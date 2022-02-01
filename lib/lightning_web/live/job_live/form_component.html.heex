@@ -1,0 +1,28 @@
+<div>
+  <h2><%= @title %></h2>
+
+  <.form
+    let={f}
+    for={@changeset}
+    id="job-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save">
+  
+    <%= label f, :name %>
+    <%= text_input f, :name %>
+    <%= error_tag f, :name %>
+  
+    <%= label f, :body %>
+    <%= textarea f, :body %>
+    <%= error_tag f, :body %>
+  
+    <%= label f, :enabled %>
+    <%= checkbox f, :enabled %>
+    <%= error_tag f, :enabled %>
+  
+    <div>
+      <%= submit "Save", phx_disable_with: "Saving..." %>
+    </div>
+  </.form>
+</div>

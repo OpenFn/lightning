@@ -1,5 +1,6 @@
 defmodule LightningWeb.Router do
   use LightningWeb, :router
+  alias JobLive
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -18,6 +19,13 @@ defmodule LightningWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :index
+
+    live "/jobs", JobLive.Index, :index
+    live "/jobs/new", JobLive.Index, :new
+    live "/jobs/:id/edit", JobLive.Index, :edit
+
+    live "/jobs/:id", JobLive.Show, :show
+    live "/jobs/:id/show/edit", JobLive.Show, :edit
   end
 
   # Other scopes may use custom stacks.

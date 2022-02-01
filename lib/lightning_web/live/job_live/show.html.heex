@@ -1,0 +1,36 @@
+<h1>Show Job</h1>
+
+<%= if @live_action in [:edit] do %>
+  <.modal return_to={Routes.job_show_path(@socket, :show, @job)}>
+    <.live_component
+      module={LightningWeb.JobLive.FormComponent}
+      id={@job.id}
+      title={@page_title}
+      action={@live_action}
+      job={@job}
+      return_to={Routes.job_show_path(@socket, :show, @job)}
+    />
+  </.modal>
+<% end %>
+
+<ul>
+
+  <li>
+    <strong>Name:</strong>
+    <%= @job.name %>
+  </li>
+
+  <li>
+    <strong>Body:</strong>
+    <%= @job.body %>
+  </li>
+
+  <li>
+    <strong>Enabled:</strong>
+    <%= @job.enabled %>
+  </li>
+
+</ul>
+
+<span><%= live_patch "Edit", to: Routes.job_show_path(@socket, :edit, @job), class: "button" %></span> |
+<span><%= live_redirect "Back", to: Routes.job_index_path(@socket, :index) %></span>

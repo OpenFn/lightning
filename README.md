@@ -10,7 +10,7 @@ Setting up
 docker volume create lightning-postgres-data
 
 docker create \
-  --name lighting-postgres \
+  --name lightning-postgres \
 	--mount source=lightning-postgres-data,target=/var/lib/postgresql/data \
 	--publish 5432:5432 \
 	-e POSTGRES_PASSWORD=postgres \
