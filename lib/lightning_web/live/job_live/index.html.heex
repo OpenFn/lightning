@@ -1,43 +1,55 @@
-<h1>Listing Jobs</h1>
+<header class="bg-white shadow">
+  <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <h1 class="text-3xl font-bold text-gray-900">
+      Jobs
+    </h1>
+  </div>
+</header>
+<main>
+  <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
 
-<%= if @live_action in [:new, :edit] do %>
-  <.modal return_to={Routes.job_index_path(@socket, :index)}>
-    <.live_component
-      module={LightningWeb.JobLive.FormComponent}
-      id={@job.id || :new}
-      title={@page_title}
-      action={@live_action}
-      job={@job}
-      return_to={Routes.job_index_path(@socket, :index)}
-    />
-  </.modal>
-<% end %>
+  <%= if @live_action in [:new, :edit] do %>
+    <.modal return_to={Routes.job_index_path(@socket, :index)}>
+      <.live_component
+        module={LightningWeb.JobLive.FormComponent}
+        id={@job.id || :new}
+        title={@page_title}
+        action={@live_action}
+        job={@job}
+        return_to={Routes.job_index_path(@socket, :index)}
+      />
+    </.modal>
+  <% end %>
 
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Body</th>
-      <th>Enabled</th>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Body</th>
+        <th>Enabled</th>
 
-      <th></th>
-    </tr>
-  </thead>
-  <tbody id="jobs">
-    <%= for job <- @jobs do %>
-      <tr id={"job-#{job.id}"}>
-        <td><%= job.name %></td>
-        <td><%= job.body %></td>
-        <td><%= job.enabled %></td>
-
-        <td>
-          <span><%= live_redirect "Show", to: Routes.job_show_path(@socket, :show, job) %></span>
-          <span><%= live_patch "Edit", to: Routes.job_index_path(@socket, :edit, job) %></span>
-          <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: job.id, data: [confirm: "Are you sure?"] %></span>
-        </td>
+        <th></th>
       </tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody id="jobs">
+      <%= for job <- @jobs do %>
+        <tr id={"job-#{job.id}"}>
+          <td><%= job.name %></td>
+          <td><%= job.body %></td>
+          <td><%= job.enabled %></td>
 
-<span><%= live_patch "New Job", to: Routes.job_index_path(@socket, :new) %></span>
+          <td>
+            <span><%= live_redirect "Show", to: Routes.job_show_path(@socket, :show, job) %></span>
+            <span><%= live_patch "Edit", to: Routes.job_index_path(@socket, :edit, job) %></span>
+            <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: job.id, data: [confirm: "Are you sure?"] %></span>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <span><%= live_patch "New Job", to: Routes.job_index_path(@socket, :new) %></span>
+
+  </div>
+</main>
+
