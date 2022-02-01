@@ -1,4 +1,4 @@
-defmodule LightningWeb.JobLive.Show do
+defmodule LightningWeb.JobLive.Edit do
   use LightningWeb, :live_view
 
   alias Lightning.Jobs

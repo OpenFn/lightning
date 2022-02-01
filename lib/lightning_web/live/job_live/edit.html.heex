@@ -1,0 +1,14 @@
+<MainSection.header title={"#{@job.name}"} />
+
+<MainSection.main>
+
+  <.live_component
+    module={LightningWeb.JobLive.FormComponent}
+    id={@job.id || :new}
+    title={@page_title}
+    action={@live_action}
+    job={@job}
+    return_to={Routes.job_index_path(@socket, :index)}
+  />
+
+</MainSection.main>

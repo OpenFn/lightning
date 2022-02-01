@@ -8,11 +8,17 @@ defmodule LightningWeb.ErrorHelpers do
   @doc """
   Generates tag for inlined form input errors.
   """
-  def error_tag(form, field) do
+  def error_tag(form, field), do: error_tag(form, field, [])
+
+  def error_tag(form, field, attrs) when is_list(attrs) do
     Enum.map(Keyword.get_values(form.errors, field), fn error ->
-      content_tag(:span, translate_error(error),
-        class: "invalid-feedback",
-        phx_feedback_for: input_name(form, field)
+      content_tag(
+        :span,
+        translate_error(error),
+        Keyword.merge(
+          [phx_feedback_for: input_name(form, field)],
+          attrs
+        )
       )
     end)
   end
