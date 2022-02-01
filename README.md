@@ -1,5 +1,5 @@
-OpenFn Lighting
-===============
+OpenFn Lightning
+================
 
 Setting up
 ----------
