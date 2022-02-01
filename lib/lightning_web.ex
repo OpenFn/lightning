@@ -99,6 +99,8 @@ defmodule LightningWeb do
       import LightningWeb.ErrorHelpers
       import LightningWeb.Gettext
       alias LightningWeb.Router.Helpers, as: Routes
+
+      alias LightningWeb.Components.MainSection
     end
   end
 

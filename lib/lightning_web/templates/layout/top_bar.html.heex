@@ -1,5 +1,5 @@
 <div class="ml-10 flex items-baseline space-x-4">
-  <%= live_redirect "Dashboard", to: Routes.page_path(@socket, :index),
+  <%= live_redirect "Dashboard", to: Routes.dashboard_index_path(@socket, :index),
       class: if @active_menu_item == :dashboard,
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
       else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>

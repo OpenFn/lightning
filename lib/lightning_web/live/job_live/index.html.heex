@@ -1,12 +1,6 @@
-<header class="bg-white shadow">
-  <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-    <h1 class="text-3xl font-bold text-gray-900">
-      Jobs
-    </h1>
-  </div>
-</header>
-<main>
-  <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+<MainSection.header title="Jobs" />
+
+<MainSection.main>
 
   <%= if @live_action in [:new, :edit] do %>
     <.modal return_to={Routes.job_index_path(@socket, :index)}>
@@ -50,6 +44,5 @@
 
   <span><%= live_patch "New Job", to: Routes.job_index_path(@socket, :new) %></span>
 
-  </div>
-</main>
+</MainSection.main>
 

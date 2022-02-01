@@ -18,7 +18,7 @@ defmodule LightningWeb.Router do
   scope "/", LightningWeb do
     pipe_through :browser
 
-    get "/", PageController, :index
+    live "/", DashboardLive.Index, :index
 
     live "/jobs", JobLive.Index, :index
     live "/jobs/new", JobLive.Index, :new
