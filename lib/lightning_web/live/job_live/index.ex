@@ -6,7 +6,6 @@ defmodule LightningWeb.JobLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    IO.inspect("mounting")
     {:ok, assign(socket, :jobs, list_jobs()) |> assign(:active_menu_item, :jobs)}
   end
 
