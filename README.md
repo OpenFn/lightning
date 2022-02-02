@@ -46,3 +46,5 @@ And then after that run the tests using:
 ```
 MIX_ENV=test mix test
 ```
+
+We also have `test.watch` installed which can be used to rerun the tests on file changes.
