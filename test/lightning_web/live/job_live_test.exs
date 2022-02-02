@@ -59,15 +59,12 @@ defmodule LightningWeb.JobLiveTest do
     test "updates job in listing", %{conn: conn, job: job} do
       {:ok, index_live, _html} = live(conn, Routes.job_index_path(conn, :index))
 
-      {:ok, form_live, _} = index_live
-      |> element("#job-#{job.id} a", "Edit")
-      |> render_click()
-      |> follow_redirect(conn, Routes.job_edit_path(conn, :edit, job))
+      {:ok, form_live, _} =
+        index_live
+        |> element("#job-#{job.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(conn, Routes.job_edit_path(conn, :edit, job))
 
-      assert_redirected(index_live, Routes.job_edit_path(conn, :edit, job))
-      # Get a new LiveView as the `live_patch` call doesn't appear to have the
-      # new Edit component on it.
-      # {:ok, form_live, _html} = live(conn, Routes.job_edit_path(conn, :edit, job))
       assert form_live
              |> form("#job-form", job: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
