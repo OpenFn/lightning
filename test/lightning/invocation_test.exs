@@ -61,16 +61,19 @@ defmodule Lightning.InvocationTest do
 
   describe "events" do
     alias Lightning.Invocation.Event
+    import Lightning.JobsFixtures
 
     @invalid_attrs %{type: nil, dataclip: nil}
 
     test "create_event/1 with valid data creates an event" do
       dataclip = dataclip_fixture()
-      valid_attrs = %{type: :webhook, dataclip_id: dataclip.id}
+      job = job_fixture()
+      valid_attrs = %{type: :webhook, dataclip_id: dataclip.id, job_id: job.id}
 
       assert {:ok, %Event{} = event} = Invocation.create_event(valid_attrs)
-      event = Repo.preload(event, :dataclip)
+      event = Repo.preload(event, [:dataclip, :job])
       assert event.dataclip == dataclip
+      assert event.job == job
       assert event.type == :webhook
     end
 
