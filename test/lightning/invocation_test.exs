@@ -2,11 +2,11 @@ defmodule Lightning.InvocationTest do
   use Lightning.DataCase
 
   alias Lightning.Invocation
+  alias Lightning.Repo
+  import Lightning.InvocationFixtures
 
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip
-
-    import Lightning.InvocationFixtures
 
     @invalid_attrs %{body: nil, type: nil}
 
@@ -56,6 +56,26 @@ defmodule Lightning.InvocationTest do
     test "change_dataclip/1 returns a dataclip changeset" do
       dataclip = dataclip_fixture()
       assert %Ecto.Changeset{} = Invocation.change_dataclip(dataclip)
+    end
+  end
+
+  describe "events" do
+    alias Lightning.Invocation.Event
+
+    @invalid_attrs %{type: nil, dataclip: nil}
+
+    test "create_event/1 with valid data creates an event" do
+      dataclip = dataclip_fixture()
+      valid_attrs = %{type: :webhook, dataclip_id: dataclip.id}
+
+      assert {:ok, %Event{} = event} = Invocation.create_event(valid_attrs)
+      event = Repo.preload(event, :dataclip)
+      assert event.dataclip == dataclip
+      assert event.type == :webhook
+    end
+
+    test "create_event/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Invocation.create_event(@invalid_attrs)
     end
   end
 end

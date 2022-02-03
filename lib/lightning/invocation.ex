@@ -6,7 +6,7 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.{Dataclip, Event}
 
   @doc """
   Returns the list of dataclips.
@@ -121,5 +121,23 @@ defmodule Lightning.Invocation do
       end)
 
     attrs
+  end
+
+  @doc """
+  Creates an event.
+
+  ## Examples
+
+      iex> create_event(%{type: :webhook, dataclip_id: dataclip.id})
+      {:ok, %Dataclip{}}
+
+      iex> create_dataclip(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_event(attrs \\ %{}) do
+    %Event{}
+    |> Event.changeset(attrs)
+    |> Repo.insert()
   end
 end

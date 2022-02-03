@@ -18,4 +18,19 @@ defmodule Lightning.InvocationFixtures do
 
     dataclip
   end
+
+  @doc """
+  Generate a dataclip.
+  """
+  def event_fixture(attrs \\ %{}) do
+    {:ok, event} =
+      attrs
+      |> Enum.into(%{
+        type: :webhook,
+        dataclip: dataclip_fixture()
+      })
+      |> Lightning.Invocation.create_event()
+
+    event
+  end
 end
