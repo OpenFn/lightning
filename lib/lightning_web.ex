@@ -97,6 +97,7 @@ defmodule LightningWeb do
       import Phoenix.View
 
       import LightningWeb.ErrorHelpers
+      import LightningWeb.FormHelpers
       import LightningWeb.Gettext
       alias LightningWeb.Router.Helpers, as: Routes
 

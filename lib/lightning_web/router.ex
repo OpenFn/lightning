@@ -27,6 +27,13 @@ defmodule LightningWeb.Router do
     live "/jobs/:id", JobLive.Show, :show
     live "/jobs/:id/edit", JobLive.Edit, :edit
     # live "/jobs/:id/show/edit", JobLive.Show, :edit
+
+    live "/dataclips", DataclipLive.Index, :index
+    live "/dataclips/new", DataclipLive.Index, :new
+    live "/dataclips/:id/edit", DataclipLive.Index, :edit
+
+    live "/dataclips/:id", DataclipLive.Show, :show
+    live "/dataclips/:id/show/edit", DataclipLive.Show, :edit
   end
 
   # Other scopes may use custom stacks.

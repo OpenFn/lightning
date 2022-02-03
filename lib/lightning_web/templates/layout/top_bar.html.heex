@@ -1,11 +1,16 @@
 <div class="ml-10 flex items-baseline space-x-4">
   <%= live_redirect "Dashboard", to: Routes.dashboard_index_path(@socket, :index),
-      class: if @active_menu_item == :dashboard,
+      class: if assigns[:active_menu_item] == :dashboard,
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
       else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
 
   <%= live_redirect "Jobs", to: Routes.job_index_path(@socket, :index),
-      class: if @active_menu_item == :jobs,
+      class: if assigns[:active_menu_item] == :jobs,
+      do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
+      else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
+
+  <%= live_redirect "Dataclips", to: Routes.dataclip_index_path(@socket, :index),
+      class: if assigns[:active_menu_item] == :dataclips,
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
       else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
 
