@@ -33,4 +33,29 @@ defmodule Lightning.InvocationFixtures do
 
     event
   end
+
+  @doc """
+  Generate a run.
+  """
+  def run_fixture(attrs \\ %{}) do
+    {:ok, run} =
+      attrs
+      |> Enum.into(%{
+        exit_code: 42,
+        finished_at: ~U[2022-02-02 11:49:00.000000Z],
+        log: [],
+        event_id: nil,
+        started_at: ~U[2022-02-02 11:49:00.000000Z]
+      })
+      |> Map.update!(:event_id, fn event_id ->
+        if event_id do
+          event_id
+        else 
+          event_fixture().id
+        end
+      end)
+      |> Lightning.Invocation.create_run()
+
+    run
+  end
 end
