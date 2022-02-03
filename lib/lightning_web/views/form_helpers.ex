@@ -13,4 +13,13 @@ defmodule LightningWeb.FormHelpers do
       Jason.encode!(data || "")
     end
   end
+
+  # defimpl Phoenix.HTML.Safe, for: String.Chars do
+  #   @doc """
+  #   Extension to Phoenix's protocols to allow viewing of Array of Strings of a JSONB/map field.
+  #   """
+  #   def to_iodata(data) do
+  #     data |> IO.inspect 
+  #   end
+  # end
 end

@@ -1,0 +1,48 @@
+<MainSection.header title="Runs" />
+
+<MainSection.main>
+
+<%= if @live_action in [:new, :edit] do %>
+  <.modal return_to={Routes.run_index_path(@socket, :index)}>
+    <.live_component
+      module={LightningWeb.RunLive.FormComponent}
+      id={@run.id || :new}
+      title={@page_title}
+      action={@live_action}
+      run={@run}
+      return_to={Routes.run_index_path(@socket, :index)}
+    />
+  </.modal>
+<% end %>
+
+<table>
+  <thead>
+    <tr>
+      <th>Log</th>
+      <th>Exit code</th>
+      <th>Started at</th>
+      <th>Finished at</th>
+
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="runs">
+    <%= for run <- @runs do %>
+      <tr id={"run-#{run.id}"}>
+        <td><%= run.log %></td>
+        <td><%= run.exit_code %></td>
+        <td><%= run.started_at %></td>
+        <td><%= run.finished_at %></td>
+
+        <td>
+          <span><%= live_redirect "Show", to: Routes.run_show_path(@socket, :show, run) %></span>
+          <span><%= live_patch "Edit", to: Routes.run_index_path(@socket, :edit, run) %></span>
+          <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: run.id, data: [confirm: "Are you sure?"] %></span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<span><%= live_patch "New Run", to: Routes.run_index_path(@socket, :new) %></span>
+</MainSection.main>
