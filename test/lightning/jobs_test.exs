@@ -21,12 +21,14 @@ defmodule Lightning.JobsTest do
     end
 
     test "create_job/1 with valid data creates a job" do
-      valid_attrs = %{body: "some body", enabled: true, name: "some name"}
+      valid_attrs = %{body: "some body", enabled: true, name: "some name", trigger: %{}}
 
       assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
       assert job.body == "some body"
       assert job.enabled == true
       assert job.name == "some name"
+
+      assert job.trigger.job_id == job.id
     end
 
     test "create_job/1 with invalid data returns error changeset" do
