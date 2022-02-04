@@ -1,7 +1,7 @@
 defmodule Lightning.Invocation.Event do
   use Ecto.Schema
   import Ecto.Changeset
-  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Jobs.Job
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -10,6 +10,7 @@ defmodule Lightning.Invocation.Event do
     field :type, Ecto.Enum, values: [:webhook, :cron, :retry]
     belongs_to :dataclip, Dataclip
     belongs_to :job, Job
+    has_one :run, Run
 
     timestamps(usec: true)
   end

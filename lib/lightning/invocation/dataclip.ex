@@ -8,7 +8,7 @@ defmodule Lightning.Invocation.Dataclip do
     field :body, :map
     field :type, Ecto.Enum, values: [:http_request, :global]
 
-    timestamps()
+    timestamps(usec: true)
   end
 
   @doc false

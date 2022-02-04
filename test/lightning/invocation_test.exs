@@ -5,6 +5,26 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Repo
   import Lightning.InvocationFixtures
 
+  describe "invocation" do
+    import Lightning.JobsFixtures
+    alias Lightning.Invocation.{Run, Dataclip, Event}
+
+    test "create/3 returns an Event with a run and a message" do
+      job = job_fixture()
+
+      assert {:ok,
+              %{
+                dataclip: %Dataclip{},
+                event: %Event{},
+                run: %Run{}
+              }} =
+               Invocation.create(
+                 %{job_id: job.id, type: :webhook},
+                 %{type: :http_request, body: %{"foo" => "bar"}}
+               )
+    end
+  end
+
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip
 
@@ -87,7 +107,7 @@ defmodule Lightning.InvocationTest do
 
     import Lightning.InvocationFixtures
 
-    @invalid_attrs %{exit_code: nil, finished_at: nil, log: nil, started_at: nil}
+    @invalid_attrs %{event_id: nil}
     @valid_attrs %{
       exit_code: 42,
       finished_at: ~U[2022-02-02 11:49:00.000000Z],

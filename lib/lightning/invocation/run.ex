@@ -20,6 +20,6 @@ defmodule Lightning.Invocation.Run do
     run
     |> cast(attrs, [:log, :exit_code, :started_at, :finished_at, :event_id])
     |> foreign_key_constraint(:event_id)
-    |> validate_required([:log, :exit_code, :started_at, :finished_at, :event_id])
+    |> validate_required([:event_id])
   end
 end

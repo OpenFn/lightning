@@ -6,7 +6,21 @@ defmodule Lightning.Invocation do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Invocation.{Dataclip, Event}
+  alias Lightning.Invocation.{Dataclip, Event, Run}
+  alias Ecto.Multi
+
+  def create(event_attrs, dataclip_attrs) do
+    Multi.new()
+    |> Multi.insert(:dataclip, Dataclip.changeset(%Dataclip{}, dataclip_attrs))
+    |> Multi.insert(:event, fn %{dataclip: %Dataclip{id: dataclip_id}} ->
+      Event.changeset(%Event{}, event_attrs)
+      |> Event.changeset(%{dataclip_id: dataclip_id})
+    end)
+    |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
+      Run.changeset(%Run{}, %{event_id: event_id})
+    end)
+    |> Repo.transaction()
+  end
 
   @doc """
   Returns the list of dataclips.
@@ -140,8 +154,6 @@ defmodule Lightning.Invocation do
     |> Event.changeset(attrs)
     |> Repo.insert()
   end
-
-  alias Lightning.Invocation.Run
 
   @doc """
   Returns the list of runs.
