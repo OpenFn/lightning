@@ -43,6 +43,13 @@ defmodule LightningWeb.Router do
     live "/runs/:id/show/edit", RunLive.Show, :edit
   end
 
+  scope "/i", LightningWeb do
+    pipe_through :api
+
+    post "/*path", WebhooksController, :create
+
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", LightningWeb do
   #   pipe_through :api

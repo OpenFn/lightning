@@ -38,6 +38,18 @@ defmodule Lightning.Jobs do
   def get_job!(id), do: Repo.get!(Job, id)
 
   @doc """
+  Gets a single job basic on it's webhook trigger.
+  """
+  def get_job_by_webhook(path) when is_binary(path) do
+    from(j in Job,
+      join: t in assoc(j, :trigger),
+      where: fragment("coalesce(?, ?)", t.custom_path, type(j.id, :string)) == ^path,
+      preload: [:trigger]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Creates a job.
 
   ## Examples

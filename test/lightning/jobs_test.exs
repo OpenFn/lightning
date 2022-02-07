@@ -20,6 +20,15 @@ defmodule Lightning.JobsTest do
       assert Jobs.get_job!(job.id) == job
     end
 
+    test "get_job_by_webhook/1 returns the job for a path" do
+      job = job_fixture(%{trigger: %{}})
+      assert Jobs.get_job_by_webhook(job.id) == job
+
+      job = job_fixture(%{trigger: %{custom_path: "foo"}})
+      assert Jobs.get_job_by_webhook(job.id) == nil
+      assert Jobs.get_job_by_webhook("foo") == job
+    end
+
     test "create_job/1 with valid data creates a job" do
       valid_attrs = %{body: "some body", enabled: true, name: "some name", trigger: %{}}
 
