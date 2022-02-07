@@ -9,6 +9,14 @@ defmodule Lightning.Invocation do
   alias Lightning.Invocation.{Dataclip, Event, Run}
   alias Ecto.Multi
 
+  @doc """
+  Create a new invocation based on a job and a body of data, which gets saved
+  as a Dataclip; resulting in a Run associated with the Event.
+  """
+  @spec create(
+          %{job_id: binary(), type: :webhook},
+          %{type: :http_request, body: map()}
+        ) :: {:ok | :error, any}
   def create(event_attrs, dataclip_attrs) do
     Multi.new()
     |> Multi.insert(:dataclip, Dataclip.changeset(%Dataclip{}, dataclip_attrs))

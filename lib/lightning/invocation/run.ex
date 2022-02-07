@@ -11,6 +11,7 @@ defmodule Lightning.Invocation.Run do
     field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
     belongs_to :event, Event
+    has_one :dataclip, through: [:event, :dataclip]
 
     timestamps(usec: true)
   end

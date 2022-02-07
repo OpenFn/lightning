@@ -9,7 +9,7 @@ defmodule Lightning.InvocationTest do
     import Lightning.JobsFixtures
     alias Lightning.Invocation.{Run, Dataclip, Event}
 
-    test "create/3 returns an Event with a run and a message" do
+    test "create/2 returns an Event with a run and a message" do
       job = job_fixture()
 
       assert {:ok,
