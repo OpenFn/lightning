@@ -26,7 +26,8 @@ config :lightning, LightningWeb.Endpoint,
   watchers: [
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
+    workers: {Esbuild, :run, [:workers, ~w()]},
+    tailwind: {Tailwind, :install_and_run, [:default, ~w(--postcss --watch)]}
   ]
 
 # ## SSL Support

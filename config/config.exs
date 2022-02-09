@@ -31,10 +31,30 @@ config :swoosh, :api_client, false
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.14.0",
+  version: "0.14.20",
   default: [
-    args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    args: ~w(
+      app=js/app.js
+      ui-builder=@openfn/ui-builder
+      --bundle
+      --target=esnext 
+      --format=esm
+      --outdir=../priv/static/assets
+      --external:/fonts/*
+      --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ],
+  workers: [
+    args: ~w(
+      ts.worker=@openfn/ui-builder/dist/esm/ts.worker.js
+      editor.worker=@openfn/ui-builder/dist/esm/editor.worker.js
+      --bundle
+      --target=esnext 
+      --format=iife
+      --outdir=../priv/static/assets
+      --external:/fonts/*
+      --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
