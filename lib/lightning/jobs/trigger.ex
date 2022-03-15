@@ -11,14 +11,17 @@ defmodule Lightning.Jobs.Trigger do
     field :custom_path, :string
     belongs_to :job, Job
 
+    field :type, :string, virtual: true, default: "webhook"
+
     timestamps()
   end
 
   @doc false
   def changeset(trigger, attrs) do
     trigger
-    |> cast(attrs, [:comment, :custom_path])
-    |> validate_required([])
+    |> cast(attrs, [:comment, :custom_path, :type])
+    |> validate_inclusion(:type, ["webhook"])
+    |> validate_required([:type])
     |> assoc_constraint(:job)
   end
 end

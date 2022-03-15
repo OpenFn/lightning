@@ -4,9 +4,24 @@ defmodule LightningWeb.RunLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.InvocationFixtures
 
-  @create_attrs %{exit_code: 42, finished_at: %{day: 2, hour: 11, minute: 49, month: 2, year: 2022}, log: [], started_at: %{day: 2, hour: 11, minute: 49, month: 2, year: 2022}}
-  @update_attrs %{exit_code: 43, finished_at: %{day: 3, hour: 11, minute: 49, month: 2, year: 2022}, log: [], started_at: %{day: 3, hour: 11, minute: 49, month: 2, year: 2022}}
-  @invalid_attrs %{exit_code: nil, finished_at: %{day: 30, hour: 11, minute: 49, month: 2, year: 2022}, log: [], started_at: %{day: 30, hour: 11, minute: 49, month: 2, year: 2022}}
+  @create_attrs %{
+    exit_code: 42,
+    finished_at: %{day: 2, hour: 11, minute: 49, month: 2, year: 2022},
+    log: [],
+    started_at: %{day: 2, hour: 11, minute: 49, month: 2, year: 2022}
+  }
+  @update_attrs %{
+    exit_code: 43,
+    finished_at: %{day: 3, hour: 11, minute: 49, month: 2, year: 2022},
+    log: [],
+    started_at: %{day: 3, hour: 11, minute: 49, month: 2, year: 2022}
+  }
+  @invalid_attrs %{
+    exit_code: nil,
+    finished_at: %{day: 30, hour: 11, minute: 49, month: 2, year: 2022},
+    log: [],
+    started_at: %{day: 30, hour: 11, minute: 49, month: 2, year: 2022}
+  }
 
   defp create_run(_) do
     run = run_fixture()

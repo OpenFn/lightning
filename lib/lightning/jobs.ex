@@ -18,7 +18,7 @@ defmodule Lightning.Jobs do
 
   """
   def list_jobs do
-    Repo.all(Job)
+    Repo.all(Job |> preload(:trigger))
   end
 
   @doc """
@@ -35,7 +35,7 @@ defmodule Lightning.Jobs do
       ** (Ecto.NoResultsError)
 
   """
-  def get_job!(id), do: Repo.get!(Job, id)
+  def get_job!(id), do: Repo.get!(Job |> preload(:trigger), id)
 
   @doc """
   Gets a single job basic on it's webhook trigger.

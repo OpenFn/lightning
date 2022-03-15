@@ -6,7 +6,7 @@ defmodule Lightning.Repo.Migrations.CreateTriggers do
       add :id, :binary_id, primary_key: true
       add :comment, :string
       add :custom_path, :string
-      add :job_id, references(:jobs, on_delete: :nothing, type: :binary_id)
+      add :job_id, references(:jobs, on_delete: :delete_all, type: :binary_id), null: false
 
       timestamps()
     end

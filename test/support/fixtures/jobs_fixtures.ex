@@ -13,7 +13,8 @@ defmodule Lightning.JobsFixtures do
       |> Enum.into(%{
         body: "some body",
         enabled: true,
-        name: "some name"
+        name: "some name",
+        trigger: %{}
       })
       |> Lightning.Jobs.create_job()
 

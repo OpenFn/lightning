@@ -29,6 +29,39 @@
         </div>
       </div>
 
+      <%= inputs_for f, :trigger, fn ft -> %>
+        <%= label class: "block" do %>
+          <span class="text-gray-700">Trigger</span>
+          <%= error_tag ft, :type, class: "block w-full rounded-md" %>
+          <%= select ft, :type, ["Webhook": "webhook"], prompt: "", class: "block
+                w-full
+                mt-1
+                rounded-md
+                border-gray-300
+                shadow-sm
+                focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" %>
+        <% end %>
+
+        <!-- Webhook URL copying -->
+        <%= if ft.data.id && ft.data.job_id do %>
+          <a
+            id="copyWebhookUrl"
+            href={ Routes.webhooks_url(@socket, :create, [ft.data.job_id]) }
+            target="_blank"
+          >
+            Copy webhook url
+          </a>
+          <script charset="utf-8">
+            let webhookUrl = "<%= Routes.webhooks_url(@socket, :create, [ft.data.job_id]) %>"
+            document.querySelector("a#copyWebhookUrl").addEventListener('click', e => {
+              e.preventDefault();
+              navigator.clipboard.writeText(webhookUrl);
+            })
+          </script>
+
+        <% end %>
+      <% end %>
+
     </div>
   </div>
 

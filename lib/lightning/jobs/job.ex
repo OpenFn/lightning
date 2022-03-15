@@ -19,7 +19,7 @@ defmodule Lightning.Jobs.Job do
   def changeset(job, attrs) do
     job
     |> cast(attrs, [:name, :body, :enabled])
-    |> cast_assoc(:trigger, with: &Trigger.changeset/2)
+    |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
     |> validate_required([:name, :body, :enabled])
   end
 end

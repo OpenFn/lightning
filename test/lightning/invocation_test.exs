@@ -93,7 +93,7 @@ defmodule Lightning.InvocationTest do
       assert {:ok, %Event{} = event} = Invocation.create_event(valid_attrs)
       event = Repo.preload(event, [:dataclip, :job])
       assert event.dataclip == dataclip
-      assert event.job == job
+      assert event.job.id == job.id
       assert event.type == :webhook
     end
 
