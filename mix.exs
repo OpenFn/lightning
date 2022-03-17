@@ -40,6 +40,7 @@ defmodule Lightning.MixProject do
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.5"},
+      {:httpoison, "~> 1.8"},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.6"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
@@ -50,7 +51,8 @@ defmodule Lightning.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
-      {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false}
+      {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:mimic, "~> 1.7", only: :test}
     ]
   end
 
