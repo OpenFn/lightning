@@ -46,7 +46,7 @@ defmodule Lightning.AdaptorRegistryTest do
          ~S[{"@openfn/language-common":"write","@openfn/devtools":"write","@openfn/language-http":"write","@openfn/core":"write","@openfn/simple-ast":"write","@openfn/language-dhis2":"write","@openfn/react-json-view":"write","@openfn/language-template":"write","@openfn/language-commcare":"write","@openfn/doclet-query":"write","@openfn/language-salesforce":"write","@openfn/language-asana":"write","@openfn/language-devtools":"write"}]}
       end)
 
-      {:ok, _pid} = AdaptorRegistry.start_link()
+      {:ok, _pid} = AdaptorRegistry.start_link(use_cache: false)
 
       results = AdaptorRegistry.all()
 

@@ -15,6 +15,12 @@ defmodule Lightning.AdaptorRegistry do
   AdaptorRegistry.all()
   ```
 
+  **Caching**
+
+  By default the results are cached to disk, and will be reused every start.
+
+  In order to disable caching pass see: `start_link/1`.
+
   The process uses `:continue` to return before the adaptors have been queried.
   This does mean that the first call to the process will be delayed until
   the `handle_continue/2` has finished.
@@ -57,17 +63,54 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
-  def init(_opts) do
-    {:ok, [], {:continue, nil}}
+  def init(opts) do
+    {:ok, [], {:continue, opts}}
   end
 
   @impl GenServer
-  def handle_continue(_, _) do
-    {:noreply, fetch()}
+  def handle_continue(opts, _state) do
+    if opts[:use_cache] do
+      read_from_cache()
+      |> case do
+        nil ->
+          {:noreply, fetch() |> write_to_cache()}
+
+        adaptors ->
+          {:noreply, adaptors}
+      end
+    else
+      {:noreply, fetch()}
+    end
   end
 
-  def start_link() do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  defp write_to_cache(adaptors) do
+    File.mkdir("tmp")
+    cache_file = File.open!("tmp/adaptor_registry_cache.json", [:write])
+    IO.binwrite(cache_file, Jason.encode_to_iodata!(adaptors))
+    File.close(cache_file)
+
+    adaptors
+  end
+
+  defp read_from_cache() do
+    File.read("tmp/adaptor_registry_cache.json")
+    |> case do
+      {:ok, file} -> Jason.decode!(file, keys: :atoms)
+      {:error, _} -> nil
+    end
+  end
+
+  @doc """
+  Starts the AdaptorRegistry
+
+  **Options**
+
+  - `:use_cache` (defaults to true) - stores the last set of results on disk
+    and uses the cached file for every subsequent start.
+  """
+  @spec start_link(opts :: [use_cache: boolean()]) :: {:error, any} | {:ok, pid}
+  def start_link(opts \\ [use_cache: true]) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @impl GenServer
