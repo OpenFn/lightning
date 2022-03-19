@@ -28,3 +28,9 @@ config :logger, level: :warn
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+config :junit_formatter,
+  report_file: "elixir_test_report.xml",
+  report_dir: "./test/reports",
+  print_report_file: true,
+  prepend_project_name?: true

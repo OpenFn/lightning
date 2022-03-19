@@ -43,6 +43,7 @@ defmodule Lightning.MixProject do
       {:gettext, "~> 0.18"},
       {:httpoison, "~> 1.8"},
       {:jason, "~> 1.2"},
+      {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
       {:phoenix_ecto, "~> 4.4"},
