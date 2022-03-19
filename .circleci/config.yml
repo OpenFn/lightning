@@ -61,13 +61,7 @@ jobs:
       - steps: << parameters.execute >>
 
 workflows:
-  version: 2.1
-  run_tests:
-    jobs:
-      - build:
-          name: "Test in elixir 1.13.2"
-          version: 1.13.2
-  validate_code_quality:
+  run checks:
     jobs:
       - build:
           name: "Check code formatting"
@@ -89,8 +83,9 @@ workflows:
           execute:
             - run: MIX_ENV=test mix sobelow --exit Medium
       - build:
-          name: "Check test coverage (codecov)"
+          name: "Run elixir tests (codecov)"
           execute:
+            - prepare_db
             - run:
                 command: MIX_ENV=test mix coveralls.json -o ./test/reports
             - codecov/upload:
@@ -98,6 +93,7 @@ workflows:
             - store_test_results:
                 path: test/reports/
       - build:
-          name: "Check test coverage (coveralls)"
+          name: "Run elixir tests (coveralls)"
           execute:
+            - prepare_db
             - run: MIX_ENV=test mix coveralls.circle
