@@ -8,6 +8,7 @@ defmodule Lightning.AdaptorRegistryTest do
     # AdaptorRegistry is a GenServer, and so stubbed (external) functions must 
     # be mocked globally. See: https://github.com/edgurgel/mimic#private-and-global-mode
     setup :set_mimic_from_context
+
     setup do
       stub(:hackney)
 

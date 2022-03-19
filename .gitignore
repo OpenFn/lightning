@@ -32,3 +32,5 @@ lightning-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# coveralls output file
+/excoveralls.json

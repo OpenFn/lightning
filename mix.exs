@@ -10,7 +10,8 @@ defmodule Lightning.MixProject do
       compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -33,26 +34,30 @@ defmodule Lightning.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, "~> 1.6.6"},
-      {:phoenix_ecto, "~> 4.4"},
+      {:credo, "~> 1.6", only: [:test, :dev]},
+      {:dialyxir, "~> 1.1", only: [:test, :dev]},
       {:ecto_sql, "~> 3.6"},
-      {:postgrex, ">= 0.0.0"},
+      {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
+      {:excoveralls, "~> 0.14.4", only: [:test, :dev]},
+      {:floki, ">= 0.30.0", only: :test},
+      {:gettext, "~> 0.18"},
+      {:httpoison, "~> 1.8"},
+      {:jason, "~> 1.2"},
+      {:mimic, "~> 1.7", only: :test},
+      {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.0"},
+      {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.5"},
-      {:httpoison, "~> 1.8"},
-      {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.6"},
-      {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
-      {:swoosh, "~> 1.3"},
-      {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.18"},
-      {:jason, "~> 1.2"},
+      {:phoenix, "~> 1.6.6"},
       {:plug_cowboy, "~> 2.5"},
+      {:postgrex, ">= 0.0.0"},
+      {:sobelow, "~> 0.11.1", only: [:test, :dev]},
+      {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
-      {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:mimic, "~> 1.7", only: :test}
+      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_poller, "~> 1.0"}
     ]
   end
 

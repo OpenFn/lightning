@@ -47,7 +47,6 @@ defmodule LightningWeb.Router do
     pipe_through :api
 
     post "/*path", WebhooksController, :create
-
   end
 
   # Other scopes may use custom stacks.

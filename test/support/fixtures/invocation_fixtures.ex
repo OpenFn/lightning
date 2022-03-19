@@ -50,7 +50,7 @@ defmodule Lightning.InvocationFixtures do
       |> Map.update!(:event_id, fn event_id ->
         if event_id do
           event_id
-        else 
+        else
           event_fixture().id
         end
       end)
