@@ -40,6 +40,17 @@ jobs:
             - deps
             - ~/.mix
 
+      - restore_cache:
+          keys:
+            - -v<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+            - -v<< parameters.version >>-plt-cache
+      - run: MIX_ENV=test mix dialyzer --plt
+      - save_cache:
+          key: -v<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+          paths:
+            - _build
+            - ~/.mix
+
       - steps: << parameters.execute >>
 
 workflows:
@@ -57,17 +68,6 @@ workflows:
           name: "Type check"
           execute:
             - run: MIX_ENV=test mix dialyzer
-            # TODO: speed this up
-            # - restore_cache:
-            #   keys:
-            #     - plt-cache-{{ checksum ".version_file" }}-{{ checksum "mix.lock" }}
-            # - run: MIX_ENV=test mix dialyzer --plt
-            # - save_cache:
-            #     key: plt-cache-{{ checksum ".version_file"  }}-{{ checksum "mix.lock" }}
-            #     paths:
-            #       - _build
-            #       - deps
-            #       - ~/.mix
       - build:
           name: "Check for security vulnerabilities"
           execute:
