@@ -1,8 +1,6 @@
-OpenFn Lightning
-================
+# OpenFn Lightning [![codecov](https://codecov.io/gh/OpenFn/lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/lightning) [![Coverage Status](https://coveralls.io/repos/github/OpenFn/lightning/badge.svg?t=4vHZlQ)](https://coveralls.io/github/OpenFn/lightning)
 
-Setting up
-----------
+## Setting up
 
 ### Postgres
 
@@ -32,8 +30,7 @@ mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 ```
 
-Running Tests
--------------
+## Running Tests
 
 Before the first time running the tests, you need a test database setup.
 
