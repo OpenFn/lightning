@@ -34,3 +34,7 @@ npm-debug.log
 
 # coveralls output file
 /excoveralls.json
+
+# Dialyzer output file
+/priv/plts/*.plt
+/priv/plts/*.plt.hash

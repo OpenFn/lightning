@@ -1,28 +1,11 @@
 version: 2.1
 
-parameters:
-  cache-version:
-    type: string
-    default: "v1" # force all caches to be cleared by bumping
-
 default_version: &default_version 1.13.2
-default_steps: &default_steps
-  - prepare_db
-  - run: MIX_ENV=test mix test
 
 orbs:
   # TODO: decide which one we like and stick with it
   codecov: codecov/codecov@1.0.5
   coveralls: coveralls/coveralls@1.0.6
-
-commands:
-  prepare_db:
-    steps:
-      - run:
-          name: Wait for DB
-          command: dockerize -wait tcp://localhost:5432 -timeout 1m
-      - run: mix ecto.create
-      - run: mix ecto.migrate
 
 jobs:
   build:
@@ -34,7 +17,6 @@ jobs:
       execute:
         description: What steps to execute after build
         type: steps
-        default: *default_steps
 
     parallelism: 1
     docker:
@@ -58,34 +40,42 @@ jobs:
             - deps
             - ~/.mix
 
+      - restore_cache:
+          keys:
+            - -v<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+            - -v<< parameters.version >>-plt-cache
+      - run: MIX_ENV=test mix dialyzer --plt
+      - save_cache:
+          key: -v<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+          paths:
+            - _build
+            - ~/.mix
+
       - steps: << parameters.execute >>
 
 workflows:
-  run checks:
+  pre-flight checks:
     jobs:
       - build:
           name: "Check code formatting"
-          # Do not provide version parameter (use default one)
-          # Provide execute parameter with custom steps
           execute:
             - run: MIX_ENV=test mix format --check-formatted
       - build:
           name: "Check code style"
           execute:
             - run: MIX_ENV=test mix credo
-      # TODO: why does this take so long?
-      # - build:
-      #     name: "Type check"
-      #     execute:
-      #       - run: MIX_ENV=test mix dialyzer
+      - build:
+          name: "Type check"
+          execute:
+            - run: MIX_ENV=test mix dialyzer
       - build:
           name: "Check for security vulnerabilities"
           execute:
             - run: MIX_ENV=test mix sobelow --exit Medium
       - build:
-          name: "Run elixir tests (codecov)"
+          name: "Check elixir tests (codecov)"
           execute:
-            - prepare_db
+            - run: MIX_ENV=test mix do ecto.create, ecto.migrate
             - run:
                 command: MIX_ENV=test mix coveralls.json -o ./test/reports
             - codecov/upload:
@@ -93,7 +83,9 @@ workflows:
             - store_test_results:
                 path: test/reports/
       - build:
-          name: "Run elixir tests (coveralls)"
+          name: "Check elixir tests (coveralls)"
           execute:
-            - prepare_db
+            - run: MIX_ENV=test mix do ecto.create, ecto.migrate
             - run: MIX_ENV=test mix coveralls.circle
+            - store_test_results:
+                path: test/reports/
