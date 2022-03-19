@@ -1,0 +1,12 @@
+[
+  verbose: false,
+  private: false,
+  skip: false,
+  router: "",
+  exit: "false",
+  format: "json",
+  out: "./sobelow.json",
+  threshold: "low",
+  ignore: [""],
+  ignore_files: [""]
+]

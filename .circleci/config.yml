@@ -1,0 +1,103 @@
+version: 2.1
+
+parameters:
+  cache-version:
+    type: string
+    default: "v1" # force all caches to be cleared by bumping
+
+default_version: &default_version 1.13.2
+default_steps: &default_steps
+  - prepare_db
+  - run: MIX_ENV=test mix test
+
+orbs:
+  # TODO: decide which one we like and stick with it
+  codecov: codecov/codecov@1.0.5
+  coveralls: coveralls/coveralls@1.0.6
+
+commands:
+  prepare_db:
+    steps:
+      - run:
+          name: Wait for DB
+          command: dockerize -wait tcp://localhost:5432 -timeout 1m
+      - run: mix ecto.create
+      - run: mix ecto.migrate
+
+jobs:
+  build:
+    parameters:
+      version:
+        description: Elixir version
+        type: string
+        default: *default_version
+      execute:
+        description: What steps to execute after build
+        type: steps
+        default: *default_steps
+
+    parallelism: 1
+    docker:
+      - image: elixir:<< parameters.version >>
+      - image: cimg/postgres:12.9
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: testing-elixir-v<< parameters.version >>
+
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+      - run: MIX_ENV=test mix do deps.get --only test, deps.compile, compile
+
+      - save_cache:
+          key: testing-elixir-v<< parameters.version >>
+          paths:
+            - _build
+            - deps
+            - ~/.mix
+
+      - steps: << parameters.execute >>
+
+workflows:
+  version: 2.1
+  run_tests:
+    jobs:
+      - build:
+          name: "Test in elixir 1.13.2"
+          version: 1.13.2
+  validate_code_quality:
+    jobs:
+      - build:
+          name: "Check code formatting"
+          # Do not provide version parameter (use default one)
+          # Provide execute parameter with custom steps
+          execute:
+            - run: MIX_ENV=test mix format --check-formatted
+      - build:
+          name: "Check code style"
+          execute:
+            - run: MIX_ENV=test mix credo
+      # TODO: why does this take so long?
+      # - build:
+      #     name: "Type check"
+      #     execute:
+      #       - run: MIX_ENV=test mix dialyzer
+      - build:
+          name: "Check for security vulnerabilities"
+          execute:
+            - run: MIX_ENV=test mix sobelow --exit Medium
+      - build:
+          name: "Check test coverage (codecov)"
+          execute:
+            - run:
+                command: MIX_ENV=test mix coveralls.json -o ./test/reports
+            - codecov/upload:
+                file: test/reports/excoveralls.json
+            - store_test_results:
+                path: test/reports/
+      - build:
+          name: "Check test coverage (coveralls)"
+          execute:
+            - run: MIX_ENV=test mix coveralls.circle

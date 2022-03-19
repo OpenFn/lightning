@@ -8,7 +8,9 @@ defmodule Lightning.Repo.Migrations.CreateRuns do
       add :exit_code, :integer
       add :started_at, :utc_datetime_usec
       add :finished_at, :utc_datetime_usec
-      add :event_id, references(:invocation_events, on_delete: :nothing, type: :binary_id), null: false
+
+      add :event_id, references(:invocation_events, on_delete: :nothing, type: :binary_id),
+        null: false
 
       timestamps()
     end
