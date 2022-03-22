@@ -10,6 +10,8 @@ defmodule Lightning.Jobs.Job do
     field(:body, :string)
     field(:enabled, :boolean, default: false)
     field(:name, :string)
+    field(:adaptor, :string)
+
     has_one(:trigger, Trigger)
 
     timestamps()
@@ -17,8 +19,11 @@ defmodule Lightning.Jobs.Job do
 
   @doc false
   def changeset(job, attrs) do
-    job
-    |> cast(attrs, [:name, :body, :enabled])
+    changeset =
+      job
+      |> cast(attrs, [:name, :body, :enabled, :adaptor, :adaptor_name])
+
+    changeset
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
     |> validate_required([:name, :body, :enabled])
   end

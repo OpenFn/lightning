@@ -23,6 +23,10 @@ defmodule LightningWeb.JobLive.Index do
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New Job")
+    |> assign(
+      :adaptors,
+      Lightning.AdaptorRegistry.all() |> Enum.map(fn %{name: name} -> name end)
+    )
     |> assign(:job, %Job{})
   end
 
