@@ -46,19 +46,20 @@ defmodule Lightning.MixProject do
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:phoenix, "~> 1.6.6"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.5"},
-      {:phoenix, "~> 1.6.6"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 1.0"}
+      {:telemetry_poller, "~> 1.0"},
+      {:temp, "~> 0.4", only: :test}
     ]
   end
 

@@ -7,18 +7,22 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Start the Ecto repository
-      Lightning.Repo,
-      # Start the Telemetry supervisor
-      LightningWeb.Telemetry,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: Lightning.PubSub},
-      # Start the Endpoint (http/https)
-      LightningWeb.Endpoint
-      # Start a worker by calling: Lightning.Worker.start_link(arg)
-      # {Lightning.Worker, arg}
-    ]
+    adaptor_registry_childspec =
+      {Lightning.AdaptorRegistry, Application.get_env(:lightning, Lightning.AdaptorRegistry)}
+
+    children =
+      [
+        # Start the Ecto repository
+        Lightning.Repo,
+        # Start the Telemetry supervisor
+        LightningWeb.Telemetry,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: Lightning.PubSub},
+        # Start the Endpoint (http/https)
+        LightningWeb.Endpoint
+        # Start a worker by calling: Lightning.Worker.start_link(arg)
+        # {Lightning.Worker, arg}
+      ] ++ List.wrap(adaptor_registry_childspec)
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

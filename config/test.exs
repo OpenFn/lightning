@@ -23,6 +23,9 @@ config :lightning, LightningWeb.Endpoint,
 # In test we don't send emails.
 config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 
+config :lightning, Lightning.AdaptorRegistry,
+  use_cache: "test/fixtures/adaptor_registry_cache.json"
+
 # Print only warnings and errors during test
 config :logger, level: :warn
 
