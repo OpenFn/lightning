@@ -26,9 +26,15 @@ to dynamically make the specified versions of Elixir and Erlang available.
 ```
 asdf install  # Install language versions
 mix local.hex
+mix deps.get
 mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
+mix ecto.migrate
 ```
+
+### Run the app
+
+Lightening is a web app. To run it, start the development server by running `mix phx.server`. Once the server started, see the app running in `localhost:4000`
 
 ## Running Tests
 
