@@ -21,7 +21,7 @@ defmodule Lightning.Jobs.Job do
   def changeset(job, attrs) do
     changeset =
       job
-      |> cast(attrs, [:name, :body, :enabled, :adaptor, :adaptor_name])
+      |> cast(attrs, [:name, :body, :enabled, :adaptor])
 
     changeset
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
