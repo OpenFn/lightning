@@ -3,50 +3,56 @@ defmodule LightningWeb.Router do
   alias JobLive
 
   pipeline :browser do
-    plug :accepts, ["html"]
-    plug :fetch_session
-    plug :fetch_live_flash
-    plug :put_root_layout, {LightningWeb.LayoutView, :root}
-    plug :protect_from_forgery
-    plug :put_secure_browser_headers, %{"content-security-policy" => "default-src 'self'"}
+    plug(:accepts, ["html"])
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:put_root_layout, {LightningWeb.LayoutView, :root})
+    plug(:protect_from_forgery)
+    plug(:put_secure_browser_headers, %{"content-security-policy" => "default-src 'self'"})
   end
 
   pipeline :api do
-    plug :accepts, ["json"]
+    plug(:accepts, ["json"])
   end
 
   scope "/", LightningWeb do
-    pipe_through :browser
+    pipe_through(:browser)
 
-    live "/", DashboardLive.Index, :index
+    live("/", DashboardLive.Index, :index)
 
-    live "/jobs", JobLive.Index, :index
-    live "/jobs/new", JobLive.Index, :new
+    live("/jobs", JobLive.Index, :index)
+    live("/jobs/new", JobLive.Index, :new)
     # live "/jobs/:id/edit", JobLive.Index, :edit
 
-    live "/jobs/:id", JobLive.Show, :show
-    live "/jobs/:id/edit", JobLive.Edit, :edit
+    live("/jobs/:id", JobLive.Show, :show)
+    live("/jobs/:id/edit", JobLive.Edit, :edit)
     # live "/jobs/:id/show/edit", JobLive.Show, :edit
 
-    live "/dataclips", DataclipLive.Index, :index
-    live "/dataclips/new", DataclipLive.Index, :new
-    live "/dataclips/:id/edit", DataclipLive.Index, :edit
+    live("/credentials", CredentialLive.Index, :index)
+    live("/credentials/new", CredentialLive.Index, :new)
 
-    live "/dataclips/:id", DataclipLive.Show, :show
-    live "/dataclips/:id/show/edit", DataclipLive.Show, :edit
+    live("/credentials/:id", CredentialLive.Show, :show)
+    live("/credentials/:id/edit", CredentialLive.Edit, :edit)
 
-    live "/runs", RunLive.Index, :index
-    live "/runs/new", RunLive.Index, :new
-    live "/runs/:id/edit", RunLive.Index, :edit
+    live("/dataclips", DataclipLive.Index, :index)
+    live("/dataclips/new", DataclipLive.Index, :new)
+    live("/dataclips/:id/edit", DataclipLive.Index, :edit)
 
-    live "/runs/:id", RunLive.Show, :show
-    live "/runs/:id/show/edit", RunLive.Show, :edit
+    live("/dataclips/:id", DataclipLive.Show, :show)
+    live("/dataclips/:id/show/edit", DataclipLive.Show, :edit)
+
+    live("/runs", RunLive.Index, :index)
+    live("/runs/new", RunLive.Index, :new)
+    live("/runs/:id/edit", RunLive.Index, :edit)
+
+    live("/runs/:id", RunLive.Show, :show)
+    live("/runs/:id/show/edit", RunLive.Show, :edit)
   end
 
   scope "/i", LightningWeb do
-    pipe_through :api
+    pipe_through(:api)
 
-    post "/*path", WebhooksController, :create
+    post("/*path", WebhooksController, :create)
   end
 
   # Other scopes may use custom stacks.
@@ -65,9 +71,9 @@ defmodule LightningWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/" do
-      pipe_through :browser
+      pipe_through(:browser)
 
-      live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
+      live_dashboard("/dashboard", metrics: LightningWeb.Telemetry)
     end
   end
 
@@ -77,9 +83,9 @@ defmodule LightningWeb.Router do
   # node running the Phoenix server.
   if Mix.env() == :dev do
     scope "/dev" do
-      pipe_through :browser
+      pipe_through(:browser)
 
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
+      forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
   end
 end
