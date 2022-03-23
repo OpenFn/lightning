@@ -20,7 +20,10 @@ defmodule LightningWeb.RunLive.FormComponent do
   def handle_event("validate", %{"run" => run_params}, socket) do
     changeset =
       socket.assigns.run
-      |> Invocation.change_run(run_params)
+      |> Invocation.change_run(
+        run_params
+        |> Map.update!("log", fn log -> String.split(log, "\n") |> List.wrap() end)
+      )
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :changeset, changeset)}

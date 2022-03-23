@@ -8,7 +8,7 @@ defmodule Lightning.Application do
   @impl true
   def start(_type, _args) do
     adaptor_registry_childspec =
-      {Lightning.AdaptorRegistry, Application.get_env(:lightning, Lightning.AdaptorRegistry)}
+      {Lightning.AdaptorRegistry, Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
 
     children =
       [
