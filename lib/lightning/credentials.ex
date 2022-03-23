@@ -4,6 +4,7 @@ defmodule Lightning.Credentials do
   """
 
   import Ecto.Query, warn: false
+  import Lightning.Helpers, only: [coerce_json_field: 2]
   alias Lightning.Repo
 
   alias Lightning.Credentials.Credential
@@ -51,7 +52,7 @@ defmodule Lightning.Credentials do
   """
   def create_credential(attrs \\ %{}) do
     %Credential{}
-    |> Credential.changeset(attrs)
+    |> Credential.changeset(attrs |> coerce_json_field("body"))
     |> Repo.insert()
   end
 
@@ -69,7 +70,7 @@ defmodule Lightning.Credentials do
   """
   def update_credential(%Credential{} = credential, attrs) do
     credential
-    |> Credential.changeset(attrs)
+    |> Credential.changeset(attrs |> coerce_json_field("body"))
     |> Repo.update()
   end
 
@@ -99,6 +100,9 @@ defmodule Lightning.Credentials do
 
   """
   def change_credential(%Credential{} = credential, attrs \\ %{}) do
-    Credential.changeset(credential, attrs)
+    Credential.changeset(
+      credential,
+      attrs |> coerce_json_field("body")
+    )
   end
 end

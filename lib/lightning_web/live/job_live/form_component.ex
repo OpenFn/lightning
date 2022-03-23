@@ -32,7 +32,7 @@ defmodule LightningWeb.JobLive.FormComponent do
 
   @impl true
   def handle_event("validate", %{"job" => job_params}, socket) do
-    # Coerce any changes to the "Adaptor" dropdown into a new selection on the 
+    # Coerce any changes to the "Adaptor" dropdown into a new selection on the
     # Version dropdown.
     job_params =
       Map.update(job_params, "adaptor", "", fn _adaptor ->

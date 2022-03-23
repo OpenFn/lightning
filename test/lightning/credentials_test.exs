@@ -36,14 +36,19 @@ defmodule Lightning.CredentialsTest do
       credential = credential_fixture()
       update_attrs = %{body: %{}, name: "some updated name"}
 
-      assert {:ok, %Credential{} = credential} = Credentials.update_credential(credential, update_attrs)
+      assert {:ok, %Credential{} = credential} =
+               Credentials.update_credential(credential, update_attrs)
+
       assert credential.body == %{}
       assert credential.name == "some updated name"
     end
 
     test "update_credential/2 with invalid data returns error changeset" do
       credential = credential_fixture()
-      assert {:error, %Ecto.Changeset{}} = Credentials.update_credential(credential, @invalid_attrs)
+
+      assert {:error, %Ecto.Changeset{}} =
+               Credentials.update_credential(credential, @invalid_attrs)
+
       assert credential == Credentials.get_credential!(credential.id)
     end
 

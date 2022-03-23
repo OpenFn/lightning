@@ -1,4 +1,8 @@
 defmodule Lightning.Credentials.Credential do
+  @moduledoc """
+  The Credential model.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

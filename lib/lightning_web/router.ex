@@ -1,6 +1,7 @@
 defmodule LightningWeb.Router do
   use LightningWeb, :router
   alias JobLive
+  alias CredentialLive
 
   pipeline :browser do
     plug(:accepts, ["html"])

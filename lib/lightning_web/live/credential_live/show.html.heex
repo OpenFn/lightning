@@ -1,0 +1,34 @@
+<MainSection.header title="Credentials" />
+
+<MainSection.main>
+  <%= if @live_action in [:edit] do %>
+    <.modal return_to={Routes.credential_show_path(@socket, :show, @credential)}>
+      <.live_component
+        module={LightningWeb.CredentialLive.FormComponent}
+        id={@credential.id}
+        title={@page_title}
+        action={@live_action}
+        credential={@credential}
+        return_to={Routes.credential_show_path(@socket, :show, @credential)}
+      />
+    </.modal>
+  <% end %>
+
+  <ul>
+
+    <li>
+      <strong>Name:</strong>
+      <%= @credential.name %>
+    </li>
+
+    <li>
+      <strong>Body:</strong>
+      <%= @credential.body %>
+    </li>
+
+  </ul>
+
+  <span><%= live_patch "Edit", to: Routes.credential_edit_path(@socket, :edit, @credential), class: "button" %></span> |
+  <span><%= live_redirect "Back", to: Routes.credential_index_path(@socket, :index) %></span>
+</MainSection.main>
+
