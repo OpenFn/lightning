@@ -34,7 +34,8 @@ mix ecto.migrate
 
 ### Run the app
 
-Lightening is a web app. To run it, start the development server by running `mix phx.server`. Once the server started, see the app running in `localhost:4000`
+Lightning is a web app. To run it, start the development server by running `mix phx.server`. 
+Once the server has started, head to [`localhost:4000`](http://localhost:4000`) in your browser.
 
 ## Running Tests
 
