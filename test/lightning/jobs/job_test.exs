@@ -4,7 +4,9 @@ defmodule Lightning.Jobs.JobTest do
   alias Lightning.Jobs.Job
 
   defp random_job_name(length) do
-    for _ <- 1..length, into: "", do: <<Enum.random('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ')>>
+    for _ <- 1..length,
+        into: "",
+        do: <<Enum.random('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ')>>
   end
 
   describe "changeset/2" do
@@ -21,8 +23,11 @@ defmodule Lightning.Jobs.JobTest do
     end
 
     test "name can't contain non url-safe chars" do
-      errors = Job.changeset(%Job{}, %{name: "My project @ OpenFn"}) |> errors_on()
-      assert errors[:name] == ["has invalid format"]
+      ["My project @ OpenFn", "Can't have a / slash"]
+      |> Enum.each(fn name ->
+        errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()
+        assert errors[:name] == ["has invalid format"]
+      end)
     end
   end
 end
