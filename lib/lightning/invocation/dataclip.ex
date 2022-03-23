@@ -6,7 +6,7 @@ defmodule Lightning.Invocation.Dataclip do
   the data and the source of the data.
 
   ## Types
-  
+
   * `:http_request`  
     The data arrived via a webhook.
   * `:global`  
