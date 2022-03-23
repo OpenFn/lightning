@@ -217,7 +217,7 @@ defmodule Lightning.AdaptorRegistry do
       { "@openfn/language-salesforce", nil }
 
   """
-  @spec resolve_package_name(package_name :: String.t()) :: {binary, binary | nil}
+  @spec resolve_package_name(package_name :: String.t()) :: {binary | nil, binary | nil}
   def resolve_package_name(package_name) when is_binary(package_name) do
     ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w]+))?$/
     |> Regex.run(package_name)
