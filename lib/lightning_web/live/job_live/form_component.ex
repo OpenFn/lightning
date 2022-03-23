@@ -1,4 +1,15 @@
 defmodule LightningWeb.JobLive.FormComponent do
+  @moduledoc """
+  Form Component for working with a single Job
+
+  A Job's `adaptor` field is a combination of the module name and the version.
+  It's formatted as an NPM style string.
+
+  The form allows the user to select a module by name and then it's version,
+  while the version dropdown itself references `adaptor` directly.
+
+  Meaning the `adaptor_name` dropdown and assigns value is not persisted.
+  """
   use LightningWeb, :live_component
 
   alias Lightning.{Jobs, AdaptorRegistry}

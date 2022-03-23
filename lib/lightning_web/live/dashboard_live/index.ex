@@ -1,4 +1,5 @@
 defmodule LightningWeb.DashboardLive.Index do
+  @moduledoc false
   use LightningWeb, :live_view
 
   @impl true

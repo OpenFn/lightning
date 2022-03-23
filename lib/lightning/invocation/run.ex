@@ -1,4 +1,10 @@
 defmodule Lightning.Invocation.Run do
+  @moduledoc """
+  Ecto model for Runs.
+
+  A run represents the results of an Invocation.Event, where the Event
+  stores what triggered the Run, the Run itself represents the execution.
+  """
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Invocation.Event

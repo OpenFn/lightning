@@ -1,4 +1,7 @@
 defmodule LightningWeb.RunLive.FormComponent do
+  @moduledoc """
+  LiveView form component for Runs
+  """
   use LightningWeb, :live_component
 
   alias Lightning.Invocation

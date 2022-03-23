@@ -1,4 +1,7 @@
 defmodule LightningWeb.DataclipLive.FormComponent do
+  @moduledoc """
+  LiveView component for creating and editing a single `DataClip`
+  """
   use LightningWeb, :live_component
 
   alias Lightning.Invocation

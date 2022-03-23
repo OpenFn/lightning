@@ -1,4 +1,7 @@
 defmodule LightningWeb.LiveHelpers do
+  @moduledoc """
+  General purpose LiveView helper functions
+  """
   import Phoenix.LiveView
   import Phoenix.LiveView.Helpers
 

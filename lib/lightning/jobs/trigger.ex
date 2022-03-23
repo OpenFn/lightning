@@ -1,4 +1,16 @@
 defmodule Lightning.Jobs.Trigger do
+  @moduledoc """
+  Ecto model for Triggers.
+
+  Triggers represent the criteria in which a Job might be invoked.
+
+  ## Types
+  
+  ### Webhook (default)
+  
+  A webhook trigger allows a Job to invoked (via `Lightning.Invocation`) when it's
+  endpoint is called.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 

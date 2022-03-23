@@ -1,4 +1,7 @@
 defmodule LightningWeb.JobLive.Show do
+  @moduledoc """
+  LiveView for viewing a single Job
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Jobs

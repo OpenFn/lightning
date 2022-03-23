@@ -1,4 +1,12 @@
 defmodule Lightning.Invocation.Event do
+  @moduledoc """
+  Ecto model for Invocation Events.
+
+  An event represents, that a trigger was invoked.
+  By storing the data that arrived in a `Dataclip`, and pairing that with
+  the corresponding Job we can maintain a detailed mapping of what happened
+  in the lifetime of a Job or Dataclip.
+  """
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Invocation.{Dataclip, Run}

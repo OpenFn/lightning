@@ -1,4 +1,7 @@
 defmodule LightningWeb.JobLive.Index do
+  @moduledoc """
+  LiveView for listing and managing Jobs
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Jobs

@@ -24,12 +24,20 @@ defmodule Lightning.AdaptorRegistry do
   The process uses `:continue` to return before the adaptors have been queried.
   This does mean that the first call to the process will be delayed until
   the `handle_continue/2` has finished.
+
+  **Timeouts**
+
+  There is a 'general' timeout of 30s, this is used for GenServer calls like 
+  `all/1` and also internally when the modules are being queried. NPM can
+  be extremely fast to respond if the package is cached on their side, but 
+  can take a couple of seconds if not cached.
   """
 
   use GenServer
   require Logger
 
   @excluded_adaptors ["@openfn/language-devtools", "@openfn/language-template"]
+  @timeout 30_000
 
   defmodule Npm do
     @moduledoc """
@@ -154,7 +162,7 @@ defmodule Lightning.AdaptorRegistry do
   """
   @spec all(server :: GenServer.server()) :: list()
   def all(server \\ __MODULE__) do
-    GenServer.call(server, :all, 30000)
+    GenServer.call(server, :all, @timeout)
   end
 
   @doc """
@@ -162,7 +170,7 @@ defmodule Lightning.AdaptorRegistry do
   """
   @spec versions_for(server :: GenServer.server(), module_name :: String.t()) :: list() | nil
   def versions_for(server \\ __MODULE__, module_name) do
-    GenServer.call(server, {:versions_for, module_name}, 30000)
+    GenServer.call(server, {:versions_for, module_name}, @timeout)
   end
 
   def fetch() do
@@ -178,7 +186,7 @@ defmodule Lightning.AdaptorRegistry do
       &fetch_npm_details/1,
       ordered: false,
       max_concurrency: 5,
-      timeout: 30000
+      timeout: @timeout
     )
     |> Stream.map(fn {:ok, detail} -> detail end)
     |> Enum.to_list()

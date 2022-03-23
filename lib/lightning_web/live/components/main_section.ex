@@ -1,4 +1,7 @@
 defmodule LightningWeb.Components.MainSection do
+  @moduledoc """
+  Wrapper helpers for layout
+  """
   use LightningWeb, :component
 
   def header(assigns) do
