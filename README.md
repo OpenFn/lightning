@@ -79,3 +79,8 @@ In addition to our test suite, you can run the following commands:
 > For convenience there is a `verify` mix task that runs all of the above and
 > defaults the `MIX_ENV` to `test`.
 
+## Generating Documentation
+
+You can generate the HTML and EPUB documentation locally using:
+
+`mix docs` and opening `doc/index.html` in your browser.
