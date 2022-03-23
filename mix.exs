@@ -12,6 +12,7 @@ defmodule Lightning.MixProject do
       aliases: aliases(),
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [verify: :test],
 
       # Docs
       name: "Lightning",
@@ -46,7 +47,7 @@ defmodule Lightning.MixProject do
   defp deps do
     [
       {:credo, "~> 1.6", only: [:test, :dev]},
-      {:dialyxir, "~> 1.1", only: [:test, :dev]},
+      {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
       {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
@@ -87,7 +88,14 @@ defmodule Lightning.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      "assets.deploy": ["esbuild default --minify", "phx.digest"],
+      verify: [
+        "coveralls",
+        "format --check-formatted",
+        "dialyzer",
+        "credo",
+        "sobelow --exit Medium"
+      ]
     ]
   end
 end

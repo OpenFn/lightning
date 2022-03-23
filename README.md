@@ -65,5 +65,10 @@ In addition to our test suite, you can run the following commands:
 * `mix sobelow --exit Medium`  
   Check for commonly known security exploits. See [Sobelow](https://sobelow.io/).
 * `MIX_ENV=test mix coveralls`  
-  Test coverage reporter. See [excoveralls](https://github.com/parroty/excoveralls).
+  Test coverage reporter. This command also runs the test suite, and can be 
+  used in place of `mix test` when checking everything before pushing your code.
+  See [excoveralls](https://github.com/parroty/excoveralls).
+
+> For convenience there is a `verify` mix task that runs all of the above and
+> defaults the `MIX_ENV` to `test`.
 
