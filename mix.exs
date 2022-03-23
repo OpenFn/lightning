@@ -21,7 +21,7 @@ defmodule Lightning.MixProject do
         # The main page in the docs
         main: "Lightning",
         logo: "priv/static/images/square-logo.png",
-        extras: ["README.md"]
+        extras: ["README.md": [title: "Lightning"]]
       ]
     ]
   end
