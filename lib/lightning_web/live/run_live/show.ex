@@ -1,4 +1,7 @@
 defmodule LightningWeb.RunLive.Show do
+  @moduledoc """
+  LiveView for viewing a single Run
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Invocation

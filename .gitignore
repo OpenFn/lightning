@@ -38,3 +38,5 @@ npm-debug.log
 # Dialyzer output file
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
+
+tmp

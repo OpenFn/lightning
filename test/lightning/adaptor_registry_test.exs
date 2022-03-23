@@ -4,7 +4,7 @@ defmodule Lightning.AdaptorRegistryTest do
 
   alias Lightning.AdaptorRegistry
 
-  describe "fetch/0" do
+  describe "start_link/1" do
     # AdaptorRegistry is a GenServer, and so stubbed (external) functions must 
     # be mocked globally. See: https://github.com/edgurgel/mimic#private-and-global-mode
     setup :set_mimic_from_context
@@ -15,11 +15,36 @@ defmodule Lightning.AdaptorRegistryTest do
       :ok
     end
 
-    test "retrieves a list of adaptors" do
+    test "uses cache from a specific location" do
+      {:ok, fd, file_path} = Temp.open("cache.json")
+
+      IO.write(fd, ~S"""
+        [{
+          "latest": "3.0.5",
+          "name": "@openfn/language-dhis2",
+          "repo": "git+https://github.com/openfn/language-dhis2.git",
+          "versions": []
+        }]
+      """)
+
+      File.close(fd)
+      start_supervised!({AdaptorRegistry, [name: :test_adaptor_registry, use_cache: file_path]})
+
+      results = AdaptorRegistry.all(:test_adaptor_registry)
+      assert length(results) == 1
+
+      File.rm(file_path)
+    end
+
+    test "retrieves a list of adaptors when caching is disabled" do
       # :hackney.request(request.method, request.url, request.headers, request.body, hn_options)
       expect(:hackney, :request, fn
         :get, "https://registry.npmjs.org/-/user/openfn/package", [], "", [pool: :default] ->
           {:ok, 200, "headers", :client}
+      end)
+
+      expect(:hackney, :body, fn :client, _timeout ->
+        {:ok, File.read!("test/fixtures/openfn-packages-npm.json")}
       end)
 
       expected_adaptors = [
@@ -41,41 +66,44 @@ defmodule Lightning.AdaptorRegistryTest do
           {:ok, 200, "headers", :adaptor}
       end)
 
-      expect(:hackney, :body, fn :client, _timeout ->
-        {:ok,
-         ~S[{"@openfn/language-common":"write","@openfn/devtools":"write","@openfn/language-http":"write","@openfn/core":"write","@openfn/simple-ast":"write","@openfn/language-dhis2":"write","@openfn/react-json-view":"write","@openfn/language-template":"write","@openfn/language-commcare":"write","@openfn/doclet-query":"write","@openfn/language-salesforce":"write","@openfn/language-asana":"write","@openfn/language-devtools":"write"}]}
-      end)
+      start_supervised!({AdaptorRegistry, [name: :test_adaptor_registry, use_cache: false]})
 
-      {:ok, _pid} = AdaptorRegistry.start_link()
-
-      results = AdaptorRegistry.all()
+      results = AdaptorRegistry.all(:test_adaptor_registry)
 
       assert length(results) == 6
+
+      versions = [
+        %{version: "1.1.0"},
+        %{version: "1.1.1"},
+        %{version: "1.2.0"},
+        %{version: "1.2.1"},
+        %{version: "1.2.2"},
+        %{version: "1.2.4"},
+        %{version: "1.2.5"},
+        %{version: "1.2.6"},
+        %{version: "1.2.7"},
+        %{version: "1.2.8"},
+        %{version: "1.4.0"},
+        %{version: "1.4.1"},
+        %{version: "1.4.2"},
+        %{version: "1.5.0"},
+        %{version: "1.6.0"},
+        %{version: "1.6.1"},
+        %{version: "1.6.2"}
+      ]
 
       assert %{
                name: "@openfn/language-common",
                repo: "git+https://github.com/OpenFn/language-common.git",
                latest: "1.6.2",
-               versions: [
-                 %{version: "1.1.0"},
-                 %{version: "1.1.1"},
-                 %{version: "1.2.0"},
-                 %{version: "1.2.1"},
-                 %{version: "1.2.2"},
-                 %{version: "1.2.4"},
-                 %{version: "1.2.5"},
-                 %{version: "1.2.6"},
-                 %{version: "1.2.7"},
-                 %{version: "1.2.8"},
-                 %{version: "1.4.0"},
-                 %{version: "1.4.1"},
-                 %{version: "1.4.2"},
-                 %{version: "1.5.0"},
-                 %{version: "1.6.0"},
-                 %{version: "1.6.1"},
-                 %{version: "1.6.2"}
-               ]
+               versions: versions
              } in results
+
+      assert AdaptorRegistry.versions_for(:test_adaptor_registry, "@openfn/language-common") ==
+               versions
+
+      assert AdaptorRegistry.versions_for(:test_adaptor_registry, "@openfn/language-foobar") ==
+               nil
     end
   end
 end

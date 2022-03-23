@@ -132,10 +132,7 @@ defmodule Lightning.Invocation do
             :pop
 
           body when is_binary(body) ->
-            case Jason.decode(body) do
-              {:error, _} -> {body, body}
-              {:ok, body_map} -> {body, body_map}
-            end
+            {body, decode_and_replace(body)}
 
           any ->
             {body, any}
@@ -143,6 +140,13 @@ defmodule Lightning.Invocation do
       end)
 
     attrs
+  end
+
+  def decode_and_replace(body) do
+    case Jason.decode(body) do
+      {:error, _} -> body
+      {:ok, body_map} -> body_map
+    end
   end
 
   @doc """

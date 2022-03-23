@@ -15,14 +15,29 @@ defmodule Lightning.AdaptorRegistry do
   AdaptorRegistry.all()
   ```
 
+  **Caching**
+
+  By default the results are cached to disk, and will be reused every start.
+
+  In order to disable or configure caching pass see: `start_link/1`.
+
   The process uses `:continue` to return before the adaptors have been queried.
   This does mean that the first call to the process will be delayed until
   the `handle_continue/2` has finished.
+
+  **Timeouts**
+
+  There is a 'general' timeout of 30s, this is used for GenServer calls like 
+  `all/1` and also internally when the modules are being queried. NPM can
+  be extremely fast to respond if the package is cached on their side, but 
+  can take a couple of seconds if not cached.
   """
 
   use GenServer
+  require Logger
 
   @excluded_adaptors ["@openfn/language-devtools", "@openfn/language-template"]
+  @timeout 30_000
 
   defmodule Npm do
     @moduledoc """
@@ -57,22 +72,86 @@ defmodule Lightning.AdaptorRegistry do
   end
 
   @impl GenServer
-  def init(_opts) do
-    {:ok, [], {:continue, nil}}
+  def init(opts) do
+    {:ok, [], {:continue, opts}}
   end
 
   @impl GenServer
-  def handle_continue(_, _) do
-    {:noreply, fetch()}
+  def handle_continue(opts, _state) do
+    cache_path =
+      case opts[:use_cache] do
+        true -> "tmp/adaptor_registry_cache.json"
+        path when is_binary(path) -> path
+        _ -> nil
+      end
+
+    if cache_path do
+      read_from_cache(cache_path)
+      |> case do
+        nil ->
+          {:noreply, write_to_cache(cache_path, fetch())}
+
+        adaptors ->
+          {:noreply, adaptors}
+      end
+    else
+      {:noreply, fetch()}
+    end
   end
 
-  def start_link() do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  defp write_to_cache(path, adaptors) when is_binary(path) do
+    File.mkdir("tmp")
+    cache_file = File.open!(path, [:write])
+    IO.binwrite(cache_file, Jason.encode_to_iodata!(adaptors))
+    File.close(cache_file)
+
+    adaptors
+  end
+
+  defp read_from_cache(path) when is_binary(path) do
+    File.read(path)
+    |> case do
+      {:ok, file} -> Jason.decode!(file, keys: :atoms)
+      {:error, _} -> nil
+    end
+  end
+
+  @doc """
+  Starts the AdaptorRegistry
+
+  **Options**
+
+  - `:use_cache` (defaults to true) - stores the last set of results on disk
+    and uses the cached file for every subsequent start.
+    It can either be a boolean, or a string - the latter being a file path
+    to set where the cache file is located.
+  - `:name` (defaults to AdaptorRegistry) - the name of the process, useful
+    for testing and/or running multiple versions of the registry
+  """
+  @spec start_link(opts :: [use_cache: boolean() | binary(), name: term()]) ::
+          {:error, any} | {:ok, pid}
+  def start_link(opts \\ [use_cache: true]) do
+    Logger.info("Starting AdaptorRegistry")
+    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @impl GenServer
   def handle_call(:all, _from, state) do
     {:reply, state, state}
+  end
+
+  @impl GenServer
+  def handle_call({:versions_for, module_name}, _from, state) do
+    versions =
+      state
+      |> Enum.find(fn %{name: name} -> name == module_name end)
+      |> case do
+        nil -> nil
+        %{versions: versions} -> versions
+      end
+
+    {:reply, versions, state}
   end
 
   @doc """
@@ -81,8 +160,17 @@ defmodule Lightning.AdaptorRegistry do
   up, so it may take a while the first time it is called (and the list hasn't
   been fetched yet).
   """
-  def all() do
-    GenServer.call(__MODULE__, :all, 30000)
+  @spec all(server :: GenServer.server()) :: list()
+  def all(server \\ __MODULE__) do
+    GenServer.call(server, :all, @timeout)
+  end
+
+  @doc """
+  Get a list of versions for a given module.
+  """
+  @spec versions_for(server :: GenServer.server(), module_name :: String.t()) :: list() | nil
+  def versions_for(server \\ __MODULE__, module_name) do
+    GenServer.call(server, {:versions_for, module_name}, @timeout)
   end
 
   def fetch() do
@@ -98,7 +186,7 @@ defmodule Lightning.AdaptorRegistry do
       &fetch_npm_details/1,
       ordered: false,
       max_concurrency: 5,
-      timeout: 30000
+      timeout: @timeout
     )
     |> Stream.map(fn {:ok, detail} -> detail end)
     |> Enum.to_list()
@@ -116,5 +204,47 @@ defmodule Lightning.AdaptorRegistry do
           %{version: version}
         end)
     }
+  end
+
+  @doc """
+  Destructures an NPM style package name into module name and version.
+
+  **Example**
+
+      iex> resolve_package_name("@openfn/language-salesforce@1.2.3")
+      { "@openfn/language-salesforce", "1.2.3" }
+      iex> resolve_package_name("@openfn/language-salesforce")
+      { "@openfn/language-salesforce", nil }
+
+  """
+  @spec resolve_package_name(package_name :: String.t()) :: {binary | nil, binary | nil}
+  def resolve_package_name(package_name) when is_binary(package_name) do
+    ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w]+))?$/
+    |> Regex.run(package_name)
+    |> case do
+      [_, name, version] ->
+        {name, version}
+
+      [_, _name] ->
+        {package_name, nil}
+
+      _ ->
+        {nil, nil}
+    end
+  end
+
+  @doc """
+  Same as `resolve_package_name/1` except will throw an exception if a package
+  name cannot be matched.
+  """
+  @spec resolve_package_name!(package_name :: String.t()) :: {binary, binary | nil}
+  def resolve_package_name!(package_name) when is_binary(package_name) do
+    {package_name, version} = resolve_package_name(package_name)
+
+    if is_nil(package_name) do
+      raise ArgumentError, "Only npm style package names are currently supported"
+    end
+
+    {package_name, version}
   end
 end

@@ -1,4 +1,9 @@
 defmodule LightningWeb.Telemetry do
+  @moduledoc """
+  Assorted metrics to collect during runtime.
+
+  See https://hexdocs.pm/phoenix/telemetry.html
+  """
   use Supervisor
   import Telemetry.Metrics
 

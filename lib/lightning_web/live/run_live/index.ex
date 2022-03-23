@@ -1,4 +1,7 @@
 defmodule LightningWeb.RunLive.Index do
+  @moduledoc """
+  Index Liveview for Runs
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Invocation

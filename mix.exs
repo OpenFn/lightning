@@ -11,7 +11,19 @@ defmodule Lightning.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      test_coverage: [tool: ExCoveralls]
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [verify: :test],
+
+      # Docs
+      name: "Lightning",
+      source_url: "https://github.com/OpenFn/lightning",
+      homepage_url: "https://www.openfn.org",
+      docs: [
+        # The main page in the docs
+        main: "Lightning",
+        logo: "priv/static/images/square-logo.png",
+        extras: ["README.md": [title: "Lightning"]]
+      ]
     ]
   end
 
@@ -35,9 +47,10 @@ defmodule Lightning.MixProject do
   defp deps do
     [
       {:credo, "~> 1.6", only: [:test, :dev]},
-      {:dialyxir, "~> 1.1", only: [:test, :dev]},
+      {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
       {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.4", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
@@ -46,19 +59,20 @@ defmodule Lightning.MixProject do
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:phoenix, "~> 1.6.6"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_dashboard, "~> 0.6"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.5"},
-      {:phoenix, "~> 1.6.6"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 1.0"}
+      {:telemetry_poller, "~> 1.0"},
+      {:temp, "~> 0.4", only: :test}
     ]
   end
 
@@ -74,7 +88,14 @@ defmodule Lightning.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.deploy": ["esbuild default --minify", "phx.digest"]
+      "assets.deploy": ["esbuild default --minify", "phx.digest"],
+      verify: [
+        "coveralls",
+        "format --check-formatted",
+        "dialyzer",
+        "credo",
+        "sobelow --exit Medium"
+      ]
     ]
   end
 end

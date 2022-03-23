@@ -1,4 +1,7 @@
 defmodule LightningWeb.JobLive.Index do
+  @moduledoc """
+  LiveView for listing and managing Jobs
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Jobs
@@ -23,6 +26,10 @@ defmodule LightningWeb.JobLive.Index do
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New Job")
+    |> assign(
+      :adaptors,
+      Lightning.AdaptorRegistry.all() |> Enum.map(fn %{name: name} -> name end)
+    )
     |> assign(:job, %Job{})
   end
 

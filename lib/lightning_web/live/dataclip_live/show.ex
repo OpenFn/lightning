@@ -1,4 +1,7 @@
 defmodule LightningWeb.DataclipLive.Show do
+  @moduledoc """
+  LiveView for viewing a single dataclip
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Invocation

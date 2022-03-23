@@ -1,4 +1,7 @@
 defmodule LightningWeb.DataclipLive.Index do
+  @moduledoc """
+  LiveView for listing and working with a list of Dataclips
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Invocation
