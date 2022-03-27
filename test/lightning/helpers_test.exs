@@ -24,4 +24,31 @@ defmodule Lightning.HelpersTest do
              stats: "goals:126, teams: Metz, Liverpool"
            }
   end
+
+  test "coerce_json_field/2 will not do anything if the given key doesn't exist" do
+    input = %{name: "Sadio Mane", stats: "goals:126, teams: Metz, Liverpool"}
+
+    assert coerce_json_field(input, "somekey") == %{
+             name: "Sadio Mane",
+             stats: "goals:126, teams: Metz, Liverpool"
+           }
+  end
+
+  test "coerce_json_field/2 will not do anything if the value of the given key is nil" do
+    input = %{name: "Sadio Mane", stats: nil}
+
+    assert coerce_json_field(input, "stats") == %{
+             name: "Sadio Mane",
+             stats: nil
+           }
+  end
+
+  test "coerce_json_field/2 will not do anything if the value of the given key is not a string" do
+    input = %{name: "Sadio Mane", goals: 123}
+
+    assert coerce_json_field(input, "goals") == %{
+             name: "Sadio Mane",
+             goals: 123
+           }
+  end
 end
