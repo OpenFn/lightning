@@ -9,6 +9,11 @@
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
       else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
 
+  <%= live_redirect "Credentials", to: Routes.credential_index_path(@socket, :index),
+      class: if assigns[:active_menu_item] == :credentials,
+      do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
+      else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
+
   <%= live_redirect "Dataclips", to: Routes.dataclip_index_path(@socket, :index),
       class: if assigns[:active_menu_item] == :dataclips,
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",

@@ -4,6 +4,7 @@ defmodule Lightning.Invocation do
   """
 
   import Ecto.Query, warn: false
+  import Lightning.Helpers, only: [coerce_json_field: 2]
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Event, Run}
@@ -73,7 +74,7 @@ defmodule Lightning.Invocation do
   """
   def create_dataclip(attrs \\ %{}) do
     %Dataclip{}
-    |> Dataclip.changeset(attrs |> coerce_json_body())
+    |> Dataclip.changeset(attrs |> coerce_json_field("body"))
     |> Repo.insert()
   end
 
@@ -91,7 +92,7 @@ defmodule Lightning.Invocation do
   """
   def update_dataclip(%Dataclip{} = dataclip, attrs) do
     dataclip
-    |> Dataclip.changeset(attrs |> coerce_json_body())
+    |> Dataclip.changeset(attrs |> coerce_json_field("body"))
     |> Repo.update()
   end
 
@@ -121,32 +122,7 @@ defmodule Lightning.Invocation do
 
   """
   def change_dataclip(%Dataclip{} = dataclip, attrs \\ %{}) do
-    Dataclip.changeset(dataclip, attrs |> coerce_json_body())
-  end
-
-  defp coerce_json_body(attrs) do
-    {_, attrs} =
-      Map.get_and_update(attrs, "body", fn body ->
-        case body do
-          nil ->
-            :pop
-
-          body when is_binary(body) ->
-            {body, decode_and_replace(body)}
-
-          any ->
-            {body, any}
-        end
-      end)
-
-    attrs
-  end
-
-  def decode_and_replace(body) do
-    case Jason.decode(body) do
-      {:error, _} -> body
-      {:ok, body_map} -> body_map
-    end
+    Dataclip.changeset(dataclip, attrs |> coerce_json_field("body"))
   end
 
   @doc """

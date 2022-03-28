@@ -1,0 +1,14 @@
+<MainSection.header title={"#{@credential.name}"} />
+
+<MainSection.main>
+
+  <.live_component
+    module={LightningWeb.CredentialLive.FormComponent}
+    id={@credential.id || :new}
+    title={@page_title}
+    action={@live_action}
+    credential={@credential}
+    return_to={Routes.credential_index_path(@socket, :index)}
+  />
+
+</MainSection.main>
