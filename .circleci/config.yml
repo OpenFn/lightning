@@ -7,6 +7,18 @@ orbs:
   codecov: codecov/codecov@1.0.5
   coveralls: coveralls/coveralls@1.0.6
 
+commands:
+  install_node:
+    steps:
+      - run:
+          name: "Install Node.js and npm"
+          command: |
+            curl -sSL "https://nodejs.org/dist/v14.17.6/node-v14.17.6-linux-x64.tar.xz" | sudo tar --strip-components=2 -xJ -C /usr/local/bin/ node-v14.17.6-linux-x64/bin/node
+            curl https://www.npmjs.com/install.sh | sudo bash
+      - run:
+          name: Check current version of node
+          command: node -v
+
 jobs:
   build:
     parameters:
@@ -24,6 +36,7 @@ jobs:
       - image: cimg/postgres:12.9
 
     steps:
+      - install_node
       - checkout
 
       - restore_cache:
