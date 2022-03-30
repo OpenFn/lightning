@@ -13,8 +13,8 @@ commands:
       - run:
           name: "Install Node.js and npm"
           command: |
-            curl -sSL "https://nodejs.org/dist/v14.17.6/node-v14.17.6-linux-x64.tar.xz" | sudo tar --strip-components=2 -xJ -C /usr/local/bin/ node-v14.17.6-linux-x64/bin/node
-            curl https://www.npmjs.com/install.sh | sudo bash
+            curl -sSL "https://nodejs.org/dist/v14.17.6/node-v14.17.6-linux-x64.tar.xz" | tar --strip-components=2 -xJ -C /usr/local/bin/ node-v14.17.6-linux-x64/bin/node
+            curl https://www.npmjs.com/install.sh | bash
       - run:
           name: Check current version of node
           command: node -v
