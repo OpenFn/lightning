@@ -30,6 +30,10 @@ defmodule LightningWeb.JobLive.Index do
       :adaptors,
       Lightning.AdaptorRegistry.all() |> Enum.map(fn %{name: name} -> name end)
     )
+    |> assign(
+      :credentials,
+      Lightning.Credentials.list_credentials()
+    )
     |> assign(:job, %Job{})
   end
 

@@ -12,7 +12,7 @@ defmodule LightningWeb.JobLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.{Jobs, AdaptorRegistry}
+  alias Lightning.{Jobs, AdaptorRegistry, Credentials}
 
   @impl true
   def update(%{job: job} = assigns, socket) do
@@ -21,11 +21,14 @@ defmodule LightningWeb.JobLive.FormComponent do
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(changeset |> Ecto.Changeset.fetch_field!(:adaptor))
 
+    credentials = Credentials.list_credentials()
+
     {:ok,
      socket
      |> assign(assigns)
      |> assign(:adaptor_name, adaptor_name)
      |> assign(:adaptors, adaptors)
+     |> assign(:credentials, credentials)
      |> assign(:versions, versions)
      |> assign(:changeset, changeset)}
   end

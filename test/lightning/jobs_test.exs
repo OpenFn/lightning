@@ -2,6 +2,9 @@ defmodule Lightning.JobsTest do
   use Lightning.DataCase
 
   alias Lightning.Jobs
+  alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
+  alias Lightning.Repo
 
   describe "jobs" do
     alias Lightning.Jobs.Job
@@ -43,6 +46,29 @@ defmodule Lightning.JobsTest do
       assert job.name == "some name"
 
       assert job.trigger.comment == "foo"
+    end
+
+    test "create_job/1 with a credential associated creates a Job with credential_id and a credential object" do
+      {:ok, %Credential{} = credential} =
+        Credentials.create_credential(%{
+          body: %{},
+          name: "My credential"
+        })
+
+      assert {:ok, %Job{} = job} =
+               Jobs.create_job(%{
+                 body: "some body",
+                 enabled: true,
+                 name: "some name",
+                 trigger: %{comment: "foo"},
+                 credential_id: credential.id
+               })
+
+      job = Repo.preload(job, :credential)
+
+      assert job.credential_id == credential.id
+      assert job.credential.name == credential.name
+      assert job.credential.body == credential.body
     end
 
     test "create_job/1 with invalid data returns error changeset" do

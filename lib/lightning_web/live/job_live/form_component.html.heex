@@ -30,6 +30,18 @@
     </div>
 
     <div class="col-span-2">
+      <%= label f, :credential_id, "Credential", for: "credentialField", class: "block text-sm font-medium text-gray-700" %>
+
+      <%= select f, :credential_id, Enum.map(@credentials, &{&1.name, &1.id}), id: "credentialField", class: "block
+        w-full
+        mt-1
+        rounded-md
+        border-gray-300
+        shadow-sm
+        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" %>
+    </div>
+
+    <div class="col-span-2">
       <%= label f, :adaptor_name, "Adaptor", class: "block text-sm font-medium text-gray-700" %>
 
         <%= select f, :adaptor_name, @adaptors, prompt: "", selected: @adaptor_name, class: "block
