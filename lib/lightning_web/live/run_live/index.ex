@@ -9,7 +9,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :runs, list_runs())}
+    {:ok, assign(socket, :runs, list_runs()) |> assign(:active_menu_item, :runs)}
   end
 
   @impl true

@@ -32,6 +32,7 @@ jobs:
       - run: mix local.hex --force
       - run: mix local.rebar --force
       - run: MIX_ENV=test mix do deps.get --only test, deps.compile, compile
+      - run: MIX_ENV=test mix openfn.install.runtime
 
       - save_cache:
           key: testing-elixir-v<< parameters.version >>

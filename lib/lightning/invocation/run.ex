@@ -5,6 +5,12 @@ defmodule Lightning.Invocation.Run do
   A run represents the results of an Invocation.Event, where the Event
   stores what triggered the Run, the Run itself represents the execution.
   """
+
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          event: nil | %{job_id: Ecto.UUID.t()}
+        }
+
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Invocation.Event

@@ -29,7 +29,11 @@
     <tbody id="runs">
       <%= for run <- @runs do %>
         <tr id={"run-#{run.id}"}>
-          <td><%= run.log %></td>
+          <td class="font-mono text-xs">
+            <%= for line <- run.log do %>
+              <li class="list-none"><%= raw(line |> String.replace(" ", "&nbsp;")) %></li>
+            <% end %>
+          </td>
           <td><%= run.exit_code %></td>
           <td><%= run.started_at %></td>
           <td><%= run.finished_at %></td>

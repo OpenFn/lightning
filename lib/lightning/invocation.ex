@@ -58,7 +58,50 @@ defmodule Lightning.Invocation do
       ** (Ecto.NoResultsError)
 
   """
+  @spec get_dataclip!(id :: Ecto.UUID.t()) :: Dataclip.t()
   def get_dataclip!(id), do: Repo.get!(Dataclip, id)
+
+  @doc """
+  Gets a single dataclip given one of:
+
+  - a Dataclip uuid
+  - a Run model, that has an associated dataclip via it's event
+
+  Returns `nil` if the Dataclip does not exist.
+
+  ## Examples
+
+      iex> get_dataclip("27b73932-16c7-4a72-86a3-85d805ccff98")
+      %Dataclip{}
+
+      iex> get_dataclip("27b73932-16c7-4a72-86a3-85d805ccff98")
+      nil
+
+      iex> get_dataclip(%Run{id: "a uuid"})
+      %Dataclip{}
+
+  """
+  @spec get_dataclip(run_or_uuid :: Run.t() | Ecto.UUID.t()) :: Dataclip.t() | nil
+  def get_dataclip(%Run{id: id}) do
+    from(r in Run, join: d in assoc(r, :dataclip), select: d, where: r.id == ^id)
+    |> Repo.one()
+  end
+
+  def get_dataclip(id), do: Repo.get(Dataclip, id)
+
+  @doc """
+  Gets a single dataclip's body as a string
+  Returns `nil` if the Dataclip does not exist.
+  """
+  @spec get_dataclip_body(Run.t()) :: String.t() | nil
+  def get_dataclip_body(%Run{id: id}) do
+    from(r in Run,
+      join: d in assoc(r, :dataclip),
+      select: type(d.body, :string),
+      where: r.id == ^id
+    )
+    |> Repo.one()
+  end
 
   @doc """
   Creates a dataclip.

@@ -38,6 +38,21 @@ defmodule Lightning.InvocationTest do
     test "get_dataclip!/1 returns the dataclip with given id" do
       dataclip = dataclip_fixture()
       assert Invocation.get_dataclip!(dataclip.id) == dataclip
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Invocation.get_dataclip!(Ecto.UUID.generate())
+      end
+    end
+
+    test "get_dataclip/1 returns the dataclip with given id" do
+      event = event_fixture() |> Repo.preload(:dataclip)
+      dataclip = event.dataclip
+      assert Invocation.get_dataclip(dataclip.id) == dataclip
+      assert Invocation.get_dataclip(Ecto.UUID.generate()) == nil
+
+      run = run_fixture(event_id: event.id)
+
+      assert Invocation.get_dataclip(run) == dataclip
     end
 
     test "create_dataclip/1 with valid data creates a dataclip" do
