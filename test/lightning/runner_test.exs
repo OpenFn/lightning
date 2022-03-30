@@ -7,7 +7,7 @@ defmodule Lightning.RunnerTest do
   test "does something" do
     job =
       job_fixture(
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-common",
         body: """
         alterState(state => {
           return new Promise((resolve, reject) => {
@@ -30,10 +30,10 @@ defmodule Lightning.RunnerTest do
     run = Repo.reload!(run)
     refute is_nil(run.started_at)
     refute is_nil(run.finished_at)
-    refute is_nil(run.exit_code)
+    assert run.exit_code == 0
 
     log = Enum.join(run.log, "\n")
-    assert log =~ "@openfn/language-http"
+    assert log =~ "@openfn/language-common"
 
     assert length(run.log) > 0
   end

@@ -69,11 +69,11 @@ defmodule Lightning.Runner do
     runspec = %Engine.RunSpec{
       adaptor: adaptor,
       state_path: state_path,
-      adaptors_path: "./priv/openfn/adaptors/node_modules",
+      adaptors_path: "./priv/openfn/lib",
       final_state_path: final_state_path,
       expression_path: expression_path,
       env: %{
-        "PATH" => "./priv/openfn/runtime/node_modules/.bin:#{System.get_env("PATH")}"
+        "PATH" => "./priv/openfn/bin:#{System.get_env("PATH")}"
       },
       timeout: 60_000
     }
