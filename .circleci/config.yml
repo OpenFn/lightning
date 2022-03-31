@@ -96,10 +96,3 @@ workflows:
                 file: test/reports/excoveralls.json
             - store_test_results:
                 path: test/reports/
-      - build:
-          name: "Check elixir tests (coveralls)"
-          execute:
-            - run: MIX_ENV=test mix do ecto.create, ecto.migrate
-            - run: MIX_ENV=test mix coveralls.circle
-            - store_test_results:
-                path: test/reports/
