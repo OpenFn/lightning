@@ -27,9 +27,9 @@ defmodule Lightning.AdaptorRegistry do
 
   **Timeouts**
 
-  There is a 'general' timeout of 30s, this is used for GenServer calls like 
+  There is a 'general' timeout of 30s, this is used for GenServer calls like
   `all/1` and also internally when the modules are being queried. NPM can
-  be extremely fast to respond if the package is cached on their side, but 
+  be extremely fast to respond if the package is cached on their side, but
   can take a couple of seconds if not cached.
   """
 
@@ -111,6 +111,7 @@ defmodule Lightning.AdaptorRegistry do
   defp read_from_cache(path) when is_binary(path) do
     File.read(path)
     |> case do
+      # credo:disable-for-next-line
       {:ok, file} -> Jason.decode!(file, keys: :atoms)
       {:error, _} -> nil
     end
