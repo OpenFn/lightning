@@ -30,12 +30,13 @@ mix deps.get
 mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
+mix openfn.runtime.install
 ```
 
 ### Run the app
 
 Lightning is a web app. To run it, start the development server by running `mix phx.server`. 
-Once the server has started, head to [`localhost:4000`](http://localhost:4000`) in your browser.
+Once the server has started, head to [`localhost:4000`](http://localhost:4000) in your browser.
 
 ## Running Tests
 
