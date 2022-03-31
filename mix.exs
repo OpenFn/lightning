@@ -5,7 +5,7 @@ defmodule Lightning.MixProject do
     [
       app: :lightning,
       version: "0.1.0",
-      elixir: "~> 1.12",
+      elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -56,6 +56,8 @@ defmodule Lightning.MixProject do
       {:gettext, "~> 0.18"},
       {:httpoison, "~> 1.8"},
       {:jason, "~> 1.2"},
+      {:engine, github: "OpenFn/engine", tag: "v0.4.0"},
+      # {:engine, path: "../engine"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
@@ -72,7 +74,7 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:temp, "~> 0.4", only: :test}
+      {:temp, "~> 0.4"}
     ]
   end
 

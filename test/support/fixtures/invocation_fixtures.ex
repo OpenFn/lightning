@@ -27,7 +27,7 @@ defmodule Lightning.InvocationFixtures do
       attrs
       |> Enum.into(%{
         type: :webhook,
-        dataclip: dataclip_fixture()
+        dataclip_id: dataclip_fixture().id
       })
       |> Lightning.Invocation.create_event()
 

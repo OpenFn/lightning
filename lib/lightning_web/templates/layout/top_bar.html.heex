@@ -4,6 +4,11 @@
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
       else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
 
+  <%= live_redirect "Runs", to: Routes.run_index_path(@socket, :index),
+      class: if assigns[:active_menu_item] == :runs,
+      do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
+      else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
+
   <%= live_redirect "Jobs", to: Routes.job_index_path(@socket, :index),
       class: if assigns[:active_menu_item] == :jobs,
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",

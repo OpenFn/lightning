@@ -7,9 +7,9 @@ defmodule Lightning.Invocation.Dataclip do
 
   ## Types
 
-  * `:http_request`  
+  * `:http_request`
     The data arrived via a webhook.
-  * `:global`  
+  * `:global`
     Was created manually, and is intended to be used multiple times.
     When repetitive static data is needed to be maintained, instead of hard-coding
     into a Job - a more convenient solution is to create a `:global` Dataclip
@@ -17,6 +17,11 @@ defmodule Lightning.Invocation.Dataclip do
   """
   use Ecto.Schema
   import Ecto.Changeset
+
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          body: %{} | nil
+        }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

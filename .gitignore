@@ -40,3 +40,4 @@ npm-debug.log
 /priv/plts/*.plt.hash
 
 tmp
+priv/openfn
