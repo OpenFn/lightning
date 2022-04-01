@@ -3,8 +3,10 @@
   private: false,
   skip: false,
   router: "",
-  exit: "Medium",
+  exit: "medium",
+  format: "txt",
+  out: "",
   threshold: "low",
-  ignore: [""],
+  ignore: ["Config.CSP"],
   ignore_files: [""]
 ]
