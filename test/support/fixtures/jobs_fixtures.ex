@@ -14,6 +14,7 @@ defmodule Lightning.JobsFixtures do
         body: "some body",
         enabled: true,
         name: "some name",
+        adaptor: "@openfn/language-common",
         trigger: %{}
       })
       |> Lightning.Jobs.create_job()

@@ -1,11 +1,23 @@
 defmodule LightningWeb.JobLiveTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Lightning.JobsFixtures
 
-  @create_attrs %{body: "some body", enabled: true, name: "some name"}
-  @update_attrs %{body: "some updated body", enabled: false, name: "some updated name"}
+  @create_attrs %{
+    body: "some body",
+    enabled: true,
+    name: "some name",
+    adaptor_name: "@openfn/language-common",
+    adaptor: "@openfn/language-common@latest"
+  }
+  @update_attrs %{
+    body: "some updated body",
+    enabled: false,
+    name: "some updated name",
+    adaptor_name: "@openfn/language-common",
+    adaptor: "@openfn/language-common@latest"
+  }
   @invalid_attrs %{body: nil, enabled: false, name: nil}
 
   defp create_job(_) do
@@ -34,6 +46,11 @@ defmodule LightningWeb.JobLiveTest do
       assert index_live
              |> form("#job-form", job: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
+
+      # Set the adaptor name to populate the version dropdown
+      assert index_live
+             |> form("#job-form", job: %{adaptor_name: "@openfn/language-common"})
+             |> render_change()
 
       {:ok, _, html} =
         index_live
@@ -77,6 +94,58 @@ defmodule LightningWeb.JobLiveTest do
 
       assert html =~ "Job updated successfully"
       assert html =~ "some updated body"
+    end
+  end
+
+  describe "coerce_params_for_adaptor_list/1" do
+    test "when adaptor_name is present it sets the adaptor to @latest" do
+      assert LightningWeb.JobLive.FormComponent.coerce_params_for_adaptor_list(%{
+               "adaptor" => "",
+               "adaptor_name" => "@openfn/language-common"
+             }) == %{
+               "adaptor" => "@openfn/language-common@latest",
+               "adaptor_name" => "@openfn/language-common"
+             }
+    end
+
+    test "when adaptor_name is present and adaptor is the same module" do
+      assert LightningWeb.JobLive.FormComponent.coerce_params_for_adaptor_list(%{
+               "adaptor" => "@openfn/language-http@1.2.3",
+               "adaptor_name" => "@openfn/language-http"
+             }) == %{
+               "adaptor" => "@openfn/language-http@1.2.3",
+               "adaptor_name" => "@openfn/language-http"
+             }
+    end
+
+    test "when adaptor_name is present but adaptor is a different module" do
+      assert LightningWeb.JobLive.FormComponent.coerce_params_for_adaptor_list(%{
+               "adaptor" => "@openfn/language-http@1.2.3",
+               "adaptor_name" => "@openfn/language-common"
+             }) == %{
+               "adaptor" => "@openfn/language-common@latest",
+               "adaptor_name" => "@openfn/language-common"
+             }
+    end
+
+    test "when adaptor_name is not present but adaptor is" do
+      assert LightningWeb.JobLive.FormComponent.coerce_params_for_adaptor_list(%{
+               "adaptor" => "@openfn/language-http@1.2.3",
+               "adaptor_name" => ""
+             }) == %{
+               "adaptor" => "",
+               "adaptor_name" => ""
+             }
+    end
+
+    test "when neither is present" do
+      assert LightningWeb.JobLive.FormComponent.coerce_params_for_adaptor_list(%{
+               "adaptor" => "",
+               "adaptor_name" => ""
+             }) == %{
+               "adaptor" => "",
+               "adaptor_name" => ""
+             }
     end
   end
 

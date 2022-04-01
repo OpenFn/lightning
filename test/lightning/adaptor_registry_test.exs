@@ -5,7 +5,7 @@ defmodule Lightning.AdaptorRegistryTest do
   alias Lightning.AdaptorRegistry
 
   describe "start_link/1" do
-    # AdaptorRegistry is a GenServer, and so stubbed (external) functions must 
+    # AdaptorRegistry is a GenServer, and so stubbed (external) functions must
     # be mocked globally. See: https://github.com/edgurgel/mimic#private-and-global-mode
     setup :set_mimic_from_context
 
@@ -39,7 +39,11 @@ defmodule Lightning.AdaptorRegistryTest do
     test "retrieves a list of adaptors when caching is disabled" do
       # :hackney.request(request.method, request.url, request.headers, request.body, hn_options)
       expect(:hackney, :request, fn
-        :get, "https://registry.npmjs.org/-/user/openfn/package", [], "", [pool: :default] ->
+        :get,
+        "https://registry.npmjs.org/-/user/openfn/package",
+        [],
+        "",
+        [recv_timeout: 15_000, pool: :default] ->
           {:ok, 200, "headers", :client}
       end)
 
@@ -104,6 +108,19 @@ defmodule Lightning.AdaptorRegistryTest do
 
       assert AdaptorRegistry.versions_for(:test_adaptor_registry, "@openfn/language-foobar") ==
                nil
+    end
+  end
+
+  describe "resolve_package_name/1" do
+    test "it can split an NPM style package name" do
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==
+               {"@openfn/language-foo", "1.2.3"}
+
+      assert AdaptorRegistry.resolve_package_name("@openfn/language-foo") ==
+               {"@openfn/language-foo", nil}
+
+      assert AdaptorRegistry.resolve_package_name("") ==
+               {nil, nil}
     end
   end
 end

@@ -29,5 +29,10 @@ defmodule Lightning.Jobs.JobTest do
         assert errors[:name] == ["has invalid format"]
       end)
     end
+
+    test "must have an adaptor" do
+      errors = Job.changeset(%Job{}, %{adaptor: nil}) |> errors_on()
+      assert errors[:adaptor] == ["can't be blank"]
+    end
   end
 end

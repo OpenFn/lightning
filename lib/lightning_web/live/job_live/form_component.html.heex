@@ -56,7 +56,7 @@
       <%= label f, :adaptor, "Version", class: "block text-sm font-medium text-gray-700" %>
 
         <%= error_tag f, :adaptor, class: "block w-full rounded-md" %>
-        <%= select f, :adaptor, @versions, prompt: "", class: "block
+        <%= select f, :adaptor, @versions, disabled: !@adaptor_name, class: "block
               w-full
               mt-1
               rounded-md

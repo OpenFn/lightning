@@ -35,19 +35,7 @@ defmodule LightningWeb.JobLive.FormComponent do
 
   @impl true
   def handle_event("validate", %{"job" => job_params}, socket) do
-    # Coerce any changes to the "Adaptor" dropdown into a new selection on the
-    # Version dropdown.
-    job_params =
-      Map.update(job_params, "adaptor", "", fn _adaptor ->
-        {params_adaptor_name, _} =
-          AdaptorRegistry.resolve_package_name(job_params["adaptor"] || "")
-
-        if params_adaptor_name !== job_params["adaptor_name"] do
-          "#{job_params["adaptor_name"]}@latest"
-        else
-          job_params["adaptor"]
-        end
-      end)
+    job_params = coerce_params_for_adaptor_list(job_params)
 
     changeset =
       socket.assigns.job
@@ -117,5 +105,27 @@ defmodule LightningWeb.JobLive.FormComponent do
       end
 
     {module_name, version, adaptor_names, versions}
+  end
+
+  @doc """
+  Coerce any changes to the "Adaptor" dropdown into a new selection on the
+  Version dropdown.
+  """
+  @spec coerce_params_for_adaptor_list(%{String.t() => String.t()}) ::
+          %{}
+  def coerce_params_for_adaptor_list(job_params) do
+    {package, _version} = AdaptorRegistry.resolve_package_name(job_params["adaptor"])
+    {package_group, _} = AdaptorRegistry.resolve_package_name(job_params["adaptor_name"])
+
+    cond do
+      is_nil(package_group) ->
+        Map.merge(job_params, %{"adaptor" => ""})
+
+      package_group !== package ->
+        Map.merge(job_params, %{"adaptor" => "#{package_group}@latest"})
+
+      true ->
+        job_params
+    end
   end
 end

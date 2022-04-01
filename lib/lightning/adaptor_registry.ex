@@ -45,10 +45,12 @@ defmodule Lightning.AdaptorRegistry do
     """
     use HTTPoison.Base
 
+    @impl true
     def process_request_url(url) do
       "https://registry.npmjs.org" <> url
     end
 
+    @impl true
     def process_response_body(body) do
       body
       |> Jason.decode!()
@@ -59,7 +61,7 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec user_packages(user :: String.t()) :: [map()]
     def user_packages(user) do
-      get!("/-/user/#{user}/package", [], hackney: [pool: :default]).body
+      get!("/-/user/#{user}/package", [], hackney: [pool: :default], recv_timeout: 15_000).body
     end
 
     @doc """
@@ -174,6 +176,10 @@ defmodule Lightning.AdaptorRegistry do
     GenServer.call(server, {:versions_for, module_name}, @timeout)
   end
 
+  @doc """
+  Fetch a list of packages for the @openfn organisation
+  """
+  @spec fetch() :: [map()]
   def fetch() do
     Npm.user_packages("openfn")
     |> Enum.map(fn {name, _} -> name end)
@@ -218,6 +224,9 @@ defmodule Lightning.AdaptorRegistry do
       { "@openfn/language-salesforce", nil }
 
   """
+  @spec resolve_package_name(package_name :: nil) :: {nil, nil}
+  def resolve_package_name(package_name) when is_nil(package_name), do: {nil, nil}
+
   @spec resolve_package_name(package_name :: String.t()) :: {binary | nil, binary | nil}
   def resolve_package_name(package_name) when is_binary(package_name) do
     ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w]+))?$/

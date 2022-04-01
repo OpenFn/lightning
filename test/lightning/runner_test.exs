@@ -13,7 +13,7 @@ defmodule Lightning.RunnerTest do
           return new Promise((resolve, reject) => {
             setTimeout(() => {
               resolve(state);
-            }, 1000);
+            }, 1);
           });
         });
         """
