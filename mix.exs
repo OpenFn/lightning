@@ -96,7 +96,7 @@ defmodule Lightning.MixProject do
         "format --check-formatted",
         "dialyzer",
         "credo",
-        "sobelow --exit Medium"
+        "sobelow"
       ]
     ]
   end
