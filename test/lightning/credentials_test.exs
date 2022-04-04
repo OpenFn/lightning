@@ -20,6 +20,16 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.get_credential!(credential.id) == credential
     end
 
+    test "get_credential_body/1 returns the credentials body" do
+      credential_body = %{"username" => "foo"}
+      credential = credential_fixture(body: credential_body)
+
+      assert Credentials.get_credential_body(credential) |> Jason.decode!() ==
+               credential_body
+
+      assert Credentials.get_credential_body(%Credential{id: Ecto.UUID.generate()}) == nil
+    end
+
     test "create_credential/1 with valid data creates a credential" do
       valid_attrs = %{body: %{}, name: "some name"}
 

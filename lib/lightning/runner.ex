@@ -2,8 +2,10 @@ defmodule Lightning.Runner do
   @moduledoc """
   Job running entrypoint
   """
-  alias Lightning.Invocation.Run
-  import Lightning.Invocation, only: [get_dataclip: 1]
+  alias Lightning.Invocation
+  import Lightning.Invocation, only: [get_dataclip_body: 1]
+  import Lightning.Jobs, only: [get_job!: 1]
+  import Lightning.Credentials, only: [get_credential_body: 1]
 
   import Engine.Adaptor.Service, only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
 
@@ -29,6 +31,8 @@ defmodule Lightning.Runner do
     end
   end
 
+  require Jason.Helpers
+
   @doc """
   Execute a Run.
 
@@ -43,12 +47,26 @@ defmodule Lightning.Runner do
   update the run when a Run is started and when it's finished, attaching
   the `exit_code` and `log` when they are available.
   """
-  @spec start(run :: Run.t(), opts :: []) :: :ok
-  def start(%Run{} = run, opts \\ []) do
+  @spec start(run :: Invocation.Run.t(), opts :: []) :: Engine.Result.t()
+  def start(%Invocation.Run{} = run, opts \\ []) do
     run = Lightning.Repo.preload(run, :event)
 
-    dataclip = Lightning.Invocation.get_dataclip_body(run)
-    %{body: expression, adaptor: adaptor} = Lightning.Jobs.get_job!(run.event.job_id)
+    %{body: expression, adaptor: adaptor, credential_id: credential_id} =
+      get_job!(run.event.job_id)
+
+    dataclip = get_dataclip_body(run)
+    credential = get_credential_body(credential_id)
+
+    # NOTE: really not sure how much we're gaining here, we're trying to avoid
+    # as much data marshalling as possible - and this currently avoids turning
+    # the job body into a map before turning it into a string again; which
+    # is probably somewhat of a win.
+    state =
+      Jason.Helpers.json_map(
+        data: Jason.Fragment.new(fn _ -> dataclip end),
+        configuration: Jason.Fragment.new(fn _ -> credential || "null" end)
+      )
+      |> Jason.encode_to_iodata!()
 
     %{local_name: local_name} = find_or_install_adaptor(adaptor)
 
@@ -56,7 +74,7 @@ defmodule Lightning.Runner do
     {:ok, state_path} =
       Temp.open(
         %{prefix: "state", suffix: ".json"},
-        &IO.write(&1, dataclip)
+        &IO.write(&1, state)
       )
 
     {:ok, final_state_path} =
@@ -84,8 +102,6 @@ defmodule Lightning.Runner do
     }
 
     Handler.start(runspec, Keyword.merge(opts, context: run))
-
-    :ok
   end
 
   @doc """
