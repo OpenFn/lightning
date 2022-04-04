@@ -37,6 +37,7 @@ defmodule Lightning.JobsTest do
         body: "some body",
         enabled: true,
         name: "some name",
+        adaptor: "@openfn/language-common",
         trigger: %{comment: "foo"}
       }
 
@@ -61,6 +62,7 @@ defmodule Lightning.JobsTest do
                  enabled: true,
                  name: "some name",
                  trigger: %{comment: "foo"},
+                 adaptor: "@openfn/language-common",
                  credential_id: credential.id
                })
 

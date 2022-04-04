@@ -47,7 +47,7 @@ defmodule Lightning.Jobs.Job do
 
     changeset
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
-    |> validate_required([:name, :body, :enabled])
+    |> validate_required([:name, :body, :enabled, :adaptor])
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end
