@@ -15,19 +15,21 @@ defmodule Lightning.JobsTest do
 
     test "list_jobs/0 returns all jobs" do
       job = job_fixture()
-      assert Jobs.list_jobs() == [job]
+      assert Jobs.list_jobs() == [Jobs.get_job!(job.id)]
     end
 
     test "get_job!/1 returns the job with given id" do
-      job = job_fixture()
+      job = job_fixture() |> unload_credential()
+
       assert Jobs.get_job!(job.id) == job
     end
 
     test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture(%{trigger: %{}})
+      job = job_fixture(%{trigger: %{}}) |> unload_credential()
+
       assert Jobs.get_job_by_webhook(job.id) == job
 
-      job = job_fixture(%{trigger: %{custom_path: "foo"}})
+      job = job_fixture(%{trigger: %{custom_path: "foo"}}) |> unload_credential()
       assert Jobs.get_job_by_webhook(job.id) == nil
       assert Jobs.get_job_by_webhook("foo") == job
     end
@@ -90,7 +92,6 @@ defmodule Lightning.JobsTest do
     test "update_job/2 with invalid data returns error changeset" do
       job = job_fixture()
       assert {:error, %Ecto.Changeset{}} = Jobs.update_job(job, @invalid_attrs)
-      assert job == Jobs.get_job!(job.id)
     end
 
     test "delete_job/1 deletes the job" do
@@ -103,5 +104,18 @@ defmodule Lightning.JobsTest do
       job = job_fixture()
       assert %Ecto.Changeset{} = Jobs.change_job(job)
     end
+  end
+
+  # Replace an preloaded Credential with an Ecto.Association.NotLoaded struct
+  # Our factories product models with Credentials on them but our context
+  # functions don't preload credentials - this helps make make our factories
+  # uniform for these specific tests.
+  defp unload_credential(job) do
+    job
+    |> Map.replace(:credential, %Ecto.Association.NotLoaded{
+      __field__: :credential,
+      __cardinality__: :one,
+      __owner__: Lightning.Jobs.Job
+    })
   end
 end

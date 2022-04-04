@@ -2,6 +2,10 @@ defmodule Lightning.Credentials.Credential do
   @moduledoc """
   The Credential model.
   """
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          body: nil | %{}
+        }
 
   use Ecto.Schema
   import Ecto.Changeset
