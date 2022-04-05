@@ -1,8 +1,35 @@
-# OpenFn Lightning  [![CircleCI](https://circleci.com/gh/OpenFn/lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/lightning) [![Coverage Status](https://coveralls.io/repos/github/OpenFn/lightning/badge.svg?t=4vHZlQ)](https://coveralls.io/github/OpenFn/lightning)
+# OpenFn Lightning [![CircleCI](https://circleci.com/gh/OpenFn/lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/lightning)[![Coverage Status](https://coveralls.io/repos/github/OpenFn/lightning/badge.svg?t=4vHZlQ)](https://coveralls.io/github/OpenFn/lightning)
 
 ## Setting up
 
-### Postgres
+The easiest way to set up Lightning is via Docker. We have included the
+necessary files to get everything setup using Docker Compose.
+
+If you'd like to contribute or set things up locally for development, checkout the [Contributing](#contributing) section.
+
+### Steps
+
+- Install [Docker](https://docs.docker.com/engine/install/)
+- Check out the repo using git
+- Copy the `.env.example` file to `.env`
+- Run `docker compose run web mix ecto.migrate`  
+  This will build the container, and set the database up with the up to date schema.
+
+Once you've done that, you can run `docker compose up` evey time you want to
+start up the server.
+
+By default the application will be available from [localhost:4000](http://localhost:4000/).
+
+## Contributing
+
+We appreciate any contribution to Lightning.
+
+### Setting up locally
+
+**Database**
+
+Ensure you have a PostgreSQL database setup and running, here is an example
+to get it running quickly using docker.
 
 ```sh
 docker volume create lightning-postgres-data
@@ -17,7 +44,7 @@ docker create \
 docker start lightning-postgres
 ```
 
-### Elixir & Ecto
+**Elixir & Ecto**
 
 We use [asdf](https://github.com/asdf-vm/asdf) to help with our local environments.
 Included in the repo is a `.tool-versions` file that is read by asdf in order
@@ -35,7 +62,7 @@ mix openfn.runtime.install
 
 ### Run the app
 
-Lightning is a web app. To run it, start the development server by running `mix phx.server`. 
+Lightning is a web app. To run it, start the development server by running `mix phx.server`.
 Once the server has started, head to [`localhost:4000`](http://localhost:4000) in your browser.
 
 ## Running Tests
@@ -61,19 +88,19 @@ pitfalls and make sure we keep everything clean and consistant.
 
 In addition to our test suite, you can run the following commands:
 
-* `mix format --check-formatted`  
-  Code formatting checker, run again without the `--check-formatted` flag to 
+- `mix format --check-formatted`
+  Code formatting checker, run again without the `--check-formatted` flag to
   have your code automatically changed.
-* `mix dialyzer`  
+- `mix dialyzer`
   Static analysis for type mismatches and other common warnings.
   See [dialyxir](https://github.com/jeremyjh/dialyxir)
-* `mix credo`  
+- `mix credo`
   Static analysis for consistancy, and coding standards.
   See [Credo](https://github.com/rrrene/credo).
-* `mix sobelow --exit Medium`  
+- `mix sobelow --exit Medium`
   Check for commonly known security exploits. See [Sobelow](https://sobelow.io/).
-* `MIX_ENV=test mix coveralls`  
-  Test coverage reporter. This command also runs the test suite, and can be 
+- `MIX_ENV=test mix coveralls`
+  Test coverage reporter. This command also runs the test suite, and can be
   used in place of `mix test` when checking everything before pushing your code.
   See [excoveralls](https://github.com/parroty/excoveralls).
 
