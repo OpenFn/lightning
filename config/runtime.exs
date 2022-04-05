@@ -12,6 +12,16 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
+port = String.to_integer(System.get_env("PORT", "4000"))
+
+listen_address =
+  System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
+    |> String.split(".")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
+
+config :lightning, LightningWeb.Endpoint, http: [port: port, ip: listen_address]
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -41,7 +51,6 @@ if config_env() == :prod do
       """
 
   host = System.get_env("PHX_HOST") || "example.com"
-  port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: 443],
