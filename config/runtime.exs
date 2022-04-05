@@ -16,9 +16,9 @@ port = String.to_integer(System.get_env("PORT", "4000"))
 
 listen_address =
   System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
-    |> String.split(".")
-    |> Enum.map(&String.to_integer/1)
-    |> List.to_tuple()
+  |> String.split(".")
+  |> Enum.map(&String.to_integer/1)
+  |> List.to_tuple()
 
 config :lightning, LightningWeb.Endpoint, http: [port: port, ip: listen_address]
 
