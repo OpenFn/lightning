@@ -88,18 +88,18 @@ pitfalls and make sure we keep everything clean and consistant.
 
 In addition to our test suite, you can run the following commands:
 
-- `mix format --check-formatted`
+- `mix format --check-formatted`  
   Code formatting checker, run again without the `--check-formatted` flag to
   have your code automatically changed.
-- `mix dialyzer`
+- `mix dialyzer`  
   Static analysis for type mismatches and other common warnings.
-  See [dialyxir](https://github.com/jeremyjh/dialyxir)
-- `mix credo`
+  See [dialyxir](https://github.com/jeremyjh/dialyxir).
+- `mix credo`  
   Static analysis for consistancy, and coding standards.
   See [Credo](https://github.com/rrrene/credo).
-- `mix sobelow --exit Medium`
+- `mix sobelow`  
   Check for commonly known security exploits. See [Sobelow](https://sobelow.io/).
-- `MIX_ENV=test mix coveralls`
+- `MIX_ENV=test mix coveralls`  
   Test coverage reporter. This command also runs the test suite, and can be
   used in place of `mix test` when checking everything before pushing your code.
   See [excoveralls](https://github.com/parroty/excoveralls).
