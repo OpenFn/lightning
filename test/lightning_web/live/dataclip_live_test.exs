@@ -46,10 +46,15 @@ defmodule LightningWeb.DataclipLiveTest do
     test "updates dataclip in listing", %{conn: conn, dataclip: dataclip} do
       {:ok, index_live, _html} = live(conn, Routes.dataclip_index_path(conn, :index))
 
-      assert index_live |> element("#dataclip-#{dataclip.id} a", "Edit") |> render_click() =~
+      assert index_live
+             |> element("#dataclip-#{dataclip.id} a", "Edit")
+             |> render_click() =~
                "Edit Dataclip"
 
-      assert_patch(index_live, Routes.dataclip_index_path(conn, :edit, dataclip))
+      assert_patch(
+        index_live,
+        Routes.dataclip_index_path(conn, :edit, dataclip)
+      )
 
       assert index_live
              |> form("#dataclip-form", dataclip: @invalid_attrs)
@@ -67,7 +72,10 @@ defmodule LightningWeb.DataclipLiveTest do
     test "deletes dataclip in listing", %{conn: conn, dataclip: dataclip} do
       {:ok, index_live, _html} = live(conn, Routes.dataclip_index_path(conn, :index))
 
-      assert index_live |> element("#dataclip-#{dataclip.id} a", "Delete") |> render_click()
+      assert index_live
+             |> element("#dataclip-#{dataclip.id} a", "Delete")
+             |> render_click()
+
       refute has_element?(index_live, "#dataclip-#{dataclip.id}")
     end
   end
@@ -97,7 +105,10 @@ defmodule LightningWeb.DataclipLiveTest do
         show_live
         |> form("#dataclip-form", dataclip: @update_attrs)
         |> render_submit()
-        |> follow_redirect(conn, Routes.dataclip_show_path(conn, :show, dataclip))
+        |> follow_redirect(
+          conn,
+          Routes.dataclip_show_path(conn, :show, dataclip)
+        )
 
       assert html =~ "Dataclip updated successfully"
     end

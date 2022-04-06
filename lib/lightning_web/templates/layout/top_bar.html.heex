@@ -24,6 +24,11 @@
       do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
       else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
 
+  <%= live_redirect "Users", to: Routes.user_index_path(@socket, :index),
+      class: if assigns[:active_menu_item] == :users,
+      do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
+      else: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
+
   <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
     <%= link "LiveDashboard", to: Routes.live_dashboard_path(@socket, :home),
       class: "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium" %>
