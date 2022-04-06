@@ -65,7 +65,11 @@ defmodule Lightning.AdaptorRegistryTest do
       end)
 
       stub(:hackney, :request, fn
-        :get, "https://registry.npmjs.org/" <> adaptor, [], "", [pool: :default] ->
+        :get,
+        "https://registry.npmjs.org/" <> adaptor,
+        [],
+        "",
+        [recv_timeout: 15_000, pool: :default] ->
           assert adaptor in expected_adaptors
           {:ok, 200, "headers", :adaptor}
       end)
