@@ -12,13 +12,29 @@ If you'd like to contribute or set things up locally for development, checkout t
 - Install [Docker](https://docs.docker.com/engine/install/)
 - Check out the repo using git
 - Copy the `.env.example` file to `.env`
-- Run `docker compose run web mix ecto.migrate`  
+- Run `docker compose run --rm web mix ecto.migrate`  
   This will build the container, and set the database up with the up to date schema.
 
 Once you've done that, you can run `docker compose up` evey time you want to
 start up the server.
 
 By default the application will be available from [localhost:4000](http://localhost:4000/).
+
+**Troubleshooting**
+
+If you're actively working with docker, start experiencing issues and would like
+to start from scratch you can clean up everything and start over like this:
+
+```sh
+# You can skip the line below if you want to keep your database
+docker compose down --rmi all --volumes
+
+docker compose build --no-cache web && \
+  docker compose create --force-recreate
+
+docker compose run --rm web mix ecto.migrate
+docker compose up
+```
 
 ## Contributing
 
