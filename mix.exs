@@ -94,7 +94,7 @@ defmodule Lightning.MixProject do
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.deploy": ["esbuild default --minify", "phx.digest"],
       verify: [
-        "coveralls",
+        "coveralls.html",
         "format --check-formatted",
         "dialyzer",
         "credo",

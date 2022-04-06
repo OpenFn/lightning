@@ -39,8 +39,8 @@
 }
 
 /* LiveView specific classes for your customization */
-.phx-no-feedback.invalid-feedback,
-.phx-no-feedback .invalid-feedback {
+/* https://hexdocs.pm/phoenix_live_view/form-bindings.html#phx-feedback-for */
+.phx-no-feedback {
   display: none;
 }
 

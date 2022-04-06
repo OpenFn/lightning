@@ -34,6 +34,12 @@ defmodule LightningWeb.ConnCase do
   setup tags do
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+
+    Map.get(tags, :create_initial_user, true)
+    |> if do
+      Lightning.UsersFixtures.user_fixture()
+    end
+
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 
