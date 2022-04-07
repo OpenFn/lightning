@@ -9,6 +9,8 @@ deps
 *.ez
 releases
 
+.elixir_ls
+
 # Generate on crash by the VM
 erl_crash.dump
 
