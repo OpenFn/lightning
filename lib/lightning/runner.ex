@@ -55,7 +55,13 @@ defmodule Lightning.Runner do
       get_job!(run.event.job_id)
 
     dataclip = get_dataclip_body(run)
-    credential = get_credential_body(credential_id)
+
+    credential =
+      if credential_id do
+        get_credential_body(credential_id)
+      else
+        nil
+      end
 
     # NOTE: really not sure how much we're gaining here, we're trying to avoid
     # as much data marshalling as possible - and this currently avoids turning

@@ -30,7 +30,7 @@
       <%= for run <- @runs do %>
         <tr id={"run-#{run.id}"}>
           <td class="font-mono text-xs">
-            <%= for line <- run.log do %>
+            <%= for line <- run.log || [] do %>
               <li class="list-none"><%= raw(line |> String.replace(" ", "&nbsp;")) %></li>
             <% end %>
           </td>
