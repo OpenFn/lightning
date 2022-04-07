@@ -54,8 +54,7 @@ RUN mix deps.compile
 COPY lib lib
 COPY bin bin
 COPY assets assets
-COPY priv/repo  priv
-COPY priv/gettext priv
+COPY priv priv
 
 RUN mix openfn.install.runtime
 

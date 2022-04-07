@@ -26,6 +26,8 @@ If you're actively working with docker, start experiencing issues and would like
 to start from scratch you can clean up everything and start over like this:
 
 ```sh
+# To remove any ignored files and reset your .env to it's example
+git clean -fdx && cp .env.example .env
 # You can skip the line below if you want to keep your database
 docker compose down --rmi all --volumes
 

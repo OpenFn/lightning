@@ -7,6 +7,6 @@ set -e
 # cp -r /public/. /app/priv/static/
 
 # Install the OpenFn runtime dependencies if they missing.
-[ ! -d "priv/openfn" ] && mix openfn.runtime.install
+[ ! -d "priv/openfn" ] && mix openfn.install.runtime
 
 exec "$@"
