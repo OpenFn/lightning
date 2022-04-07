@@ -1,4 +1,7 @@
 defmodule LightningWeb.UserLive.Index do
+  @moduledoc """
+  Index page for listing users
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Users

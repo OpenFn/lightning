@@ -1,11 +1,13 @@
 defmodule LightningWeb.UserLive.FormComponent do
+  @moduledoc """
+  Form component for creating and editing users
+  """
   use LightningWeb, :live_component
 
   alias Lightning.Users
 
   @impl true
   def update(%{user: user} = assigns, socket) do
-    IO.inspect(socket, label: "UserLive.FormComponent.update/2")
     changeset = Users.change_user(user)
 
     {:ok,
