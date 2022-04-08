@@ -1,4 +1,7 @@
 defmodule Lightning.Users.User do
+  @moduledoc """
+  The User model
+  """
   use Ecto.Schema
   import Ecto.Changeset
 

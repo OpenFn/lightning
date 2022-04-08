@@ -1,4 +1,7 @@
 defmodule LightningWeb.UserLive.Show do
+  @moduledoc """
+  The User show page
+  """
   use LightningWeb, :live_view
 
   alias Lightning.Users

@@ -1,0 +1,1 @@
+call "%~dp0\lightning" eval Lightning.Release.migrate
