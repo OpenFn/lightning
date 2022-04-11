@@ -1,4 +1,4 @@
-# OpenFn Lightning [![CircleCI](https://circleci.com/gh/OpenFn/lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/lightning)[![Coverage Status](https://coveralls.io/repos/github/OpenFn/lightning/badge.svg?t=4vHZlQ)](https://coveralls.io/github/OpenFn/lightning)
+# OpenFn Lightning [![CircleCI](https://circleci.com/gh/OpenFn/lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/lightning)
 
 ## Setting up
 
