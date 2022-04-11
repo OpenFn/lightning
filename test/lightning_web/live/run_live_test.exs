@@ -9,6 +9,8 @@ defmodule LightningWeb.RunLiveTest do
     %{run: run}
   end
 
+  setup :register_and_log_in_user
+
   describe "Index" do
     setup [:create_run]
 

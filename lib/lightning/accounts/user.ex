@@ -12,6 +12,8 @@ defmodule Lightning.Accounts.User do
     :admin
   ])
 
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
   schema "users" do
     field(:first_name, :string)
     field(:last_name, :string)
@@ -57,7 +59,7 @@ defmodule Lightning.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:first_name, :last_name, :email, :password])
     |> validate_email()
     |> validate_password(opts)
   end
@@ -81,6 +83,16 @@ defmodule Lightning.Accounts.User do
     |> maybe_hash_password(opts)
   end
 
+  defp validate_name(changeset) do
+    changeset
+    |> validate_required([:first_name, :last_name])
+  end
+
+  defp validate_role(changeset) do
+    changeset
+    |> validate_inclusion(:role, RolesEnum)
+  end
+
   defp maybe_hash_password(changeset, opts) do
     hash_password? = Keyword.get(opts, :hash_password, true)
     password = get_change(changeset, :password)
@@ -94,6 +106,22 @@ defmodule Lightning.Accounts.User do
     else
       changeset
     end
+  end
+
+  @doc """
+  A user changeset for user details:
+
+  - email
+  - first_name
+  - last_name
+  - role
+  """
+  def details_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:email, :first_name, :last_name, :role])
+    |> validate_email()
+    |> validate_name()
+    |> validate_role()
   end
 
   @doc """

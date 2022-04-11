@@ -6,6 +6,11 @@ defmodule Lightning.AccountsTest do
   import Lightning.AccountsFixtures
   alias Lightning.Accounts.{User, UserToken}
 
+  test "list_users/0 returns all users" do
+    user = user_fixture()
+    assert Accounts.list_users() == [user]
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")
@@ -38,7 +43,7 @@ defmodule Lightning.AccountsTest do
   describe "get_user!/1" do
     test "raises if id is invalid" do
       assert_raise Ecto.NoResultsError, fn ->
-        Accounts.get_user!(-1)
+        Accounts.get_user!(Ecto.UUID.generate())
       end
     end
 
@@ -508,6 +513,12 @@ defmodule Lightning.AccountsTest do
       {:ok, _} = Accounts.reset_user_password(user, %{password: "new valid password"})
       refute Repo.get_by(UserToken, user_id: user.id)
     end
+  end
+
+  test "delete_user/1 deletes the user" do
+    user = user_fixture()
+    assert {:ok, %User{}} = Accounts.delete_user(user)
+    assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
   end
 
   describe "inspect/2" do

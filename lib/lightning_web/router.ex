@@ -21,7 +21,36 @@ defmodule LightningWeb.Router do
   end
 
   scope "/", LightningWeb do
-    pipe_through(:browser)
+    pipe_through [:browser]
+
+    get "/users/log_out", UserSessionController, :delete
+    get "/users/confirm", UserConfirmationController, :new
+    post "/users/confirm", UserConfirmationController, :create
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
+  end
+
+  ## Authentication routes
+
+  scope "/", LightningWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
+    get "/users/log_in", UserSessionController, :new
+    post "/users/log_in", UserSessionController, :create
+    get "/users/reset_password", UserResetPasswordController, :new
+    post "/users/reset_password", UserResetPasswordController, :create
+    get "/users/reset_password/:token", UserResetPasswordController, :edit
+    put "/users/reset_password/:token", UserResetPasswordController, :update
+  end
+
+  scope "/", LightningWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/users/settings", UserSettingsController, :edit
+    put "/users/settings", UserSettingsController, :update
+    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
 
     live("/jobs", JobLive.Index, :index)
     live("/jobs/new", JobLive.Index, :new)
@@ -56,6 +85,8 @@ defmodule LightningWeb.Router do
 
     live("/runs/:id", RunLive.Show, :show)
     live("/runs/:id/show/edit", RunLive.Show, :edit)
+
+    live("/", DashboardLive.Index, :index)
   end
 
   scope "/i", LightningWeb do
@@ -96,40 +127,5 @@ defmodule LightningWeb.Router do
 
       forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
-  end
-
-  ## Authentication routes
-
-  scope "/", LightningWeb do
-    pipe_through [:browser, :redirect_if_user_is_authenticated]
-
-    get "/users/register", UserRegistrationController, :new
-    post "/users/register", UserRegistrationController, :create
-    get "/users/log_in", UserSessionController, :new
-    post "/users/log_in", UserSessionController, :create
-    get "/users/reset_password", UserResetPasswordController, :new
-    post "/users/reset_password", UserResetPasswordController, :create
-    get "/users/reset_password/:token", UserResetPasswordController, :edit
-    put "/users/reset_password/:token", UserResetPasswordController, :update
-  end
-
-  scope "/", LightningWeb do
-    pipe_through [:browser, :require_authenticated_user]
-
-    get "/users/settings", UserSettingsController, :edit
-    put "/users/settings", UserSettingsController, :update
-    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
-
-    live("/", DashboardLive.Index, :index)
-  end
-
-  scope "/", LightningWeb do
-    pipe_through [:browser]
-
-    get "/users/log_out", UserSessionController, :delete
-    get "/users/confirm", UserConfirmationController, :new
-    post "/users/confirm", UserConfirmationController, :create
-    get "/users/confirm/:token", UserConfirmationController, :edit
-    post "/users/confirm/:token", UserConfirmationController, :update
   end
 end

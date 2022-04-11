@@ -2,16 +2,16 @@ defmodule LightningWeb.UserLiveTest do
   use LightningWeb.ConnCase
 
   import Phoenix.LiveViewTest
-  import Lightning.UsersFixtures
+  import Lightning.AccountsFixtures
 
   @create_attrs %{
-    email: "some email",
+    email: "test@example.com",
     first_name: "some first_name",
     last_name: "some last_name",
     password: "some password"
   }
   @update_attrs %{
-    email: "some updated email",
+    email: "test-updated@example.com",
     first_name: "some updated first_name",
     last_name: "some updated last_name",
     password: "some updated password"
@@ -22,6 +22,8 @@ defmodule LightningWeb.UserLiveTest do
     user = user_fixture()
     %{user: user}
   end
+
+  setup :register_and_log_in_user
 
   describe "Index" do
     setup [:create_user]
@@ -52,7 +54,7 @@ defmodule LightningWeb.UserLiveTest do
         |> follow_redirect(conn, Routes.user_index_path(conn, :index))
 
       assert html =~ "User created successfully"
-      assert html =~ "some email"
+      assert html =~ "test@example.com"
     end
 
     test "updates user in listing", %{conn: conn, user: user} do

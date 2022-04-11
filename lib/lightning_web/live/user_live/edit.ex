@@ -5,7 +5,7 @@ defmodule LightningWeb.UserLive.Edit do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Users
+  alias Lightning.Accounts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -18,7 +18,7 @@ defmodule LightningWeb.UserLive.Edit do
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:active_menu_item, :users)
-     |> assign(:user, Users.get_user!(id))}
+     |> assign(:user, Accounts.get_user!(id))}
   end
 
   defp page_title(:show), do: "Show User"
