@@ -9,9 +9,7 @@ defmodule LightningWeb.DashboardLive.Index do
 
   @impl true
   def handle_params(_, _, socket) do
-    {:noreply,
-     socket
-     |> assign(:page_title, page_title(socket.assigns.live_action))}
+    {:noreply, socket |> assign(:page_title, page_title(socket.assigns.live_action))}
   end
 
   defp page_title(:index), do: "Dashboard"
