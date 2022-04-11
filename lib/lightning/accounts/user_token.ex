@@ -1,4 +1,8 @@
 defmodule Lightning.Accounts.UserToken do
+  @moduledoc """
+  The UserToken model.
+  """
+
   use Ecto.Schema
   import Ecto.Query
 

@@ -1,4 +1,8 @@
 defmodule Lightning.Accounts.User do
+  @moduledoc """
+  The User model.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
   import EctoEnum
@@ -70,7 +74,7 @@ defmodule Lightning.Accounts.User do
   defp validate_password(changeset, opts) do
     changeset
     |> validate_required([:password])
-    |> validate_length(:password, min: 8)
+    |> validate_length(:password, min: 8, max: 72)
     # |> validate_format(:password, ~r/[a-z]/, message: "at least one lower case character")
     # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
     # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
@@ -84,7 +88,7 @@ defmodule Lightning.Accounts.User do
     if hash_password? && password && changeset.valid? do
       changeset
       # If using Bcrypt, then further validate it is at most 72 bytes long
-      |> validate_length(:password, max: 72, count: :bytes)
+      |> validate_length(:password, min: 8, max: 72, count: :bytes)
       |> put_change(:hashed_password, Bcrypt.hash_pwd_salt(password))
       |> delete_change(:password)
     else

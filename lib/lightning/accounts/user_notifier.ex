@@ -1,4 +1,8 @@
 defmodule Lightning.Accounts.UserNotifier do
+  @moduledoc """
+  The UserNotifier module.
+  """
+
   import Swoosh.Email
 
   alias Lightning.Mailer

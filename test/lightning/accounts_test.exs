@@ -62,13 +62,12 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} = Accounts.register_user(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["must have the @ sign and no spaces"],
-               password: ["should be at least 12 character(s)"]
+               email: ["must have the @ sign and no spaces"]
              } = errors_on(changeset)
     end
 
     test "validates maximum values for email and password for security" do
-      too_long = String.duplicate("db", 100)
+      too_long = String.duplicate("db@db.sn", 100)
       {:error, changeset} = Accounts.register_user(%{email: too_long, password: too_long})
       assert "should be at most 160 character(s)" in errors_on(changeset).email
       assert "should be at most 72 character(s)" in errors_on(changeset).password
@@ -280,7 +279,6 @@ defmodule Lightning.AccountsTest do
         })
 
       assert %{
-               password: ["should be at least 12 character(s)"],
                password_confirmation: ["does not match password"]
              } = errors_on(changeset)
     end
@@ -489,7 +487,6 @@ defmodule Lightning.AccountsTest do
         })
 
       assert %{
-               password: ["should be at least 12 character(s)"],
                password_confirmation: ["does not match password"]
              } = errors_on(changeset)
     end
