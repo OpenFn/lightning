@@ -1,5 +1,7 @@
 defmodule LightningWeb.Router do
   use LightningWeb, :router
+
+  import LightningWeb.UserAuth
   alias JobLive
   alias CredentialLive
 
@@ -10,6 +12,7 @@ defmodule LightningWeb.Router do
     plug :put_root_layout, {LightningWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug :fetch_current_user
   end
 
   pipeline :api do
@@ -18,8 +21,6 @@ defmodule LightningWeb.Router do
 
   scope "/", LightningWeb do
     pipe_through(:browser)
-
-    live("/", DashboardLive.Index, :index)
 
     live("/jobs", JobLive.Index, :index)
     live("/jobs/new", JobLive.Index, :new)
@@ -88,5 +89,40 @@ defmodule LightningWeb.Router do
 
       forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
+  end
+
+  ## Authentication routes
+
+  scope "/", LightningWeb do
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
+
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
+    get "/users/log_in", UserSessionController, :new
+    post "/users/log_in", UserSessionController, :create
+    get "/users/reset_password", UserResetPasswordController, :new
+    post "/users/reset_password", UserResetPasswordController, :create
+    get "/users/reset_password/:token", UserResetPasswordController, :edit
+    put "/users/reset_password/:token", UserResetPasswordController, :update
+  end
+
+  scope "/", LightningWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    get "/users/settings", UserSettingsController, :edit
+    put "/users/settings", UserSettingsController, :update
+    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
+
+    live("/", DashboardLive.Index, :index)
+  end
+
+  scope "/", LightningWeb do
+    pipe_through [:browser]
+
+    get "/users/log_out", UserSessionController, :delete
+    get "/users/confirm", UserConfirmationController, :new
+    post "/users/confirm", UserConfirmationController, :create
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
   end
 end

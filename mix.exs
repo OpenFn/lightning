@@ -46,6 +46,7 @@ defmodule Lightning.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:bcrypt_elixir, "~> 2.0"},
       {:credo, "~> 1.6", only: [:test, :dev]},
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
       {:ecto_sql, "~> 3.6"},
@@ -73,7 +74,8 @@ defmodule Lightning.MixProject do
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:temp, "~> 0.4"}
+      {:temp, "~> 0.4"},
+      {:ecto_enum, "~> 1.4"}
     ]
   end
 
