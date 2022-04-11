@@ -85,7 +85,7 @@ workflows:
       - build:
           name: "Check for security vulnerabilities"
           execute:
-            - run: MIX_ENV=test mix sobelow --config .sobelow.exs
+            - run: MIX_ENV=test mix sobelow
       - build:
           name: "Check elixir tests (codecov)"
           execute:

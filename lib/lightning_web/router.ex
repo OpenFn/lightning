@@ -4,6 +4,7 @@ defmodule LightningWeb.Router do
   import LightningWeb.UserAuth
   alias JobLive
   alias CredentialLive
+  alias UserLive
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -35,6 +36,12 @@ defmodule LightningWeb.Router do
 
     live("/credentials/:id", CredentialLive.Show, :show)
     live("/credentials/:id/edit", CredentialLive.Edit, :edit)
+
+    live("/users", UserLive.Index, :index)
+    live("/users/new", UserLive.Index, :new)
+
+    live("/users/:id", UserLive.Show, :show)
+    live("/users/:id/edit", UserLive.Edit, :edit)
 
     live("/dataclips", DataclipLive.Index, :index)
     live("/dataclips/new", DataclipLive.Index, :new)

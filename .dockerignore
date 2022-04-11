@@ -1,0 +1,20 @@
+.dockerignore
+.git
+.log
+tmp
+
+# Mix artifacts
+_build
+deps
+*.ez
+releases
+
+.elixir_ls
+
+# Generate on crash by the VM
+erl_crash.dump
+
+# Static artifacts
+node_modules
+
+priv/openfn

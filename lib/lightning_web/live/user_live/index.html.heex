@@ -1,0 +1,47 @@
+<MainSection.header title="Users" />
+
+<MainSection.main>
+<%= if @live_action in [:new, :edit] do %>
+  <.modal return_to={Routes.user_index_path(@socket, :index)}>
+    <.live_component
+      module={LightningWeb.UserLive.FormComponent}
+      id={@user.id || :new}
+      title={@page_title}
+      action={@live_action}
+      user={@user}
+      return_to={Routes.user_index_path(@socket, :index)}
+    />
+  </.modal>
+<% end %>
+
+<table>
+  <thead>
+    <tr>
+      <th>First name</th>
+      <th>Last name</th>
+      <th>Email</th>
+      <th>Password</th>
+
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="users">
+    <%= for user <- @users do %>
+      <tr id={"user-#{user.id}"}>
+        <td><%= user.first_name %></td>
+        <td><%= user.last_name %></td>
+        <td><%= user.email %></td>
+        <td><%= user.password %></td>
+
+        <td>
+          <span><%= live_redirect "Show", to: Routes.user_show_path(@socket, :show, user) %></span>
+          <span><%= live_redirect "Edit", to: Routes.user_edit_path(@socket, :edit, user) %></span>
+          <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: user.id, data: [confirm: "Are you sure?"] %></span>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<span><%= live_patch "New User", to: Routes.user_index_path(@socket, :new) %></span>
+</MainSection.main>

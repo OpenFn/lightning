@@ -1,8 +1,6 @@
 <MainSection.header title="Dataclips" />
 
 <MainSection.main>
-
-
 <%= if @live_action in [:new, :edit] do %>
   <.modal return_to={Routes.dataclip_index_path(@socket, :index)}>
     <.live_component

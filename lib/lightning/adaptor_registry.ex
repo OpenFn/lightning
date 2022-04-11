@@ -69,7 +69,7 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec package_detail(package_name :: String.t()) :: map()
     def package_detail(package_name) do
-      get!("/#{package_name}", [], hackney: [pool: :default]).body
+      get!("/#{package_name}", [], hackney: [pool: :default], recv_timeout: 15_000).body
     end
   end
 

@@ -41,7 +41,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "3.0.7",
+  version: "3.0.23",
   default: [
     args: ~w(
       --config=tailwind.config.js
