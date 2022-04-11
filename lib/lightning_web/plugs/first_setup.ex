@@ -4,12 +4,12 @@ defmodule LightningWeb.Plugs.FirstSetup do
   superusers in the system yet.
   """
   use LightningWeb, :controller
-  alias Lightning.Users
+  alias Lightning.Accounts
 
   def init(opts), do: opts
 
   def call(%{request_path: "/first_setup"} = conn, _opts) do
-    if Users.has_one_superuser?() do
+    if Accounts.has_one_superuser?() do
       conn |> redirect(to: "/") |> halt()
     else
       conn
@@ -17,7 +17,7 @@ defmodule LightningWeb.Plugs.FirstSetup do
   end
 
   def call(conn, _opts) do
-    if Users.has_one_superuser?() do
+    if Accounts.has_one_superuser?() do
       conn
     else
       conn |> redirect(to: "/first_setup") |> halt()

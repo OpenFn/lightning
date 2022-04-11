@@ -9,7 +9,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
   use LightningWeb, :live_view
   import LightningWeb.Components.Form
 
-  alias Lightning.Users
+  alias Lightning.Accounts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -29,7 +29,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
       ) do
     changeset =
       socket.assigns.registration
-      |> Users.change_user(registration_params)
+      |> Accounts.change_superuser(registration_params)
       |> Ecto.Changeset.validate_confirmation(:password)
       |> Ecto.Changeset.validate_length(:password, min: 8)
       |> Map.put(:action, :validate)
@@ -43,12 +43,12 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
         %{"superuser_registration" => registration_params},
         socket
       ) do
-    case Users.create_user(registration_params) do
-      {:ok, _user} ->
+    case Accounts.register_superuser(registration_params) do
+      {:ok, user} ->
         {:noreply,
          socket
          |> put_flash(:info, "Superuser account created.")
-         |> push_redirect(to: Routes.dashboard_index_path(socket, :index))}
+         |> LightningWeb.UserAuth.log_in_user(user)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -56,16 +56,16 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
   end
 
   defp apply_action(socket, :show, _params) do
-    if Lightning.Users.has_one_superuser?() do
+    if Lightning.Accounts.has_one_superuser?() do
       socket
       |> put_flash(:warn, "Superuser account already exists.")
       |> push_redirect(to: Routes.dashboard_index_path(socket, :index))
     else
-      registration = %Users.User{}
+      registration = %Accounts.User{}
 
       socket
       |> assign(:registration, registration)
-      |> assign(:changeset, registration |> Users.change_user())
+      |> assign(:changeset, registration |> Accounts.change_superuser())
     end
   end
 end

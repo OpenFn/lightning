@@ -38,20 +38,24 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Registers an admin.
+  Registers a superuser.
 
   ## Examples
-      iex> register_admin(%{field: value})
+      iex> register_superuser(%{field: value})
       {:ok, %User{}}
 
-      iex> register_admin(%{field: bad_value})
+      iex> register_superuser(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
   """
 
-  def register_admin(attrs) do
+  def register_superuser(attrs) do
     %User{}
-    |> User.admin_registration_changeset(attrs)
+    |> User.superuser_registration_changeset(attrs)
     |> Repo.insert()
+  end
+
+  def change_superuser(%User{} = user, attrs \\ %{}) do
+    User.superuser_registration_changeset(user, attrs)
   end
 
   @doc """
@@ -152,8 +156,7 @@ defmodule Lightning.Accounts do
   ## Examples
 
       iex> apply_user_email(user, "valid password", %{email: ...})
-      {:ok, %User{}}
-
+      {:ok, %User{}}role: :superuser
       iex> apply_user_email(user, "invalid password", %{email: ...})
       {:error, %Ecto.Changeset{}}
 
@@ -402,5 +405,15 @@ defmodule Lightning.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  @doc """
+  Used to determine if there is at least one Superuser in the system.
+  This triggers the setup page on fresh installs.
+  """
+  @spec has_one_superuser?() :: boolean()
+  def has_one_superuser?() do
+    from(u in User, select: count(), where: u.role == :superuser)
+    |> Repo.one() >= 1
   end
 end

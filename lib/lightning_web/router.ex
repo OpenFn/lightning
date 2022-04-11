@@ -1,13 +1,10 @@
 defmodule LightningWeb.Router do
   use LightningWeb, :router
-<<<<<<< HEAD
 
   import LightningWeb.UserAuth
   alias JobLive
   alias CredentialLive
   alias UserLive
-=======
->>>>>>> ee6a6ea (Superuser registration form and model)
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -17,6 +14,7 @@ defmodule LightningWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_user
+    plug LightningWeb.Plugs.FirstSetup
   end
 
   pipeline :api do
@@ -24,11 +22,9 @@ defmodule LightningWeb.Router do
   end
 
   scope "/", LightningWeb do
-<<<<<<< HEAD
     pipe_through [:browser]
-=======
-    pipe_through [:browser, LightningWeb.Plugs.FirstSetup]
->>>>>>> ee6a6ea (Superuser registration form and model)
+
+    live("/first_setup", FirstSetupLive.Superuser, :show)
 
     get "/users/log_out", UserSessionController, :delete
     get "/users/confirm", UserConfirmationController, :new
@@ -93,11 +89,7 @@ defmodule LightningWeb.Router do
     live("/runs/:id", RunLive.Show, :show)
     live("/runs/:id/show/edit", RunLive.Show, :edit)
 
-<<<<<<< HEAD
     live("/", DashboardLive.Index, :index)
-=======
-    live("/first_setup", FirstSetupLive.Superuser, :show)
->>>>>>> ee6a6ea (Superuser registration form and model)
   end
 
   scope "/i", LightningWeb do

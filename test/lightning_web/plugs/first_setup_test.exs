@@ -12,7 +12,7 @@ defmodule LightningWeb.Plugs.FirstSetupTest do
   test "doesn't redirect when there is a first user" do
     conn = build_conn() |> FirstSetup.call(%{}) |> get("/")
 
-    assert conn.status != 302
     assert conn.request_path == "/"
+    assert conn.status != 302
   end
 end

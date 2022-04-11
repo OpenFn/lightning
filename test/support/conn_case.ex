@@ -37,7 +37,7 @@ defmodule LightningWeb.ConnCase do
 
     Map.get(tags, :create_initial_user, true)
     |> if do
-      Lightning.UsersFixtures.user_fixture()
+      Lightning.AccountsFixtures.superuser_fixture()
     end
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
