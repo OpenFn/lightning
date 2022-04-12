@@ -6,7 +6,7 @@ defmodule LightningWeb.UserSettingsControllerTest do
 
   setup :register_and_log_in_user
 
-  describe "GET /users/settings" do
+  describe "GET /profile" do
     test "renders settings page", %{conn: conn} do
       conn = get(conn, Routes.user_settings_path(conn, :edit))
       response = html_response(conn, 200)
@@ -20,7 +20,7 @@ defmodule LightningWeb.UserSettingsControllerTest do
     end
   end
 
-  describe "PUT /users/settings (change password form)" do
+  describe "PUT /profile (change password form)" do
     test "updates the user password and resets tokens", %{conn: conn, user: user} do
       new_password_conn =
         put(conn, Routes.user_settings_path(conn, :update), %{
@@ -58,7 +58,7 @@ defmodule LightningWeb.UserSettingsControllerTest do
     end
   end
 
-  describe "PUT /users/settings (change email form)" do
+  describe "PUT /profile (change email form)" do
     @tag :capture_log
     test "updates the user email", %{conn: conn, user: user} do
       conn =
@@ -88,7 +88,7 @@ defmodule LightningWeb.UserSettingsControllerTest do
     end
   end
 
-  describe "GET /users/settings/confirm_email/:token" do
+  describe "GET /profile/confirm_email/:token" do
     setup %{user: user} do
       email = unique_user_email()
 

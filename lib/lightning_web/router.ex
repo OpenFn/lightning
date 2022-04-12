@@ -48,9 +48,9 @@ defmodule LightningWeb.Router do
   scope "/", LightningWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    get "/users/settings", UserSettingsController, :edit
-    put "/users/settings", UserSettingsController, :update
-    get "/users/settings/confirm_email/:token", UserSettingsController, :confirm_email
+    get "/profile", UserSettingsController, :edit
+    put "/profile", UserSettingsController, :update
+    get "/profile/confirm_email/:token", UserSettingsController, :confirm_email
 
     live("/jobs", JobLive.Index, :index)
     live("/jobs/new", JobLive.Index, :new)
