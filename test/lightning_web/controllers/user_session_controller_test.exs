@@ -22,6 +22,47 @@ defmodule LightningWeb.UserSessionControllerTest do
     end
   end
 
+  describe "GET /users/exchange_token" do
+    test "renders home as a logged in user for a valid token", %{conn: conn, user: user} do
+      token = Lightning.Accounts.generate_auth_token(user)
+
+      conn =
+        get(conn, Routes.user_session_path(conn, :exchange_token, token |> Base.url_encode64()))
+
+      assert "/" = redirected_path = redirected_to(conn)
+
+      response =
+        get(recycle(conn), redirected_path)
+        |> html_response(200)
+
+      assert response =~ "Settings</a>"
+      assert response =~ "Log out</a>"
+    end
+
+    test "renders log in page for an invalid token", %{conn: conn} do
+      conn = get(conn, Routes.user_session_path(conn, :exchange_token, "oops"))
+      assert "/users/log_in" = redirected_path = redirected_to(conn)
+
+      response =
+        get(recycle(conn), redirected_path)
+        |> html_response(200)
+
+      assert response =~ "Invalid token"
+      assert response =~ "<h1>Log in</h1>"
+      assert response =~ "Register</a>"
+      assert response =~ "Forgot your password?</a>"
+    end
+
+    test "redirects if already logged in", %{conn: conn, user: user} do
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.user_session_path(conn, :exchange_token, "oops"))
+
+      assert redirected_to(conn) == "/"
+    end
+  end
+
   describe "POST /users/log_in" do
     test "logs the user in", %{conn: conn, user: user} do
       conn =
