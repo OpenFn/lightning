@@ -20,7 +20,7 @@ defmodule LightningWeb.FirstSetupLiveTest do
              )
              |> render_change() =~ "should be at least 8 character(s)"
 
-      {:ok, _, html} =
+      {:ok, conn} =
         show_live
         |> form("#superuser-registration-form",
           superuser_registration: %{
@@ -32,7 +32,13 @@ defmodule LightningWeb.FirstSetupLiveTest do
           }
         )
         |> render_submit()
-        |> follow_redirect(conn, Routes.dashboard_index_path(conn, :index))
+        |> follow_redirect(conn)
+
+      assert "/" = redirected_path = redirected_to(conn, 302)
+
+      html =
+        get(recycle(conn), redirected_path)
+        |> html_response(200)
 
       assert html =~ "Superuser account created."
       assert html =~ "Dashboard"

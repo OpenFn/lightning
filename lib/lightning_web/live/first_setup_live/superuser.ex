@@ -48,7 +48,14 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
         {:noreply,
          socket
          |> put_flash(:info, "Superuser account created.")
-         |> LightningWeb.UserAuth.log_in_user(user)}
+         |> redirect(
+           to:
+             Routes.user_session_path(
+               socket,
+               :exchange_token,
+               Accounts.generate_auth_token(user) |> Base.url_encode64()
+             )
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}

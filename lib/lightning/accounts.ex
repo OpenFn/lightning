@@ -298,6 +298,49 @@ defmodule Lightning.Accounts do
     :ok
   end
 
+  ## Auth
+
+  @doc """
+  Generates an auth token.
+  """
+  def generate_auth_token(user) do
+    {token, user_token} = UserToken.build_token(user, "auth")
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Exchanges an auth token for a session token.
+
+  The auth token is removed from the database if successful.
+  """
+  def exchange_auth_token(auth_token) do
+    case get_user_by_auth_token(auth_token) do
+      user = %User{} ->
+        delete_auth_token(auth_token)
+        generate_user_session_token(user)
+
+      any ->
+        any
+    end
+  end
+
+  @doc """
+  Gets the user with the given signed token.
+  """
+  def get_user_by_auth_token(token) do
+    {:ok, query} = UserToken.verify_auth_token_query(token)
+    Repo.one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_auth_token(token) do
+    Repo.delete_all(UserToken.token_and_context_query(token, "auth"))
+    :ok
+  end
+
   ## Confirmation
 
   @doc """

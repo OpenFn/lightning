@@ -17,7 +17,15 @@ defmodule LightningWeb.UserAuth do
   @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
 
   @doc """
-  Logs the user in.
+  Logs the user in by creating a new session token.
+  """
+  def log_in_user(conn, user, params \\ %{}) do
+    token = Accounts.generate_user_session_token(user)
+    new_session(conn, token, params)
+  end
+
+  @doc """
+  Assigns the token to a new session.
 
   It renews the session ID and clears the whole session
   to avoid fixation attacks. See the renew_session
@@ -28,8 +36,7 @@ defmodule LightningWeb.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def log_in_user(conn, user, params \\ %{}) do
-    token = Accounts.generate_user_session_token(user)
+  def new_session(conn, token, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
 
     conn

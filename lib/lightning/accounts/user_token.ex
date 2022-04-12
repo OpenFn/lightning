@@ -5,6 +5,9 @@ defmodule Lightning.Accounts.UserToken do
 
   use Ecto.Schema
   import Ecto.Query
+  import Ecto.Changeset
+
+  alias Lightning.Accounts.User
 
   @hash_algorithm :sha256
   @rand_size 32
@@ -15,6 +18,7 @@ defmodule Lightning.Accounts.UserToken do
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
   @session_validity_in_days 60
+  @auth_validity_in_seconds 30
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -22,7 +26,7 @@ defmodule Lightning.Accounts.UserToken do
     field :token, :binary
     field :context, :string
     field :sent_to, :string
-    belongs_to :user, Lightning.Accounts.User
+    belongs_to :user, User
 
     timestamps(updated_at: false)
   end
@@ -47,8 +51,20 @@ defmodule Lightning.Accounts.UserToken do
   session they deem invalid.
   """
   def build_session_token(user) do
+    build_token(user, "session")
+  end
+
+  @spec build_token(User.t(), context :: binary()) ::
+          {binary(), Ecto.Changeset.t(%__MODULE__{})}
+  def build_token(user, context) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {token, %Lightning.Accounts.UserToken{token: token, context: "session", user_id: user.id}}
+    {token, changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
+  end
+
+  def changeset(user_token, attrs) do
+    user_token
+    |> cast(attrs, [:token, :context, :user_id, :sent_to])
+    |> validate_required([:token, :context, :user_id])
   end
 
   @doc """
@@ -57,13 +73,13 @@ defmodule Lightning.Accounts.UserToken do
   The query returns the user found by the token, if any.
 
   The token is valid if it matches the value in the database and it has
-  not expired (after @session_validity_in_days).
+  not expired (after @auth_validity_in_seconds).
   """
-  def verify_session_token_query(token) do
+  def verify_auth_token_query(token) do
     query =
-      from token in token_and_context_query(token, "session"),
+      from token in token_and_context_query(token, "auth"),
         join: user in assoc(token, :user),
-        where: token.inserted_at > ago(@session_validity_in_days, "day"),
+        where: token.inserted_at > ago(@auth_validity_in_seconds, "second"),
         select: user
 
     {:ok, query}
@@ -91,12 +107,30 @@ defmodule Lightning.Accounts.UserToken do
     hashed_token = :crypto.hash(@hash_algorithm, token)
 
     {Base.url_encode64(token, padding: false),
-     %Lightning.Accounts.UserToken{
+     changeset(%__MODULE__{}, %{
        token: hashed_token,
        context: context,
-       sent_to: sent_to,
-       user_id: user.id
-     }}
+       user_id: user.id,
+       sent_to: sent_to
+     })}
+  end
+
+  @doc """
+  Checks if the token is valid and returns its underlying lookup query.
+
+  The query returns the user found by the token, if any.
+
+  The token is valid if it matches the value in the database and it has
+  not expired (after @session_validity_in_days).
+  """
+  def verify_session_token_query(token) do
+    query =
+      from token in token_and_context_query(token, "session"),
+        join: user in assoc(token, :user),
+        where: token.inserted_at > ago(@session_validity_in_days, "day"),
+        select: user
+
+    {:ok, query}
   end
 
   @doc """

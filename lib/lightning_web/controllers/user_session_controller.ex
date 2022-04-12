@@ -19,6 +19,19 @@ defmodule LightningWeb.UserSessionController do
     end
   end
 
+  def exchange_token(conn, %{"token" => token}) do
+    case Accounts.exchange_auth_token(token |> Base.url_decode64!()) do
+      nil ->
+        conn
+        |> put_flash(:error, "Invalid token")
+        |> redirect(to: Routes.user_session_path(conn, :new))
+
+      token ->
+        conn
+        |> UserAuth.new_session(token)
+    end
+  end
+
   def delete(conn, _params) do
     conn
     |> put_flash(:info, "Logged out successfully.")

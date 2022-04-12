@@ -7,6 +7,10 @@ defmodule Lightning.Accounts.User do
   import Ecto.Changeset
   import EctoEnum
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil
+        }
+
   defenum(RolesEnum, :role, [
     :user,
     :admin,

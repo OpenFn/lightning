@@ -347,6 +347,78 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "generate_auth_token/1" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "generates a token", %{user: user} do
+      token = Accounts.generate_auth_token(user)
+      assert user_token = Repo.get_by(UserToken, token: token)
+      assert user_token.context == "auth"
+
+      # Creating the same token for another user should fail
+      assert_raise Ecto.ConstraintError, fn ->
+        Repo.insert!(%UserToken{
+          token: user_token.token,
+          user_id: user_fixture().id,
+          context: "auth"
+        })
+      end
+    end
+  end
+
+  describe "exchange_auth_token/1" do
+    setup do
+      user = user_fixture()
+      token = Accounts.generate_auth_token(user)
+      %{user: user, token: token}
+    end
+
+    test "returns a new session token", %{user: user, token: auth_token} do
+      assert session_token = Accounts.exchange_auth_token(auth_token)
+      assert session_user = Accounts.get_user_by_session_token(session_token)
+      assert session_user.id == user.id
+
+      refute Accounts.get_user_by_auth_token(auth_token)
+    end
+
+    test "does not return for an invalid token" do
+      refute Accounts.exchange_auth_token("oops")
+    end
+  end
+
+  describe "get_user_by_auth_token/1" do
+    setup do
+      user = user_fixture()
+      token = Accounts.generate_auth_token(user)
+      %{user: user, token: token}
+    end
+
+    test "returns user by token", %{user: user, token: token} do
+      assert auth_user = Accounts.get_user_by_auth_token(token)
+      assert auth_user.id == user.id
+    end
+
+    test "does not return user for invalid token" do
+      refute Accounts.get_user_by_auth_token("oops")
+    end
+
+    test "does not return user for expired token", %{token: token} do
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      refute Accounts.get_user_by_auth_token(token)
+    end
+  end
+
+  describe "delete_auth_token/1" do
+    test "deletes the token" do
+      user = user_fixture()
+      token = Accounts.generate_auth_token(user)
+      assert Accounts.delete_auth_token(token) == :ok
+      refute Accounts.get_user_by_auth_token(token)
+    end
+  end
+
   describe "get_user_by_session_token/1" do
     setup do
       user = user_fixture()
@@ -525,7 +597,6 @@ defmodule Lightning.AccountsTest do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
-
   end
 
   test "has_one_superuser?/0" do
