@@ -38,20 +38,24 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Registers an admin.
+  Registers a superuser.
 
   ## Examples
-      iex> register_admin(%{field: value})
+      iex> register_superuser(%{field: value})
       {:ok, %User{}}
 
-      iex> register_admin(%{field: bad_value})
+      iex> register_superuser(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
   """
 
-  def register_admin(attrs) do
+  def register_superuser(attrs) do
     %User{}
-    |> User.admin_registration_changeset(attrs)
+    |> User.superuser_registration_changeset(attrs)
     |> Repo.insert()
+  end
+
+  def change_superuser(%User{} = user, attrs \\ %{}) do
+    User.superuser_registration_changeset(user, attrs)
   end
 
   @doc """
@@ -152,8 +156,7 @@ defmodule Lightning.Accounts do
   ## Examples
 
       iex> apply_user_email(user, "valid password", %{email: ...})
-      {:ok, %User{}}
-
+      {:ok, %User{}}role: :superuser
       iex> apply_user_email(user, "invalid password", %{email: ...})
       {:error, %Ecto.Changeset{}}
 
@@ -295,6 +298,49 @@ defmodule Lightning.Accounts do
     :ok
   end
 
+  ## Auth
+
+  @doc """
+  Generates an auth token.
+  """
+  def generate_auth_token(user) do
+    {token, user_token} = UserToken.build_token(user, "auth")
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Exchanges an auth token for a session token.
+
+  The auth token is removed from the database if successful.
+  """
+  def exchange_auth_token(auth_token) do
+    case get_user_by_auth_token(auth_token) do
+      user = %User{} ->
+        delete_auth_token(auth_token)
+        generate_user_session_token(user)
+
+      any ->
+        any
+    end
+  end
+
+  @doc """
+  Gets the user with the given signed token.
+  """
+  def get_user_by_auth_token(token) do
+    {:ok, query} = UserToken.verify_auth_token_query(token)
+    Repo.one(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_auth_token(token) do
+    Repo.delete_all(UserToken.token_and_context_query(token, "auth"))
+    :ok
+  end
+
   ## Confirmation
 
   @doc """
@@ -402,5 +448,15 @@ defmodule Lightning.Accounts do
       {:ok, %{user: user}} -> {:ok, user}
       {:error, :user, changeset, _} -> {:error, changeset}
     end
+  end
+
+  @doc """
+  Used to determine if there is at least one Superuser in the system.
+  This triggers the setup page on fresh installs.
+  """
+  @spec has_one_superuser?() :: boolean()
+  def has_one_superuser?() do
+    from(u in User, select: count(), where: u.role == :superuser)
+    |> Repo.one() >= 1
   end
 end

@@ -7,9 +7,14 @@ defmodule Lightning.Accounts.User do
   import Ecto.Changeset
   import EctoEnum
 
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil
+        }
+
   defenum(RolesEnum, :role, [
     :user,
-    :admin
+    :admin,
+    :superuser
   ])
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -27,17 +32,17 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
-  A user changeset for registering admins.
+  A user changeset for registering superusers.
   """
-  def admin_registration_changeset(user, attrs) do
+  def superuser_registration_changeset(user, attrs) do
     user
     |> registration_changeset(attrs)
-    |> prepare_changes(&set_admin_role/1)
+    |> prepare_changes(&set_superuser_role/1)
   end
 
-  defp set_admin_role(changeset) do
+  defp set_superuser_role(changeset) do
     changeset
-    |> put_change(:role, :admin)
+    |> put_change(:role, :superuser)
   end
 
   @doc """

@@ -14,6 +14,7 @@ defmodule LightningWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
     plug :fetch_current_user
+    plug LightningWeb.Plugs.FirstSetup
   end
 
   pipeline :api do
@@ -22,6 +23,8 @@ defmodule LightningWeb.Router do
 
   scope "/", LightningWeb do
     pipe_through [:browser]
+
+    live("/first_setup", FirstSetupLive.Superuser, :show)
 
     get "/users/log_out", UserSessionController, :delete
     get "/users/confirm", UserConfirmationController, :new
@@ -37,6 +40,7 @@ defmodule LightningWeb.Router do
 
     get "/users/register", UserRegistrationController, :new
     post "/users/register", UserRegistrationController, :create
+    get "/users/token_exchange/:token", UserSessionController, :exchange_token
     get "/users/log_in", UserSessionController, :new
     post "/users/log_in", UserSessionController, :create
     get "/users/reset_password", UserResetPasswordController, :new
