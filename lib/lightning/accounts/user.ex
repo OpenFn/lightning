@@ -31,6 +31,8 @@ defmodule Lightning.Accounts.User do
     timestamps()
   end
 
+  defdelegate authorize(action, user, params), to: Lightning.Accounts.Policy
+
   @doc """
   A user changeset for registering superusers.
   """
