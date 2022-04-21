@@ -115,6 +115,8 @@ defmodule Lightning.Invocation do
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec create_dataclip(attrs :: map()) ::
+          {:ok, Dataclip.t()} | {:error, Ecto.Changeset.t(Dataclip)}
   def create_dataclip(attrs \\ %{}) do
     %Dataclip{}
     |> Dataclip.changeset(attrs |> coerce_json_field("body"))

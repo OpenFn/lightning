@@ -3,8 +3,9 @@ defmodule Lightning.RunnerTest do
 
   alias Lightning.{Invocation, Runner}
   import Lightning.JobsFixtures
+  import Lightning.InvocationFixtures
 
-  test "does something" do
+  test "start/2 takes a run and executes it" do
     credential_body = %{"username" => "quux"}
 
     job =
@@ -26,7 +27,6 @@ defmodule Lightning.RunnerTest do
       )
 
     dataclip_body = %{"foo" => "bar"}
-    expected_state = %{"data" => dataclip_body, "configuration" => credential_body}
 
     {:ok, %{run: run}} =
       Invocation.create(
@@ -35,11 +35,15 @@ defmodule Lightning.RunnerTest do
       )
 
     result = %Engine.Result{} = Runner.start(run)
+    expected_state = %{"data" => dataclip_body, "configuration" => credential_body}
 
     assert File.read!(result.final_state_path)
            |> Jason.decode!() == expected_state
 
-    run = Repo.reload!(run)
+    run = Repo.reload!(run) |> Repo.preload(:result_dataclip)
+
+    assert run.result_dataclip.body == expected_state
+
     refute is_nil(run.started_at)
     refute is_nil(run.finished_at)
     assert run.exit_code == 0
@@ -48,5 +52,17 @@ defmodule Lightning.RunnerTest do
     assert log =~ "@openfn/language-common"
 
     assert length(run.log) > 0
+  end
+
+  test "create_dataclip_from_result/2" do
+    assert Runner.create_dataclip_from_result(
+             %Engine.Result{final_state_path: "no_such_path"},
+             run_fixture()
+           ) == {:error, :enoent}
+
+    assert Runner.create_dataclip_from_result(
+             %Engine.Result{final_state_path: Temp.open!(%{suffix: ".json"}, &IO.write(&1, ""))},
+             run_fixture()
+           ) == {:error, %Jason.DecodeError{data: "", position: 0}}
   end
 end

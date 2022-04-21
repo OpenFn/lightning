@@ -2,6 +2,7 @@ defmodule Lightning.Runner do
   @moduledoc """
   Job running entrypoint
   """
+  require Logger
   alias Lightning.Invocation
   import Lightning.Invocation, only: [get_dataclip_body: 1]
   import Lightning.Jobs, only: [get_job!: 1]
@@ -28,6 +29,8 @@ defmodule Lightning.Runner do
         exit_code: result.exit_code,
         log: result.log
       })
+
+      Lightning.Runner.create_dataclip_from_result(result, run)
     end
   end
 
@@ -63,37 +66,14 @@ defmodule Lightning.Runner do
         nil
       end
 
-    # NOTE: really not sure how much we're gaining here, we're trying to avoid
-    # as much data marshalling as possible - and this currently avoids turning
-    # the job body into a map before turning it into a string again; which
-    # is probably somewhat of a win.
-    state =
-      Jason.Helpers.json_map(
-        data: Jason.Fragment.new(fn _ -> dataclip end),
-        configuration: Jason.Fragment.new(fn _ -> credential || "null" end)
-      )
-      |> Jason.encode_to_iodata!()
+    state = build_state(dataclip, credential)
 
     %{local_name: local_name} = find_or_install_adaptor(adaptor)
 
     # turn run into RunSpec
-    {:ok, state_path} =
-      Temp.open(
-        %{prefix: "state", suffix: ".json"},
-        &IO.write(&1, state)
-      )
-
-    {:ok, final_state_path} =
-      Temp.open(
-        %{prefix: "output", suffix: ".json"},
-        &IO.write(&1, "")
-      )
-
-    {:ok, expression_path} =
-      Temp.open(
-        %{prefix: "expression", suffix: ".json"},
-        &IO.write(&1, expression)
-      )
+    {:ok, state_path} = write_temp(state, "state")
+    {:ok, final_state_path} = write_temp("", "output")
+    {:ok, expression_path} = write_temp(expression, "expression")
 
     runspec = %Engine.RunSpec{
       adaptor: local_name,
@@ -108,6 +88,61 @@ defmodule Lightning.Runner do
     }
 
     Handler.start(runspec, Keyword.merge(opts, context: run))
+  end
+
+  # In order to run a flow job, `start/2` is called, and on a result
+
+  @spec write_temp(contents :: binary(), prefix :: String.t()) :: {:ok, Path.t()} | {:error, any}
+  defp write_temp(contents, prefix) do
+    Temp.open(
+      %{prefix: prefix, suffix: ".json"},
+      &IO.write(&1, contents)
+    )
+  end
+
+  @spec build_state(dataclip :: String.t(), credential :: String.t() | nil) :: iodata()
+  defp build_state(dataclip, credential) do
+    # NOTE: really not sure how much we're gaining here, we're trying to avoid
+    # as much data marshalling as possible - and this currently avoids turning
+    # the job body into a map before turning it into a string again; which
+    # is probably somewhat of a win.
+    Jason.Helpers.json_map(
+      data: Jason.Fragment.new(fn _ -> dataclip end),
+      configuration: Jason.Fragment.new(fn _ -> credential || "null" end)
+    )
+    |> Jason.encode_to_iodata!()
+  end
+
+  @doc """
+  Creates a dataclip linked to the run that just finished.
+  If either the file doesn't exist or there is a JSON decoding error, it logs
+  and returns an error tuple.
+  """
+  @spec create_dataclip_from_result(result :: Engine.Result.t(), run :: Invocation.Run.t()) ::
+          {:ok, Invocation.Dataclip.t()} | {:error, any}
+  def create_dataclip_from_result(%Engine.Result{} = result, run) do
+    with {:ok, data} <- File.read(result.final_state_path),
+         {:ok, body} <- Jason.decode(data) do
+      Invocation.create_dataclip(%{
+        run_id: run.id,
+        type: :run_result,
+        body: body
+      })
+    else
+      res = {:error, %Jason.DecodeError{position: pos}} ->
+        Logger.info(
+          "Got JSON decoding error when trying to parse: #{result.final_state_path}:#{pos}"
+        )
+
+        res
+
+      res = {:error, err} ->
+        Logger.info(
+          "Got unexpected result while saving the resulting state from a Run:\n#{inspect(err)}"
+        )
+
+        res
+    end
   end
 
   @doc """
