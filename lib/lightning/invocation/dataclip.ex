@@ -18,16 +18,20 @@ defmodule Lightning.Invocation.Dataclip do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Lightning.Invocation.Run
+
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
-          body: %{} | nil
+          body: %{} | nil,
+          run_id: Ecto.UUID.t() | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "dataclips" do
     field :body, :map
-    field :type, Ecto.Enum, values: [:http_request, :global]
+    field :type, Ecto.Enum, values: [:http_request, :global, :run_result]
+    belongs_to :run, Run
 
     timestamps(usec: true)
   end
@@ -35,7 +39,27 @@ defmodule Lightning.Invocation.Dataclip do
   @doc false
   def changeset(dataclip, attrs) do
     dataclip
-    |> cast(attrs, [:body, :type])
+    |> cast(attrs, [:body, :type, :run_id])
     |> validate_required([:body, :type])
+    |> validate_by_type()
+  end
+
+  @doc """
+  Append validations based on the type of the Dataclip.
+
+  - `:run_result` must have an associated Run model.
+  """
+  def validate_by_type(changeset) do
+    changeset
+    |> fetch_field!(:type)
+    |> case do
+      :run_result ->
+        changeset
+        |> validate_required(:run_id)
+        |> assoc_constraint(:run)
+
+      _ ->
+        changeset
+    end
   end
 end

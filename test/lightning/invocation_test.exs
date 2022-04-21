@@ -63,6 +63,20 @@ defmodule Lightning.InvocationTest do
       assert dataclip.type == :http_request
     end
 
+    test "create_dataclip/1 with run_result type creates a dataclip" do
+      run = run_fixture()
+      attrs = %{body: %{}, type: :run_result, run_id: nil}
+
+      assert {:error, changeset} = Invocation.create_dataclip(attrs)
+
+      assert {:run_id, {"can't be blank", [validation: :required]}} in changeset.errors
+
+      assert {:ok, %Dataclip{} = dataclip} = Invocation.create_dataclip(%{attrs | run_id: run.id})
+      assert dataclip.body == %{}
+      assert dataclip.type == :run_result
+      assert dataclip.run_id == run.id
+    end
+
     test "create_dataclip/1 with invalid data returns error changeset" do
       assert {:error, %Ecto.Changeset{}} = Invocation.create_dataclip(@invalid_attrs)
     end
