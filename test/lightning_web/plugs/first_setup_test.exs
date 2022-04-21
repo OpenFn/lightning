@@ -1,5 +1,5 @@
 defmodule LightningWeb.Plugs.FirstSetupTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
   alias LightningWeb.Plugs.FirstSetup
 
   @tag create_initial_user: false

@@ -1,5 +1,5 @@
 defmodule Lightning.InvocationTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Invocation
   alias Lightning.Repo

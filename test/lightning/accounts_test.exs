@@ -1,5 +1,5 @@
 defmodule Lightning.AccountsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Accounts
 

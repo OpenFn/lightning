@@ -1,5 +1,5 @@
 defmodule Lightning.RunnerTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.{Invocation, Runner}
   import Lightning.JobsFixtures

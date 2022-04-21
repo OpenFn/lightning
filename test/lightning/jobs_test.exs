@@ -1,5 +1,5 @@
 defmodule Lightning.JobsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Jobs
   alias Lightning.Credentials
