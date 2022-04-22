@@ -80,7 +80,7 @@
                 <%= select(ft, :type, [Webhook: "webhook", "On Job Success": "on_job_success"],
                   prompt: "",
                   class: "block
-                w-1/2
+                w-full
                 mt-1
                 rounded-md
                 border-gray-300
@@ -107,22 +107,24 @@
               <% end %>
             </div>
             <div class="col-span-3">
-              <%= label ft, :upstream_job_id, class: "block" do %>
-                <span class="block text-sm font-medium text-gray-700">Upstream Job</span>
-                <%= error_tag(ft, :upstream_job_id, class: "block w-full rounded-md") %>
-                <%= select(
-                  ft,
-                  :upstream_job_id,
-                  [Webhook: "webhook", "On Job Success": "on_job_success"],
-                  prompt: "",
-                  class: "block
-                w-1/2
+              <%= if get_field(ft.source,:type) == :on_job_success do %>
+                <%= label ft, :upstream_job_id, class: "block" do %>
+                  <span class="block text-sm font-medium text-gray-700">Upstream Job</span>
+                  <%= error_tag(ft, :upstream_job_id, class: "block w-full rounded-md") %>
+                  <%= select(
+                    ft,
+                    :upstream_job_id,
+                    Enum.map(@upstream_jobs, &{&1.name, &1.id}),
+                    prompt: "",
+                    class: "block
+                w-full
                 mt-1
                 rounded-md
                 border-gray-300
                 shadow-sm
                 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                ) %>
+                  ) %>
+                <% end %>
               <% end %>
             </div>
           <% end %>

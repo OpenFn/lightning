@@ -22,6 +22,20 @@ defmodule Lightning.Jobs do
   end
 
   @doc """
+  Returns the list of jobs excluding the one given.
+  """
+  @spec get_upstream_jobs_for(Job.t()) :: [Job.t()]
+  def get_upstream_jobs_for(%Job{id: id}) do
+    query = from(j in Job, preload: :trigger)
+
+    if is_nil(id) do
+      Repo.all(query)
+    else
+      from(j in query, where: j.id != ^id) |> Repo.all()
+    end
+  end
+
+  @doc """
   Gets a single job.
 
   Raises `Ecto.NoResultsError` if the Job does not exist.

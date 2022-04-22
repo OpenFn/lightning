@@ -35,7 +35,6 @@ defmodule LightningWeb.UserSessionControllerTest do
         get(recycle(conn), redirected_path)
         |> html_response(200)
 
-      assert response =~ "Settings</a>"
       assert response =~ "Log out</a>"
     end
 
@@ -77,7 +76,6 @@ defmodule LightningWeb.UserSessionControllerTest do
       conn = get(conn, "/")
       response = html_response(conn, 200)
       # assert response =~ user.email
-      assert response =~ "Settings</a>"
       assert response =~ "Log out</a>"
     end
 

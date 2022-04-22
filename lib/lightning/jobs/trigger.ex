@@ -40,6 +40,7 @@ defmodule Lightning.Jobs.Trigger do
 
   # Append validations based on the type of the Trigger.
   # - `:on_job_success` must have an associated upstream Job model.
+  # - `:webhook` should _not_ have an upstream Job.
   defp validate_by_type(changeset) do
     changeset
     |> fetch_field!(:type)
@@ -49,8 +50,9 @@ defmodule Lightning.Jobs.Trigger do
         |> validate_required(:upstream_job_id)
         |> assoc_constraint(:upstream_job)
 
-      _ ->
+      :webhook ->
         changeset
+        |> put_change(:upstream_job_id, nil)
     end
   end
 end

@@ -27,5 +27,20 @@ defmodule Lightning.Jobs.TriggerTest do
       assert errors[:upstream_job_id] == nil
       assert errors[:type] == nil
     end
+
+    test "removes any upstream job when type is :webhook" do
+      job = job_fixture()
+
+      changeset = Trigger.changeset(%Trigger{}, %{type: :webhook, upstream_job_id: job.id})
+
+      assert get_field(changeset, :upstream_job_id) == nil
+
+      changeset =
+        Trigger.changeset(%Trigger{type: :on_job_success, upstream_job_id: job.id}, %{
+          type: :webhook
+        })
+
+      assert get_field(changeset, :upstream_job_id) == nil
+    end
   end
 end

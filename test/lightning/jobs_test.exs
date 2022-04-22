@@ -104,6 +104,13 @@ defmodule Lightning.JobsTest do
       job = job_fixture()
       assert %Ecto.Changeset{} = Jobs.change_job(job)
     end
+
+    test "get_upstream_jobs_for/1 returns all jobs except the job passed in" do
+      job = job_fixture()
+      other_job = job_fixture()
+      assert Jobs.get_upstream_jobs_for(job) == [Jobs.get_job!(other_job.id)]
+      assert Jobs.get_upstream_jobs_for(other_job) == [Jobs.get_job!(job.id)]
+    end
   end
 
   # Replace an preloaded Credential with an Ecto.Association.NotLoaded struct
