@@ -1,5 +1,5 @@
 defmodule LightningWeb.WebhooksControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   alias Lightning.{Invocation, Repo}
 

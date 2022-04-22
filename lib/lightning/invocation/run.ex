@@ -13,7 +13,7 @@ defmodule Lightning.Invocation.Run do
 
   use Ecto.Schema
   import Ecto.Changeset
-  alias Lightning.Invocation.Event
+  alias Lightning.Invocation.{Event, Dataclip}
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -24,6 +24,7 @@ defmodule Lightning.Invocation.Run do
     field :started_at, :utc_datetime_usec
     belongs_to :event, Event
     has_one :dataclip, through: [:event, :dataclip]
+    has_one :result_dataclip, Dataclip, where: [type: :run_result]
 
     timestamps(usec: true)
   end

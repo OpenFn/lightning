@@ -1,5 +1,5 @@
 defmodule Lightning.Credentials.CredentialTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Credentials.Credential
 

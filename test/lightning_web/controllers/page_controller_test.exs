@@ -1,5 +1,5 @@
 defmodule LightningWeb.PageControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   test "GET /", %{conn: conn} do
     conn = get(conn, "/")

@@ -1,5 +1,5 @@
 defmodule LightningWeb.UserLiveTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Lightning.AccountsFixtures
