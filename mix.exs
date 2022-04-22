@@ -76,7 +76,8 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:temp, "~> 0.4"},
-      {:ecto_enum, "~> 1.4"}
+      {:ecto_enum, "~> 1.4"},
+      {:bodyguard, "~> 2.2"}
     ]
   end
 
@@ -97,7 +98,7 @@ defmodule Lightning.MixProject do
         "coveralls.html",
         "format --check-formatted",
         "dialyzer",
-        "credo",
+        "credo --all",
         "sobelow"
       ]
     ]

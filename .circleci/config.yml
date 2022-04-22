@@ -77,7 +77,7 @@ workflows:
       - build:
           name: "Check code style"
           execute:
-            - run: MIX_ENV=test mix credo
+            - run: MIX_ENV=test mix credo --all
       - build:
           name: "Type check"
           execute:

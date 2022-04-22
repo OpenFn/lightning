@@ -56,6 +56,11 @@ defmodule LightningWeb.ConnCase do
     %{conn: log_in_user(conn, user), user: user}
   end
 
+  def register_and_log_in_superuser(%{conn: conn}) do
+    user = Lightning.AccountsFixtures.superuser_fixture()
+    %{conn: log_in_user(conn, user), user: user}
+  end
+
   @doc """
   Logs the given `user` into the `conn`.
 
