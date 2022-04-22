@@ -1,44 +1,43 @@
 <MainSection.header title="Users" />
 
 <MainSection.main>
+  <%= if @live_action in [:edit] do %>
+    <.modal return_to={Routes.user_show_path(@socket, :show, @user)}>
+      <.live_component
+        module={LightningWeb.UserLive.FormComponent}
+        id={@user.id}
+        title={@page_title}
+        action={@live_action}
+        user={@user}
+        return_to={Routes.user_show_path(@socket, :show, @user)}
+      />
+    </.modal>
+  <% end %>
 
-<%= if @live_action in [:edit] do %>
-  <.modal return_to={Routes.user_show_path(@socket, :show, @user)}>
-    <.live_component
-      module={LightningWeb.UserLive.FormComponent}
-      id={@user.id}
-      title={@page_title}
-      action={@live_action}
-      user={@user}
-      return_to={Routes.user_show_path(@socket, :show, @user)}
-    />
-  </.modal>
-<% end %>
+  <ul>
+    <li>
+      <strong>First name:</strong>
+      <%= @user.first_name %>
+    </li>
 
-<ul>
+    <li>
+      <strong>Last name:</strong>
+      <%= @user.last_name %>
+    </li>
 
-  <li>
-    <strong>First name:</strong>
-    <%= @user.first_name %>
-  </li>
+    <li>
+      <strong>Email:</strong>
+      <%= @user.email %>
+    </li>
 
-  <li>
-    <strong>Last name:</strong>
-    <%= @user.last_name %>
-  </li>
+    <li>
+      <strong>Password:</strong>
+      <%= @user.password %>
+    </li>
+  </ul>
 
-  <li>
-    <strong>Email:</strong>
-    <%= @user.email %>
-  </li>
-
-  <li>
-    <strong>Password:</strong>
-    <%= @user.password %>
-  </li>
-
-</ul>
-
-<span><%= live_patch "Edit", to: Routes.user_edit_path(@socket, :edit, @user), class: "button" %></span> |
-<span><%= live_redirect "Back", to: Routes.user_index_path(@socket, :index) %></span>
+  <span>
+    <%= live_patch("Edit", to: Routes.user_edit_path(@socket, :edit, @user), class: "button") %>
+  </span>
+  | <span><%= live_redirect("Back", to: Routes.user_index_path(@socket, :index)) %></span>
 </MainSection.main>

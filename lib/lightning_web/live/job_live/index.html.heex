@@ -1,7 +1,6 @@
 <MainSection.header title="Jobs" />
 
 <MainSection.main>
-
   <%= if @live_action in [:new, :edit] do %>
     <.modal return_to={Routes.job_index_path(@socket, :index)}>
       <.live_component
@@ -33,16 +32,25 @@
           <td><%= job.enabled %></td>
 
           <td>
-            <span><%= live_redirect "Show", to: Routes.job_show_path(@socket, :show, job) %></span>
-            <span><%= live_redirect "Edit", to: Routes.job_edit_path(@socket, :edit, job) %></span>
-            <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: job.id, data: [confirm: "Are you sure?"] %></span>
+            <span>
+              <%= live_redirect("Show", to: Routes.job_show_path(@socket, :show, job)) %>
+            </span>
+            <span>
+              <%= live_redirect("Edit", to: Routes.job_edit_path(@socket, :edit, job)) %>
+            </span>
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: job.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
           </td>
         </tr>
       <% end %>
     </tbody>
   </table>
 
-  <span><%= live_patch "New Job", to: Routes.job_index_path(@socket, :new) %></span>
-
+  <span><%= live_patch("New Job", to: Routes.job_index_path(@socket, :new)) %></span>
 </MainSection.main>
-

@@ -1,43 +1,54 @@
 <MainSection.header title="Dataclips" />
 
 <MainSection.main>
-<%= if @live_action in [:new, :edit] do %>
-  <.modal return_to={Routes.dataclip_index_path(@socket, :index)}>
-    <.live_component
-      module={LightningWeb.DataclipLive.FormComponent}
-      id={@dataclip.id || :new}
-      title={@page_title}
-      action={@live_action}
-      dataclip={@dataclip}
-      return_to={Routes.dataclip_index_path(@socket, :index)}
-    />
-  </.modal>
-<% end %>
+  <%= if @live_action in [:new, :edit] do %>
+    <.modal return_to={Routes.dataclip_index_path(@socket, :index)}>
+      <.live_component
+        module={LightningWeb.DataclipLive.FormComponent}
+        id={@dataclip.id || :new}
+        title={@page_title}
+        action={@live_action}
+        dataclip={@dataclip}
+        return_to={Routes.dataclip_index_path(@socket, :index)}
+      />
+    </.modal>
+  <% end %>
 
-<table>
-  <thead>
-    <tr>
-      <th>Body</th>
-      <th>Type</th>
+  <table>
+    <thead>
+      <tr>
+        <th>Body</th>
+        <th>Type</th>
 
-      <th></th>
-    </tr>
-  </thead>
-  <tbody id="dataclips">
-    <%= for dataclip <- @dataclips do %>
-      <tr id={"dataclip-#{dataclip.id}"}>
-        <td><%= dataclip.body %></td>
-        <td><%= dataclip.type %></td>
-
-        <td>
-          <span><%= live_redirect "Show", to: Routes.dataclip_show_path(@socket, :show, dataclip) %></span>
-          <span><%= live_patch "Edit", to: Routes.dataclip_index_path(@socket, :edit, dataclip) %></span>
-          <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: dataclip.id, data: [confirm: "Are you sure?"] %></span>
-        </td>
+        <th></th>
       </tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody id="dataclips">
+      <%= for dataclip <- @dataclips do %>
+        <tr id={"dataclip-#{dataclip.id}"}>
+          <td><%= dataclip.body %></td>
+          <td><%= dataclip.type %></td>
 
-<span><%= live_patch "New Dataclip", to: Routes.dataclip_index_path(@socket, :new) %></span>
+          <td>
+            <span>
+              <%= live_redirect("Show", to: Routes.dataclip_show_path(@socket, :show, dataclip)) %>
+            </span>
+            <span>
+              <%= live_patch("Edit", to: Routes.dataclip_index_path(@socket, :edit, dataclip)) %>
+            </span>
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: dataclip.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <span><%= live_patch("New Dataclip", to: Routes.dataclip_index_path(@socket, :new)) %></span>
 </MainSection.main>

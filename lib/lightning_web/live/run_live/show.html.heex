@@ -14,7 +14,6 @@
 <% end %>
 
 <ul>
-
   <li>
     <strong>Log:</strong>
     <%= @run.log %>
@@ -34,8 +33,9 @@
     <strong>Finished at:</strong>
     <%= @run.finished_at %>
   </li>
-
 </ul>
 
-<span><%= live_patch "Edit", to: Routes.run_show_path(@socket, :edit, @run), class: "button" %></span> |
-<span><%= live_redirect "Back", to: Routes.run_index_path(@socket, :index) %></span>
+<span>
+  <%= live_patch("Edit", to: Routes.run_show_path(@socket, :edit, @run), class: "button") %>
+</span>
+| <span><%= live_redirect("Back", to: Routes.run_index_path(@socket, :index)) %></span>

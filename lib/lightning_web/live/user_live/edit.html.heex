@@ -1,7 +1,6 @@
 <MainSection.header title={"#{@user.first_name} #{@user.last_name}"} />
 
 <MainSection.main>
-
   <.live_component
     module={LightningWeb.UserLive.FormComponent}
     id={@user.id || :new}
@@ -10,5 +9,4 @@
     user={@user}
     return_to={Routes.user_index_path(@socket, :index)}
   />
-
 </MainSection.main>

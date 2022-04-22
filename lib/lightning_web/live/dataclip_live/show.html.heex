@@ -14,7 +14,6 @@
 <% end %>
 
 <ul>
-
   <li>
     <strong>Body:</strong>
     <%= @dataclip.body %>
@@ -24,8 +23,9 @@
     <strong>Type:</strong>
     <%= @dataclip.type %>
   </li>
-
 </ul>
 
-<span><%= live_patch "Edit", to: Routes.dataclip_show_path(@socket, :edit, @dataclip), class: "button" %></span> |
-<span><%= live_redirect "Back", to: Routes.dataclip_index_path(@socket, :index) %></span>
+<span>
+  <%= live_patch("Edit", to: Routes.dataclip_show_path(@socket, :edit, @dataclip), class: "button") %>
+</span>
+| <span><%= live_redirect("Back", to: Routes.dataclip_index_path(@socket, :index)) %></span>

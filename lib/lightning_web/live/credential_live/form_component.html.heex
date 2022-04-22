@@ -1,34 +1,40 @@
 <div id={"credential-#{@id}"}>
   <.form
-  let={f}
-  for={@changeset}
-  id="credential-form"
-  phx-target={@myself}
-  phx-change="validate"
-  phx-submit="save">
-
-  <div class="grid grid-cols-6 gap-6">
-    <div class="col-span-3">
-
-      <%= label f, :name, class: "block text-sm font-medium text-gray-700" %>
-      <%= error_tag f, :name, class: "block w-full rounded-md" %>
-      <%= text_input f, :name, class: "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" %>
-
+    let={f}
+    for={@changeset}
+    id="credential-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save"
+  >
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :name, class: "block text-sm font-medium text-gray-700") %>
+        <%= error_tag(f, :name, class: "block w-full rounded-md") %>
+        <%= text_input(f, :name,
+          class:
+            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+        ) %>
+      </div>
     </div>
 
-  </div>
-
-  <div class="hidden sm:block" aria-hidden="true">
-    <div class="py-5">
-      <div class="border-t border-gray-200"></div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5">
+        <div class="border-t border-gray-200"></div>
+      </div>
     </div>
-  </div>
 
-  <%= error_tag f, :body %>
-  <%= textarea f, :body, class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96 min-h-full" %>
+    <%= error_tag(f, :body) %>
+    <%= textarea(f, :body,
+      class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96 min-h-full"
+    ) %>
 
-  <div>
-    <%= submit "Save", phx_disable_with: "Saving...", class: "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
-  </div>
+    <div>
+      <%= submit("Save",
+        phx_disable_with: "Saving...",
+        class:
+          "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      ) %>
+    </div>
   </.form>
 </div>

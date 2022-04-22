@@ -1,7 +1,6 @@
 <MainSection.header title={"#{@job.name}"} />
 
 <MainSection.main>
-
   <.live_component
     module={LightningWeb.JobLive.FormComponent}
     id={@job.id || :new}
@@ -10,5 +9,4 @@
     job={@job}
     return_to={Routes.job_index_path(@socket, :index)}
   />
-
 </MainSection.main>

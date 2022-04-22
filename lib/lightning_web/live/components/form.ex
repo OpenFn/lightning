@@ -33,10 +33,11 @@ defmodule LightningWeb.Components.Form do
     ] ++ base_classes
 
     ~H"""
-      <%= submit "Save",
-        phx_disable_with: "Saving...",
-        disabled: !@changeset.valid?,
-        class: if @changeset.valid?, do: active_classes, else: inactive_classes %>
+    <%= submit("Save",
+      phx_disable_with: "Saving...",
+      disabled: !@changeset.valid?,
+      class: if(@changeset.valid?, do: active_classes, else: inactive_classes)
+    ) %>
     """
   end
 end

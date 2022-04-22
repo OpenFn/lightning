@@ -15,7 +15,6 @@
   <% end %>
 
   <ul>
-
     <li>
       <strong>Name:</strong>
       <%= @credential.name %>
@@ -25,10 +24,13 @@
       <strong>Body:</strong>
       <%= @credential.body %>
     </li>
-
   </ul>
 
-  <span><%= live_patch "Edit", to: Routes.credential_edit_path(@socket, :edit, @credential), class: "button" %></span> |
-  <span><%= live_redirect "Back", to: Routes.credential_index_path(@socket, :index) %></span>
+  <span>
+    <%= live_patch("Edit",
+      to: Routes.credential_edit_path(@socket, :edit, @credential),
+      class: "button"
+    ) %>
+  </span>
+  | <span><%= live_redirect("Back", to: Routes.credential_index_path(@socket, :index)) %></span>
 </MainSection.main>
-

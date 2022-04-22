@@ -1,120 +1,149 @@
 <div id={"job-#{@id}"}>
   <.form
-  let={f}
-  for={@changeset}
-  id="job-form"
-  phx-target={@myself}
-  phx-change="validate"
-  phx-submit="save">
-
-  <div class="grid grid-cols-6 gap-6">
-    <div class="col-span-3">
-
-      <%= label f, :name, class: "block text-sm font-medium text-gray-700" %>
-      <%= error_tag f, :name, class: "block w-full rounded-md" %>
-      <%= text_input f, :name, class: "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" %>
-
-    </div>
-    <div class="col-span-3">
-
-      <div class="flex items-start">
-        <div class="flex items-center h-5">
-          <%= checkbox f, :enabled, class: "focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded" %>
-        </div>
-        <div class="ml-3 text-sm">
-          <%= error_tag f, :enabled, class: "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"  %>
-          <%= label f, :enabled, class: "font-medium text-gray-700" %>
-          <p class="text-gray-500">Job will process messages when triggered</p>
+    let={f}
+    for={@changeset}
+    id="job-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save"
+  >
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :name, class: "block text-sm font-medium text-gray-700") %>
+        <%= error_tag(f, :name, class: "block w-full rounded-md") %>
+        <%= text_input(f, :name,
+          class:
+            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+        ) %>
+      </div>
+      <div class="col-span-3">
+        <div class="flex items-start">
+          <div class="flex items-center h-5">
+            <%= checkbox(f, :enabled,
+              class: "focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+            ) %>
+          </div>
+          <div class="ml-3 text-sm">
+            <%= error_tag(f, :enabled,
+              class:
+                "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            ) %>
+            <%= label(f, :enabled, class: "font-medium text-gray-700") %>
+            <p class="text-gray-500">Job will process messages when triggered</p>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="col-span-2">
-      <%= label f, :credential_id, "Credential", for: "credentialField", class: "block text-sm font-medium text-gray-700" %>
-
-      <%= select f, :credential_id, Enum.map(@credentials, &{&1.name, &1.id}), id: "credentialField", class: "block
+      <div class="col-span-2">
+        <%= label(f, :credential_id, "Credential",
+          for: "credentialField",
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
+        <%= select(f, :credential_id, Enum.map(@credentials, &{&1.name, &1.id}),
+          id: "credentialField",
+          class: "block
         w-full
         mt-1
         rounded-md
         border-gray-300
         shadow-sm
-        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" %>
-    </div>
-
-    <div class="col-span-2">
-      <%= label f, :adaptor_name, "Adaptor", class: "block text-sm font-medium text-gray-700" %>
-
-        <%= select f, :adaptor_name, @adaptors, prompt: "", selected: @adaptor_name, class: "block
+        focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+        ) %>
+      </div>
+      <div class="col-span-2">
+        <%= label(f, :adaptor_name, "Adaptor", class: "block text-sm font-medium text-gray-700") %>
+        <%= select(f, :adaptor_name, @adaptors, prompt: "", selected: @adaptor_name, class: "block
               w-full
               mt-1
               rounded-md
               border-gray-300
               shadow-sm
-              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" %>
-    </div>
-    <div class="col-span-1">
-      <%= label f, :adaptor, "Version", class: "block text-sm font-medium text-gray-700" %>
-
-        <%= error_tag f, :adaptor, class: "block w-full rounded-md" %>
-        <%= select f, :adaptor, @versions, disabled: !@adaptor_name, class: "block
+              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50") %>
+      </div>
+      <div class="col-span-1">
+        <%= label(f, :adaptor, "Version", class: "block text-sm font-medium text-gray-700") %>
+        <%= error_tag(f, :adaptor, class: "block w-full rounded-md") %>
+        <%= select(f, :adaptor, @versions, disabled: !@adaptor_name, class: "block
               w-full
               mt-1
               rounded-md
               border-gray-300
               shadow-sm
-              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" %>
-
-
-    </div>
-    <div class="col-span-3">
-      <%= inputs_for f, :trigger, fn ft -> %>
-        <%= label class: "block" do %>
-          <span class="block text-sm font-medium text-gray-700">Trigger</span>
-          <%= error_tag ft, :type, class: "block w-full rounded-md" %>
-          <%= select ft, :type, ["Webhook": "webhook"], prompt: "", class: "block
-                w-full
+              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50") %>
+      </div>
+      <div class="col-span-3">
+        <div class="grid grid-cols-6 gap-6">
+          <%= inputs_for f, :trigger, fn ft -> %>
+            <div class="col-span-3">
+              <%= label ft, :type, class: "block" do %>
+                <span class="block text-sm font-medium text-gray-700">Trigger</span>
+                <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
+                <%= select(ft, :type, [Webhook: "webhook", "On Job Success": "on_job_success"],
+                  prompt: "",
+                  class: "block
+                w-1/2
                 mt-1
                 rounded-md
                 border-gray-300
                 shadow-sm
-                focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" %>
-        <% end %>
-
-        <!-- Webhook URL copying -->
-        <%= if ft.data.id && ft.data.job_id do %>
-          <a
-            id="copyWebhookUrl"
-            href={ Routes.webhooks_url(@socket, :create, [ft.data.job_id]) }
-            target="_blank"
-          >
-            Copy webhook url
-          </a>
-          <script charset="utf-8">
-            let webhookUrl = "<%= Routes.webhooks_url(@socket, :create, [ft.data.job_id]) %>"
-            document.querySelector("a#copyWebhookUrl").addEventListener('click', e => {
-              e.preventDefault();
-              navigator.clipboard.writeText(webhookUrl);
-            })
-          </script>
-
-        <% end %>
-      <% end %>
+                focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                ) %>
+              <% end %>
+              <%= if ft.data.id && ft.data.job_id do %>
+                <!-- Webhook URL copying -->
+                <a
+                  id="copyWebhookUrl"
+                  href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
+                  target="_blank"
+                >
+                  Copy webhook url
+                </a>
+                <script charset="utf-8">
+                  let webhookUrl = "<%= Routes.webhooks_url(@socket, :create, [ft.data.job_id]) %>"
+                  document.querySelector("a#copyWebhookUrl").addEventListener('click', e => {
+                    e.preventDefault();
+                    navigator.clipboard.writeText(webhookUrl);
+                  })
+                </script>
+              <% end %>
+            </div>
+            <div class="col-span-3">
+              <%= label ft, :upstream_job_id, class: "block" do %>
+                <span class="block text-sm font-medium text-gray-700">Upstream Job</span>
+                <%= error_tag(ft, :upstream_job_id, class: "block w-full rounded-md") %>
+                <%= select(
+                  ft,
+                  :upstream_job_id,
+                  [Webhook: "webhook", "On Job Success": "on_job_success"],
+                  prompt: "",
+                  class: "block
+                w-1/2
+                mt-1
+                rounded-md
+                border-gray-300
+                shadow-sm
+                focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                ) %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
     </div>
-
-  </div>
-
-  <div class="hidden sm:block" aria-hidden="true">
-    <div class="py-5">
-      <div class="border-t border-gray-200"></div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5">
+        <div class="border-t border-gray-200"></div>
+      </div>
     </div>
-  </div>
-
-  <%= error_tag f, :body %>
-  <%= textarea f, :body, class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96 min-h-full" %>
-
-
-  <div>
-    <%= submit "Save", phx_disable_with: "Saving...", class: "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
-  </div>
+    <%= error_tag(f, :body) %>
+    <%= textarea(f, :body,
+      class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96 min-h-full"
+    ) %>
+    <div>
+      <%= submit("Save",
+        phx_disable_with: "Saving...",
+        class:
+          "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      ) %>
+    </div>
   </.form>
 </div>

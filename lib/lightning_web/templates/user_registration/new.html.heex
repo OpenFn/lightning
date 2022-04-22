@@ -7,28 +7,28 @@
     </div>
   <% end %>
 
-    <%= label f, :first_name %>
-  <%= text_input f, :first_name, required: true %>
-  <%= error_tag f, :first_name %>
+  <%= label(f, :first_name) %>
+  <%= text_input(f, :first_name, required: true) %>
+  <%= error_tag(f, :first_name) %>
 
-      <%= label f, :last_name %>
-  <%= text_input f, :last_name, required: true %>
-  <%= error_tag f, :last_name %>
+  <%= label(f, :last_name) %>
+  <%= text_input(f, :last_name, required: true) %>
+  <%= error_tag(f, :last_name) %>
 
-  <%= label f, :email %>
-  <%= email_input f, :email, required: true %>
-  <%= error_tag f, :email %>
+  <%= label(f, :email) %>
+  <%= email_input(f, :email, required: true) %>
+  <%= error_tag(f, :email) %>
 
-  <%= label f, :password %>
-  <%= password_input f, :password, required: true %>
-  <%= error_tag f, :password %>
+  <%= label(f, :password) %>
+  <%= password_input(f, :password, required: true) %>
+  <%= error_tag(f, :password) %>
 
   <div>
-    <%= submit "Register" %>
+    <%= submit("Register") %>
   </div>
 </.form>
 
 <p>
-  <%= link "Log in", to: Routes.user_session_path(@conn, :new) %> |
-  <%= link "Forgot your password?", to: Routes.user_reset_password_path(@conn, :new) %>
+  <%= link("Log in", to: Routes.user_session_path(@conn, :new)) %> |
+  <%= link("Forgot your password?", to: Routes.user_reset_password_path(@conn, :new)) %>
 </p>

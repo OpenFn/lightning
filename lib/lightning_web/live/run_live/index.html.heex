@@ -1,7 +1,6 @@
 <MainSection.header title="Runs" />
 
 <MainSection.main>
-
   <%= if @live_action in [:new, :edit] do %>
     <.modal return_to={Routes.run_index_path(@socket, :index)}>
       <.live_component
@@ -39,13 +38,21 @@
           <td><%= run.finished_at %></td>
 
           <td>
-            <span><%= live_redirect "Show", to: Routes.run_show_path(@socket, :show, run) %></span>
-            <span><%= live_patch "Edit", to: Routes.run_index_path(@socket, :edit, run) %></span>
-            <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: run.id, data: [confirm: "Are you sure?"] %></span>
+            <span>
+              <%= live_redirect("Show", to: Routes.run_show_path(@socket, :show, run)) %>
+            </span>
+            <span><%= live_patch("Edit", to: Routes.run_index_path(@socket, :edit, run)) %></span>
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: run.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
           </td>
         </tr>
       <% end %>
     </tbody>
   </table>
-
 </MainSection.main>

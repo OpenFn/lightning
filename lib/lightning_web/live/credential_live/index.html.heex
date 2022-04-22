@@ -1,7 +1,6 @@
 <MainSection.header title="Credentials" />
 
 <MainSection.main>
-
   <%= if @live_action in [:new, :edit] do %>
     <.modal return_to={Routes.credential_index_path(@socket, :index)}>
       <.live_component
@@ -31,16 +30,31 @@
           <td><%= credential.body %></td>
 
           <td>
-            <span><%= live_redirect "Show", to: Routes.credential_show_path(@socket, :show, credential) %></span>
-            <span><%= live_redirect "Edit", to: Routes.credential_edit_path(@socket, :edit, credential) %></span>
-            <span><%= link "Delete", to: "#", phx_click: "delete", phx_value_id: credential.id, data: [confirm: "Are you sure?"] %></span>
+            <span>
+              <%= live_redirect("Show",
+                to: Routes.credential_show_path(@socket, :show, credential)
+              ) %>
+            </span>
+            <span>
+              <%= live_redirect("Edit",
+                to: Routes.credential_edit_path(@socket, :edit, credential)
+              ) %>
+            </span>
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: credential.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
           </td>
         </tr>
       <% end %>
     </tbody>
   </table>
 
-  <span><%= live_patch "New Credential", to: Routes.credential_index_path(@socket, :new) %></span>
-
+  <span>
+    <%= live_patch("New Credential", to: Routes.credential_index_path(@socket, :new)) %>
+  </span>
 </MainSection.main>
-
