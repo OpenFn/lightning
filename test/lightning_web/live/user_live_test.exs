@@ -2,7 +2,6 @@ defmodule LightningWeb.UserLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Lightning.AccountsFixtures
 
   @create_attrs %{
     email: "test@example.com",
@@ -18,15 +17,8 @@ defmodule LightningWeb.UserLiveTest do
   }
   @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}
 
-  defp create_user(_) do
-    user = user_fixture()
-    %{user: user}
-  end
-
-  setup :register_and_log_in_user
-
-  describe "Index" do
-    setup [:create_user]
+  describe "Index for super user" do
+    setup :register_and_log_in_superuser
 
     test "lists all users", %{conn: conn, user: user} do
       {:ok, _index_live, html} = live(conn, Routes.user_index_path(conn, :index))
@@ -87,6 +79,18 @@ defmodule LightningWeb.UserLiveTest do
              |> render_click()
 
       refute has_element?(index_live, "#user-#{user.id}")
+    end
+  end
+
+  describe "Index for user" do
+    setup :register_and_log_in_user
+
+    test "a regular user cannot access the users list", %{conn: conn, user: _user} do
+      {:ok, _index_live, html} =
+        live(conn, Routes.user_index_path(conn, :index))
+        |> follow_redirect(conn, "/")
+
+      assert html =~ "You can&#39;t access that page"
     end
   end
 end
