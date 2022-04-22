@@ -1,6 +1,6 @@
 version: 2.1
 
-default_version: &default_version 1.13.2
+default_version: &default_version 1.13.4
 
 orbs:
   # TODO: decide which one we like and stick with it
@@ -33,7 +33,7 @@ jobs:
     parallelism: 1
     docker:
       - image: elixir:<< parameters.version >>
-      - image: cimg/postgres:12.9
+      - image: cimg/postgres:14.1
 
     steps:
       - install_node
