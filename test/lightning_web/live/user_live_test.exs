@@ -13,7 +13,8 @@ defmodule LightningWeb.UserLiveTest do
     email: "test-updated@example.com",
     first_name: "some updated first_name",
     last_name: "some updated last_name",
-    password: "some updated password"
+    password: "some updated password",
+    disabled: true
   }
   @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}
 

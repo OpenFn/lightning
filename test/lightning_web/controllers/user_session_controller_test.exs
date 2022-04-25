@@ -4,7 +4,7 @@ defmodule LightningWeb.UserSessionControllerTest do
   import Lightning.AccountsFixtures
 
   setup do
-    %{user: user_fixture()}
+    %{user: user_fixture(), disabled_user: user_fixture(%{disabled: true})}
   end
 
   describe "GET /users/log_in" do
@@ -79,6 +79,16 @@ defmodule LightningWeb.UserSessionControllerTest do
       # assert response =~ user.email
       assert response =~ "Settings</a>"
       assert response =~ "Log out</a>"
+    end
+
+    test "a disabled user can't log in", %{conn: conn, disabled_user: disabled_user} do
+      conn =
+        post(conn, Routes.user_session_path(conn, :create), %{
+          "user" => %{"email" => disabled_user.email, "password" => valid_user_password()}
+        })
+
+      response = html_response(conn, 200)
+      assert response =~ "This user account is disabled"
     end
 
     test "logs the user in with remember me", %{conn: conn, user: user} do
