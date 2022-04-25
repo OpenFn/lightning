@@ -144,4 +144,8 @@ defmodule LightningWeb.JobLive.FormComponent do
         job_params
     end
   end
+
+  defp requires_upstream_job?(changeset) do
+    get_field(changeset, :type) in [:on_job_failure, :on_job_success]
+  end
 end

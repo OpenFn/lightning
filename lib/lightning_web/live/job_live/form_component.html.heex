@@ -97,7 +97,11 @@
                 <%= select(
                   ft,
                   :type,
-                  [Webhook: "webhook", "On Job Success": "on_job_success"],
+                  [
+                    Webhook: "webhook",
+                    "On Job Success": "on_job_success",
+                    "On Job Failure": "on_job_failure"
+                  ],
                   prompt: "",
                   class:
                     "block
@@ -128,7 +132,7 @@
               <% end %>
             </div>
             <div class="col-span-3">
-              <%= if get_field(ft.source,:type) == :on_job_success do %>
+              <%= if requires_upstream_job?(ft.source) do %>
                 <%= label ft, :upstream_job_id, class: "block" do %>
                   <span class="block text-sm font-medium text-gray-700">
                     Upstream Job

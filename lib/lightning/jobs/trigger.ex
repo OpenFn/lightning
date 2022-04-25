@@ -25,7 +25,7 @@ defmodule Lightning.Jobs.Trigger do
     belongs_to :upstream_job, Job
 
     field :type, Ecto.Enum,
-      values: [:webhook, :on_job_success],
+      values: [:webhook, :on_job_success, :on_job_failure],
       default: :webhook
 
     timestamps()
@@ -47,7 +47,7 @@ defmodule Lightning.Jobs.Trigger do
     changeset
     |> fetch_field!(:type)
     |> case do
-      :on_job_success ->
+      type when type in [:on_job_success, :on_job_failure] ->
         changeset
         |> validate_required(:upstream_job_id)
         |> assoc_constraint(:upstream_job)

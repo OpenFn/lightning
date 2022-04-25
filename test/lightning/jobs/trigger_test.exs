@@ -13,24 +13,25 @@ defmodule Lightning.Jobs.TriggerTest do
       assert errors[:type] == nil
     end
 
-    test "must have an upstream job when type is :on_job_success" do
-      errors =
-        Trigger.changeset(%Trigger{}, %{type: :on_job_success}) |> errors_on()
+    test "must have an upstream job when type is :on_job_x" do
+      for type <- [:on_job_success, :on_job_failure] do
+        errors = Trigger.changeset(%Trigger{}, %{type: type}) |> errors_on()
 
-      assert errors[:upstream_job_id] == ["can't be blank"]
-      assert errors[:type] == nil
+        assert errors[:upstream_job_id] == ["can't be blank"]
+        assert errors[:type] == nil
 
-      job = job_fixture()
+        job = job_fixture()
 
-      errors =
-        Trigger.changeset(%Trigger{}, %{
-          type: :on_job_success,
-          upstream_job_id: job.id
-        })
-        |> errors_on()
+        errors =
+          Trigger.changeset(%Trigger{}, %{
+            type: type,
+            upstream_job_id: job.id
+          })
+          |> errors_on()
 
-      assert errors[:upstream_job_id] == nil
-      assert errors[:type] == nil
+        assert errors[:upstream_job_id] == nil
+        assert errors[:type] == nil
+      end
     end
 
     test "removes any upstream job when type is :webhook" do
