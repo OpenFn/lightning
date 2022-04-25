@@ -32,5 +32,8 @@
       class: "button"
     ) %>
   </span>
-  | <span><%= live_redirect("Back", to: Routes.credential_index_path(@socket, :index)) %></span>
+  |
+  <span>
+    <%= live_redirect("Back", to: Routes.credential_index_path(@socket, :index)) %>
+  </span>
 </MainSection.main>

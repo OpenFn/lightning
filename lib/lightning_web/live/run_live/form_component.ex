@@ -22,7 +22,9 @@ defmodule LightningWeb.RunLive.FormComponent do
       socket.assigns.run
       |> Invocation.change_run(
         run_params
-        |> Map.update!("log", fn log -> String.split(log, "\n") |> List.wrap() end)
+        |> Map.update!("log", fn log ->
+          String.split(log, "\n") |> List.wrap()
+        end)
       )
       |> Map.put(:action, :validate)
 

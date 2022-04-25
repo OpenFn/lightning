@@ -177,7 +177,8 @@ defmodule Lightning.Accounts do
   def update_user_email(user, token) do
     context = "change:#{user.email}"
 
-    with {:ok, query} <- UserToken.verify_change_email_token_query(token, context),
+    with {:ok, query} <-
+           UserToken.verify_change_email_token_query(token, context),
          %UserToken{sent_to: email} <- Repo.one(query),
          {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
       :ok
@@ -194,7 +195,10 @@ defmodule Lightning.Accounts do
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, changeset)
-    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, [context]))
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, [context])
+    )
   end
 
   @doc """
@@ -206,12 +210,21 @@ defmodule Lightning.Accounts do
       {:ok, %{to: ..., body: ...}}
 
   """
-  def deliver_update_email_instructions(%User{} = user, current_email, update_email_url_fun)
+  def deliver_update_email_instructions(
+        %User{} = user,
+        current_email,
+        update_email_url_fun
+      )
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "change:#{current_email}")
 
     Repo.insert!(user_token)
-    UserNotifier.deliver_update_email_instructions(user, update_email_url_fun.(encoded_token))
+
+    UserNotifier.deliver_update_email_instructions(
+      user,
+      update_email_url_fun.(encoded_token)
+    )
   end
 
   @doc """
@@ -247,7 +260,10 @@ defmodule Lightning.Accounts do
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, changeset)
-    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, :all))
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
     |> Repo.transaction()
     |> case do
       {:ok, %{user: user}} -> {:ok, user}
@@ -355,14 +371,21 @@ defmodule Lightning.Accounts do
       {:error, :already_confirmed}
 
   """
-  def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun)
+  def deliver_user_confirmation_instructions(
+        %User{} = user,
+        confirmation_url_fun
+      )
       when is_function(confirmation_url_fun, 1) do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
       {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
       Repo.insert!(user_token)
-      UserNotifier.deliver_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+
+      UserNotifier.deliver_confirmation_instructions(
+        user,
+        confirmation_url_fun.(encoded_token)
+      )
     end
   end
 
@@ -385,7 +408,10 @@ defmodule Lightning.Accounts do
   defp confirm_user_multi(user) do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, User.confirm_changeset(user))
-    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, ["confirm"]))
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, ["confirm"])
+    )
   end
 
   ## Reset password
@@ -399,11 +425,20 @@ defmodule Lightning.Accounts do
       {:ok, %{to: ..., body: ...}}
 
   """
-  def deliver_user_reset_password_instructions(%User{} = user, reset_password_url_fun)
+  def deliver_user_reset_password_instructions(
+        %User{} = user,
+        reset_password_url_fun
+      )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "reset_password")
+
     Repo.insert!(user_token)
-    UserNotifier.deliver_reset_password_instructions(user, reset_password_url_fun.(encoded_token))
+
+    UserNotifier.deliver_reset_password_instructions(
+      user,
+      reset_password_url_fun.(encoded_token)
+    )
   end
 
   @doc """
@@ -419,7 +454,8 @@ defmodule Lightning.Accounts do
 
   """
   def get_user_by_reset_password_token(token) do
-    with {:ok, query} <- UserToken.verify_email_token_query(token, "reset_password"),
+    with {:ok, query} <-
+           UserToken.verify_email_token_query(token, "reset_password"),
          %User{} = user <- Repo.one(query) do
       user
     else
@@ -442,7 +478,10 @@ defmodule Lightning.Accounts do
   def reset_user_password(user, attrs) do
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, User.password_changeset(user, attrs))
-    |> Ecto.Multi.delete_all(:tokens, UserToken.user_and_contexts_query(user, :all))
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
     |> Repo.transaction()
     |> case do
       {:ok, %{user: user}} -> {:ok, user}

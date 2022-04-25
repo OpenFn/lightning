@@ -8,7 +8,8 @@ defmodule Lightning.Runner do
   import Lightning.Jobs, only: [get_job!: 1]
   import Lightning.Credentials, only: [get_credential_body: 1]
 
-  import Engine.Adaptor.Service, only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
+  import Engine.Adaptor.Service,
+    only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
 
   defmodule Handler do
     @moduledoc """
@@ -92,7 +93,8 @@ defmodule Lightning.Runner do
 
   # In order to run a flow job, `start/2` is called, and on a result
 
-  @spec write_temp(contents :: binary(), prefix :: String.t()) :: {:ok, Path.t()} | {:error, any}
+  @spec write_temp(contents :: binary(), prefix :: String.t()) ::
+          {:ok, Path.t()} | {:error, any}
   defp write_temp(contents, prefix) do
     Temp.open(
       %{prefix: prefix, suffix: ".json"},
@@ -100,7 +102,8 @@ defmodule Lightning.Runner do
     )
   end
 
-  @spec build_state(dataclip :: String.t(), credential :: String.t() | nil) :: iodata()
+  @spec build_state(dataclip :: String.t(), credential :: String.t() | nil) ::
+          iodata()
   defp build_state(dataclip, credential) do
     # NOTE: really not sure how much we're gaining here, we're trying to avoid
     # as much data marshalling as possible - and this currently avoids turning
@@ -118,7 +121,10 @@ defmodule Lightning.Runner do
   If either the file doesn't exist or there is a JSON decoding error, it logs
   and returns an error tuple.
   """
-  @spec create_dataclip_from_result(result :: Engine.Result.t(), run :: Invocation.Run.t()) ::
+  @spec create_dataclip_from_result(
+          result :: Engine.Result.t(),
+          run :: Invocation.Run.t()
+        ) ::
           {:ok, Invocation.Dataclip.t()} | {:error, any}
   def create_dataclip_from_result(%Engine.Result{} = result, run) do
     with {:ok, data} <- File.read(result.final_state_path),

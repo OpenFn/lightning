@@ -81,7 +81,12 @@ defmodule Lightning.JobsTest do
 
     test "update_job/2 with valid data updates the job" do
       job = job_fixture()
-      update_attrs = %{body: "some updated body", enabled: false, name: "some updated name"}
+
+      update_attrs = %{
+        body: "some updated body",
+        enabled: false,
+        name: "some updated name"
+      }
 
       assert {:ok, %Job{} = job} = Jobs.update_job(job, update_attrs)
       assert job.body == "some updated body"

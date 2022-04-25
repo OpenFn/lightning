@@ -19,13 +19,15 @@ defmodule LightningWeb.DataclipLiveTest do
     setup [:create_dataclip]
 
     test "lists all dataclips", %{conn: conn} do
-      {:ok, _index_live, html} = live(conn, Routes.dataclip_index_path(conn, :index))
+      {:ok, _index_live, html} =
+        live(conn, Routes.dataclip_index_path(conn, :index))
 
       assert html =~ "Listing Dataclips"
     end
 
     test "saves new dataclip", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, Routes.dataclip_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.dataclip_index_path(conn, :index))
 
       assert index_live |> element("a", "New Dataclip") |> render_click() =~
                "New Dataclip"
@@ -46,7 +48,8 @@ defmodule LightningWeb.DataclipLiveTest do
     end
 
     test "updates dataclip in listing", %{conn: conn, dataclip: dataclip} do
-      {:ok, index_live, _html} = live(conn, Routes.dataclip_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.dataclip_index_path(conn, :index))
 
       assert index_live
              |> element("#dataclip-#{dataclip.id} a", "Edit")
@@ -72,7 +75,8 @@ defmodule LightningWeb.DataclipLiveTest do
     end
 
     test "deletes dataclip in listing", %{conn: conn, dataclip: dataclip} do
-      {:ok, index_live, _html} = live(conn, Routes.dataclip_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.dataclip_index_path(conn, :index))
 
       assert index_live
              |> element("#dataclip-#{dataclip.id} a", "Delete")
@@ -86,13 +90,15 @@ defmodule LightningWeb.DataclipLiveTest do
     setup [:create_dataclip]
 
     test "displays dataclip", %{conn: conn, dataclip: dataclip} do
-      {:ok, _show_live, html} = live(conn, Routes.dataclip_show_path(conn, :show, dataclip))
+      {:ok, _show_live, html} =
+        live(conn, Routes.dataclip_show_path(conn, :show, dataclip))
 
       assert html =~ "Show Dataclip"
     end
 
     test "updates dataclip within modal", %{conn: conn, dataclip: dataclip} do
-      {:ok, show_live, _html} = live(conn, Routes.dataclip_show_path(conn, :show, dataclip))
+      {:ok, show_live, _html} =
+        live(conn, Routes.dataclip_show_path(conn, :show, dataclip))
 
       assert show_live |> element("a", "Edit") |> render_click() =~
                "Edit Dataclip"

@@ -26,6 +26,12 @@
 </ul>
 
 <span>
-  <%= live_patch("Edit", to: Routes.dataclip_show_path(@socket, :edit, @dataclip), class: "button") %>
+  <%= live_patch("Edit",
+    to: Routes.dataclip_show_path(@socket, :edit, @dataclip),
+    class: "button"
+  ) %>
 </span>
-| <span><%= live_redirect("Back", to: Routes.dataclip_index_path(@socket, :index)) %></span>
+|
+<span>
+  <%= live_redirect("Back", to: Routes.dataclip_index_path(@socket, :index)) %>
+</span>

@@ -32,7 +32,11 @@ defmodule LightningWeb.ConnCase do
   end
 
   setup tags do
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo, shared: not tags[:async])
+    pid =
+      Ecto.Adapters.SQL.Sandbox.start_owner!(Lightning.Repo,
+        shared: not tags[:async]
+      )
+
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
 
     Map.get(tags, :create_initial_user, true)

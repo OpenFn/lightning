@@ -35,7 +35,11 @@ defmodule Lightning.RunnerTest do
       )
 
     result = %Engine.Result{} = Runner.start(run)
-    expected_state = %{"data" => dataclip_body, "configuration" => credential_body}
+
+    expected_state = %{
+      "data" => dataclip_body,
+      "configuration" => credential_body
+    }
 
     assert File.read!(result.final_state_path)
            |> Jason.decode!() == expected_state
@@ -61,7 +65,10 @@ defmodule Lightning.RunnerTest do
            ) == {:error, :enoent}
 
     assert Runner.create_dataclip_from_result(
-             %Engine.Result{final_state_path: Temp.open!(%{suffix: ".json"}, &IO.write(&1, ""))},
+             %Engine.Result{
+               final_state_path:
+                 Temp.open!(%{suffix: ".json"}, &IO.write(&1, ""))
+             },
              run_fixture()
            ) == {:error, %Jason.DecodeError{data: "", position: 0}}
   end

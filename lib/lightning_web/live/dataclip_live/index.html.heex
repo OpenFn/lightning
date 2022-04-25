@@ -31,10 +31,14 @@
 
           <td>
             <span>
-              <%= live_redirect("Show", to: Routes.dataclip_show_path(@socket, :show, dataclip)) %>
+              <%= live_redirect("Show",
+                to: Routes.dataclip_show_path(@socket, :show, dataclip)
+              ) %>
             </span>
             <span>
-              <%= live_patch("Edit", to: Routes.dataclip_index_path(@socket, :edit, dataclip)) %>
+              <%= live_patch("Edit",
+                to: Routes.dataclip_index_path(@socket, :edit, dataclip)
+              ) %>
             </span>
             <span>
               <%= link("Delete",
@@ -50,5 +54,7 @@
     </tbody>
   </table>
 
-  <span><%= live_patch("New Dataclip", to: Routes.dataclip_index_path(@socket, :new)) %></span>
+  <span>
+    <%= live_patch("New Dataclip", to: Routes.dataclip_index_path(@socket, :new)) %>
+  </span>
 </MainSection.main>

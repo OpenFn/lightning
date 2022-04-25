@@ -6,17 +6,23 @@ defmodule LightningWeb.FirstSetupLiveTest do
   describe "show" do
     @tag create_initial_user: false
     test "requires a user to create an initial superuser", %{conn: conn} do
-      {:ok, show_live, _html} = live(conn, Routes.first_setup_superuser_path(conn, :show))
+      {:ok, show_live, _html} =
+        live(conn, Routes.first_setup_superuser_path(conn, :show))
 
       assert show_live |> element("h2", "Setup")
 
       assert show_live
-             |> form("#superuser-registration-form", superuser_registration: %{password: "123"})
+             |> form("#superuser-registration-form",
+               superuser_registration: %{password: "123"}
+             )
              |> render_change() =~ "does not match confirmation"
 
       assert show_live
              |> form("#superuser-registration-form",
-               superuser_registration: %{password: "123", password_confirmation: "123"}
+               superuser_registration: %{
+                 password: "123",
+                 password_confirmation: "123"
+               }
              )
              |> render_change() =~ "should be at least 8 character(s)"
 

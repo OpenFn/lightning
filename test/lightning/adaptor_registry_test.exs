@@ -28,7 +28,10 @@ defmodule Lightning.AdaptorRegistryTest do
       """)
 
       File.close(fd)
-      start_supervised!({AdaptorRegistry, [name: :test_adaptor_registry, use_cache: file_path]})
+
+      start_supervised!(
+        {AdaptorRegistry, [name: :test_adaptor_registry, use_cache: file_path]}
+      )
 
       results = AdaptorRegistry.all(:test_adaptor_registry)
       assert length(results) == 1
@@ -74,7 +77,9 @@ defmodule Lightning.AdaptorRegistryTest do
           {:ok, 200, "headers", :adaptor}
       end)
 
-      start_supervised!({AdaptorRegistry, [name: :test_adaptor_registry, use_cache: false]})
+      start_supervised!(
+        {AdaptorRegistry, [name: :test_adaptor_registry, use_cache: false]}
+      )
 
       results = AdaptorRegistry.all(:test_adaptor_registry)
 
@@ -107,10 +112,16 @@ defmodule Lightning.AdaptorRegistryTest do
                versions: versions
              } in results
 
-      assert AdaptorRegistry.versions_for(:test_adaptor_registry, "@openfn/language-common") ==
+      assert AdaptorRegistry.versions_for(
+               :test_adaptor_registry,
+               "@openfn/language-common"
+             ) ==
                versions
 
-      assert AdaptorRegistry.versions_for(:test_adaptor_registry, "@openfn/language-foobar") ==
+      assert AdaptorRegistry.versions_for(
+               :test_adaptor_registry,
+               "@openfn/language-foobar"
+             ) ==
                nil
     end
   end

@@ -32,7 +32,13 @@
   </ul>
 
   <span>
-    <%= live_patch("Edit", to: Routes.job_edit_path(@socket, :edit, @job), class: "button") %>
+    <%= live_patch("Edit",
+      to: Routes.job_edit_path(@socket, :edit, @job),
+      class: "button"
+    ) %>
   </span>
-  | <span><%= live_redirect("Back", to: Routes.job_index_path(@socket, :index)) %></span>
+  |
+  <span>
+    <%= live_redirect("Back", to: Routes.job_index_path(@socket, :index)) %>
+  </span>
 </MainSection.main>

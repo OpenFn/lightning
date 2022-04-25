@@ -9,7 +9,9 @@ defmodule LightningWeb.DataclipLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :dataclips, list_dataclips()) |> assign(:active_menu_item, :dataclips)}
+    {:ok,
+     assign(socket, :dataclips, list_dataclips())
+     |> assign(:active_menu_item, :dataclips)}
   end
 
   @impl true

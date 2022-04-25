@@ -20,7 +20,10 @@ defmodule LightningWeb.JobLive.FormComponent do
     changeset = Jobs.change_job(job)
 
     {adaptor_name, _, adaptors, versions} =
-      get_adaptor_version_options(changeset |> Ecto.Changeset.fetch_field!(:adaptor))
+      get_adaptor_version_options(
+        changeset
+        |> Ecto.Changeset.fetch_field!(:adaptor)
+      )
 
     credentials = Credentials.list_credentials()
     upstream_jobs = Jobs.get_upstream_jobs_for(job)
@@ -46,7 +49,10 @@ defmodule LightningWeb.JobLive.FormComponent do
       |> Map.put(:action, :validate)
 
     {adaptor_name, _, adaptors, versions} =
-      get_adaptor_version_options(changeset |> Ecto.Changeset.fetch_field!(:adaptor))
+      get_adaptor_version_options(
+        changeset
+        |> Ecto.Changeset.fetch_field!(:adaptor)
+      )
 
     {:noreply,
      assign(socket, :changeset, changeset)
@@ -94,15 +100,19 @@ defmodule LightningWeb.JobLive.FormComponent do
 
     {module_name, version, versions} =
       if adaptor do
-        {module_name, version} = Lightning.AdaptorRegistry.resolve_package_name(adaptor)
+        {module_name, version} =
+          Lightning.AdaptorRegistry.resolve_package_name(adaptor)
 
         versions =
           Lightning.AdaptorRegistry.versions_for(module_name)
           |> List.wrap()
           |> Enum.map(&Map.get(&1, :version))
-          |> Enum.map(fn version -> [key: version, value: "#{module_name}@#{version}"] end)
+          |> Enum.map(fn version ->
+            [key: version, value: "#{module_name}@#{version}"]
+          end)
 
-        {module_name, version, [[key: "latest", value: "#{module_name}@latest"] | versions]}
+        {module_name, version,
+         [[key: "latest", value: "#{module_name}@latest"] | versions]}
       else
         {nil, nil, []}
       end
@@ -117,8 +127,11 @@ defmodule LightningWeb.JobLive.FormComponent do
   @spec coerce_params_for_adaptor_list(%{String.t() => String.t()}) ::
           %{}
   def coerce_params_for_adaptor_list(job_params) do
-    {package, _version} = AdaptorRegistry.resolve_package_name(job_params["adaptor"])
-    {package_group, _} = AdaptorRegistry.resolve_package_name(job_params["adaptor_name"])
+    {package, _version} =
+      AdaptorRegistry.resolve_package_name(job_params["adaptor"])
+
+    {package_group, _} =
+      AdaptorRegistry.resolve_package_name(job_params["adaptor_name"])
 
     cond do
       is_nil(package_group) ->

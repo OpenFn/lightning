@@ -24,7 +24,9 @@ defmodule Lightning.Jobs.Trigger do
     belongs_to :job, Job
     belongs_to :upstream_job, Job
 
-    field :type, Ecto.Enum, values: [:webhook, :on_job_success], default: :webhook
+    field :type, Ecto.Enum,
+      values: [:webhook, :on_job_success],
+      default: :webhook
 
     timestamps()
   end

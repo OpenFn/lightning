@@ -86,7 +86,10 @@ defmodule LightningWeb.UserLiveTest do
   describe "Index for user" do
     setup :register_and_log_in_user
 
-    test "a regular user cannot access the users list", %{conn: conn, user: _user} do
+    test "a regular user cannot access the users list", %{
+      conn: conn,
+      user: _user
+    } do
       {:ok, _index_live, html} =
         live(conn, Routes.user_index_path(conn, :index))
         |> follow_redirect(conn, "/")

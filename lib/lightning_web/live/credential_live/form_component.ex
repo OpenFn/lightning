@@ -31,7 +31,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp save_credential(socket, :edit, credential_params) do
-    case Credentials.update_credential(socket.assigns.credential, credential_params) do
+    case Credentials.update_credential(
+           socket.assigns.credential,
+           credential_params
+         ) do
       {:ok, _credential} ->
         {:noreply,
          socket

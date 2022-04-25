@@ -17,17 +17,29 @@ defmodule LightningWeb.UserSessionControllerTest do
     end
 
     test "redirects if already logged in", %{conn: conn, user: user} do
-      conn = conn |> log_in_user(user) |> get(Routes.user_session_path(conn, :new))
+      conn =
+        conn |> log_in_user(user) |> get(Routes.user_session_path(conn, :new))
+
       assert redirected_to(conn) == "/"
     end
   end
 
   describe "GET /users/exchange_token" do
-    test "renders home as a logged in user for a valid token", %{conn: conn, user: user} do
+    test "renders home as a logged in user for a valid token", %{
+      conn: conn,
+      user: user
+    } do
       token = Lightning.Accounts.generate_auth_token(user)
 
       conn =
-        get(conn, Routes.user_session_path(conn, :exchange_token, token |> Base.url_encode64()))
+        get(
+          conn,
+          Routes.user_session_path(
+            conn,
+            :exchange_token,
+            token |> Base.url_encode64()
+          )
+        )
 
       assert "/" = redirected_path = redirected_to(conn)
 
@@ -79,10 +91,16 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert response =~ "Log out</a>"
     end
 
-    test "a disabled user can't log in", %{conn: conn, disabled_user: disabled_user} do
+    test "a disabled user can't log in", %{
+      conn: conn,
+      disabled_user: disabled_user
+    } do
       conn =
         post(conn, Routes.user_session_path(conn, :create), %{
-          "user" => %{"email" => disabled_user.email, "password" => valid_user_password()}
+          "user" => %{
+            "email" => disabled_user.email,
+            "password" => valid_user_password()
+          }
         })
 
       response = html_response(conn, 200)
@@ -117,7 +135,10 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert redirected_to(conn) == "/foo/bar"
     end
 
-    test "emits error message with invalid credentials", %{conn: conn, user: user} do
+    test "emits error message with invalid credentials", %{
+      conn: conn,
+      user: user
+    } do
       conn =
         post(conn, Routes.user_session_path(conn, :create), %{
           "user" => %{"email" => user.email, "password" => "invalid_password"}
@@ -131,7 +152,9 @@ defmodule LightningWeb.UserSessionControllerTest do
 
   describe "DELETE /users/log_out" do
     test "logs the user out", %{conn: conn, user: user} do
-      conn = conn |> log_in_user(user) |> get(Routes.user_session_path(conn, :delete))
+      conn =
+        conn |> log_in_user(user) |> get(Routes.user_session_path(conn, :delete))
+
       assert redirected_to(conn) == "/"
       refute get_session(conn, :user_token)
       assert get_flash(conn, :info) =~ "Logged out successfully"

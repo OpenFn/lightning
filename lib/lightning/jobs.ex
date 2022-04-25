@@ -57,7 +57,8 @@ defmodule Lightning.Jobs do
   def get_job_by_webhook(path) when is_binary(path) do
     from(j in Job,
       join: t in assoc(j, :trigger),
-      where: fragment("coalesce(?, ?)", t.custom_path, type(j.id, :string)) == ^path,
+      where:
+        fragment("coalesce(?, ?)", t.custom_path, type(j.id, :string)) == ^path,
       preload: [:trigger]
     )
     |> Repo.one()

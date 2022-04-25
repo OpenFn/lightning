@@ -81,7 +81,8 @@ defmodule Lightning.Invocation do
       %Dataclip{}
 
   """
-  @spec get_dataclip(run_or_uuid :: Run.t() | Ecto.UUID.t()) :: Dataclip.t() | nil
+  @spec get_dataclip(run_or_uuid :: Run.t() | Ecto.UUID.t()) ::
+          Dataclip.t() | nil
   def get_dataclip(%Run{id: id}) do
     from(r in Run, join: d in assoc(r, :dataclip), select: d, where: r.id == ^id)
     |> Repo.one()

@@ -27,19 +27,25 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.get_credential_body(credential) |> Jason.decode!() ==
                credential_body
 
-      assert Credentials.get_credential_body(%Credential{id: Ecto.UUID.generate()}) == nil
+      assert Credentials.get_credential_body(%Credential{
+               id: Ecto.UUID.generate()
+             }) ==
+               nil
     end
 
     test "create_credential/1 with valid data creates a credential" do
       valid_attrs = %{body: %{}, name: "some name"}
 
-      assert {:ok, %Credential{} = credential} = Credentials.create_credential(valid_attrs)
+      assert {:ok, %Credential{} = credential} =
+               Credentials.create_credential(valid_attrs)
+
       assert credential.body == %{}
       assert credential.name == "some name"
     end
 
     test "create_credential/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Credentials.create_credential(@invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} =
+               Credentials.create_credential(@invalid_attrs)
     end
 
     test "update_credential/2 with valid data updates the credential" do
@@ -65,7 +71,10 @@ defmodule Lightning.CredentialsTest do
     test "delete_credential/1 deletes the credential" do
       credential = credential_fixture()
       assert {:ok, %Credential{}} = Credentials.delete_credential(credential)
-      assert_raise Ecto.NoResultsError, fn -> Credentials.get_credential!(credential.id) end
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Credentials.get_credential!(credential.id)
+      end
     end
 
     test "change_credential/1 returns a credential changeset" do

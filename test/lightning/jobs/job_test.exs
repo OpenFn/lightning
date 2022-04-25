@@ -6,7 +6,8 @@ defmodule Lightning.Jobs.JobTest do
   defp random_job_name(length) do
     for _ <- 1..length,
         into: "",
-        do: <<Enum.random('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ')>>
+        do:
+          <<Enum.random('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ')>>
   end
 
   describe "changeset/2" do

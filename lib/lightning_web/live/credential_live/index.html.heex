@@ -55,6 +55,8 @@
   </table>
 
   <span>
-    <%= live_patch("New Credential", to: Routes.credential_index_path(@socket, :new)) %>
+    <%= live_patch("New Credential",
+      to: Routes.credential_index_path(@socket, :new)
+    ) %>
   </span>
 </MainSection.main>

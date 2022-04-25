@@ -14,14 +14,19 @@ defmodule Lightning.Jobs.TriggerTest do
     end
 
     test "must have an upstream job when type is :on_job_success" do
-      errors = Trigger.changeset(%Trigger{}, %{type: :on_job_success}) |> errors_on()
+      errors =
+        Trigger.changeset(%Trigger{}, %{type: :on_job_success}) |> errors_on()
+
       assert errors[:upstream_job_id] == ["can't be blank"]
       assert errors[:type] == nil
 
       job = job_fixture()
 
       errors =
-        Trigger.changeset(%Trigger{}, %{type: :on_job_success, upstream_job_id: job.id})
+        Trigger.changeset(%Trigger{}, %{
+          type: :on_job_success,
+          upstream_job_id: job.id
+        })
         |> errors_on()
 
       assert errors[:upstream_job_id] == nil
@@ -31,14 +36,18 @@ defmodule Lightning.Jobs.TriggerTest do
     test "removes any upstream job when type is :webhook" do
       job = job_fixture()
 
-      changeset = Trigger.changeset(%Trigger{}, %{type: :webhook, upstream_job_id: job.id})
+      changeset =
+        Trigger.changeset(%Trigger{}, %{type: :webhook, upstream_job_id: job.id})
 
       assert get_field(changeset, :upstream_job_id) == nil
 
       changeset =
-        Trigger.changeset(%Trigger{type: :on_job_success, upstream_job_id: job.id}, %{
-          type: :webhook
-        })
+        Trigger.changeset(
+          %Trigger{type: :on_job_success, upstream_job_id: job.id},
+          %{
+            type: :webhook
+          }
+        )
 
       assert get_field(changeset, :upstream_job_id) == nil
     end

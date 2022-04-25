@@ -32,10 +32,19 @@ defmodule LightningWeb.UserSettingsControllerTest do
           }
         })
 
-      assert redirected_to(new_password_conn) == Routes.user_settings_path(conn, :edit)
-      assert get_session(new_password_conn, :user_token) != get_session(conn, :user_token)
-      assert get_flash(new_password_conn, :info) =~ "Password updated successfully"
-      assert Accounts.get_user_by_email_and_password(user.email, "new valid password")
+      assert redirected_to(new_password_conn) ==
+               Routes.user_settings_path(conn, :edit)
+
+      assert get_session(new_password_conn, :user_token) !=
+               get_session(conn, :user_token)
+
+      assert get_flash(new_password_conn, :info) =~
+               "Password updated successfully"
+
+      assert Accounts.get_user_by_email_and_password(
+               user.email,
+               "new valid password"
+             )
     end
 
     test "does not update password on invalid data", %{conn: conn} do
@@ -54,7 +63,8 @@ defmodule LightningWeb.UserSettingsControllerTest do
       assert response =~ "does not match password"
       assert response =~ "is not valid"
 
-      assert get_session(old_password_conn, :user_token) == get_session(conn, :user_token)
+      assert get_session(old_password_conn, :user_token) ==
+               get_session(conn, :user_token)
     end
   end
 
@@ -94,13 +104,22 @@ defmodule LightningWeb.UserSettingsControllerTest do
 
       token =
         extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(%{user | email: email}, user.email, url)
+          Accounts.deliver_update_email_instructions(
+            %{user | email: email},
+            user.email,
+            url
+          )
         end)
 
       %{token: token, email: email}
     end
 
-    test "updates the user email once", %{conn: conn, user: user, token: token, email: email} do
+    test "updates the user email once", %{
+      conn: conn,
+      user: user,
+      token: token,
+      email: email
+    } do
       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
       assert get_flash(conn, :info) =~ "Email changed successfully"
@@ -109,13 +128,18 @@ defmodule LightningWeb.UserSettingsControllerTest do
 
       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
-      assert get_flash(conn, :error) =~ "Email change link is invalid or it has expired"
+
+      assert get_flash(conn, :error) =~
+               "Email change link is invalid or it has expired"
     end
 
     test "does not update email with invalid token", %{conn: conn, user: user} do
       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, "oops"))
       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
-      assert get_flash(conn, :error) =~ "Email change link is invalid or it has expired"
+
+      assert get_flash(conn, :error) =~
+               "Email change link is invalid or it has expired"
+
       assert Accounts.get_user_by_email(user.email)
     end
 

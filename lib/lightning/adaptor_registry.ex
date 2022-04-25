@@ -61,7 +61,10 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec user_packages(user :: String.t()) :: [map()]
     def user_packages(user) do
-      get!("/-/user/#{user}/package", [], hackney: [pool: :default], recv_timeout: 15_000).body
+      get!("/-/user/#{user}/package", [],
+        hackney: [pool: :default],
+        recv_timeout: 15_000
+      ).body
     end
 
     @doc """
@@ -69,7 +72,10 @@ defmodule Lightning.AdaptorRegistry do
     """
     @spec package_detail(package_name :: String.t()) :: map()
     def package_detail(package_name) do
-      get!("/#{package_name}", [], hackney: [pool: :default], recv_timeout: 15_000).body
+      get!("/#{package_name}", [],
+        hackney: [pool: :default],
+        recv_timeout: 15_000
+      ).body
     end
   end
 
@@ -171,7 +177,8 @@ defmodule Lightning.AdaptorRegistry do
   @doc """
   Get a list of versions for a given module.
   """
-  @spec versions_for(server :: GenServer.server(), module_name :: String.t()) :: list() | nil
+  @spec versions_for(server :: GenServer.server(), module_name :: String.t()) ::
+          list() | nil
   def versions_for(server \\ __MODULE__, module_name) do
     GenServer.call(server, {:versions_for, module_name}, @timeout)
   end
@@ -225,9 +232,11 @@ defmodule Lightning.AdaptorRegistry do
 
   """
   @spec resolve_package_name(package_name :: nil) :: {nil, nil}
-  def resolve_package_name(package_name) when is_nil(package_name), do: {nil, nil}
+  def resolve_package_name(package_name) when is_nil(package_name),
+    do: {nil, nil}
 
-  @spec resolve_package_name(package_name :: String.t()) :: {binary | nil, binary | nil}
+  @spec resolve_package_name(package_name :: String.t()) ::
+          {binary | nil, binary | nil}
   def resolve_package_name(package_name) when is_binary(package_name) do
     ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w]+))?$/
     |> Regex.run(package_name)
@@ -247,7 +256,8 @@ defmodule Lightning.AdaptorRegistry do
   Same as `resolve_package_name/1` except will throw an exception if a package
   name cannot be matched.
   """
-  @spec resolve_package_name!(package_name :: String.t()) :: {binary, binary | nil}
+  @spec resolve_package_name!(package_name :: String.t()) ::
+          {binary, binary | nil}
   def resolve_package_name!(package_name) when is_binary(package_name) do
     {package_name, version} = resolve_package_name(package_name)
 

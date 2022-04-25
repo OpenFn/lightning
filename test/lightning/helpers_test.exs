@@ -11,7 +11,10 @@ defmodule Lightning.HelpersTest do
     }
 
     assert coerce_json_field(input, "body") == %{
-             "body" => %{"a" => 1, "b" => %{"other" => [1, 2, "bah"], "sadio" => true}},
+             "body" => %{
+               "a" => 1,
+               "b" => %{"other" => [1, 2, "bah"], "sadio" => true}
+             },
              "name" => "My Credential"
            }
   end

@@ -33,10 +33,14 @@
 
           <td>
             <span>
-              <%= live_redirect("Show", to: Routes.job_show_path(@socket, :show, job)) %>
+              <%= live_redirect("Show",
+                to: Routes.job_show_path(@socket, :show, job)
+              ) %>
             </span>
             <span>
-              <%= live_redirect("Edit", to: Routes.job_edit_path(@socket, :edit, job)) %>
+              <%= live_redirect("Edit",
+                to: Routes.job_edit_path(@socket, :edit, job)
+              ) %>
             </span>
             <span>
               <%= link("Delete",
@@ -52,5 +56,7 @@
     </tbody>
   </table>
 
-  <span><%= live_patch("New Job", to: Routes.job_index_path(@socket, :new)) %></span>
+  <span>
+    <%= live_patch("New Job", to: Routes.job_index_path(@socket, :new)) %>
+  </span>
 </MainSection.main>

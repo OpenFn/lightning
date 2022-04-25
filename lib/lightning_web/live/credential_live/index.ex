@@ -10,7 +10,8 @@ defmodule LightningWeb.CredentialLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket, :credentials, list_credentials()) |> assign(:active_menu_item, :credentials)}
+     assign(socket, :credentials, list_credentials())
+     |> assign(:active_menu_item, :credentials)}
   end
 
   @impl true

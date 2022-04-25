@@ -67,7 +67,10 @@ defmodule LightningWeb.JobLiveTest do
     test "deletes job in listing", %{conn: conn, job: job} do
       {:ok, index_live, _html} = live(conn, Routes.job_index_path(conn, :index))
 
-      assert index_live |> element("#job-#{job.id} a", "Delete") |> render_click()
+      assert index_live
+             |> element("#job-#{job.id} a", "Delete")
+             |> render_click()
+
       refute has_element?(index_live, "#job-#{job.id}")
     end
   end

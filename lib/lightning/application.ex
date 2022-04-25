@@ -8,10 +8,12 @@ defmodule Lightning.Application do
   @impl true
   def start(_type, _args) do
     adaptor_registry_childspec =
-      {Lightning.AdaptorRegistry, Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
+      {Lightning.AdaptorRegistry,
+       Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
 
     adaptor_service_childspec =
-      {Engine.Adaptor.Service, [name: :adaptor_service, adaptors_path: "./priv/openfn"]}
+      {Engine.Adaptor.Service,
+       [name: :adaptor_service, adaptors_path: "./priv/openfn"]}
 
     children = [
       # Start the Ecto repository

@@ -11,12 +11,20 @@ defmodule LightningWeb.UserLive.Index do
   def mount(_params, session, socket) do
     socket = assign_current_user_from_session(session, socket)
 
-    case Bodyguard.permit(Lightning.Accounts.Policy, :index, socket.assigns.current_user) do
+    case Bodyguard.permit(
+           Lightning.Accounts.Policy,
+           :index,
+           socket.assigns.current_user
+         ) do
       :ok ->
-        {:ok, assign(socket, :users, list_users()) |> assign(:active_menu_item, :users)}
+        {:ok,
+         assign(socket, :users, list_users())
+         |> assign(:active_menu_item, :users)}
 
       {:error, :unauthorized} ->
-        {:ok, put_flash(socket, :error, "You can't access that page") |> push_redirect(to: "/")}
+        {:ok,
+         put_flash(socket, :error, "You can't access that page")
+         |> push_redirect(to: "/")}
     end
   end
 

@@ -35,10 +35,14 @@
 
           <td>
             <span>
-              <%= live_redirect("Show", to: Routes.user_show_path(@socket, :show, user)) %>
+              <%= live_redirect("Show",
+                to: Routes.user_show_path(@socket, :show, user)
+              ) %>
             </span>
             <span>
-              <%= live_redirect("Edit", to: Routes.user_edit_path(@socket, :edit, user)) %>
+              <%= live_redirect("Edit",
+                to: Routes.user_edit_path(@socket, :edit, user)
+              ) %>
             </span>
             <span>
               <%= link("Delete",
@@ -54,5 +58,7 @@
     </tbody>
   </table>
 
-  <span><%= live_patch("New User", to: Routes.user_index_path(@socket, :new)) %></span>
+  <span>
+    <%= live_patch("New User", to: Routes.user_index_path(@socket, :new)) %>
+  </span>
 </MainSection.main>

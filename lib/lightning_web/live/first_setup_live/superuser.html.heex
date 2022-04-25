@@ -15,7 +15,9 @@
   >
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :first_name, class: "block text-sm font-medium text-gray-700") %>
+        <%= label(f, :first_name,
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
         <%= text_input(f, :first_name,
           autocomplete: "given-name",
           autofocus: "true",
@@ -57,13 +59,17 @@
           class: "block w-full rounded-md"
         ) %>
         <%= error_tag(f, :password, class: "mt-1 block w-full sm:text-sm") %>
-        <%= error_tag(f, :password_confirmation, class: "mt-1 block w-full sm:text-sm") %>
+        <%= error_tag(f, :password_confirmation,
+          class: "mt-1 block w-full sm:text-sm"
+        ) %>
       </div>
     </div>
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :password_confirmation, class: "block text-sm font-medium text-gray-700") %>
+        <%= label(f, :password_confirmation,
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
         <%= password_input(f, :password_confirmation,
           value: input_value(f, :password_confirmation),
           autocomplete: "new-password",

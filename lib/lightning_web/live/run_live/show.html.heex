@@ -36,6 +36,12 @@
 </ul>
 
 <span>
-  <%= live_patch("Edit", to: Routes.run_show_path(@socket, :edit, @run), class: "button") %>
+  <%= live_patch("Edit",
+    to: Routes.run_show_path(@socket, :edit, @run),
+    class: "button"
+  ) %>
 </span>
-| <span><%= live_redirect("Back", to: Routes.run_index_path(@socket, :index)) %></span>
+|
+<span>
+  <%= live_redirect("Back", to: Routes.run_index_path(@socket, :index)) %>
+</span>

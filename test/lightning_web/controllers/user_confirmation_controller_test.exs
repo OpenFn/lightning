@@ -27,10 +27,15 @@ defmodule LightningWeb.UserConfirmationControllerTest do
 
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "If your email is in our system"
-      assert Repo.get_by!(Accounts.UserToken, user_id: user.id).context == "confirm"
+
+      assert Repo.get_by!(Accounts.UserToken, user_id: user.id).context ==
+               "confirm"
     end
 
-    test "does not send confirmation token if User is confirmed", %{conn: conn, user: user} do
+    test "does not send confirmation token if User is confirmed", %{
+      conn: conn,
+      user: user
+    } do
       Repo.update!(Accounts.User.confirm_changeset(user))
 
       conn =
@@ -83,7 +88,9 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       # When not logged in
       conn = post(conn, Routes.user_confirmation_path(conn, :update, token))
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :error) =~ "User confirmation link is invalid or it has expired"
+
+      assert get_flash(conn, :error) =~
+               "User confirmation link is invalid or it has expired"
 
       # When logged in
       conn =
@@ -98,7 +105,10 @@ defmodule LightningWeb.UserConfirmationControllerTest do
     test "does not confirm email with invalid token", %{conn: conn, user: user} do
       conn = post(conn, Routes.user_confirmation_path(conn, :update, "oops"))
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :error) =~ "User confirmation link is invalid or it has expired"
+
+      assert get_flash(conn, :error) =~
+               "User confirmation link is invalid or it has expired"
+
       refute Accounts.get_user!(user.id).confirmed_at
     end
   end

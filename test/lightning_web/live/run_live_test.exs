@@ -26,7 +26,10 @@ defmodule LightningWeb.RunLiveTest do
     test "deletes run in listing", %{conn: conn, run: run} do
       {:ok, index_live, _html} = live(conn, Routes.run_index_path(conn, :index))
 
-      assert index_live |> element("#run-#{run.id} a", "Delete") |> render_click()
+      assert index_live
+             |> element("#run-#{run.id} a", "Delete")
+             |> render_click()
+
       refute has_element?(index_live, "#run-#{run.id}")
     end
   end
@@ -35,7 +38,8 @@ defmodule LightningWeb.RunLiveTest do
     setup [:create_run]
 
     test "displays run", %{conn: conn, run: run} do
-      {:ok, _show_live, html} = live(conn, Routes.run_show_path(conn, :show, run))
+      {:ok, _show_live, html} =
+        live(conn, Routes.run_show_path(conn, :show, run))
 
       assert html =~ "Show Run"
     end

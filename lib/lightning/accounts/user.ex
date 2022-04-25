@@ -73,7 +73,9 @@ defmodule Lightning.Accounts.User do
   defp validate_email(changeset) do
     changeset
     |> validate_required([:email])
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
     |> validate_length(:email, max: 160)
     |> unsafe_validate_unique(:email, Lightning.Repo)
     |> unique_constraint(:email)
@@ -178,7 +180,10 @@ defmodule Lightning.Accounts.User do
   If there is no user or the user doesn't have a password, we call
   `Bcrypt.no_user_verify/0` to avoid timing attacks.
   """
-  def valid_password?(%Lightning.Accounts.User{hashed_password: hashed_password}, password)
+  def valid_password?(
+        %Lightning.Accounts.User{hashed_password: hashed_password},
+        password
+      )
       when is_binary(hashed_password) and byte_size(password) > 0 do
     Bcrypt.verify_pass(password, hashed_password)
   end

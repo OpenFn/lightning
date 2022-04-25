@@ -20,7 +20,8 @@
         <div class="flex items-start">
           <div class="flex items-center h-5">
             <%= checkbox(f, :enabled,
-              class: "focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+              class:
+                "focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
             ) %>
           </div>
           <div class="ml-3 text-sm">
@@ -40,7 +41,8 @@
         ) %>
         <%= select(f, :credential_id, Enum.map(@credentials, &{&1.name, &1.id}),
           id: "credentialField",
-          class: "block
+          class:
+            "block
         w-full
         mt-1
         rounded-md
@@ -50,36 +52,55 @@
         ) %>
       </div>
       <div class="col-span-2">
-        <%= label(f, :adaptor_name, "Adaptor", class: "block text-sm font-medium text-gray-700") %>
-        <%= select(f, :adaptor_name, @adaptors, prompt: "", selected: @adaptor_name, class: "block
+        <%= label(f, :adaptor_name, "Adaptor",
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
+        <%= select(f, :adaptor_name, @adaptors,
+          prompt: "",
+          selected: @adaptor_name,
+          class:
+            "block
               w-full
               mt-1
               rounded-md
               border-gray-300
               shadow-sm
-              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50") %>
+              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+        ) %>
       </div>
       <div class="col-span-1">
-        <%= label(f, :adaptor, "Version", class: "block text-sm font-medium text-gray-700") %>
+        <%= label(f, :adaptor, "Version",
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
         <%= error_tag(f, :adaptor, class: "block w-full rounded-md") %>
-        <%= select(f, :adaptor, @versions, disabled: !@adaptor_name, class: "block
+        <%= select(f, :adaptor, @versions,
+          disabled: !@adaptor_name,
+          class:
+            "block
               w-full
               mt-1
               rounded-md
               border-gray-300
               shadow-sm
-              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50") %>
+              focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+        ) %>
       </div>
       <div class="col-span-3">
         <div class="grid grid-cols-6 gap-6">
           <%= inputs_for f, :trigger, fn ft -> %>
             <div class="col-span-3">
               <%= label ft, :type, class: "block" do %>
-                <span class="block text-sm font-medium text-gray-700">Trigger</span>
+                <span class="block text-sm font-medium text-gray-700">
+                  Trigger
+                </span>
                 <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
-                <%= select(ft, :type, [Webhook: "webhook", "On Job Success": "on_job_success"],
+                <%= select(
+                  ft,
+                  :type,
+                  [Webhook: "webhook", "On Job Success": "on_job_success"],
                   prompt: "",
-                  class: "block
+                  class:
+                    "block
                 w-full
                 mt-1
                 rounded-md
@@ -109,14 +130,19 @@
             <div class="col-span-3">
               <%= if get_field(ft.source,:type) == :on_job_success do %>
                 <%= label ft, :upstream_job_id, class: "block" do %>
-                  <span class="block text-sm font-medium text-gray-700">Upstream Job</span>
-                  <%= error_tag(ft, :upstream_job_id, class: "block w-full rounded-md") %>
+                  <span class="block text-sm font-medium text-gray-700">
+                    Upstream Job
+                  </span>
+                  <%= error_tag(ft, :upstream_job_id,
+                    class: "block w-full rounded-md"
+                  ) %>
                   <%= select(
                     ft,
                     :upstream_job_id,
                     Enum.map(@upstream_jobs, &{&1.name, &1.id}),
                     prompt: "",
-                    class: "block
+                    class:
+                      "block
                 w-full
                 mt-1
                 rounded-md
@@ -138,7 +164,8 @@
     </div>
     <%= error_tag(f, :body) %>
     <%= textarea(f, :body,
-      class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96 min-h-full"
+      class:
+        "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96 min-h-full"
     ) %>
     <div>
       <%= submit("Save",

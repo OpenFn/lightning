@@ -58,7 +58,9 @@ defmodule Lightning.Accounts.UserToken do
           {binary(), Ecto.Changeset.t(%__MODULE__{})}
   def build_token(user, context) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {token, changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
+
+    {token,
+     changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
   end
 
   def changeset(user_token, attrs) do
@@ -155,7 +157,9 @@ defmodule Lightning.Accounts.UserToken do
         query =
           from token in token_and_context_query(hashed_token, context),
             join: user in assoc(token, :user),
-            where: token.inserted_at > ago(^days, "day") and token.sent_to == user.email,
+            where:
+              token.inserted_at > ago(^days, "day") and
+                token.sent_to == user.email,
             select: user
 
         {:ok, query}

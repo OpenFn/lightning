@@ -30,7 +30,9 @@
         <tr id={"run-#{run.id}"}>
           <td class="font-mono text-xs">
             <%= for line <- run.log || [] do %>
-              <li class="list-none"><%= raw(line |> String.replace(" ", "&nbsp;")) %></li>
+              <li class="list-none">
+                <%= raw(line |> String.replace(" ", "&nbsp;")) %>
+              </li>
             <% end %>
           </td>
           <td><%= run.exit_code %></td>
@@ -39,9 +41,15 @@
 
           <td>
             <span>
-              <%= live_redirect("Show", to: Routes.run_show_path(@socket, :show, run)) %>
+              <%= live_redirect("Show",
+                to: Routes.run_show_path(@socket, :show, run)
+              ) %>
             </span>
-            <span><%= live_patch("Edit", to: Routes.run_index_path(@socket, :edit, run)) %></span>
+            <span>
+              <%= live_patch("Edit",
+                to: Routes.run_index_path(@socket, :edit, run)
+              ) %>
+            </span>
             <span>
               <%= link("Delete",
                 to: "#",

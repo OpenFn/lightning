@@ -13,7 +13,11 @@ config :lightning,
 # Configures the endpoint
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost"],
-  render_errors: [view: LightningWeb.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [
+    view: LightningWeb.ErrorView,
+    accepts: ~w(html json),
+    layout: false
+  ],
   pubsub_server: Lightning.PubSub,
   live_view: [signing_salt: "EfrmuOUr"]
 
