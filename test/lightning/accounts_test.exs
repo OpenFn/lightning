@@ -32,6 +32,17 @@ defmodule Lightning.AccountsTest do
       refute Accounts.get_user_by_email_and_password(user.email, "invalid")
     end
 
+    test "does not return the user if the user is disabled" do
+      user =
+        user_fixture(%{
+          disabled: "true",
+          email: "test@test.com",
+          password: valid_user_password()
+        })
+
+      refute Accounts.get_user_by_email_and_password(user.email, valid_user_password())
+    end
+
     test "returns the user if the email and password are valid" do
       %{id: id} = user = user_fixture()
 
