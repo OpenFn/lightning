@@ -12,16 +12,16 @@ defmodule LightningWeb.UserSessionController do
   def create(conn, %{"user" => user_params}) do
     %{"email" => email, "password" => password} = user_params
 
-    if user = Accounts.get_user_by_email_and_password(email, password) do
-      case user do
-        %User{disabled: true} ->
-          render(conn, "new.html", error_message: "This user account is disabled")
+    Accounts.get_user_by_email_and_password(email, password)
+    |> case do
+      %User{disabled: true} ->
+        render(conn, "new.html", error_message: "This user account is disabled")
 
-        _ ->
-          UserAuth.log_in_user(conn, user, user_params)
-      end
-    else
-      render(conn, "new.html", error_message: "Invalid email or password")
+      %User{} = user ->
+        UserAuth.log_in_user(conn, user, user_params)
+
+      _ ->
+        render(conn, "new.html", error_message: "Invalid email or password")
     end
   end
 
