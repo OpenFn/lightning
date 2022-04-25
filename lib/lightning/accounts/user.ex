@@ -27,6 +27,7 @@ defmodule Lightning.Accounts.User do
     field(:hashed_password, :string, redact: true)
     field(:confirmed_at, :naive_datetime)
     field(:role, RolesEnum, default: :user)
+    field(:disabled, :boolean, default: false)
 
     timestamps()
   end
@@ -123,7 +124,7 @@ defmodule Lightning.Accounts.User do
   """
   def details_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :first_name, :last_name, :role])
+    |> cast(attrs, [:email, :first_name, :last_name, :role, :disabled])
     |> validate_email()
     |> validate_name()
     |> validate_role()
