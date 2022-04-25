@@ -18,6 +18,17 @@ defmodule Lightning.Jobs.Job do
     Association to it's trigger, a job _must_ have a trigger.
     See `Lightning.Jobs.Trigger`.
   """
+
+  @type t :: %__MODULE__{
+          id: Ecto.UUID.t() | nil,
+          body: String.t() | nil,
+          enabled: boolean(),
+          name: String.t() | nil,
+          adaptor: String.t() | nil,
+          trigger: nil | %{id: Ecto.UUID.t()},
+          credential: nil | %{id: Ecto.UUID.t()}
+        }
+
   use Ecto.Schema
   import Ecto.Changeset
 
