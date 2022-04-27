@@ -40,4 +40,68 @@ defmodule LightningWeb.Components.Form do
     ) %>
     """
   end
+
+  def text_input(assigns, name) do
+    input_classes = ~w[
+      mt-1
+      focus:ring-indigo-500
+      focus:border-indigo-500
+      block
+      w-full
+      shadow-sm
+      sm:text-sm
+      border-gray-300
+      rounded-md
+    ]
+
+    label_classes = ~w[
+      block
+      text-sm
+      font-medium
+      text-gray-700
+    ]
+
+    error_classes = ~w[
+      block
+      w-full
+      rounded-md
+    ]
+
+    ~H"""
+    <div>
+      <%= label(f, :name, class: label_classes) %>
+      <%= error_tag(f, :name, class: error_classes) %>
+      <%= text_input(f, :name, class: input_classes) %>
+    </div>
+    """
+  end
+
+  def select(assigns, name, options, html_for, label) do
+    select_classes = ~w[
+      block
+      w-full
+      mt-1
+      rounded-md
+      border-gray-300
+      shadow-sm
+      focus:border-indigo-300
+      focus:ring
+      focus:ring-indigo-200
+      focus:ring-opacity-50
+    ]
+
+    label_classes = ~w[
+      block
+      text-sm
+      font-medium
+      text-gray-700
+    ]
+
+    ~H"""
+    <div>
+      <%= label(f, name, label, for: html_for, class: label_classes) %>
+      <%= select(f, name, options), id: html_for, class: select_classes) %>
+    </div>
+    """
+  end
 end
