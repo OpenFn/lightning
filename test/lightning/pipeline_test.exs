@@ -38,13 +38,19 @@ defmodule Lightning.PipelineTest do
                "error" => error
              } = expected_event.result_dataclip.body
 
-      assert Enum.slice(error, 0..4) == [
-               "╭─────────────────────────────────────────────╮",
-               "│ ◲ ◱  @openfn/core#v1.4.7 (Node.js v16.13.2) │",
-               "│ ◳ ◰           @openfn/language-common@1.6.2 │",
-               "╰─────────────────────────────────────────────╯",
-               "Error: I'm supposed to fail."
-             ]
+      error = Enum.slice(error, 0..4)
+
+      [
+        "╭─────────────────────────────────────────────╮",
+        ~r/│ ◲ ◱  @openfn\/core#v1.4.7 \(Node.js v1[\d\.]+\) │/,
+        ~r/│ ◳ ◰           @openfn\/language-common@[\d\.]+ │/,
+        "╰─────────────────────────────────────────────╯",
+        "Error: I'm supposed to fail."
+      ]
+      |> Enum.zip(error)
+      |> Enum.each(fn {m, l} ->
+        assert l =~ m
+      end)
     end
   end
 end
