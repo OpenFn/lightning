@@ -31,6 +31,17 @@ defmodule Lightning.Invocation do
     |> Repo.transaction()
   end
 
+  def create(event_attrs) do
+    Multi.new()
+    |> Multi.insert(:event, fn _ ->
+      Event.changeset(%Event{}, event_attrs)
+    end)
+    |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
+      Run.changeset(%Run{}, %{event_id: event_id})
+    end)
+    |> Repo.transaction()
+  end
+
   @doc """
   Returns the list of dataclips.
 
@@ -83,9 +94,8 @@ defmodule Lightning.Invocation do
   """
   @spec get_dataclip(run_or_uuid :: Run.t() | Ecto.UUID.t()) ::
           Dataclip.t() | nil
-  def get_dataclip(%Run{id: id}) do
-    from(r in Run, join: d in assoc(r, :dataclip), select: d, where: r.id == ^id)
-    |> Repo.one()
+  def get_dataclip(%Run{} = run) do
+    get_dataclip_query(run) |> Repo.one()
   end
 
   def get_dataclip(id), do: Repo.get(Dataclip, id)
@@ -102,6 +112,22 @@ defmodule Lightning.Invocation do
       where: r.id == ^id
     )
     |> Repo.one()
+  end
+
+  def get_result_dataclip_query(%Run{id: run_id}) do
+    from(d in Dataclip,
+      join: e in assoc(d, :source_event),
+      join: r in assoc(e, :run),
+      where: r.run_id == ^run_id and d.type == :run_result
+    )
+  end
+
+  def get_dataclip_query(%Run{id: run_id}) do
+    from(d in Dataclip,
+      join: e in assoc(d, :events),
+      join: r in assoc(e, :run),
+      where: r.id == ^run_id
+    )
   end
 
   @doc """
@@ -216,6 +242,11 @@ defmodule Lightning.Invocation do
       ** (Ecto.NoResultsError)
 
   """
+  @spec get_run!(Ecto.UUID.t() | Event.t()) :: Run.t()
+  def get_run!(%Event{id: event_id}) do
+    from(r in Run, where: r.event_id == ^event_id) |> Repo.one!()
+  end
+
   def get_run!(id), do: Repo.get!(Run, id)
 
   @doc """

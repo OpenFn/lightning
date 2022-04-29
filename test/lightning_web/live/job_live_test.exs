@@ -34,7 +34,7 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, _index_live, html} = live(conn, Routes.job_index_path(conn, :index))
 
       assert html =~ "Listing Jobs"
-      assert html =~ job.body
+      assert html =~ job.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
     end
 
     test "saves new job", %{conn: conn} do

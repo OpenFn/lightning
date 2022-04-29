@@ -60,7 +60,7 @@ defmodule Lightning.MixProject do
       {:engine, github: "OpenFn/engine", tag: "v0.5.1"},
       # {:engine, path: "../engine"},
       {:junit_formatter, "~> 3.0", only: [:test]},
-      {:mimic, "~> 1.7", only: :test},
+      {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
       {:phoenix, "~> 1.6.7"},
       {:phoenix_ecto, "~> 4.4"},

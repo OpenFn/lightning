@@ -67,18 +67,23 @@ defmodule Lightning.InvocationTest do
 
     test "create_dataclip/1 with run_result type creates a dataclip" do
       run = run_fixture()
-      attrs = %{body: %{}, type: :run_result, run_id: nil}
+      attrs = %{body: %{}, type: :run_result, source_event_id: nil}
 
-      assert {:error, changeset} = Invocation.create_dataclip(attrs)
-
-      assert {:run_id, {"can't be blank", [validation: :required]}} in changeset.errors
+      # Commenting this out for now, in order to have truly versatile `cast_assoc`
+      # we can't validate_required on `source_event_id`.
+      # assert {:error, changeset} = Invocation.create_dataclip(attrs)
+      # assert {:run_id, {"can't be blank", [validation: :required]}} in changeset.errors
 
       assert {:ok, %Dataclip{} = dataclip} =
-               Invocation.create_dataclip(%{attrs | run_id: run.id})
+               Invocation.create_dataclip(%{
+                 attrs
+                 | source_event_id: run.event_id
+               })
 
       assert dataclip.body == %{}
       assert dataclip.type == :run_result
-      assert dataclip.run_id == run.id
+
+      assert dataclip.source_event_id == run.event_id
     end
 
     test "create_dataclip/1 with invalid data returns error changeset" do
@@ -166,6 +171,12 @@ defmodule Lightning.InvocationTest do
     test "get_run!/1 returns the run with given id" do
       run = run_fixture()
       assert Invocation.get_run!(run.id) == run
+    end
+
+    test "get_run!/1 returns the run for a given event" do
+      event = event_fixture()
+      run = run_fixture(%{event_id: event.id})
+      assert Invocation.get_run!(event) == run
     end
 
     test "create_run/1 with valid data creates a run" do

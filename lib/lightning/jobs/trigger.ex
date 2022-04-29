@@ -16,6 +16,16 @@ defmodule Lightning.Jobs.Trigger do
 
   alias Lightning.Jobs.Job
 
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil
+        }
+
+  @flow_types [:on_job_success, :on_job_failure]
+  @trigger_types [:webhook] ++ @flow_types
+
+  @type trigger_type :: :webhook | :on_job_success | :on_job_failure
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "triggers" do
@@ -25,7 +35,7 @@ defmodule Lightning.Jobs.Trigger do
     belongs_to :upstream_job, Job
 
     field :type, Ecto.Enum,
-      values: [:webhook, :on_job_success, :on_job_failure],
+      values: @trigger_types,
       default: :webhook
 
     timestamps()
@@ -47,9 +57,8 @@ defmodule Lightning.Jobs.Trigger do
     changeset
     |> fetch_field!(:type)
     |> case do
-      type when type in [:on_job_success, :on_job_failure] ->
+      type when type in @flow_types ->
         changeset
-        |> validate_required(:upstream_job_id)
         |> assoc_constraint(:upstream_job)
 
       :webhook ->

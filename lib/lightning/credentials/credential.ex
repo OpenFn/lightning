@@ -3,6 +3,7 @@ defmodule Lightning.Credentials.Credential do
   The Credential model.
   """
   @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           body: nil | %{}
         }

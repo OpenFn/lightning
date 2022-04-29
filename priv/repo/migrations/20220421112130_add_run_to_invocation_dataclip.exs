@@ -3,7 +3,9 @@ defmodule Lightning.Repo.Migrations.AddRunToInvocationDataclip do
 
   def change do
     alter table(:dataclips) do
-      add :run_id, references(:runs, on_delete: :delete_all, type: :binary_id), null: true
+      add :source_event_id,
+          references(:invocation_events, on_delete: :delete_all, type: :binary_id),
+          null: true
     end
   end
 end

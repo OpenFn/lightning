@@ -1,4 +1,4 @@
-defmodule Lightning.Runner do
+defmodule Lightning.Pipeline.Runner do
   @moduledoc """
   Job running entrypoint
   """
@@ -6,7 +6,6 @@ defmodule Lightning.Runner do
   alias Lightning.Invocation
   import Lightning.Invocation, only: [get_dataclip_body: 1]
   import Lightning.Jobs, only: [get_job!: 1]
-  import Lightning.Credentials, only: [get_credential_body: 1]
 
   import Engine.Adaptor.Service,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
@@ -16,6 +15,7 @@ defmodule Lightning.Runner do
     Custom handler callbacks for Lightnings use of Engine to execute runs.
     """
     use Engine.Run.Handler
+    alias Lightning.Pipeline.Runner
     import Lightning.Invocation, only: [update_run: 2]
 
     @impl true
@@ -25,13 +25,20 @@ defmodule Lightning.Runner do
 
     @impl true
     def on_finish(result, run) do
+      if Logger.compare_levels(Logger.level(), :debug) == :eq do
+        result.log
+        |> Enum.each(fn line ->
+          Logger.debug("#{String.slice(run.id, -5..-1)} : #{line}")
+        end)
+      end
+
       update_run(run, %{
         finished_at: DateTime.utc_now(),
         exit_code: result.exit_code,
         log: result.log
       })
 
-      Lightning.Runner.create_dataclip_from_result(result, run)
+      Runner.create_dataclip_from_result(result, run)
     end
   end
 
@@ -55,19 +62,9 @@ defmodule Lightning.Runner do
   def start(%Invocation.Run{} = run, opts \\ []) do
     run = Lightning.Repo.preload(run, :event)
 
-    %{body: expression, adaptor: adaptor, credential_id: credential_id} =
-      get_job!(run.event.job_id)
+    %{body: expression, adaptor: adaptor} = get_job!(run.event.job_id)
 
-    dataclip = get_dataclip_body(run)
-
-    credential =
-      if credential_id do
-        get_credential_body(credential_id)
-      else
-        nil
-      end
-
-    state = build_state(dataclip, credential)
+    state = Lightning.Pipeline.StateAssembler.assemble(run)
 
     %{local_name: local_name} = find_or_install_adaptor(adaptor)
 
@@ -97,23 +94,9 @@ defmodule Lightning.Runner do
           {:ok, Path.t()} | {:error, any}
   defp write_temp(contents, prefix) do
     Temp.open(
-      %{prefix: prefix, suffix: ".json"},
+      %{prefix: prefix, suffix: ".json", mode: [:write, :utf8]},
       &IO.write(&1, contents)
     )
-  end
-
-  @spec build_state(dataclip :: String.t(), credential :: String.t() | nil) ::
-          iodata()
-  defp build_state(dataclip, credential) do
-    # NOTE: really not sure how much we're gaining here, we're trying to avoid
-    # as much data marshalling as possible - and this currently avoids turning
-    # the job body into a map before turning it into a string again; which
-    # is probably somewhat of a win.
-    Jason.Helpers.json_map(
-      data: Jason.Fragment.new(fn _ -> dataclip end),
-      configuration: Jason.Fragment.new(fn _ -> credential || "null" end)
-    )
-    |> Jason.encode_to_iodata!()
   end
 
   @doc """
@@ -130,7 +113,7 @@ defmodule Lightning.Runner do
     with {:ok, data} <- File.read(result.final_state_path),
          {:ok, body} <- Jason.decode(data) do
       Invocation.create_dataclip(%{
-        run_id: run.id,
+        source_event_id: run.event_id,
         type: :run_result,
         body: body
       })

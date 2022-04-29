@@ -5,15 +5,15 @@ defmodule Lightning.Invocation.Run do
   A run represents the results of an Invocation.Event, where the Event
   stores what triggered the Run, the Run itself represents the execution.
   """
-
-  @type t :: %__MODULE__{
-          id: Ecto.UUID.t() | nil,
-          event: nil | %{job_id: Ecto.UUID.t()}
-        }
-
   use Ecto.Schema
   import Ecto.Changeset
-  alias Lightning.Invocation.{Event, Dataclip}
+  alias Lightning.Invocation.Event
+
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          event: Event.t() | Ecto.Association.NotLoaded.t() | nil
+        }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -23,8 +23,9 @@ defmodule Lightning.Invocation.Run do
     field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
     belongs_to :event, Event
-    has_one :dataclip, through: [:event, :dataclip]
-    has_one :result_dataclip, Dataclip, where: [type: :run_result]
+    has_one :source_dataclip, through: [:event, :dataclip]
+
+    has_one :result_dataclip, through: [:event, :result_dataclip]
 
     timestamps(usec: true)
   end
