@@ -4,7 +4,6 @@ defmodule Lightning.Pipeline.Runner do
   """
   require Logger
   alias Lightning.Invocation
-  import Lightning.Invocation, only: [get_dataclip_body: 1]
   import Lightning.Jobs, only: [get_job!: 1]
 
   import Engine.Adaptor.Service,

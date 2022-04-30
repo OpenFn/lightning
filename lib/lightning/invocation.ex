@@ -101,27 +101,19 @@ defmodule Lightning.Invocation do
   def get_dataclip(id), do: Repo.get(Dataclip, id)
 
   @doc """
-  Gets a single dataclip's body as a string
-  Returns `nil` if the Dataclip does not exist.
+  Query for retrieving the dataclip that was the result of a successful run.
   """
-  @spec get_dataclip_body(Run.t()) :: String.t() | nil
-  def get_dataclip_body(%Run{id: id}) do
-    from(r in Run,
-      join: d in assoc(r, :dataclip),
-      select: type(d.body, :string),
-      where: r.id == ^id
-    )
-    |> Repo.one()
-  end
-
   def get_result_dataclip_query(%Run{id: run_id}) do
     from(d in Dataclip,
       join: e in assoc(d, :source_event),
       join: r in assoc(e, :run),
-      where: r.run_id == ^run_id and d.type == :run_result
+      where: r.id == ^run_id and d.type == :run_result
     )
   end
 
+  @doc """
+  Query for retrieving the dataclip that a runs starting dataclip.
+  """
   def get_dataclip_query(%Run{id: run_id}) do
     from(d in Dataclip,
       join: e in assoc(d, :events),
