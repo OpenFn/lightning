@@ -1,5 +1,6 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: true
+  use Mimic
 
   alias Lightning.{Invocation, Repo}
 
@@ -7,14 +8,15 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   test "POST /i", %{conn: conn} do
     job = job_fixture(%{trigger: %{}})
+    expect(Lightning.Pipeline.Runner, :start, fn _run -> %Engine.Result{} end)
 
     message = %{"foo" => "bar"}
     conn = post(conn, "/i/#{job.id}", message)
     assert %{"event_id" => _, "run_id" => run_id} = json_response(conn, 200)
 
-    %{dataclip: %{body: body}} =
+    %{source_dataclip: %{body: body}} =
       Invocation.get_run!(run_id)
-      |> Repo.preload(:dataclip)
+      |> Repo.preload(:source_dataclip)
 
     assert body == message
 

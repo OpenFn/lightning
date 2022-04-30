@@ -1,4 +1,5 @@
 Mimic.copy(:hackney)
+Mimic.copy(Lightning.Pipeline.Runner)
 
 ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])
 

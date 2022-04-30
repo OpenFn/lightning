@@ -20,7 +20,7 @@ defmodule LightningWeb.WebhooksController do
             %{type: :http_request, body: conn.body_params}
           )
 
-        Lightning.Runner.start(run)
+        Lightning.Pipeline.process(event)
 
         conn
         |> json(%{event_id: event.id, run_id: run.id})

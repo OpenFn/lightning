@@ -1,7 +1,7 @@
-defmodule Lightning.RunnerTest do
+defmodule Lightning.Pipeline.RunnerTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.{Invocation, Runner}
+  alias Lightning.{Invocation, Pipeline}
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
 
@@ -34,7 +34,7 @@ defmodule Lightning.RunnerTest do
         %{type: :http_request, body: dataclip_body}
       )
 
-    result = %Engine.Result{} = Runner.start(run)
+    result = %Engine.Result{} = Pipeline.Runner.start(run)
 
     expected_state = %{
       "data" => dataclip_body,
@@ -44,7 +44,9 @@ defmodule Lightning.RunnerTest do
     assert File.read!(result.final_state_path)
            |> Jason.decode!() == expected_state
 
-    run = Repo.reload!(run) |> Repo.preload(:result_dataclip)
+    run =
+      Repo.reload!(run)
+      |> Repo.preload(:result_dataclip)
 
     assert run.result_dataclip.body == expected_state
 
@@ -59,12 +61,12 @@ defmodule Lightning.RunnerTest do
   end
 
   test "create_dataclip_from_result/2" do
-    assert Runner.create_dataclip_from_result(
+    assert Pipeline.Runner.create_dataclip_from_result(
              %Engine.Result{final_state_path: "no_such_path"},
              run_fixture()
            ) == {:error, :enoent}
 
-    assert Runner.create_dataclip_from_result(
+    assert Pipeline.Runner.create_dataclip_from_result(
              %Engine.Result{
                final_state_path:
                  Temp.open!(%{suffix: ".json"}, &IO.write(&1, ""))

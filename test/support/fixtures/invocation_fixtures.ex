@@ -27,7 +27,8 @@ defmodule Lightning.InvocationFixtures do
       attrs
       |> Enum.into(%{
         type: :webhook,
-        dataclip_id: dataclip_fixture().id
+        dataclip_id: dataclip_fixture().id,
+        job_id: Lightning.JobsFixtures.job_fixture().id
       })
       |> Lightning.Invocation.create_event()
 
@@ -41,11 +42,11 @@ defmodule Lightning.InvocationFixtures do
     {:ok, run} =
       attrs
       |> Enum.into(%{
-        exit_code: 42,
-        finished_at: ~U[2022-02-02 11:49:00.000000Z],
+        exit_code: nil,
+        finished_at: nil,
         log: [],
         event_id: nil,
-        started_at: ~U[2022-02-02 11:49:00.000000Z]
+        started_at: nil
       })
       |> Map.update!(:event_id, fn event_id ->
         if event_id do

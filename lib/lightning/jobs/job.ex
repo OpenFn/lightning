@@ -18,32 +18,33 @@ defmodule Lightning.Jobs.Job do
     Association to it's trigger, a job _must_ have a trigger.
     See `Lightning.Jobs.Trigger`.
   """
-
-  @type t :: %__MODULE__{
-          id: Ecto.UUID.t() | nil,
-          body: String.t() | nil,
-          enabled: boolean(),
-          name: String.t() | nil,
-          adaptor: String.t() | nil,
-          trigger: nil | %{id: Ecto.UUID.t()},
-          credential: nil | %{id: Ecto.UUID.t()}
-        }
-
   use Ecto.Schema
   import Ecto.Changeset
 
   alias Lightning.Jobs.Trigger
   alias Lightning.Credentials.Credential
 
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          body: String.t() | nil,
+          enabled: boolean(),
+          name: String.t() | nil,
+          adaptor: String.t() | nil,
+          trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
+          credential: nil | Credential.t() | Ecto.Association.NotLoaded.t()
+        }
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "jobs" do
-    field(:body, :string)
-    field(:enabled, :boolean, default: false)
-    field(:name, :string)
-    field(:adaptor, :string)
+    field :body, :string
+    field :enabled, :boolean, default: false
+    field :name, :string
+    field :adaptor, :string
 
-    has_one(:trigger, Trigger)
+    has_one :trigger, Trigger
+    has_many :events, Lightning.Invocation.Event
 
     belongs_to :credential, Credential
 
@@ -52,11 +53,8 @@ defmodule Lightning.Jobs.Job do
 
   @doc false
   def changeset(job, attrs) do
-    changeset =
-      job
-      |> cast(attrs, [:name, :body, :enabled, :adaptor, :credential_id])
-
-    changeset
+    job
+    |> cast(attrs, [:name, :body, :enabled, :adaptor, :credential_id])
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
     |> cast_assoc(:credential, with: &Credential.changeset/2)
     |> validate_required([:name, :body, :enabled, :adaptor])

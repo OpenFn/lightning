@@ -11,7 +11,7 @@ defmodule Lightning.JobsFixtures do
     {:ok, job} =
       attrs
       |> Enum.into(%{
-        body: "some body",
+        body: "fn(state => state)",
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",

@@ -116,6 +116,22 @@ defmodule Lightning.JobsTest do
       assert Jobs.get_upstream_jobs_for(job) == [Jobs.get_job!(other_job.id)]
       assert Jobs.get_upstream_jobs_for(other_job) == [Jobs.get_job!(job.id)]
     end
+
+    test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
+      job = job_fixture()
+
+      other_job =
+        job_fixture(%{trigger: %{type: :on_job_failure, upstream_job_id: job.id}})
+
+      assert Jobs.get_downstream_jobs_for(job) == [Jobs.get_job!(other_job.id)]
+
+      assert Jobs.get_downstream_jobs_for(job, :on_job_failure) == [
+               Jobs.get_job!(other_job.id)
+             ]
+
+      assert Jobs.get_downstream_jobs_for(job, :on_job_success) == []
+      assert Jobs.get_downstream_jobs_for(other_job) == []
+    end
   end
 
   # Replace an preloaded Credential with an Ecto.Association.NotLoaded struct

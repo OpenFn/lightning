@@ -6,7 +6,7 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.Job
+  alias Lightning.Jobs.{Job, Trigger}
 
   @doc """
   Returns the list of jobs.
@@ -33,6 +33,41 @@ defmodule Lightning.Jobs do
     else
       from(j in query, where: j.id != ^id) |> Repo.all()
     end
+  end
+
+  @doc """
+  Returns the list of downstream jobs for a given job, optionally matching a
+  specific trigger type.
+  """
+  @spec get_downstream_jobs_for(
+          Job.t() | Ecto.UUID.t(),
+          Trigger.trigger_type() | nil
+        ) :: [
+          Job.t()
+        ]
+  def get_downstream_jobs_for(job, trigger_type \\ nil)
+
+  def get_downstream_jobs_for(%Job{id: job_id}, trigger_type) do
+    get_downstream_jobs_for(job_id, trigger_type)
+  end
+
+  def get_downstream_jobs_for(job_id, nil) do
+    downstream_query(job_id)
+    |> Repo.all()
+  end
+
+  def get_downstream_jobs_for(job_id, trigger_type) do
+    downstream_query(job_id)
+    |> where([_, t], t.type == ^trigger_type)
+    |> Repo.all()
+  end
+
+  defp downstream_query(job_id) do
+    from(j in Job,
+      join: t in assoc(j, :trigger),
+      where: t.upstream_job_id == ^job_id,
+      preload: [trigger: t]
+    )
   end
 
   @doc """
