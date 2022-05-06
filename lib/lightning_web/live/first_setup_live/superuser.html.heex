@@ -79,7 +79,10 @@
     </div>
 
     <div class="mt-2">
-      <.submit_button changeset={@changeset} />
+      <.submit_button
+        value="Save"
+        disable_with="Saving"
+        changeset={@changeset} />
     </div>
   </.form>
 </MainSection.main>
