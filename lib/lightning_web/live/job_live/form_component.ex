@@ -13,6 +13,8 @@ defmodule LightningWeb.JobLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.{Jobs, AdaptorRegistry, Credentials}
+  import LightningWeb.Components.Form
+
   import Ecto.Changeset, only: [get_field: 2]
 
   @impl true
