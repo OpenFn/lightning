@@ -181,4 +181,14 @@ defmodule LightningWeb.Components.Form do
     </div>
     """
   end
+
+  def form_field(assigns) do
+    ~H"""
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
 end
