@@ -34,9 +34,15 @@ defmodule LightningWeb.Components.Form do
 
     ~H"""
     <%= submit(@value,
-      phx_disable_with: @disable_with,
-      disabled: !@changeset.valid?,
-      class: if(@changeset.valid?, do: active_classes, else: inactive_classes)
+      phx_disable_with:
+        if(Map.has_key?(assigns, "disable_with"), do: @disable_with, else: ""),
+      disabled:
+        if(Map.has_key?(assigns, "changeset"), do: !@changeset.valid?, else: false),
+      class:
+        if(Map.has_key?(assigns, "changeset"),
+          do: if(@changeset.valid?, do: active_classes, else: inactive_classes),
+          else: active_classes
+        )
     ) %>
     """
   end
@@ -55,6 +61,76 @@ defmodule LightningWeb.Components.Form do
     ~H"""
     <%= error_tag(@form, @id) %>
     <%= textarea(@form, @id, class: classes) %>
+    """
+  end
+
+  def password_field(assigns) do
+    label_classes = ~w[
+      block
+      text-sm
+      font-medium
+      text-gray-700
+    ]
+
+    error_classes = ~w[
+      block
+      w-full
+      rounded-md
+    ]
+
+    input_classes = ~w[
+      mt-1
+      focus:ring-indigo-500
+      focus:border-indigo-500
+      block w-full
+      shadow-sm
+      sm:text-sm
+      border-gray-300
+      rounded-md
+    ]
+
+    ~H"""
+    <%= label(@form, @id, class: label_classes) %>
+    <%= error_tag(@form, @id, class: error_classes) %>
+    <%= password_input(@form, @id,
+      class: input_classes,
+      required: if(Map.has_key?(assigns, "required"), do: @required, else: false)
+    ) %>
+    """
+  end
+
+  def email_field(assigns) do
+    label_classes = ~w[
+      block
+      text-sm
+      font-medium
+      text-gray-700
+    ]
+
+    error_classes = ~w[
+      block
+      w-full
+      rounded-md
+    ]
+
+    input_classes = ~w[
+      mt-1
+      focus:ring-indigo-500
+      focus:border-indigo-500
+      block w-full
+      shadow-sm
+      sm:text-sm
+      border-gray-300
+      rounded-md
+    ]
+
+    ~H"""
+    <%= label(@form, @id, class: label_classes) %>
+    <%= error_tag(@form, @id, class: error_classes) %>
+    <%= email_input(@form, @id,
+      class: input_classes,
+      required: if(Map.has_key?(assigns, "required"), do: @required, else: false)
+    ) %>
     """
   end
 
