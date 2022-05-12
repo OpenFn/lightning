@@ -1,34 +1,78 @@
-<h1>Log in</h1>
-
-<.form
-  let={f}
-  for={@conn}
-  action={Routes.user_session_path(@conn, :create)}
-  as={:user}
->
-  <%= if @error_message do %>
-    <div class="alert alert-danger">
-      <p><%= @error_message %></p>
+<nav class="bg-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <img
+            class="h-8 w-8"
+            src={Routes.static_path(@conn, "/images/square-logo.png")}
+            alt="OpenFn"
+          />
+        </div>
+      </div>
     </div>
-  <% end %>
-
-  <%= label(f, :email) %>
-  <%= email_input(f, :email, required: true) %>
-
-  <%= label(f, :password) %>
-  <%= password_input(f, :password, required: true) %>
-
-  <%= label(f, :remember_me, "Keep me logged in for 60 days") %>
-  <%= checkbox(f, :remember_me) %>
-
-  <div>
-    <%= submit("Log in") %>
   </div>
-</.form>
+</nav>
 
-<p>
-  <%= link("Register", to: Routes.user_registration_path(@conn, :new)) %> |
-  <%= link("Forgot your password?",
-    to: Routes.user_reset_password_path(@conn, :new)
-  ) %>
-</p>
+<MainSection.header title="Log in" />
+<MainSection.main>
+  <main class="container">
+    <div id="login">
+      <.form
+        let={f}
+        for={@conn}
+        action={Routes.user_session_path(@conn, :create)}
+        as={:user}
+      >
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <%= if @error_message do %>
+              <div class="alert alert-danger">
+                <p><%= @error_message %></p>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.email_field form={f} id={:email} required={true} />
+            <.divider />
+          </div>
+        </div>
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.password_field form={f} id={:password} required={true} />
+            <.divider />
+          </div>
+        </div>
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.check_box form={f} id={:remember_me}>
+              <span>Keep me logged in for 60 days</span>
+            </.check_box>
+            <.divider />
+          </div>
+        </div>
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.submit_button value="Log in" />
+            <.divider />
+          </div>
+        </div>
+      </.form>
+
+      <div class="grid grid-cols-6 gap-6">
+        <div class="col-span-3">
+          <p>
+            <%= link("Register", to: Routes.user_registration_path(@conn, :new)) %>
+            |
+            <%= link("Forgot your password?",
+              to: Routes.user_reset_password_path(@conn, :new)
+            ) %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</MainSection.main>
