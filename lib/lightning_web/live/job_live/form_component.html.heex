@@ -43,7 +43,6 @@
           form={f}
           name={:adaptor_name}
           prompt=""
-          ,
           selected={@adaptor_name}
           id="adaptorField"
           values={@adaptors}
@@ -78,9 +77,10 @@
                   form={ft}
                   name={:type}
                   prompt=""
-                  id="adaptorVersionField"
+                  id="triggerType"
                   values={
                     [
+                      Cron: "cron",
                       Webhook: "webhook",
                       "On Job Success": "on_job_success",
                       "On Job Failure": "on_job_failure"
@@ -119,10 +119,13 @@
                     form={ft}
                     name={:upstream_job_id}
                     prompt=""
-                    id="adaptorVersionField"
+                    id="upstreamJob"
                     values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
                   />
                 <% end %>
+              <% end %>
+              <%= if requires_cron_job?(ft.source) do %>
+                <.text_field form={ft} id={:cron_expression} />
               <% end %>
             </div>
           <% end %>

@@ -22,21 +22,23 @@ defmodule Lightning.Jobs.Trigger do
         }
 
   @flow_types [:on_job_success, :on_job_failure]
-  @trigger_types [:webhook] ++ @flow_types
+  @trigger_types [:webhook, :cron] ++ @flow_types
 
-  @type trigger_type :: :webhook | :on_job_success | :on_job_failure
+  @type trigger_type :: :webhook | :cron | :on_job_success | :on_job_failure
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "triggers" do
-    field :comment, :string
-    field :custom_path, :string
-    belongs_to :job, Job
-    belongs_to :upstream_job, Job
+    field(:comment, :string)
+    field(:custom_path, :string)
+    field(:cron_expression, :string)
+    belongs_to(:job, Job)
+    belongs_to(:upstream_job, Job)
 
-    field :type, Ecto.Enum,
+    field(:type, Ecto.Enum,
       values: @trigger_types,
       default: :webhook
+    )
 
     timestamps()
   end
@@ -44,10 +46,30 @@ defmodule Lightning.Jobs.Trigger do
   @doc false
   def changeset(trigger, attrs) do
     trigger
-    |> cast(attrs, [:comment, :custom_path, :type, :upstream_job_id])
+    |> cast(attrs, [
+      :comment,
+      :custom_path,
+      :type,
+      :upstream_job_id,
+      :cron_expression
+    ])
     |> validate_required([:type])
     |> assoc_constraint(:job)
     |> validate_by_type()
+    |> validate_cron(:cron_expression)
+  end
+
+  defp validate_cron(changeset, field, _options \\ []) do
+    validate_change(changeset, field, fn _, cron_expression ->
+      Crontab.CronExpression.Parser.parse(cron_expression)
+      |> case do
+        {:error, error_message} ->
+          [{field, error_message}]
+
+        {:ok, _exp} ->
+          []
+      end
+    end)
   end
 
   # Append validations based on the type of the Trigger.
@@ -62,6 +84,10 @@ defmodule Lightning.Jobs.Trigger do
         |> assoc_constraint(:upstream_job)
 
       :webhook ->
+        changeset
+        |> put_change(:upstream_job_id, nil)
+
+      :cron ->
         changeset
         |> put_change(:upstream_job_id, nil)
     end
