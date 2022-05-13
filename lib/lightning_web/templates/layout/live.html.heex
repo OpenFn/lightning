@@ -1,25 +1,6 @@
 <main class="container">
-  <%= if info = live_flash(@flash, :info) do %>
-    <p
-      class="alert alert-info"
-      role="alert"
-      phx-click="lv:clear-flash"
-      phx-value-key="info"
-    >
-      <%= info %>
-    </p>
-  <% end %>
-
-  <%= if error = live_flash(@flash, :error) do %>
-    <p
-      class="alert alert-danger"
-      role="alert"
-      phx-click="lv:clear-flash"
-      phx-value-key="error"
-    >
-      <%= error %>
-    </p>
-  <% end %>
+  <.live_info_block flash={@flash} />
+  <.live_error_block flash={@flash} />
 </main>
 <nav class="bg-gray-800">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
