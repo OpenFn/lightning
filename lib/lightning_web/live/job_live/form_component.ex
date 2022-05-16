@@ -150,4 +150,8 @@ defmodule LightningWeb.JobLive.FormComponent do
   defp requires_upstream_job?(changeset) do
     get_field(changeset, :type) in [:on_job_failure, :on_job_success]
   end
+
+  defp requires_cron_job?(changeset) do
+    get_field(changeset, :type) == :cron
+  end
 end

@@ -46,6 +46,7 @@ defmodule Lightning.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:crontab, "~> 1.1"},
       {:bcrypt_elixir, "~> 2.0"},
       {:credo, "~> 1.6", only: [:test, :dev]},
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
