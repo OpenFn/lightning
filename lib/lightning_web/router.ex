@@ -71,9 +71,6 @@ defmodule LightningWeb.Router do
       live("/credentials/:id", CredentialLive.Show, :show)
       live("/credentials/:id/edit", CredentialLive.Edit, :edit)
 
-      live("/users/:id", UserLive.Show, :show)
-      live("/users/:id/edit", UserLive.Edit, :edit)
-
       live("/dataclips", DataclipLive.Index, :index)
       live("/dataclips/new", DataclipLive.Index, :new)
       live("/dataclips/:id/edit", DataclipLive.Index, :edit)
@@ -94,6 +91,9 @@ defmodule LightningWeb.Router do
 
       live "/settings/users", UserLive.Index, :index
       live "/settings/users/new", UserLive.Index, :new
+
+      live "/settings/users/:id", UserLive.Show, :show
+      live "/settings/users/:id/edit", UserLive.Edit, :edit
     end
 
     live("/", DashboardLive.Index, :index)
