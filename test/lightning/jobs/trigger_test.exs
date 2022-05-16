@@ -35,8 +35,6 @@ defmodule Lightning.Jobs.TriggerTest do
     end
 
     test "must raise an error when cron expression is invalid" do
-      job = job_fixture()
-
       errors =
         Trigger.changeset(%Trigger{}, %{
           type: :cron,
@@ -50,8 +48,6 @@ defmodule Lightning.Jobs.TriggerTest do
     end
 
     test "must raise no error when cron expression is valid" do
-      job = job_fixture()
-
       errors =
         Trigger.changeset(%Trigger{}, %{
           type: :cron,
@@ -79,6 +75,48 @@ defmodule Lightning.Jobs.TriggerTest do
         )
 
       assert get_field(changeset, :upstream_job_id) == nil
+    end
+
+    test "removes cron expression job when type is :webhook" do
+      changeset =
+        Trigger.changeset(%Trigger{}, %{
+          type: :webhook,
+          cron_expression: "* * * *"
+        })
+
+      assert get_field(changeset, :cron_expression) == nil
+
+      changeset =
+        Trigger.changeset(
+          %Trigger{type: :cron, cron_expression: "* * * *"},
+          %{
+            type: :webhook
+          }
+        )
+
+      assert get_field(changeset, :cron_expression) == nil
+    end
+
+    test "removes cron expression job when type is :on_job_x" do
+      for type <- [:on_job_success, :on_job_failure] do
+        changeset =
+          Trigger.changeset(%Trigger{}, %{
+            type: type,
+            cron_expression: "* * * *"
+          })
+
+        assert get_field(changeset, :cron_expression) == nil
+
+        changeset =
+          Trigger.changeset(
+            %Trigger{type: :cron, cron_expression: "* * * *"},
+            %{
+              type: type
+            }
+          )
+
+        assert get_field(changeset, :cron_expression) == nil
+      end
     end
 
     test "removes any upstream job when type is :cron" do

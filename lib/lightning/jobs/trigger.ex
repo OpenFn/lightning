@@ -56,15 +56,14 @@ defmodule Lightning.Jobs.Trigger do
     |> validate_required([:type])
     |> assoc_constraint(:job)
     |> validate_by_type()
-    |> validate_cron(:cron_expression)
   end
 
-  defp validate_cron(changeset, field, _options \\ []) do
-    validate_change(changeset, field, fn _, cron_expression ->
+  defp validate_cron(changeset, _options \\ []) do
+    validate_change(changeset, :cron_expression, fn _, cron_expression ->
       Crontab.CronExpression.Parser.parse(cron_expression)
       |> case do
         {:error, error_message} ->
-          [{field, error_message}]
+          [{:cron_expression, error_message}]
 
         {:ok, _exp} ->
           []
@@ -81,14 +80,17 @@ defmodule Lightning.Jobs.Trigger do
     |> case do
       type when type in @flow_types ->
         changeset
+        |> put_change(:cron_expression, nil)
         |> assoc_constraint(:upstream_job)
 
       :webhook ->
         changeset
+        |> put_change(:cron_expression, nil)
         |> put_change(:upstream_job_id, nil)
 
       :cron ->
         changeset
+        |> validate_cron()
         |> put_change(:upstream_job_id, nil)
     end
   end
