@@ -8,7 +8,7 @@ defmodule LightningWeb.UserLive.Show do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, socket, layout: {LightningWeb.LayoutView, "settings.html"}}
   end
 
   @impl true
@@ -16,6 +16,7 @@ defmodule LightningWeb.UserLive.Show do
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
+     |> assign(:active_menu_item, :users)
      |> assign(:user, Accounts.get_user!(id))}
   end
 

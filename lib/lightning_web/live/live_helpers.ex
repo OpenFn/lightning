@@ -57,6 +57,40 @@ defmodule LightningWeb.LiveHelpers do
     """
   end
 
+  def live_info_block(assigns) do
+    ~H"""
+    <%= if info = live_flash(@flash, :info) do %>
+      <div class="fixed h-16 top-3 right-3 z-10 ">
+        <p
+          class="bg-blue-200 border-blue-300 border opacity-75 py-4 px-5 rounded-md drop-shadow-lg"
+          role="alert"
+          phx-click="lv:clear-flash"
+          phx-value-key="info"
+        >
+          <%= info %>
+        </p>
+      </div>
+    <% end %>
+    """
+  end
+
+  def live_error_block(assigns) do
+    ~H"""
+    <%= if error = live_flash(@flash, :error) do %>
+      <div class="fixed h-16 top-3 right-3 z-10 ">
+        <p
+          class="bg-red-300 border-red-400 text-red-900 border opacity-75 py-4 px-5 rounded-md drop-shadow-lg"
+          role="alert"
+          phx-click="lv:clear-flash"
+          phx-value-key="error"
+        >
+          <%= error %>
+        </p>
+      </div>
+    <% end %>
+    """
+  end
+
   defp hide_modal(js \\ %JS{}) do
     js
     |> JS.hide(to: "#modal", transition: "fade-out")

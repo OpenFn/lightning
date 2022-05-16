@@ -56,39 +56,45 @@ defmodule LightningWeb.Router do
     put "/profile", UserSettingsController, :update
     get "/profile/confirm_email/:token", UserSettingsController, :confirm_email
 
-    live("/jobs", JobLive.Index, :index)
-    live("/jobs/new", JobLive.Index, :new)
-    # live "/jobs/:id/edit", JobLive.Index, :edit
+    live_session :default, on_mount: LightningWeb.InitAssigns do
+      live("/jobs", JobLive.Index, :index)
+      live("/jobs/new", JobLive.Index, :new)
+      # live "/jobs/:id/edit", JobLive.Index, :edit
 
-    live("/jobs/:id", JobLive.Show, :show)
-    live("/jobs/:id/edit", JobLive.Edit, :edit)
-    # live "/jobs/:id/show/edit", JobLive.Show, :edit
+      live("/jobs/:id", JobLive.Show, :show)
+      live("/jobs/:id/edit", JobLive.Edit, :edit)
+      # live "/jobs/:id/show/edit", JobLive.Show, :edit
 
-    live("/credentials", CredentialLive.Index, :index)
-    live("/credentials/new", CredentialLive.Index, :new)
+      live("/credentials", CredentialLive.Index, :index)
+      live("/credentials/new", CredentialLive.Index, :new)
 
-    live("/credentials/:id", CredentialLive.Show, :show)
-    live("/credentials/:id/edit", CredentialLive.Edit, :edit)
+      live("/credentials/:id", CredentialLive.Show, :show)
+      live("/credentials/:id/edit", CredentialLive.Edit, :edit)
 
-    live("/users", UserLive.Index, :index)
-    live("/users/new", UserLive.Index, :new)
+      live("/dataclips", DataclipLive.Index, :index)
+      live("/dataclips/new", DataclipLive.Index, :new)
+      live("/dataclips/:id/edit", DataclipLive.Index, :edit)
 
-    live("/users/:id", UserLive.Show, :show)
-    live("/users/:id/edit", UserLive.Edit, :edit)
+      live("/dataclips/:id", DataclipLive.Show, :show)
+      live("/dataclips/:id/show/edit", DataclipLive.Show, :edit)
 
-    live("/dataclips", DataclipLive.Index, :index)
-    live("/dataclips/new", DataclipLive.Index, :new)
-    live("/dataclips/:id/edit", DataclipLive.Index, :edit)
+      live("/runs", RunLive.Index, :index)
+      live("/runs/new", RunLive.Index, :new)
+      live("/runs/:id/edit", RunLive.Index, :edit)
 
-    live("/dataclips/:id", DataclipLive.Show, :show)
-    live("/dataclips/:id/show/edit", DataclipLive.Show, :edit)
+      live("/runs/:id", RunLive.Show, :show)
+      live("/runs/:id/show/edit", RunLive.Show, :edit)
+    end
 
-    live("/runs", RunLive.Index, :index)
-    live("/runs/new", RunLive.Index, :new)
-    live("/runs/:id/edit", RunLive.Index, :edit)
+    live_session :settings, on_mount: LightningWeb.InitAssigns do
+      live "/settings", SettingsLive.Index, :index
 
-    live("/runs/:id", RunLive.Show, :show)
-    live("/runs/:id/show/edit", RunLive.Show, :edit)
+      live "/settings/users", UserLive.Index, :index
+      live "/settings/users/new", UserLive.Index, :new
+
+      live "/settings/users/:id", UserLive.Show, :show
+      live "/settings/users/:id/edit", UserLive.Edit, :edit
+    end
 
     live("/", DashboardLive.Index, :index)
   end

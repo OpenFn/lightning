@@ -102,6 +102,7 @@ defmodule LightningWeb do
       alias LightningWeb.Router.Helpers, as: Routes
 
       alias LightningWeb.Components.MainSection
+      alias LightningWeb.Components.Settings
     end
   end
 

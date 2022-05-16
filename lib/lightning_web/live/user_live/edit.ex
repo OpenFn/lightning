@@ -9,7 +9,7 @@ defmodule LightningWeb.UserLive.Edit do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, socket, layout: {LightningWeb.LayoutView, "settings.html"}}
   end
 
   @impl true

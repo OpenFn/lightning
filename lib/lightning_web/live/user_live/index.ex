@@ -8,9 +8,7 @@ defmodule LightningWeb.UserLive.Index do
   alias Lightning.Accounts.User
 
   @impl true
-  def mount(_params, session, socket) do
-    socket = assign_current_user_from_session(session, socket)
-
+  def mount(_params, _session, socket) do
     case Bodyguard.permit(
            Lightning.Accounts.Policy,
            :index,
@@ -19,7 +17,8 @@ defmodule LightningWeb.UserLive.Index do
       :ok ->
         {:ok,
          assign(socket, :users, list_users())
-         |> assign(:active_menu_item, :users)}
+         |> assign(:active_menu_item, :users),
+         layout: {LightningWeb.LayoutView, "settings.html"}}
 
       {:error, :unauthorized} ->
         {:ok,
@@ -28,21 +27,9 @@ defmodule LightningWeb.UserLive.Index do
     end
   end
 
-  def assign_current_user_from_session(session, socket) do
-    user_token = session["user_token"]
-    user = user_token && Accounts.get_user_by_session_token(user_token)
-    assign(socket, :current_user, user)
-  end
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit User")
-    |> assign(:user, Accounts.get_user!(id))
   end
 
   defp apply_action(socket, :new, _params) do
