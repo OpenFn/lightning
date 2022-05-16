@@ -1,0 +1,47 @@
+<div id={"project-#{@id}"}>
+  <.form
+    let={f}
+    for={@changeset}
+    id="project-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save"
+  >
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :name, class: "block text-sm font-medium text-gray-700") %>
+        <%= error_tag(f, :name, class: "block w-full rounded-md") %>
+        <%= hidden_input(f, :name) %>
+        <%= text_input(f, :raw_name,
+          class:
+            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5">
+        <div class="border-t border-gray-200"></div>
+      </div>
+    </div>
+
+    <div class="mt-2">
+      <div class="inline-block">
+        <.submit_button
+          value="Save"
+          disable_with="Saving"
+          changeset={@changeset}
+        />
+      </div>
+      <div class="inline-block pl-2">
+        <%= if @changeset.valid? do %>
+          Your project will be named
+          <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
+            <%= @name %>
+          </span>
+          .
+        <% end %>
+      </div>
+    </div>
+  </.form>
+</div>

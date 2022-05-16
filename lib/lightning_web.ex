@@ -103,6 +103,7 @@ defmodule LightningWeb do
 
       alias LightningWeb.Components.MainSection
       alias LightningWeb.Components.Settings
+      alias LightningWeb.Components.Common
     end
   end
 
