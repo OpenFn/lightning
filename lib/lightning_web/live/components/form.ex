@@ -4,6 +4,7 @@ defmodule LightningWeb.Components.Form do
   """
   use LightningWeb, :component
 
+  @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
   def submit_button(assigns) do
     base_classes = ~w[
       inline-flex
@@ -32,17 +33,26 @@ defmodule LightningWeb.Components.Form do
       hover:bg-indigo-700
     ] ++ base_classes
 
+    disabled =
+      if Map.has_key?(assigns, :changeset) do
+        !assigns.changeset.valid?
+      else
+        false
+      end
+
+    class =
+      if disabled do
+        inactive_classes
+      else
+        active_classes
+      end
+
     ~H"""
     <%= submit(@value,
       phx_disable_with:
-        if(Map.has_key?(assigns, "disable_with"), do: @disable_with, else: ""),
-      disabled:
-        if(Map.has_key?(assigns, "changeset"), do: !@changeset.valid?, else: false),
-      class:
-        if(Map.has_key?(assigns, "changeset"),
-          do: if(@changeset.valid?, do: active_classes, else: inactive_classes),
-          else: active_classes
-        )
+        if(Map.has_key?(assigns, :disable_with), do: @disable_with, else: ""),
+      disabled: disabled,
+      class: class
     ) %>
     """
   end

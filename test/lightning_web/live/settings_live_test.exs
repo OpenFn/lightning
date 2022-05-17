@@ -24,8 +24,7 @@ defmodule LightningWeb.SettingsLiveTest do
     setup :register_and_log_in_user
 
     test "a regular user cannot access the settings page", %{
-      conn: conn,
-      user: _user
+      conn: conn
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.settings_index_path(conn, :index))
