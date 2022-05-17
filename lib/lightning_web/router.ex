@@ -56,6 +56,19 @@ defmodule LightningWeb.Router do
     put "/profile", UserSettingsController, :update
     get "/profile/confirm_email/:token", UserSettingsController, :confirm_email
 
+    live_session :settings, on_mount: LightningWeb.InitAssigns do
+      live "/settings", SettingsLive.Index, :index
+
+      live "/settings/users", UserLive.Index, :index
+      live "/settings/users/new", UserLive.Index, :new
+
+      live "/settings/users/:id", UserLive.Show, :show
+      live "/settings/users/:id/edit", UserLive.Edit, :edit
+
+      live "/settings/projects", ProjectLive.Index, :index
+      live "/settings/projects/new", ProjectLive.Index, :new
+    end
+
     live_session :default, on_mount: LightningWeb.InitAssigns do
       live("/jobs", JobLive.Index, :index)
       live("/jobs/new", JobLive.Index, :new)
@@ -84,22 +97,9 @@ defmodule LightningWeb.Router do
 
       live("/runs/:id", RunLive.Show, :show)
       live("/runs/:id/show/edit", RunLive.Show, :edit)
+
+      live("/", DashboardLive.Index, :index)
     end
-
-    live_session :settings, on_mount: LightningWeb.InitAssigns do
-      live "/settings", SettingsLive.Index, :index
-
-      live "/settings/users", UserLive.Index, :index
-      live "/settings/users/new", UserLive.Index, :new
-
-      live "/settings/users/:id", UserLive.Show, :show
-      live "/settings/users/:id/edit", UserLive.Edit, :edit
-
-      live "/settings/projects", ProjectLive.Index, :index
-      live "/settings/projects/new", ProjectLive.Index, :new
-    end
-
-    live("/", DashboardLive.Index, :index)
   end
 
   scope "/i", LightningWeb do
