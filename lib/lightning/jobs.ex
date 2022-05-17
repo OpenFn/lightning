@@ -21,6 +21,15 @@ defmodule Lightning.Jobs do
     Repo.all(Job |> preload(:trigger))
   end
 
+  def list_cron_jobs do
+    Repo.all(
+      from j in Job,
+        join: t in assoc(j, :trigger),
+        where: t.type == :cron,
+        preload: [trigger: t]
+    )
+  end
+
   @doc """
   Returns the list of jobs excluding the one given.
   """
@@ -33,6 +42,17 @@ defmodule Lightning.Jobs do
     else
       from(j in query, where: j.id != ^id) |> Repo.all()
     end
+  end
+
+  def find_cron_triggers(timestamp) do
+    list_cron_jobs()
+    |> Enum.filter(fn job ->
+      cron_expression = Map.get(Map.get(job, :trigger), :cron_expression)
+      {:ok, cron} = Crontab.CronExpression.Parser.parse(cron_expression)
+      datetime = timestamp |> DateTime.from_unix!(:millisecond)
+
+      if Crontab.DateChecker.matches_date?(cron, datetime), do: job
+    end)
   end
 
   @doc """
