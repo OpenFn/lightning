@@ -18,6 +18,22 @@ defmodule Lightning.JobsTest do
       assert Jobs.list_jobs() == [Jobs.get_job!(job.id)]
     end
 
+    test "list_cron_jobs/0 returns all jobs" do
+      job_fixture()
+      job = job_fixture(%{trigger: %{type: :cron, cron_expression: "5 0 * 8 *"}})
+      assert Jobs.list_cron_jobs() == [Jobs.get_job!(job.id)]
+    end
+
+    test "find_cron_triggers/0 filter jobs on its cron trigger based off a given time" do
+      job_fixture(%{trigger: %{type: :cron, cron_expression: "5 0 * 8 *"}})
+
+      job_1 =
+        job_fixture(%{trigger: %{type: :cron, cron_expression: "* * * * *"}})
+
+      assert Jobs.find_cron_triggers(DateTime.utc_now() |> DateTime.to_unix()) ==
+               [Jobs.get_job!(job_1.id)]
+    end
+
     test "get_job!/1 returns the job with given id" do
       job = job_fixture() |> unload_credential()
 
