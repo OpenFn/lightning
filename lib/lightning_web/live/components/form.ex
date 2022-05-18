@@ -49,6 +49,7 @@ defmodule LightningWeb.Components.Form do
 
     ~H"""
     <%= submit(@value,
+      type: "submit",
       phx_disable_with:
         if(Map.has_key?(assigns, :disable_with), do: @disable_with, else: ""),
       disabled: disabled,
@@ -237,7 +238,6 @@ defmodule LightningWeb.Components.Form do
     select_classes = ~w[
       block
       w-full
-      mt-1
       rounded-md
       border-gray-300
       shadow-sm
@@ -247,14 +247,12 @@ defmodule LightningWeb.Components.Form do
       focus:ring-opacity-50
     ]
 
+    opts =
+      assigns_to_attributes(assigns, [:form, :name, :values]) ++
+        [class: select_classes]
+
     ~H"""
-    <%= select(@form, @name, @values,
-      prompt: if(Map.has_key?(assigns, "prompt"), do: @prompt, else: ""),
-      selected: if(Map.has_key?(assigns, "selected"), do: @selected, else: ""),
-      disabled: if(Map.has_key?(assigns, "disabled"), do: @disabled, else: false),
-      id: @id,
-      class: select_classes
-    ) %>
+    <%= select(@form, @name, @values, opts) %>
     """
   end
 

@@ -37,6 +37,9 @@ defmodule Lightning.Projects do
   """
   def get_project!(id), do: Repo.get!(Project, id)
 
+  def get_project_with_users!(id),
+    do: Repo.get!(Project |> preload(project_users: [:user]), id)
+
   @doc """
   Creates a project.
 

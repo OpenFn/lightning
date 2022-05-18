@@ -7,6 +7,7 @@ defmodule Lightning.ProjectsTest do
     alias Lightning.Projects.Project
 
     import Lightning.ProjectsFixtures
+    import Lightning.AccountsFixtures
 
     @invalid_attrs %{name: nil}
 
@@ -21,10 +22,16 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "create_project/1 with valid data creates a project" do
-      valid_attrs = %{name: "some-name"}
+      %{id: user_id} = user_fixture()
+      valid_attrs = %{name: "some-name", project_users: [%{user_id: user_id}]}
 
-      assert {:ok, %Project{} = project} = Projects.create_project(valid_attrs)
+      assert {:ok, %Project{id: project_id} = project} =
+               Projects.create_project(valid_attrs)
+
       assert project.name == "some-name"
+
+      assert [%{project_id: ^project_id, user_id: ^user_id}] =
+               project.project_users
     end
 
     test "create_project/1 with invalid data returns error changeset" do
