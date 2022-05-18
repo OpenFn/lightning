@@ -45,7 +45,7 @@
 
         <%= for member_form <- inputs_for(f, :project_users) do %>
           <%= if input_value(member_form, :delete) != true do %>
-            <div class="flex w-full gap-2 items-center">
+            <div class="flex w-full gap-2 items-center pb-2">
               <div class="grow">
                 <%= @all_users
                 |> Enum.find_value(fn {name, id} ->

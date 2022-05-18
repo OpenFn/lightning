@@ -109,7 +109,12 @@ defmodule LightningWeb.ProjectLive.FormComponent do
     available_users = filter_available_users(changeset, socket.assigns.all_users)
 
     {:noreply,
-     socket |> assign(changeset: changeset, available_users: available_users)}
+     socket
+     |> assign(
+       changeset: changeset,
+       available_users: available_users,
+       selected_member: ""
+     )}
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
