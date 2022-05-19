@@ -25,19 +25,21 @@
 
         <div class="flex w-full items-center gap-2 pb-3">
           <div class="grow">
-            <.select_field
-              form={f}
-              name={:available_users}
-              values={@available_users}
-              phx-change="select_new_member"
-              prompt="Select a user"
-            />
+            <.select
+              phx-hook="MemberListChange"
+              phx-target={@myself}
+              id="member_list"
+            >
+              <option>Select a user</option>
+              <%= options_for_select(@available_users, @selected_member) %>
+            </.select>
           </div>
           <div class="grow-0 items-right">
             <.button
               text="Add"
               disabled={@selected_member == ""}
               phx-target={@myself}
+              phx-value-userid={@selected_member}
               phx-click="add_new_member"
             />
           </div>

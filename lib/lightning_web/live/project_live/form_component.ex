@@ -16,7 +16,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
-  import Ecto.Changeset, only: [fetch_field!: 2]
+  import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   @impl true
   def update(%{project: project, users: users} = assigns, socket) do
@@ -56,54 +56,69 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   @impl true
-  def handle_event(
-        "select_new_member",
-        %{"project" => %{"available_users" => user_id}},
-        socket
-      ) do
-    {:noreply, socket |> assign(:selected_member, user_id)}
-  end
-
-  @impl true
   def handle_event("delete_member", %{"index" => index}, socket) do
     index = String.to_integer(index)
 
     project_users_params =
       fetch_field!(socket.assigns.changeset, :project_users)
       |> Enum.with_index()
-      |> Enum.reject(fn {pu, i} ->
-        i == index && is_nil(pu.id)
-      end)
-      |> Enum.map(fn {pu, i} ->
-        %{
-          "user_id" => pu.user_id,
-          "id" => pu.id,
-          "delete" => if(i == index, do: "true", else: pu.delete)
-        }
+      |> Enum.reduce([], fn {pu, i}, project_users ->
+        if i == index do
+          if is_nil(pu.id) do
+            project_users
+          else
+            [Ecto.Changeset.change(pu, %{delete: true}) | project_users]
+          end
+        else
+          [pu | project_users]
+        end
       end)
 
     changeset =
-      socket.assigns.project
-      |> Projects.change_project(%{"project_users" => project_users_params})
+      socket.assigns.changeset
+      |> put_assoc(:project_users, project_users_params)
       |> Map.put(:action, :validate)
 
-    {:noreply, socket |> assign(changeset: changeset)}
+    available_users = filter_available_users(changeset, socket.assigns.all_users)
+
+    {:noreply,
+     socket |> assign(changeset: changeset, available_users: available_users)}
+  end
+
+  @impl true
+  def handle_event(
+        "select_member",
+        %{"user_id" => user_id},
+        socket
+      ) do
+    {:noreply, socket |> assign(selected_member: user_id)}
   end
 
   @impl true
   def handle_event(
         "add_new_member",
-        _params,
+        %{"userid" => user_id},
         socket
       ) do
-    project_users_params =
-      fetch_field!(socket.assigns.changeset, :project_users)
-      |> Enum.map(fn pu -> %{"user_id" => pu.user_id, "id" => pu.id} end)
-      |> Enum.concat([%{"user_id" => socket.assigns.selected_member}])
+    project_users = fetch_field!(socket.assigns.changeset, :project_users)
+
+    project_users =
+      Enum.find(project_users, fn pu -> pu.user_id == user_id end)
+      |> if do
+        project_users
+        |> Enum.map(fn pu ->
+          if pu.user_id == user_id do
+            Ecto.Changeset.change(pu, %{delete: false})
+          end
+        end)
+      else
+        project_users
+        |> Enum.concat([%Lightning.Projects.ProjectUser{user_id: user_id}])
+      end
 
     changeset =
-      socket.assigns.project
-      |> Projects.change_project(%{"project_users" => project_users_params})
+      socket.assigns.changeset
+      |> put_assoc(:project_users, project_users)
       |> Map.put(:action, :validate)
 
     available_users = filter_available_users(changeset, socket.assigns.all_users)

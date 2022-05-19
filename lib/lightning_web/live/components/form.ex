@@ -256,6 +256,30 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  def select(assigns) do
+    select_classes = ~w[
+      block
+      w-full
+      rounded-md
+      border-gray-300
+      shadow-sm
+      focus:border-indigo-300
+      focus:ring
+      focus:ring-indigo-200
+      focus:ring-opacity-50
+    ]
+
+    opts = assigns_to_attributes(assigns) ++ [class: select_classes]
+
+    assigns = assigns |> assign(opts: opts)
+
+    ~H"""
+    <select {@opts}>
+      <%= render_slot(@inner_block) %>
+    </select>
+    """
+  end
+
   def divider(assigns) do
     ~H"""
     <div class="hidden sm:block" aria-hidden="true">

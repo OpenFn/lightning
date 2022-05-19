@@ -21,6 +21,16 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project!(project.id) == project
     end
 
+    test "get_project_with_users!/1 returns the project with given id" do
+      user = user_fixture()
+
+      project =
+        project_fixture(%{project_users: [%{user_id: user.id}]})
+        |> Repo.preload(project_users: [:user])
+
+      assert Projects.get_project_with_users!(project.id) == project
+    end
+
     test "create_project/1 with valid data creates a project" do
       %{id: user_id} = user_fixture()
       valid_attrs = %{name: "some-name", project_users: [%{user_id: user_id}]}
