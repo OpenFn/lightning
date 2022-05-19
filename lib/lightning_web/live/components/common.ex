@@ -28,8 +28,28 @@ defmodule LightningWeb.Components.Common do
       hover:bg-indigo-700
     ] ++ base_classes
 
+    inactive_classes = ~w[
+      bg-indigo-300
+    ] ++ base_classes
+
+    class =
+      if assigns[:disabled] do
+        inactive_classes
+      else
+        active_classes
+      end
+
+    extra = assigns_to_attributes(assigns, [:disabled, :text])
+
+    assigns =
+      Phoenix.LiveView.assign_new(assigns, :disabled, fn -> false end)
+      |> assign(:class, class)
+      |> assign(:extra, extra)
+
     ~H"""
-    <button class={active_classes}><%= @text %></button>
+    <button type="button" class={@class} disabled={@disabled} {@extra}>
+      <%= @text %>
+    </button>
     """
   end
 

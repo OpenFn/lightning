@@ -3,6 +3,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
+  import Lightning.AccountsFixtures
 
   @create_attrs %{
     raw_name: "some name"
@@ -41,6 +42,8 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     test "saves new project", %{conn: conn} do
+      user = user_fixture()
+
       {:ok, index_live, _html} =
         live(conn, Routes.project_index_path(conn, :index))
 
@@ -56,6 +59,14 @@ defmodule LightningWeb.ProjectLiveTest do
       index_live
       |> form("#project-form", project: @create_attrs)
       |> render_change()
+
+      index_live
+      |> element("#member_list")
+      |> render_hook("select_member", %{"user_id" => user.id})
+
+      index_live
+      |> element("button", "Add")
+      |> render_click()
 
       index_live
       |> form("#project-form")

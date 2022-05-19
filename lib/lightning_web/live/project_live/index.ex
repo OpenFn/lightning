@@ -35,9 +35,17 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(:page_title, "Projects")
   end
 
+  defp apply_action(socket, :edit, %{"id" => id}) do
+    socket
+    |> assign(:page_title, "New Project")
+    |> assign(:project, Projects.get_project_with_users!(id))
+    |> assign(:users, Lightning.Accounts.list_users())
+  end
+
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New Project")
     |> assign(:project, %Lightning.Projects.Project{})
+    |> assign(:users, Lightning.Accounts.list_users())
   end
 end

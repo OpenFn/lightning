@@ -8,6 +8,7 @@
       title={@page_title}
       action={@live_action}
       project={@project}
+      users={@users}
       return_to={Routes.project_index_path(@socket, :index)}
     />
   <% else %>
@@ -22,7 +23,11 @@
       <tbody id="projects">
         <%= for project <- @projects do %>
           <tr id={"project-#{project.id}"}>
-            <td><%= project.name %></td>
+            <td>
+              <%= live_patch(project.name,
+                to: Routes.project_index_path(@socket, :edit, project.id)
+              ) %>
+            </td>
 
             <td>
               <span></span>

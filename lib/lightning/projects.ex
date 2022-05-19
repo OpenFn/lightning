@@ -38,6 +38,23 @@ defmodule Lightning.Projects do
   def get_project!(id), do: Repo.get!(Project, id)
 
   @doc """
+  Gets a single project with it's members via `project_users`.
+
+  Raises `Ecto.NoResultsError` if the Project does not exist.
+
+  ## Examples
+
+      iex> get_project!(123)
+      %Project{}
+
+      iex> get_project!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_project_with_users!(id),
+    do: Repo.get!(Project |> preload(project_users: [:user]), id)
+
+  @doc """
   Creates a project.
 
   ## Examples
