@@ -1,59 +1,36 @@
-<div class="ml-10 flex items-baseline space-x-4">
-  <%= live_redirect("Dashboard",
-    to: Routes.dashboard_index_path(@socket, :index),
-    class:
-      if(assigns[:active_menu_item] == :dashboard,
-        do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
-        else:
-          "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-      )
-  ) %>
+<Settings.menu_item
+  text="Dashboard"
+  to={Routes.dashboard_index_path(@socket, :index)}
+  active={@active_menu_item == :dashboard}
+/>
 
-  <%= live_redirect("Runs",
-    to: Routes.run_index_path(@socket, :index),
-    class:
-      if(assigns[:active_menu_item] == :runs,
-        do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
-        else:
-          "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-      )
-  ) %>
+<Settings.menu_item
+  text="Runs"
+  to={Routes.run_index_path(@socket, :index)}
+  active={@active_menu_item == :runs}
+/>
 
-  <%= live_redirect("Jobs",
-    to: Routes.job_index_path(@socket, :index),
-    class:
-      if(assigns[:active_menu_item] == :jobs,
-        do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
-        else:
-          "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-      )
-  ) %>
+<Settings.menu_item
+  text="Jobs"
+  to={Routes.job_index_path(@socket, :index)}
+  active={@active_menu_item == :jobs}
+/>
 
-  <%= live_redirect("Credentials",
-    to: Routes.credential_index_path(@socket, :index),
-    class:
-      if(assigns[:active_menu_item] == :credentials,
-        do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
-        else:
-          "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-      )
-  ) %>
+<Settings.menu_item
+  text="Dataclips"
+  to={Routes.dataclip_index_path(@socket, :index)}
+  active={@active_menu_item == :dataclips}
+/>
 
-  <%= live_redirect("Dataclips",
-    to: Routes.dataclip_index_path(@socket, :index),
-    class:
-      if(assigns[:active_menu_item] == :dataclips,
-        do: "bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium",
-        else:
-          "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-      )
-  ) %>
+<Settings.menu_item
+  text="Credentials"
+  to={Routes.credential_index_path(@socket, :index)}
+  active={@active_menu_item == :credentials}
+/>
 
-  <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
-    <%= link("LiveDashboard",
-      to: Routes.live_dashboard_path(@socket, :home),
-      class:
-        "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-    ) %>
-  <% end %>
-</div>
+<%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+  <Settings.menu_item
+    text="Live Dashboard"
+    to={Routes.live_dashboard_path(@socket, :home)}
+  />
+<% end %>

@@ -104,6 +104,7 @@ defmodule LightningWeb do
       alias LightningWeb.Components.MainSection
       alias LightningWeb.Components.Settings
       alias LightningWeb.Components.Common
+      alias LightningWeb.Components.Icon
     end
   end
 

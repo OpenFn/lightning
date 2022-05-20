@@ -12,7 +12,10 @@
         <%= label(f, :first_name,
           class: "block text-sm font-medium text-gray-700"
         ) %>
-        <%= text_input(f, :first_name, class: "block w-full rounded-md") %>
+        <%= text_input(f, :first_name,
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
         <%= error_tag(f, :first_name,
           class:
             "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
@@ -27,7 +30,10 @@
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <%= label(f, :last_name, class: "block text-sm font-medium text-gray-700") %>
-        <%= text_input(f, :last_name, class: "block w-full rounded-md") %>
+        <%= text_input(f, :last_name,
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
         <%= error_tag(f, :last_name,
           class:
             "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
@@ -42,14 +48,16 @@
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <%= label(f, :email, class: "block text-sm font-medium text-gray-700") %>
-        <%= email_input(f, :email, class: "block w-full rounded-md") %>
+        <%= email_input(f, :email,
+          class: "block w-full rounded-md",
+          phx_debounce: "800"
+        ) %>
         <%= error_tag(f, :email,
           class:
             "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
         ) %>
       </div>
     </div>
-
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5"></div>
     </div>
@@ -57,7 +65,10 @@
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <%= label(f, :password, class: "block text-sm font-medium text-gray-700") %>
-        <%= password_input(f, :password, class: "block w-full rounded-md") %>
+        <%= password_input(f, :password,
+          class: "block w-full rounded-md",
+          phx_debounce: "500"
+        ) %>
         <%= error_tag(f, :password,
           class:
             "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"

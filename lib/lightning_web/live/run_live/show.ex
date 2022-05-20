@@ -16,6 +16,7 @@ defmodule LightningWeb.RunLive.Show do
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
+     |> assign(:active_menu_item, :runs)
      |> assign(:run, Invocation.get_run!(id))}
   end
 
