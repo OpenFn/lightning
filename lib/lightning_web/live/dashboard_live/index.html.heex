@@ -1,3 +1,17 @@
-<MainSection.header title="Dashboard" />
+<MainSection.header title="Projects" />
 
-<MainSection.main></MainSection.main>
+<MainSection.main>
+  <%= for project <- @projects do %>
+    <div class="w-full rounded-md drop-shadow-sm bg-white flex">
+      <div class="p-4">
+        <%= project.name %>
+      </div>
+      <div class="grow">
+      </div>
+      <div class="flex-none h-14 w-12">
+        <div class="h-14 inline-block align-middle"></div>
+        <Icon.right class="h-6 w-6 text-slate-600 inline-block" />
+      </div>
+    </div>
+  <% end %>
+</MainSection.main>
