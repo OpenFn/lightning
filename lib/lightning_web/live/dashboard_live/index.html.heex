@@ -2,15 +2,14 @@
 
 <MainSection.main>
   <%= for project <- @projects do %>
-    <div class="w-full rounded-md drop-shadow-sm bg-white flex">
+    <Common.item_bar id={"project-#{project.id}"}>
       <div class="p-4">
         <%= project.name %>
       </div>
       <div class="grow"></div>
-      <div class="flex-none h-14 w-12">
-        <div class="h-14 inline-block align-middle"></div>
-        <Icon.right class="h-6 w-6 text-slate-600 inline-block" />
+      <div class="flex h-14 w-12 items-center justify-center">
+        <Icon.right class="h-6 w-6 text-slate-600" />
       </div>
-    </div>
+    </Common.item_bar>
   <% end %>
 </MainSection.main>

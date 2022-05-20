@@ -48,8 +48,24 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <button type="button" class={@class} disabled={@disabled} {@extra}>
-      <%= @text %>
+      <%= if assigns[:inner_block], do: render_slot(@inner_block), else: @text %>
     </button>
+    """
+  end
+
+  def item_bar(assigns) do
+    assigns = assign(assigns, Map.merge(%{id: nil}, assigns))
+
+    ~H"""
+    <div
+      class="w-full rounded-md drop-shadow-sm
+           outline-2 outline-blue-300
+           hover:outline hover:drop-shadow-none
+        bg-white flex mb-4"
+      id={@id}
+    >
+      <%= render_slot(@inner_block) %>
+    </div>
     """
   end
 end
