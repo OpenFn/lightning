@@ -120,7 +120,7 @@ defmodule Lightning.Projects do
     Project.changeset(project, attrs)
   end
 
-  @spec get_projects_for_user(user :: %User{}) :: [%Project{}]
+  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
   def get_projects_for_user(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
