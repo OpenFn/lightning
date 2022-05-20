@@ -18,7 +18,7 @@ defmodule LightningWeb.CredentialLive.Edit do
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:active_menu_item, :credentials)
-     |> assign(:credentials, Credentials.get_credential!(id))}
+     |> assign(:credential, Credentials.get_credential!(id))}
   end
 
   defp page_title(:show), do: "Show Job"
