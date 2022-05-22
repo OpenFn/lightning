@@ -10,7 +10,11 @@ defmodule LightningWeb.CredentialLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket, :credentials, list_credentials())
+     assign(
+       socket,
+       :credentials,
+       list_credentials(socket.assigns.current_user)
+     )
      |> assign(:active_menu_item, :credentials)}
   end
 
@@ -42,10 +46,17 @@ defmodule LightningWeb.CredentialLive.Index do
     credential = Credentials.get_credential!(id)
     {:ok, _} = Credentials.delete_credential(credential)
 
-    {:noreply, assign(socket, :credentials, list_credentials())}
+    {:noreply,
+     assign(
+       socket,
+       :credentials,
+       list_credentials(socket.assigns.current_user.id)
+     )}
   end
 
-  defp list_credentials do
-    Credentials.list_credentials()
+  defp list_credentials(user) do
+    if user.role == :superuser,
+      do: Credentials.list_credentials(),
+      else: Credentials.list_credentials_for_user(user.id)
   end
 end
