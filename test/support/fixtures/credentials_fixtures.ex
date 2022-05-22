@@ -7,7 +7,14 @@ defmodule Lightning.CredentialsFixtures do
   @doc """
   Generate a credential.
   """
-  def credential_fixture(attrs \\ %{}) do
+  @spec credential_fixture(attrs :: Keyword.t()) ::
+          Lightning.Credentials.Credential.t()
+  def credential_fixture(attrs \\ []) when is_list(attrs) do
+    attrs =
+      Keyword.put_new_lazy(attrs, :user_id, fn ->
+        Lightning.AccountsFixtures.user_fixture().id
+      end)
+
     {:ok, credential} =
       attrs
       |> Enum.into(%{

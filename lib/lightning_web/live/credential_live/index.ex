@@ -50,7 +50,7 @@ defmodule LightningWeb.CredentialLive.Index do
      assign(
        socket,
        :credentials,
-       list_credentials(socket.assigns.current_user.id)
+       list_credentials(socket.assigns.current_user)
      )}
   end
 

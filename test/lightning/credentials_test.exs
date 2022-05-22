@@ -14,8 +14,8 @@ defmodule Lightning.CredentialsTest do
     test "list_credentials_for_user/1 returns all credentials for given user" do
       user_1 = user_fixture()
       user_2 = user_fixture()
-      credential_1 = credential_fixture(%{user_id: user_1.id})
-      credential_2 = credential_fixture(%{user_id: user_2.id})
+      credential_1 = credential_fixture(user_id: user_1.id)
+      credential_2 = credential_fixture(user_id: user_2.id)
 
       assert Credentials.list_credentials_for_user(user_1.id) == [
                credential_1
@@ -29,8 +29,8 @@ defmodule Lightning.CredentialsTest do
     test "get_credential_for_user/2 returns a specific credential matching a given user" do
       user_1 = user_fixture()
       user_2 = user_fixture()
-      credential_1 = credential_fixture(%{user_id: user_1.id})
-      credential_2 = credential_fixture(%{user_id: user_2.id})
+      credential_1 = credential_fixture(user_id: user_1.id)
+      credential_2 = credential_fixture(user_id: user_2.id)
 
       assert Credentials.get_credential_for_user(
                credential_1.id,

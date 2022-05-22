@@ -6,22 +6,28 @@ defmodule Lightning.PipelineTest do
 
   import Lightning.InvocationFixtures
   import Lightning.JobsFixtures
+  import Lightning.CredentialsFixtures
 
   describe "process/1" do
     test "starts a run for a given event and executes it's on_job_failure downstream job" do
       job =
-        job_fixture(%{
+        job_fixture(
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
-        })
+        )
 
       %{id: downstream_job_id} =
-        job_fixture(%{
+        job_fixture(
           trigger: %{type: :on_job_failure, upstream_job_id: job.id},
-          body: ~s[fn(state => state)]
-        })
+          body: ~s[fn(state => state)],
+          credential_id:
+            credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
+        )
 
-      event = event_fixture(%{job_id: job.id})
-      run_fixture(%{event_id: event.id})
+      event = event_fixture(job_id: job.id)
+      run_fixture(event_id: event.id)
 
       Pipeline.process(event)
 
@@ -55,19 +61,25 @@ defmodule Lightning.PipelineTest do
 
     test "starts a run for a given event and executes it's on_job_success downstream job" do
       job =
-        job_fixture(%{
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        })
+        job_fixture(
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          credential_id: credential_fixture().id
+        )
 
       %{id: downstream_job_id} =
-        job_fixture(%{
+        job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           name: "on previous job success",
-          body: ~s[fn(state => state)]
-        })
+          body: ~s[fn(state => state)],
+          credential_id:
+            credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
+        )
 
-      event = event_fixture(%{job_id: job.id})
-      run_fixture(%{event_id: event.id})
+      event = event_fixture(job_id: job.id)
+      run_fixture(event_id: event.id)
 
       Pipeline.process(event)
 

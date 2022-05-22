@@ -7,7 +7,8 @@ defmodule Lightning.JobsFixtures do
   @doc """
   Generate a job.
   """
-  def job_fixture(attrs \\ %{}) do
+  @spec job_fixture(attrs :: []) :: Lightning.Jobs.Job.t()
+  def job_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, job} =
       attrs
       |> Enum.into(%{
@@ -15,8 +16,7 @@ defmodule Lightning.JobsFixtures do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{},
-        credential: %{name: "my credential", body: %{"credential" => "body"}}
+        trigger: %{}
       })
       |> Lightning.Jobs.create_job()
 

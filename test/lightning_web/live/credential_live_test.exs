@@ -15,7 +15,7 @@ defmodule LightningWeb.CredentialLiveTest do
   @invalid_attrs %{body: nil, name: nil}
 
   defp create_credential(%{conn: _conn, user: user} = attrs) do
-    credential = credential_fixture(%{user_id: user.id})
+    credential = credential_fixture(user_id: user.id)
     Map.put(attrs, :credential, credential)
   end
 
@@ -58,7 +58,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "deletes credential in listing", %{conn: conn, credential: credential} do
       {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+        live(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
 
       assert index_live
              |> element("#credential-#{credential.id} a", "Delete")

@@ -175,7 +175,7 @@ defmodule Lightning.InvocationTest do
 
     test "get_run!/1 returns the run for a given event" do
       event = event_fixture()
-      run = run_fixture(%{event_id: event.id})
+      run = run_fixture(event_id: event.id)
       assert Invocation.get_run!(event) == run
     end
 

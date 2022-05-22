@@ -10,6 +10,7 @@ defmodule Lightning.JobsTest do
     alias Lightning.Jobs.Job
 
     import Lightning.JobsFixtures
+    import Lightning.AccountsFixtures
 
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
 
@@ -20,15 +21,14 @@ defmodule Lightning.JobsTest do
 
     test "list_cron_jobs/0 returns all jobs" do
       job_fixture()
-      job = job_fixture(%{trigger: %{type: :cron, cron_expression: "5 0 * 8 *"}})
+      job = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
       assert Jobs.list_cron_jobs() == [Jobs.get_job!(job.id)]
     end
 
     test "find_cron_triggers/0 filter jobs on its cron trigger based off a given time" do
-      job_fixture(%{trigger: %{type: :cron, cron_expression: "5 0 * 8 *"}})
+      job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
 
-      job_1 =
-        job_fixture(%{trigger: %{type: :cron, cron_expression: "* * * * *"}})
+      job_1 = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
 
       assert Jobs.find_cron_triggers(DateTime.utc_now() |> DateTime.to_unix()) ==
                [Jobs.get_job!(job_1.id)]
@@ -41,11 +41,11 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture(%{trigger: %{}}) |> unload_credential()
+      job = job_fixture(trigger: %{}) |> unload_credential()
 
       assert Jobs.get_job_by_webhook(job.id) == job
 
-      job = job_fixture(%{trigger: %{custom_path: "foo"}}) |> unload_credential()
+      job = job_fixture(trigger: %{custom_path: "foo"}) |> unload_credential()
       assert Jobs.get_job_by_webhook(job.id) == nil
       assert Jobs.get_job_by_webhook("foo") == job
     end
@@ -71,7 +71,8 @@ defmodule Lightning.JobsTest do
       {:ok, %Credential{} = credential} =
         Credentials.create_credential(%{
           body: %{},
-          name: "My credential"
+          name: "My credential",
+          user_id: user_fixture().id
         })
 
       assert {:ok, %Job{} = job} =
@@ -137,7 +138,7 @@ defmodule Lightning.JobsTest do
       job = job_fixture()
 
       other_job =
-        job_fixture(%{trigger: %{type: :on_job_failure, upstream_job_id: job.id}})
+        job_fixture(trigger: %{type: :on_job_failure, upstream_job_id: job.id})
 
       assert Jobs.get_downstream_jobs_for(job) == [Jobs.get_job!(other_job.id)]
 
