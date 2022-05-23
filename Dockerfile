@@ -18,7 +18,7 @@ ARG DEBIAN_VERSION=bullseye-20210902-slim
 ARG NODE_VERSION=16
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
-ARG RUNNER_IMAGE="debian:bullseye-20210902-slim"
+ARG RUNNER_IMAGE="node:${NODE_VERSION}-slim"
 
 FROM ${BUILDER_IMAGE} as builder
 
@@ -85,9 +85,6 @@ FROM ${RUNNER_IMAGE}
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 locales nodejs
-
-RUN echo "Node: " && node -v
-RUN echo "NPM: " && npm -v
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
