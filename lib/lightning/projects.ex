@@ -38,6 +38,8 @@ defmodule Lightning.Projects do
   """
   def get_project!(id), do: Repo.get!(Project, id)
 
+  def get_project(id), do: Repo.get(Project, id)
+
   @doc """
   Gets a single project with it's members via `project_users`.
 

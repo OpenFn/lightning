@@ -2,14 +2,18 @@
 
 <MainSection.main>
   <%= if @live_action in [:edit] do %>
-    <.modal return_to={Routes.job_show_path(@socket, :show, @job)}>
+    <.modal return_to={
+      Routes.project_job_show_path(@socket, :show, @job.project_id, @job)
+    }>
       <.live_component
         module={LightningWeb.JobLive.FormComponent}
         id={@job.id}
         title={@page_title}
         action={@live_action}
         job={@job}
-        return_to={Routes.job_show_path(@socket, :show, @job)}
+        return_to={
+          Routes.project_job_show_path(@socket, :show, @job.project_id, @job)
+        }
       />
     </.modal>
   <% end %>
@@ -33,12 +37,14 @@
 
   <span>
     <%= live_patch("Edit",
-      to: Routes.job_edit_path(@socket, :edit, @job),
+      to: Routes.project_job_edit_path(@socket, :edit, @job.project_id, @job),
       class: "button"
     ) %>
   </span>
   |
   <span>
-    <%= live_redirect("Back", to: Routes.job_index_path(@socket, :index)) %>
+    <%= live_redirect("Back",
+      to: Routes.project_job_index_path(@socket, :index, @project.id)
+    ) %>
   </span>
 </MainSection.main>

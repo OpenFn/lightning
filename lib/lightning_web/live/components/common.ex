@@ -54,16 +54,21 @@ defmodule LightningWeb.Components.Common do
   end
 
   def item_bar(assigns) do
-    assigns = assign(assigns, Map.merge(%{id: nil}, assigns))
+    base_classes = ~w[w-full rounded-md drop-shadow-sm
+           outline-2 outline-blue-300
+        bg-white flex mb-4]
+
+    class =
+      if assigns[:stay_outlined] do
+        base_classes ++ ~w[outline]
+      else
+        base_classes ++ ~w[hover:outline hover:drop-shadow-none]
+      end
+
+    assigns = Map.merge(%{id: nil, class: class}, assigns)
 
     ~H"""
-    <div
-      class="w-full rounded-md drop-shadow-sm
-           outline-2 outline-blue-300
-           hover:outline hover:drop-shadow-none
-        bg-white flex mb-4"
-      id={@id}
-    >
+    <div class={@class} id={@id}>
       <%= render_slot(@inner_block) %>
     </div>
     """

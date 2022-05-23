@@ -70,6 +70,18 @@ defmodule LightningWeb.Components.Icon do
     """
   end
 
+  def archive(assigns) do
+    ~H"""
+    <.outer_svg {assigns}>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+      />
+    </.outer_svg>
+    """
+  end
+
   defp outer_svg(assigns) do
     default_classes = ~w[h-5 w-5 inline-block]
     attrs = build_attrs(assigns, default_classes)

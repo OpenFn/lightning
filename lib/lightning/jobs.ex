@@ -7,15 +7,10 @@ defmodule Lightning.Jobs do
   alias Lightning.Repo
 
   alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Projects.Project
 
   @doc """
   Returns the list of jobs.
-
-  ## Examples
-
-      iex> list_jobs()
-      [%Job{}, ...]
-
   """
   def list_jobs do
     Repo.all(Job |> preload(:trigger))
@@ -28,6 +23,10 @@ defmodule Lightning.Jobs do
         where: t.type == :cron,
         preload: [trigger: t]
     )
+  end
+
+  def jobs_for_project(%Project{} = project) do
+    Repo.all(Ecto.assoc(project, :jobs))
   end
 
   @doc """

@@ -1,3 +1,12 @@
+<div class="px-4 py-2 text-indigo-300 border-dashed bg-indigo-800 border-b-2 border-indigo-900 mb-4">
+  <%= if assigns[:project] do %>
+    <Icon.archive class="h-5 w-5 inline-block mr-2" />
+    <span class="inline-block align-middle"><%= @project.name %></span>
+  <% else %>
+    No Project
+  <% end %>
+</div>
+
 <Settings.menu_item
   text="Dashboard"
   to={Routes.dashboard_index_path(@socket, :index)}
@@ -10,11 +19,13 @@
   active={@active_menu_item == :runs}
 />
 
-<Settings.menu_item
-  text="Jobs"
-  to={Routes.job_index_path(@socket, :index)}
-  active={@active_menu_item == :jobs}
-/>
+<%= if assigns[:project] do %>
+  <Settings.menu_item
+    text="Jobs"
+    to={Routes.project_job_index_path(@socket, :index, @project.id)}
+    active={@active_menu_item == :jobs}
+  />
+<% end %>
 
 <Settings.menu_item
   text="Dataclips"

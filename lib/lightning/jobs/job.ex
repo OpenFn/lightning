@@ -23,6 +23,7 @@ defmodule Lightning.Jobs.Job do
 
   alias Lightning.Jobs.Trigger
   alias Lightning.Credentials.Credential
+  alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -32,7 +33,8 @@ defmodule Lightning.Jobs.Job do
           name: String.t() | nil,
           adaptor: String.t() | nil,
           trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
-          credential: nil | Credential.t() | Ecto.Association.NotLoaded.t()
+          credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
+          project: nil | Project.t() | Ecto.Association.NotLoaded.t()
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -47,6 +49,7 @@ defmodule Lightning.Jobs.Job do
     has_many :events, Lightning.Invocation.Event
 
     belongs_to :credential, Credential
+    belongs_to :project, Project
 
     timestamps()
   end
@@ -54,10 +57,17 @@ defmodule Lightning.Jobs.Job do
   @doc false
   def changeset(job, attrs) do
     job
-    |> cast(attrs, [:name, :body, :enabled, :adaptor, :credential_id])
+    |> cast(attrs, [
+      :name,
+      :body,
+      :enabled,
+      :adaptor,
+      :credential_id,
+      :project_id
+    ])
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
     |> cast_assoc(:credential, with: &Credential.changeset/2)
-    |> validate_required([:name, :body, :enabled, :adaptor])
+    |> validate_required([:name, :body, :enabled, :adaptor, :project_id])
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end

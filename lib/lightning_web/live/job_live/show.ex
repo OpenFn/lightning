@@ -6,6 +6,8 @@ defmodule LightningWeb.JobLive.Show do
 
   alias Lightning.Jobs
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}

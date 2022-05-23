@@ -7,9 +7,16 @@ defmodule LightningWeb.JobLive.Index do
   alias Lightning.Jobs
   alias Lightning.Jobs.Job
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :jobs, list_jobs()) |> assign(:active_menu_item, :jobs)}
+    {:ok,
+     socket
+     |> assign(
+       jobs: Jobs.jobs_for_project(socket.assigns.project),
+       active_menu_item: :jobs
+     )}
   end
 
   @impl true
@@ -34,7 +41,7 @@ defmodule LightningWeb.JobLive.Index do
       :credentials,
       Lightning.Credentials.list_credentials()
     )
-    |> assign(:job, %Job{})
+    |> assign(:job, %Job{project_id: socket.assigns.project.id})
   end
 
   defp apply_action(socket, :index, _params) do

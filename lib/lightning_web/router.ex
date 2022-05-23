@@ -71,13 +71,16 @@ defmodule LightningWeb.Router do
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
-      live("/jobs", JobLive.Index, :index)
-      live("/jobs/new", JobLive.Index, :new)
-      # live "/jobs/:id/edit", JobLive.Index, :edit
+      scope "/projects/:project_id", as: :project do
+        live("/jobs", JobLive.Index, :index)
+        live("/jobs/new", JobLive.Index, :new)
+        live("/jobs/:id", JobLive.Show, :show)
+        live("/jobs/:id/edit", JobLive.Edit, :edit)
 
-      live("/jobs/:id", JobLive.Show, :show)
-      live("/jobs/:id/edit", JobLive.Edit, :edit)
-      # live "/jobs/:id/show/edit", JobLive.Show, :edit
+        live("/", DashboardLive.Index, :index)
+      end
+
+      # live("/jobs", JobLive.Index, :index)
 
       live("/credentials", CredentialLive.Index, :index)
       live("/credentials/new", CredentialLive.Index, :new)

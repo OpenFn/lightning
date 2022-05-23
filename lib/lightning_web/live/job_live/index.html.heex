@@ -2,14 +2,16 @@
 
 <MainSection.main>
   <%= if @live_action in [:new, :edit] do %>
-    <.modal return_to={Routes.job_index_path(@socket, :index)}>
+    <.modal return_to={
+      Routes.project_job_index_path(@socket, :index, @project.id)
+    }>
       <.live_component
         module={LightningWeb.JobLive.FormComponent}
         id={@job.id || :new}
         title={@page_title}
         action={@live_action}
         job={@job}
-        return_to={Routes.job_index_path(@socket, :index)}
+        return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
       />
     </.modal>
   <% end %>
@@ -34,12 +36,24 @@
           <td>
             <span>
               <%= live_redirect("Show",
-                to: Routes.job_show_path(@socket, :show, job)
+                to:
+                  Routes.project_job_show_path(
+                    @socket,
+                    :show,
+                    job.project_id,
+                    job
+                  )
               ) %>
             </span>
             <span>
               <%= live_redirect("Edit",
-                to: Routes.job_edit_path(@socket, :edit, job)
+                to:
+                  Routes.project_job_edit_path(
+                    @socket,
+                    :edit,
+                    job.project_id,
+                    job
+                  )
               ) %>
             </span>
             <span>
@@ -57,6 +71,8 @@
   </table>
 
   <span>
-    <%= live_patch("New Job", to: Routes.job_index_path(@socket, :new)) %>
+    <%= live_patch("New Job",
+      to: Routes.project_job_index_path(@socket, :new, @project.id)
+    ) %>
   </span>
 </MainSection.main>
