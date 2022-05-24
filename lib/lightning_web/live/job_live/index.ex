@@ -55,10 +55,7 @@ defmodule LightningWeb.JobLive.Index do
     job = Jobs.get_job!(id)
     {:ok, _} = Jobs.delete_job(job)
 
-    {:noreply, assign(socket, :jobs, list_jobs())}
-  end
-
-  defp list_jobs do
-    Jobs.list_jobs()
+    {:noreply,
+     assign(socket, :jobs, Jobs.jobs_for_project(socket.assigns.project))}
   end
 end

@@ -8,6 +8,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Event, Run}
+  alias Lightning.Projects.Project
   alias Ecto.Multi
 
   @doc """
@@ -218,6 +219,11 @@ defmodule Lightning.Invocation do
   """
   def list_runs do
     Repo.all(Run)
+  end
+
+  def list_runs_for_project(%Project{id: project_id}) do
+    from(r in Run, join: p in assoc(r, :project), where: p.id == ^project_id)
+    |> Repo.all()
   end
 
   @doc """

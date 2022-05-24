@@ -2,14 +2,16 @@
 
 <MainSection.main>
   <%= if @live_action in [:new, :edit] do %>
-    <.modal return_to={Routes.run_index_path(@socket, :index)}>
+    <.modal return_to={
+      Routes.project_run_index_path(@socket, :index, @project.id)
+    }>
       <.live_component
         module={LightningWeb.RunLive.FormComponent}
         id={@run.id || :new}
         title={@page_title}
         action={@live_action}
         run={@run}
-        return_to={Routes.run_index_path(@socket, :index)}
+        return_to={Routes.project_run_index_path(@socket, :index, @project.id)}
       />
     </.modal>
   <% end %>
@@ -42,12 +44,8 @@
           <td>
             <span>
               <%= live_redirect("Show",
-                to: Routes.run_show_path(@socket, :show, run)
-              ) %>
-            </span>
-            <span>
-              <%= live_patch("Edit",
-                to: Routes.run_index_path(@socket, :edit, run)
+                to:
+                  Routes.project_run_show_path(@socket, :show, @project.id, run)
               ) %>
             </span>
             <span>

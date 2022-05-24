@@ -13,13 +13,13 @@
   active={@active_menu_item == :dashboard}
 />
 
-<Settings.menu_item
-  text="Runs"
-  to={Routes.run_index_path(@socket, :index)}
-  active={@active_menu_item == :runs}
-/>
-
 <%= if assigns[:project] do %>
+  <Settings.menu_item
+    text="Runs"
+    to={Routes.project_run_index_path(@socket, :index, @project.id)}
+    active={@active_menu_item == :runs}
+  />
+
   <Settings.menu_item
     text="Jobs"
     to={Routes.project_job_index_path(@socket, :index, @project.id)}

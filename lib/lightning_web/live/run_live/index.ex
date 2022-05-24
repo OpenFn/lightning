@@ -7,9 +7,16 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :runs, list_runs()) |> assign(:active_menu_item, :runs)}
+    {:ok,
+     socket
+     |> assign(
+       runs: Invocation.list_runs_for_project(socket.assigns.project),
+       active_menu_item: :runs
+     )}
   end
 
   @impl true
@@ -40,10 +47,8 @@ defmodule LightningWeb.RunLive.Index do
     run = Invocation.get_run!(id)
     {:ok, _} = Invocation.delete_run(run)
 
-    {:noreply, assign(socket, :runs, list_runs())}
-  end
-
-  defp list_runs do
-    Invocation.list_runs()
+    {:noreply,
+     socket
+     |> assign(runs: Invocation.list_runs_for_project(socket.assigns.project))}
   end
 end

@@ -1,14 +1,16 @@
 <h1>Show Run</h1>
 
 <%= if @live_action in [:edit] do %>
-  <.modal return_to={Routes.run_show_path(@socket, :show, @run)}>
+  <.modal return_to={
+    Routes.project_run_show_path(@socket, :show, @project.id, @run)
+  }>
     <.live_component
       module={LightningWeb.RunLive.FormComponent}
       id={@run.id}
       title={@page_title}
       action={@live_action}
       run={@run}
-      return_to={Routes.run_show_path(@socket, :show, @run)}
+      return_to={Routes.project_run_show_path(@socket, :show, @project.id, @run)}
     />
   </.modal>
 <% end %>
@@ -43,5 +45,7 @@
 </span>
 |
 <span>
-  <%= live_redirect("Back", to: Routes.run_index_path(@socket, :index)) %>
+  <%= live_redirect("Back",
+    to: Routes.project_run_index_path(@socket, :index, @project.id)
+  ) %>
 </span>
