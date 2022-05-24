@@ -22,6 +22,9 @@ listen_address =
 
 config :lightning, LightningWeb.Endpoint, http: [port: port, ip: listen_address]
 
+config :lightning, :adaptor_service,
+  adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
