@@ -1,6 +1,8 @@
 defmodule Lightning.Credentials.PolicyTest do
   use Lightning.DataCase
 
+  alias Lightning.Credentials.Credential
+
   describe "Accounts policy" do
     test "users can only access their credentials" do
       user = Lightning.AccountsFixtures.user_fixture()
@@ -14,16 +16,16 @@ defmodule Lightning.Credentials.PolicyTest do
                Bodyguard.permit(
                  Lightning.Credentials.Policy,
                  :show,
-                 %{"user_id" => user.id},
-                 %{"credential_id" => credential_1.id}
+                 user,
+                 credential_1
                )
 
       assert {:error, :unauthorized} =
                Bodyguard.permit(
                  Lightning.Credentials.Policy,
                  :show,
-                 %{"user_id" => user.id},
-                 %{"credential_id" => credential_2.id}
+                 user,
+                 credential_2
                )
     end
   end

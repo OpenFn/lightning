@@ -4,17 +4,6 @@ defmodule Lightning.Credentials.Policy do
   """
   @behaviour Bodyguard.Policy
 
-  alias Lightning.Credentials
-
-  def authorize(
-        action,
-        %{"user_id" => user_id} = _user,
-        %{"credential_id" => credential_id} = _params
-      )
-      when action in ~w[show]a do
-    !!Credentials.get_credential_for_user(
-      credential_id,
-      user_id
-    )
-  end
+  def authorize(action, user, credential) when action in ~w[show]a,
+    do: credential.user_id == user.id
 end

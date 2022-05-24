@@ -13,24 +13,21 @@ defmodule LightningWeb.CredentialLive.Show do
 
   @impl true
   def handle_params(%{"id" => id}, _, socket) do
+    credential = Credentials.get_credential!(id)
+    current_user = socket.assigns.current_user
+
     case Bodyguard.permit(
            Lightning.Credentials.Policy,
            :show,
-           %{"user_id" => socket.assigns.current_user.id},
-           %{"credential_id" => id}
+           current_user,
+           credential
          ) do
       :ok ->
         {:noreply,
          socket
          |> assign(:page_title, page_title(socket.assigns.live_action))
          |> assign(:active_menu_item, :credentials)
-         |> assign(
-           :credential,
-           Credentials.get_credential_for_user(
-             id,
-             socket.assigns.current_user.id
-           )
-         )}
+         |> assign(:credential, credential)}
 
       {:error, :unauthorized} ->
         {:noreply,
