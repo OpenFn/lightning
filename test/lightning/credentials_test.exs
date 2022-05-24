@@ -26,28 +26,6 @@ defmodule Lightning.CredentialsTest do
              ]
     end
 
-    test "get_credential_for_user/2 returns a specific credential matching a given user" do
-      user_1 = user_fixture()
-      user_2 = user_fixture()
-      credential_1 = credential_fixture(user_id: user_1.id)
-      credential_2 = credential_fixture(user_id: user_2.id)
-
-      assert Credentials.get_credential_for_user(
-               credential_1.id,
-               user_1.id
-             ).id == credential_1.id
-
-      assert Credentials.get_credential_for_user(
-               credential_2.id,
-               user_2.id
-             ).id == credential_2.id
-
-      assert Credentials.get_credential_for_user(
-               credential_2.id,
-               user_1.id
-             ) == nil
-    end
-
     test "list_credentials/0 returns all credentials" do
       user = user_fixture()
       credential = credential_fixture(user_id: user.id)
