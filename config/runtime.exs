@@ -13,6 +13,8 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
 end
 
 port = String.to_integer(System.get_env("PORT", "4000"))
+url_port = String.to_integer(System.get_env("URL_PORT", "443"))
+url_port = String.to_integer(System.get_env("URL_SCHEME", "https"))
 
 listen_address =
   System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
@@ -56,7 +58,7 @@ if config_env() == :prod do
   host = System.get_env("URL_HOST") || "example.com"
 
   config :lightning, LightningWeb.Endpoint,
-    url: [host: host, port: 443],
+    url: [host: host, port: url_port, scheme: url_scheme],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
@@ -65,14 +67,16 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    check_origin: System.get_env("ORIGIN"),
+    server: true
 
   # ## Using releases
   #
   # If you are doing OTP releases, you need to instruct Phoenix
   # to start each relevant endpoint:
   #
-  config :lightning, LightningWeb.Endpoint, server: true
+  # config :lightning, LightningWeb.Endpoint, server: true
   #
   # Then you can assemble a release by calling `mix release`.
   # See `mix help release` for more information.
