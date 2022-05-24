@@ -90,15 +90,13 @@ defmodule Lightning.ProjectsTest do
       other_user = user_fixture()
 
       project_1 =
-        project_fixture(%{
+        project_fixture(
           project_users: [%{user_id: user.id}, %{user_id: other_user.id}]
-        })
+        )
         |> Repo.reload()
 
       project_2 =
-        project_fixture(%{
-          project_users: [%{user_id: user.id}]
-        })
+        project_fixture(project_users: [%{user_id: user.id}])
         |> Repo.reload()
 
       assert [project_1, project_2] == Projects.get_projects_for_user(user)
