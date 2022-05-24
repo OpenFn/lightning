@@ -15,7 +15,7 @@ defmodule Lightning.Invocation do
   as a Dataclip; resulting in a Run associated with the Event.
   """
   @spec create(
-          %{job_id: binary(), type: :webhook},
+          %{job_id: binary(), project_id: binary(), type: :webhook},
           %{type: :http_request, body: map()}
         ) :: {:ok | :error, any}
   def create(event_attrs, dataclip_attrs) do

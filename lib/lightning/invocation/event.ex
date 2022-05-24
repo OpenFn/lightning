@@ -11,6 +11,7 @@ defmodule Lightning.Invocation.Event do
   import Ecto.Changeset
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Jobs.Job
+  alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -35,6 +36,7 @@ defmodule Lightning.Invocation.Event do
       foreign_key: :source_event_id
 
     belongs_to :job, Job
+    belongs_to :project, Project
     has_one :run, Run
 
     timestamps(usec: true)
@@ -43,10 +45,11 @@ defmodule Lightning.Invocation.Event do
   @doc false
   def changeset(event, attrs) do
     event
-    |> cast(attrs, [:type, :dataclip_id, :job_id, :source_id])
-    |> validate_required([:type, :job_id])
+    |> cast(attrs, [:type, :dataclip_id, :job_id, :source_id, :project_id])
+    |> validate_required([:type, :job_id, :project_id])
     |> validate_inclusion(:type, @source_types)
     |> assoc_constraint(:job)
+    |> assoc_constraint(:project)
     |> validate_by_type()
   end
 
