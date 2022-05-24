@@ -25,7 +25,7 @@ defmodule Lightning.ProjectsTest do
       user = user_fixture()
 
       project =
-        project_fixture(%{project_users: [%{user_id: user.id}]})
+        project_fixture(project_users: [%{user_id: user.id}])
         |> Repo.preload(project_users: [:user])
 
       assert Projects.get_project_with_users!(project.id) == project

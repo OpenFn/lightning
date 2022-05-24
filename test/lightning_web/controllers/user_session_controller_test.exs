@@ -4,7 +4,7 @@ defmodule LightningWeb.UserSessionControllerTest do
   import Lightning.AccountsFixtures
 
   setup do
-    %{user: user_fixture(), disabled_user: user_fixture(%{disabled: true})}
+    %{user: user_fixture(), disabled_user: user_fixture(disabled: true)}
   end
 
   describe "GET /users/log_in" do

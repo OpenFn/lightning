@@ -7,6 +7,13 @@ defmodule Lightning.Projects.ProjectUser do
   alias Lightning.Projects.Project
   alias Lightning.Accounts.User
 
+  @type t :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          user: User.t() | Ecto.Association.NotLoaded.t() | nil,
+          project: Project.t() | Ecto.Association.NotLoaded.t() | nil
+        }
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "project_users" do

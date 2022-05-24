@@ -7,7 +7,8 @@ defmodule Lightning.ProjectsFixtures do
   @doc """
   Generate a project.
   """
-  def project_fixture(attrs \\ %{}) do
+  @spec project_fixture(attrs :: Keyword.t()) :: Lightning.Projects.Project.t()
+  def project_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, project} =
       attrs
       |> Enum.into(%{

@@ -4,10 +4,11 @@ defmodule Lightning.Credentials.CredentialTest do
   alias Lightning.Credentials.Credential
 
   describe "changeset/2" do
-    test "name can't be blank" do
+    test "name, body, and user_id can't be blank" do
       errors = Credential.changeset(%Credential{}, %{}) |> errors_on()
       assert errors[:name] == ["can't be blank"]
       assert errors[:body] == ["can't be blank"]
+      assert errors[:user_id] == ["can't be blank"]
     end
   end
 end

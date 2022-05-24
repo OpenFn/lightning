@@ -7,7 +7,7 @@ defmodule Lightning.InvocationFixtures do
   @doc """
   Generate a dataclip.
   """
-  def dataclip_fixture(attrs \\ %{}) do
+  def dataclip_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, dataclip} =
       attrs
       |> Enum.into(%{
@@ -22,7 +22,7 @@ defmodule Lightning.InvocationFixtures do
   @doc """
   Generate a dataclip.
   """
-  def event_fixture(attrs \\ %{}) do
+  def event_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, event} =
       attrs
       |> Enum.into(%{
@@ -38,7 +38,7 @@ defmodule Lightning.InvocationFixtures do
   @doc """
   Generate a run.
   """
-  def run_fixture(attrs \\ %{}) do
+  def run_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, run} =
       attrs
       |> Enum.into(%{

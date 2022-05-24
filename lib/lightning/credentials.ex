@@ -23,6 +23,20 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  Returns the list of credentials for a given user.
+
+  ## Examples
+
+      iex> list_credentials_for_user(123)
+      [%Credential{user_id: 123}, %Credential{user_id: 123},...]
+
+  """
+  def list_credentials_for_user(user_id) do
+    from(c in Credential, where: c.user_id == ^user_id)
+    |> Repo.all()
+  end
+
+  @doc """
   Gets a single credential.
 
   Raises `Ecto.NoResultsError` if the Credential does not exist.

@@ -29,6 +29,8 @@ defmodule Lightning.Accounts.User do
     field(:role, RolesEnum, default: :user)
     field(:disabled, :boolean, default: false)
 
+    has_many :credentials, Lightning.Credentials.Credential
+
     timestamps()
   end
 

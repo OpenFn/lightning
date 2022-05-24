@@ -9,6 +9,7 @@ defmodule Lightning.Credentials.Credential do
         }
 
   use Ecto.Schema
+  alias Lightning.Accounts.User
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -16,6 +17,7 @@ defmodule Lightning.Credentials.Credential do
   schema "credentials" do
     field :body, :map
     field :name, :string
+    belongs_to :user, User
 
     timestamps()
   end
@@ -23,7 +25,8 @@ defmodule Lightning.Credentials.Credential do
   @doc false
   def changeset(credential, attrs) do
     credential
-    |> cast(attrs, [:name, :body])
-    |> validate_required([:name, :body])
+    |> cast(attrs, [:name, :body, :user_id])
+    |> validate_required([:name, :body, :user_id])
+    |> assoc_constraint(:user)
   end
 end

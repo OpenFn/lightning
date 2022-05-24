@@ -4,6 +4,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   alias Lightning.Pipeline.StateAssembler
   import Lightning.InvocationFixtures
   import Lightning.JobsFixtures
+  import Lightning.CredentialsFixtures
 
   describe "assemble/2" do
     test "event triggered by webhook" do
@@ -14,9 +15,9 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
                "data" => %{"foo" => "bar"}
              }
 
-      job = job_fixture(%{credential: nil})
-      event = event_fixture(%{dataclip_id: dataclip.id, job_id: job.id})
-      run = run_fixture(%{event_id: event.id})
+      job = job_fixture(credential: nil)
+      event = event_fixture(dataclip_id: dataclip.id, job_id: job.id)
+      run = run_fixture(event_id: event.id)
 
       # When a Job doesn't have a credential
       assert StateAssembler.assemble(run) |> Jason.decode!() == %{
@@ -78,15 +79,19 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   end
 
   def webhook_event() do
-    dataclip = dataclip_fixture(%{body: %{"foo" => "bar"}})
+    dataclip = dataclip_fixture(body: %{"foo" => "bar"})
 
     job =
-      job_fixture(%{
-        credential: %{body: %{"my" => "credential"}, name: "My Credential"}
-      })
+      job_fixture(
+        credential_id:
+          credential_fixture(
+            body: %{"my" => "credential"},
+            name: "My Credential"
+          ).id
+      )
 
     event =
-      event_fixture(%{type: :webhook, dataclip_id: dataclip.id, job_id: job.id})
+      event_fixture(type: :webhook, dataclip_id: dataclip.id, job_id: job.id)
 
     %{dataclip: dataclip, job: job, event: event}
   end
@@ -95,7 +100,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     %{dataclip: dataclip, job: job, event: event} = webhook_event()
 
     %{
-      run: run_fixture(%{event_id: event.id}),
+      run: run_fixture(event_id: event.id),
       event: event,
       job: job,
       dataclip: dataclip
@@ -105,39 +110,40 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   def run_with_successful_source_event() do
     %{event: event} = webhook_event()
 
-    dataclip_fixture(%{
+    dataclip_fixture(
       type: :run_result,
       source_event_id: event.id,
       body: %{"data" => "I succeeded", "extra" => ["data"]}
-    })
+    )
 
     run =
-      run_fixture(%{
+      run_fixture(
         event_id: event.id,
         exit_code: 0,
         log: ["1", "2"]
-      })
+      )
       |> Repo.preload(:result_dataclip)
 
     job =
-      job_fixture(%{
+      job_fixture(
         trigger: %{type: :on_job_success},
-        credential: %{
-          body: %{"other" => "credential"},
-          name: "other credential"
-        }
-      })
+        credential_id:
+          credential_fixture(
+            body: %{"other" => "credential"},
+            name: "other credential"
+          ).id
+      )
 
     event =
-      event_fixture(%{
+      event_fixture(
         type: :flow,
         dataclip_id: run.result_dataclip.id,
         job_id: job.id,
         source_id: event.id
-      })
+      )
       |> Repo.preload(:dataclip)
 
-    run = run_fixture(%{event_id: event.id}) |> Repo.preload(:result_dataclip)
+    run = run_fixture(event_id: event.id) |> Repo.preload(:result_dataclip)
 
     %{
       run: run,
@@ -150,32 +156,33 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   def run_with_failed_source_event() do
     %{event: event} = webhook_event()
 
-    run_fixture(%{
+    run_fixture(
       event_id: event.id,
       exit_code: 1,
       log: ["1", "2"],
       result_dataclip: nil
-    })
+    )
 
     job =
-      job_fixture(%{
+      job_fixture(
         trigger: %{type: :on_job_failure},
-        credential: %{
-          body: %{"other" => "credential"},
-          name: "other credential"
-        }
-      })
+        credential_id:
+          credential_fixture(
+            body: %{"other" => "credential"},
+            name: "other credential"
+          ).id
+      )
 
     event =
-      event_fixture(%{
+      event_fixture(
         type: :flow,
         dataclip_id: event.dataclip_id,
         job_id: job.id,
         source_id: event.id
-      })
+      )
       |> Repo.preload(:dataclip)
 
-    run = run_fixture(%{event_id: event.id})
+    run = run_fixture(event_id: event.id)
 
     %{
       run: run,

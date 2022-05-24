@@ -4,9 +4,13 @@ defmodule Lightning.Pipeline.RunnerTest do
   alias Lightning.{Invocation, Pipeline}
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
+  import Lightning.CredentialsFixtures
 
   test "start/2 takes a run and executes it" do
     credential_body = %{"username" => "quux"}
+
+    credential =
+      credential_fixture(name: "test credential", body: credential_body)
 
     job =
       job_fixture(
@@ -23,7 +27,7 @@ defmodule Lightning.Pipeline.RunnerTest do
           });
         });
         """,
-        credential: %{name: "test credential", body: credential_body}
+        credential_id: credential.id
       )
 
     dataclip_body = %{"foo" => "bar"}

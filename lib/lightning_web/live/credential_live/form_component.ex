@@ -47,7 +47,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp save_credential(socket, :new, credential_params) do
-    case Credentials.create_credential(credential_params) do
+    user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
+
+    credential_params
+    # We are adding user_id in credential_params because we don't want to do it in the form
+    |> Map.put("user_id", user_id)
+    |> Credentials.create_credential()
+    |> case do
       {:ok, _credential} ->
         {:noreply,
          socket
