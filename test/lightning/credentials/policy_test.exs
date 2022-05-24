@@ -1,4 +1,4 @@
-defmodule Lightning.Accounts.PolicyTest do
+defmodule Lightning.Credentials.PolicyTest do
   use Lightning.DataCase
 
   describe "Accounts policy" do

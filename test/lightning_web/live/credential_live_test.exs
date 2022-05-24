@@ -107,5 +107,25 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Show Credential"
       assert html =~ credential.name
     end
+
+    test "can't display others credentials", %{
+      conn: conn,
+      credential: _credential
+    } do
+      assert live(
+               conn,
+               Routes.credential_show_path(
+                 conn,
+                 :show,
+                 Lightning.CredentialsFixtures.credential_fixture()
+               )
+             ) ==
+               {:error,
+                {:live_redirect,
+                 %{
+                   flash: %{"error" => "You can't access that page"},
+                   to: "/credentials"
+                 }}}
+    end
   end
 end
