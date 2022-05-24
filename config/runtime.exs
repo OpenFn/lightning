@@ -22,7 +22,7 @@ listen_address =
   |> Enum.map(&String.to_integer/1)
   |> List.to_tuple()
 
-config :lightning, LightningWeb.Endpoint, http: [port: port, ip: listen_address]
+config :lightning, LightningWeb.Endpoint, http: [port: port]
 
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
@@ -59,14 +59,14 @@ if config_env() == :prod do
 
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
-    http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-      # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
-      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      # ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: port
-    ],
+    # http: [
+    #   # Enable IPv6 and bind on all interfaces.
+    #   # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
+    #   # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
+    #   # for details about using IPv6 vs IPv4 and loopback vs public addresses.
+    #   # ip: {0, 0, 0, 0, 0, 0, 0, 0},
+    #   port: port
+    # ],
     secret_key_base: secret_key_base,
     check_origin: System.get_env("ORIGIN"),
     server: true
