@@ -14,7 +14,7 @@ end
 
 port = String.to_integer(System.get_env("PORT", "4000"))
 url_port = String.to_integer(System.get_env("URL_PORT", "443"))
-url_port = String.to_integer(System.get_env("URL_SCHEME", "https"))
+url_scheme = System.get_env("URL_SCHEME", "https")
 
 listen_address =
   System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
