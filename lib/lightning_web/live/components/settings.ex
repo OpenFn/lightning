@@ -6,17 +6,33 @@ defmodule LightningWeb.Components.Settings do
 
   def menu_item(assigns) do
     base_classes = ~w[
-      m-4 px-3 py-2 rounded-md text-sm font-medium rounded-md block
+      px-3 py-2 rounded-md text-sm font-medium rounded-md block
     ]
 
     active_classes = ~w[text-indigo-200 bg-indigo-900] ++ base_classes
     inactive_classes = ~w[text-indigo-300 hover:bg-indigo-900] ++ base_classes
 
+    assigns =
+      assigns
+      |> assign(
+        class:
+          if assigns[:active] do
+            active_classes
+          else
+            inactive_classes
+          end
+      )
+
     ~H"""
-    <%= live_redirect(@text,
-      to: @to,
-      class: if(@active, do: active_classes, else: inactive_classes)
-    ) %>
+    <div class="h-12 mx-4">
+      <%= live_redirect(to: @to, class: @class) do %>
+        <%= if assigns[:inner_block] do %>
+          <%= render_slot(@inner_block) %>
+        <% else %>
+          <%= @text %>
+        <% end %>
+      <% end %>
+    </div>
     """
   end
 end

@@ -1,3 +1,15 @@
-<MainSection.header title="Dashboard" />
+<MainSection.header title="Projects" />
 
-<MainSection.main></MainSection.main>
+<MainSection.main>
+  <%= for project <- @projects do %>
+    <Common.item_bar id={"project-#{project.id}"}>
+      <div class="p-4">
+        <%= project.name %>
+      </div>
+      <div class="grow"></div>
+      <div class="flex h-14 w-12 items-center justify-center">
+        <Icon.right class="h-6 w-6 text-slate-600" />
+      </div>
+    </Common.item_bar>
+  <% end %>
+</MainSection.main>

@@ -16,6 +16,7 @@ defmodule LightningWeb.DataclipLive.Show do
     {:noreply,
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
+     |> assign(:active_menu_item, :dataclips)
      |> assign(:dataclip, Invocation.get_dataclip!(id))}
   end
 

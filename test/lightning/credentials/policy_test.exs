@@ -1,8 +1,6 @@
 defmodule Lightning.Credentials.PolicyTest do
   use Lightning.DataCase
 
-  alias Lightning.Credentials.Credential
-
   describe "Accounts policy" do
     test "users can only access their credentials" do
       user = Lightning.AccountsFixtures.user_fixture()

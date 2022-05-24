@@ -11,6 +11,8 @@ defmodule LightningWeb.Components.MainSection do
         <h1 class="text-3xl font-bold text-gray-900">
           <%= @title %>
         </h1>
+        <div class="grow"></div>
+        <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
       </div>
     </header>
     """

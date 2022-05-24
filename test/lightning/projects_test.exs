@@ -84,5 +84,23 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)
     end
+
+    test "get projects for a given user" do
+      user = user_fixture()
+      other_user = user_fixture()
+
+      project_1 =
+        project_fixture(
+          project_users: [%{user_id: user.id}, %{user_id: other_user.id}]
+        )
+        |> Repo.reload()
+
+      project_2 =
+        project_fixture(project_users: [%{user_id: user.id}])
+        |> Repo.reload()
+
+      assert [project_1, project_2] == Projects.get_projects_for_user(user)
+      assert [project_1] == Projects.get_projects_for_user(other_user)
+    end
   end
 end

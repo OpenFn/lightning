@@ -7,6 +7,7 @@ defmodule Lightning.Projects do
   alias Lightning.Repo
 
   alias Lightning.Projects.Project
+  alias Lightning.Accounts.User
 
   @doc """
   Returns the list of projects.
@@ -117,6 +118,15 @@ defmodule Lightning.Projects do
   """
   def change_project(%Project{} = project, attrs \\ %{}) do
     Project.changeset(project, attrs)
+  end
+
+  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
+  def get_projects_for_user(%User{id: user_id}) do
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: pu.user_id == ^user_id
+    )
+    |> Repo.all()
   end
 
   def url_safe_project_name(nil), do: ""
