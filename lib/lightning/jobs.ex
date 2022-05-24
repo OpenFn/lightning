@@ -105,6 +105,10 @@ defmodule Lightning.Jobs do
   """
   def get_job!(id), do: Repo.get!(Job |> preload(:trigger), id)
 
+  def get_job(id) do
+    from(j in Job, preload: :trigger) |> Repo.get(id)
+  end
+
   @doc """
   Gets a single job basic on it's webhook trigger.
   """
