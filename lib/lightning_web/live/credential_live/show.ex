@@ -16,7 +16,7 @@ defmodule LightningWeb.CredentialLive.Show do
     case Bodyguard.permit(
            Lightning.Credentials.Policy,
            :show,
-           socket.assigns.current_user,
+           %{"user_id" => socket.assigns.current_user.id},
            %{"credential_id" => id}
          ) do
       :ok ->

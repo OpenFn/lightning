@@ -13,7 +13,7 @@ defmodule LightningWeb.CredentialLive.Index do
      assign(
        socket,
        :credentials,
-       list_credentials(socket.assigns.current_user)
+       list_credentials(socket.assigns.current_user.id)
      )
      |> assign(:active_menu_item, :credentials)}
   end
@@ -50,13 +50,11 @@ defmodule LightningWeb.CredentialLive.Index do
      assign(
        socket,
        :credentials,
-       list_credentials(socket.assigns.current_user)
+       list_credentials(socket.assigns.current_user.id)
      )}
   end
 
-  defp list_credentials(user) do
-    if user.role == :superuser,
-      do: Credentials.list_credentials(),
-      else: Credentials.list_credentials_for_user(user.id)
+  defp list_credentials(user_id) do
+    Credentials.list_credentials_for_user(user_id)
   end
 end
