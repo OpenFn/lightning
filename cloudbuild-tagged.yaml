@@ -4,13 +4,13 @@ steps:
       - buildx
       - create
       - '--name'
-      - mybuilder
+      - lightning-builder
     id: create-builder
   - name: gcr.io/cloud-builders/docker
     args:
       - buildx
       - use
-      - mybuilder
+      - lightning-builder
     id: select-builder
   - name: gcr.io/cloud-builders/docker
     args:
@@ -26,19 +26,19 @@ steps:
       - '--progress=plain'
       - .
     id: Build
-  # DEPLOY NEW IMAGE TO STAGING ================================================
-  # - name: 'gcr.io/cloud-builders/kubectl'
-  #   args:
-  #     [
-  #       'set',
-  #       'image',
-  #       'deployment',
-  #       'lightning-demo',
-  #       'lightning-demo=$_IMAGE_NAME:$TAG_NAME',
-  #     ]
-  #   env:
-  #     - 'CLOUDSDK_COMPUTE_ZONE=us-east4-c'
-  #     - 'CLOUDSDK_CONTAINER_CLUSTER=prod-cluster'
+  # DEPLOY NEW IMAGE TO DEMO ================================================
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args:
+      [
+        'set',
+        'image',
+        'deployment',
+        'lightning-demo-deployment',
+        'lightning-demo=$_IMAGE_NAME:$TAG_NAME',
+      ]
+    env:
+      - 'CLOUDSDK_COMPUTE_ZONE=us-east4-c'
+      - 'CLOUDSDK_CONTAINER_CLUSTER=prod-cluster'
 # Push images to Google Container Registry with tags ===========================
 # images: ['$_IMAGE_TAG:$TAG_NAME', '$_IMAGE_TAG:latest']
 substitutions:
