@@ -27,9 +27,7 @@ defmodule LightningWeb.RunLiveTest do
       {:ok, view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      assert html =~ "Listing Runs"
-      # Temporarily check that you _can't_ create a run via the front end
-      refute html =~ "New Run"
+      assert html =~ "Runs"
 
       table = view |> element("table") |> render()
       assert table =~ "run-#{run.id}"
@@ -53,9 +51,9 @@ defmodule LightningWeb.RunLiveTest do
 
     test "displays run", %{conn: conn, run: run, project: project} do
       {:ok, _show_live, html} =
-        live(conn, Routes.project_run_show_path(conn, :show, project.id, run))
+        live(conn, Routes.project_run_index_path(conn, :show, project.id, run))
 
-      assert html =~ "Show Run"
+      assert html =~ "Run"
     end
   end
 end
