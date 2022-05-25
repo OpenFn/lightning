@@ -4,19 +4,18 @@ defmodule LightningWeb.RunLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.InvocationFixtures
 
-  defp create_run(_) do
-    project = Lightning.ProjectsFixtures.project_fixture()
-
+  defp create_run(%{project: project}) do
     run =
       run_fixture(
         event_id: event_fixture(project_id: project.id).id,
         log: ["First Run"]
       )
 
-    %{run: run, project: project}
+    %{run: run}
   end
 
   setup :register_and_log_in_user
+  setup :create_project_for_current_user
 
   describe "Index" do
     setup [:create_run]

@@ -111,13 +111,11 @@ defmodule Lightning.InvocationTest do
       assert dataclip == Invocation.get_dataclip!(dataclip.id)
     end
 
-    test "delete_dataclip/1 deletes the dataclip" do
+    test "delete_dataclip/1 sets the body to nil" do
       dataclip = dataclip_fixture()
       assert {:ok, %Dataclip{}} = Invocation.delete_dataclip(dataclip)
 
-      assert_raise Ecto.NoResultsError, fn ->
-        Invocation.get_dataclip!(dataclip.id)
-      end
+      assert %{body: nil} = Invocation.get_dataclip!(dataclip.id)
     end
 
     test "change_dataclip/1 returns a dataclip changeset" do

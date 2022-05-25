@@ -80,6 +80,10 @@ defmodule LightningWeb.Router do
         live("/runs", RunLive.Index, :index)
         live("/runs/:id", RunLive.Index, :show)
 
+        live("/dataclips", DataclipLive.Index, :index)
+        live("/dataclips/new", DataclipLive.Index, :new)
+        live("/dataclips/:id/edit", DataclipLive.Show, :show)
+
         live("/", DashboardLive.Index, :index)
       end
 
@@ -91,11 +95,6 @@ defmodule LightningWeb.Router do
       live("/credentials/:id", CredentialLive.Show, :show)
       live("/credentials/:id/edit", CredentialLive.Edit, :edit)
 
-      live("/dataclips", DataclipLive.Index, :index)
-      live("/dataclips/new", DataclipLive.Index, :new)
-      live("/dataclips/:id/edit", DataclipLive.Index, :edit)
-
-      live("/dataclips/:id", DataclipLive.Show, :show)
       live("/dataclips/:id/show/edit", DataclipLive.Show, :edit)
 
       live("/", DashboardLive.Index, :index)

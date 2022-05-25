@@ -20,12 +20,13 @@ defmodule LightningWeb.JobLiveTest do
   }
   @invalid_attrs %{body: nil, enabled: false, name: nil}
 
-  setup do
-    job = job_fixture()
-    %{job: job, project_id: job.project_id}
-  end
-
   setup :register_and_log_in_user
+  setup :create_project_for_current_user
+
+  setup %{project: project} do
+    job = job_fixture(project_id: project.id)
+    %{job: job}
+  end
 
   describe "Index" do
     test "lists all jobs", %{conn: conn, job: job} do
@@ -40,16 +41,16 @@ defmodule LightningWeb.JobLiveTest do
       assert html =~ job.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
     end
 
-    test "saves new job", %{conn: conn, project_id: project_id} do
+    test "saves new job", %{conn: conn, project: project} do
       {:ok, index_live, _html} =
-        live(conn, Routes.project_job_index_path(conn, :index, project_id))
+        live(conn, Routes.project_job_index_path(conn, :index, project.id))
 
       assert index_live |> element("a", "New Job") |> render_click() =~
                "New Job"
 
       assert_patch(
         index_live,
-        Routes.project_job_index_path(conn, :new, project_id)
+        Routes.project_job_index_path(conn, :new, project.id)
       )
 
       assert index_live
@@ -67,7 +68,7 @@ defmodule LightningWeb.JobLiveTest do
         |> render_submit()
         |> follow_redirect(
           conn,
-          Routes.project_job_index_path(conn, :index, project_id)
+          Routes.project_job_index_path(conn, :index, project.id)
         )
 
       assert html =~ "Job created successfully"

@@ -3,6 +3,8 @@ defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
   alias Lightning.Projects
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
   @impl true
   def mount(%{"project_id" => project_id}, _session, socket) do
     {:ok,

@@ -25,13 +25,13 @@
     to={Routes.project_job_index_path(@socket, :index, @project.id)}
     active={@active_menu_item == :jobs}
   />
-<% end %>
 
-<Settings.menu_item
-  text="Dataclips"
-  to={Routes.dataclip_index_path(@socket, :index)}
-  active={@active_menu_item == :dataclips}
-/>
+  <Settings.menu_item
+    text="Dataclips"
+    to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
+    active={@active_menu_item == :dataclips}
+  />
+<% end %>
 
 <Settings.menu_item
   text="Credentials"

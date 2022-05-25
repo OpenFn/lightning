@@ -52,8 +52,19 @@ defmodule Lightning.Invocation do
       [%Dataclip{}, ...]
 
   """
+  @spec list_dataclips() :: [%Dataclip{}]
   def list_dataclips do
     Repo.all(Dataclip)
+  end
+
+  @spec list_dataclips(project :: Project.t()) :: [%Dataclip{}]
+  def list_dataclips(%Project{id: project_id}) do
+    from(d in Dataclip,
+      join: e in Event,
+      on: e.dataclip_id == d.id or d.source_event_id == e.id,
+      where: e.project_id == ^project_id
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -174,7 +185,11 @@ defmodule Lightning.Invocation do
 
   """
   def delete_dataclip(%Dataclip{} = dataclip) do
-    Repo.delete(dataclip)
+    dataclip
+    |> Dataclip.changeset(%{})
+    |> Map.put(:action, :delete)
+    |> Dataclip.changeset(%{body: nil})
+    |> Repo.update()
   end
 
   @doc """

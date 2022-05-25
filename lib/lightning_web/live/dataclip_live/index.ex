@@ -7,11 +7,31 @@ defmodule LightningWeb.DataclipLive.Index do
   alias Lightning.Invocation
   alias Lightning.Invocation.Dataclip
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     assign(socket, :dataclips, list_dataclips())
-     |> assign(:active_menu_item, :dataclips)}
+    case Bodyguard.permit(
+           Lightning.Projects.Policy,
+           :read,
+           socket.assigns.current_user,
+           socket.assigns.project
+         ) do
+      {:error, :unauthorized} ->
+        {:ok,
+         socket
+         |> assign(active_menu_item: nil, project: nil, live_action: :no_access)
+         |> put_flash(:nav, :no_access)}
+
+      :ok ->
+        {:ok,
+         socket
+         |> assign(active_menu_item: :dataclips, dataclips: [])}
+    end
+  end
+
+  def handle_params(_, _url, %{assigns: %{live_action: :no_access}} = socket) do
+    {:noreply, socket}
   end
 
   @impl true
@@ -34,6 +54,7 @@ defmodule LightningWeb.DataclipLive.Index do
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Listing Dataclips")
+    |> assign(:dataclips, Invocation.list_dataclips(socket.assigns.project))
     |> assign(:dataclip, nil)
   end
 
@@ -42,10 +63,33 @@ defmodule LightningWeb.DataclipLive.Index do
     dataclip = Invocation.get_dataclip!(id)
     {:ok, _} = Invocation.delete_dataclip(dataclip)
 
-    {:noreply, assign(socket, :dataclips, list_dataclips())}
+    {:noreply,
+     assign(
+       socket,
+       :dataclips,
+       Invocation.list_dataclips(socket.assigns.project)
+     )}
   end
 
-  defp list_dataclips do
-    Invocation.list_dataclips()
+  def type_pill(assigns) do
+    base_classes = ~w[
+      px-2 py-1 rounded-full inline-block text-sm font-mono
+    ]
+
+    class =
+      base_classes ++
+        case assigns[:dataclip].type do
+          :run_result -> ~w[bg-purple-500 text-purple-900]
+          :http_request -> ~w[bg-green-500 text-green-900]
+          _ -> []
+        end
+
+    assigns = assign(assigns, class: class)
+
+    ~H"""
+    <div class={@class}>
+      <%= @dataclip.type %>
+    </div>
+    """
   end
 end

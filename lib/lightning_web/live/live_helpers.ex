@@ -94,8 +94,28 @@ defmodule LightningWeb.LiveHelpers do
   end
 
   def live_nav_block(assigns) do
+    assigns =
+      case live_flash(assigns[:flash], :nav) do
+        :not_found ->
+          assign(assigns,
+            heading: "Not Found",
+            blurb: "Sorry, we couldn't find what you were looking for.",
+            show_nav_error: true
+          )
+
+        :no_access ->
+          assign(assigns,
+            heading: "No Access",
+            blurb: "Sorry, you don't have access to that.",
+            show_nav_error: true
+          )
+
+        _ ->
+          assign(assigns, show_nav_error: false)
+      end
+
     ~H"""
-    <%= if live_flash(@flash, :nav) do %>
+    <%= if @show_nav_error do %>
       <div class="flex items-start sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
         <div class="relative bg-white rounded-lg text-left overflow-hidden shadow-md transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -108,11 +128,11 @@ defmodule LightningWeb.LiveHelpers do
                   class="text-lg leading-6 font-medium text-gray-900"
                   id="modal-title"
                 >
-                  Not Found
+                  <%= @heading %>
                 </h3>
                 <div class="mt-2">
                   <p class="text-sm text-gray-500">
-                    Sorry, we couldn't find what you were looking for.
+                    <%= @blurb %>
                   </p>
                 </div>
               </div>
