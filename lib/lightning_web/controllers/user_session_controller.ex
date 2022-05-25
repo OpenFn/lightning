@@ -5,8 +5,6 @@ defmodule LightningWeb.UserSessionController do
   alias LightningWeb.UserAuth
   alias Lightning.Accounts.User
 
-  import LightningWeb.Components.Form
-
   def new(conn, _params) do
     render(conn, "new.html", error_message: nil)
   end

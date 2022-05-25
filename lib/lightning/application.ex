@@ -13,7 +13,8 @@ defmodule Lightning.Application do
 
     adaptor_service_childspec =
       {Engine.Adaptor.Service,
-       [name: :adaptor_service, adaptors_path: "./priv/openfn"]}
+       [name: :adaptor_service]
+       |> Keyword.merge(Application.get_env(:lightning, :adaptor_service))}
 
     children = [
       # Start the Ecto repository

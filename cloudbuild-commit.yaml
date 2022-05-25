@@ -1,0 +1,63 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    entrypoint: "bash"
+    args: ["-c", "docker login --username=$$USERNAME --password=$$PASSWORD"]
+    secretEnv: ["USERNAME", "PASSWORD"]
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - create
+      - "--name"
+      - lightning-builder
+    id: create-builder
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - use
+      - lightning-builder
+    id: select-builder
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - buildx
+      - build
+      - "-t"
+      - $_IMAGE_NAME:latest
+      - "-t"
+      - $_IMAGE_NAME:$COMMIT_SHA
+      - "-f"
+      - ./Dockerfile
+      - "--push"
+      - "--progress=plain"
+      - .
+    id: Build
+  # DEPLOY NEW IMAGE TO DEMO ================================================
+  - name: "gcr.io/cloud-builders/kubectl"
+    args:
+      [
+        "set",
+        "image",
+        "deployment",
+        "lightning-demo-deployment",
+        "lightning-demo=$_IMAGE_NAME:$COMMIT_SHA",
+      ]
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=us-east4-c"
+      - "CLOUDSDK_CONTAINER_CLUSTER=prod-cluster"
+substitutions:
+  _IMAGE_NAME: 'openfn/lightning'
+  # _CACHE_NAME: "${_IMAGE_NAME}-build-cache"
+options:
+  machineType: "N1_HIGHCPU_8"
+  dynamic_substitutions: true
+  env:
+    - DOCKER_CLI_EXPERIMENTAL=enabled
+    - LOCAL_BUILD=true
+tags:
+  - gcp-cloud-build-deploy
+timeout: 3600s
+availableSecrets:
+  secretManager:
+    - versionName: projects/1014955836204/secrets/docker-password/versions/1
+      env: "PASSWORD"
+    - versionName: projects/1014955836204/secrets/docker-username/versions/1
+      env: "USERNAME"

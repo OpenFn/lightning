@@ -13,6 +13,8 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
 end
 
 port = String.to_integer(System.get_env("PORT", "4000"))
+url_port = String.to_integer(System.get_env("URL_PORT", "443"))
+url_scheme = System.get_env("URL_SCHEME", "https")
 
 listen_address =
   System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
@@ -20,7 +22,8 @@ listen_address =
   |> Enum.map(&String.to_integer/1)
   |> List.to_tuple()
 
-config :lightning, LightningWeb.Endpoint, http: [port: port, ip: listen_address]
+config :lightning, :adaptor_service,
+  adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
 if config_env() == :prod do
   database_url =
@@ -33,7 +36,9 @@ if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
 
   config :lightning, Lightning.Repo,
-    # ssl: true,
+    ssl: true,
+    # TODO: determine why we see this certs verification warn for the repo conn
+    # ssl_opts: [log_level: :error],
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
@@ -50,26 +55,35 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "example.com"
+  host = System.get_env("URL_HOST") || "example.com"
+
+  origins =
+    case System.get_env("ORIGINS") do
+      nil -> true
+      str -> String.split(str, ",")
+    end
 
   config :lightning, LightningWeb.Endpoint,
-    url: [host: host, port: 443],
+    url: [host: host, port: url_port, scheme: url_scheme],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
       # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      # ip: {0, 0, 0, 0, 0, 0, 0, 0},
+      # ip: listen_address,
       port: port
     ],
-    secret_key_base: secret_key_base
+    secret_key_base: secret_key_base,
+    check_origin: origins,
+    server: true
 
   # ## Using releases
   #
   # If you are doing OTP releases, you need to instruct Phoenix
   # to start each relevant endpoint:
   #
-  config :lightning, LightningWeb.Endpoint, server: true
+  # config :lightning, LightningWeb.Endpoint, server: true
   #
   # Then you can assemble a release by calling `mix release`.
   # See `mix help release` for more information.
