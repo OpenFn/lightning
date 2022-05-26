@@ -11,27 +11,9 @@ defmodule LightningWeb.DataclipLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    case Bodyguard.permit(
-           Lightning.Projects.Policy,
-           :read,
-           socket.assigns.current_user,
-           socket.assigns.project
-         ) do
-      {:error, :unauthorized} ->
-        {:ok,
-         socket
-         |> assign(active_menu_item: nil, project: nil, live_action: :no_access)
-         |> put_flash(:nav, :no_access)}
-
-      :ok ->
-        {:ok,
-         socket
-         |> assign(active_menu_item: :dataclips, dataclips: [])}
-    end
-  end
-
-  def handle_params(_, _url, %{assigns: %{live_action: :no_access}} = socket) do
-    {:noreply, socket}
+    {:ok,
+     socket
+     |> assign(active_menu_item: :dataclips, dataclips: [])}
   end
 
   @impl true
