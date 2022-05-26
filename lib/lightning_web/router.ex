@@ -138,4 +138,17 @@ defmodule LightningWeb.Router do
       forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
   end
+
+  forward "/health_check", LightningWeb.HealthCheck
+end
+
+defmodule LightningWeb.HealthCheck do
+  use Plug.Router
+
+  plug :match
+  plug :dispatch
+
+  get "/" do
+    send_resp(conn, 200, "Hello you!")
+  end
 end
