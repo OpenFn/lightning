@@ -42,10 +42,9 @@ RUN mix local.hex --force && \
   mix local.rebar --force
 
 # set build ENV
-
 ENV MIX_ENV="prod"
 
-COPY mix.exs mix.lock ./
+COPY mix.* ./
 RUN mix deps.get --only $MIX_ENV
 
 RUN mkdir config
@@ -57,18 +56,21 @@ COPY config/config.exs config/${MIX_ENV}.exs config/
 RUN mix deps.compile
 
 COPY priv priv
+COPY lib lib
 
 RUN mix openfn.install.runtime
 
-COPY lib lib
-COPY bin bin
+# note: if your project uses a tool like https://purgecss.com/,
+# which customizes asset compilation based on what it finds in
+# your Elixir templates, you will need to move the asset compilation
+# step down so that `lib` is available.
 COPY assets assets
 
 # compile assets
 RUN mix assets.deploy
 
+
 # Compile the release
-COPY lib lib
 
 RUN mix compile
 
@@ -112,4 +114,4 @@ COPY --from=builder --chown=nobody:root /app/priv/openfn ./priv/openfn
 
 USER nobody
 
-# CMD /app/bin/server
+CMD /app/bin/server

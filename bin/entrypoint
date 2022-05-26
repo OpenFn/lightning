@@ -6,7 +6,7 @@ set -e
 # into your volume persisted public directory.
 # cp -r /public/. /app/priv/static/
 
-# Install the OpenFn runtime dependencies if they missing.
+# Install the OpenFn runtime dependencies if they are missing.
 [ ! -d "priv/openfn" ] && mix openfn.install.runtime
 
 exec "$@"
