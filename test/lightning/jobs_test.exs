@@ -11,6 +11,7 @@ defmodule Lightning.JobsTest do
 
     import Lightning.JobsFixtures
     import Lightning.AccountsFixtures
+    import Lightning.ProjectsFixtures
 
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
 
@@ -38,6 +39,17 @@ defmodule Lightning.JobsTest do
       job = job_fixture() |> unload_credential()
 
       assert Jobs.get_job!(job.id) == job
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Jobs.get_job!(Ecto.UUID.generate())
+      end
+    end
+
+    test "get_job/1 returns the job with given id" do
+      job = job_fixture() |> unload_credential()
+
+      assert Jobs.get_job(job.id) == job
+      assert Jobs.get_job(Ecto.UUID.generate()) == nil
     end
 
     test "get_job_by_webhook/1 returns the job for a path" do
@@ -56,7 +68,8 @@ defmodule Lightning.JobsTest do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{comment: "foo"}
+        trigger: %{comment: "foo"},
+        project_id: project_fixture().id
       }
 
       assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
@@ -82,7 +95,8 @@ defmodule Lightning.JobsTest do
                  name: "some name",
                  trigger: %{comment: "foo"},
                  adaptor: "@openfn/language-common",
-                 credential_id: credential.id
+                 credential_id: credential.id,
+                 project_id: project_fixture().id
                })
 
       job = Repo.preload(job, :credential)

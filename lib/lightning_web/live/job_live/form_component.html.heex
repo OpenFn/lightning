@@ -135,11 +135,7 @@
     <.divider />
     <.text_area form={f} id={:body} />
     <div>
-      <.submit_button
-        value="Create job"
-        disable_with="Saving"
-        changeset={@changeset}
-      />
+      <.submit_button value="Save" disable_with="Saving" changeset={@changeset} />
     </div>
   </.form>
 </div>

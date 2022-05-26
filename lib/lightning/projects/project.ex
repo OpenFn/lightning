@@ -6,6 +6,7 @@ defmodule Lightning.Projects.Project do
   import Ecto.Changeset
 
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Jobs.Job
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -18,6 +19,7 @@ defmodule Lightning.Projects.Project do
   schema "projects" do
     field :name, :string
     has_many :project_users, ProjectUser
+    has_many :jobs, Job
 
     timestamps()
   end

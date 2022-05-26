@@ -38,6 +38,8 @@ defmodule Lightning.Projects do
   """
   def get_project!(id), do: Repo.get!(Project, id)
 
+  def get_project(id), do: Repo.get(Project, id)
+
   @doc """
   Gets a single project with it's members via `project_users`.
 
@@ -136,5 +138,18 @@ defmodule Lightning.Projects do
     |> String.downcase()
     |> String.replace(~r/[^a-z-_\.\d]+/, "-")
     |> String.replace(~r/^\-+|\-+$/, "")
+  end
+
+  def is_member_of?(%Project{id: project_id}, %User{id: user_id}) do
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: pu.user_id == ^user_id and p.id == ^project_id,
+      select: true
+    )
+    |> Repo.one()
+    |> case do
+      nil -> false
+      true -> true
+    end
   end
 end

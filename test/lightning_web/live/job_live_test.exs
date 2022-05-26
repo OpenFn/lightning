@@ -20,30 +20,38 @@ defmodule LightningWeb.JobLiveTest do
   }
   @invalid_attrs %{body: nil, enabled: false, name: nil}
 
-  defp create_job(_) do
-    job = job_fixture()
+  setup :register_and_log_in_user
+  setup :create_project_for_current_user
+
+  setup %{project: project} do
+    job = job_fixture(project_id: project.id)
     %{job: job}
   end
 
-  setup :register_and_log_in_user
-
   describe "Index" do
-    setup [:create_job]
-
     test "lists all jobs", %{conn: conn, job: job} do
-      {:ok, _index_live, html} = live(conn, Routes.job_index_path(conn, :index))
+      other_job = job_fixture(name: "other job")
+
+      {:ok, _index_live, html} =
+        live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
 
       assert html =~ "Listing Jobs"
+      refute html =~ other_job.name
+      assert html =~ job.name
       assert html =~ job.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
     end
 
-    test "saves new job", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, Routes.job_index_path(conn, :index))
+    test "saves new job", %{conn: conn, project: project} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_job_index_path(conn, :index, project.id))
 
       assert index_live |> element("a", "New Job") |> render_click() =~
                "New Job"
 
-      assert_patch(index_live, Routes.job_index_path(conn, :new))
+      assert_patch(
+        index_live,
+        Routes.project_job_index_path(conn, :new, project.id)
+      )
 
       assert index_live
              |> form("#job-form", job: @invalid_attrs)
@@ -58,14 +66,18 @@ defmodule LightningWeb.JobLiveTest do
         index_live
         |> form("#job-form", job: @create_attrs)
         |> render_submit()
-        |> follow_redirect(conn, Routes.job_index_path(conn, :index))
+        |> follow_redirect(
+          conn,
+          Routes.project_job_index_path(conn, :index, project.id)
+        )
 
       assert html =~ "Job created successfully"
       assert html =~ "some body"
     end
 
     test "deletes job in listing", %{conn: conn, job: job} do
-      {:ok, index_live, _html} = live(conn, Routes.job_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
 
       assert index_live
              |> element("#job-#{job.id} a", "Delete")
@@ -76,16 +88,18 @@ defmodule LightningWeb.JobLiveTest do
   end
 
   describe "Edit" do
-    setup [:create_job]
-
     test "updates job in listing", %{conn: conn, job: job} do
-      {:ok, index_live, _html} = live(conn, Routes.job_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
 
       {:ok, form_live, _} =
         index_live
         |> element("#job-#{job.id} a", "Edit")
         |> render_click()
-        |> follow_redirect(conn, Routes.job_edit_path(conn, :edit, job))
+        |> follow_redirect(
+          conn,
+          Routes.project_job_edit_path(conn, :edit, job.project_id, job)
+        )
 
       assert form_live
              |> form("#job-form", job: @invalid_attrs)
@@ -95,7 +109,10 @@ defmodule LightningWeb.JobLiveTest do
         form_live
         |> form("#job-form", job: @update_attrs)
         |> render_submit()
-        |> follow_redirect(conn, Routes.job_index_path(conn, :index))
+        |> follow_redirect(
+          conn,
+          Routes.project_job_index_path(conn, :index, job.project_id)
+        )
 
       assert html =~ "Job updated successfully"
       assert html =~ "some updated body"
@@ -154,36 +171,43 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
-  # describe "Show" do
-  #   setup [:create_job]
+  describe "Show" do
+    test "displays job", %{conn: conn, job: job, project: project} do
+      {:ok, _show_live, html} =
+        live(conn, Routes.project_job_show_path(conn, :show, project, job))
 
-  #   test "displays job", %{conn: conn, job: job} do
-  #     {:ok, _show_live, html} = live(conn, Routes.job_show_path(conn, :show, job))
+      assert html =~ "Show Job"
+      assert html =~ job.name
+    end
 
-  #     assert html =~ "Show Job"
-  #     assert html =~ job.body
-  #   end
+    test "updates job within modal", %{conn: conn, job: job, project: project} do
+      {:ok, show_live, _html} =
+        live(conn, Routes.project_job_show_path(conn, :show, project, job))
 
-  #   test "updates job within modal", %{conn: conn, job: job} do
-  #     {:ok, show_live, _html} = live(conn, Routes.job_show_path(conn, :show, job))
+      {:ok, view, _} =
+        show_live
+        |> element("a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_edit_path(conn, :edit, project, job)
+        )
 
-  #     assert show_live |> element("a", "Edit") |> render_click() =~
-  #              "Edit Job"
+      assert view
+             |> form("#job-form", job: @invalid_attrs)
+             |> render_change() =~ "can&#39;t be blank"
 
-  #     assert_patch(show_live, Routes.job_show_path(conn, :edit, job))
+      {:ok, _, html} =
+        view
+        |> form("#job-form", job: @update_attrs)
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_index_path(conn, :index, project)
+        )
 
-  #     assert show_live
-  #            |> form("#job-form", job: @invalid_attrs)
-  #            |> render_change() =~ "can&#39;t be blank"
-
-  #     {:ok, _, html} =
-  #       show_live
-  #       |> form("#job-form", job: @update_attrs)
-  #       |> render_submit()
-  #       |> follow_redirect(conn, Routes.job_show_path(conn, :show, job))
-
-  #     assert html =~ "Job updated successfully"
-  #     assert html =~ "some updated body"
-  #   end
-  # end
+      assert html =~ "Job updated successfully"
+      assert html =~ "some updated body"
+    end
+  end
 end

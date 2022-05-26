@@ -46,7 +46,13 @@ defmodule Lightning.Invocation.Dataclip do
   def changeset(dataclip, attrs) do
     dataclip
     |> cast(attrs, [:body, :type, :source_event_id])
-    |> validate_required([:body, :type])
+    |> case do
+      %{action: :delete} = c ->
+        c |> validate_required([:type]) |> Map.put(:action, :update)
+
+      c ->
+        c |> validate_required([:type, :body])
+    end
     |> validate_by_type()
   end
 

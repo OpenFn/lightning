@@ -19,6 +19,17 @@ defmodule Lightning.ProjectsTest do
     test "get_project!/1 returns the project with given id" do
       project = project_fixture()
       assert Projects.get_project!(project.id) == project
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Projects.get_project!(Ecto.UUID.generate())
+      end
+    end
+
+    test "get_project/1 returns the project with given id" do
+      assert Projects.get_project(Ecto.UUID.generate()) == nil
+
+      project = project_fixture()
+      assert Projects.get_project(project.id) == project
     end
 
     test "get_project_with_users!/1 returns the project with given id" do

@@ -3,6 +3,18 @@ defmodule LightningWeb.DashboardLive.Index do
   use LightningWeb, :live_view
   alias Lightning.Projects
 
+  on_mount {LightningWeb.Hooks, :project_scope}
+
+  @impl true
+  def mount(%{"project_id" => project_id}, _session, socket) do
+    {:ok,
+     socket
+     |> assign(
+       project: Projects.get_project(project_id),
+       active_menu_item: :dashboard
+     )}
+  end
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket |> assign(:active_menu_item, :dashboard)}

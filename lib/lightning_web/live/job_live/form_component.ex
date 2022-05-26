@@ -19,7 +19,7 @@ defmodule LightningWeb.JobLive.FormComponent do
 
   @impl true
   def update(%{job: job} = assigns, socket) do
-    changeset = Jobs.change_job(job)
+    changeset = Jobs.change_job(job, %{"project_id" => job.project_id})
 
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(
@@ -81,7 +81,10 @@ defmodule LightningWeb.JobLive.FormComponent do
   end
 
   defp save_job(socket, :new, job_params) do
-    case Jobs.create_job(job_params) do
+    case Jobs.create_job(
+           job_params
+           |> Map.put("project_id", socket.assigns.job.project_id)
+         ) do
       {:ok, _job} ->
         {:noreply,
          socket
