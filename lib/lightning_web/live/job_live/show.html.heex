@@ -36,7 +36,7 @@
   </ul>
 
   <span>
-    <%= live_patch("Edit",
+    <%= live_redirect("Edit",
       to: Routes.project_job_edit_path(@socket, :edit, @job.project_id, @job),
       class: "button"
     ) %>

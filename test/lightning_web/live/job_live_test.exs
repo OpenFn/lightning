@@ -171,36 +171,43 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
-  # describe "Show" do
-  #   setup [:create_job]
+  describe "Show" do
+    test "displays job", %{conn: conn, job: job, project: project} do
+      {:ok, _show_live, html} =
+        live(conn, Routes.project_job_show_path(conn, :show, project, job))
 
-  #   test "displays job", %{conn: conn, job: job} do
-  #     {:ok, _show_live, html} = live(conn, Routes.job_show_path(conn, :show, job))
+      assert html =~ "Show Job"
+      assert html =~ job.name
+    end
 
-  #     assert html =~ "Show Job"
-  #     assert html =~ job.body
-  #   end
+    test "updates job within modal", %{conn: conn, job: job, project: project} do
+      {:ok, show_live, _html} =
+        live(conn, Routes.project_job_show_path(conn, :show, project, job))
 
-  #   test "updates job within modal", %{conn: conn, job: job} do
-  #     {:ok, show_live, _html} = live(conn, Routes.job_show_path(conn, :show, job))
+      {:ok, view, _} =
+        show_live
+        |> element("a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_edit_path(conn, :edit, project, job)
+        )
 
-  #     assert show_live |> element("a", "Edit") |> render_click() =~
-  #              "Edit Job"
+      assert view
+             |> form("#job-form", job: @invalid_attrs)
+             |> render_change() =~ "can&#39;t be blank"
 
-  #     assert_patch(show_live, Routes.job_show_path(conn, :edit, job))
+      {:ok, _, html} =
+        view
+        |> form("#job-form", job: @update_attrs)
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_index_path(conn, :index, project)
+        )
 
-  #     assert show_live
-  #            |> form("#job-form", job: @invalid_attrs)
-  #            |> render_change() =~ "can&#39;t be blank"
-
-  #     {:ok, _, html} =
-  #       show_live
-  #       |> form("#job-form", job: @update_attrs)
-  #       |> render_submit()
-  #       |> follow_redirect(conn, Routes.job_show_path(conn, :show, job))
-
-  #     assert html =~ "Job updated successfully"
-  #     assert html =~ "some updated body"
-  #   end
-  # end
+      assert html =~ "Job updated successfully"
+      assert html =~ "some updated body"
+    end
+  end
 end
