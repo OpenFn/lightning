@@ -30,7 +30,6 @@ steps:
       - "--progress=plain"
       - .
     id: Build
-  # DEPLOY NEW IMAGE TO DEMO ================================================
   - name: "gcr.io/cloud-builders/kubectl"
     args:
       [
@@ -44,8 +43,7 @@ steps:
       - "CLOUDSDK_COMPUTE_ZONE=us-east4-c"
       - "CLOUDSDK_CONTAINER_CLUSTER=prod-cluster"
 substitutions:
-  _IMAGE_NAME: 'openfn/lightning'
-  # _CACHE_NAME: "${_IMAGE_NAME}-build-cache"
+  _IMAGE_NAME: "openfn/lightning"
 options:
   machineType: "N1_HIGHCPU_8"
   dynamic_substitutions: true
