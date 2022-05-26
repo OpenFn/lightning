@@ -17,7 +17,7 @@ defmodule LightningWeb.CredentialLive.Edit do
   def handle_params(%{"id" => id}, _, socket) do
     {:noreply,
      socket
-     |> assign(:page_title, page_title(socket.assigns.live_action))
+     |> assign(:page_title, "Show Job")
      |> assign(:active_menu_item, :credentials)
      |> assign(
        credential:
@@ -26,7 +26,4 @@ defmodule LightningWeb.CredentialLive.Edit do
        projects: Projects.get_projects_for_user(socket.assigns.current_user)
      )}
   end
-
-  defp page_title(:show), do: "Show Job"
-  defp page_title(:edit), do: "Edit Job"
 end

@@ -3,6 +3,7 @@ defmodule LightningWeb.JobLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.JobsFixtures
+  import Lightning.CredentialsFixtures
 
   @create_attrs %{
     body: "some body",
@@ -24,6 +25,7 @@ defmodule LightningWeb.JobLiveTest do
   setup :create_project_for_current_user
 
   setup %{project: project} do
+    project_credential_fixture(project_id: project.id)
     job = job_fixture(project_id: project.id)
     %{job: job}
   end

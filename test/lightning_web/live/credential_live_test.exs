@@ -14,20 +14,20 @@ defmodule LightningWeb.CredentialLiveTest do
   }
   @invalid_attrs %{body: nil, name: nil}
 
-  defp create_credential(%{conn: _conn, user: user} = attrs) do
+  defp create_credential(%{user: user}) do
     credential = credential_fixture(user_id: user.id)
-    Map.put(attrs, :credential, credential)
+    %{credential: credential}
   end
 
   setup :register_and_log_in_user
+  setup :create_project_for_current_user
 
   describe "Index" do
     setup [:create_credential]
 
     test "lists all credentials", %{
       conn: conn,
-      credential: credential,
-      user: _user
+      credential: credential
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.credential_index_path(conn, :index))
@@ -38,7 +38,7 @@ defmodule LightningWeb.CredentialLiveTest do
                credential.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
     end
 
-    test "saves new credential", %{conn: conn} do
+    test "saves new credential", %{conn: conn, project: project} do
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
@@ -53,7 +53,19 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> form("#credential-form", credential: @create_attrs)
-             |> render_submit() =~ "some name"
+             |> render_change()
+
+      index_live
+      |> element("#project_list")
+      |> render_hook("select_item", %{"id" => project.id})
+
+      index_live
+      |> element("button", "Add")
+      |> render_click()
+
+      index_live
+      |> form("#credential-form")
+      |> render_submit()
     end
 
     test "deletes credential in listing", %{conn: conn, credential: credential} do

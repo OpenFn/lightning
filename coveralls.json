@@ -1,6 +1,7 @@
 {
   "skip_files": [
     "lib/lightning_web/router.ex",
-    "lib/lightning/release.ex"
+    "lib/lightning/release.ex",
+    "test/support/*"
   ]
 }
