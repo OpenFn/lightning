@@ -83,8 +83,8 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
     job =
       job_fixture(
-        credential_id:
-          credential_fixture(
+        project_credential_id:
+          project_credential_fixture(
             body: %{"my" => "credential"},
             name: "My Credential"
           ).id
@@ -127,8 +127,8 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     job =
       job_fixture(
         trigger: %{type: :on_job_success},
-        credential_id:
-          credential_fixture(
+        project_credential_id:
+          project_credential_fixture(
             body: %{"other" => "credential"},
             name: "other credential"
           ).id
@@ -166,8 +166,8 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     job =
       job_fixture(
         trigger: %{type: :on_job_failure},
-        credential_id:
-          credential_fixture(
+        project_credential_id:
+          project_credential_fixture(
             body: %{"other" => "credential"},
             name: "other credential"
           ).id

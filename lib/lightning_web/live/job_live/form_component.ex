@@ -12,13 +12,13 @@ defmodule LightningWeb.JobLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.{Jobs, AdaptorRegistry, Credentials}
+  alias Lightning.{Jobs, AdaptorRegistry, Projects}
   import LightningWeb.Components.Form
 
   import Ecto.Changeset, only: [get_field: 2]
 
   @impl true
-  def update(%{job: job} = assigns, socket) do
+  def update(%{job: job, project: project} = assigns, socket) do
     changeset = Jobs.change_job(job, %{"project_id" => job.project_id})
 
     {adaptor_name, _, adaptors, versions} =
@@ -27,7 +27,12 @@ defmodule LightningWeb.JobLive.FormComponent do
         |> Ecto.Changeset.fetch_field!(:adaptor)
       )
 
-    credentials = Credentials.list_credentials()
+    credentials =
+      Projects.list_project_credentials(project)
+      |> Enum.map(fn pu ->
+        {pu.credential.name, pu.id}
+      end)
+
     upstream_jobs = Jobs.get_upstream_jobs_for(job)
 
     {:ok,

@@ -19,16 +19,18 @@
       <div class="col-span-2">
         <.label_field
           form={f}
-          id={:credential_id}
+          id={:project_credential_id}
           title="Credential"
           for="credentialField"
         />
-        <%= error_tag(f, :credential_id, class: "block w-full rounded-md") %>
+        <%= error_tag(f, :project_credential_id, class: "block w-full rounded-md") %>
         <.select_field
           form={f}
-          name={:credential_id}
+          name={:project_credential_id}
           id="credentialField"
-          values={Enum.map(@credentials, &{&1.name, &1.id})}
+          prompt=""
+          values={@credentials}
+          }
         />
       </div>
       <div class="col-span-2">
@@ -93,17 +95,11 @@
                 <a
                   id="copyWebhookUrl"
                   href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
+                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
                   target="_blank"
                 >
                   Copy webhook url
                 </a>
-                <script charset="utf-8">
-                  let webhookUrl = "<%= Routes.webhooks_url(@socket, :create, [ft.data.job_id]) %>"
-                  document.querySelector("a#copyWebhookUrl").addEventListener('click', e => {
-                    e.preventDefault();
-                    navigator.clipboard.writeText(webhookUrl);
-                  })
-                </script>
               <% end %>
             </div>
             <div class="col-span-3">

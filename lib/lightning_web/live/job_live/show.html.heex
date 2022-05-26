@@ -11,6 +11,7 @@
         title={@page_title}
         action={@live_action}
         job={@job}
+        project={@project}
         return_to={
           Routes.project_job_show_path(@socket, :show, @job.project_id, @job)
         }

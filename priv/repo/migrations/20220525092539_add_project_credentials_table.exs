@@ -10,6 +10,16 @@ defmodule Lightning.Repo.Migrations.AddProjectCredentialsTable do
       timestamps()
     end
 
-    create index(:project_credentials, [:project_id, :credential_id])
+    alter table(:jobs) do
+      add :project_credential_id,
+          references(:project_credentials, type: :binary_id, on_delete: :nilify_all),
+          null: true
+
+      remove :credential_id, references(:credentials, type: :binary_id)
+    end
+
+    create index(:project_credentials, [:credential_id])
+    create index(:project_credentials, [:project_id])
+    create unique_index(:project_credentials, [:project_id, :credential_id])
   end
 end

@@ -6,7 +6,7 @@ defmodule Lightning.Projects do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Projects.Project
+  alias Lightning.Projects.{Project, ProjectCredential}
   alias Lightning.Accounts.User
 
   @doc """
@@ -120,6 +120,15 @@ defmodule Lightning.Projects do
   """
   def change_project(%Project{} = project, attrs \\ %{}) do
     Project.changeset(project, attrs)
+  end
+
+  @spec list_project_credentials(project :: Project.t()) :: [
+          ProjectCredential.t()
+        ]
+  def list_project_credentials(%Project{} = project) do
+    Ecto.assoc(project, :project_credentials)
+    |> preload(:credential)
+    |> Repo.all()
   end
 
   @spec get_projects_for_user(user :: User.t()) :: [Project.t()]

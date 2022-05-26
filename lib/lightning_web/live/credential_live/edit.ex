@@ -6,6 +6,7 @@ defmodule LightningWeb.CredentialLive.Edit do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
+  alias Lightning.Projects
 
   @impl true
   def mount(_params, _session, socket) do
@@ -18,7 +19,12 @@ defmodule LightningWeb.CredentialLive.Edit do
      socket
      |> assign(:page_title, page_title(socket.assigns.live_action))
      |> assign(:active_menu_item, :credentials)
-     |> assign(:credential, Credentials.get_credential!(id))}
+     |> assign(
+       credential:
+         Credentials.get_credential!(id)
+         |> Lightning.Repo.preload(:project_credentials),
+       projects: Projects.get_projects_for_user(socket.assigns.current_user)
+     )}
   end
 
   defp page_title(:show), do: "Show Job"

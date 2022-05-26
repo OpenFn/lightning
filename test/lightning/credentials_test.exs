@@ -8,6 +8,7 @@ defmodule Lightning.CredentialsTest do
 
     import Lightning.CredentialsFixtures
     import Lightning.AccountsFixtures
+    import Lightning.ProjectsFixtures
 
     @invalid_attrs %{body: nil, name: nil}
 
@@ -30,6 +31,21 @@ defmodule Lightning.CredentialsTest do
       user = user_fixture()
       credential = credential_fixture(user_id: user.id)
       assert Credentials.list_credentials() == [credential]
+    end
+
+    test "list_credentials/1 returns all credentials for a project" do
+      user = user_fixture()
+      project = project_fixture(project_users: [%{user_id: user.id}])
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      assert Credentials.list_credentials(project) == [
+               credential |> unload_relation(:project_credentials)
+             ]
     end
 
     test "get_credential!/1 returns the credential with given id" do

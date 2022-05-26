@@ -9,8 +9,8 @@ defmodule Lightning.Pipeline.RunnerTest do
   test "start/2 takes a run and executes it" do
     credential_body = %{"username" => "quux"}
 
-    credential =
-      credential_fixture(name: "test credential", body: credential_body)
+    project_credential =
+      project_credential_fixture(name: "test credential", body: credential_body)
 
     job =
       job_fixture(
@@ -27,7 +27,7 @@ defmodule Lightning.Pipeline.RunnerTest do
           });
         });
         """,
-        credential_id: credential.id
+        project_credential_id: project_credential.id
       )
 
     dataclip_body = %{"foo" => "bar"}

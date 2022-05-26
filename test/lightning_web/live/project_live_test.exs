@@ -59,7 +59,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       index_live
       |> element("#member_list")
-      |> render_hook("select_member", %{"user_id" => user.id})
+      |> render_hook("select_item", %{"id" => user.id})
 
       index_live
       |> element("button", "Add")

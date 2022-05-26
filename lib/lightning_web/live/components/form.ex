@@ -262,6 +262,7 @@ defmodule LightningWeb.Components.Form do
       w-full
       rounded-md
       border-gray-300
+      sm:text-sm
       shadow-sm
       focus:border-indigo-300
       focus:ring
