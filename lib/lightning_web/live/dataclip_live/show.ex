@@ -17,11 +17,8 @@ defmodule LightningWeb.DataclipLive.Show do
   def handle_params(%{"id" => id}, _, socket) do
     {:noreply,
      socket
-     |> assign(:page_title, page_title(socket.assigns.live_action))
+     |> assign(:page_title, "Show Dataclip")
      |> assign(:active_menu_item, :dataclips)
      |> assign(:dataclip, Invocation.get_dataclip!(id))}
   end
-
-  defp page_title(:show), do: "Show Dataclip"
-  defp page_title(:edit), do: "Edit Dataclip"
 end

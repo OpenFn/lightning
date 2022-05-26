@@ -52,12 +52,12 @@ defmodule Lightning.Invocation do
       [%Dataclip{}, ...]
 
   """
-  @spec list_dataclips() :: [%Dataclip{}]
+  @spec list_dataclips() :: [Dataclip.t()]
   def list_dataclips do
     Repo.all(Dataclip)
   end
 
-  @spec list_dataclips(project :: Project.t()) :: [%Dataclip{}]
+  @spec list_dataclips(project :: Project.t()) :: [Dataclip.t()]
   def list_dataclips(%Project{id: project_id}) do
     from(d in Dataclip,
       join: e in Event,
