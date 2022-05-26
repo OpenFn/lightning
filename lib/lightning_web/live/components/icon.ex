@@ -70,6 +70,47 @@ defmodule LightningWeb.Components.Icon do
     """
   end
 
+  def archive(assigns) do
+    ~H"""
+    <.outer_svg {assigns}>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+      />
+    </.outer_svg>
+    """
+  end
+
+  def warning(assigns) do
+    ~H"""
+    <.outer_svg {assigns}>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+      />
+    </.outer_svg>
+    """
+  end
+
+  def eye(assigns) do
+    ~H"""
+    <.outer_svg {assigns}>
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+      />
+    </.outer_svg>
+    """
+  end
+
   defp outer_svg(assigns) do
     default_classes = ~w[h-5 w-5 inline-block]
     attrs = build_attrs(assigns, default_classes)

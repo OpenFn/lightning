@@ -71,33 +71,29 @@ defmodule LightningWeb.Router do
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
-      live("/jobs", JobLive.Index, :index)
-      live("/jobs/new", JobLive.Index, :new)
-      # live "/jobs/:id/edit", JobLive.Index, :edit
+      scope "/projects/:project_id", as: :project do
+        live("/jobs", JobLive.Index, :index)
+        live("/jobs/new", JobLive.Index, :new)
+        live("/jobs/:id", JobLive.Show, :show)
+        live("/jobs/:id/edit", JobLive.Edit, :edit)
 
-      live("/jobs/:id", JobLive.Show, :show)
-      live("/jobs/:id/edit", JobLive.Edit, :edit)
-      # live "/jobs/:id/show/edit", JobLive.Show, :edit
+        live("/runs", RunLive.Index, :index)
+        live("/runs/:id", RunLive.Index, :show)
+
+        live("/dataclips", DataclipLive.Index, :index)
+        live("/dataclips/new", DataclipLive.Index, :new)
+        live("/dataclips/:id", DataclipLive.Show, :show)
+
+        live("/", DashboardLive.Index, :index)
+      end
+
+      # live("/jobs", JobLive.Index, :index)
 
       live("/credentials", CredentialLive.Index, :index)
       live("/credentials/new", CredentialLive.Index, :new)
 
       live("/credentials/:id", CredentialLive.Show, :show)
       live("/credentials/:id/edit", CredentialLive.Edit, :edit)
-
-      live("/dataclips", DataclipLive.Index, :index)
-      live("/dataclips/new", DataclipLive.Index, :new)
-      live("/dataclips/:id/edit", DataclipLive.Index, :edit)
-
-      live("/dataclips/:id", DataclipLive.Show, :show)
-      live("/dataclips/:id/show/edit", DataclipLive.Show, :edit)
-
-      live("/runs", RunLive.Index, :index)
-      live("/runs/new", RunLive.Index, :new)
-      live("/runs/:id/edit", RunLive.Index, :edit)
-
-      live("/runs/:id", RunLive.Show, :show)
-      live("/runs/:id/show/edit", RunLive.Show, :edit)
 
       live("/", DashboardLive.Index, :index)
     end
@@ -141,5 +137,18 @@ defmodule LightningWeb.Router do
 
       forward("/mailbox", Plug.Swoosh.MailboxPreview)
     end
+  end
+
+  forward "/health_check", LightningWeb.HealthCheck
+end
+
+defmodule LightningWeb.HealthCheck do
+  use Plug.Router
+
+  plug :match
+  plug :dispatch
+
+  get "/" do
+    send_resp(conn, 200, "Hello you!")
   end
 end

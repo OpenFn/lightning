@@ -25,6 +25,9 @@ defmodule Lightning.InvocationFixtures do
   def event_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, event} =
       attrs
+      |> Keyword.put_new_lazy(:project_id, fn ->
+        Lightning.ProjectsFixtures.project_fixture().id
+      end)
       |> Enum.into(%{
         type: :webhook,
         dataclip_id: dataclip_fixture().id,
@@ -41,6 +44,7 @@ defmodule Lightning.InvocationFixtures do
   def run_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, run} =
       attrs
+      |> Keyword.put_new_lazy(:event_id, fn -> event_fixture().id end)
       |> Enum.into(%{
         exit_code: nil,
         finished_at: nil,
@@ -48,13 +52,6 @@ defmodule Lightning.InvocationFixtures do
         event_id: nil,
         started_at: nil
       })
-      |> Map.update!(:event_id, fn event_id ->
-        if event_id do
-          event_id
-        else
-          event_fixture().id
-        end
-      end)
       |> Lightning.Invocation.create_run()
 
     run

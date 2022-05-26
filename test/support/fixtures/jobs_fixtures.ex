@@ -4,6 +4,8 @@ defmodule Lightning.JobsFixtures do
   entities via the `Lightning.Jobs` context.
   """
 
+  import Lightning.ProjectsFixtures
+
   @doc """
   Generate a job.
   """
@@ -11,6 +13,7 @@ defmodule Lightning.JobsFixtures do
   def job_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, job} =
       attrs
+      |> Keyword.put_new_lazy(:project_id, fn -> project_fixture().id end)
       |> Enum.into(%{
         body: "fn(state => state)",
         enabled: true,

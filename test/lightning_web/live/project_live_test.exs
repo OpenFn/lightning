@@ -8,9 +8,6 @@ defmodule LightningWeb.ProjectLiveTest do
   @create_attrs %{
     raw_name: "some name"
   }
-  @update_attrs %{
-    raw_name: "some updated name"
-  }
   @invalid_attrs %{raw_name: nil}
 
   defp create_project(_) do

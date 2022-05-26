@@ -1,18 +1,5 @@
 <h1>Show Dataclip</h1>
 
-<%= if @live_action in [:edit] do %>
-  <.modal return_to={Routes.dataclip_show_path(@socket, :show, @dataclip)}>
-    <.live_component
-      module={LightningWeb.DataclipLive.FormComponent}
-      id={@dataclip.id}
-      title={@page_title}
-      action={@live_action}
-      dataclip={@dataclip}
-      return_to={Routes.dataclip_show_path(@socket, :show, @dataclip)}
-    />
-  </.modal>
-<% end %>
-
 <ul>
   <li>
     <strong>Body:</strong>
@@ -26,12 +13,7 @@
 </ul>
 
 <span>
-  <%= live_patch("Edit",
-    to: Routes.dataclip_show_path(@socket, :edit, @dataclip),
-    class: "button"
+  <%= live_redirect("Back",
+    to: Routes.project_dataclip_index_path(@socket, :index, @project.id)
   ) %>
-</span>
-|
-<span>
-  <%= live_redirect("Back", to: Routes.dataclip_index_path(@socket, :index)) %>
 </span>

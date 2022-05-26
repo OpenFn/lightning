@@ -2,12 +2,16 @@
   <div class="flex flex-row h-full">
     <div class="flex-none w-48 bg-indigo-800 h-full">
       <div class="flex flex-col h-full">
-        <div class="w-full h-20 bg-indigo-900 flex items-center justify-center mb-4">
-          <img
-            class="h-10 w-10"
-            src={Routes.static_path(@socket || @conn, "/images/logo-white.svg")}
-            alt="OpenFn"
-          />
+        <div class="w-full h-20 bg-indigo-900 flex items-center justify-center">
+          <%= live_redirect(to: Routes.dashboard_index_path(@socket, :index)) do %>
+            <img
+              class="h-10 w-10"
+              src={
+                Routes.static_path(@socket || @conn, "/images/logo-white.svg")
+              }
+              alt="OpenFn"
+            />
+          <% end %>
         </div>
         <%= unless assigns[:is_first_setup] do %>
           <%= render("menu_items.html", assigns) %>
@@ -26,11 +30,12 @@
         <% end %>
       </div>
     </div>
-    <div class="flex-auto">
+    <div class="flex-auto over">
       <.live_info_block flash={@flash} />
       <.live_error_block flash={@flash} />
-
-      <%= @inner_content %>
+      <.live_nav_block flash={@flash}>
+        <%= @inner_content %>
+      </.live_nav_block>
     </div>
   </div>
 </main>

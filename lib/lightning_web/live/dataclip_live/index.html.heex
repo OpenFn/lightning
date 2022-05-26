@@ -2,59 +2,72 @@
 
 <MainSection.main>
   <%= if @live_action in [:new, :edit] do %>
-    <.modal return_to={Routes.dataclip_index_path(@socket, :index)}>
-      <.live_component
-        module={LightningWeb.DataclipLive.FormComponent}
-        id={@dataclip.id || :new}
-        title={@page_title}
-        action={@live_action}
-        dataclip={@dataclip}
-        return_to={Routes.dataclip_index_path(@socket, :index)}
-      />
-    </.modal>
+    <.live_component
+      module={LightningWeb.DataclipLive.FormComponent}
+      id={@dataclip.id || :new}
+      title={@page_title}
+      action={@live_action}
+      dataclip={@dataclip}
+      return_to={
+        Routes.project_dataclip_index_path(@socket, :index, @project.id)
+      }
+    />
+  <% else %>
+    <%= if length(@dataclips) > 0 do %>
+      <table class="table-auto w-full">
+        <thead>
+          <tr class="text-left">
+            <th>Created</th>
+            <th>Type</th>
+            <th>Body</th>
+
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dataclips">
+          <%= for dataclip <- @dataclips do %>
+            <tr id={"dataclip-#{dataclip.id}"}>
+              <td><%= dataclip.inserted_at |> Calendar.strftime("%c") %></td>
+              <td>
+                <.type_pill dataclip={dataclip} />
+              </td>
+              <td><%= dataclip.body %></td>
+
+              <td>
+                <div class="inline-block"></div>
+                <%= link(
+                  to: "#",
+                  phx_click: "delete",
+                  phx_value_id: dataclip.id,
+                  data: [confirm: "Are you sure?"],
+                  class: "inline-block align-middle"
+
+                ) do %>
+                  <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
+                <% end %>
+                <%= live_redirect(
+                    to:
+                      Routes.project_dataclip_show_path(
+                        @socket,
+                        :show,
+                        @project.id,
+                        dataclip
+                      ),
+
+                  class: "inline-block align-middle"
+                  ) do %>
+                  <Icon.eye class="h-6 w-6 text-slate-300 hover:text-blue-700" />
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <div class="mx-auto my-12 p-6 text-slate-700 text-center 
+                  border-dashed border-2 border-slate-300 rounded-md md:w-1/2">
+        There are currently no dataclips.
+      </div>
+    <% end %>
   <% end %>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Body</th>
-        <th>Type</th>
-
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="dataclips">
-      <%= for dataclip <- @dataclips do %>
-        <tr id={"dataclip-#{dataclip.id}"}>
-          <td><%= dataclip.body %></td>
-          <td><%= dataclip.type %></td>
-
-          <td>
-            <span>
-              <%= live_redirect("Show",
-                to: Routes.dataclip_show_path(@socket, :show, dataclip)
-              ) %>
-            </span>
-            <span>
-              <%= live_patch("Edit",
-                to: Routes.dataclip_index_path(@socket, :edit, dataclip)
-              ) %>
-            </span>
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: dataclip.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
-            </span>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-
-  <span>
-    <%= live_patch("New Dataclip", to: Routes.dataclip_index_path(@socket, :new)) %>
-  </span>
 </MainSection.main>

@@ -19,7 +19,7 @@ defmodule Lightning.InvocationTest do
                 run: %Run{}
               }} =
                Invocation.create(
-                 %{job_id: job.id, type: :webhook},
+                 %{job_id: job.id, project_id: job.project_id, type: :webhook},
                  %{type: :http_request, body: %{"foo" => "bar"}}
                )
     end
@@ -111,13 +111,11 @@ defmodule Lightning.InvocationTest do
       assert dataclip == Invocation.get_dataclip!(dataclip.id)
     end
 
-    test "delete_dataclip/1 deletes the dataclip" do
+    test "delete_dataclip/1 sets the body to nil" do
       dataclip = dataclip_fixture()
       assert {:ok, %Dataclip{}} = Invocation.delete_dataclip(dataclip)
 
-      assert_raise Ecto.NoResultsError, fn ->
-        Invocation.get_dataclip!(dataclip.id)
-      end
+      assert %{body: nil} = Invocation.get_dataclip!(dataclip.id)
     end
 
     test "change_dataclip/1 returns a dataclip changeset" do
@@ -135,7 +133,13 @@ defmodule Lightning.InvocationTest do
     test "create_event/1 with valid data creates an event" do
       dataclip = dataclip_fixture()
       job = job_fixture()
-      valid_attrs = %{type: :webhook, dataclip_id: dataclip.id, job_id: job.id}
+
+      valid_attrs = %{
+        type: :webhook,
+        project_id: job.project_id,
+        dataclip_id: dataclip.id,
+        job_id: job.id
+      }
 
       assert {:ok, %Event{} = event} = Invocation.create_event(valid_attrs)
       event = Repo.preload(event, [:dataclip, :job])

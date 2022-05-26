@@ -22,12 +22,13 @@ defmodule Lightning.Pipeline do
       next_dataclip_id = get_next_dataclip_id(result, run)
 
       jobs
-      |> Enum.map(fn %{id: job_id} ->
+      |> Enum.map(fn %{id: job_id, project_id: project_id} ->
         %{
           job_id: job_id,
           type: :flow,
           dataclip_id: next_dataclip_id,
-          source_id: event.id
+          source_id: event.id,
+          project_id: project_id
         }
       end)
       |> Enum.map(fn attrs ->

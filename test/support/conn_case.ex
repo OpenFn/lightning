@@ -55,14 +55,32 @@ defmodule LightningWeb.ConnCase do
   It stores an updated connection and a registered user in the
   test context.
   """
-  def register_and_log_in_user(%{conn: conn} = attrs) do
+  def register_and_log_in_user(%{conn: conn}) do
     user = Lightning.AccountsFixtures.user_fixture()
-    Map.merge(attrs, %{conn: log_in_user(conn, user), user: user})
+    %{conn: log_in_user(conn, user), user: user}
   end
 
-  def register_and_log_in_superuser(%{conn: conn} = attrs) do
+  def register_and_log_in_superuser(%{conn: conn}) do
     user = Lightning.AccountsFixtures.superuser_fixture()
-    Map.merge(attrs, %{conn: log_in_user(conn, user), user: user})
+    %{conn: log_in_user(conn, user), user: user}
+  end
+
+  @doc """
+  Setup helper that adds the current user to a new project
+
+      setup :register_and_login_user
+      # ^ Must have a `:user` key in the context before calling
+      setup :create_project_for_current_user
+
+  It then adds the project (as `:project`) to the setup context
+  """
+  def create_project_for_current_user(%{user: user}) do
+    project =
+      Lightning.ProjectsFixtures.project_fixture(
+        project_users: [%{user_id: user.id}]
+      )
+
+    %{project: project}
   end
 
   @doc """

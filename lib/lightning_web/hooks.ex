@@ -1,0 +1,35 @@
+defmodule LightningWeb.Hooks do
+  @moduledoc """
+  LiveView Hooks
+  """
+  import Phoenix.LiveView
+
+  @doc """
+  Finds and assigns a project to the socket, if a user doesn't have access
+  they are redirected and shown a 'No Access' screen via a `:nav` flash message.
+
+  There is a fallthru function, when there is no `project_id` in the params -
+  this is for liveviews that may or may not have a `project_id` depending on
+  usage - like `DashboardLive`.
+  """
+  def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
+    project = Lightning.Projects.get_project(project_id)
+
+    case Bodyguard.permit(
+           Lightning.Projects.Policy,
+           :read,
+           socket.assigns.current_user,
+           project
+         ) do
+      {:error, :unauthorized} ->
+        {:halt, redirect(socket, to: "/") |> put_flash(:nav, :no_access)}
+
+      :ok ->
+        {:cont, socket |> assign(project: project)}
+    end
+  end
+
+  def on_mount(:project_scope, _, _session, socket) do
+    {:cont, socket}
+  end
+end

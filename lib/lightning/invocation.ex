@@ -8,6 +8,7 @@ defmodule Lightning.Invocation do
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Event, Run}
+  alias Lightning.Projects.Project
   alias Ecto.Multi
 
   @doc """
@@ -15,7 +16,7 @@ defmodule Lightning.Invocation do
   as a Dataclip; resulting in a Run associated with the Event.
   """
   @spec create(
-          %{job_id: binary(), type: :webhook},
+          %{job_id: binary(), project_id: binary(), type: :webhook},
           %{type: :http_request, body: map()}
         ) :: {:ok | :error, any}
   def create(event_attrs, dataclip_attrs) do
@@ -51,8 +52,19 @@ defmodule Lightning.Invocation do
       [%Dataclip{}, ...]
 
   """
+  @spec list_dataclips() :: [Dataclip.t()]
   def list_dataclips do
     Repo.all(Dataclip)
+  end
+
+  @spec list_dataclips(project :: Project.t()) :: [Dataclip.t()]
+  def list_dataclips(%Project{id: project_id}) do
+    from(d in Dataclip,
+      join: e in Event,
+      on: e.dataclip_id == d.id or d.source_event_id == e.id,
+      where: e.project_id == ^project_id
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -173,7 +185,11 @@ defmodule Lightning.Invocation do
 
   """
   def delete_dataclip(%Dataclip{} = dataclip) do
-    Repo.delete(dataclip)
+    dataclip
+    |> Dataclip.changeset(%{})
+    |> Map.put(:action, :delete)
+    |> Dataclip.changeset(%{body: nil})
+    |> Repo.update()
   end
 
   @doc """
@@ -218,6 +234,11 @@ defmodule Lightning.Invocation do
   """
   def list_runs do
     Repo.all(Run)
+  end
+
+  def list_runs_for_project(%Project{id: project_id}) do
+    from(r in Run, join: p in assoc(r, :project), where: p.id == ^project_id)
+    |> Repo.all()
   end
 
   @doc """
