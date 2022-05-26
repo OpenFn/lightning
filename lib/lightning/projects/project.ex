@@ -5,7 +5,7 @@ defmodule Lightning.Projects.Project do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Projects.ProjectUser
+  alias Lightning.Projects.{ProjectUser, ProjectCredential}
   alias Lightning.Jobs.Job
 
   @type t :: %__MODULE__{
@@ -19,6 +19,9 @@ defmodule Lightning.Projects.Project do
   schema "projects" do
     field :name, :string
     has_many :project_users, ProjectUser
+    has_many :project_credentials, ProjectCredential
+    has_many :credentials, through: [:project_credentials, :credential]
+
     has_many :jobs, Job
 
     timestamps()

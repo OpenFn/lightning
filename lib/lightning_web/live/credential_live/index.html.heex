@@ -8,6 +8,7 @@
         id={@credential.id || :new}
         title={@page_title}
         action={@live_action}
+        projects={@projects}
         credential={@credential}
         return_to={Routes.credential_index_path(@socket, :index)}
       />

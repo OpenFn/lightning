@@ -8,12 +8,27 @@ defmodule Lightning.ProjectsTest do
 
     import Lightning.ProjectsFixtures
     import Lightning.AccountsFixtures
+    import Lightning.CredentialsFixtures
 
     @invalid_attrs %{name: nil}
 
     test "list_projects/0 returns all projects" do
       project = project_fixture()
       assert Projects.list_projects() == [project]
+    end
+
+    test "list_project_credentials/1 returns all project_credentials for a project" do
+      user = user_fixture()
+      project = project_fixture(project_users: [%{user_id: user.id}])
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          project_credentials: [%{project_id: project.id}]
+        )
+
+      assert Projects.list_project_credentials(project) ==
+               credential.project_credentials |> Repo.preload(:credential)
     end
 
     test "get_project!/1 returns the project with given id" do

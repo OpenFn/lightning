@@ -25,4 +25,25 @@ defmodule Lightning.CredentialsFixtures do
 
     credential
   end
+
+  def project_credential_fixture(attrs \\ []) when is_list(attrs) do
+    {:ok, credential} =
+      Lightning.Credentials.update_credential(
+        credential_fixture(attrs)
+        |> Lightning.Repo.preload(:project_credentials),
+        %{
+          project_credentials: [
+            %{
+              project_id:
+                attrs[:project_id] ||
+                  Lightning.ProjectsFixtures.project_fixture().id
+            }
+          ]
+        }
+      )
+
+    credential
+    |> Map.get(:project_credentials)
+    |> List.first()
+  end
 end

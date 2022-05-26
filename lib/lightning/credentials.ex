@@ -8,6 +8,7 @@ defmodule Lightning.Credentials do
   alias Lightning.Repo
 
   alias Lightning.Credentials.Credential
+  alias Lightning.Projects.Project
 
   @doc """
   Returns the list of credentials.
@@ -20,6 +21,11 @@ defmodule Lightning.Credentials do
   """
   def list_credentials do
     Repo.all(Credential)
+  end
+
+  def list_credentials(%Project{} = project) do
+    Ecto.assoc(project, :credentials)
+    |> Repo.all()
   end
 
   @doc """

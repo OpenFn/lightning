@@ -23,7 +23,7 @@ defmodule Lightning.Jobs.Job do
 
   alias Lightning.Jobs.Trigger
   alias Lightning.Credentials.Credential
-  alias Lightning.Projects.Project
+  alias Lightning.Projects.{Project, ProjectCredential}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -48,7 +48,9 @@ defmodule Lightning.Jobs.Job do
     has_one :trigger, Trigger
     has_many :events, Lightning.Invocation.Event
 
-    belongs_to :credential, Credential
+    # belongs_to :credential, Credential
+    belongs_to :project_credential, ProjectCredential
+    has_one :credential, through: [:project_credential, :credential]
     belongs_to :project, Project
 
     timestamps()
@@ -62,11 +64,10 @@ defmodule Lightning.Jobs.Job do
       :body,
       :enabled,
       :adaptor,
-      :credential_id,
+      :project_credential_id,
       :project_id
     ])
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
-    |> cast_assoc(:credential, with: &Credential.changeset/2)
     |> validate_required([:name, :body, :enabled, :adaptor, :project_id])
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)

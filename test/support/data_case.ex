@@ -23,6 +23,9 @@ defmodule Lightning.DataCase do
       import Ecto
       import Ecto.Changeset
       import Ecto.Query
+
+      import Lightning.ModelHelpers
+
       import Lightning.DataCase
     end
   end

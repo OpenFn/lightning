@@ -26,10 +26,10 @@ import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 
 let Hooks = {};
-Hooks.MemberListChange = {
+Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener("change", (event) => {
-      this.pushEventTo(this.el, "select_member", { user_id: this.el.value });
+      this.pushEventTo(this.el, "select_item", { id: this.el.value });
     });
   },
 };

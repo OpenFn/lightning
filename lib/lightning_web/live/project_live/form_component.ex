@@ -87,8 +87,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   @impl true
   def handle_event(
-        "select_member",
-        %{"user_id" => user_id},
+        "select_item",
+        %{"id" => user_id},
         socket
       ) do
     {:noreply, socket |> assign(selected_member: user_id)}

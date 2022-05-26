@@ -7,6 +7,7 @@ defmodule Lightning.PipelineTest do
   import Lightning.InvocationFixtures
   import Lightning.JobsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.ProjectsFixtures
 
   describe "process/1" do
     test "starts a run for a given event and executes it's on_job_failure downstream job" do
@@ -19,8 +20,8 @@ defmodule Lightning.PipelineTest do
         job_fixture(
           trigger: %{type: :on_job_failure, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
-          credential_id:
-            credential_fixture(
+          project_credential_id:
+            project_credential_fixture(
               name: "my credential",
               body: %{"credential" => "body"}
             ).id
@@ -60,10 +61,27 @@ defmodule Lightning.PipelineTest do
     end
 
     test "starts a run for a given event and executes it's on_job_success downstream job" do
+      project = project_fixture()
+
+      project_credential =
+        credential_fixture(project_credentials: [%{project_id: project.id}])
+        |> Map.get(:project_credentials)
+        |> List.first()
+
+      other_project_credential =
+        credential_fixture(
+          name: "my credential",
+          body: %{"credential" => "body"},
+          project_credentials: [%{project_id: project.id}]
+        )
+        |> Map.get(:project_credentials)
+        |> List.first()
+
       job =
         job_fixture(
           body: ~s[fn(state => { return {...state, extra: "data"} })],
-          credential_id: credential_fixture().id
+          project_credential_id: project_credential.id,
+          project_id: project.id
         )
 
       %{id: downstream_job_id} =
@@ -71,11 +89,8 @@ defmodule Lightning.PipelineTest do
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           name: "on previous job success",
           body: ~s[fn(state => state)],
-          credential_id:
-            credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          project_id: project.id,
+          project_credential_id: other_project_credential.id
         )
 
       event = event_fixture(job_id: job.id)

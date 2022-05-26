@@ -2,16 +2,14 @@ defmodule Lightning.JobsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Jobs
-  alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
   alias Lightning.Repo
 
   describe "jobs" do
     alias Lightning.Jobs.Job
 
     import Lightning.JobsFixtures
-    import Lightning.AccountsFixtures
     import Lightning.ProjectsFixtures
+    import Lightning.CredentialsFixtures
 
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
 
@@ -36,7 +34,7 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job!/1 returns the job with given id" do
-      job = job_fixture() |> unload_credential()
+      job = job_fixture() |> unload_relation(:credential)
 
       assert Jobs.get_job!(job.id) == job
 
@@ -46,18 +44,21 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job/1 returns the job with given id" do
-      job = job_fixture() |> unload_credential()
+      job = job_fixture() |> unload_relation(:credential)
 
       assert Jobs.get_job(job.id) == job
       assert Jobs.get_job(Ecto.UUID.generate()) == nil
     end
 
     test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture(trigger: %{}) |> unload_credential()
+      job = job_fixture(trigger: %{}) |> unload_relation(:credential)
 
       assert Jobs.get_job_by_webhook(job.id) == job
 
-      job = job_fixture(trigger: %{custom_path: "foo"}) |> unload_credential()
+      job =
+        job_fixture(trigger: %{custom_path: "foo"})
+        |> unload_relation(:credential)
+
       assert Jobs.get_job_by_webhook(job.id) == nil
       assert Jobs.get_job_by_webhook("foo") == job
     end
@@ -81,12 +82,11 @@ defmodule Lightning.JobsTest do
     end
 
     test "create_job/1 with a credential associated creates a Job with credential_id and a credential object" do
-      {:ok, %Credential{} = credential} =
-        Credentials.create_credential(%{
-          body: %{},
-          name: "My credential",
-          user_id: user_fixture().id
-        })
+      project_credential =
+        project_credential_fixture(
+          name: "new credential",
+          body: %{"foo" => "manchu"}
+        )
 
       assert {:ok, %Job{} = job} =
                Jobs.create_job(%{
@@ -95,15 +95,15 @@ defmodule Lightning.JobsTest do
                  name: "some name",
                  trigger: %{comment: "foo"},
                  adaptor: "@openfn/language-common",
-                 credential_id: credential.id,
+                 project_credential_id: project_credential.id,
                  project_id: project_fixture().id
                })
 
       job = Repo.preload(job, :credential)
 
-      assert job.credential_id == credential.id
-      assert job.credential.name == credential.name
-      assert job.credential.body == credential.body
+      assert job.project_credential_id == project_credential.id
+      assert job.credential.name == "new credential"
+      assert job.credential.body == %{"foo" => "manchu"}
     end
 
     test "create_job/1 with invalid data returns error changeset" do
@@ -163,18 +163,5 @@ defmodule Lightning.JobsTest do
       assert Jobs.get_downstream_jobs_for(job, :on_job_success) == []
       assert Jobs.get_downstream_jobs_for(other_job) == []
     end
-  end
-
-  # Replace an preloaded Credential with an Ecto.Association.NotLoaded struct
-  # Our factories product models with Credentials on them but our context
-  # functions don't preload credentials - this helps make make our factories
-  # uniform for these specific tests.
-  defp unload_credential(job) do
-    job
-    |> Map.replace(:credential, %Ecto.Association.NotLoaded{
-      __field__: :credential,
-      __cardinality__: :one,
-      __owner__: Lightning.Jobs.Job
-    })
   end
 end
