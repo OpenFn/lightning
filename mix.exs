@@ -46,39 +46,41 @@ defmodule Lightning.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:crontab, "~> 1.1"},
       {:bcrypt_elixir, "~> 2.0"},
+      {:bodyguard, "~> 2.2"},
       {:credo, "~> 1.6", only: [:test, :dev]},
+      {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
+      {:ecto_enum, "~> 1.4"},
       {:ecto_sql, "~> 3.6"},
+      {:engine, github: "OpenFn/engine", tag: "v0.5.1"},
+      # {:engine, path: "../engine"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.4", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
+      {:hackney, "~> 1.8"},
       {:httpoison, "~> 1.8"},
       {:jason, "~> 1.2"},
-      {:engine, github: "OpenFn/engine", tag: "v0.5.1"},
-      # {:engine, path: "../engine"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:phoenix, "~> 1.6.7"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
       {:phoenix_live_dashboard, "~> 0.6.5"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.10"},
+      {:phoenix, "~> 1.6.7"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
+      {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
-      {:temp, "~> 0.4"},
-      {:ecto_enum, "~> 1.4"},
-      {:bodyguard, "~> 2.2"}
+      {:temp, "~> 0.4"}
     ]
   end
 
