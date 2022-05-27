@@ -25,19 +25,12 @@ listen_address =
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
-sentry_env =
-  case System.get_env("SENTRY_ENVIRONMENT") do
-    nil -> nil
-    str -> String.to_atom(str)
-  end
-
+# If you've booted up with a SENTRY_DSN environment variable, use Sentry!
 config :sentry,
-  dsn: System.get_env("SENTRY_DSN"),
   filter: Lightning.SentryEventFilter,
-  environment_name: sentry_env,
-  enable_source_code_context: true,
-  root_source_code_path: File.cwd!(),
-  included_environments: [:staging, :prod]
+  environment_name: config_env(),
+  included_environments:
+    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
 
 if config_env() == :prod do
   database_url =
