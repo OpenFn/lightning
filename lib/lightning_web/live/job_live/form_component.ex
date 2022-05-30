@@ -107,6 +107,7 @@ defmodule LightningWeb.JobLive.FormComponent do
     adaptor_names =
       Lightning.AdaptorRegistry.all()
       |> Enum.map(&Map.get(&1, :name))
+      |> Enum.sort()
 
     {module_name, version, versions} =
       if adaptor do
@@ -117,6 +118,7 @@ defmodule LightningWeb.JobLive.FormComponent do
           Lightning.AdaptorRegistry.versions_for(module_name)
           |> List.wrap()
           |> Enum.map(&Map.get(&1, :version))
+          |> Enum.sort_by(&Version.parse(&1), :desc)
           |> Enum.map(fn version ->
             [key: version, value: "#{module_name}@#{version}"]
           end)
