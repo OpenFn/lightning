@@ -84,7 +84,7 @@ defmodule LightningWeb.Router do
         live("/dataclips/new", DataclipLive.Index, :new)
         live("/dataclips/:id", DataclipLive.Show, :show)
 
-        live("/", DashboardLive.Index, :index)
+        live("/", DashboardLive.Index, :show)
       end
 
       # live("/jobs", JobLive.Index, :index)
