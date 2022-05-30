@@ -2,14 +2,13 @@ defmodule Lightning.ProjectsTest do
   use Lightning.DataCase
 
   alias Lightning.Projects
+  alias Lightning.Projects.Project
+
+  import Lightning.ProjectsFixtures
+  import Lightning.AccountsFixtures
+  import Lightning.CredentialsFixtures
 
   describe "projects" do
-    alias Lightning.Projects.Project
-
-    import Lightning.ProjectsFixtures
-    import Lightning.AccountsFixtures
-    import Lightning.CredentialsFixtures
-
     @invalid_attrs %{name: nil}
 
     test "list_projects/0 returns all projects" do
@@ -127,6 +126,95 @@ defmodule Lightning.ProjectsTest do
 
       assert [project_1, project_2] == Projects.get_projects_for_user(user)
       assert [project_1] == Projects.get_projects_for_user(other_user)
+    end
+  end
+
+  describe "project structure" do
+    import Ecto.Query
+    alias Lightning.Jobs.Job
+    import Lightning.JobsFixtures
+
+    test "can do fancy recursive cte" do
+      project = project_fixture()
+
+      job =
+        job_fixture(
+          name: "webhook job",
+          project_id: project.id,
+          trigger: %{type: :webhook}
+        )
+
+      on_fail_job =
+        job_fixture(
+          name: "on fail",
+          project_id: project.id,
+          trigger: %{type: :on_job_failure, upstream_job_id: job.id}
+        )
+
+      on_success_job =
+        job_fixture(
+          name: "on success",
+          project_id: project.id,
+          trigger: %{type: :on_job_success, upstream_job_id: job.id}
+        )
+
+      initial_query =
+        Job
+        |> join(:inner, [j], t in assoc(j, :trigger))
+        |> where([j, t], is_nil(t.upstream_job_id))
+        |> select([j, t], %{
+          id: j.id,
+          name: j.name,
+          adaptor: j.adaptor,
+          upstream_job_id: t.upstream_job_id,
+          trigger_type: t.type
+        })
+
+      recursion_query =
+        Job
+        |> join(:inner, [j], t in assoc(j, :trigger))
+        |> join(:inner, [j, t], w in "workflows", on: w.id == t.upstream_job_id)
+        |> select([j, t], %{
+          id: j.id,
+          name: j.name,
+          adaptor: j.adaptor,
+          upstream_job_id: t.upstream_job_id,
+          trigger_type: t.type
+        })
+
+      tree_query =
+        initial_query
+        |> union_all(^recursion_query)
+
+      Job
+      |> recursive_ctes(true)
+      |> with_cte("workflows", as: ^tree_query)
+      |> Repo.all()
+      |> IO.inspect()
+      |> Enum.map(fn j ->
+        %{
+          "id" => j.id,
+          "name" => j.name,
+          "trigger" => %{
+            "type" => j.trigger_type,
+            "upstreamJob" => j.upstream_job_id
+          }
+        }
+      end)
+      |> IO.inspect()
+
+      from(j in Job,
+        join: t in assoc(j, :trigger),
+        order_by: [desc_nulls_first: t.upstream_job_id],
+        select: %{
+          id: j.id,
+          name: j.name,
+          adaptor: j.adaptor,
+          upstream_job_id: t.upstream_job_id,
+          trigger_type: t.type
+        }
+      )
+      |> Repo.all()
     end
   end
 end

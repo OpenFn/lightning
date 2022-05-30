@@ -19,6 +19,10 @@
       <% end %>
     <% end %>
   <% else %>
-    <div phx-hook="WorkflowDiagram" id={@project.id}></div>
+    <.live_component
+      module={LightningWeb.WorkflowDiagramLive}
+      id={@project.id}
+      project={@project}
+    />
   <% end %>
 </MainSection.main>
