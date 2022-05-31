@@ -76,6 +76,7 @@ defmodule Lightning.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
+      {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},

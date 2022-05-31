@@ -4,6 +4,7 @@ defmodule LightningWeb.JobLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.JobsFixtures
   import Lightning.CredentialsFixtures
+  import SweetXml
 
   @create_attrs %{
     body: "some body",
@@ -63,6 +64,21 @@ defmodule LightningWeb.JobLiveTest do
       assert index_live
              |> form("#job-form", job: %{adaptor_name: "@openfn/language-common"})
              |> render_change()
+
+      assert index_live
+             |> element("#adaptorVersionField")
+             |> render()
+             |> parse()
+             |> xpath(~x"option/text()"l) == [
+               'latest',
+               '2.14.0',
+               '1.10.3',
+               '1.2.22',
+               '1.2.14',
+               '1.2.3',
+               '1.1.12',
+               '1.1.0'
+             ]
 
       {:ok, _, html} =
         index_live
