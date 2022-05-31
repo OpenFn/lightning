@@ -103,15 +103,16 @@ ENV LC_ALL en_US.UTF-8
 
 WORKDIR "/app"
 
-RUN chown nobody /app
+RUN useradd --uid 1000 --home /app lightning
+RUN chown lightning /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
 
 # Only copy the final release and the adaptor directory from the build stage
-COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/lightning ./
-COPY --from=builder --chown=nobody:root /app/priv/openfn ./priv/openfn
+COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
+COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
 
-USER nobody
+USER lightning
 
 CMD /app/bin/server
