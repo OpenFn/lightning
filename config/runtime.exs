@@ -41,9 +41,10 @@ if config_env() == :prod do
       """
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
+  enforce_repo_ssl = System.get_env("DISABLE_DB_SSL") == "true"
 
   config :lightning, Lightning.Repo,
-    ssl: true,
+    ssl: enforce_repo_ssl,
     # TODO: determine why we see this certs verification warn for the repo conn
     # ssl_opts: [log_level: :error],
     url: database_url,
@@ -84,6 +85,10 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: origins,
     server: true
+
+  if log_level = System.get_env("LOG_LEVEL") do
+    config :logger, level: log_level |> String.to_atom()
+  end
 
   # ## Using releases
   #

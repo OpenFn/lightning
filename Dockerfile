@@ -108,6 +108,7 @@ RUN chown lightning /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
+ENV ADAPTORS_PATH /app/priv/openfn
 
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./

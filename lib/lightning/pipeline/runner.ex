@@ -72,14 +72,18 @@ defmodule Lightning.Pipeline.Runner do
     {:ok, final_state_path} = write_temp("", "output")
     {:ok, expression_path} = write_temp(expression, "expression")
 
+    adaptors_path =
+      Application.get_env(:lightning, :adaptor_service)
+      |> Keyword.get(:adaptors_path)
+
     runspec = %Engine.RunSpec{
       adaptor: local_name,
       state_path: state_path,
-      adaptors_path: "./priv/openfn/lib",
+      adaptors_path: "#{adaptors_path}/lib",
       final_state_path: final_state_path,
       expression_path: expression_path,
       env: %{
-        "PATH" => "./priv/openfn/bin:#{System.get_env("PATH")}"
+        "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
       },
       timeout: 60_000
     }
