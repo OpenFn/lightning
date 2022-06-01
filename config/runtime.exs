@@ -41,7 +41,7 @@ if config_env() == :prod do
       """
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
-  enforce_repo_ssl = System.get_env("DISABLE_DB_SSL") == "true"
+  enforce_repo_ssl = System.get_env("DISABLE_DB_SSL") != "true"
 
   config :lightning, Lightning.Repo,
     ssl: enforce_repo_ssl,
