@@ -62,7 +62,8 @@ defmodule Lightning.Invocation do
     from(d in Dataclip,
       join: e in Event,
       on: e.dataclip_id == d.id or d.source_event_id == e.id,
-      where: e.project_id == ^project_id
+      where: e.project_id == ^project_id,
+      order_by: [desc: d.inserted_at]
     )
     |> Repo.all()
   end
@@ -237,7 +238,11 @@ defmodule Lightning.Invocation do
   end
 
   def list_runs_for_project(%Project{id: project_id}) do
-    from(r in Run, join: p in assoc(r, :project), where: p.id == ^project_id)
+    from(r in Run,
+      join: p in assoc(r, :project),
+      where: p.id == ^project_id,
+      order_by: [desc: r.inserted_at]
+    )
     |> Repo.all()
   end
 

@@ -4,6 +4,19 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Invocation
   alias Lightning.Repo
   import Lightning.InvocationFixtures
+  import Lightning.ProjectsFixtures
+
+  @spec shift_inserted_at!(map(), list()) :: map()
+  defp shift_inserted_at!(struct, shift_attrs) do
+    inserted_at =
+      Map.get(struct, :inserted_at)
+      |> Timex.shift(shift_attrs)
+      |> Timex.to_naive_datetime()
+      |> NaiveDateTime.truncate(:second)
+
+    Ecto.Changeset.change(struct, %{inserted_at: inserted_at})
+    |> Repo.update!()
+  end
 
   describe "invocation" do
     import Lightning.JobsFixtures
@@ -33,6 +46,24 @@ defmodule Lightning.InvocationTest do
     test "list_dataclips/0 returns all dataclips" do
       dataclip = dataclip_fixture()
       assert Invocation.list_dataclips() == [dataclip]
+    end
+
+    test "list_dataclips/1 returns dataclips for project, desc by inserted_at" do
+      project = project_fixture([])
+
+      event = event_fixture(project_id: project.id)
+
+      old_dataclip =
+        dataclip_fixture(source_event_id: event.id)
+        |> shift_inserted_at!(days: -2)
+
+      new_dataclip =
+        dataclip_fixture(source_event_id: event.id)
+        |> shift_inserted_at!(days: -1)
+
+      assert Invocation.list_dataclips(project)
+             |> Enum.map(fn x -> x.id end) ==
+               [event.dataclip_id, new_dataclip.id, old_dataclip.id]
     end
 
     test "get_dataclip!/1 returns the dataclip with given id" do
@@ -170,6 +201,16 @@ defmodule Lightning.InvocationTest do
     test "list_runs/0 returns all runs" do
       run = run_fixture()
       assert Invocation.list_runs() == [run]
+    end
+
+    test "list_runs_for_project/1 returns runs ordered by inserted at desc" do
+      project = project_fixture([])
+      event = event_fixture(project_id: project.id)
+
+      first_run = run_fixture(event_id: event.id) |> shift_inserted_at!(days: -1)
+      second_run = run_fixture(event_id: event.id)
+
+      assert Invocation.list_runs_for_project(project) == [second_run, first_run]
     end
 
     test "get_run!/1 returns the run with given id" do
