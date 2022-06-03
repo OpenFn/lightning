@@ -1,20 +1,28 @@
-<MainSection.header title="Projects" />
+<MainSection.header title={@page_title} />
 
 <MainSection.main>
-  <%= for project <- @projects do %>
-    <%= link(
-      to: Routes.project_dashboard_index_path(@socket, :index, project.id),
+  <%= if @live_action == :index do %>
+    <%= for project <- @projects do %>
+      <%= live_redirect(
+      to: Routes.project_dashboard_index_path(@socket, :show, project.id),
       class: "block w-full",
       id: "project-#{project.id}") do %>
-      <Common.item_bar>
-        <div class="p-4">
-          <%= project.name %>
-        </div>
-        <div class="grow"></div>
-        <div class="flex h-14 w-12 items-center justify-center">
-          <Icon.right class="h-6 w-6 inline-block text-slate-600" />
-        </div>
-      </Common.item_bar>
+        <Common.item_bar>
+          <div class="p-4">
+            <%= project.name %>
+          </div>
+          <div class="grow"></div>
+          <div class="flex h-14 w-12 items-center justify-center">
+            <Icon.right class="h-6 w-6 inline-block text-slate-600" />
+          </div>
+        </Common.item_bar>
+      <% end %>
     <% end %>
+  <% else %>
+    <.live_component
+      module={LightningWeb.WorkflowDiagramLive}
+      id={@project.id}
+      project={@project}
+    />
   <% end %>
 </MainSection.main>

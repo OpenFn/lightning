@@ -12,10 +12,10 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.13.2-erlang-24.2.1-debian-bullseye-20210902-slim
 #
-ARG ELIXIR_VERSION=1.13.1
+ARG ELIXIR_VERSION=1.13.4
 ARG OTP_VERSION=24.2.1
 ARG DEBIAN_VERSION=bullseye-20210902-slim
-ARG NODE_VERSION=16
+ARG NODE_VERSION=16.15.1
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
@@ -27,10 +27,8 @@ ARG NODE_VERSION
 RUN apt-get update -y && apt-get install -y \
   build-essential curl git inotify-tools
 
-# isntall nodejs using nodesource
-# https://github.com/nodesource/distributions/blob/master/README.md#deb
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-RUN apt-get install -y nodejs
+COPY bin/install_node bin/install_node
+RUN bin/install_node ${NODE_VERSION}
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 
@@ -60,18 +58,14 @@ COPY lib lib
 
 RUN mix openfn.install.runtime
 
-# note: if your project uses a tool like https://purgecss.com/,
-# which customizes asset compilation based on what it finds in
-# your Elixir templates, you will need to move the asset compilation
-# step down so that `lib` is available.
 COPY assets assets
+RUN npm install --prefix assets
 
 # compile assets
 RUN mix assets.deploy
 
 
 # Compile the release
-
 RUN mix compile
 
 # Changes to config/runtime.exs don't require recompiling the code
@@ -87,10 +81,7 @@ FROM ${RUNNER_IMAGE}
 ARG NODE_VERSION
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
-  locales curl
-
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
-RUN apt-get install -y nodejs
+  locales curl gpg
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_**
 
@@ -100,6 +91,9 @@ RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen && locale-gen
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
+
+COPY bin/install_node tmp/install_node
+RUN tmp/install_node ${NODE_VERSION}
 
 WORKDIR "/app"
 

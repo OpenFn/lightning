@@ -2,14 +2,13 @@ defmodule Lightning.ProjectsTest do
   use Lightning.DataCase
 
   alias Lightning.Projects
+  alias Lightning.Projects.Project
+
+  import Lightning.ProjectsFixtures
+  import Lightning.AccountsFixtures
+  import Lightning.CredentialsFixtures
 
   describe "projects" do
-    alias Lightning.Projects.Project
-
-    import Lightning.ProjectsFixtures
-    import Lightning.AccountsFixtures
-    import Lightning.CredentialsFixtures
-
     @invalid_attrs %{name: nil}
 
     test "list_projects/0 returns all projects" do

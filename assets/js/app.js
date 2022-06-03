@@ -25,7 +25,9 @@ import { Socket } from "phoenix";
 import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 
-let Hooks = {};
+import WorkflowDiagram from "./workflow-diagram";
+
+let Hooks = {WorkflowDiagram};
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener("change", (event) => {
