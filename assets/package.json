@@ -8,11 +8,9 @@
   },
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0"
-  },
   "dependencies": {
-    "@openfn/workflow-diagram": "file:../../kit/packages/workflow-diagram"
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "@openfn/workflow-diagram": "0.0.1"
   }
 }

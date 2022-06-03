@@ -1,9 +1,31 @@
 defmodule LightningWeb.WorkflowDiagramLive do
   use LightningWeb, :live_component
 
-  def handle_event("component.mounted", params, socket) do
-    IO.inspect(params, label: "component.mounted")
+  alias Lightning.Jobs
 
-    {:noreply, push_event(socket, "update_diagram", %{"foo" => "bar"})}
+  def handle_event("component.mounted", _params, socket) do
+    project_space =
+      Jobs.get_workflows_for(socket.assigns.project)
+      |> to_project_space()
+
+    {:noreply, push_event(socket, "update_project_space", project_space)}
+  end
+
+  defp to_project_space(workflows) do
+    %{
+      "jobs" =>
+        workflows
+        |> Enum.map(fn {_workflow_id, job} ->
+          %{
+            "id" => job.id,
+            "name" => job.name,
+            "adaptor" => job.adaptor,
+            "trigger" => %{
+              "type" => job.trigger.type,
+              "upstreamJob" => job.trigger.upstream_job_id
+            }
+          }
+        end)
+    }
   end
 end
