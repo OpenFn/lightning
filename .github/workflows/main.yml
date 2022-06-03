@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-permissions: 
+permissions:
   contents: write
 jobs:
   build-and-deploy:
@@ -12,13 +12,16 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
 
-      - name: Generate docs 🔧
+      - name: Setup elixir & erlang
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '24.2'
-          elixir-version: '1.13.4'
-      - run: mix deps.get
-      - run: mix docs
+          otp-version: "24.2"
+          elixir-version: "1.13.4"
+
+      - name: Generate docs 🔧
+        run: |
+          mix deps.get
+          mix docs
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4.3.3
