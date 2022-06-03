@@ -29,16 +29,15 @@ defmodule Lightning.Jobs.Trigger do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "triggers" do
-    field(:comment, :string)
-    field(:custom_path, :string)
-    field(:cron_expression, :string)
-    belongs_to(:job, Job)
-    belongs_to(:upstream_job, Job)
+    field :comment, :string
+    field :custom_path, :string
+    field :cron_expression, :string
+    belongs_to :job, Job
+    belongs_to :upstream_job, Job
 
-    field(:type, Ecto.Enum,
+    field :type, Ecto.Enum,
       values: @trigger_types,
       default: :webhook
-    )
 
     timestamps()
   end

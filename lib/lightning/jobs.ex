@@ -6,7 +6,7 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Jobs.{Job, Trigger, Query}
   alias Lightning.Projects.Project
 
   @doc """
@@ -185,5 +185,33 @@ defmodule Lightning.Jobs do
   """
   def change_job(%Job{} = job, attrs \\ %{}) do
     Job.changeset(job, attrs)
+  end
+
+  def get_workflow_for(%Job{} = job) do
+    workflow_query = Query.workflow_query(job)
+
+    from(j in Job, join: w in subquery(workflow_query), on: j.id == w.job_id)
+    |> preload(:trigger)
+    |> Repo.all()
+  end
+
+  @doc """
+  Retrieves a list of Jobs with their initiating Job id in a tuple.
+  This is useful when needing to group a projects jobs by their 'Workflow'
+
+  E.g.
+  `{<initial_job_uuid>, %Job{}}`
+  """
+  def get_workflows_for(%Project{} = project) do
+    workflow_query = Query.workflow_query(project)
+
+    from(j in Job,
+      join: w in subquery(workflow_query),
+      on: j.id == w.job_id,
+      preload: :trigger,
+      group_by: [w.workflow_id, j.id],
+      select: {w.workflow_id, j}
+    )
+    |> Repo.all()
   end
 end
