@@ -3,7 +3,7 @@
 <MainSection.main>
   <%= if @live_action == :index do %>
     <%= for project <- @projects do %>
-      <%= link(
+      <%= live_redirect(
       to: Routes.project_dashboard_index_path(@socket, :show, project.id),
       class: "block w-full",
       id: "project-#{project.id}") do %>

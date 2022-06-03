@@ -1,4 +1,11 @@
 defmodule LightningWeb.WorkflowDiagramLive do
+  @moduledoc """
+  Workflow Diagram Component
+
+  The template uses the `WorkflowDiagram` hook, which loads the
+  `@openfn/workflow-diagram` React component; and then triggers the
+  `component.mounted` event.
+  """
   use LightningWeb, :live_component
 
   alias Lightning.Jobs

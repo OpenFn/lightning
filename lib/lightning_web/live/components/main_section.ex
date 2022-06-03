@@ -20,11 +20,11 @@ defmodule LightningWeb.Components.MainSection do
 
   def main(assigns) do
     ~H"""
-    <main>
+    <section id="inner">
       <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <%= render_slot(@inner_block) %>
       </div>
-    </main>
+    </section>
     """
   end
 end
