@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="project" content="Lightning v0.1.5">
+
+    <title>Lightning.Accounts.User — Lightning v0.1.5</title>
+    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+
+    <script src="dist/sidebar_items-a3eb1f60c1.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+
+
+  </head>
+  <body data-type="modules">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+
+<section class="sidebar">
+  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+  </button>
+
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    </button>
+    <label class="search-label">
+      <p class="sr-only">Search</p>
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://www.openfn.org">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://www.openfn.org" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.1.5
+      </strong>
+    </div>
+    <ul class="sidebar-listNav">
+      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+    </ul>
+  </div>
+
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="settings display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L1" title="View Source" class="view-source" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+  <span translate="no">Lightning.Accounts.User</span> 
+  <small class="app-vsn" translate="no">(Lightning v0.1.5)</small>
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>The User model.</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+      Summary
+    </h1>
+
+  <div class="summary-types summary">
+    <h2>
+      <a href="#types">Types</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#t:t/0" translate="no">t()</a>
+
+        </div>
+
+      </div>
+
+  </div>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#confirm_changeset/1" translate="no">confirm_changeset(user)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Confirms the account by setting <code class="inline">confirmed_at</code>.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#details_changeset/2" translate="no">details_changeset(user, attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>A user changeset for user details</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#email_changeset/2" translate="no">email_changeset(user, attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>A user changeset for changing the email.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#password_changeset/3" translate="no">password_changeset(user, attrs, opts \\ [])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>A user changeset for changing the password.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#registration_changeset/3" translate="no">registration_changeset(user, attrs, opts \\ [])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>A user changeset for registration.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#superuser_registration_changeset/2" translate="no">superuser_registration_changeset(user, attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>A user changeset for registering superusers.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#valid_password?/2" translate="no">valid_password?(arg1, password)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Verifies the password.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#validate_current_password/2" translate="no">validate_current_password(changeset, password)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Validates the current password otherwise adds an error to the changeset.</p></div>
+
+      </div>
+
+  </div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Types
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:t/0">
+
+  <div class="detail-header">
+    <a href="#t:t/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">t()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L10" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Accounts.User{
+  __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  confirmed_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  credentials: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  disabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  email: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  first_name: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  hashed_password: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  id: <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  last_name: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  password: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  role: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="confirm_changeset/1">
+
+  <div class="detail-header">
+    <a href="#confirm_changeset/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">confirm_changeset(user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L174" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Confirms the account by setting <code class="inline">confirmed_at</code>.</p>
+  </section>
+</section>
+<section class="detail" id="details_changeset/2">
+
+  <div class="detail-header">
+    <a href="#details_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">details_changeset(user, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L129" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>A user changeset for user details:</p><ul><li>email</li><li>first_name</li><li>last_name</li><li>role</li></ul>
+  </section>
+</section>
+<section class="detail" id="email_changeset/2">
+
+  <div class="detail-header">
+    <a href="#email_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">email_changeset(user, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L142" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>A user changeset for changing the email.</p><p>It requires the email to change otherwise an error is added.</p>
+  </section>
+</section>
+<section class="detail" id="password_changeset/3">
+
+    <span id="password_changeset/2"></span>
+
+  <div class="detail-header">
+    <a href="#password_changeset/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">password_changeset(user, attrs, opts \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L164" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>A user changeset for changing the password.</p><h2 id="password_changeset/3-options" class="section-heading">
+  <a href="#password_changeset/3-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">options</p>
+  </a>
+  Options
+</h2>
+<ul><li><code class="inline">:hash_password</code> - Hashes the password so it can be stored securely
+in the database and ensures the password field is cleared to prevent
+leaks in the logs. If password hashing is not needed and clearing the
+password field is not desired (like when using this changeset for
+validations on a LiveView form), this option can be set to <code class="inline">false</code>.
+Defaults to <code class="inline">true</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="registration_changeset/3">
+
+    <span id="registration_changeset/2"></span>
+
+  <div class="detail-header">
+    <a href="#registration_changeset/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">registration_changeset(user, attrs, opts \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L68" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>A user changeset for registration.</p><p>It is important to validate the length of both email and password.
+Otherwise databases may truncate the email without warnings, which
+could lead to unpredictable or insecure behaviour. Long passwords may
+also be very expensive to hash for certain algorithms.</p><h2 id="registration_changeset/3-options" class="section-heading">
+  <a href="#registration_changeset/3-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">options</p>
+  </a>
+  Options
+</h2>
+<ul><li><code class="inline">:hash_password</code> - Hashes the password so it can be stored securely
+in the database and ensures the password field is cleared to prevent
+leaks in the logs. If password hashing is not needed and clearing the
+password field is not desired (like when using this changeset for
+validations on a LiveView form), this option can be set to <code class="inline">false</code>.
+Defaults to <code class="inline">true</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="superuser_registration_changeset/2">
+
+  <div class="detail-header">
+    <a href="#superuser_registration_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">superuser_registration_changeset(user, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L40" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>A user changeset for registering superusers.</p>
+  </section>
+</section>
+<section class="detail" id="valid_password?/2">
+
+  <div class="detail-header">
+    <a href="#valid_password?/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">valid_password?(arg1, password)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L185" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Verifies the password.</p><p>If there is no user or the user doesn't have a password, we call
+<a href="https://hexdocs.pm/bcrypt_elixir/2.3.1/Bcrypt.html#no_user_verify/0"><code class="inline">Bcrypt.no_user_verify/0</code></a> to avoid timing attacks.</p>
+  </section>
+</section>
+<section class="detail" id="validate_current_password/2">
+
+  <div class="detail-header">
+    <a href="#validate_current_password/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">validate_current_password(changeset, password)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L201" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Validates the current password otherwise adds an error to the changeset.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+
+        <p>
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>

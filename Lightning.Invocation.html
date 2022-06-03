@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="project" content="Lightning v0.1.5">
+
+    <title>Lightning.Invocation — Lightning v0.1.5</title>
+    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+
+    <script src="dist/sidebar_items-a3eb1f60c1.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+
+
+  </head>
+  <body data-type="modules">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+
+<section class="sidebar">
+  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+  </button>
+
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    </button>
+    <label class="search-label">
+      <p class="sr-only">Search</p>
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://www.openfn.org">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://www.openfn.org" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.1.5
+      </strong>
+    </div>
+    <ul class="sidebar-listNav">
+      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+    </ul>
+  </div>
+
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="settings display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L1" title="View Source" class="view-source" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+  <span translate="no">Lightning.Invocation</span> 
+  <small class="app-vsn" translate="no">(Lightning v0.1.5)</small>
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>The Invocation context.</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+      Summary
+    </h1>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#change_dataclip/2" translate="no">change_dataclip(dataclip, attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking dataclip changes.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#change_run/2" translate="no">change_run(run, attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking run changes.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create/1" translate="no">create(event_attrs)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create/2" translate="no">create(event_attrs, dataclip_attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Create a new invocation based on a job and a body of data, which gets saved
+as a Dataclip; resulting in a Run associated with the Event.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_dataclip/1" translate="no">create_dataclip(attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates a dataclip.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_event/1" translate="no">create_event(attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates an event.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_run/1" translate="no">create_run(attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates a run.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#delete_dataclip/1" translate="no">delete_dataclip(dataclip)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Deletes a dataclip.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#delete_run/1" translate="no">delete_run(run)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Deletes a run.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_dataclip!/1" translate="no">get_dataclip!(id)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Gets a single dataclip.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_dataclip/1" translate="no">get_dataclip(run)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Gets a single dataclip given one of</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_dataclip_query/1" translate="no">get_dataclip_query(run)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Query for retrieving the dataclip that a runs starting dataclip.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_result_dataclip_query/1" translate="no">get_result_dataclip_query(run)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Query for retrieving the dataclip that was the result of a successful run.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_run!/1" translate="no">get_run!(id)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Gets a single run.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#list_dataclips/0" translate="no">list_dataclips()</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns the list of dataclips.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#list_dataclips/1" translate="no">list_dataclips(project)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#list_runs/0" translate="no">list_runs()</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns the list of runs.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#list_runs_for_project/1" translate="no">list_runs_for_project(project)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#update_dataclip/2" translate="no">update_dataclip(dataclip, attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Updates a dataclip.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#update_run/2" translate="no">update_run(run, attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Updates a run.</p></div>
+
+      </div>
+
+  </div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="change_dataclip/2">
+
+    <span id="change_dataclip/1"></span>
+
+  <div class="detail-header">
+    <a href="#change_dataclip/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">change_dataclip(dataclip, attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L205" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking dataclip changes.</p><h2 id="change_dataclip/2-examples" class="section-heading">
+  <a href="#change_dataclip/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="6866865569-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="6866865569-1">)</span><span class="w">
+</span><span class="p" data-group-id="6866865569-2">%</span><span class="nc" data-group-id="6866865569-2">Ecto.Changeset</span><span class="p" data-group-id="6866865569-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6866865569-3">%</span><span class="nc" data-group-id="6866865569-3">Dataclip</span><span class="p" data-group-id="6866865569-3">{</span><span class="p" data-group-id="6866865569-3">}</span><span class="p" data-group-id="6866865569-2">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="change_run/2">
+
+    <span id="change_run/1"></span>
+
+  <div class="detail-header">
+    <a href="#change_run/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">change_run(run, attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L331" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking run changes.</p><h2 id="change_run/2-examples" class="section-heading">
+  <a href="#change_run/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="4646849678-1">(</span><span class="n">run</span><span class="p" data-group-id="4646849678-1">)</span><span class="w">
+</span><span class="p" data-group-id="4646849678-2">%</span><span class="nc" data-group-id="4646849678-2">Ecto.Changeset</span><span class="p" data-group-id="4646849678-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4646849678-3">%</span><span class="nc" data-group-id="4646849678-3">Run</span><span class="p" data-group-id="4646849678-3">{</span><span class="p" data-group-id="4646849678-3">}</span><span class="p" data-group-id="4646849678-2">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="create/1">
+
+  <div class="detail-header">
+    <a href="#create/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create(event_attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L35" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create/2">
+
+  <div class="detail-header">
+    <a href="#create/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create(event_attrs, dataclip_attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L22" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create(
+  %{job_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), type: :webhook},
+  %{type: :http_request, body: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()}
+) :: {:ok | :error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>Create a new invocation based on a job and a body of data, which gets saved
+as a Dataclip; resulting in a Run associated with the Event.</p>
+  </section>
+</section>
+<section class="detail" id="create_dataclip/1">
+
+    <span id="create_dataclip/0"></span>
+
+  <div class="detail-header">
+    <a href="#create_dataclip/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_dataclip(attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L152" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create_dataclip(attrs :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:ok, <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(Lightning.Invocation.Dataclip)}</pre>
+
+      </div>
+
+<p>Creates a dataclip.</p><h2 id="create_dataclip/1-examples" class="section-heading">
+  <a href="#create_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1286687246-1">(</span><span class="p" data-group-id="1286687246-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1286687246-2">}</span><span class="p" data-group-id="1286687246-1">)</span><span class="w">
+</span><span class="p" data-group-id="1286687246-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1286687246-4">%</span><span class="nc" data-group-id="1286687246-4">Dataclip</span><span class="p" data-group-id="1286687246-4">{</span><span class="p" data-group-id="1286687246-4">}</span><span class="p" data-group-id="1286687246-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1286687246-5">(</span><span class="p" data-group-id="1286687246-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1286687246-6">}</span><span class="p" data-group-id="1286687246-5">)</span><span class="w">
+</span><span class="p" data-group-id="1286687246-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1286687246-8">%</span><span class="nc" data-group-id="1286687246-8">Ecto.Changeset</span><span class="p" data-group-id="1286687246-8">{</span><span class="p" data-group-id="1286687246-8">}</span><span class="p" data-group-id="1286687246-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="create_event/1">
+
+    <span id="create_event/0"></span>
+
+  <div class="detail-header">
+    <a href="#create_event/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_event(attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L221" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Creates an event.</p><h2 id="create_event/1-examples" class="section-heading">
+  <a href="#create_event/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_event</span><span class="p" data-group-id="9296403780-1">(</span><span class="p" data-group-id="9296403780-2">%{</span><span class="ss">type</span><span class="p">:</span><span class="w"> </span><span class="ss">:webhook</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip_id</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="9296403780-2">}</span><span class="p" data-group-id="9296403780-1">)</span><span class="w">
+</span><span class="p" data-group-id="9296403780-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9296403780-4">%</span><span class="nc" data-group-id="9296403780-4">Dataclip</span><span class="p" data-group-id="9296403780-4">{</span><span class="p" data-group-id="9296403780-4">}</span><span class="p" data-group-id="9296403780-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="9296403780-5">(</span><span class="p" data-group-id="9296403780-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9296403780-6">}</span><span class="p" data-group-id="9296403780-5">)</span><span class="w">
+</span><span class="p" data-group-id="9296403780-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9296403780-8">%</span><span class="nc" data-group-id="9296403780-8">Ecto.Changeset</span><span class="p" data-group-id="9296403780-8">{</span><span class="p" data-group-id="9296403780-8">}</span><span class="p" data-group-id="9296403780-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="create_run/1">
+
+    <span id="create_run/0"></span>
+
+  <div class="detail-header">
+    <a href="#create_run/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_run(attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L282" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Creates a run.</p><h2 id="create_run/1-examples" class="section-heading">
+  <a href="#create_run/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="9180127667-1">(</span><span class="p" data-group-id="9180127667-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9180127667-2">}</span><span class="p" data-group-id="9180127667-1">)</span><span class="w">
+</span><span class="p" data-group-id="9180127667-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9180127667-4">%</span><span class="nc" data-group-id="9180127667-4">Run</span><span class="p" data-group-id="9180127667-4">{</span><span class="p" data-group-id="9180127667-4">}</span><span class="p" data-group-id="9180127667-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="9180127667-5">(</span><span class="p" data-group-id="9180127667-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9180127667-6">}</span><span class="p" data-group-id="9180127667-5">)</span><span class="w">
+</span><span class="p" data-group-id="9180127667-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9180127667-8">%</span><span class="nc" data-group-id="9180127667-8">Ecto.Changeset</span><span class="p" data-group-id="9180127667-8">{</span><span class="p" data-group-id="9180127667-8">}</span><span class="p" data-group-id="9180127667-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="delete_dataclip/1">
+
+  <div class="detail-header">
+    <a href="#delete_dataclip/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete_dataclip(dataclip)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L188" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Deletes a dataclip.</p><h2 id="delete_dataclip/1-examples" class="section-heading">
+  <a href="#delete_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="2266655153-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="2266655153-1">)</span><span class="w">
+</span><span class="p" data-group-id="2266655153-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2266655153-3">%</span><span class="nc" data-group-id="2266655153-3">Dataclip</span><span class="p" data-group-id="2266655153-3">{</span><span class="p" data-group-id="2266655153-3">}</span><span class="p" data-group-id="2266655153-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="2266655153-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="2266655153-4">)</span><span class="w">
+</span><span class="p" data-group-id="2266655153-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2266655153-6">%</span><span class="nc" data-group-id="2266655153-6">Ecto.Changeset</span><span class="p" data-group-id="2266655153-6">{</span><span class="p" data-group-id="2266655153-6">}</span><span class="p" data-group-id="2266655153-5">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="delete_run/1">
+
+  <div class="detail-header">
+    <a href="#delete_run/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete_run(run)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L318" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Deletes a run.</p><h2 id="delete_run/1-examples" class="section-heading">
+  <a href="#delete_run/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="8689249795-1">(</span><span class="n">run</span><span class="p" data-group-id="8689249795-1">)</span><span class="w">
+</span><span class="p" data-group-id="8689249795-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8689249795-3">%</span><span class="nc" data-group-id="8689249795-3">Run</span><span class="p" data-group-id="8689249795-3">{</span><span class="p" data-group-id="8689249795-3">}</span><span class="p" data-group-id="8689249795-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="8689249795-4">(</span><span class="n">run</span><span class="p" data-group-id="8689249795-4">)</span><span class="w">
+</span><span class="p" data-group-id="8689249795-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8689249795-6">%</span><span class="nc" data-group-id="8689249795-6">Ecto.Changeset</span><span class="p" data-group-id="8689249795-6">{</span><span class="p" data-group-id="8689249795-6">}</span><span class="p" data-group-id="8689249795-5">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_dataclip!/1">
+
+  <div class="detail-header">
+    <a href="#get_dataclip!/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_dataclip!(id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L86" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_dataclip!(id :: <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()</pre>
+
+      </div>
+
+<p>Gets a single dataclip.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Dataclip does not exist.</p><h2 id="get_dataclip!/1-examples" class="section-heading">
+  <a href="#get_dataclip!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="6344033673-1">(</span><span class="mi">123</span><span class="p" data-group-id="6344033673-1">)</span><span class="w">
+</span><span class="p" data-group-id="6344033673-2">%</span><span class="nc" data-group-id="6344033673-2">Dataclip</span><span class="p" data-group-id="6344033673-2">{</span><span class="p" data-group-id="6344033673-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="6344033673-3">(</span><span class="mi">456</span><span class="p" data-group-id="6344033673-3">)</span><span class="w">
+</span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_dataclip/1">
+
+  <div class="detail-header">
+    <a href="#get_dataclip/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_dataclip(run)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L110" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_dataclip(run_or_uuid :: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+  <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>() | nil</pre>
+
+      </div>
+
+<p>Gets a single dataclip given one of:</p><ul><li>a Dataclip uuid</li><li>a Run model, that has an associated dataclip via it's event</li></ul><p>Returns <code class="inline">nil</code> if the Dataclip does not exist.</p><h2 id="get_dataclip/1-examples" class="section-heading">
+  <a href="#get_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="7071032604-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="7071032604-1">)</span><span class="w">
+</span><span class="p" data-group-id="7071032604-2">%</span><span class="nc" data-group-id="7071032604-2">Dataclip</span><span class="p" data-group-id="7071032604-2">{</span><span class="p" data-group-id="7071032604-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="7071032604-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="7071032604-3">)</span><span class="w">
+</span><span class="no">nil</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="7071032604-4">(</span><span class="p" data-group-id="7071032604-5">%</span><span class="nc" data-group-id="7071032604-5">Run</span><span class="p" data-group-id="7071032604-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="7071032604-5">}</span><span class="p" data-group-id="7071032604-4">)</span><span class="w">
+</span><span class="p" data-group-id="7071032604-6">%</span><span class="nc" data-group-id="7071032604-6">Dataclip</span><span class="p" data-group-id="7071032604-6">{</span><span class="p" data-group-id="7071032604-6">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_dataclip_query/1">
+
+  <div class="detail-header">
+    <a href="#get_dataclip_query/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_dataclip_query(run)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L130" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Query for retrieving the dataclip that a runs starting dataclip.</p>
+  </section>
+</section>
+<section class="detail" id="get_result_dataclip_query/1">
+
+  <div class="detail-header">
+    <a href="#get_result_dataclip_query/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_result_dataclip_query(run)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L119" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Query for retrieving the dataclip that was the result of a successful run.</p>
+  </section>
+</section>
+<section class="detail" id="get_run!/1">
+
+  <div class="detail-header">
+    <a href="#get_run!/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_run!(id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L264" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_run!(<a href="https://hexdocs.pm/ecto/3.7.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | <a href="Lightning.Invocation.Event.html#t:t/0">Lightning.Invocation.Event.t</a>()) ::
+  <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()</pre>
+
+      </div>
+
+<p>Gets a single run.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Run does not exist.</p><h2 id="get_run!/1-examples" class="section-heading">
+  <a href="#get_run!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="0722057358-1">(</span><span class="mi">123</span><span class="p" data-group-id="0722057358-1">)</span><span class="w">
+</span><span class="p" data-group-id="0722057358-2">%</span><span class="nc" data-group-id="0722057358-2">Run</span><span class="p" data-group-id="0722057358-2">{</span><span class="p" data-group-id="0722057358-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="0722057358-3">(</span><span class="mi">456</span><span class="p" data-group-id="0722057358-3">)</span><span class="w">
+</span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_dataclips/0">
+
+  <div class="detail-header">
+    <a href="#list_dataclips/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_dataclips()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L56" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_dataclips() :: [<a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()]</pre>
+
+      </div>
+
+<p>Returns the list of dataclips.</p><h2 id="list_dataclips/0-examples" class="section-heading">
+  <a href="#list_dataclips/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="3803258220-1">(</span><span class="p" data-group-id="3803258220-1">)</span><span class="w">
+</span><span class="p" data-group-id="3803258220-2">[</span><span class="p" data-group-id="3803258220-3">%</span><span class="nc" data-group-id="3803258220-3">Dataclip</span><span class="p" data-group-id="3803258220-3">{</span><span class="p" data-group-id="3803258220-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3803258220-2">]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_dataclips/1">
+
+  <div class="detail-header">
+    <a href="#list_dataclips/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_dataclips(project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L61" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_dataclips(project :: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: [
+  <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()
+]</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="list_runs/0">
+
+  <div class="detail-header">
+    <a href="#list_runs/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_runs()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L236" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the list of runs.</p><h2 id="list_runs/0-examples" class="section-heading">
+  <a href="#list_runs/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="7545302022-1">(</span><span class="p" data-group-id="7545302022-1">)</span><span class="w">
+</span><span class="p" data-group-id="7545302022-2">[</span><span class="p" data-group-id="7545302022-3">%</span><span class="nc" data-group-id="7545302022-3">Run</span><span class="p" data-group-id="7545302022-3">{</span><span class="p" data-group-id="7545302022-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7545302022-2">]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="list_runs_for_project/1">
+
+  <div class="detail-header">
+    <a href="#list_runs_for_project/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_runs_for_project(project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L240" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="update_dataclip/2">
+
+  <div class="detail-header">
+    <a href="#update_dataclip/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update_dataclip(dataclip, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L170" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Updates a dataclip.</p><h2 id="update_dataclip/2-examples" class="section-heading">
+  <a href="#update_dataclip/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="5089114618-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5089114618-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="5089114618-2">}</span><span class="p" data-group-id="5089114618-1">)</span><span class="w">
+</span><span class="p" data-group-id="5089114618-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5089114618-4">%</span><span class="nc" data-group-id="5089114618-4">Dataclip</span><span class="p" data-group-id="5089114618-4">{</span><span class="p" data-group-id="5089114618-4">}</span><span class="p" data-group-id="5089114618-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="5089114618-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5089114618-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5089114618-6">}</span><span class="p" data-group-id="5089114618-5">)</span><span class="w">
+</span><span class="p" data-group-id="5089114618-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5089114618-8">%</span><span class="nc" data-group-id="5089114618-8">Ecto.Changeset</span><span class="p" data-group-id="5089114618-8">{</span><span class="p" data-group-id="5089114618-8">}</span><span class="p" data-group-id="5089114618-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="update_run/2">
+
+  <div class="detail-header">
+    <a href="#update_run/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update_run(run, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L300" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Updates a run.</p><h2 id="update_run/2-examples" class="section-heading">
+  <a href="#update_run/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="8762148719-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8762148719-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="8762148719-2">}</span><span class="p" data-group-id="8762148719-1">)</span><span class="w">
+</span><span class="p" data-group-id="8762148719-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8762148719-4">%</span><span class="nc" data-group-id="8762148719-4">Run</span><span class="p" data-group-id="8762148719-4">{</span><span class="p" data-group-id="8762148719-4">}</span><span class="p" data-group-id="8762148719-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="8762148719-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8762148719-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8762148719-6">}</span><span class="p" data-group-id="8762148719-5">)</span><span class="w">
+</span><span class="p" data-group-id="8762148719-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8762148719-8">%</span><span class="nc" data-group-id="8762148719-8">Ecto.Changeset</span><span class="p" data-group-id="8762148719-8">{</span><span class="p" data-group-id="8762148719-8">}</span><span class="p" data-group-id="8762148719-7">}</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+
+        <p>
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>

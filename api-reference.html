@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="project" content="Lightning v0.1.5">
+
+    <title>API Reference — Lightning v0.1.5</title>
+    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+
+    <script src="dist/sidebar_items-a3eb1f60c1.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+
+
+  </head>
+  <body data-type="extras">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+
+<section class="sidebar">
+  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+  </button>
+
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    </button>
+    <label class="search-label">
+      <p class="sr-only">Search</p>
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://www.openfn.org">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://www.openfn.org" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.1.5
+      </strong>
+    </div>
+    <ul class="sidebar-listNav">
+      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+    </ul>
+  </div>
+
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="settings display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+  <span>API Reference <small class="app-vsn">Lightning v0.1.5</small></span>
+</h1>
+
+
+  <section class="details-list">
+    <h2 id="modules" class="section-heading">
+  <a href="#modules" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">modules</p>
+  </a>
+  Modules
+</h2>
+
+    <div class="summary">
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.html" translate="no">Lightning</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Lightning keeps the contexts that define your domain
+and business logic.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Accounts.html" translate="no">Lightning.Accounts</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Accounts context.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Accounts.Policy.html" translate="no">Lightning.Accounts.Policy</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Bodyguard Policy module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Accounts.User.html" translate="no">Lightning.Accounts.User</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The User model.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Accounts.User.RolesEnum.html" translate="no">Lightning.Accounts.User.RolesEnum</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Accounts.UserNotifier.html" translate="no">Lightning.Accounts.UserNotifier</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The UserNotifier module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Accounts.UserToken.html" translate="no">Lightning.Accounts.UserToken</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The UserToken model.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.AdaptorRegistry.html" translate="no">Lightning.AdaptorRegistry</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Registry process to query and maintain a list of adaptors available for
+writing jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.AdaptorRegistry.Npm.html" translate="no">Lightning.AdaptorRegistry.Npm</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>NPM API functions</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.html" translate="no">Lightning.Credentials</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Credentials context.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.Credential.html" translate="no">Lightning.Credentials.Credential</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Credential model.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Credentials.Policy.html" translate="no">Lightning.Credentials.Policy</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Bodyguard Policy module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Helpers.html" translate="no">Lightning.Helpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Common functions for the context</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Invocation.html" translate="no">Lightning.Invocation</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Invocation context.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Invocation.Dataclip.html" translate="no">Lightning.Invocation.Dataclip</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Dataclips.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Invocation.Event.html" translate="no">Lightning.Invocation.Event</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Invocation Events.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Invocation.Run.html" translate="no">Lightning.Invocation.Run</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Runs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Jobs.html" translate="no">Lightning.Jobs</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Jobs context.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Jobs.Job.html" translate="no">Lightning.Jobs.Job</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Jobs.Query.html" translate="no">Lightning.Jobs.Query</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Query module for finding Jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Jobs.Trigger.html" translate="no">Lightning.Jobs.Trigger</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ecto model for Triggers.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Pipeline.html" translate="no">Lightning.Pipeline</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Service class to coordinate the running of jobs, and their downstream jobs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Pipeline.Runner.html" translate="no">Lightning.Pipeline.Runner</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Job running entrypoint</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Pipeline.Runner.Handler.html" translate="no">Lightning.Pipeline.Runner.Handler</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Custom handler callbacks for Lightnings use of Engine to execute runs.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Pipeline.StateAssembler.html" translate="no">Lightning.Pipeline.StateAssembler</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Facilities for building the state for a Run</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.html" translate="no">Lightning.Projects</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Projects context.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Policy.html" translate="no">Lightning.Projects.Policy</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The Bodyguard Policy module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.Project.html" translate="no">Lightning.Projects.Project</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Project model</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.ProjectCredential.html" translate="no">Lightning.Projects.ProjectCredential</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Join table to assign credentials to a project</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Projects.ProjectUser.html" translate="no">Lightning.Projects.ProjectUser</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Join table to assign users to a project</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Release.html" translate="no">Lightning.Release</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Used for executing DB release tasks when run in production without Mix
+installed.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Lightning.Repo.html" translate="no">Lightning.Repo</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.html" translate="no">LightningWeb</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The entrypoint for defining your web interface, such
+as controllers, views, channels and so on.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Components.Common.html" translate="no">LightningWeb.Components.Common</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Common Components</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Components.Form.html" translate="no">LightningWeb.Components.Form</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Form Components</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Components.Icon.html" translate="no">LightningWeb.Components.Icon</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>SVG Icons</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Components.MainSection.html" translate="no">LightningWeb.Components.MainSection</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Wrapper helpers for layout</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Components.Settings.html" translate="no">LightningWeb.Components.Settings</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Components for Settings live session</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.Edit.html" translate="no">LightningWeb.CredentialLive.Edit</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for editing a single job, which inturn uses <a href="LightningWeb.JobLive.FormComponent.html"><code class="inline">LightningWeb.JobLive.FormComponent</code></a>
+for common functionality.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.FormComponent.html" translate="no">LightningWeb.CredentialLive.FormComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Form Component for working with a single Credential</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.Index.html" translate="no">LightningWeb.CredentialLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for listing and managing Jobs</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.CredentialLive.Show.html" translate="no">LightningWeb.CredentialLive.Show</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for viewing a single Job</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.DataclipLive.FormComponent.html" translate="no">LightningWeb.DataclipLive.FormComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView component for creating and editing a single <code class="inline">DataClip</code></p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.DataclipLive.Index.html" translate="no">LightningWeb.DataclipLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for listing and working with a list of Dataclips</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.DataclipLive.Show.html" translate="no">LightningWeb.DataclipLive.Show</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for viewing a single dataclip</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Endpoint.html" translate="no">LightningWeb.Endpoint</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.ErrorHelpers.html" translate="no">LightningWeb.ErrorHelpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Conveniences for translating and building error messages.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.ErrorView.html" translate="no">LightningWeb.ErrorView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.FirstSetupLive.Superuser.html" translate="no">LightningWeb.FirstSetupLive.Superuser</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Superuser setup liveview</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.FormHelpers.html" translate="no">LightningWeb.FormHelpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Conveniences for building forms.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Gettext.html" translate="no">LightningWeb.Gettext</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>A module providing Internationalization with a gettext-based API.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.HealthCheck.html" translate="no">LightningWeb.HealthCheck</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Hooks.html" translate="no">LightningWeb.Hooks</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView Hooks</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.InitAssigns.html" translate="no">LightningWeb.InitAssigns</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Ensures common <code class="inline">assigns</code> are applied to all LiveViews attaching this hook.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.JobLive.Edit.html" translate="no">LightningWeb.JobLive.Edit</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for editing a single job, which inturn uses <a href="LightningWeb.JobLive.FormComponent.html"><code class="inline">LightningWeb.JobLive.FormComponent</code></a>
+for common functionality.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.JobLive.FormComponent.html" translate="no">LightningWeb.JobLive.FormComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Form Component for working with a single Job</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.JobLive.Index.html" translate="no">LightningWeb.JobLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for listing and managing Jobs</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.JobLive.Show.html" translate="no">LightningWeb.JobLive.Show</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for viewing a single Job</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.LayoutView.html" translate="no">LightningWeb.LayoutView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.LiveHelpers.html" translate="no">LightningWeb.LiveHelpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>General purpose LiveView helper functions</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.PageView.html" translate="no">LightningWeb.PageView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Plugs.FirstSetup.html" translate="no">LightningWeb.Plugs.FirstSetup</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Plug to redirect HTTP requests to <code class="inline">/first_setup</code> if there are no
+superusers in the system yet.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.ProjectLive.FormComponent.html" translate="no">LightningWeb.ProjectLive.FormComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Form Component for working with a single Job</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.ProjectLive.Index.html" translate="no">LightningWeb.ProjectLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for listing and managing Jobs</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Router.html" translate="no">LightningWeb.Router</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Router.Helpers.html" translate="no">LightningWeb.Router.Helpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module with named helpers generated from LightningWeb.Router.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.RunLive.Index.html" translate="no">LightningWeb.RunLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Index Liveview for Runs</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.SettingsLive.Index.html" translate="no">LightningWeb.SettingsLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Index page for listing users</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.Telemetry.html" translate="no">LightningWeb.Telemetry</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Assorted metrics to collect during runtime.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserAuth.html" translate="no">LightningWeb.UserAuth</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The UserAuth controller.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserConfirmationController.html" translate="no">LightningWeb.UserConfirmationController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserConfirmationView.html" translate="no">LightningWeb.UserConfirmationView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserLive.Edit.html" translate="no">LightningWeb.UserLive.Edit</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>LiveView for editing a single job, which inturn uses <a href="LightningWeb.JobLive.FormComponent.html"><code class="inline">LightningWeb.JobLive.FormComponent</code></a>
+for common functionality.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserLive.FormComponent.html" translate="no">LightningWeb.UserLive.FormComponent</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Form component for creating and editing users</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserLive.Index.html" translate="no">LightningWeb.UserLive.Index</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Index page for listing users</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserLive.Show.html" translate="no">LightningWeb.UserLive.Show</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>The User show page</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserRegistrationController.html" translate="no">LightningWeb.UserRegistrationController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserRegistrationView.html" translate="no">LightningWeb.UserRegistrationView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserResetPasswordController.html" translate="no">LightningWeb.UserResetPasswordController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserResetPasswordView.html" translate="no">LightningWeb.UserResetPasswordView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserSessionController.html" translate="no">LightningWeb.UserSessionController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserSessionView.html" translate="no">LightningWeb.UserSessionView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserSettingsController.html" translate="no">LightningWeb.UserSettingsController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.UserSettingsView.html" translate="no">LightningWeb.UserSettingsView</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.WebhooksController.html" translate="no">LightningWeb.WebhooksController</a>
+
+  </div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="LightningWeb.WorkflowDiagramLive.html" translate="no">LightningWeb.WorkflowDiagramLive</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Workflow Diagram Component</p></div>
+
+</div>
+
+    </div>
+  </section>
+
+
+<div class="bottom-actions">
+  <div class="bottom-actions-item">
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="readme.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Lightning
+        </span>
+      </a>
+
+  </div>
+</div>
+
+      <footer class="footer">
+
+        <p>
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>
