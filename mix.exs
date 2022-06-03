@@ -22,7 +22,11 @@ defmodule Lightning.MixProject do
         # The main page in the docs
         main: "Lightning",
         logo: "priv/static/images/square-logo.png",
-        extras: ["README.md": [title: "Lightning"]]
+        extras: [
+          "README.md": [title: "Lightning"],
+          "CHANGELOG.md": [title: "Changelog"]
+        ],
+        output: "docs"
       ]
     ]
   end
@@ -56,7 +60,7 @@ defmodule Lightning.MixProject do
       {:engine, github: "OpenFn/engine", tag: "v0.5.1"},
       # {:engine, path: "../engine"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
-      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.4", only: [:test, :dev]},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
