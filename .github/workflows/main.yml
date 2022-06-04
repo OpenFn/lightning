@@ -9,14 +9,13 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@v3
-
-      - name: Setup elixir & erlang
-      - uses: erlef/setup-beam@v1
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-elixir@v1
         with:
-          otp-version: "24.2"
-          elixir-version: "1.13.4"
+          otp-version: 24.2
+          elixir-version: '1.13'
+      - run: mix deps.get
+      - run: mix docs
 
       - name: Generate docs 🔧
         run: |
@@ -27,4 +26,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4.3.3
         with:
           branch: gh-pages # The branch the action should deploy to.
-          folder: docs # The folder the action should deploy.
+          folder: doc # The folder the action should deploy.

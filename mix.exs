@@ -25,8 +25,7 @@ defmodule Lightning.MixProject do
         extras: [
           "README.md": [title: "Lightning"],
           "CHANGELOG.md": [title: "Changelog"]
-        ],
-        output: "docs"
+        ]
       ]
     ]
   end
