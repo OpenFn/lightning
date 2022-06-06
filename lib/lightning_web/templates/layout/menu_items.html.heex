@@ -7,13 +7,13 @@
   <% end %>
 </div>
 
-<Settings.menu_item
-  text="Dashboard"
-  to={Routes.dashboard_index_path(@socket, :index)}
-  active={@active_menu_item == :dashboard}
-/>
-
 <%= if assigns[:project] do %>
+  <Settings.menu_item
+    text="Overview"
+    to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
+    active={@active_menu_item == :overview}
+  />
+
   <Settings.menu_item
     text="Runs"
     to={Routes.project_run_index_path(@socket, :index, @project.id)}
@@ -31,17 +31,18 @@
     to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
     active={@active_menu_item == :dataclips}
   />
+
+  <div class="px-4 py-2 text-indigo-300 border-dashed bg-indigo-800 border-b-2 border-indigo-900 mb-4" />
 <% end %>
+
+<Settings.menu_item
+  text="Projects"
+  to={Routes.dashboard_index_path(@socket, :index)}
+  active={@active_menu_item == :projects}
+/>
 
 <Settings.menu_item
   text="Credentials"
   to={Routes.credential_index_path(@socket, :index)}
   active={@active_menu_item == :credentials}
 />
-
-<%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
-  <Settings.menu_item
-    text="Live Dashboard"
-    to={Routes.live_dashboard_path(@socket, :home)}
-  />
-<% end %>

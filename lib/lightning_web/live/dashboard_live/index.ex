@@ -7,14 +7,14 @@ defmodule LightningWeb.DashboardLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(:active_menu_item, :dashboard)}
+    {:ok, socket |> assign(:active_menu_item, :projects)}
   end
 
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,
      apply_action(
-       socket |> assign(:active_menu_item, :dashboard),
+       socket |> assign(:active_menu_item, :projects),
        socket.assigns.live_action,
        params
      )}
@@ -33,7 +33,7 @@ defmodule LightningWeb.DashboardLive.Index do
     socket
     |> assign(
       project: Projects.get_project(project_id),
-      active_menu_item: :dashboard
+      active_menu_item: :overview
     )
     |> assign(:page_title, socket.assigns.project.name)
   end
