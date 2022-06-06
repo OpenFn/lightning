@@ -1,7 +1,7 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.{Jobs, Invocation}
+  alias Lightning.{Jobs, Invocation, Pipeline}
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
@@ -20,7 +20,7 @@ defmodule LightningWeb.WebhooksController do
             %{type: :http_request, body: conn.body_params}
           )
 
-        Lightning.Pipeline.process(event)
+        Task.start(Pipeline, :process, [event])
 
         conn
         |> json(%{event_id: event.id, run_id: run.id})
