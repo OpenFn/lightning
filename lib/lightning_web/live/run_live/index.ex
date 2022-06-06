@@ -13,7 +13,16 @@ defmodule LightningWeb.RunLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(active_menu_item: :runs)}
+     |> assign(
+       active_menu_item: :runs,
+       pagination_path:
+         &Routes.project_run_index_path(
+           socket,
+           :index,
+           socket.assigns.project,
+           &1
+         )
+     )}
   end
 
   @impl true
@@ -21,12 +30,12 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp apply_action(socket, :index, params) do
     socket
     |> assign(
-      runs: Invocation.list_runs_for_project(socket.assigns.project),
       page_title: "Runs",
-      run: %Run{}
+      run: %Run{},
+      page: Invocation.list_runs_for_project(socket.assigns.project, params)
     )
   end
 
@@ -43,7 +52,9 @@ defmodule LightningWeb.RunLive.Index do
 
     {:noreply,
      socket
-     |> assign(runs: Invocation.list_runs_for_project(socket.assigns.project))}
+     |> assign(
+       page: Invocation.list_runs_for_project(socket.assigns.project, %{})
+     )}
   end
 
   def show_run(assigns) do
@@ -76,5 +87,40 @@ defmodule LightningWeb.RunLive.Index do
       ) %>
     </span>
     """
+  end
+
+  # people: page.entries,
+  # page_number: page.page_number,
+  # page_size: page.page_size,
+  # total_pages: page.total_pages,
+  # total_entries: page.total_entries
+
+  defp format_time(time) when is_nil(time) do
+    ""
+  end
+
+  defp format_time(time) do
+    time |> Timex.from_now(Timex.now(), "en")
+  end
+
+  def run_time(%{run: run} = assigns) do
+    if run.finished_at do
+      time_taken = Timex.diff(run.finished_at, run.started_at, :milliseconds)
+
+      assigns =
+        assigns
+        |> assign(
+          time_since: run.started_at |> format_time(),
+          time_taken: time_taken
+        )
+
+      ~H"""
+      <%= @time_since %> (<%= @time_taken %> ms)
+      """
+    else
+      ~H"""
+
+      """
+    end
   end
 end

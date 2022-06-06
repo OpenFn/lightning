@@ -25,7 +25,7 @@ defmodule Lightning.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Lightning.Application, []},
+      mod: {Lightning.Application, [:timex]},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -67,6 +67,7 @@ defmodule Lightning.MixProject do
       {:phoenix, "~> 1.6.7"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
+      {:scrivener_ecto, "~> 2.7"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
@@ -75,7 +76,7 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:temp, "~> 0.4"},
-      {:timex, "~> 3.7", only: :test}
+      {:timex, "~> 3.7"}
     ]
   end
 
