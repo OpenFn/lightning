@@ -46,7 +46,7 @@ defmodule Lightning.MixProject do
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_sql, "~> 3.6"},
-      {:engine, github: "OpenFn/engine", tag: "v0.5.1"},
+      {:engine, github: "OpenFn/engine", tag: "v0.6.0"},
       # {:engine, path: "../engine"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
