@@ -16,17 +16,7 @@ defmodule Lightning.MixProject do
 
       # Docs
       name: "Lightning",
-      source_url: "https://github.com/OpenFn/lightning",
-      homepage_url: "https://www.openfn.org",
-      docs: [
-        # The main page in the docs
-        main: "Lightning",
-        logo: "priv/static/images/square-logo.png",
-        extras: [
-          "README.md": [title: "Lightning"],
-          "CHANGELOG.md": [title: "Changelog"]
-        ]
-      ]
+      docs: docs()
     ]
   end
 
@@ -112,6 +102,58 @@ defmodule Lightning.MixProject do
         "dialyzer",
         "credo --all",
         "sobelow"
+      ]
+    ]
+  end
+
+  defp docs() do
+    [
+      # The main page in the docs
+      main: "Lightning",
+      logo: "priv/static/images/square-logo.png",
+      extras: [
+        "README.md": [title: "Lightning"],
+        "CHANGELOG.md": [title: "Changelog"]
+      ],
+      source_url: "https://github.com/OpenFn/lightning",
+      homepage_url: "https://www.openfn.org",
+      groups_for_modules: [
+        Accounts: [
+          Lightning.Accounts,
+          Lightning.Accounts.Policy,
+          Lightning.Accounts.UserNotifier,
+          Lightning.Accounts.UserToken,
+          Lightning.Accounts.User
+        ],
+        Credentials: [
+          Lightning.Credentials,
+          Lightning.Credentials.Credential,
+          Lightning.Credentials.Policy
+        ],
+        Invocation: [
+          Lightning.Invocation,
+          Lightning.Invocation.Dataclip,
+          Lightning.Invocation.Event,
+          Lightning.Invocation.Run
+        ],
+        Pipeline: [
+          Lightning.Pipeline,
+          Lightning.Pipeline.Runner,
+          Lightning.Pipeline.StateAssembler
+        ],
+        Jobs: [
+          Lightning.Jobs,
+          Lightning.Jobs.Job,
+          Lightning.Jobs.Query,
+          Lightning.Jobs.Trigger
+        ],
+        Projects: [
+          Lightning.Projects,
+          Lightning.Projects.Project,
+          Lightning.Projects.Policy,
+          Lightning.Projects.ProjectCredential,
+          Lightning.Projects.ProjectUser
+        ]
       ]
     ]
   end
