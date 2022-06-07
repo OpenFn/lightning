@@ -56,6 +56,7 @@ defmodule Lightning.MixProject do
       {:hackney, "~> 1.8"},
       {:httpoison, "~> 1.8"},
       {:jason, "~> 1.2"},
+      {:joken, "~> 2.4.1"},
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},

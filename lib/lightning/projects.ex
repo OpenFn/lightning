@@ -131,12 +131,17 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
-  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
-  def get_projects_for_user(%User{id: user_id}) do
+  @spec projects_for_user_query(user :: User.t()) :: Ecto.Queryable.t()
+  def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user_id
     )
+  end
+
+  @spec get_projects_for_user(user :: User.t()) :: [Project.t()]
+  def get_projects_for_user(user) do
+    projects_for_user_query(user)
     |> Repo.all()
   end
 

@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Project do
   schema "projects" do
     field :name, :string
     has_many :project_users, ProjectUser
+    has_many :users, through: [:project_users, :user]
     has_many :project_credentials, ProjectCredential
     has_many :credentials, through: [:project_credentials, :credential]
 

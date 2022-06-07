@@ -36,7 +36,9 @@ defmodule LightningWeb.JobLive.Index do
     |> assign(
       page_title: "Listing Jobs",
       job: %Job{},
-      page: Jobs.jobs_for_project(socket.assigns.project, params)
+      page:
+        Jobs.jobs_for_project_query(socket.assigns.project)
+        |> Lightning.Repo.paginate(params)
     )
   end
 
@@ -73,7 +75,11 @@ defmodule LightningWeb.JobLive.Index do
 
     {:noreply,
      socket
-     |> assign(page: Jobs.jobs_for_project(socket.assigns.project, %{}))}
+     |> assign(
+       page:
+         Jobs.jobs_for_project_query(socket.assigns.project)
+         |> Lightning.Repo.paginate(%{})
+     )}
   end
 
   def show_job(assigns) do

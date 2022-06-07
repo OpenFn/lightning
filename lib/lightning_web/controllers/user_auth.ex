@@ -119,6 +119,26 @@ defmodule LightningWeb.UserAuth do
     end
   end
 
+  def authenticate_bearer(conn, _opts) do
+    with {:ok, bearer_token} <- get_bearer(conn),
+         user when not is_nil(user) <-
+           Accounts.get_user_by_api_token(bearer_token) do
+      assign(conn, :current_user, user)
+    else
+      {:error, _error} ->
+        conn
+    end
+  end
+
+  defp get_bearer(conn) do
+    conn
+    |> get_req_header("authorization")
+    |> case do
+      ["Bearer " <> bearer_token] -> {:ok, bearer_token}
+      _ -> {:error, "Bearer Token not found"}
+    end
+  end
+
   @doc """
   Used for routes that require the user to not be authenticated.
   """
@@ -143,10 +163,22 @@ defmodule LightningWeb.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
-      |> maybe_store_return_to()
-      |> redirect(to: Routes.user_session_path(conn, :new))
-      |> halt()
+      |> get_format()
+      |> case do
+        "json" ->
+          conn
+          |> put_status(:unauthorized)
+          |> put_view(LightningWeb.ErrorView)
+          |> render(:"401")
+          |> halt()
+
+        _ ->
+          conn
+          |> put_flash(:error, "You must log in to access this page.")
+          |> maybe_store_return_to()
+          |> redirect(to: Routes.user_session_path(conn, :new))
+          |> halt()
+      end
     end
   end
 

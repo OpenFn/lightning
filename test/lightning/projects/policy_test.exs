@@ -12,6 +12,16 @@ defmodule Lightning.Projects.PolicyTest do
 
       assert :ok =
                Bodyguard.permit(Lightning.Projects.Policy, :read, user, project)
+
+      other_project = project_fixture(project_users: [])
+
+      assert {:error, :unauthorized} =
+               Bodyguard.permit(
+                 Lightning.Projects.Policy,
+                 :read,
+                 user,
+                 other_project
+               )
     end
 
     test "regular users can't do anything" do

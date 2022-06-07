@@ -30,6 +30,8 @@ defmodule Lightning.Accounts.User do
     field(:disabled, :boolean, default: false)
 
     has_many :credentials, Lightning.Credentials.Credential
+    has_many :project_users, Lightning.Projects.ProjectUser
+    has_many :projects, through: [:project_users, :project]
 
     timestamps()
   end

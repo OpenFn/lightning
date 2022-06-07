@@ -33,6 +33,24 @@ defmodule LightningWeb.Router do
     post "/users/confirm/:token", UserConfirmationController, :update
   end
 
+  ## JSON API
+
+  scope "/api", LightningWeb, as: :api do
+    pipe_through [
+      :api,
+      :authenticate_bearer,
+      :require_authenticated_user
+    ]
+
+    resources "/projects", API.ProjectController, only: [:index, :show] do
+      resources "/jobs", API.JobController, only: [:index, :show]
+      resources "/runs", API.RunController, only: [:index, :show]
+    end
+
+    resources "/jobs", API.JobController, only: [:index, :show]
+    resources "/runs", API.RunController, only: [:index, :show]
+  end
+
   ## Authentication routes
 
   scope "/", LightningWeb do
@@ -86,8 +104,6 @@ defmodule LightningWeb.Router do
 
         live "/", DashboardLive.Index, :show
       end
-
-      # live("/jobs", JobLive.Index, :index)
 
       live "/credentials", CredentialLive.Index, :index
       live "/credentials/new", CredentialLive.Index, :new

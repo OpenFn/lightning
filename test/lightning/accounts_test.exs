@@ -450,6 +450,46 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "generate_api_token/1" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "generates a token", %{user: user} do
+      token = Accounts.generate_api_token(user)
+      assert user_token = Repo.get_by(UserToken, token: token)
+      assert user_token.context == "api"
+
+      Lightning.Accounts.UserToken.verify_and_validate!(token)
+
+      # Creating the same token for another user should fail
+      assert_raise Ecto.ConstraintError, fn ->
+        Repo.insert!(%UserToken{
+          token: user_token.token,
+          user_id: user_fixture().id,
+          context: "api"
+        })
+      end
+    end
+  end
+
+  describe "get_user_by_api_token/1" do
+    setup do
+      user = user_fixture()
+      token = Accounts.generate_api_token(user)
+      %{user: user, token: token}
+    end
+
+    test "returns user by token", %{user: user, token: token} do
+      assert auth_user = Accounts.get_user_by_api_token(token)
+      assert auth_user.id == user.id
+    end
+
+    test "does not return user for invalid token" do
+      refute Accounts.get_user_by_api_token("oops")
+    end
+  end
+
   describe "get_user_by_auth_token/1" do
     setup do
       user = user_fixture()

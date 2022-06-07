@@ -3,6 +3,7 @@ defmodule Lightning.Jobs.Query do
   Query module for finding Jobs.
   """
   alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Accounts.User
   alias Lightning.Projects.Project
   import Ecto.Query
 
@@ -107,5 +108,14 @@ defmodule Lightning.Jobs.Query do
   def workflow_query(%Project{} = project) do
     initiating_jobs_query(project)
     |> downstream_jobs_query()
+  end
+
+  @doc """
+  Returns all jobs accessible to a user, via their projects
+  """
+  @spec jobs_for(User.t()) :: Ecto.Queryable.t()
+  def jobs_for(%User{} = user) do
+    projects = Ecto.assoc(user, :projects) |> select([:id])
+    from(j in Job, where: j.project_id in subquery(projects))
   end
 end

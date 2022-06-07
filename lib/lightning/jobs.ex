@@ -25,8 +25,14 @@ defmodule Lightning.Jobs do
     )
   end
 
-  def jobs_for_project(%Project{} = project, params \\ %{}) do
-    Repo.paginate(Ecto.assoc(project, :jobs), params)
+  @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
+  def jobs_for_project_query(%Project{} = project) do
+    Ecto.assoc(project, :jobs)
+  end
+
+  @spec jobs_for_project(Project.t()) :: [Job.t()]
+  def jobs_for_project(%Project{} = project) do
+    jobs_for_project_query(project) |> Repo.all()
   end
 
   @doc """

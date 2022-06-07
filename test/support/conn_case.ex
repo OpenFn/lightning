@@ -68,6 +68,23 @@ defmodule LightningWeb.ConnCase do
   end
 
   @doc """
+  Setup helper that registers and logs in users for token authentication.
+
+      setup :assign_bearer_for_api
+
+  It stores an updated connection and a registered user in the
+  test context.
+  """
+  def assign_bearer_for_api(%{conn: conn}) do
+    user = Lightning.AccountsFixtures.user_fixture()
+
+    token = Lightning.Accounts.generate_api_token(user)
+    conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+
+    %{conn: conn, user: user}
+  end
+
+  @doc """
   Setup helper that adds the current user to a new project
 
       setup :register_and_login_user
