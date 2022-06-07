@@ -6,18 +6,6 @@ defmodule Lightning.InvocationTest do
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
 
-  @spec shift_inserted_at!(map(), list()) :: map()
-  defp shift_inserted_at!(struct, shift_attrs) do
-    inserted_at =
-      Map.get(struct, :inserted_at)
-      |> Timex.shift(shift_attrs)
-      |> Timex.to_naive_datetime()
-      |> NaiveDateTime.truncate(:second)
-
-    Ecto.Changeset.change(struct, %{inserted_at: inserted_at})
-    |> Repo.update!()
-  end
-
   describe "invocation" do
     import Lightning.JobsFixtures
     alias Lightning.Invocation.{Run, Dataclip, Event}
@@ -203,14 +191,17 @@ defmodule Lightning.InvocationTest do
       assert Invocation.list_runs() == [run]
     end
 
-    test "list_runs_for_project/1 returns runs ordered by inserted at desc" do
+    test "list_runs_for_project/2 returns runs ordered by inserted at desc" do
       project = project_fixture([])
       event = event_fixture(project_id: project.id)
 
       first_run = run_fixture(event_id: event.id) |> shift_inserted_at!(days: -1)
       second_run = run_fixture(event_id: event.id)
 
-      assert Invocation.list_runs_for_project(project) == [second_run, first_run]
+      assert Invocation.list_runs_for_project(project).entries == [
+               second_run,
+               first_run
+             ]
     end
 
     test "get_run!/1 returns the run with given id" do

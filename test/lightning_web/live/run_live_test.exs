@@ -11,7 +11,25 @@ defmodule LightningWeb.RunLiveTest do
         log: ["First Run"]
       )
 
-    %{run: run}
+    finished_run =
+      run_fixture(
+        event_id: event_fixture(project_id: project.id).id,
+        log: ["Finished Run"],
+        started_at: DateTime.add(DateTime.utc_now(), -1, :second),
+        finished_at: DateTime.add(DateTime.utc_now(), -500, :millisecond)
+      )
+
+    # Add a bunch of other runs to invoke pagination with more than one page.
+    Enum.each(0..10, fn _ ->
+      run_fixture(
+        event_id: event_fixture(project_id: project.id).id,
+        log: ["Finished Run"],
+        started_at: DateTime.add(DateTime.utc_now(), -1, :second),
+        finished_at: DateTime.add(DateTime.utc_now(), -500, :millisecond)
+      )
+    end)
+
+    %{run: run, finished_run: finished_run}
   end
 
   setup :register_and_log_in_user
@@ -28,7 +46,7 @@ defmodule LightningWeb.RunLiveTest do
 
       assert html =~ "Runs"
 
-      table = view |> element("table") |> render()
+      table = view |> element("section#inner") |> render()
       assert table =~ "run-#{run.id}"
       refute table =~ "run-#{other_run.id}"
     end

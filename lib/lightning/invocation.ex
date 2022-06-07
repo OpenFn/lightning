@@ -237,13 +237,13 @@ defmodule Lightning.Invocation do
     Repo.all(Run)
   end
 
-  def list_runs_for_project(%Project{id: project_id}) do
+  def list_runs_for_project(%Project{id: project_id}, params \\ %{}) do
     from(r in Run,
       join: p in assoc(r, :project),
       where: p.id == ^project_id,
       order_by: [desc: r.inserted_at]
     )
-    |> Repo.all()
+    |> Repo.paginate(params)
   end
 
   @doc """
