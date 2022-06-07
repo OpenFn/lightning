@@ -6,18 +6,6 @@ defmodule Lightning.InvocationTest do
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
 
-  @spec shift_inserted_at!(map(), list()) :: map()
-  defp shift_inserted_at!(struct, shift_attrs) do
-    inserted_at =
-      Map.get(struct, :inserted_at)
-      |> Timex.shift(shift_attrs)
-      |> Timex.to_naive_datetime()
-      |> NaiveDateTime.truncate(:second)
-
-    Ecto.Changeset.change(struct, %{inserted_at: inserted_at})
-    |> Repo.update!()
-  end
-
   describe "invocation" do
     import Lightning.JobsFixtures
     alias Lightning.Invocation.{Run, Dataclip, Event}
