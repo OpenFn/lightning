@@ -14,7 +14,7 @@ defmodule LightningWeb.DashboardLiveTest do
       {:ok, view, html} = live(conn, Routes.dashboard_index_path(conn, :index))
 
       assert html =~ "Projects"
-      assert html =~ "No Project"
+      assert html =~ "Credentials"
 
       view
       |> element(~s{a[data-phx-link=redirect]#project-#{project.id}})
