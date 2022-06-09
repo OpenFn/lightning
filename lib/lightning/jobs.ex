@@ -26,7 +26,7 @@ defmodule Lightning.Jobs do
   end
 
   def jobs_for_project(%Project{} = project) do
-    Repo.all(Ecto.assoc(project, :jobs))
+    Repo.all(Ecto.assoc(project, :jobs) |> preload(:trigger))
   end
 
   @doc """
