@@ -35,13 +35,14 @@ defmodule LightningWeb.JobLiveTest do
     test "lists all jobs", %{conn: conn, job: job} do
       other_job = job_fixture(name: "other job")
 
-      {:ok, _index_live, html} =
+      {:ok, view, html} =
         live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
 
       assert html =~ "Listing Jobs"
-      refute html =~ other_job.name
-      assert html =~ job.name
-      assert html =~ job.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+
+      table = view |> element("section#inner") |> render()
+      assert table =~ "job-#{job.id}"
+      refute table =~ "job-#{other_job.id}"
     end
 
     test "saves new job", %{conn: conn, project: project} do
@@ -192,15 +193,15 @@ defmodule LightningWeb.JobLiveTest do
   describe "Show" do
     test "displays job", %{conn: conn, job: job, project: project} do
       {:ok, _show_live, html} =
-        live(conn, Routes.project_job_show_path(conn, :show, project, job))
+        live(conn, Routes.project_job_index_path(conn, :show, project, job))
 
-      assert html =~ "Show Job"
+      # assert html =~ "Show Job"
       assert html =~ job.name
     end
 
     test "updates job within modal", %{conn: conn, job: job, project: project} do
       {:ok, show_live, _html} =
-        live(conn, Routes.project_job_show_path(conn, :show, project, job))
+        live(conn, Routes.project_job_index_path(conn, :show, project, job))
 
       {:ok, view, _} =
         show_live
