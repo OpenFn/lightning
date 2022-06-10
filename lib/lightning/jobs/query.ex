@@ -118,4 +118,17 @@ defmodule Lightning.Jobs.Query do
     projects = Ecto.assoc(user, :projects) |> select([:id])
     from(j in Job, where: j.project_id in subquery(projects))
   end
+
+  @doc """
+  Returns active jobs with their cron triggers for use in the cron scheduling
+  service.
+  """
+  def enabled_cron_jobs do
+    from(j in Job,
+      join: t in assoc(j, :trigger),
+      where: t.type == :cron,
+      where: j.enabled,
+      preload: [:trigger]
+    )
+  end
 end

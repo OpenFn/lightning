@@ -45,3 +45,5 @@ priv/openfn
 .elixir_ls
 
 .env
+
+.vscode

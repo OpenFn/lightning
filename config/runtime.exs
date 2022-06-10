@@ -25,6 +25,22 @@ listen_address =
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
+config :lightning, Oban,
+  repo: Lightning.Repo,
+  plugins: [
+    {Oban.Plugins.Cron,
+     crontab: [
+        {"* * * * *", Lightning.Jobs.Scheduler},
+       #  {"* * * * *", ObanPruner},
+     ]}
+  ],
+  shutdown_grace_period: 15_000,
+  dispatch_cooldown: 100,
+  queues: [
+    scheduler: 1,
+    runs: System.get_env("GLOBAL_RUNS_CONCURRENCY", "1") |> String.to_integer()
+  ]
+
 # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
 config :sentry,
   filter: Lightning.SentryEventFilter,

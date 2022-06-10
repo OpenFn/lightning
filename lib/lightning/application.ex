@@ -23,6 +23,8 @@ defmodule Lightning.Application do
     children = [
       # Start the Ecto repository
       Lightning.Repo,
+      # Start Oban,
+      {Oban, Application.fetch_env!(:lightning, Oban)},
       # Start the Telemetry supervisor
       LightningWeb.Telemetry,
       # Start the PubSub system
