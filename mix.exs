@@ -110,7 +110,7 @@ defmodule Lightning.MixProject do
   defp docs() do
     [
       # The main page in the docs
-      main: "Lightning",
+      main: "readme",
       logo: "priv/static/images/square-logo.png",
       extras: [
         "README.md": [title: "Lightning"],
