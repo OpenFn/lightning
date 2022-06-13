@@ -55,7 +55,6 @@ LightningWeb.InitAssigns.html
 LightningWeb.JobLive.Edit.html
 LightningWeb.JobLive.FormComponent.html
 LightningWeb.JobLive.Index.html
-LightningWeb.JobLive.Show.html
 LightningWeb.LayoutView.html
 LightningWeb.LiveHelpers.html
 LightningWeb.PageView.html
@@ -96,8 +95,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-ded9f50333.js
-dist/sidebar_items-ac38d152f0.js
+dist/search_items-cfe3e5ff5c.js
+dist/sidebar_items-da7f6304f4.js
 index.html
 readme.html
 search.html
