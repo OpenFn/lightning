@@ -1,79 +1,81 @@
-<MainSection.header title="Jobs" />
+<MainSection.header title={@page_title} />
 
 <MainSection.main>
-  <%= if @live_action in [:new, :edit] do %>
-    <.modal return_to={
-      Routes.project_job_index_path(@socket, :index, @project.id)
-    }>
-      <.live_component
-        module={LightningWeb.JobLive.FormComponent}
-        id={@job.id || :new}
-        title={@page_title}
-        action={@live_action}
-        job={@job}
-        project={@project}
-        return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
-      />
-    </.modal>
+  <%= if @live_action == :show do %>
+    <.show_job {assigns} />
   <% end %>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Body</th>
-        <th>Enabled</th>
+  <%= if @live_action in [:new, :edit] do %>
+    <.live_component
+      module={LightningWeb.JobLive.FormComponent}
+      id={@job.id || :new}
+      title={@page_title}
+      action={@live_action}
+      job={@job}
+      project={@project}
+      return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
+    />
+  <% end %>
+  <%= if @live_action == :index do %>
+    <div class="grid grid-cols-10 gap-4 font-bold">
+      <div class="col-span-3">
+        Name
+      </div>
+      <div class="col-span-4">Body</div>
+      <div class="col-span-1">Enabled</div>
 
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="jobs">
-      <%= for job <- @jobs do %>
-        <tr id={"job-#{job.id}"}>
-          <td><%= job.name %></td>
-          <td><%= job.body %></td>
-          <td><%= job.enabled %></td>
+      <div class="col-span-2">Action</div>
+    </div>
+    <%= for job <- @page.entries do %>
+      <div class="grid grid-cols-10 gap-4" id={"job-#{job.id}"}>
+        <div class="col-span-3"><%= job.name %></div>
+        <div class="col-span-4"><%= job.body %></div>
+        <div class="col-span-1"><%= job.enabled %></div>
 
-          <td>
-            <span>
-              <%= live_redirect("Show",
-                to:
-                  Routes.project_job_show_path(
-                    @socket,
-                    :show,
-                    job.project_id,
-                    job
-                  )
-              ) %>
-            </span>
-            <span>
-              <%= live_redirect("Edit",
-                to:
-                  Routes.project_job_edit_path(
-                    @socket,
-                    :edit,
-                    job.project_id,
-                    job
-                  )
-              ) %>
-            </span>
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: job.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
-            </span>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-
-  <span>
-    <%= live_patch("New Job",
-      to: Routes.project_job_index_path(@socket, :new, @project.id)
-    ) %>
-  </span>
+        <div class="col-span-2">
+          <span>
+            <%= live_redirect("Show",
+              to:
+                Routes.project_job_index_path(
+                  @socket,
+                  :show,
+                  @project.id,
+                  job
+                )
+            ) %>
+          </span>
+          |
+          <span>
+            <%= live_redirect("Edit",
+              to:
+                Routes.project_job_edit_path(
+                  @socket,
+                  :edit,
+                  @project.id,
+                  job
+                ),
+              class: "button"
+            ) %>
+          </span>
+          |
+          <span>
+            <%= link("Delete",
+              to: "#",
+              phx_click: "delete",
+              phx_value_id: job.id,
+              data: [confirm: "Are you sure?"]
+            ) %>
+          </span>
+        </div>
+      </div>
+    <% end %>
+    <.divider />
+    <span>
+      <%= live_patch("New Job",
+        to: Routes.project_job_index_path(@socket, :new, @project.id)
+      ) %>
+    </span>
+    <.divider />
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
+  <% end %>
 </MainSection.main>

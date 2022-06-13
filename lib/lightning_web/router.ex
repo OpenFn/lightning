@@ -18,13 +18,13 @@ defmodule LightningWeb.Router do
   end
 
   pipeline :api do
-    plug(:accepts, ["json"])
+    plug :accepts, ["json"]
   end
 
   scope "/", LightningWeb do
     pipe_through [:browser]
 
-    live("/first_setup", FirstSetupLive.Superuser, :show)
+    live "/first_setup", FirstSetupLive.Superuser, :show
 
     get "/users/log_out", UserSessionController, :delete
     get "/users/confirm", UserConfirmationController, :new
@@ -72,37 +72,37 @@ defmodule LightningWeb.Router do
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
       scope "/projects/:project_id", as: :project do
-        live("/jobs", JobLive.Index, :index)
-        live("/jobs/new", JobLive.Index, :new)
-        live("/jobs/:id", JobLive.Show, :show)
-        live("/jobs/:id/edit", JobLive.Edit, :edit)
+        live "/jobs", JobLive.Index, :index
+        live "/jobs/new", JobLive.Index, :new
+        live "/jobs/:id", JobLive.Index, :show
+        live "/jobs/:id/edit", JobLive.Edit, :edit
 
-        live("/runs", RunLive.Index, :index)
-        live("/runs/:id", RunLive.Index, :show)
+        live "/runs", RunLive.Index, :index
+        live "/runs/:id", RunLive.Index, :show
 
-        live("/dataclips", DataclipLive.Index, :index)
-        live("/dataclips/new", DataclipLive.Index, :new)
-        live("/dataclips/:id", DataclipLive.Show, :show)
+        live "/dataclips", DataclipLive.Index, :index
+        live "/dataclips/new", DataclipLive.Index, :new
+        live "/dataclips/:id", DataclipLive.Show, :show
 
-        live("/", DashboardLive.Index, :show)
+        live "/", DashboardLive.Index, :show
       end
 
       # live("/jobs", JobLive.Index, :index)
 
-      live("/credentials", CredentialLive.Index, :index)
-      live("/credentials/new", CredentialLive.Index, :new)
+      live "/credentials", CredentialLive.Index, :index
+      live "/credentials/new", CredentialLive.Index, :new
 
-      live("/credentials/:id", CredentialLive.Show, :show)
-      live("/credentials/:id/edit", CredentialLive.Edit, :edit)
+      live "/credentials/:id", CredentialLive.Show, :show
+      live "/credentials/:id/edit", CredentialLive.Edit, :edit
 
-      live("/", DashboardLive.Index, :index)
+      live "/", DashboardLive.Index, :index
     end
   end
 
   scope "/i", LightningWeb do
-    pipe_through(:api)
+    pipe_through :api
 
-    post("/*path", WebhooksController, :create)
+    post "/*path", WebhooksController, :create
   end
 
   # Other scopes may use custom stacks.
@@ -121,9 +121,9 @@ defmodule LightningWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/" do
-      pipe_through(:browser)
+      pipe_through :browser
 
-      live_dashboard("/dashboard", metrics: LightningWeb.Telemetry)
+      live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
     end
   end
 
@@ -133,9 +133,9 @@ defmodule LightningWeb.Router do
   # node running the Phoenix server.
   if Mix.env() == :dev do
     scope "/dev" do
-      pipe_through(:browser)
+      pipe_through :browser
 
-      forward("/mailbox", Plug.Swoosh.MailboxPreview)
+      forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
 
