@@ -7,102 +7,102 @@ defmodule LightningWeb.Router do
   alias UserLive
 
   pipeline :browser do
-    plug(:accepts, ["html"])
-    plug(:fetch_session)
-    plug(:fetch_live_flash)
-    plug(:put_root_layout, {LightningWeb.LayoutView, :root})
-    plug(:protect_from_forgery)
-    plug(:put_secure_browser_headers)
-    plug(:fetch_current_user)
-    plug(LightningWeb.Plugs.FirstSetup)
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, {LightningWeb.LayoutView, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :fetch_current_user
+    plug LightningWeb.Plugs.FirstSetup
   end
 
   pipeline :api do
-    plug(:accepts, ["json"])
+    plug :accepts, ["json"]
   end
 
   scope "/", LightningWeb do
-    pipe_through([:browser])
+    pipe_through [:browser]
 
-    live("/first_setup", FirstSetupLive.Superuser, :show)
+    live "/first_setup", FirstSetupLive.Superuser, :show
 
-    get("/users/log_out", UserSessionController, :delete)
-    get("/users/confirm", UserConfirmationController, :new)
-    post("/users/confirm", UserConfirmationController, :create)
-    get("/users/confirm/:token", UserConfirmationController, :edit)
-    post("/users/confirm/:token", UserConfirmationController, :update)
+    get "/users/log_out", UserSessionController, :delete
+    get "/users/confirm", UserConfirmationController, :new
+    post "/users/confirm", UserConfirmationController, :create
+    get "/users/confirm/:token", UserConfirmationController, :edit
+    post "/users/confirm/:token", UserConfirmationController, :update
   end
 
   ## Authentication routes
 
   scope "/", LightningWeb do
-    pipe_through([:browser, :redirect_if_user_is_authenticated])
+    pipe_through [:browser, :redirect_if_user_is_authenticated]
 
-    get("/users/register", UserRegistrationController, :new)
-    post("/users/register", UserRegistrationController, :create)
-    get("/users/token_exchange/:token", UserSessionController, :exchange_token)
-    get("/users/log_in", UserSessionController, :new)
-    post("/users/log_in", UserSessionController, :create)
-    get("/users/reset_password", UserResetPasswordController, :new)
-    post("/users/reset_password", UserResetPasswordController, :create)
-    get("/users/reset_password/:token", UserResetPasswordController, :edit)
-    put("/users/reset_password/:token", UserResetPasswordController, :update)
+    get "/users/register", UserRegistrationController, :new
+    post "/users/register", UserRegistrationController, :create
+    get "/users/token_exchange/:token", UserSessionController, :exchange_token
+    get "/users/log_in", UserSessionController, :new
+    post "/users/log_in", UserSessionController, :create
+    get "/users/reset_password", UserResetPasswordController, :new
+    post "/users/reset_password", UserResetPasswordController, :create
+    get "/users/reset_password/:token", UserResetPasswordController, :edit
+    put "/users/reset_password/:token", UserResetPasswordController, :update
   end
 
   scope "/", LightningWeb do
-    pipe_through([:browser, :require_authenticated_user])
+    pipe_through [:browser, :require_authenticated_user]
 
-    get("/profile", UserSettingsController, :edit)
-    put("/profile", UserSettingsController, :update)
-    get("/profile/confirm_email/:token", UserSettingsController, :confirm_email)
+    get "/profile", UserSettingsController, :edit
+    put "/profile", UserSettingsController, :update
+    get "/profile/confirm_email/:token", UserSettingsController, :confirm_email
 
     live_session :settings, on_mount: LightningWeb.InitAssigns do
-      live("/settings", SettingsLive.Index, :index)
+      live "/settings", SettingsLive.Index, :index
 
-      live("/settings/users", UserLive.Index, :index)
-      live("/settings/users/new", UserLive.Index, :new)
+      live "/settings/users", UserLive.Index, :index
+      live "/settings/users/new", UserLive.Index, :new
 
-      live("/settings/users/:id", UserLive.Show, :show)
-      live("/settings/users/:id/edit", UserLive.Edit, :edit)
+      live "/settings/users/:id", UserLive.Show, :show
+      live "/settings/users/:id/edit", UserLive.Edit, :edit
 
-      live("/settings/projects", ProjectLive.Index, :index)
-      live("/settings/projects/new", ProjectLive.Index, :new)
-      live("/settings/projects/:id", ProjectLive.Index, :edit)
+      live "/settings/projects", ProjectLive.Index, :index
+      live "/settings/projects/new", ProjectLive.Index, :new
+      live "/settings/projects/:id", ProjectLive.Index, :edit
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
       scope "/projects/:project_id", as: :project do
-        live("/jobs", JobLive.Index, :index)
-        live("/jobs/new", JobLive.Index, :new)
-        live("/jobs/:id", JobLive.Index, :show)
-        live("/jobs/:id/edit", JobLive.Edit, :edit)
+        live "/jobs", JobLive.Index, :index
+        live "/jobs/new", JobLive.Index, :new
+        live "/jobs/:id", JobLive.Index, :show
+        live "/jobs/:id/edit", JobLive.Edit, :edit
 
-        live("/runs", RunLive.Index, :index)
-        live("/runs/:id", RunLive.Index, :show)
+        live "/runs", RunLive.Index, :index
+        live "/runs/:id", RunLive.Index, :show
 
-        live("/dataclips", DataclipLive.Index, :index)
-        live("/dataclips/new", DataclipLive.Index, :new)
-        live("/dataclips/:id", DataclipLive.Show, :show)
+        live "/dataclips", DataclipLive.Index, :index
+        live "/dataclips/new", DataclipLive.Index, :new
+        live "/dataclips/:id", DataclipLive.Show, :show
 
-        live("/", DashboardLive.Index, :show)
+        live "/", DashboardLive.Index, :show
       end
 
       # live("/jobs", JobLive.Index, :index)
 
-      live("/credentials", CredentialLive.Index, :index)
-      live("/credentials/new", CredentialLive.Index, :new)
+      live "/credentials", CredentialLive.Index, :index
+      live "/credentials/new", CredentialLive.Index, :new
 
-      live("/credentials/:id", CredentialLive.Show, :show)
-      live("/credentials/:id/edit", CredentialLive.Edit, :edit)
+      live "/credentials/:id", CredentialLive.Show, :show
+      live "/credentials/:id/edit", CredentialLive.Edit, :edit
 
-      live("/", DashboardLive.Index, :index)
+      live "/", DashboardLive.Index, :index
     end
   end
 
   scope "/i", LightningWeb do
-    pipe_through(:api)
+    pipe_through :api
 
-    post("/*path", WebhooksController, :create)
+    post "/*path", WebhooksController, :create
   end
 
   # Other scopes may use custom stacks.
@@ -121,9 +121,9 @@ defmodule LightningWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/" do
-      pipe_through(:browser)
+      pipe_through :browser
 
-      live_dashboard("/dashboard", metrics: LightningWeb.Telemetry)
+      live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
     end
   end
 
@@ -133,20 +133,20 @@ defmodule LightningWeb.Router do
   # node running the Phoenix server.
   if Mix.env() == :dev do
     scope "/dev" do
-      pipe_through(:browser)
+      pipe_through :browser
 
-      forward("/mailbox", Plug.Swoosh.MailboxPreview)
+      forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end
 
-  forward("/health_check", LightningWeb.HealthCheck)
+  forward "/health_check", LightningWeb.HealthCheck
 end
 
 defmodule LightningWeb.HealthCheck do
   use Plug.Router
 
-  plug(:match)
-  plug(:dispatch)
+  plug :match
+  plug :dispatch
 
   get "/" do
     send_resp(conn, 200, "Hello you!")
