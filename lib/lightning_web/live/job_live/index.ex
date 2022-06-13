@@ -46,16 +46,6 @@ defmodule LightningWeb.JobLive.Index do
     |> assign(:job, Jobs.get_job!(id))
   end
 
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    job = Jobs.get_job!(id)
-    {:ok, _} = Jobs.delete_job(job)
-
-    {:noreply,
-     socket
-     |> assign(page: Jobs.jobs_for_project(socket.assigns.project, %{}))}
-  end
-
   defp apply_action(socket, :edit, %{"id" => id}) do
     socket
     |> assign(:page_title, "Edit Job")
@@ -74,6 +64,16 @@ defmodule LightningWeb.JobLive.Index do
       Lightning.Credentials.list_credentials()
     )
     |> assign(:job, %Job{project_id: socket.assigns.project.id})
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    job = Jobs.get_job!(id)
+    {:ok, _} = Jobs.delete_job(job)
+
+    {:noreply,
+     socket
+     |> assign(page: Jobs.jobs_for_project(socket.assigns.project, %{}))}
   end
 
   def show_job(assigns) do

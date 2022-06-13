@@ -27,6 +27,7 @@ defmodule LightningWeb.RunLiveTest do
         started_at: DateTime.add(DateTime.utc_now(), -1, :second),
         finished_at: DateTime.add(DateTime.utc_now(), -500, :millisecond)
       )
+      |> shift_inserted_at!(days: -1)
     end)
 
     %{run: run, finished_run: finished_run}
