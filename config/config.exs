@@ -21,6 +21,8 @@ config :lightning, LightningWeb.Endpoint,
   pubsub_server: Lightning.PubSub,
   live_view: [signing_salt: "EfrmuOUr"]
 
+config :joken, default_signer: "secret"
+
 # Configures the mailer
 #
 # By default it uses the "Local" adapter which stores the emails

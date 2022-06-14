@@ -15,6 +15,7 @@ defmodule LightningWeb.UserAuthTest do
         LightningWeb.Endpoint.config(:secret_key_base)
       )
       |> init_test_session(%{})
+      |> Phoenix.Controller.accepts(["html", "json"])
 
     %{user: user_fixture(), conn: conn}
   end
@@ -173,6 +174,19 @@ defmodule LightningWeb.UserAuthTest do
       assert conn.halted
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
       assert get_flash(conn, :error) == "You must log in to access this page."
+    end
+
+    test "returns a 401 on json requests if user is not authenticated", %{
+      conn: conn
+    } do
+      conn =
+        conn
+        |> Phoenix.Controller.put_format("json")
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert conn.status == 401
+      assert conn.resp_body |> Jason.decode!() == %{"error" => "Unauthorized"}
     end
 
     test "stores the path to redirect to on GET", %{conn: conn} do

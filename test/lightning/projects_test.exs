@@ -12,7 +12,7 @@ defmodule Lightning.ProjectsTest do
     @invalid_attrs %{name: nil}
 
     test "list_projects/0 returns all projects" do
-      project = project_fixture()
+      project = project_fixture() |> unload_relation(:project_users)
       assert Projects.list_projects() == [project]
     end
 
@@ -31,7 +31,7 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "get_project!/1 returns the project with given id" do
-      project = project_fixture()
+      project = project_fixture() |> unload_relation(:project_users)
       assert Projects.get_project!(project.id) == project
 
       assert_raise Ecto.NoResultsError, fn ->
@@ -42,7 +42,7 @@ defmodule Lightning.ProjectsTest do
     test "get_project/1 returns the project with given id" do
       assert Projects.get_project(Ecto.UUID.generate()) == nil
 
-      project = project_fixture()
+      project = project_fixture() |> unload_relation(:project_users)
       assert Projects.get_project(project.id) == project
     end
 
@@ -88,7 +88,7 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "update_project/2 with invalid data returns error changeset" do
-      project = project_fixture()
+      project = project_fixture() |> unload_relation(:project_users)
 
       assert {:error, %Ecto.Changeset{}} =
                Projects.update_project(project, @invalid_attrs)

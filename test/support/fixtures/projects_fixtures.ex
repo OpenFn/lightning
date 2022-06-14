@@ -12,7 +12,8 @@ defmodule Lightning.ProjectsFixtures do
     {:ok, project} =
       attrs
       |> Enum.into(%{
-        name: "some-name"
+        name: "some-name",
+        project_users: []
       })
       |> Lightning.Projects.create_project()
 

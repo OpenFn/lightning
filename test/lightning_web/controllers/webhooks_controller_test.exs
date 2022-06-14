@@ -1,5 +1,5 @@
 defmodule LightningWeb.WebhooksControllerTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
   use Mimic
 
   alias Lightning.{Invocation, Repo}
@@ -7,8 +7,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   import Lightning.JobsFixtures
 
   test "POST /i", %{conn: conn} do
-    job = job_fixture(trigger: %{})
     expect(Lightning.Pipeline.Runner, :start, fn _run -> %Engine.Result{} end)
+    job = job_fixture(trigger: %{})
 
     message = %{"foo" => "bar"}
     conn = post(conn, "/i/#{job.id}", message)

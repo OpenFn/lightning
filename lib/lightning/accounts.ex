@@ -293,7 +293,7 @@ defmodule Lightning.Accounts do
   Generates a session token.
   """
   def generate_user_session_token(user) do
-    {token, user_token} = UserToken.build_session_token(user)
+    {token, user_token} = UserToken.build_token(user, "session")
     Repo.insert!(user_token)
     token
   end
@@ -302,7 +302,7 @@ defmodule Lightning.Accounts do
   Gets the user with the given signed token.
   """
   def get_user_by_session_token(token) do
-    {:ok, query} = UserToken.verify_session_token_query(token)
+    {:ok, query} = UserToken.verify_token_query(token, "session")
     Repo.one(query)
   end
 
@@ -345,7 +345,7 @@ defmodule Lightning.Accounts do
   Gets the user with the given signed token.
   """
   def get_user_by_auth_token(token) do
-    {:ok, query} = UserToken.verify_auth_token_query(token)
+    {:ok, query} = UserToken.verify_token_query(token, "auth")
     Repo.one(query)
   end
 
@@ -355,6 +355,25 @@ defmodule Lightning.Accounts do
   def delete_auth_token(token) do
     Repo.delete_all(UserToken.token_and_context_query(token, "auth"))
     :ok
+  end
+
+  ## API
+
+  @doc """
+  Generates an API token for a user.
+  """
+  def generate_api_token(user) do
+    {token, user_token} = UserToken.build_token(user, "api")
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Gets the user with the given signed token.
+  """
+  def get_user_by_api_token(token) do
+    {:ok, query} = UserToken.verify_token_query(token, "api")
+    Repo.one(query)
   end
 
   ## Confirmation
