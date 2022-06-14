@@ -13,9 +13,12 @@ Lightning.Credentials.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
 Lightning.Invocation.Event.html
+Lightning.Invocation.Policy.html
+Lightning.Invocation.Query.html
 Lightning.Invocation.Run.html
 Lightning.Invocation.html
 Lightning.Jobs.Job.html
+Lightning.Jobs.Policy.html
 Lightning.Jobs.Query.html
 Lightning.Jobs.Trigger.html
 Lightning.Jobs.html
@@ -31,6 +34,14 @@ Lightning.Projects.html
 Lightning.Release.html
 Lightning.Repo.html
 Lightning.html
+LightningWeb.API.Helpers.html
+LightningWeb.API.JobController.html
+LightningWeb.API.JobView.html
+LightningWeb.API.ProjectController.html
+LightningWeb.API.ProjectView.html
+LightningWeb.API.RunController.html
+LightningWeb.API.RunView.html
+LightningWeb.ChangesetView.html
 LightningWeb.Components.Common.html
 LightningWeb.Components.Form.html
 LightningWeb.Components.Icon.html
@@ -46,6 +57,7 @@ LightningWeb.DataclipLive.Show.html
 LightningWeb.Endpoint.html
 LightningWeb.ErrorHelpers.html
 LightningWeb.ErrorView.html
+LightningWeb.FallbackController.html
 LightningWeb.FirstSetupLive.Superuser.html
 LightningWeb.FormHelpers.html
 LightningWeb.Gettext.html
@@ -95,8 +107,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-cfe3e5ff5c.js
-dist/sidebar_items-da7f6304f4.js
+dist/search_items-e02bfe161c.js
+dist/sidebar_items-04b94e0fd8.js
 index.html
 readme.html
 search.html
