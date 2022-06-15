@@ -6,47 +6,47 @@
   <% end %>
 
   <%= if @live_action == :index do %>
-      <div class="grid grid-cols-10 gap-4 font-bold">
-        <div class="col-span-2">
-          Created
-        </div>
-        <div class="col-span-2">Type</div>
-        <div class="col-span-4">Body</div>
-
-        <div class="col-span-2">Action</div>
+    <div class="grid grid-cols-10 gap-4 font-bold">
+      <div class="col-span-2">
+        Created
       </div>
-      <%= for dataclip <- @page.entries do %>
-        <div class="grid grid-cols-10 gap-4" id={"dataclip-#{dataclip.id}"}>
-          <div class="col-span-2">
-            <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
-          </div>
-          <div class="col-span-2"><.type_pill dataclip={dataclip} /></div>
-          <div class="col-span-4"><%= dataclip.body %></div>
+      <div class="col-span-2">Type</div>
+      <div class="col-span-4">Body</div>
 
-          <div class="col-span-2">
-            <span>
-              <%= live_redirect("Show",
-                to:
-                  Routes.project_dataclip_index_path(
-                    @socket,
-                    :show,
-                    @project.id,
-                    dataclip
-                  )
-              ) %>
-            </span>
-            |
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: dataclip.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
-            </span>
-          </div>
+      <div class="col-span-2">Action</div>
+    </div>
+    <%= for dataclip <- @page.entries do %>
+      <div class="grid grid-cols-10 gap-4" id={"dataclip-#{dataclip.id}"}>
+        <div class="col-span-2">
+          <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
         </div>
-      <% end %>
+        <div class="col-span-2"><.type_pill dataclip={dataclip} /></div>
+        <div class="col-span-4"><%= dataclip.body %></div>
+
+        <div class="col-span-2">
+          <span>
+            <%= live_redirect("Show",
+              to:
+                Routes.project_dataclip_index_path(
+                  @socket,
+                  :show,
+                  @project.id,
+                  dataclip
+                )
+            ) %>
+          </span>
+          |
+          <span>
+            <%= link("Delete",
+              to: "#",
+              phx_click: "delete",
+              phx_value_id: dataclip.id,
+              data: [confirm: "Are you sure?"]
+            ) %>
+          </span>
+        </div>
+      </div>
+    <% end %>
     <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   <% end %>
 </MainSection.main>

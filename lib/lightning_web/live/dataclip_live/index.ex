@@ -36,7 +36,7 @@ defmodule LightningWeb.DataclipLive.Index do
       page_title: "Listing Dataclips",
       dataclip: %Dataclip{},
       page:
-        Invocation.list_dataclips(socket.assigns.project)
+        Invocation.list_dataclips_query(socket.assigns.project)
         |> Lightning.Repo.paginate(params)
     )
   end
@@ -56,7 +56,7 @@ defmodule LightningWeb.DataclipLive.Index do
      socket
      |> assign(
        page:
-         Invocation.list_dataclips(socket.assigns.project)
+         Invocation.list_dataclips_query(socket.assigns.project)
          |> Lightning.Repo.paginate(%{})
      )}
   end

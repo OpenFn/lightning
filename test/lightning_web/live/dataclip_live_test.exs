@@ -42,16 +42,9 @@ defmodule LightningWeb.DataclipLiveTest do
 
       assert html =~ "Listing Dataclips"
 
-      refute has_element?(view, "#dataclip-#{other_dataclip.id}")
-
-      view
-      |> element(~s{#dataclip-#{dataclip.id} a[data-phx-link=redirect]})
-      |> render_click()
-
-      assert_redirect(
-        view,
-        Routes.project_dataclip_show_path(conn, :show, project.id, dataclip.id)
-      )
+      table = view |> element("section#inner") |> render()
+      assert table =~ "dataclip-#{dataclip.id}"
+      refute table =~ "dataclip-#{other_dataclip.id}"
     end
 
     @tag skip: "You can't create dataclips manually right now"
@@ -142,46 +135,10 @@ defmodule LightningWeb.DataclipLiveTest do
       {:ok, _show_live, html} =
         live(
           conn,
-          Routes.project_dataclip_show_path(conn, :show, project.id, dataclip)
+          Routes.project_dataclip_index_path(conn, :show, project.id, dataclip)
         )
 
-      assert html =~ "Show Dataclip"
-    end
-
-    @tag skip: "You can't create dataclips manually right now"
-    test "updates dataclip within modal", %{
-      conn: conn,
-      dataclip: dataclip,
-      project: project
-    } do
-      {:ok, show_live, _html} =
-        live(
-          conn,
-          Routes.project_dataclip_show_path(conn, :show, project.id, dataclip)
-        )
-
-      assert show_live |> element("a", "Edit") |> render_click() =~
-               "Edit Dataclip"
-
-      assert_patch(
-        show_live,
-        Routes.project_dataclip_show_path(conn, :edit, project.id, dataclip)
-      )
-
-      assert show_live
-             |> form("#dataclip-form", dataclip: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      {:ok, _, html} =
-        show_live
-        |> form("#dataclip-form", dataclip: @update_attrs)
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.project_dataclip_show_path(conn, :show, project.id, dataclip)
-        )
-
-      assert html =~ "Dataclip updated successfully"
+      assert html =~ "Dataclip"
     end
   end
 end
