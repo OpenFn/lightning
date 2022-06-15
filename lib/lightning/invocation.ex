@@ -65,7 +65,6 @@ defmodule Lightning.Invocation do
       where: e.project_id == ^project_id,
       order_by: [desc: d.inserted_at]
     )
-    |> Repo.all()
   end
 
   @doc """
