@@ -79,7 +79,7 @@ mix deps.get
 mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
-mix openfn.runtime.install
+mix openfn.install.runtime
 ```
 
 ### Run the app
