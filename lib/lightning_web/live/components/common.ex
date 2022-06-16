@@ -43,11 +43,20 @@ defmodule LightningWeb.Components.Common do
 
     assigns =
       Phoenix.LiveView.assign_new(assigns, :disabled, fn -> false end)
+      |> Phoenix.LiveView.assign_new(:onclick, fn -> nil end)
+      |> Phoenix.LiveView.assign_new(:title, fn -> nil end)
       |> assign(:class, class)
       |> assign(:extra, extra)
 
     ~H"""
-    <button type="button" class={@class} disabled={@disabled} {@extra}>
+    <button
+      type="button"
+      class={@class}
+      disabled={@disabled}
+      onclick={@onclick}
+      title={@title}
+      {@extra}
+    >
       <%= if assigns[:inner_block], do: render_slot(@inner_block), else: @text %>
     </button>
     """
