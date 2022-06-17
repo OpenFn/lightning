@@ -1,4 +1,4 @@
-# OpenFn/Lightning (alpha) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning)
+# OpenFn/Lightning (alpha) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
 Lightning extends the existing [OpenFn](https://www.openfn.org) Digital Public
 Good, providing a web UI to visually manage complex workflow automation
