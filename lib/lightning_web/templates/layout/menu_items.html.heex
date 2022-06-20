@@ -1,5 +1,5 @@
 <%= if assigns[:project] do %>
-  <div class="py-2 text-indigo-300 border-dashed bg-indigo-800 border-b-2 border-indigo-900 mb-4">
+  <div class="mt-4 pb-2 mb-4 text-indigo-300 border-dashed bg-indigo-800 border-b-2 border-indigo-900">
     <Settings.menu_item
       to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
       active={@active_menu_item == :overview}

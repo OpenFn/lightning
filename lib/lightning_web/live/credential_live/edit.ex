@@ -1,7 +1,7 @@
 defmodule LightningWeb.CredentialLive.Edit do
   @moduledoc """
-  LiveView for editing a single job, which inturn uses `LightningWeb.JobLive.FormComponent`
-  for common functionality.
+  LiveView for editing a single Credential, which inturn uses
+  `LightningWeb.CredentialLive.FormComponent` for common functionality.
   """
   use LightningWeb, :live_view
 

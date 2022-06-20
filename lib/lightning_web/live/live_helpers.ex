@@ -19,7 +19,7 @@ defmodule LightningWeb.LiveHelpers do
 
       <.modal return_to={Routes.job_index_path(@socket, :index)}>
         <.live_component
-          module={LightningWeb.JobLive.FormComponent}
+          module={LightningWeb.JobLive.BigFormComponent}
           id={@job.id || :new}
           title={@page_title}
           action={@live_action}

@@ -27,7 +27,7 @@ import topbar from "../vendor/topbar";
 
 import WorkflowDiagram from "./workflow-diagram";
 
-let Hooks = {WorkflowDiagram};
+let Hooks = { WorkflowDiagram };
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener("change", (event) => {
@@ -46,13 +46,23 @@ let liveSocket = new LiveSocket("/live", Socket, {
 });
 
 // Show progress bar on live navigation and form submits
+// Include a 120ms timeout to avoid small flashes when things load quickly.
 topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
-window.addEventListener("phx:page-loading-start", (info) => topbar.show());
-window.addEventListener("phx:page-loading-stop", (info) => topbar.hide());
+
+let topBarScheduled = undefined;
+window.addEventListener("phx:page-loading-start", () => {
+  if (!topBarScheduled) {
+    topBarScheduled = setTimeout(() => topbar.show(), 120);
+  }
+});
+window.addEventListener("phx:page-loading-stop", () => {
+  clearTimeout(topBarScheduled);
+  topBarScheduled = undefined;
+  topbar.hide();
+});
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();
-
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session

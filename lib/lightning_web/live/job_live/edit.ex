@@ -1,6 +1,6 @@
 defmodule LightningWeb.JobLive.Edit do
   @moduledoc """
-  LiveView for editing a single job, which inturn uses `LightningWeb.JobLive.FormComponent`
+  LiveView for editing a single job, which inturn uses `LightningWeb.JobLive.JobFormComponent`
   for common functionality.
   """
   use LightningWeb, :live_view

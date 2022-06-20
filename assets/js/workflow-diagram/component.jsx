@@ -1,13 +1,18 @@
-import WorkflowDiagram from "@openfn/workflow-diagram";
 import React from "react";
 import { createRoot } from "react-dom/client";
+import WorkflowDiagram from "@openfn/workflow-diagram";
 
 export function mount(el) {
   const componentRoot = createRoot(el);
 
-  function update(projectSpace) {
+  function update({ projectSpace, onNodeClick, onPaneClick }) {
     return componentRoot.render(
-      <WorkflowDiagram className="h-8" projectSpace={projectSpace} />
+      <WorkflowDiagram
+        className="h-8"
+        projectSpace={projectSpace}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+      />
     );
   }
 
