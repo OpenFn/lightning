@@ -7,6 +7,7 @@ defmodule LightningWeb.JobLive.Index do
   alias Lightning.Jobs
   alias Lightning.Jobs.Job
   import LightningWeb.Components.Form
+  import LightningWeb.Components.Common
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

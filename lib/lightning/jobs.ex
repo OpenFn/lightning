@@ -27,7 +27,7 @@ defmodule Lightning.Jobs do
 
   @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
   def jobs_for_project_query(%Project{} = project) do
-    Ecto.assoc(project, :jobs)
+    Ecto.assoc(project, :jobs) |> preload(:trigger)
   end
 
   @spec jobs_for_project(Project.t()) :: [Job.t()]
