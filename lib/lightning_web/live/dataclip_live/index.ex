@@ -13,7 +13,16 @@ defmodule LightningWeb.DataclipLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(active_menu_item: :dataclips, dataclips: [])}
+     |> assign(
+       active_menu_item: :dataclips,
+       pagination_path:
+         &Routes.project_dataclip_index_path(
+           socket,
+           :index,
+           socket.assigns.project,
+           &1
+         )
+     )}
   end
 
   @impl true
@@ -21,17 +30,21 @@ defmodule LightningWeb.DataclipLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :new, _params) do
+  defp apply_action(socket, :index, params) do
     socket
-    |> assign(:page_title, "New Dataclip")
-    |> assign(:dataclip, %Dataclip{})
+    |> assign(
+      page_title: "Listing Dataclips",
+      dataclip: %Dataclip{},
+      page:
+        Invocation.list_dataclips_query(socket.assigns.project)
+        |> Lightning.Repo.paginate(params)
+    )
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp apply_action(socket, :show, %{"id" => id}) do
     socket
-    |> assign(:page_title, "Listing Dataclips")
-    |> assign(:dataclips, Invocation.list_dataclips(socket.assigns.project))
-    |> assign(:dataclip, nil)
+    |> assign(:page_title, "Dataclip")
+    |> assign(:dataclip, Invocation.get_dataclip(id))
   end
 
   @impl true
@@ -40,10 +53,11 @@ defmodule LightningWeb.DataclipLive.Index do
     {:ok, _} = Invocation.delete_dataclip(dataclip)
 
     {:noreply,
-     assign(
-       socket,
-       :dataclips,
-       Invocation.list_dataclips(socket.assigns.project)
+     socket
+     |> assign(
+       page:
+         Invocation.list_dataclips_query(socket.assigns.project)
+         |> Lightning.Repo.paginate(%{})
      )}
   end
 
@@ -66,6 +80,37 @@ defmodule LightningWeb.DataclipLive.Index do
     <div class={@class}>
       <%= @dataclip.type %>
     </div>
+    """
+  end
+
+  def show_dataclip(assigns) do
+    ~H"""
+    <ul>
+      <li>
+        <strong>Body:</strong>
+        <%= @dataclip.body %>
+      </li>
+
+      <li>
+        <strong>Type:</strong>
+        <.type_pill dataclip={@dataclip} />
+      </li>
+    </ul>
+
+    <span>
+      <%= live_redirect("Back",
+        to: Routes.project_dataclip_index_path(@socket, :index, @project.id)
+      ) %>
+    </span>
+    |
+    <span>
+    <%= link("Delete",
+      to: "#",
+      phx_click: "delete",
+      phx_value_id: @dataclip.id,
+      data: [confirm: "Are you sure?"]
+    ) %>
+    </span>
     """
   end
 end

@@ -1,73 +1,52 @@
-<MainSection.header title="Dataclips" />
+<MainSection.header title={@page_title} />
 
 <MainSection.main>
-  <%= if @live_action in [:new, :edit] do %>
-    <.live_component
-      module={LightningWeb.DataclipLive.FormComponent}
-      id={@dataclip.id || :new}
-      title={@page_title}
-      action={@live_action}
-      dataclip={@dataclip}
-      return_to={
-        Routes.project_dataclip_index_path(@socket, :index, @project.id)
-      }
-    />
-  <% else %>
-    <%= if length(@dataclips) > 0 do %>
-      <table class="table-auto w-full">
-        <thead>
-          <tr class="text-left">
-            <th>Created</th>
-            <th>Type</th>
-            <th>Body</th>
+  <%= if @live_action == :show do %>
+    <.show_dataclip {assigns} />
+  <% end %>
 
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="dataclips">
-          <%= for dataclip <- @dataclips do %>
-            <tr id={"dataclip-#{dataclip.id}"}>
-              <td><%= dataclip.inserted_at |> Calendar.strftime("%c") %></td>
-              <td>
-                <.type_pill dataclip={dataclip} />
-              </td>
-              <td><%= dataclip.body %></td>
+  <%= if @live_action == :index do %>
+    <div class="grid grid-cols-10 gap-4 font-bold">
+      <div class="col-span-2">
+        Created
+      </div>
+      <div class="col-span-2">Type</div>
+      <div class="col-span-4">Body</div>
 
-              <td>
-                <div class="inline-block"></div>
-                <%= link(
-                  to: "#",
-                  phx_click: "delete",
-                  phx_value_id: dataclip.id,
-                  data: [confirm: "Are you sure?"],
-                  class: "inline-block align-middle"
+      <div class="col-span-2">Action</div>
+    </div>
+    <%= for dataclip <- @page.entries do %>
+      <div class="grid grid-cols-10 gap-4" id={"dataclip-#{dataclip.id}"}>
+        <div class="col-span-2">
+          <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
+        </div>
+        <div class="col-span-2"><.type_pill dataclip={dataclip} /></div>
+        <div class="col-span-4"><%= dataclip.body %></div>
 
-                ) do %>
-                  <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
-                <% end %>
-                <%= live_redirect(
-                    to:
-                      Routes.project_dataclip_show_path(
-                        @socket,
-                        :show,
-                        @project.id,
-                        dataclip
-                      ),
-
-                  class: "inline-block align-middle"
-                  ) do %>
-                  <Icon.eye class="h-6 w-6 text-slate-300 hover:text-blue-700" />
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    <% else %>
-      <div class="mx-auto my-12 p-6 text-slate-700 text-center 
-                  border-dashed border-2 border-slate-300 rounded-md md:w-1/2">
-        There are currently no dataclips.
+        <div class="col-span-2">
+          <span>
+            <%= live_redirect("Show",
+              to:
+                Routes.project_dataclip_index_path(
+                  @socket,
+                  :show,
+                  @project.id,
+                  dataclip
+                )
+            ) %>
+          </span>
+          |
+          <span>
+            <%= link("Delete",
+              to: "#",
+              phx_click: "delete",
+              phx_value_id: dataclip.id,
+              data: [confirm: "Are you sure?"]
+            ) %>
+          </span>
+        </div>
       </div>
     <% end %>
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   <% end %>
 </MainSection.main>
