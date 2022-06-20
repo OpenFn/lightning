@@ -138,7 +138,7 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
-  describe "coerce_params_for_adaptor_list/1" do
+  describe "FormComponent.coerce_params_for_adaptor_list/1" do
     test "when adaptor_name is present it sets the adaptor to @latest" do
       assert LightningWeb.JobLive.FormComponent.coerce_params_for_adaptor_list(%{
                "adaptor" => "",

@@ -69,4 +69,32 @@ defmodule LightningWeb.Components.Common do
     </div>
     """
   end
+
+  # https://play.tailwindcss.com/r7kBDT2cJY?layout=horizontal
+  def page_content(assigns) do
+    ~H"""
+    <div class="flex h-full w-full flex-col">
+      <%= render_slot(@header) %>
+      <div class="flex-auto bg-gray-100 relative">
+        <div class="overflow-y-auto absolute top-0 bottom-0 left-0 right-0">
+          <%= render_slot(@inner_block) %>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def header(assigns) do
+    ~H"""
+    <div class="flex-none bg-white shadow-sm z-10">
+      <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
+        <h1 class="text-3xl font-bold text-gray-900">
+          <%= @title %>
+        </h1>
+        <div class="grow"></div>
+        <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
 end

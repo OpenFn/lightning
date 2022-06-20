@@ -7,7 +7,7 @@
 
   <%= if @live_action in [:new, :edit] do %>
     <.live_component
-      module={LightningWeb.JobLive.FormComponent}
+      module={LightningWeb.JobLive.BigFormComponent}
       id={@job.id || :new}
       title={@page_title}
       action={@live_action}

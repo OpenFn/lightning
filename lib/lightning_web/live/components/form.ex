@@ -34,7 +34,7 @@ defmodule LightningWeb.Components.Form do
     ] ++ base_classes
 
     disabled =
-      if Map.has_key?(assigns, :changeset) do
+      if assigns[:changeset] do
         !assigns.changeset.valid?
       else
         false
@@ -46,14 +46,19 @@ defmodule LightningWeb.Components.Form do
       else
         active_classes
       end
+      |> Enum.concat(List.wrap(assigns[:class]))
+
+    assigns =
+      assigns
+      |> assign(class: class, disabled: disabled)
+      |> assign_new(:disabled_with, fn -> "" end)
 
     ~H"""
     <%= submit(@value,
       type: "submit",
-      phx_disable_with:
-        if(Map.has_key?(assigns, :disable_with), do: @disable_with, else: ""),
-      disabled: disabled,
-      class: class
+      phx_disable_with: @disabled_with,
+      disabled: @disabled,
+      class: @class
     ) %>
     """
   end

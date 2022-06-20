@@ -101,10 +101,11 @@ defmodule LightningWeb do
       import LightningWeb.Gettext
       alias LightningWeb.Router.Helpers, as: Routes
 
-      alias LightningWeb.Components.MainSection
-      alias LightningWeb.Components.Settings
-      alias LightningWeb.Components.Common
-      alias LightningWeb.Components.Icon
+      alias LightningWeb.Components
+      alias Components.MainSection
+      alias Components.Settings
+      alias Components.Common
+      alias Components.Icon
     end
   end
 

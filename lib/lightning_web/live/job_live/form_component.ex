@@ -1,23 +1,48 @@
 defmodule LightningWeb.JobLive.FormComponent do
   @moduledoc """
-  Form Component for working with a single Job
-
-  A Job's `adaptor` field is a combination of the module name and the version.
-  It's formatted as an NPM style string.
-
-  The form allows the user to select a module by name and then it's version,
-  while the version dropdown itself references `adaptor` directly.
-
-  Meaning the `adaptor_name` dropdown and assigns value is not persisted.
+  Macro for Form Components that edit and show Jobs.
   """
-  use LightningWeb, :live_component
-
-  alias Lightning.{Jobs, AdaptorRegistry, Projects}
-  import LightningWeb.Components.Form
-
   import Ecto.Changeset, only: [get_field: 2]
 
-  @impl true
+  import Phoenix.LiveView,
+    only: [assign: 2, assign: 3]
+
+  alias Lightning.{Jobs, AdaptorRegistry, Projects}
+
+  defmacro __using__(_opts) do
+    quote do
+      @behaviour LightningWeb.JobLive.FormComponent
+      use LightningWeb, :live_component
+
+      alias LightningWeb.Components.Form
+      alias Lightning.{Jobs, AdaptorRegistry, Projects}
+
+      @impl true
+      defdelegate update(assigns, socket), to: LightningWeb.JobLive.FormComponent
+
+      @impl true
+      defdelegate save(params, socket), to: LightningWeb.JobLive.FormComponent
+
+      @impl true
+      defdelegate validate(params, socket),
+        to: LightningWeb.JobLive.FormComponent
+
+      @impl true
+      def handle_event(event, params, socket) do
+        case event do
+          "validate" ->
+            {:noreply, validate(params, socket)}
+
+          "save" ->
+            {:noreply, save(params, socket)}
+        end
+      end
+
+      import LightningWeb.JobLive.FormComponent
+      defoverridable save: 2, validate: 2
+    end
+  end
+
   def update(%{job: job, project: project} = assigns, socket) do
     changeset = Jobs.change_job(job, %{"project_id" => job.project_id})
 
@@ -46,8 +71,7 @@ defmodule LightningWeb.JobLive.FormComponent do
      |> assign(:changeset, changeset)}
   end
 
-  @impl true
-  def handle_event("validate", %{"job" => job_params}, socket) do
+  def validate(%{"job" => job_params}, socket) do
     job_params = coerce_params_for_adaptor_list(job_params)
 
     changeset =
@@ -61,47 +85,17 @@ defmodule LightningWeb.JobLive.FormComponent do
         |> Ecto.Changeset.fetch_field!(:adaptor)
       )
 
-    {:noreply,
-     assign(socket, :changeset, changeset)
-     |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptors, adaptors)
-     |> assign(:versions, versions)}
+    assign(socket, :changeset, changeset)
+    |> assign(:adaptor_name, adaptor_name)
+    |> assign(:adaptors, adaptors)
+    |> assign(:versions, versions)
   end
 
-  def handle_event("save", %{"job" => job_params}, socket) do
-    save_job(socket, socket.assigns.action, job_params)
+  def save(_params, _socket) do
+    raise "save/2 not implemented"
   end
 
-  defp save_job(socket, :edit, job_params) do
-    case Jobs.update_job(socket.assigns.job, job_params) do
-      {:ok, _job} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Job updated successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
-    end
-  end
-
-  defp save_job(socket, :new, job_params) do
-    case Jobs.create_job(
-           job_params
-           |> Map.put("project_id", socket.assigns.job.project_id)
-         ) do
-      {:ok, _job} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Job created successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
-    end
-  end
-
-  defp get_adaptor_version_options(adaptor) do
+  def get_adaptor_version_options(adaptor) do
     # Gets @openfn/language-foo@1.2.3 or @openfn/language-foo
 
     adaptor_names =
@@ -157,11 +151,21 @@ defmodule LightningWeb.JobLive.FormComponent do
     end
   end
 
-  defp requires_upstream_job?(changeset) do
+  def requires_upstream_job?(changeset) do
     get_field(changeset, :type) in [:on_job_failure, :on_job_success]
   end
 
-  defp requires_cron_job?(changeset) do
+  def requires_cron_job?(changeset) do
     get_field(changeset, :type) == :cron
   end
+
+  @callback save(
+              job_params :: Phoenix.LiveView.unsigned_params(),
+              socket :: Phoenix.LiveView.Socket.t()
+            ) :: Phoenix.LiveView.Socket.t()
+
+  @callback validate(
+              job_params :: Phoenix.LiveView.unsigned_params(),
+              socket :: Phoenix.LiveView.Socket.t()
+            ) :: Phoenix.LiveView.Socket.t()
 end

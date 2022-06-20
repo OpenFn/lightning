@@ -45,7 +45,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
       assert view
              |> element("div#hook-#{project.id}[phx-update=ignore]")
-             |> render_hook("component.mounted")
+             |> render_hook("component_mounted")
 
       expected_project_space = %{
         "jobs" => [
