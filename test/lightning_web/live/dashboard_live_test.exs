@@ -59,6 +59,15 @@ defmodule LightningWeb.DashboardLiveTest do
       }
 
       assert_push_event(view, "update_project_space", ^expected_project_space)
+
+      view
+      |> render_patch(
+        Routes.project_dashboard_index_path(conn, :show, project.id, %{
+          selected: job.id
+        })
+      )
+
+      assert has_element?(view, "#job-#{job.id}")
     end
   end
 end
