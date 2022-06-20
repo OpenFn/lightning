@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.1.6">
 
-    <title>LightningWeb.Router — Lightning v0.1.6</title>
+    <title>LightningWeb.JobLive.BigFormComponent — Lightning v0.1.6</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-f53f8e98ad.js"></script>
@@ -97,16 +97,22 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/router.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/big_form_component.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.Router</span> 
+  <span translate="no">LightningWeb.JobLive.BigFormComponent</span> 
   <small class="app-vsn" translate="no">(Lightning v0.1.6)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Form Component for working with a single Job</p><p>A Job's <code class="inline">adaptor</code> field is a combination of the module name and the version.
+It's formatted as an NPM style string.</p><p>The form allows the user to select a module by name and then it's version,
+while the version dropdown itself references <code class="inline">adaptor</code> directly.</p><p>Meaning the <code class="inline">adaptor_name</code> dropdown and assigns value is not persisted.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -125,38 +131,11 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#api/2" translate="no">api(conn, _)</a>
+          <a href="#render/1" translate="no">render(arg)</a>
 
         </div>
 
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#browser/2" translate="no">browser(conn, _)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#call/2" translate="no">call(conn, opts)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Callback invoked by Plug on every request.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#init/1" translate="no">init(opts)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Callback required by Plug that initializes the router
-for serving web requests.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.10/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p></div>
 
       </div>
 
@@ -174,16 +153,16 @@ for serving web requests.</p></div>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="api/2">
+<section class="detail" id="render/1">
 
   <div class="detail-header">
-    <a href="#api/2" class="detail-link" title="Link to this function">
+    <a href="#render/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">api(conn, _)</h1>
+    <h1 class="signature" translate="no">render(arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/router.ex#L20" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/big_form_component.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -193,74 +172,7 @@ Functions
 
   <section class="docstring">
 
-
-  </section>
-</section>
-<section class="detail" id="browser/2">
-
-  <div class="detail-header">
-    <a href="#browser/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">browser(conn, _)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/router.ex#L9" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="call/2">
-
-  <div class="detail-header">
-    <a href="#call/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">call(conn, opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/router.ex#L2" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Callback invoked by Plug on every request.</p>
-  </section>
-</section>
-<section class="detail" id="init/1">
-
-  <div class="detail-header">
-    <a href="#init/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">init(opts)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/router.ex#L2" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Callback required by Plug that initializes the router
-for serving web requests.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.10/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p>
   </section>
 </section>
 

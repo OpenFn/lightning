@@ -45,6 +45,7 @@ LightningWeb.ChangesetView.html
 LightningWeb.Components.Common.html
 LightningWeb.Components.Form.html
 LightningWeb.Components.Icon.html
+LightningWeb.Components.Jobs.html
 LightningWeb.Components.MainSection.html
 LightningWeb.Components.Settings.html
 LightningWeb.CredentialLive.Edit.html
@@ -62,9 +63,11 @@ LightningWeb.Gettext.html
 LightningWeb.HealthCheck.html
 LightningWeb.Hooks.html
 LightningWeb.InitAssigns.html
+LightningWeb.JobLive.BigFormComponent.html
 LightningWeb.JobLive.Edit.html
 LightningWeb.JobLive.FormComponent.html
 LightningWeb.JobLive.Index.html
+LightningWeb.JobLive.InspectorFormComponent.html
 LightningWeb.LayoutView.html
 LightningWeb.LiveHelpers.html
 LightningWeb.PageView.html
@@ -105,8 +108,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-e73e8109a7.js
-dist/sidebar_items-38bf3052e1.js
+dist/search_items-537f004826.js
+dist/sidebar_items-f53f8e98ad.js
 index.html
 readme.html
 search.html
