@@ -27,7 +27,7 @@ import topbar from "../vendor/topbar";
 
 import WorkflowDiagram from "./workflow-diagram";
 
-let Hooks = {WorkflowDiagram};
+let Hooks = { WorkflowDiagram };
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener("change", (event) => {
@@ -63,7 +63,6 @@ window.addEventListener("phx:page-loading-stop", () => {
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();
-
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
