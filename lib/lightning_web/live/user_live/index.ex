@@ -40,7 +40,7 @@ defmodule LightningWeb.UserLive.Index do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Listing Users")
+    |> assign(:page_title, "Users")
     |> assign(:user, nil)
   end
 

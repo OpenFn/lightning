@@ -40,7 +40,7 @@ defmodule LightningWeb.DataclipLiveTest do
       {:ok, view, html} =
         live(conn, Routes.project_dataclip_index_path(conn, :index, project.id))
 
-      assert html =~ "Listing Dataclips"
+      assert html =~ "Dataclips"
 
       table = view |> element("section#inner") |> render()
       assert table =~ "dataclip-#{dataclip.id}"

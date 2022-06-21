@@ -32,7 +32,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, _index_live, html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
-      assert html =~ "Listing Credentials"
+      assert html =~ "Credentials"
 
       assert html =~
                credential.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()

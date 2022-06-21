@@ -1,6 +1,6 @@
 defmodule LightningWeb.ProjectLive.Index do
   @moduledoc """
-  LiveView for listing and managing Jobs
+  LiveView for listing and managing Projects
   """
   use LightningWeb, :live_view
 

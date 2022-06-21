@@ -35,7 +35,7 @@ defmodule LightningWeb.JobLive.Index do
   defp apply_action(socket, :index, params) do
     socket
     |> assign(
-      page_title: "Listing Jobs",
+      page_title: "Jobs",
       job: %Job{},
       page:
         Jobs.jobs_for_project_query(socket.assigns.project)

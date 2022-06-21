@@ -1,6 +1,6 @@
 defmodule LightningWeb.CredentialLive.Index do
   @moduledoc """
-  LiveView for listing and managing Jobs
+  LiveView for listing and managing credentials
   """
   use LightningWeb, :live_view
 
@@ -46,7 +46,7 @@ defmodule LightningWeb.CredentialLive.Index do
 
   defp apply_action(socket, :index, _params) do
     socket
-    |> assign(:page_title, "Listing Credentials")
+    |> assign(:page_title, "Credentials")
     |> assign(:credential, nil)
   end
 

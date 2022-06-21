@@ -24,7 +24,7 @@ defmodule LightningWeb.UserLiveTest do
     test "lists all users", %{conn: conn, user: user} do
       {:ok, _index_live, html} = live(conn, Routes.user_index_path(conn, :index))
 
-      assert html =~ "Listing Users"
+      assert html =~ "Users"
       assert html =~ user.email
     end
 

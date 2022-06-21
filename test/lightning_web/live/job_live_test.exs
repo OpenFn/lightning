@@ -38,7 +38,7 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, html} =
         live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
 
-      assert html =~ "Listing Jobs"
+      assert html =~ "Jobs"
 
       table = view |> element("section#inner") |> render()
       assert table =~ "job-#{job.id}"

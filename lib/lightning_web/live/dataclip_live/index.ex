@@ -33,7 +33,7 @@ defmodule LightningWeb.DataclipLive.Index do
   defp apply_action(socket, :index, params) do
     socket
     |> assign(
-      page_title: "Listing Dataclips",
+      page_title: "Dataclips",
       dataclip: %Dataclip{},
       page:
         Invocation.list_dataclips_query(socket.assigns.project)
