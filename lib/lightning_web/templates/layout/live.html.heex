@@ -22,10 +22,7 @@
               <span class="inline-block align-middle">Settings</span>
             </Settings.menu_item>
           <% else %>
-            <Settings.menu_item to={
-              Routes.user_settings_path(@socket, :edit)
-              |> IO.inspect(label: "SETTINGS")
-            }>
+            <Settings.menu_item to={Routes.user_settings_path(@socket, :edit)}>
               <Icon.user class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Settings</span>
             </Settings.menu_item>
