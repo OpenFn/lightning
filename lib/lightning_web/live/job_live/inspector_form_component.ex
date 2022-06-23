@@ -8,7 +8,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   use LightningWeb.JobLive.FormComponent
 
   @impl true
-  def save(job_params, socket) do
+  def save(%{"job" => job_params}, socket) do
     case socket.assigns.action do
       :edit ->
         case Jobs.update_job(socket.assigns.job, job_params) do
@@ -62,6 +62,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
         </div>
         <Form.divider />
+        <Form.text_area form={f} id={:body} />
         <div class="w-full">
           <Form.submit_button
             value="Save"
