@@ -15,7 +15,7 @@ defmodule ObanPruner do
   """
   @impl Oban.Worker
   def perform(%Job{}) do
-    age_limit = Application.get_env(:lightning, :queue_result_retention_limit)
+    age_limit = Application.get_env(:lightning, :queue_result_retention_period)
 
     {pruned, nil} =
       from(j in Oban.Job,
