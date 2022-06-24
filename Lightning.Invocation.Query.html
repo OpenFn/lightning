@@ -10,7 +10,7 @@
     <title>Lightning.Invocation.Query — Lightning v0.1.6</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-a6d62b666a.js"></script>
+    <script src="dist/sidebar_items-0ecec53810.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -129,11 +129,41 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#last_run_for_job/1" translate="no">last_run_for_job(job)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>The last run for a job</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#last_successful_run_for_job/1" translate="no">last_successful_run_for_job(job)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>The last run for a job for a particular exit code, used in scheduler</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#runs_for/1" translate="no">runs_for(user)</a>
 
         </div>
 
           <div class="summary-synopsis"><p>Runs for a specific user</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#runs_with_code/2" translate="no">runs_with_code(query, exit_code)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>The last run for a job for a particular exit code, used in scheduler</p></div>
 
       </div>
 
@@ -151,16 +181,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="runs_for/1">
+<section class="detail" id="last_run_for_job/1">
 
   <div class="detail-header">
-    <a href="#runs_for/1" class="detail-link" title="Link to this function">
+    <a href="#last_run_for_job/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">runs_for(user)</h1>
+    <h1 class="signature" translate="no">last_run_for_job(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L14" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L29" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -172,11 +202,95 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.7.2/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> last_run_for_job(<a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>The last run for a job</p>
+  </section>
+</section>
+<section class="detail" id="last_successful_run_for_job/1">
+
+  <div class="detail-header">
+    <a href="#last_successful_run_for_job/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">last_successful_run_for_job(job)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L50" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> last_successful_run_for_job(<a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>The last run for a job for a particular exit code, used in scheduler</p>
+  </section>
+</section>
+<section class="detail" id="runs_for/1">
+
+  <div class="detail-header">
+    <a href="#runs_for/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">runs_for(user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L15" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> runs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
 <p>Runs for a specific user</p>
+  </section>
+</section>
+<section class="detail" id="runs_with_code/2">
+
+  <div class="detail-header">
+    <a href="#runs_with_code/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">runs_with_code(query, exit_code)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/query.ex#L42" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> runs_with_code(<a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+
+      </div>
+
+<p>The last run for a job for a particular exit code, used in scheduler</p>
   </section>
 </section>
 

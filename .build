@@ -20,6 +20,7 @@ Lightning.Invocation.html
 Lightning.Jobs.Job.html
 Lightning.Jobs.Policy.html
 Lightning.Jobs.Query.html
+Lightning.Jobs.Scheduler.html
 Lightning.Jobs.Trigger.html
 Lightning.Jobs.html
 Lightning.Pipeline.Runner.Handler.html
@@ -98,6 +99,7 @@ LightningWeb.UserSettingsView.html
 LightningWeb.WebhooksController.html
 LightningWeb.WorkflowDiagramLive.html
 LightningWeb.html
+ObanPruner.html
 api-reference.html
 assets/logo.png
 changelog.html
@@ -108,8 +110,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-efb3bf4742.js
-dist/sidebar_items-a6d62b666a.js
+dist/search_items-f5fd543590.js
+dist/sidebar_items-0ecec53810.js
 index.html
 readme.html
 search.html

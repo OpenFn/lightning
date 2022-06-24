@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.1.6">
 
-    <title>LightningWeb.FirstSetupLive.Superuser — Lightning v0.1.6</title>
+    <title>Lightning.Jobs.Scheduler — Lightning v0.1.6</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-0ecec53810.js"></script>
@@ -97,19 +97,20 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/first_setup_live/superuser.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.FirstSetupLive.Superuser</span> 
+  <span translate="no">Lightning.Jobs.Scheduler</span> 
   <small class="app-vsn" translate="no">(Lightning v0.1.6)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Superuser setup liveview</p><p>Allows the creation on the first user in the system.</p><p>It has only one action: <code class="inline">:show</code></p>
+<p>The Scheduler is responsible for finding jobs that are ready to run based on
+their cron schedule, and then running them.</p>
   </section>
 
 
@@ -129,11 +130,20 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#render/1" translate="no">render(arg)</a>
+          <a href="#active_jobs_with_cron_triggers/0" translate="no">active_jobs_with_cron_triggers()</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.10/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p></div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#enqueue_cronjobs/1" translate="no">enqueue_cronjobs(date_time \\ DateTime.utc_now())</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Find and start any cronjobs that are scheduled to run for a given time
+(defaults to the current time).</p></div>
 
       </div>
 
@@ -151,16 +161,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="render/1">
+<section class="detail" id="active_jobs_with_cron_triggers/0">
 
   <div class="detail-header">
-    <a href="#render/1" class="detail-link" title="Link to this function">
+    <a href="#active_jobs_with_cron_triggers/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">render(arg)</h1>
+    <h1 class="signature" translate="no">active_jobs_with_cron_triggers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/first_setup_live/superuser.ex#L1" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L86" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -170,7 +180,38 @@ Functions
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.10/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p>
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> active_jobs_with_cron_triggers() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="enqueue_cronjobs/1">
+
+    <span id="enqueue_cronjobs/0"></span>
+
+  <div class="detail-header">
+    <a href="#enqueue_cronjobs/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">enqueue_cronjobs(date_time \\ DateTime.utc_now())</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L29" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Find and start any cronjobs that are scheduled to run for a given time
+(defaults to the current time).</p>
   </section>
 </section>
 
