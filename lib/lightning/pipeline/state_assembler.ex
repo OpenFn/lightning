@@ -4,8 +4,8 @@ defmodule Lightning.Pipeline.StateAssembler do
 
   ## How state is assembled
 
-  For the most common jobs, where a Webhooks will store an `:http_request` type
-  dataclip. The event that was created is associated with the dataclip.
+  For the most common jobs, an inbound webhook will store an `:http_request` type
+  dataclip. The event that is created is associated with the dataclip.
 
   At runtime, the initial state for a Run will in the shape of:
 
@@ -95,8 +95,44 @@ defmodule Lightning.Pipeline.StateAssembler do
           )
         )
 
+      # A cron job started without any default initial dataclip gets a new
+      # "global" dataclip with an empty body.
+      {:global, :cron} ->
+        query
+        |> select(
+          [dataclip: d, credential: c],
+          type(
+            fragment(
+              """
+              (? || jsonb_build_object('configuration', ?))
+              """,
+              d.body,
+              c.body
+            ),
+            :string
+          )
+        )
+
+      # A cron job started with the result of a previous run; merge the
+      # `run_result` dataclip onto the root and then use this job's configuration.
+      {:run_result, :cron} ->
+        query
+        |> select(
+          [dataclip: d, credential: c],
+          type(
+            fragment(
+              """
+              (? || jsonb_build_object('configuration', ?))
+              """,
+              d.body,
+              c.body
+            ),
+            :string
+          )
+        )
+
       # Source event succeeded, merge the `run_result` dataclip onto the root
-      # and then this Jobs configuration.
+      # and then use this job's configuration.
       {:run_result, :on_job_success} ->
         query
         |> select(

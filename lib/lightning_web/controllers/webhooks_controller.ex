@@ -14,16 +14,19 @@ defmodule LightningWeb.WebhooksController do
         |> json(%{})
 
       job ->
-        {:ok, %{event: event, run: run}} =
+        {:ok, %{event: event, run: run, dataclip: _dataclip}} =
           Invocation.create(
             %{job_id: job.id, project_id: job.project_id, type: :webhook},
             %{type: :http_request, body: conn.body_params}
           )
 
-        Task.start(Pipeline, :process, [event])
+        resp = %{event_id: event.id, run_id: run.id}
+
+        Pipeline.new(%{event_id: event.id})
+        |> Oban.insert()
 
         conn
-        |> json(%{event_id: event.id, run_id: run.id})
+        |> json(resp)
     end
   end
 end

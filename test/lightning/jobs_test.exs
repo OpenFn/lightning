@@ -1,13 +1,16 @@
 defmodule Lightning.JobsTest do
+  use Oban.Testing, repo: Lightning.Repo
   use Lightning.DataCase, async: true
 
   alias Lightning.Jobs
   alias Lightning.Repo
   alias Lightning.Jobs.Job
+  alias Lightning.Jobs.Scheduler
 
   import Lightning.JobsFixtures
   import Lightning.ProjectsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.InvocationFixtures
 
   describe "jobs" do
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
@@ -260,6 +263,65 @@ defmodule Lightning.JobsTest do
              )
 
       assert MapSet.size(results) == 5
+    end
+  end
+
+  describe "Scheduler" do
+    test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
+      job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
+
+      result = Scheduler.enqueue_cronjobs()
+
+      %{event_id: event_id} = Repo.one(Lightning.Invocation.Run)
+      %{job_id: job_id} = Repo.get(Lightning.Invocation.Event, event_id)
+
+      assert job_id == job.id
+
+      run =
+        %Jobs.Job{id: job.id}
+        |> Lightning.Invocation.Query.last_successful_run_for_job()
+        |> Repo.one()
+        |> Repo.preload(:source_dataclip)
+        |> Repo.preload(:result_dataclip)
+
+      assert run.source_dataclip.type == :global
+      assert run.source_dataclip.body == %{}
+    end
+
+    test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
+      job =
+        job_fixture(
+          body: "fn(state => { console.log(state); return { changed: true }; })",
+          trigger: %{type: :cron, cron_expression: "* * * * *"}
+        )
+
+      event = event_fixture(job_id: job.id)
+      run = run_fixture(event_id: event.id)
+
+      Lightning.Pipeline.process(event)
+
+      old =
+        %Jobs.Job{id: job.id}
+        |> Lightning.Invocation.Query.last_successful_run_for_job()
+        |> Repo.one()
+        |> Repo.preload(:source_dataclip)
+        |> Repo.preload(:result_dataclip)
+
+      result = Scheduler.enqueue_cronjobs()
+
+      new =
+        %Jobs.Job{id: job.id}
+        |> Lightning.Invocation.Query.last_successful_run_for_job()
+        |> Repo.one()
+        |> Repo.preload(:source_dataclip)
+        |> Repo.preload(:result_dataclip)
+
+      assert old.source_dataclip.type == :http_request
+      assert old.source_dataclip.body == %{}
+
+      assert new.source_dataclip.type == :run_result
+      assert new.source_dataclip.body == old.result_dataclip.body
+      assert new.result_dataclip.body == %{"changed" => true}
     end
   end
 end

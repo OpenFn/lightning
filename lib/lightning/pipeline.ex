@@ -2,6 +2,11 @@ defmodule Lightning.Pipeline do
   @moduledoc """
   Service class to coordinate the running of jobs, and their downstream jobs.
   """
+  use Oban.Worker,
+    queue: :runs,
+    priority: 1,
+    max_attempts: 1
+
   require Logger
 
   alias Lightning.Pipeline.Runner
@@ -10,6 +15,15 @@ defmodule Lightning.Pipeline do
   alias Lightning.Invocation.Event
   alias Lightning.Repo
   import Ecto.Query, only: [select: 3]
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"event_id" => id}}) do
+    Invocation.Event
+    |> Repo.get(id)
+    |> process()
+
+    :ok
+  end
 
   @spec process(Event.t()) :: :ok
   def process(%Event{} = event) do

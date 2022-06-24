@@ -6,6 +6,7 @@ defmodule Lightning.Invocation.Query do
 
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Run
+  alias Lightning.Jobs.Job
 
   @doc """
   Runs for a specific user
@@ -19,5 +20,35 @@ defmodule Lightning.Invocation.Query do
       join: p in subquery(projects),
       on: e.project_id == p.id
     )
+  end
+
+  @doc """
+  The last run for a job
+  """
+  @spec last_run_for_job(Job.t()) :: Ecto.Queryable.t()
+  def last_run_for_job(%Job{id: id}) do
+    from(r in Run,
+      join: e in assoc(r, :event),
+      where: e.job_id == ^id,
+      order_by: [desc: r.finished_at],
+      limit: 1
+    )
+  end
+
+  @doc """
+  The last run for a job for a particular exit code, used in scheduler
+  """
+  @spec runs_with_code(Ecto.Queryable.t(), integer()) :: Ecto.Queryable.t()
+  def runs_with_code(query, exit_code) do
+    from(q in query, where: q.exit_code == ^exit_code)
+  end
+
+  @doc """
+  The last run for a job for a particular exit code, used in scheduler
+  """
+  @spec last_successful_run_for_job(Job.t()) :: Ecto.Queryable.t()
+  def last_successful_run_for_job(%Job{id: id}) do
+    last_run_for_job(%Job{id: id})
+    |> runs_with_code(0)
   end
 end
