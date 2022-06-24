@@ -3,7 +3,7 @@ defmodule Lightning.Jobs.Scheduler do
     queue: :scheduler,
     priority: 1,
     max_attempts: 1,
-    # This unqique period ensures that cron jobs are only enqueued once across a cluster
+    # This unique period ensures that cron jobs are only enqueued once across a cluster
     unique: [period: 59]
 
   require Logger
@@ -16,7 +16,7 @@ defmodule Lightning.Jobs.Scheduler do
   }
 
   @impl Oban.Worker
-  @spec perform(Oban.Job.t()) :: {:ok, any}
+
   def perform(%Oban.Job{}), do: enqueue_cronjobs()
 
   @doc """
@@ -37,7 +37,7 @@ defmodule Lightning.Jobs.Scheduler do
     :ok
   end
 
-  @spec invoke_cronjob(Integer, Integer) :: {:ok, Map}
+  @spec invoke_cronjob(binary(), binary()) :: {:ok, map()}
   defp invoke_cronjob(id, project_id) do
     case last_state_for_job(id) do
       nil ->
