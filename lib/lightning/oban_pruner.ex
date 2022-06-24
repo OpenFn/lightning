@@ -1,4 +1,7 @@
 defmodule ObanPruner do
+  @moduledoc """
+  The Oban Pruner removes completed Oban jobs. It leaves everything else for manual inspection.
+  """
   use Oban.Worker,
     queue: :background,
     priority: 1,
