@@ -17,32 +17,42 @@ defmodule Lightning.Jobs.Scheduler do
 
   @impl Oban.Worker
   @spec perform(Oban.Job.t()) :: {:ok, any}
-  def perform(%Oban.Job{}),
-    do: enqueue_cronjobs(DateTime.utc_now() |> DateTime.to_unix())
+  def perform(%Oban.Job{}), do: enqueue_cronjobs()
 
-  @spec enqueue_cronjobs(any) :: {:ok, [any]}
-  def enqueue_cronjobs(now) do
-    Jobs.find_cron_triggers(now)
+  @doc """
+  Find and start any cronjobs that are scheduled to run for a given time
+  (defaults to the current time).
+  """
+  def enqueue_cronjobs(date_time \\ DateTime.utc_now()) do
+    date_time
+    |> DateTime.to_unix()
+    |> Jobs.find_cron_triggers()
     |> Enum.each(fn %Jobs.Job{id: id, project_id: project_id} ->
       {:ok, %{event: event, run: run}} =
-        case last_run_for_job(id) do
+        case last_state_for_job(id) do
           nil ->
+            Logger.debug(fn ->
+              "Starting cronjob #{id} for the first time. (No previous final state.)"
+            end)
+
             Invocation.create(
               %{job_id: id, project_id: project_id, type: :cron},
-              %{type: :empty, body: %{}}
+              # Add a facility to specify _which_ global state should be use as
+              # the first initial state for a cron-triggered job.
+              %{type: :global, body: %{}}
+              # The implementation would look like:
+              # default_state_for_job(id)
+              # which returns %{id: uuid, type: :global, body: %{arbitrary: true}}
             )
 
-          run ->
+          state ->
+            Logger.debug(fn ->
+              "Starting cronjob #{id} using the final state of its last successful run."
+            end)
+
             Invocation.create(
               %{job_id: id, project_id: project_id, type: :cron},
-              %{
-                type: :run_result,
-                body:
-                  run
-                  |> Lightning.Invocation.get_result_dataclip_query()
-                  |> Repo.one()
-                  |> Map.get(:body)
-              }
+              %{type: :run_result, body: Map.get(state, :body)}
             )
         end
 
@@ -53,9 +63,12 @@ defmodule Lightning.Jobs.Scheduler do
     :ok
   end
 
-  defp last_run_for_job(id) do
-    Invocation.Query.last_run_for_job(%Jobs.Job{id: id})
-    |> Repo.one()
+  defp last_state_for_job(id) do
+    case Invocation.Query.last_run_for_job_and_code(%Jobs.Job{id: id}, 0)
+         |> Repo.one() do
+      nil -> nil
+      run -> Invocation.get_result_dataclip_query(run) |> Repo.one()
+    end
   end
 
   @spec active_jobs_with_cron_triggers :: any

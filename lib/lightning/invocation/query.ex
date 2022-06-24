@@ -23,14 +23,15 @@ defmodule Lightning.Invocation.Query do
   end
 
   @doc """
-  The last run for a job, used in scheduler
+  The last run for a job for a particular exit code, used in scheduler
   """
-  @spec last_run_for_job(Job.t()) :: Ecto.Queryable.t()
-  def last_run_for_job(%Job{id: id}) do
+  @spec last_run_for_job_and_code(Job.t(), Integer) :: Ecto.Queryable.t()
+  def last_run_for_job_and_code(%Job{id: id}, exit_code) do
     from(r in Run,
       join: e in assoc(r, :event),
       where: e.job_id == ^id,
-      order_by: [desc: r.inserted_at],
+      where: r.exit_code == ^exit_code,
+      order_by: [desc: r.finished_at],
       limit: 1
     )
   end

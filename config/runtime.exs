@@ -30,8 +30,8 @@ config :lightning, Oban,
   plugins: [
     {Oban.Plugins.Cron,
      crontab: [
-        {"* * * * *", Lightning.Jobs.Scheduler},
-       #  {"* * * * *", ObanPruner},
+       {"* * * * *", Lightning.Jobs.Scheduler},
+       {"* * * * *", ObanPruner}
      ]}
   ],
   shutdown_grace_period: 15_000,
@@ -40,6 +40,11 @@ config :lightning, Oban,
     scheduler: 1,
     runs: System.get_env("GLOBAL_RUNS_CONCURRENCY", "1") |> String.to_integer()
   ]
+
+config :lightning,
+       :queue_result_retention_limit,
+       System.get_env("QUEUE_RESULT_RETENTION_PERIOD", "60")
+       |> String.to_integer()
 
 # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
 config :sentry,
