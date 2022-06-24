@@ -42,7 +42,7 @@ config :lightning, Oban,
   ]
 
 config :lightning,
-       :queue_result_retention_limit,
+       :queue_result_retention_period,
        System.get_env("QUEUE_RESULT_RETENTION_PERIOD", "60")
        |> String.to_integer()
 
