@@ -19,7 +19,7 @@ If you'd like to contribute or set things up locally for development, checkout t
 - Run `docker compose run --rm web mix ecto.migrate`  
   This will build the container, and set the database up with the up to date schema.
 
-Once you've done that, you can run `docker compose up` evey time you want to
+Once you've done that, you can run `docker compose up` every time you want to
 start up the server.
 
 By default the application will be available from [localhost:4000](http://localhost:4000/).
@@ -106,7 +106,7 @@ We also have `test.watch` installed which can be used to rerun the tests on file
 ## Security and Standards
 
 We use a host of common Elixir static analysis tools to help us avoid common
-pitfalls and make sure we keep everything clean and consistant.
+pitfalls and make sure we keep everything clean and consistent.
 
 In addition to our test suite, you can run the following commands:
 
@@ -117,7 +117,7 @@ In addition to our test suite, you can run the following commands:
   Static analysis for type mismatches and other common warnings.
   See [dialyxir](https://github.com/jeremyjh/dialyxir).
 - `mix credo`  
-  Static analysis for consistancy, and coding standards.
+  Static analysis for consistency, and coding standards.
   See [Credo](https://github.com/rrrene/credo).
 - `mix sobelow`  
   Check for commonly known security exploits. See [Sobelow](https://sobelow.io/).
