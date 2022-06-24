@@ -8,7 +8,6 @@ defmodule Lightning.Invocation do
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Event, Run}
-  alias Lightning.Jobs.Job
   alias Lightning.Projects.Project
   alias Ecto.Multi
 
