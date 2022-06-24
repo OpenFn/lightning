@@ -17,4 +17,15 @@ defmodule Lightning.Jobs.QueryTest do
              job |> unload_relation(:trigger)
            ]
   end
+
+  test "enabled_cron_jobs/0" do
+    job = job_fixture(trigger: %{type: :cron, cron: "* * * * *"}, enabled: true)
+
+    _disabled_conjob =
+      job_fixture(trigger: %{type: :cron, cron: "* * * * *"}, enabled: false)
+
+    _non_cronjob = job_fixture()
+
+    assert Query.enabled_cron_jobs() |> Repo.all() == [job]
+  end
 end

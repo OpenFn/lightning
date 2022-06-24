@@ -123,6 +123,7 @@ defmodule Lightning.Jobs.Query do
   Returns active jobs with their cron triggers for use in the cron scheduling
   service.
   """
+  @spec enabled_cron_jobs() :: Ecto.Queryable.t()
   def enabled_cron_jobs do
     from(j in Job,
       join: t in assoc(j, :trigger),
