@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@openfn/workflow-diagram": "^0.0.3",
+    "@openfn/workflow-diagram": "^0.0.5",
     "react": "^18.1.0",
     "react-dom": "^18.1.0"
   }
