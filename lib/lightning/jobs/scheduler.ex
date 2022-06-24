@@ -1,4 +1,8 @@
 defmodule Lightning.Jobs.Scheduler do
+  @moduledoc """
+  The Scheduler is responsible for finding jobs that are ready to run based on
+  their cron schedule, and then running them.
+  """
   use Oban.Worker,
     queue: :scheduler,
     priority: 1,
@@ -16,7 +20,6 @@ defmodule Lightning.Jobs.Scheduler do
   }
 
   @impl Oban.Worker
-
   def perform(%Oban.Job{}), do: enqueue_cronjobs()
 
   @doc """
