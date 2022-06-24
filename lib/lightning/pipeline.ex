@@ -17,7 +17,7 @@ defmodule Lightning.Pipeline do
   import Ecto.Query, only: [select: 3]
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"event_id" => id, "run_id" => _id}}) do
+  def perform(%Oban.Job{args: %{"event_id" => id}}) do
     Invocation.Event
     |> Repo.get(id)
     |> process()

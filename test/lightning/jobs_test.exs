@@ -278,10 +278,8 @@ defmodule Lightning.JobsTest do
       assert job_id == job.id
 
       run =
-        Lightning.Invocation.Query.last_run_for_job_and_code(
-          %Jobs.Job{id: job.id},
-          0
-        )
+        %Jobs.Job{id: job.id}
+        |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:source_dataclip)
         |> Repo.preload(:result_dataclip)
@@ -303,10 +301,8 @@ defmodule Lightning.JobsTest do
       Lightning.Pipeline.process(event)
 
       old =
-        Lightning.Invocation.Query.last_run_for_job_and_code(
-          %Jobs.Job{id: job.id},
-          0
-        )
+        %Jobs.Job{id: job.id}
+        |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:source_dataclip)
         |> Repo.preload(:result_dataclip)
@@ -314,10 +310,8 @@ defmodule Lightning.JobsTest do
       result = Scheduler.enqueue_cronjobs()
 
       new =
-        Lightning.Invocation.Query.last_run_for_job_and_code(
-          %Jobs.Job{id: job.id},
-          0
-        )
+        %Jobs.Job{id: job.id}
+        |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:source_dataclip)
         |> Repo.preload(:result_dataclip)

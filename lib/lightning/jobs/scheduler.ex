@@ -33,7 +33,7 @@ defmodule Lightning.Jobs.Scheduler do
     |> Enum.each(fn %Jobs.Job{id: id, project_id: project_id} ->
       {:ok, %{event: event, run: run}} = invoke_cronjob(id, project_id)
 
-      Pipeline.new(%{event_id: event.id, run_id: run.id})
+      Pipeline.new(%{event_id: event.id})
       |> Oban.insert()
     end)
 
@@ -52,10 +52,10 @@ defmodule Lightning.Jobs.Scheduler do
           %{job_id: id, project_id: project_id, type: :cron},
           # Add a facility to specify _which_ global state should be use as
           # the first initial state for a cron-triggered job.
-          %{type: :global, body: %{}}
           # The implementation would look like:
           # default_state_for_job(id)
-          # which returns %{id: uuid, type: :global, body: %{arbitrary: true}}
+          # %{id: uuid, type: :global, body: %{arbitrary: true}}
+          %{type: :global, body: %{}}
         )
 
       state ->
@@ -71,8 +71,12 @@ defmodule Lightning.Jobs.Scheduler do
   end
 
   defp last_state_for_job(id) do
-    case Invocation.Query.last_run_for_job_and_code(%Jobs.Job{id: id}, 0)
-         |> Repo.one() do
+    run =
+      %Jobs.Job{id: id}
+      |> Invocation.Query.last_successful_run_for_job()
+      |> Repo.one()
+
+    case run do
       nil -> nil
       run -> Invocation.get_result_dataclip_query(run) |> Repo.one()
     end

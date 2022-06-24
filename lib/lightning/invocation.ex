@@ -18,7 +18,7 @@ defmodule Lightning.Invocation do
   @spec create(
           %{job_id: binary(), project_id: binary(), type: :webhook | :cron},
           %{type: Dataclip.source_type(), body: map()}
-        ) :: {:ok | :error, any}
+        ) :: {:ok | :error, %{event: Event, run: Run, dataclip: Dataclip}}
   def create(event_attrs, dataclip_attrs) do
     Multi.new()
     |> Multi.insert(:dataclip, Dataclip.changeset(%Dataclip{}, dataclip_attrs))
@@ -32,6 +32,12 @@ defmodule Lightning.Invocation do
     |> Repo.transaction()
   end
 
+  # This second create is called by flow, and doesn't return a new dataclip.
+  # We should update the spec or separate it out; It requires a next_dataclip_id
+  # @spec create(
+  #         %{job_id: binary(), project_id: binary(), type: :webhook | :cron},
+  #         %{type: Dataclip.source_type(), body: map()}
+  #       ) :: {:ok | :error, %{event: Event, run: Run}}
   def create(event_attrs) do
     Multi.new()
     |> Multi.insert(:event, fn _ ->
