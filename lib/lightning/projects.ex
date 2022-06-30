@@ -145,6 +145,16 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @spec first_project_for_user(user :: User.t()) :: Project.t() | nil
+  def first_project_for_user(user) do
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: pu.user_id == ^user.id,
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
   def url_safe_project_name(nil), do: ""
 
   def url_safe_project_name(name) when is_binary(name) do

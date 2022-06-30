@@ -21,13 +21,19 @@ defmodule LightningWeb.DashboardLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(:page_title, "Projects")
-    |> assign(active_menu_item: :projects)
-    |> assign(
-      :projects,
-      Projects.get_projects_for_user(socket.assigns.current_user)
-    )
+    project = Projects.first_project_for_user(socket.assigns.current_user)
+
+    if project != nil do
+      socket
+      |> push_redirect(
+        to: Routes.project_dashboard_index_path(socket, :show, project.id)
+      )
+    else
+      socket
+      |> assign(:page_title, "Projects")
+      |> assign(active_menu_item: :projects)
+      |> assign(:projects, nil)
+    end
   end
 
   defp apply_action(socket, :show, %{"project_id" => project_id} = params) do

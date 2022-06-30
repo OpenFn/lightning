@@ -7,22 +7,14 @@ defmodule LightningWeb.DashboardLiveTest do
   setup :create_project_for_current_user
 
   describe "Index" do
-    test "lists all projects", %{
-      conn: conn,
-      project: project
+    setup :register_and_log_in_user
+
+    test "User is assigned no project", %{
+      conn: conn
     } do
-      {:ok, view, html} = live(conn, Routes.dashboard_index_path(conn, :index))
+      {:ok, _view, html} = live(conn, Routes.dashboard_index_path(conn, :index))
 
-      assert html =~ "Projects"
-
-      view
-      |> element(~s{a[data-phx-link=redirect]#project-#{project.id}})
-      |> render_click()
-
-      assert_redirect(
-        view,
-        Routes.project_dashboard_index_path(conn, :show, project.id)
-      )
+      assert html =~ "No project found, please talk to your administrator."
     end
   end
 
