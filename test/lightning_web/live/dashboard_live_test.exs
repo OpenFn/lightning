@@ -18,6 +18,26 @@ defmodule LightningWeb.DashboardLiveTest do
     end
   end
 
+  describe "Index redirects to show" do
+    setup :register_and_log_in_user
+    setup :create_project_for_current_user
+
+    test "User is assigned a project, should redirect", %{
+      conn: conn,
+      user: user,
+      project: project
+    } do
+      {:ok, _view, html} =
+        live(conn, Routes.dashboard_index_path(conn, :index))
+        |> follow_redirect(
+          conn,
+          Routes.project_dashboard_index_path(conn, :show, project.id)
+        )
+
+      assert html =~ "WorkflowDiagram"
+    end
+  end
+
   describe "Show" do
     import Lightning.JobsFixtures
 
