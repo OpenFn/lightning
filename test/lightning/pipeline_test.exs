@@ -48,10 +48,10 @@ defmodule Lightning.PipelineTest do
       error = Enum.slice(error, 0..4)
 
       [
-        "╭─────────────────────────────────────────────╮",
+        ~r/╭─[─]+─╮/,
         ~r/│ ◲ ◱  @openfn\/core#v1.4.7 \(Node.js v1[\d\.]+\) │/,
         ~r/│ ◳ ◰           @openfn\/language-common@[\d\.]+ │/,
-        "╰─────────────────────────────────────────────╯",
+        ~r/╰─[─]+─╯/,
         "Error: I'm supposed to fail."
       ]
       |> Enum.zip(error)

@@ -270,7 +270,7 @@ defmodule Lightning.JobsTest do
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
       job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
 
-      result = Scheduler.enqueue_cronjobs()
+      _result = Scheduler.enqueue_cronjobs()
 
       %{event_id: event_id} = Repo.one(Lightning.Invocation.Run)
       %{job_id: job_id} = Repo.get(Lightning.Invocation.Event, event_id)
@@ -296,7 +296,7 @@ defmodule Lightning.JobsTest do
         )
 
       event = event_fixture(job_id: job.id)
-      run = run_fixture(event_id: event.id)
+      _run = run_fixture(event_id: event.id)
 
       Lightning.Pipeline.process(event)
 
@@ -307,7 +307,7 @@ defmodule Lightning.JobsTest do
         |> Repo.preload(:source_dataclip)
         |> Repo.preload(:result_dataclip)
 
-      result = Scheduler.enqueue_cronjobs()
+      _result = Scheduler.enqueue_cronjobs()
 
       new =
         %Jobs.Job{id: job.id}

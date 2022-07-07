@@ -1,5 +1,5 @@
 <%= if assigns[:project] do %>
-  <div class="mt-4 pb-2 mb-4 text-indigo-300 border-dashed bg-indigo-800 border-b-2 border-indigo-900">
+  <div class="mt-4 pb-2 mb-4 text-indigo-300  bg-indigo-800">
     <Settings.menu_item
       to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
       active={@active_menu_item == :overview}
@@ -14,34 +14,31 @@
 
 <%= if assigns[:project] do %>
   <Settings.menu_item
-    text="Runs"
+    to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
+    active={@active_menu_item == :overview}
+  >
+    <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
+    <span class="inline-block align-middle">Workflows</span>
+  </Settings.menu_item>
+
+  <Settings.menu_item
     to={Routes.project_run_index_path(@socket, :index, @project.id)}
     active={@active_menu_item == :runs}
-  />
+  >
+    <Icon.runs class="h-5 w-5 inline-block mr-2" />
+    <span class="inline-block align-middle">Run history</span>
+  </Settings.menu_item>
 
   <Settings.menu_item
-    text="Jobs"
-    to={Routes.project_job_index_path(@socket, :index, @project.id)}
-    active={@active_menu_item == :jobs}
-  />
-
-  <Settings.menu_item
-    text="Dataclips"
     to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
     active={@active_menu_item == :dataclips}
-  />
+  >
+    <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
+    <span class="inline-block align-middle">Dataclips</span>
+  </Settings.menu_item>
 
-  <div class="px-4 py-2 text-indigo-300 border-dashed bg-indigo-800 border-b-2 border-indigo-900 mb-4" />
+  <Settings.menu_item to={Routes.user_settings_path(@socket, :edit)}>
+    <Icon.project_setting class="h-5 w-5 inline-block mr-2" />
+    <span class="inline-block align-middle">Settings</span>
+  </Settings.menu_item>
 <% end %>
-
-<Settings.menu_item
-  text="Projects"
-  to={Routes.dashboard_index_path(@socket, :index)}
-  active={@active_menu_item == :projects}
-/>
-
-<Settings.menu_item
-  text="Credentials"
-  to={Routes.credential_index_path(@socket, :index)}
-  active={@active_menu_item == :credentials}
-/>

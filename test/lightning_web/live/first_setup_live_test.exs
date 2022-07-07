@@ -47,7 +47,7 @@ defmodule LightningWeb.FirstSetupLiveTest do
         |> html_response(200)
 
       assert html =~ "Superuser account created."
-      assert html =~ "Dashboard"
+      assert html =~ "Projects"
     end
 
     test "will redirect with a warning when a user already exists", %{conn: conn} do
