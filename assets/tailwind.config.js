@@ -1,5 +1,7 @@
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
+const colors = require('tailwindcss/colors')
+
 module.exports = {
   content: [
     './js/**/*.js',
@@ -9,6 +11,8 @@ module.exports = {
   theme: {
     extend: {},
     colors: {
+      slate: colors.slate,
+      indigo: colors.indigo,
       'primary': '#111827',
       'primary-light': '#334155',
       'white': '#ffffff'

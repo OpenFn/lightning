@@ -36,6 +36,12 @@ Hooks.AssocListChange = {
   },
 };
 
+Hooks.ProjectChange = {
+  mounted() {
+    this.el.addEventListener("change", (event) => this.liveSocket.redirect(this.el.value));
+  },
+};
+
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");

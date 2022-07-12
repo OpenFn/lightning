@@ -2,17 +2,35 @@
   <div class="flex flex-row h-full">
     <nav class="basis-48 bg-primary text-white" style="width: 300px">
       <div class="flex flex-col h-full">
-        <div class="w-full h-20 bg-primary flex items-center justify-center">
-          <%= live_redirect(to: Routes.dashboard_index_path(@socket, :index)) do %>
-            <img
-              class="h-10 w-10"
-              src={
-                Routes.static_path(@socket || @conn, "/images/logo-white.svg")
-              }
-              alt="OpenFn"
-            />
-          <% end %>
-        </div>
+        <%= if assigns[:project] do %>
+          <div class="mt-4 pb-2 mb-4 text-black-300 bg-primary">
+            <%= live_redirect(class: "px-4 py-3", to: Routes.project_dashboard_index_path(@socket, :show, @project.id)) do %>
+              <img
+                class="h-6 w-6 inline-block align-middle"
+                src={
+                  Routes.static_path(@socket || @conn, "/images/logo-white.svg")
+                }
+                alt="OpenFn"
+              />
+            <% end %>
+            <select
+              class="bg-primary"
+              id="projectPicker"
+              phx-hook="ProjectChange"
+            >
+              <%= for project <- Lightning.Projects.get_projects_for_user(@current_user) do %>
+                <option value={
+                  Routes.project_dashboard_index_path(@socket, :show, project.id)
+                }>
+                  <%= project.name %>
+                </option>
+              <% end %>
+            </select>
+          </div>
+        <% else %>
+          <div class="mb-4" />
+        <% end %>
+        <Components.Form.divider />
         <%= unless assigns[:is_first_setup] do %>
           <%= render("menu_items.html", assigns) %>
           <div class="grow"></div>

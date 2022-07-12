@@ -1,18 +1,4 @@
 <%= if assigns[:project] do %>
-  <div class="mt-4 pb-2 mb-4 text-indigo-300  bg-indigo-800">
-    <Settings.menu_item
-      to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
-      active={@active_menu_item == :overview}
-    >
-      <Icon.archive class="h-5 w-5 inline-block mr-2" />
-      <span class="inline-block align-middle"><%= @project.name %></span>
-    </Settings.menu_item>
-  </div>
-<% else %>
-  <div class="mb-4" />
-<% end %>
-
-<%= if assigns[:project] do %>
   <Settings.menu_item
     to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
     active={@active_menu_item == :overview}
