@@ -1,0 +1,47 @@
+<div id={"dataclip-#{@id}"}>
+  <.form
+    let={f}
+    for={@changeset}
+    id="dataclip-form"
+    phx-target={@myself}
+    phx-change="validate"
+    phx-submit="save"
+  >
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :body,
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
+        <%= textarea(f, :body,
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :body,
+          class:
+            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :type,
+          class: "block text-sm font-medium text-gray-700"
+        ) %>
+        <%= text_input(f, :type,
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :type,
+          class:
+            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <div>
+      <%= submit("Save", phx_disable_with: "Saving...") %>
+    </div>
+  </.form>
+</div>

@@ -104,6 +104,12 @@ defmodule LightningWeb.DataclipLive.Index do
     </span>
     |
     <span>
+    <%= live_redirect("Edit",
+      to: Routes.project_dataclip_edit_path(@socket, :edit, @project.id, @dataclip),
+      class: "button"
+    ) %>
+    </span> |
+    <span>
     <%= link("Delete",
       to: "#",
       phx_click: "delete",

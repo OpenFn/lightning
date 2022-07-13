@@ -55,7 +55,7 @@ defmodule Lightning.Jobs.Scheduler do
           # The implementation would look like:
           # default_state_for_job(id)
           # %{id: uuid, type: :global, body: %{arbitrary: true}}
-          %{type: :global, body: %{}}
+          %{body: %{}, project_id: project_id, type: :global}
         )
 
       state ->
@@ -65,7 +65,11 @@ defmodule Lightning.Jobs.Scheduler do
 
         Invocation.create(
           %{job_id: id, project_id: project_id, type: :cron},
-          %{type: :run_result, body: Map.get(state, :body)}
+          %{
+            body: Map.get(state, :body),
+            project_id: project_id,
+            type: :run_result
+          }
         )
     end
   end

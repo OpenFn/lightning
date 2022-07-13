@@ -1,4 +1,13 @@
-<MainSection.header title={@page_title} />
+<MainSection.header title={@page_title}>
+  <%= live_patch to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
+      <Common.button>
+        <div class="h-full">
+          <Icon.plus class="h-4 w-4 inline-block" />
+          <span class="inline-block align-middle">New Dataclip</span>
+        </div>
+      </Common.button>
+    <% end %>
+</MainSection.header>
 
 <MainSection.main>
   <%= if @live_action == :show do %>
@@ -12,7 +21,6 @@
       </div>
       <div class="col-span-2">Type</div>
       <div class="col-span-4">Body</div>
-
       <div class="col-span-2">Action</div>
     </div>
     <%= for dataclip <- @page.entries do %>
@@ -21,7 +29,7 @@
           <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
         </div>
         <div class="col-span-2"><.type_pill dataclip={dataclip} /></div>
-        <div class="col-span-4"><%= dataclip.body %></div>
+        <div class="col-span-4 truncate"><%= dataclip.body %></div>
 
         <div class="col-span-2">
           <span>

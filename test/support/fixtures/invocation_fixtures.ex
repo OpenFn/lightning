@@ -10,6 +10,9 @@ defmodule Lightning.InvocationFixtures do
   def dataclip_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, dataclip} =
       attrs
+      |> Keyword.put_new_lazy(:project_id, fn ->
+        Lightning.ProjectsFixtures.project_fixture().id
+      end)
       |> Enum.into(%{
         body: %{},
         type: :http_request
@@ -20,7 +23,7 @@ defmodule Lightning.InvocationFixtures do
   end
 
   @doc """
-  Generate a dataclip.
+  Generate an event.
   """
   def event_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, event} =
@@ -29,7 +32,8 @@ defmodule Lightning.InvocationFixtures do
         Lightning.ProjectsFixtures.project_fixture().id
       end)
       |> Keyword.put_new_lazy(:dataclip_id, fn ->
-        dataclip_fixture().id
+        # TODO: How do we only pass certain attrs here? Just the project_id
+        dataclip_fixture(attrs).id
       end)
       |> Keyword.put_new_lazy(:job_id, fn ->
         Lightning.JobsFixtures.job_fixture().id

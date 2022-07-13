@@ -17,7 +17,11 @@ defmodule LightningWeb.WebhooksController do
         {:ok, %{event: event, run: run, dataclip: _dataclip}} =
           Invocation.create(
             %{job_id: job.id, project_id: job.project_id, type: :webhook},
-            %{type: :http_request, body: conn.body_params}
+            %{
+              type: :http_request,
+              body: conn.body_params,
+              project_id: job.project_id
+            }
           )
 
         resp = %{event_id: event.id, run_id: run.id}

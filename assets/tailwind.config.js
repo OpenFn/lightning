@@ -7,8 +7,6 @@ module.exports = {
   theme: {
     extend: {},
     colors: {
-      slate: colors.slate,
-      indigo: colors.indigo,
       primary: "#111827",
       "primary-light": "#334155",
       white: "#ffffff",

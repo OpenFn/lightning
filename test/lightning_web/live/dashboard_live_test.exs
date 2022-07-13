@@ -24,7 +24,7 @@ defmodule LightningWeb.DashboardLiveTest do
 
     test "User is assigned a project, should redirect", %{
       conn: conn,
-      user: user,
+      user: _user,
       project: project
     } do
       {:ok, _view, html} =

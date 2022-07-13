@@ -23,6 +23,7 @@ defmodule Lightning.Invocation.Dataclip do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
+          project_id: Ecto.UUID.t() | nil,
           body: %{} | nil,
           source_event: Event.t() | Ecto.Association.NotLoaded.t() | nil,
           events: [Event.t()] | Ecto.Association.NotLoaded.t()
@@ -36,6 +37,7 @@ defmodule Lightning.Invocation.Dataclip do
   schema "dataclips" do
     field :body, :map
     field :type, Ecto.Enum, values: @source_types
+    belongs_to :project, Project
     belongs_to :source_event, Event
     has_many :events, Event
 
@@ -45,7 +47,7 @@ defmodule Lightning.Invocation.Dataclip do
   @doc false
   def changeset(dataclip, attrs) do
     dataclip
-    |> cast(attrs, [:body, :type, :source_event_id])
+    |> cast(attrs, [:body, :type, :source_event_id, :project_id])
     |> case do
       %{action: :delete} = c ->
         c |> validate_required([:type]) |> Map.put(:action, :update)

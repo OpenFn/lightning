@@ -23,6 +23,5 @@ defmodule LightningWeb.JobLive.Edit do
      |> assign(:job, Jobs.get_job!(id))}
   end
 
-  defp page_title(:show), do: "Show Job"
   defp page_title(:edit), do: "Edit Job"
 end
