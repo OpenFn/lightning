@@ -16,6 +16,25 @@
         <%= unless assigns[:is_first_setup] do %>
           <%= render("menu_items.html", assigns) %>
           <div class="grow"></div>
+          <%= if @current_user.role == :superuser do %>
+            <Settings.menu_item to={Routes.settings_index_path(@socket, :index)}>
+              <Icon.cog class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Settings</span>
+            </Settings.menu_item>
+          <% else %>
+            <Settings.menu_item to={Routes.user_settings_path(@socket, :edit)}>
+              <Icon.user class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Settings</span>
+            </Settings.menu_item>
+          <% end %>
+
+          <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
+            <Settings.menu_item to={Routes.live_dashboard_path(@socket, :home)}>
+              <Icon.warning class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Phx Dashboard</span>
+            </Settings.menu_item>
+          <% end %>
+
           <Settings.menu_item to={Routes.user_session_path(@socket, :delete)}>
             <Icon.logout class="h-5 w-5 inline-block mr-2" />
             <span class="inline-block align-middle">Log out</span>
