@@ -10,13 +10,7 @@ module.exports = {
     "../deps/petal_components/**/*.*ex",
   ],
   theme: {
-    extend: {
-      colors: {
-        primary: "#111827",
-        "primary-light": "#334155",
-        white: "#ffffff",
-      },
-    },
+    extend: {},
   },
   plugins: [require("@tailwindcss/forms")],
 };
