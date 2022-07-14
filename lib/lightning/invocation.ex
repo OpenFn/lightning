@@ -17,7 +17,7 @@ defmodule Lightning.Invocation do
   """
   @spec create(
           %{job_id: binary(), project_id: binary(), type: :webhook | :cron},
-          %{type: Dataclip.source_type(), body: map()}
+          %{body: map(), project_id: binary(), type: Dataclip.source_type()}
         ) :: {:ok | :error, %{event: Event, run: Run, dataclip: Dataclip}}
   def create(event_attrs, dataclip_attrs) do
     Multi.new()
