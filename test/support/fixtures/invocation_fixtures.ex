@@ -26,14 +26,16 @@ defmodule Lightning.InvocationFixtures do
   Generate an event.
   """
   def event_fixture(attrs \\ []) when is_list(attrs) do
-    {:ok, event} =
+    attrs =
       attrs
       |> Keyword.put_new_lazy(:project_id, fn ->
         Lightning.ProjectsFixtures.project_fixture().id
       end)
+
+    {:ok, event} =
+      attrs
       |> Keyword.put_new_lazy(:dataclip_id, fn ->
-        # TODO: How do we only pass certain attrs here? Just the project_id
-        dataclip_fixture(attrs).id
+        dataclip_fixture(project_id: Keyword.get(attrs, :project_id)).id
       end)
       |> Keyword.put_new_lazy(:job_id, fn ->
         Lightning.JobsFixtures.job_fixture().id
