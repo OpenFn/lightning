@@ -10,7 +10,7 @@ defmodule Lightning.PipelineTest do
   import Lightning.ProjectsFixtures
 
   describe "process/1" do
-    test "starts a run for a given event and executes it's on_job_failure downstream job" do
+    test "starts a run for a given event and executes its on_job_failure downstream job" do
       job =
         job_fixture(
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
@@ -60,7 +60,7 @@ defmodule Lightning.PipelineTest do
       end)
     end
 
-    test "starts a run for a given event and executes it's on_job_success downstream job" do
+    test "starts a run for a given event and executes its on_job_success downstream job" do
       project = project_fixture()
 
       project_credential =

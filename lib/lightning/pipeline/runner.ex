@@ -116,6 +116,7 @@ defmodule Lightning.Pipeline.Runner do
     with {:ok, data} <- File.read(result.final_state_path),
          {:ok, body} <- Jason.decode(data) do
       Invocation.create_dataclip(%{
+        project_id: run.event.project_id,
         source_event_id: run.event_id,
         type: :run_result,
         body: body

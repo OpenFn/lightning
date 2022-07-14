@@ -35,7 +35,7 @@ defmodule Lightning.Pipeline.RunnerTest do
     {:ok, %{run: run}} =
       Invocation.create(
         %{job_id: job.id, project_id: job.project_id, type: :webhook},
-        %{type: :http_request, body: dataclip_body}
+        %{body: dataclip_body, project_id: job.project_id, type: :http_request}
       )
 
     result = %Engine.Result{} = Pipeline.Runner.start(run)

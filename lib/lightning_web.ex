@@ -101,6 +101,8 @@ defmodule LightningWeb do
       import LightningWeb.Gettext
       alias LightningWeb.Router.Helpers, as: Routes
 
+      import PetalComponents.Table
+
       alias LightningWeb.Components
       alias Components.MainSection
       alias Components.Settings

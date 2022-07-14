@@ -17,7 +17,7 @@ defmodule Lightning.Invocation do
   """
   @spec create(
           %{job_id: binary(), project_id: binary(), type: :webhook | :cron},
-          %{type: Dataclip.source_type(), body: map()}
+          %{body: map(), project_id: binary(), type: Dataclip.source_type()}
         ) :: {:ok | :error, %{event: Event, run: Run, dataclip: Dataclip}}
   def create(event_attrs, dataclip_attrs) do
     Multi.new()
@@ -66,9 +66,7 @@ defmodule Lightning.Invocation do
   @spec list_dataclips_query(project :: Project.t()) :: Ecto.Queryable.t()
   def list_dataclips_query(%Project{id: project_id}) do
     from(d in Dataclip,
-      join: e in Event,
-      on: e.dataclip_id == d.id or d.source_event_id == e.id,
-      where: e.project_id == ^project_id,
+      where: d.project_id == ^project_id,
       order_by: [desc: d.inserted_at]
     )
   end

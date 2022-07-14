@@ -1,0 +1,12 @@
+<MainSection.header title={"#{@dataclip.id}"} />
+
+<MainSection.main>
+  <.live_component
+    module={LightningWeb.DataclipLive.FormComponent}
+    id={@dataclip.id || :new}
+    action={@live_action}
+    dataclip={@dataclip}
+    project={@project}
+    return_to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
+  />
+</MainSection.main>

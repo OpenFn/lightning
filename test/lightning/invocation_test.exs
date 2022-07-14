@@ -21,7 +21,11 @@ defmodule Lightning.InvocationTest do
               }} =
                Invocation.create(
                  %{job_id: job.id, project_id: job.project_id, type: :webhook},
-                 %{type: :http_request, body: %{"foo" => "bar"}}
+                 %{
+                   body: %{"foo" => "bar"},
+                   project_id: job.project_id,
+                   type: :http_request
+                 }
                )
     end
   end
@@ -37,16 +41,15 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_dataclips/1 returns dataclips for project, desc by inserted_at" do
-      project = project_fixture([])
-
+      project = project_fixture()
       event = event_fixture(project_id: project.id)
 
       old_dataclip =
-        dataclip_fixture(source_event_id: event.id)
+        dataclip_fixture(source_event_id: event.id, project_id: project.id)
         |> shift_inserted_at!(days: -2)
 
       new_dataclip =
-        dataclip_fixture(source_event_id: event.id)
+        dataclip_fixture(source_event_id: event.id, project_id: project.id)
         |> shift_inserted_at!(days: -1)
 
       assert Invocation.list_dataclips(project)
@@ -75,7 +78,8 @@ defmodule Lightning.InvocationTest do
     end
 
     test "create_dataclip/1 with valid data creates a dataclip" do
-      valid_attrs = %{body: %{}, type: :http_request}
+      project = project_fixture()
+      valid_attrs = %{body: %{}, project_id: project.id, type: :http_request}
 
       assert {:ok, %Dataclip{} = dataclip} =
                Invocation.create_dataclip(valid_attrs)
@@ -85,8 +89,14 @@ defmodule Lightning.InvocationTest do
     end
 
     test "create_dataclip/1 with run_result type creates a dataclip" do
-      run = run_fixture()
-      attrs = %{body: %{}, type: :run_result, source_event_id: nil}
+      run = run_fixture() |> Repo.preload(:project)
+
+      attrs = %{
+        body: %{},
+        type: :run_result,
+        source_event_id: nil,
+        project_id: run.project.id
+      }
 
       # Commenting this out for now, in order to have truly versatile `cast_assoc`
       # we can't validate_required on `source_event_id`.
