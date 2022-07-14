@@ -1,5 +1,5 @@
 <MainSection.header title={@page_title}>
-  <%= live_patch to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
+  <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
     <Common.button>
       <div class="h-full">
         <Icon.plus class="h-4 w-4 inline-block" />
