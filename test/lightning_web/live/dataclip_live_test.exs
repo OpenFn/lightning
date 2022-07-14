@@ -96,7 +96,7 @@ defmodule LightningWeb.DataclipLiveTest do
 
       {:ok, _, html} =
         edit_live
-        |> form("#dataclip-form", dataclip: @create_attrs)
+        |> form("#dataclip-form", dataclip: @update_attrs)
         |> render_submit()
         |> follow_redirect(
           conn,

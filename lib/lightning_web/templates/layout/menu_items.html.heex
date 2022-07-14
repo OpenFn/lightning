@@ -4,7 +4,6 @@
       to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
       active={@active_menu_item == :overview}
     >
-      <Icon.archive class="h-5 w-5 inline-block mr-2" />
       <span class="inline-block align-middle"><%= @project.name %></span>
     </Settings.menu_item>
   </div>
@@ -38,7 +37,7 @@
   </Settings.menu_item>
 
   <Settings.menu_item to={Routes.user_settings_path(@socket, :edit)}>
-    <Icon.project_setting class="h-5 w-5 inline-block mr-2" />
-    <span class="inline-block align-middle">Settings</span>
+    <Heroicons.Outline.user class="h-5 w-5 inline-block mr-2" />
+    <span class="inline-block align-middle">User Settings</span>
   </Settings.menu_item>
 <% end %>
