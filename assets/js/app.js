@@ -26,8 +26,9 @@ import { LiveSocket } from "phoenix_live_view";
 import topbar from "../vendor/topbar";
 
 import WorkflowDiagram from "./workflow-diagram";
+import Compiler from "./compiler";
 
-let Hooks = { WorkflowDiagram };
+let Hooks = { WorkflowDiagram, Compiler };
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener("change", (event) => {
@@ -36,6 +37,7 @@ Hooks.AssocListChange = {
   },
 };
 
+// @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");

@@ -131,6 +131,11 @@ defmodule Lightning.AdaptorRegistryTest do
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo@1.2.3") ==
                {"@openfn/language-foo", "1.2.3"}
 
+      assert AdaptorRegistry.resolve_package_name(
+               "@openfn/language-foo@1.2.3-pre"
+             ) ==
+               {"@openfn/language-foo", "1.2.3-pre"}
+
       assert AdaptorRegistry.resolve_package_name("@openfn/language-foo") ==
                {"@openfn/language-foo", nil}
 

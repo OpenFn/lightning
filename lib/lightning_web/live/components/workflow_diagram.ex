@@ -1,4 +1,4 @@
-defmodule LightningWeb.WorkflowDiagramLive do
+defmodule LightningWeb.Components.WorkflowDiagram do
   @moduledoc """
   Workflow Diagram Component
 
