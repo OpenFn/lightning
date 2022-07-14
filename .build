@@ -53,6 +53,8 @@ LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
 LightningWeb.CredentialLive.Index.html
 LightningWeb.CredentialLive.Show.html
+LightningWeb.DataclipLive.Edit.html
+LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Index.html
 LightningWeb.Endpoint.html
 LightningWeb.ErrorHelpers.html
@@ -110,8 +112,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-7298364631.js
-dist/sidebar_items-ab3c64b90c.js
+dist/search_items-80cf4f27c1.js
+dist/sidebar_items-9fe0243a7f.js
 index.html
 readme.html
 search.html
