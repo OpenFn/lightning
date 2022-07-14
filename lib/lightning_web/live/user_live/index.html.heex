@@ -14,49 +14,47 @@
     </.modal>
   <% end %>
 
-  <table>
-    <thead>
-      <tr>
-        <th>First name</th>
-        <th>Last name</th>
-        <th>Email</th>
-        <th>Password</th>
+  <.table id="users">
+    <.tr>
+      <.th>First name</.th>
+      <.th>Last name</.th>
+      <.th>Email</.th>
+      <.th>Password</.th>
+      <.th>Actions</.th>
+    </.tr>
 
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="users">
-      <%= for user <- @users do %>
-        <tr id={"user-#{user.id}"}>
-          <td><%= user.first_name %></td>
-          <td><%= user.last_name %></td>
-          <td><%= user.email %></td>
-          <td><%= user.password %></td>
+    <%= for user <- @users do %>
+      <.tr id={"user-#{user.id}"}>
+        <.td><%= user.first_name %></.td>
+        <.td><%= user.last_name %></.td>
+        <.td><%= user.email %></.td>
+        <.td><%= user.password %></.td>
 
-          <td>
-            <span>
-              <%= live_redirect("Show",
-                to: Routes.user_show_path(@socket, :show, user)
-              ) %>
-            </span>
-            <span>
-              <%= live_redirect("Edit",
-                to: Routes.user_edit_path(@socket, :edit, user)
-              ) %>
-            </span>
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: user.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
-            </span>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+        <.td>
+          <span>
+            <%= live_redirect("Show",
+              to: Routes.user_show_path(@socket, :show, user)
+            ) %>
+          </span>
+          |
+          <span>
+            <%= live_redirect("Edit",
+              to: Routes.user_edit_path(@socket, :edit, user)
+            ) %>
+          </span>
+          |
+          <span>
+            <%= link("Delete",
+              to: "#",
+              phx_click: "delete",
+              phx_value_id: user.id,
+              data: [confirm: "Are you sure?"]
+            ) %>
+          </span>
+        </.td>
+      </.tr>
+    <% end %>
+  </.table>
 
   <span>
     <%= live_patch("New User", to: Routes.user_index_path(@socket, :new)) %>

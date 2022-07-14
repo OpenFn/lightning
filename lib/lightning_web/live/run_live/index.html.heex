@@ -4,52 +4,52 @@
   <%= if @live_action == :show do %>
     <.show_run {assigns} />
   <% else %>
-    <div class="grid grid-cols-10 gap-4 font-bold">
-      <div class="col-span-3">
-        Log
-      </div>
-      <div class="col-span-1">Exit Code</div>
-      <div class="col-span-2">Started At</div>
-      <div class="col-span-2">Finished At</div>
+    <.table>
+      <.tr>
+        <.th>Started At</.th>
+        <.th>Finished At</.th>
+        <.th>Exit Code</.th>
+        <.th>Log</.th>
+        <.th>Actions</.th>
+      </.tr>
 
-      <div class="col-span-2"></div>
-    </div>
-    <%= for run <- @page.entries do %>
-      <div class="grid grid-cols-10 gap-4" id={"run-#{run.id}"}>
-        <div class="col-span-3 font-mono text-xs">
-          <%= for line <- run.log || [] do %>
-            <li class="list-none">
-              <%= raw(line |> String.replace(" ", "&nbsp;")) %>
-            </li>
-          <% end %>
-        </div>
-        <div class="col-span-1"><%= run.exit_code %></div>
-        <div class="col-span-2"><%= run.started_at |> format_time %></div>
-        <div class="col-span-2"><.run_time run={run} /></div>
-
-        <div class="col-span-2">
-          <span>
-            <%= live_redirect("Show",
-              to:
-                Routes.project_run_index_path(
-                  @socket,
-                  :show,
-                  @project.id,
-                  run
-                )
-            ) %>
-          </span>
-          <span>
-            <%= link("Delete",
-              to: "#",
-              phx_click: "delete",
-              phx_value_id: run.id,
-              data: [confirm: "Are you sure?"]
-            ) %>
-          </span>
-        </div>
-      </div>
-    <% end %>
+      <%= for run <- @page.entries do %>
+        <.tr id={"run-#{run.id}"}>
+          <.td class="col-span-2"><%= run.started_at |> format_time %></.td>
+          <.td class="col-span-2"><.run_time run={run} /></.td>
+          <.td class="col-span-1"><%= run.exit_code %></.td>
+          <.td class="col-span-3 font-mono text-xs">
+            <%= for line <- run.log || [] do %>
+              <li class="list-none">
+                <%= raw(line |> String.replace(" ", "&nbsp;")) %>
+              </li>
+            <% end %>
+          </.td>
+          <.td class="col-span-2">
+            <span>
+              <%= live_redirect("Show",
+                to:
+                  Routes.project_run_index_path(
+                    @socket,
+                    :show,
+                    @project.id,
+                    run
+                  )
+              ) %>
+            </span>
+            |
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: run.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
+          </.td>
+        </.tr>
+      <% end %>
+    </.table>
 
     <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   <% end %>

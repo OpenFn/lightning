@@ -15,45 +15,43 @@
     </.modal>
   <% end %>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Body</th>
+  <.table id="credentials">
+    <.tr>
+      <.th>Name</.th>
+      <.th>Body</.th>
+      <.th>Actions</.th>
+    </.tr>
 
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="credentials">
-      <%= for credential <- @credentials do %>
-        <tr id={"credential-#{credential.id}"}>
-          <td><%= credential.name %></td>
-          <td><%= credential.body %></td>
+    <%= for credential <- @credentials do %>
+      <.tr id={"credential-#{credential.id}"}>
+        <.td><%= credential.name %></.td>
+        <.td><%= credential.body %></.td>
 
-          <td>
-            <span>
-              <%= live_redirect("Show",
-                to: Routes.credential_show_path(@socket, :show, credential)
-              ) %>
-            </span>
-            <span>
-              <%= live_redirect("Edit",
-                to: Routes.credential_edit_path(@socket, :edit, credential)
-              ) %>
-            </span>
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: credential.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
-            </span>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
+        <.td>
+          <span>
+            <%= live_redirect("Show",
+              to: Routes.credential_show_path(@socket, :show, credential)
+            ) %>
+          </span>
+          |
+          <span>
+            <%= live_redirect("Edit",
+              to: Routes.credential_edit_path(@socket, :edit, credential)
+            ) %>
+          </span>
+          |
+          <span>
+            <%= link("Delete",
+              to: "#",
+              phx_click: "delete",
+              phx_value_id: credential.id,
+              data: [confirm: "Are you sure?"]
+            ) %>
+          </span>
+        </.td>
+      </.tr>
+    <% end %>
+  </.table>
 
   <span>
     <%= live_patch("New Credential",
