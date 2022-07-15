@@ -1,4 +1,4 @@
-<MainSection.header title={@page_title}>
+<MainSection.header socket={@socket} title={@page_title}>
   <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
     <Common.button>
       <div class="h-full">
