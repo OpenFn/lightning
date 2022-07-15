@@ -102,6 +102,7 @@ defmodule LightningWeb do
       alias LightningWeb.Router.Helpers, as: Routes
 
       import PetalComponents.Table
+      import PetalComponents.Avatar
       import PetalComponents.Dropdown
       alias PetalComponents.Heroicons
 

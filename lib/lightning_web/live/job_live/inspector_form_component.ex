@@ -40,7 +40,9 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
           <div class="">
             <Form.check_box form={f} id={:enabled}>
-              <p class="text-gray-500">Job will process messages when triggered</p>
+              <p class="text-secondary-500">
+                Job will process messages when triggered
+              </p>
             </Form.check_box>
           </div>
           <div class="">

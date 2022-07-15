@@ -1,4 +1,4 @@
-<MainSection.header title={@page_title} />
+<MainSection.header socket={@socket} title={@page_title} />
 
 <MainSection.main>
   <%= if @live_action == :show do %>
@@ -17,69 +17,68 @@
     />
   <% end %>
   <%= if @live_action == :index do %>
-    <div class="grid grid-cols-12 gap-4 font-bold">
-      <div class="col-span-2">
-        Name
-      </div>
-      <div class="col-span-3">Body</div>
-      <div class="col-span-4">Webhook URL</div>
-      <div class="col-span-1">Enabled</div>
+    <.table>
+      <.tr>
+        <.th>Name</.th>
+        <.th>Body</.th>
+        <.th>Webhook URL</.th>
+        <.th>Enabled</.th>
+        <.th>Actions</.th>
+      </.tr>
+      <%= for job <- @page.entries do %>
+        <.tr id={"job-#{job.id}"}>
+          <.td class="col-span-2"><%= job.name %></.td>
+          <.td class="col-span-3"><%= job.body %></.td>
+          <.td class="col-span-4">
+            <%= if job.trigger.type == :webhook do %>
+              <.button
+                title="Click to copy the webhook url"
+                onclick="(function(e) {  navigator.clipboard.writeText(e.target.innerText); e.preventDefault(); })(event)"
+              >
+                <%= Routes.webhooks_url(@socket, :create, [job.id]) %>
+              </.button>
+            <% end %>
+          </.td>
+          <.td class="col-span-1"><%= job.enabled %></.td>
+          <.td class="col-span-2">
+            <span>
+              <%= live_redirect("Show",
+                to:
+                  Routes.project_job_index_path(
+                    @socket,
+                    :show,
+                    @project.id,
+                    job
+                  )
+              ) %>
+            </span>
+            |
+            <span>
+              <%= live_redirect("Edit",
+                to:
+                  Routes.project_job_edit_path(
+                    @socket,
+                    :edit,
+                    @project.id,
+                    job
+                  ),
+                class: "button"
+              ) %>
+            </span>
+            |
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: job.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
+          </.td>
+        </.tr>
+      <% end %>
+    </.table>
 
-      <div class="col-span-2">Action</div>
-    </div>
-    <%= for job <- @page.entries do %>
-      <div class="grid grid-cols-12 gap-4" id={"job-#{job.id}"}>
-        <div class="col-span-2"><%= job.name %></div>
-        <div class="col-span-3"><%= job.body %></div>
-        <div class="col-span-4">
-          <%= if job.trigger.type == :webhook do %>
-            <.button
-              title="Click to copy the webhook url"
-              onclick="(function(e) {  navigator.clipboard.writeText(e.target.innerText); e.preventDefault(); })(event)"
-            >
-              <%= Routes.webhooks_url(@socket, :create, [job.id]) %>
-            </.button>
-          <% end %>
-        </div>
-        <div class="col-span-1"><%= job.enabled %></div>
-
-        <div class="col-span-2">
-          <span>
-            <%= live_redirect("Show",
-              to:
-                Routes.project_job_index_path(
-                  @socket,
-                  :show,
-                  @project.id,
-                  job
-                )
-            ) %>
-          </span>
-          |
-          <span>
-            <%= live_redirect("Edit",
-              to:
-                Routes.project_job_edit_path(
-                  @socket,
-                  :edit,
-                  @project.id,
-                  job
-                ),
-              class: "button"
-            ) %>
-          </span>
-          |
-          <span>
-            <%= link("Delete",
-              to: "#",
-              phx_click: "delete",
-              phx_value_id: job.id,
-              data: [confirm: "Are you sure?"]
-            ) %>
-          </span>
-        </div>
-      </div>
-    <% end %>
     <.divider />
     <span>
       <%= live_patch("New Job",

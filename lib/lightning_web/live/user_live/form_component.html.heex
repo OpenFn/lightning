@@ -10,7 +10,7 @@
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <%= label(f, :first_name,
-          class: "block text-sm font-medium text-gray-700"
+          class: "block text-sm font-medium text-secondary-700"
         ) %>
         <%= text_input(f, :first_name,
           class: "block w-full rounded-md",
@@ -18,7 +18,7 @@
         ) %>
         <%= error_tag(f, :first_name,
           class:
-            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
         ) %>
       </div>
     </div>
@@ -29,14 +29,16 @@
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :last_name, class: "block text-sm font-medium text-gray-700") %>
+        <%= label(f, :last_name,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= text_input(f, :last_name,
           class: "block w-full rounded-md",
           phx_debounce: "blur"
         ) %>
         <%= error_tag(f, :last_name,
           class:
-            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
         ) %>
       </div>
     </div>
@@ -47,14 +49,16 @@
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :email, class: "block text-sm font-medium text-gray-700") %>
+        <%= label(f, :email,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= email_input(f, :email,
           class: "block w-full rounded-md",
           phx_debounce: "800"
         ) %>
         <%= error_tag(f, :email,
           class:
-            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
         ) %>
       </div>
     </div>
@@ -64,14 +68,16 @@
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :password, class: "block text-sm font-medium text-gray-700") %>
+        <%= label(f, :password,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= password_input(f, :password,
           class: "block w-full rounded-md",
           phx_debounce: "500"
         ) %>
         <%= error_tag(f, :password,
           class:
-            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
         ) %>
       </div>
     </div>
@@ -80,16 +86,18 @@
       <div class="flex items-center h-5">
         <%= checkbox(f, :disabled,
           class:
-            "focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+            "focus:ring-primary-500 h-4 w-4 text-primary-600 border-secondary-300 rounded"
         ) %>
       </div>
       <div class="ml-3 text-sm">
         <%= error_tag(f, :disabled,
           class:
-            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
         ) %>
-        <%= label(f, :disabled, class: "font-medium text-gray-700") %>
-        <p class="text-gray-500">Triggering this will deactivate the user</p>
+        <%= label(f, :disabled, class: "font-medium text-secondary-700") %>
+        <p class="text-secondary-500">
+          Triggering this will deactivate the user
+        </p>
       </div>
     </div>
 
