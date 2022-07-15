@@ -8,7 +8,9 @@ defmodule LightningWeb.Components.Settings do
     base_classes = ~w[px-3 py-2 rounded-md text-sm font-medium rounded-md block]
 
     active_classes = ~w[text-primary-200 bg-primary-light] ++ base_classes
-    inactive_classes = ~w[text-primary-300 hover:bg-primary-light] ++ base_classes
+
+    inactive_classes =
+      ~w[text-primary-300 hover:bg-primary-light] ++ base_classes
 
     assigns =
       assigns

@@ -29,7 +29,9 @@
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :last_name, class: "block text-sm font-medium text-secondary-700") %>
+        <%= label(f, :last_name,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= text_input(f, :last_name,
           class: "block w-full rounded-md",
           phx_debounce: "blur"
@@ -47,7 +49,9 @@
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :email, class: "block text-sm font-medium text-secondary-700") %>
+        <%= label(f, :email,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= email_input(f, :email,
           class: "block w-full rounded-md",
           phx_debounce: "800"
@@ -64,7 +68,9 @@
 
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :password, class: "block text-sm font-medium text-secondary-700") %>
+        <%= label(f, :password,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= password_input(f, :password,
           class: "block w-full rounded-md",
           phx_debounce: "500"
@@ -89,7 +95,9 @@
             "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
         ) %>
         <%= label(f, :disabled, class: "font-medium text-secondary-700") %>
-        <p class="text-secondary-500">Triggering this will deactivate the user</p>
+        <p class="text-secondary-500">
+          Triggering this will deactivate the user
+        </p>
       </div>
     </div>
 
