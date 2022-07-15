@@ -1,4 +1,7 @@
-<MainSection.header title={"#{@user.first_name} #{@user.last_name}"} />
+<MainSection.header
+  socket={@socket}
+  title={"#{@user.first_name} #{@user.last_name}"}
+/>
 
 <MainSection.main>
   <.live_component

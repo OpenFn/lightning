@@ -1,19 +1,16 @@
-<Common.page_content>
-  <:header>
-    <Common.header title={@page_title} />
-  </:header>
-  <%= if @live_action == :index do %>
-    <%= if @projects == nil do %>
-      <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        No project found, please talk to your administrator.
-      </div>
-    <% end %>
-  <% else %>
-    <.live_component
-      module={LightningWeb.WorkflowDiagramLive}
-      id={@project.id}
-      project={@project}
-      selected_id={@selected_id}
-    />
+<MainSection.header socket={@socket} title={@page_title} />
+
+<%= if @live_action == :index do %>
+  <%= if @projects == nil do %>
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      No project found, please talk to your administrator.
+    </div>
   <% end %>
-</Common.page_content>
+<% else %>
+  <.live_component
+    module={LightningWeb.WorkflowDiagramLive}
+    id={@project.id}
+    project={@project}
+    selected_id={@selected_id}
+  />
+<% end %>

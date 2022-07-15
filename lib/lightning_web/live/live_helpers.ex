@@ -8,6 +8,7 @@ defmodule LightningWeb.LiveHelpers do
   alias Phoenix.LiveView.JS
 
   alias PetalComponents.Heroicons
+
   alias LightningWeb.Components.{Common, Icon}
 
   @doc """
