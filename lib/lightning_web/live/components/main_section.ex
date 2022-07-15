@@ -13,7 +13,7 @@ defmodule LightningWeb.Components.MainSection do
         </h1>
         <div class="grow"></div>
         <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
-        <%= if @socket do %>
+        <%= if assigns[:socket] do %>
           <div class="w-5" />
           <.dropdown js_lib="live_view_js">
             <:trigger_element>
