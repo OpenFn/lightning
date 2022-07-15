@@ -9,18 +9,18 @@
   >
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :name, class: "block text-sm font-medium text-gray-700 mb-2") %>
+        <%= label(f, :name, class: "block text-sm font-medium text-secondary-700 mb-2") %>
         <%= error_tag(f, :name, class: "block w-full rounded-md") %>
         <%= hidden_input(f, :name) %>
         <%= text_input(f, :raw_name,
           class:
-            "mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md",
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md",
           value: input_value(f, :name)
         ) %>
       </div>
       <div class="col-span-3">
         <%= label(f, :project_users, "Members",
-          class: "block text-sm font-medium text-gray-700 mb-2"
+          class: "block text-sm font-medium text-secondary-700 mb-2"
         ) %>
 
         <div class="flex w-full items-center gap-2 pb-3">
@@ -72,7 +72,7 @@
       </div>
       <div class="col-span-6">
         <div class="hidden sm:block" aria-hidden="true">
-          <div class="border-t border-gray-200"></div>
+          <div class="border-t border-secondary-200"></div>
         </div>
       </div>
     </div>

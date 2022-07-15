@@ -1,6 +1,5 @@
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
-const colors = require("tailwindcss/colors");
 
 module.exports = {
   content: [
@@ -12,9 +11,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        "primary": "#111827",
-        "primary-light": "#334155",
-      }
+        "primary-900": "#312e81",
+        "primary-800": "#3730a3",
+        "primary-700": "#4338ca",
+        "primary-600": "#4f46e5",
+        "primary-500": "#6366f1",
+        "primary-400": "#818cf8",
+        "primary-300": "#a5b4fc",
+        "primary-200": "#c7d2fe",
+        "primary-100": "#e0e7ff",
+        "primary-50": "#eef2ff",
+        "secondary-900": "#111827",
+        "secondary-800": "#1f2937",
+        "secondary-700": "#374151",
+        "secondary-600": "#4b5563",
+        "secondary-500": "#6b7280",
+        "secondary-400": "#9ca3af",
+        "secondary-300": "#d1d5db",
+        "secondary-200": "#e5e7eb",
+        "secondary-100": "#f3f4f6",
+        "secondary-50": "#f9fafb"
+      },
     },
 
   },

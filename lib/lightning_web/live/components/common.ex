@@ -20,16 +20,16 @@ defmodule LightningWeb.Components.Common do
       focus:outline-none
       focus:ring-2
       focus:ring-offset-2
-      focus:ring-indigo-500
+      focus:ring-primary-500
     ]
 
     active_classes = ~w[
-      bg-indigo-600
-      hover:bg-indigo-700
+      bg-primary-600
+      hover:bg-primary-700
     ] ++ base_classes
 
     inactive_classes = ~w[
-      bg-indigo-300
+      bg-primary-300
     ] ++ base_classes
 
     class =
@@ -84,7 +84,7 @@ defmodule LightningWeb.Components.Common do
     ~H"""
     <div class="flex h-full w-full flex-col">
       <%= render_slot(@header) %>
-      <div class="flex-auto bg-gray-100 relative">
+      <div class="flex-auto bg-secondary-100 relative">
         <div class="overflow-y-auto absolute top-0 bottom-0 left-0 right-0">
           <%= render_slot(@inner_block) %>
         </div>
@@ -97,7 +97,7 @@ defmodule LightningWeb.Components.Common do
     ~H"""
     <div class="flex-none bg-white shadow-sm z-10">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
-        <h1 class="text-3xl font-bold text-gray-900">
+        <h1 class="text-3xl font-bold text-secondary-900">
           <%= @title %>
         </h1>
         <div class="grow"></div>

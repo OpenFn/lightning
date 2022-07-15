@@ -13,7 +13,7 @@
       </div>
       <div class="col-span-3">
         <Form.check_box form={f} id={:enabled}>
-          <p class="text-gray-500">Job will process messages when triggered</p>
+          <p class="text-secondary-500">Job will process messages when triggered</p>
         </Form.check_box>
       </div>
       <div class="col-span-2">
@@ -38,7 +38,7 @@
           <%= inputs_for f, :trigger, fn ft -> %>
             <div class="col-span-3">
               <%= label ft, :type, class: "block" do %>
-                <span class="block text-sm font-medium text-gray-700">
+                <span class="block text-sm font-medium text-secondary-700">
                   Trigger
                 </span>
                 <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
@@ -72,7 +72,7 @@
             <div class="col-span-3">
               <%= if requires_upstream_job?(ft.source) do %>
                 <%= label ft, :upstream_job_id, class: "block" do %>
-                  <span class="block text-sm font-medium text-gray-700">
+                  <span class="block text-sm font-medium text-secondary-700">
                     Upstream Job
                   </span>
                   <%= error_tag(ft, :upstream_job_id,

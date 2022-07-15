@@ -4,7 +4,7 @@
       <%= live_redirect(to: Routes.settings_index_path(@socket, :index)) do %>
         <button
           type="button"
-          class="bg-gray-800 p-1 rounded-full text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+          class="bg-secondary-800 p-1 rounded-full text-secondary-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-800 focus:ring-white"
         >
           <span class="sr-only">Settings</span>
         </button>
@@ -15,7 +15,7 @@
       <div>
         <button
           type="button"
-          class="max-w-xs bg-gray-800 align-middle rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+          class="max-w-xs bg-secondary-800 align-middle rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-secondary-800 focus:ring-white"
           id="user-menu-button"
           aria-expanded="false"
           aria-haspopup="true"
@@ -24,7 +24,7 @@
           <%= live_redirect("Log out",
             to: Routes.user_session_path(@socket, :delete),
             class:
-              "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+              "text-secondary-300 hover:bg-secondary-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
           ) %>
         </button>
       </div>
@@ -46,10 +46,10 @@
         aria-labelledby="user-menu-button"
         tabindex="-1"
       >
-        <!-- Active: "bg-gray-100", Not Active: "" -->
+        <!-- Active: "bg-secondary-100", Not Active: "" -->
         <a
           href="#"
-          class="block px-4 py-2 text-sm text-gray-700"
+          class="block px-4 py-2 text-sm text-secondary-700"
           role="menuitem"
           tabindex="-1"
           id="user-menu-item-0"
@@ -59,7 +59,7 @@
 
         <a
           href="#"
-          class="block px-4 py-2 text-sm text-gray-700"
+          class="block px-4 py-2 text-sm text-secondary-700"
           role="menuitem"
           tabindex="-1"
           id="user-menu-item-2"

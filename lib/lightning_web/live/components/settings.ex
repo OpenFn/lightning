@@ -5,12 +5,10 @@ defmodule LightningWeb.Components.Settings do
   use LightningWeb, :component
 
   def menu_item(assigns) do
-    base_classes = ~w[
-      px-3 py-2 rounded-md text-sm font-medium rounded-md block
-    ]
+    base_classes = ~w[px-3 py-2 rounded-md text-sm font-medium rounded-md block]
 
-    active_classes = ~w[text-indigo-200 bg-indigo-900] ++ base_classes
-    inactive_classes = ~w[text-indigo-300 hover:bg-indigo-900] ++ base_classes
+    active_classes = ~w[text-primary-200 bg-primary-light] ++ base_classes
+    inactive_classes = ~w[text-primary-300 hover:bg-primary-light] ++ base_classes
 
     assigns =
       assigns
