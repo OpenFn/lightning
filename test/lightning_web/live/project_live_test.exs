@@ -73,4 +73,106 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
     end
   end
+
+  describe "projects picker dropdown" do
+    setup :register_and_log_in_user
+
+    test "lists all projects", %{conn: conn, user: user} do
+      another_user = user_fixture()
+
+      {:ok, project_1} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id}]
+        })
+
+      {:ok, project_2} =
+        Lightning.Projects.create_project(%{
+          name: "project-2",
+          project_users: [%{user_id: user.id}]
+        })
+
+      {:ok, project_3} =
+        Lightning.Projects.create_project(%{
+          name: "project-3",
+          project_users: [%{user_id: another_user.id}]
+        })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_dashboard_index_path(
+            conn,
+            :show,
+            Lightning.Projects.first_project_for_user(user)
+          )
+        )
+
+      assert view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_1.id)}']"
+             )
+             |> has_element?()
+
+      assert view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_2.id)}']"
+             )
+             |> has_element?()
+
+      refute view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_3.id)}']"
+             )
+             |> has_element?()
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_dashboard_index_path(conn, :show, project_1.id)
+        )
+
+      assert html =~ project_1.name
+      assert view |> element("button", "#{project_1.name}") |> has_element?()
+
+      assert view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_2.id)}']"
+             )
+             |> has_element?()
+
+      refute view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_3.id)}']"
+             )
+             |> has_element?()
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_dashboard_index_path(conn, :show, project_2.id)
+        )
+
+      assert html =~ project_2.name
+      assert view |> element("button", "#{project_2.name}") |> has_element?()
+
+      assert view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_1.id)}']"
+             )
+             |> has_element?()
+
+      refute view
+             |> element(
+               "a[href='#{Routes.project_dashboard_index_path(conn, :show, project_3.id)}']"
+             )
+             |> has_element?()
+
+      assert live(
+               conn,
+               Routes.project_dashboard_index_path(conn, :show, project_3.id)
+             ) ==
+               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+    end
+  end
 end
