@@ -21,16 +21,16 @@ defmodule LightningWeb.Components.Form do
       focus:outline-none
       focus:ring-2
       focus:ring-offset-2
-      focus:ring-indigo-500
+      focus:ring-primary-500
     ]
 
     inactive_classes = ~w[
-      bg-indigo-300
+      bg-primary-300
     ] ++ base_classes
 
     active_classes = ~w[
-      bg-indigo-600
-      hover:bg-indigo-700
+      bg-primary-600
+      hover:bg-primary-700
     ] ++ base_classes
 
     disabled =
@@ -85,7 +85,7 @@ defmodule LightningWeb.Components.Form do
       block
       text-sm
       font-medium
-      text-gray-700
+      text-secondary-700
     ]
 
     error_classes = ~w[
@@ -96,12 +96,12 @@ defmodule LightningWeb.Components.Form do
 
     input_classes = ~w[
       mt-1
-      focus:ring-indigo-500
-      focus:border-indigo-500
+      focus:ring-primary-500
+      focus:border-primary-500
       block w-full
       shadow-sm
       sm:text-sm
-      border-gray-300
+      border-secondary-300
       rounded-md
     ]
 
@@ -120,7 +120,7 @@ defmodule LightningWeb.Components.Form do
       block
       text-sm
       font-medium
-      text-gray-700
+      text-secondary-700
     ]
 
     error_classes = ~w[
@@ -131,12 +131,12 @@ defmodule LightningWeb.Components.Form do
 
     input_classes = ~w[
       mt-1
-      focus:ring-indigo-500
-      focus:border-indigo-500
+      focus:ring-primary-500
+      focus:border-primary-500
       block w-full
       shadow-sm
       sm:text-sm
-      border-gray-300
+      border-secondary-300
       rounded-md
     ]
 
@@ -155,7 +155,7 @@ defmodule LightningWeb.Components.Form do
       block
       text-sm
       font-medium
-      text-gray-700
+      text-secondary-700
     ]
 
     error_classes = ~w[
@@ -166,12 +166,12 @@ defmodule LightningWeb.Components.Form do
 
     input_classes = ~w[
       mt-1
-      focus:ring-indigo-500
-      focus:border-indigo-500
+      focus:ring-primary-500
+      focus:border-primary-500
       block w-full
       shadow-sm
       sm:text-sm
-      border-gray-300
+      border-secondary-300
       rounded-md
     ]
 
@@ -184,29 +184,29 @@ defmodule LightningWeb.Components.Form do
 
   def check_box(assigns) do
     checkbox_classes = ~w[
-      "focus:ring-indigo-500
+      "focus:ring-primary-500
       h-4
       w-4
-      text-indigo-600
-      border-gray-300
+      text-primary-600
+      border-secondary-300
       rounded
     ]
 
     error_tag_classes = ~w[
       mt-1
-      focus:ring-indigo-500
-      focus:border-indigo-500
+      focus:ring-primary-500
+      focus:border-primary-500
       block
       w-full
       shadow-sm
       sm:text-sm
-      border-gray-300
+      border-secondary-300
       rounded-md
     ]
 
     label_classes = ~w[
       font-medium
-      text-gray-700
+      text-secondary-700
     ]
 
     ~H"""
@@ -228,7 +228,7 @@ defmodule LightningWeb.Components.Form do
       block
       text-sm
       font-medium
-      text-gray-700
+      text-secondary-700
     ]
 
     ~H"""
@@ -244,11 +244,11 @@ defmodule LightningWeb.Components.Form do
       block
       w-full
       rounded-md
-      border-gray-300
+      border-secondary-300
       shadow-sm
-      focus:border-indigo-300
+      focus:border-primary-300
       focus:ring
-      focus:ring-indigo-200
+      focus:ring-primary-200
       focus:ring-opacity-50
     ]
 
@@ -266,12 +266,12 @@ defmodule LightningWeb.Components.Form do
       block
       w-full
       rounded-md
-      border-gray-300
+      border-secondary-300
       sm:text-sm
       shadow-sm
-      focus:border-indigo-300
+      focus:border-primary-300
       focus:ring
-      focus:ring-indigo-200
+      focus:ring-primary-200
       focus:ring-opacity-50
     ]
 
@@ -290,7 +290,7 @@ defmodule LightningWeb.Components.Form do
     ~H"""
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5">
-        <div class="border-t border-gray-200"></div>
+        <div class="border-t border-secondary-200"></div>
       </div>
     </div>
     """

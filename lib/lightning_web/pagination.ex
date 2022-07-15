@@ -91,9 +91,9 @@ defmodule LightningWeb.Pagination do
 
   def pagination_bar(assigns) do
     ~H"""
-    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+    <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-secondary-200 sm:px-6">
       <div>
-        <p class="text-sm text-gray-700">
+        <p class="text-sm text-secondary-700">
           Showing
           <span class="font-medium">
             <%= @page.page_number * @page.page_size - @page.page_size + 1 %>
@@ -129,8 +129,8 @@ defmodule LightningWeb.Pagination do
         <%= live_patch(
             to: assigns.url.(page: assigns.page_number),
             class: "relative inline-flex items-center px-2 py-2 rounded-l-md
-                    border border-gray-300 bg-white text-sm font-medium
-                    text-gray-500 hover:bg-gray-50"
+                    border border-secondary-300 bg-white text-sm font-medium
+                    text-secondary-500 hover:bg-secondary-50"
           ) do %>
           <span class="sr-only">Previous</span>
           <Icon.chevron_left />
@@ -142,8 +142,8 @@ defmodule LightningWeb.Pagination do
         <%= live_patch(
             to: assigns.url.(page: assigns.page_number),
             class: "relative inline-flex items-center px-2 py-2 rounded-r-md
-                    border border-gray-300 bg-white text-sm font-medium
-                    text-gray-500 hover:bg-gray-50"
+                    border border-secondary-300 bg-white text-sm font-medium
+                    text-secondary-500 hover:bg-secondary-50"
           ) do %>
           <span class="sr-only">Next</span>
           <Icon.chevron_right />
@@ -152,7 +152,7 @@ defmodule LightningWeb.Pagination do
 
       :ellipsis ->
         ~H"""
-        <div class="bg-white border-gray-300 text-gray-500
+        <div class="bg-white border-secondary-300 text-secondary-500
            relative inline-flex items-center px-4 py-2 border text-sm font-medium">
           &hellip;
         </div>
@@ -170,7 +170,7 @@ defmodule LightningWeb.Pagination do
       ~H"""
       <%= live_patch(@page_number,
         to: assigns.url.(page: assigns.page_number),
-        class: "z-10 bg-indigo-50 border-indigo-500 text-indigo-600
+        class: "z-10 bg-primary-50 border-primary-500 text-primary-600
            relative inline-flex items-center px-4 py-2 border text-sm font-medium"
       ) %>
       """
@@ -178,7 +178,7 @@ defmodule LightningWeb.Pagination do
       ~H"""
       <%= live_patch(@page_number,
         to: assigns.url.(page: assigns.page_number),
-        class: "bg-white border-gray-300 text-gray-500 hover:bg-gray-50
+        class: "bg-white border-secondary-300 text-secondary-500 hover:bg-secondary-50
            relative inline-flex items-center px-4 py-2 border text-sm font-medium"
       ) %>
       """
