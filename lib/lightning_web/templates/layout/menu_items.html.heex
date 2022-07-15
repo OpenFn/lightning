@@ -1,4 +1,22 @@
 <%= if assigns[:project] do %>
+  <div class="p-2 mb-4 text-center text-indigo-300  bg-indigo-800">
+    <.dropdown placement="right" label={@project.name} js_lib="live_view_js">
+      <%= for project <- Lightning.Projects.get_projects_for_user(@current_user) do %>
+        <%= unless project.id == @project.id do %>
+          <.dropdown_menu_item
+            link_type="live_redirect"
+            to={Routes.project_dashboard_index_path(@socket, :show, project.id)}
+            label={project.name}
+          />
+        <% end %>
+      <% end %>
+    </.dropdown>
+  </div>
+<% else %>
+  <div class="mb-4" />
+<% end %>
+
+<%= if assigns[:project] do %>
   <Settings.menu_item
     to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
     active={@active_menu_item == :overview}
