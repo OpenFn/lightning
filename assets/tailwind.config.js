@@ -11,6 +11,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // indigo
         "primary-900": "#312e81",
         "primary-800": "#3730a3",
         "primary-700": "#4338ca",
@@ -19,6 +20,7 @@ module.exports = {
         "primary-300": "#a5b4fc",
         "primary-200": "#c7d2fe",
         "primary-50": "#eef2ff",
+        // gray
         "secondary-900": "#111827",
         "secondary-800": "#1f2937",
         "secondary-700": "#374151",

@@ -19,26 +19,28 @@ defmodule LightningWeb.Components.MainSection do
             <:trigger_element>
               <div class="inline-flex items-center justify-center w-full align-middle focus:outline-none">
                 <.avatar size="sm" />
-                <Heroicons.Solid.chevron_down class="w-4 h-4 ml-1 -mr-1 text-gray-400 dark:text-gray-100" />
+                <Heroicons.Solid.chevron_down class="w-4 h-4 ml-1 -mr-1 text-secondary-400 dark:text-secondary-100" />
               </div>
             </:trigger_element>
             <.dropdown_menu_item
               link_type="live_redirect"
               to={Routes.user_settings_path(@socket, :edit)}
             >
-              <Heroicons.Outline.cog class="w-5 h-5 text-gray-500" /> User Profile
+              <Heroicons.Outline.cog class="w-5 h-5 text-secondary-500" />
+              User Profile
             </.dropdown_menu_item>
             <.dropdown_menu_item
               link_type="live_redirect"
               to={Routes.credential_index_path(@socket, :index)}
             >
-              <Heroicons.Outline.key class="w-5 h-5 text-gray-500" /> Credentials
+              <Heroicons.Outline.key class="w-5 h-5 text-secondary-500" />
+              Credentials
             </.dropdown_menu_item>
             <.dropdown_menu_item
               link_type="live_redirect"
               to={Routes.user_session_path(@socket, :delete)}
             >
-              <Heroicons.Outline.logout class="w-5 h-5 text-gray-500" /> Logout
+              <Heroicons.Outline.logout class="w-5 h-5 text-secondary-500" /> Logout
             </.dropdown_menu_item>
           </.dropdown>
         <% end %>
