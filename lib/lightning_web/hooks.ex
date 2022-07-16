@@ -15,6 +15,9 @@ defmodule LightningWeb.Hooks do
   def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
     project = Lightning.Projects.get_project(project_id)
 
+    projects =
+      Lightning.Projects.get_projects_for_user(socket.assigns.current_user)
+
     case Bodyguard.permit(
            Lightning.Projects.Policy,
            :read,
@@ -29,7 +32,8 @@ defmodule LightningWeb.Hooks do
          socket
          |> assign_new(:project, fn ->
            project
-         end)}
+         end)
+         |> assign_new(:projects, fn -> projects end)}
     end
   end
 
