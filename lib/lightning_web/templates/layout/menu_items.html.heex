@@ -1,16 +1,22 @@
 <%= if assigns[:project] do %>
-  <div class="p-2 mb-4 text-center text-indigo-300  bg-indigo-800">
-    <.dropdown placement="right" label={@project.name} js_lib="live_view_js">
-      <%= for project <- assigns[:projects] do %>
-        <%= unless project.id == @project.id do %>
-          <.dropdown_menu_item
-            link_type="live_redirect"
-            to={Routes.project_dashboard_index_path(@socket, :show, project.id)}
-            label={project.name}
-          />
+  <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+    <%= if Enum.count(assigns[:projects]) > 1 do %>
+      <.dropdown placement="right" label={@project.name} js_lib="live_view_js">
+        <%= for project <- assigns[:projects] do %>
+          <%= unless project.id == @project.id do %>
+            <.dropdown_menu_item
+              link_type="live_redirect"
+              to={
+                Routes.project_dashboard_index_path(@socket, :show, project.id)
+              }
+              label={project.name}
+            />
+          <% end %>
         <% end %>
-      <% end %>
-    </.dropdown>
+      </.dropdown>
+    <% else %>
+      <span class="inline-block align-middle"><%= @project.name %></span>
+    <% end %>
   </div>
 <% else %>
   <div class="mb-4" />
