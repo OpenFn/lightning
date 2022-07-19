@@ -5,7 +5,6 @@ defmodule LightningWeb.CredentialLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
-  alias Lightning.Credentials.Credential
   alias Lightning.Projects
 
   @impl true
@@ -22,26 +21,6 @@ defmodule LightningWeb.CredentialLive.Index do
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Credential")
-    |> assign(
-      credential:
-        Credentials.get_credential!(id)
-        |> Lightning.Repo.preload(:project_credentials),
-      projects: list_projects(socket)
-    )
-  end
-
-  defp apply_action(socket, :new, _params) do
-    socket
-    |> assign(:page_title, "New Credential")
-    |> assign(
-      credential: %Credential{user_id: socket.assigns.current_user.id},
-      projects: list_projects(socket)
-    )
   end
 
   defp apply_action(socket, :index, _params) do

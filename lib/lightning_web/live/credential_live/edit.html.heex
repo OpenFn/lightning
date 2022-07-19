@@ -1,4 +1,7 @@
-<MainSection.header socket={@socket} title={"#{@credential.name}"} />
+<MainSection.header
+  socket={@socket}
+  title={"#{@credential.name || @page_title}"}
+/>
 
 <MainSection.main>
   <.live_component
