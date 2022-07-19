@@ -49,6 +49,7 @@ LightningWeb.Components.Icon.html
 LightningWeb.Components.Jobs.html
 LightningWeb.Components.MainSection.html
 LightningWeb.Components.Settings.html
+LightningWeb.Components.WorkflowDiagram.html
 LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
 LightningWeb.CredentialLive.Index.html
@@ -99,7 +100,6 @@ LightningWeb.UserSessionView.html
 LightningWeb.UserSettingsController.html
 LightningWeb.UserSettingsView.html
 LightningWeb.WebhooksController.html
-LightningWeb.WorkflowDiagramLive.html
 LightningWeb.html
 ObanPruner.html
 api-reference.html
@@ -112,8 +112,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-ef472e0693.js
-dist/sidebar_items-6d94bc5578.js
+dist/search_items-644fb4fc09.js
+dist/sidebar_items-b6d4a2552e.js
 index.html
 readme.html
 search.html
