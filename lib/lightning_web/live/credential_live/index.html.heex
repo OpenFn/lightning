@@ -1,20 +1,15 @@
-<MainSection.header socket={@socket} title="Credentials" />
+<MainSection.header socket={@socket} title="Credentials">
+  <%= live_redirect to: Routes.credential_edit_path(@socket, :new) do %>
+    <Common.button>
+      <div class="h-full">
+        <Icon.plus class="h-4 w-4 inline-block" />
+        <span class="inline-block align-middle">New Credential</span>
+      </div>
+    </Common.button>
+  <% end %>
+</MainSection.header>
 
 <MainSection.main>
-  <%= if @live_action in [:new, :edit] do %>
-    <.modal return_to={Routes.credential_index_path(@socket, :index)}>
-      <.live_component
-        module={LightningWeb.CredentialLive.FormComponent}
-        id={@credential.id || :new}
-        title={@page_title}
-        action={@live_action}
-        projects={@projects}
-        credential={@credential}
-        return_to={Routes.credential_index_path(@socket, :index)}
-      />
-    </.modal>
-  <% end %>
-
   <.table id="credentials">
     <.tr>
       <.th>Name</.th>
@@ -28,12 +23,6 @@
         <.td><%= credential.body %></.td>
 
         <.td>
-          <span>
-            <%= live_redirect("Show",
-              to: Routes.credential_show_path(@socket, :show, credential)
-            ) %>
-          </span>
-          |
           <span>
             <%= live_redirect("Edit",
               to: Routes.credential_edit_path(@socket, :edit, credential)
@@ -52,10 +41,4 @@
       </.tr>
     <% end %>
   </.table>
-
-  <span>
-    <%= live_patch("New Credential",
-      to: Routes.credential_index_path(@socket, :new)
-    ) %>
-  </span>
 </MainSection.main>

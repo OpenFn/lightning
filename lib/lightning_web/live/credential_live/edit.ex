@@ -6,6 +6,7 @@ defmodule LightningWeb.CredentialLive.Edit do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   alias Lightning.Projects
 
   @impl true
@@ -14,16 +15,31 @@ defmodule LightningWeb.CredentialLive.Edit do
   end
 
   @impl true
-  def handle_params(%{"id" => id}, _, socket) do
-    {:noreply,
-     socket
-     |> assign(:page_title, "Show Job")
-     |> assign(:active_menu_item, :credentials)
-     |> assign(
-       credential:
-         Credentials.get_credential!(id)
-         |> Lightning.Repo.preload(:project_credentials),
-       projects: Projects.get_projects_for_user(socket.assigns.current_user)
-     )}
+  def handle_params(params, _url, socket) do
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  defp apply_action(socket, :edit, %{"id" => id}) do
+    socket
+    |> assign(:page_title, "Edit Credential")
+    |> assign(
+      credential:
+        Credentials.get_credential!(id)
+        |> Lightning.Repo.preload(:project_credentials),
+      projects: list_projects(socket)
+    )
+  end
+
+  defp apply_action(socket, :new, _params) do
+    socket
+    |> assign(:page_title, "New Credential")
+    |> assign(
+      credential: %Credential{user_id: socket.assigns.current_user.id},
+      projects: list_projects(socket)
+    )
+  end
+
+  defp list_projects(socket) do
+    Projects.get_projects_for_user(socket.assigns.current_user)
   end
 end
