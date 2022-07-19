@@ -14,6 +14,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         case Jobs.update_job(socket.assigns.job, job_params) do
           {:ok, _job} ->
             socket
+            |> LightningWeb.Components.WorkflowDiagram.push_project_space()
             |> push_patch(to: socket.assigns.return_to)
 
           {:error, %Ecto.Changeset{} = changeset} ->

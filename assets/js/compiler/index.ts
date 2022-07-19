@@ -37,8 +37,8 @@ export default {
     });
   },
   destroyed() {
-    this.component.unmount();
-    this.observer.disconnect();
+    this.component?.unmount();
+    this.observer?.disconnect();
     console.log("unmounted compiler");
   },
   component: null,
