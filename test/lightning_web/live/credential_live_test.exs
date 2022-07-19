@@ -42,28 +42,32 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
-      assert index_live |> element("a", "New Credential") |> render_click() =~
-               "New Credential"
+      {:ok, edit_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
 
-      assert_patch(index_live, Routes.credential_index_path(conn, :new))
-
-      assert index_live
+      assert edit_live
              |> form("#credential-form", credential: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
-      assert index_live
+      assert edit_live
              |> form("#credential-form", credential: @create_attrs)
              |> render_change()
 
-      index_live
+      edit_live
       |> element("#project_list")
       |> render_hook("select_item", %{"id" => project.id})
 
-      index_live
+      edit_live
       |> element("button", "Add")
       |> render_click()
 
-      index_live
+      edit_live
       |> form("#credential-form")
       |> render_submit()
     end
@@ -106,38 +110,6 @@ defmodule LightningWeb.CredentialLiveTest do
       assert form_live
              |> form("#credential-form", credential: @update_attrs)
              |> render_submit() =~ "some updated body"
-    end
-  end
-
-  describe "Show" do
-    setup [:create_credential]
-
-    test "displays credential", %{conn: conn, credential: credential} do
-      {:ok, _show_live, html} =
-        live(conn, Routes.credential_show_path(conn, :show, credential))
-
-      assert html =~ "Show Credential"
-      assert html =~ credential.name
-    end
-
-    test "can't display others credentials", %{
-      conn: conn,
-      credential: _credential
-    } do
-      assert live(
-               conn,
-               Routes.credential_show_path(
-                 conn,
-                 :show,
-                 Lightning.CredentialsFixtures.credential_fixture()
-               )
-             ) ==
-               {:error,
-                {:live_redirect,
-                 %{
-                   flash: %{"error" => "You can't access that page"},
-                   to: "/credentials"
-                 }}}
     end
   end
 end
