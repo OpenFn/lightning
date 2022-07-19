@@ -3,7 +3,7 @@
 
 module.exports = {
   content: [
-    "./js/**/*.js",
+    "./js/**/*.{js,jsx,ts,tsx}",
     "../lib/*_web.ex",
     "../lib/*_web/**/*.*ex",
     "../deps/petal_components/**/*.*ex",
