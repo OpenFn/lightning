@@ -122,18 +122,4 @@ defmodule LightningWeb.DataclipLiveTest do
       assert has_element?(index_live, "#dataclip-#{dataclip.id}")
     end
   end
-
-  describe "Show" do
-    setup [:create_dataclip]
-
-    test "displays dataclip", %{conn: conn, dataclip: dataclip, project: project} do
-      {:ok, _show_live, html} =
-        live(
-          conn,
-          Routes.project_dataclip_index_path(conn, :show, project.id, dataclip)
-        )
-
-      assert html =~ "Dataclip"
-    end
-  end
 end

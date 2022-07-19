@@ -100,7 +100,6 @@ defmodule LightningWeb.Router do
 
         live "/dataclips", DataclipLive.Index, :index
         live "/dataclips/new", DataclipLive.Edit, :new
-        live "/dataclips/:id", DataclipLive.Index, :show
         live "/dataclips/:id/edit", DataclipLive.Edit, :edit
 
         live "/", DashboardLive.Index, :show
