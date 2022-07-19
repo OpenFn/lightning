@@ -41,12 +41,6 @@ defmodule LightningWeb.DataclipLive.Index do
     )
   end
 
-  defp apply_action(socket, :show, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Dataclip")
-    |> assign(:dataclip, Invocation.get_dataclip(id))
-  end
-
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     dataclip = Invocation.get_dataclip!(id)
@@ -80,43 +74,6 @@ defmodule LightningWeb.DataclipLive.Index do
     <div class={@class}>
       <%= @dataclip.type %>
     </div>
-    """
-  end
-
-  def show_dataclip(assigns) do
-    ~H"""
-    <ul>
-      <li>
-        <strong>Body:</strong>
-        <%= @dataclip.body %>
-      </li>
-
-      <li>
-        <strong>Type:</strong>
-        <.type_pill dataclip={@dataclip} />
-      </li>
-    </ul>
-
-    <span>
-      <%= live_redirect("Back",
-        to: Routes.project_dataclip_index_path(@socket, :index, @project.id)
-      ) %>
-    </span>
-    |
-    <span>
-    <%= live_redirect("Edit",
-      to: Routes.project_dataclip_edit_path(@socket, :edit, @project.id, @dataclip),
-      class: "button"
-    ) %>
-    </span> |
-    <span>
-    <%= link("Delete",
-      to: "#",
-      phx_click: "delete",
-      phx_value_id: @dataclip.id,
-      data: [confirm: "Are you sure?"]
-    ) %>
-    </span>
     """
   end
 end
