@@ -37,7 +37,7 @@ config :swoosh, :api_client, false
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.14.42",
+  version: "0.14.49",
   default: [
     args:
       ~w(js/app.js js/workflow-diagram/component.jsx js/compiler/index.ts
@@ -50,7 +50,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "3.0.23",
+  version: "3.1.6",
   default: [
     args: ~w(
       --config=tailwind.config.js

@@ -11,6 +11,7 @@
   "dependencies": {
     "@openfn/compiler": "0.0.1",
     "@openfn/workflow-diagram": "^0.0.5",
+    "blueimp-md5": "^2.19.0",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-markdown": "^8.0.3",

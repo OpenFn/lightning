@@ -26,11 +26,7 @@ defmodule LightningWeb.Components.WorkflowDiagram do
   end
 
   def handle_event("component_mounted", _params, socket) do
-    project_space =
-      Jobs.get_workflows_for(socket.assigns.project)
-      |> to_project_space()
-
-    {:noreply, push_event(socket, "update_project_space", project_space)}
+    {:noreply, push_project_space(socket)}
   end
 
   def render(assigns) do
@@ -62,6 +58,20 @@ defmodule LightningWeb.Components.WorkflowDiagram do
       </div>
     </div>
     """
+  end
+
+  @doc """
+  Pushes an event to update the WorkflowDiagram with the current ProjectSpace
+
+  > This is likely to be outgrown in the near future, where instead we want
+  > to subscribe to a channel that publishes changes made by any user.
+  """
+  def push_project_space(socket) do
+    project_space =
+      Jobs.get_workflows_for(socket.assigns.project)
+      |> to_project_space()
+
+    push_event(socket, "update_project_space", project_space)
   end
 
   defp to_project_space(workflows) do
