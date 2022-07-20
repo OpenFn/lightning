@@ -11,6 +11,7 @@ defmodule Lightning.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      dialyzer: [plt_add_apps: [:mix]],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [verify: :test],
 
@@ -41,6 +42,7 @@ defmodule Lightning.MixProject do
     [
       {:bcrypt_elixir, "~> 2.0"},
       {:bodyguard, "~> 2.2"},
+      {:cloak_ecto, "~> 1.2.0"},
       {:credo, "~> 1.6", only: [:test, :dev]},
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
@@ -117,6 +119,7 @@ defmodule Lightning.MixProject do
       logo: "priv/static/images/square-logo.png",
       extras: [
         "README.md": [title: "Lightning"],
+        "DEPLOYMENT.md": [title: "Deployment"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",

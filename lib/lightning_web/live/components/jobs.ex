@@ -1,7 +1,5 @@
 defmodule LightningWeb.Components.Jobs do
-  @moduledoc """
-  Components for viewing and editing Jobs
-  """
+  @moduledoc false
   use LightningWeb, :component
 
   import LightningWeb.Components.Form

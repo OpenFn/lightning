@@ -4,6 +4,10 @@ Lightning extends the existing [OpenFn](https://www.openfn.org) Digital Public
 Good, providing a web UI to visually manage complex workflow automation
 projects.
 
+## Deployment
+
+See [Deployment](DEPLOYMENT.md) for more detailed information.
+
 ## Setting up
 
 The easiest way to set up Lightning is via Docker. We have included the
@@ -24,7 +28,7 @@ start up the server.
 
 By default the application will be available from [localhost:4000](http://localhost:4000/).
 
-**Troubleshooting**
+### Troubleshooting
 
 If you're actively working with docker, start experiencing issues and would like
 to start from scratch you can clean up everything and start over like this:

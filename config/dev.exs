@@ -31,6 +31,9 @@ config :lightning, LightningWeb.Endpoint,
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
 
+config :lightning, Lightning.Vault,
+  primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed

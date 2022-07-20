@@ -1,7 +1,5 @@
 defmodule LightningWeb.Components.Form do
-  @moduledoc """
-  Form Components
-  """
+  @moduledoc false
   use LightningWeb, :component
 
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()

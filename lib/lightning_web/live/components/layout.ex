@@ -1,7 +1,5 @@
 defmodule LightningWeb.Components.Layout do
-  @moduledoc """
-  Layout Components
-  """
+  @moduledoc false
   use LightningWeb, :component
 
   # https://play.tailwindcss.com/r7kBDT2cJY?layout=horizontal

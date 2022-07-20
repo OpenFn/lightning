@@ -21,6 +21,7 @@ defmodule Lightning.Application do
        |> Keyword.merge(Application.get_env(:lightning, :adaptor_service))}
 
     children = [
+      Lightning.Vault,
       # Start the Ecto repository
       Lightning.Repo,
       # Start Oban,
