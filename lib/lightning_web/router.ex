@@ -78,10 +78,8 @@ defmodule LightningWeb.Router do
       live "/settings", SettingsLive.Index, :index
 
       live "/settings/users", UserLive.Index, :index
-      live "/settings/users/new", UserLive.Index, :new
-
-      live "/settings/users/:id", UserLive.Show, :show
-      live "/settings/users/:id/edit", UserLive.Edit, :edit
+      live "/settings/users/new", UserLive.Edit, :new
+      live "/settings/users/:id", UserLive.Edit, :edit
 
       live "/settings/projects", ProjectLive.Index, :index
       live "/settings/projects/new", ProjectLive.Index, :new
