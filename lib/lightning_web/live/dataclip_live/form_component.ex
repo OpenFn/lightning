@@ -5,6 +5,7 @@ defmodule LightningWeb.DataclipLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Invocation
+  import LightningWeb.Components.Form
 
   @impl true
   def update(%{dataclip: dataclip, project: project} = assigns, socket) do

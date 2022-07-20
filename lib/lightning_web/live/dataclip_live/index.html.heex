@@ -1,55 +1,58 @@
-<MainSection.header socket={@socket} title={@page_title}>
-  <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
-    <Common.button>
-      <div class="h-full">
-        <Icon.plus class="h-4 w-4 inline-block" />
-        <span class="inline-block align-middle">New Dataclip</span>
-      </div>
-    </Common.button>
-  <% end %>
-</MainSection.header>
-
-<MainSection.main>
-  <.table>
-    <.tr>
-      <.th>Created</.th>
-      <.th>Type</.th>
-      <.th>Body</.th>
-      <.th>Actions</.th>
-    </.tr>
-
-    <%= for dataclip <- @page.entries do %>
-      <.tr id={"dataclip-#{dataclip.id}"}>
-        <.td>
-          <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
-        </.td>
-        <.td><.type_pill dataclip={dataclip} /></.td>
-        <.td><%= dataclip.body %></.td>
-
-        <.td>
-          <span>
-            <%= live_redirect("Edit",
-              to:
-                Routes.project_dataclip_edit_path(
-                  @socket,
-                  :edit,
-                  @project.id,
-                  dataclip
-                )
-            ) %>
-          </span>
-          |
-          <span>
-            <%= link("Delete",
-              to: "#",
-              phx_click: "delete",
-              phx_value_id: dataclip.id,
-              data: [confirm: "Are you sure?"]
-            ) %>
-          </span>
-        </.td>
+<Layout.page_content>
+  <:header>
+    <Layout.header socket={@socket} title={@page_title}>
+      <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
+        <Common.button>
+          <div class="h-full">
+            <Heroicons.Solid.plus class="h-4 w-4 inline-block" />
+            <span class="inline-block align-middle">New Dataclip</span>
+          </div>
+        </Common.button>
+      <% end %>
+    </Layout.header>
+  </:header>
+  <Layout.centered>
+    <.table>
+      <.tr>
+        <.th>Created</.th>
+        <.th>Type</.th>
+        <.th>Body</.th>
+        <.th>Actions</.th>
       </.tr>
-    <% end %>
-  </.table>
-  <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
-</MainSection.main>
+
+      <%= for dataclip <- @page.entries do %>
+        <.tr id={"dataclip-#{dataclip.id}"}>
+          <.td>
+            <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
+          </.td>
+          <.td><.type_pill dataclip={dataclip} /></.td>
+          <.td><%= dataclip.body %></.td>
+
+          <.td>
+            <span>
+              <%= live_redirect("Edit",
+                to:
+                  Routes.project_dataclip_edit_path(
+                    @socket,
+                    :edit,
+                    @project.id,
+                    dataclip
+                  )
+              ) %>
+            </span>
+            |
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: dataclip.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
+          </.td>
+        </.tr>
+      <% end %>
+    </.table>
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
+  </Layout.centered>
+</Layout.page_content>
