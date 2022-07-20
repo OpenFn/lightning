@@ -40,7 +40,7 @@ defmodule LightningWeb.JobLiveTest do
 
       assert html =~ "Jobs"
 
-      table = view |> element("section#inner") |> render()
+      table = view |> element("section#inner_content") |> render()
       assert table =~ "job-#{job.id}"
       refute table =~ "job-#{other_job.id}"
     end

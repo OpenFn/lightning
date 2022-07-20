@@ -1,12 +1,15 @@
-<MainSection.header socket={@socket} title={"#{@job.name}"} />
-
-<MainSection.main>
-  <.live_component
-    module={LightningWeb.JobLive.BigFormComponent}
-    id={@job.id || :new}
-    action={@live_action}
-    job={@job}
-    project={@project}
-    return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
-  />
-</MainSection.main>
+<Layout.page_content>
+  <:header>
+    <Layout.header title={@job.name} socket={@socket} />
+  </:header>
+  <Layout.centered>
+    <.live_component
+      module={LightningWeb.JobLive.BigFormComponent}
+      id={@job.id || :new}
+      action={@live_action}
+      job={@job}
+      project={@project}
+      return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
+    />
+  </Layout.centered>
+</Layout.page_content>
