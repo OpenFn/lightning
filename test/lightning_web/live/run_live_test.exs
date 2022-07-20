@@ -47,7 +47,7 @@ defmodule LightningWeb.RunLiveTest do
 
       assert html =~ "Runs"
 
-      table = view |> element("section#inner") |> render()
+      table = view |> element("section#inner_content") |> render()
       assert table =~ "run-#{run.id}"
       refute table =~ "run-#{other_run.id}"
     end

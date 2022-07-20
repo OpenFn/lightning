@@ -1,16 +1,16 @@
-<MainSection.header
-  socket={@socket}
-  title={"#{@credential.name || @page_title}"}
-/>
-
-<MainSection.main>
-  <.live_component
-    module={LightningWeb.CredentialLive.FormComponent}
-    id={@credential.id || :new}
-    title={@page_title}
-    action={@live_action}
-    credential={@credential}
-    projects={@projects}
-    return_to={Routes.credential_index_path(@socket, :index)}
-  />
-</MainSection.main>
+<Layout.page_content>
+  <:header>
+    <Layout.header socket={@socket} title={@credential.name || @page_title} />
+  </:header>
+  <Layout.centered>
+    <.live_component
+      module={LightningWeb.CredentialLive.FormComponent}
+      id={@credential.id || :new}
+      title={@page_title}
+      action={@live_action}
+      credential={@credential}
+      projects={@projects}
+      return_to={Routes.credential_index_path(@socket, :index)}
+    />
+  </Layout.centered>
+</Layout.page_content>

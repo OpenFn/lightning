@@ -59,33 +59,36 @@ defmodule LightningWeb.RunLive.Index do
 
   def show_run(assigns) do
     ~H"""
-    <ul>
-      <li>
-        <strong>Log:</strong>
-        <%= @run.log %>
-      </li>
-
-      <li>
-        <strong>Exit code:</strong>
-        <%= @run.exit_code %>
-      </li>
-
-      <li>
-        <strong>Started at:</strong>
-        <%= @run.started_at %>
-      </li>
-
-      <li>
-        <strong>Finished at:</strong>
-        <%= @run.finished_at %>
-      </li>
-    </ul>
-
-    <span>
-      <%= live_redirect("Back",
-        to: Routes.project_run_index_path(@socket, :index, @project.id)
-      ) %>
-    </span>
+    <.card>
+      <.card_content
+        heading={"Run #{@run.id}"}
+        category={"Run exited with code #{@run.exit_code}"}
+      >
+        <.p>
+          <b>Started:</b> <%= @run.started_at %>
+        </.p>
+        <.p>
+          <b>Finished:</b> <%= @run.finished_at %>
+        </.p>
+        <.p>
+          <b>Logs:</b>
+        </.p>
+        <div class="font-mono text-sm">
+          <%= for line <- @run.log || [] do %>
+            <li class="list-none">
+              <%= raw(line |> String.replace(" ", "&nbsp;")) %>
+            </li>
+          <% end %>
+        </div>
+      </.card_content>
+      <.card_footer>
+        <%= live_redirect("Back",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+          to: Routes.project_run_index_path(@socket, :index, @project.id)
+        ) %>
+      </.card_footer>
+    </.card>
     """
   end
 
