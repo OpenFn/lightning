@@ -1,7 +1,14 @@
 defmodule LightningWeb.JobLive.InspectorFormComponent do
   @moduledoc """
-  Inspector Job Form used on the Workflow Diagram, it's a cut-down version
-  of the `BigFormComponent`.
+  Form Component for working with a single Job.
+
+  A Job's `adaptor` field is a combination of the module name and the version.
+  It's formatted as an NPM style string.
+
+  The form allows the user to select a module by name and then it's version,
+  while the version dropdown itself references `adaptor` directly.
+
+  Meaning the `adaptor_name` dropdown and assigns value is not persisted.
 
   It uses the `LightningWeb.JobLive.FormComponent` macro for shared functionality.
   """
@@ -14,11 +21,26 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         case Jobs.update_job(socket.assigns.job, job_params) do
           {:ok, _job} ->
             socket
+            |> put_flash(:info, "Job updated successfully")
             |> LightningWeb.Components.WorkflowDiagram.push_project_space()
             |> push_patch(to: socket.assigns.return_to)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, :changeset, changeset)
+        end
+
+      :new ->
+        case Jobs.create_job(
+               job_params
+               |> Map.put("project_id", socket.assigns.job.project_id)
+             ) do
+          {:ok, _job} ->
+            socket
+            |> put_flash(:info, "Job created successfully")
+            |> push_redirect(to: socket.assigns.return_to)
+
+          {:error, %Ecto.Changeset{} = changeset} ->
+            assign(socket, changeset: changeset)
         end
     end
   end
@@ -46,6 +68,67 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               </p>
             </Form.check_box>
           </div>
+          <div class="col-span-3">
+            <div class="grid grid-cols-6 gap-6">
+              <%= inputs_for f, :trigger, fn ft -> %>
+                <div class="col-span-3">
+                  <%= label ft, :type, class: "block" do %>
+                    <span class="block text-sm font-medium text-secondary-700">
+                      Trigger
+                    </span>
+                    <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
+                    <Form.select_field
+                      form={ft}
+                      name={:type}
+                      prompt=""
+                      id="triggerType"
+                      values={
+                        [
+                          Cron: "cron",
+                          Webhook: "webhook",
+                          "On Job Success": "on_job_success",
+                          "On Job Failure": "on_job_failure"
+                        ]
+                      }
+                    />
+                  <% end %>
+                  <%= if ft.data.id && ft.data.job_id do %>
+                    <!-- Webhook URL copying -->
+                    <a
+                      id="copyWebhookUrl"
+                      href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
+                      onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                      target="_blank"
+                    >
+                      Copy webhook url
+                    </a>
+                  <% end %>
+                </div>
+                <div class="col-span-3">
+                  <%= if requires_upstream_job?(ft.source) do %>
+                    <%= label ft, :upstream_job_id, class: "block" do %>
+                      <span class="block text-sm font-medium text-secondary-700">
+                        Upstream Job
+                      </span>
+                      <%= error_tag(ft, :upstream_job_id,
+                        class: "block w-full rounded-md"
+                      ) %>
+                      <Form.select_field
+                        form={ft}
+                        name={:upstream_job_id}
+                        prompt=""
+                        id="upstreamJob"
+                        values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+                      />
+                    <% end %>
+                  <% end %>
+                  <%= if requires_cron_job?(ft.source) do %>
+                    <Form.text_field form={ft} id={:cron_expression} />
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
           <div class="">
             <Components.Jobs.credential_select form={f} credentials={@credentials} />
           </div>
@@ -69,6 +152,13 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         <br />
         <Form.text_area form={f} id={:body} />
         <div class="w-full">
+          <span>
+            <%= live_redirect("Cancel",
+              class:
+                "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+              to: Routes.project_dashboard_index_path(@socket, :show, @project.id)
+            ) %>
+          </span>
           <Form.submit_button
             value="Save"
             disable_with="Saving"
