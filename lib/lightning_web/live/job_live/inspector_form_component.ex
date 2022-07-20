@@ -23,7 +23,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
             socket
             |> put_flash(:info, "Job updated successfully")
             |> LightningWeb.Components.WorkflowDiagram.push_project_space()
-            |> push_patch(to: socket.assigns.return_to)
+            |> push_redirect(to: socket.assigns.return_to)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, :changeset, changeset)
