@@ -47,6 +47,7 @@ LightningWeb.Components.Common.html
 LightningWeb.Components.Form.html
 LightningWeb.Components.Icon.html
 LightningWeb.Components.Jobs.html
+LightningWeb.Components.Layout.html
 LightningWeb.Components.MainSection.html
 LightningWeb.Components.Settings.html
 LightningWeb.Components.WorkflowDiagram.html
@@ -111,8 +112,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-fc789f3340.js
-dist/sidebar_items-0a2af53ca6.js
+dist/search_items-623512ad31.js
+dist/sidebar_items-620eb9f174.js
 index.html
 readme.html
 search.html
