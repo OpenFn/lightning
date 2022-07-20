@@ -1,36 +1,38 @@
-<MainSection.header socket={@socket} title="Projects">
-  <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
-    <Common.button>
-      <div class="h-full">
-        <Icon.plus class="h-4 w-4 inline-block" />
-        <span class="inline-block align-middle">New Project</span>
-      </div>
-    </Common.button>
-  <% end %>
-</MainSection.header>
-
-<MainSection.main>
-  <%= if @live_action in [:new, :edit] do %>
-    <.live_component
-      module={LightningWeb.ProjectLive.FormComponent}
-      id={@project.id || :new}
-      title={@page_title}
-      action={@live_action}
-      project={@project}
-      users={@users}
-      return_to={Routes.project_index_path(@socket, :index)}
-    />
-  <% else %>
-    <%= for project <- @projects do %>
-      <Common.item_bar id={"project-#{project.id}"}>
-        <%= live_patch(project.name,
-          to: Routes.project_index_path(@socket, :edit, project.id),
-          class: "p-4 h-14 flex w-64 text-primary-500"
-        ) %>
-        <div class="grow h-14 border-r border-slate-100"></div>
-        <div class="flex h-14 w-12 items-center justify-center">
-          <div class="h-14 inline-block"></div>
-          <%= link(
+<Layout.page_content>
+  <:header>
+    <Layout.header socket={@socket} title="Projects">
+      <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
+        <Common.button>
+          <div class="h-full">
+            <Icon.plus class="h-4 w-4 inline-block" />
+            <span class="inline-block align-middle">New Project</span>
+          </div>
+        </Common.button>
+      <% end %>
+    </Layout.header>
+  </:header>
+  <Layout.centered>
+    <%= if @live_action in [:new, :edit] do %>
+      <.live_component
+        module={LightningWeb.ProjectLive.FormComponent}
+        id={@project.id || :new}
+        title={@page_title}
+        action={@live_action}
+        project={@project}
+        users={@users}
+        return_to={Routes.project_index_path(@socket, :index)}
+      />
+    <% else %>
+      <%= for project <- @projects do %>
+        <Common.item_bar id={"project-#{project.id}"}>
+          <%= live_patch(project.name,
+            to: Routes.project_index_path(@socket, :edit, project.id),
+            class: "p-4 h-14 flex w-64 text-primary-500"
+          ) %>
+          <div class="grow h-14 border-r border-slate-100"></div>
+          <div class="flex h-14 w-12 items-center justify-center">
+            <div class="h-14 inline-block"></div>
+            <%= link(
                   to: "#",
                   phx_click: "delete",
                   phx_value_id: project.id,
@@ -38,10 +40,11 @@
                   class: "inline-block align-middle"
 
                 ) do %>
-            <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
-          <% end %>
-        </div>
-      </Common.item_bar>
+              <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
+            <% end %>
+          </div>
+        </Common.item_bar>
+      <% end %>
     <% end %>
-  <% end %>
-</MainSection.main>
+  </Layout.centered>
+</Layout.page_content>
