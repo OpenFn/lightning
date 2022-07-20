@@ -19,7 +19,7 @@ defmodule LightningWeb.JobLive.Edit do
        pagination_path:
          &Routes.project_job_edit_path(
            socket,
-           :index,
+           :edit,
            socket.assigns.project,
            &1
          )
@@ -50,6 +50,4 @@ defmodule LightningWeb.JobLive.Edit do
     )
     |> assign(:job, %Job{project_id: socket.assigns.project.id})
   end
-
-  defp page_title(:edit), do: "Edit Job"
 end
