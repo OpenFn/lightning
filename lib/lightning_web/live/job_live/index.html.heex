@@ -1,102 +1,76 @@
 <Layout.page_content>
   <:header>
     <Layout.header title={@page_title} socket={@socket}>
-      <%= if @live_action == :index do %>
-        <%= live_patch to: Routes.project_job_index_path(@socket, :new, @project.id) do %>
-          <Common.button>
-            <div class="h-full">
-              <Icon.plus class="h-4 w-4 inline-block" />
-              <span class="inline-block align-middle">New Job</span>
-            </div>
-          </Common.button>
-        <% end %>
+      <%= live_redirect to: Routes.project_dashboard_index_path(@socket, :show, @project.id) do %>
+        <Common.button>
+          <div class="h-full">
+            <Heroicons.Solid.view_grid class="h-4 w-4 inline-block" />
+          </div>
+        </Common.button>
+      <% end %>
+      &nbsp;&nbsp;
+      <%= live_redirect to: Routes.project_job_edit_path(@socket, :new, @project.id) do %>
+        <Common.button>
+          <div class="h-full">
+            <Icon.plus class="h-4 w-4 inline-block" />
+            <span class="inline-block align-middle">New Job</span>
+          </div>
+        </Common.button>
       <% end %>
     </Layout.header>
   </:header>
   <Layout.centered>
-    <%= if @live_action == :show do %>
-      <.show_job {assigns} />
-    <% end %>
-
-    <%= if @live_action in [:new, :edit] do %>
-      <.live_component
-        module={LightningWeb.JobLive.BigFormComponent}
-        id={@job.id || :new}
-        title={@page_title}
-        action={@live_action}
-        job={@job}
-        project={@project}
-        return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
-      />
-    <% end %>
-    <%= if @live_action == :index do %>
-      <.table>
-        <.tr>
-          <.th>Name</.th>
-          <.th>Body</.th>
-          <.th>Webhook URL</.th>
-          <.th>Enabled</.th>
-          <.th>Actions</.th>
+    <.table>
+      <.tr>
+        <.th>Name</.th>
+        <.th>Body</.th>
+        <.th>Webhook URL</.th>
+        <.th>Enabled</.th>
+        <.th>Actions</.th>
+      </.tr>
+      <%= for job <- @page.entries do %>
+        <.tr id={"job-#{job.id}"}>
+          <.td class="col-span-2"><%= job.name %></.td>
+          <.td class="col-span-3"><%= job.body %></.td>
+          <.td class="col-span-4">
+            <%= if job.trigger.type == :webhook do %>
+              <.button
+                title="Click to copy the webhook url"
+                onclick="(function(e) {  navigator.clipboard.writeText(e.target.innerText); e.preventDefault(); })(event)"
+              >
+                <%= Routes.webhooks_url(@socket, :create, [job.id]) %>
+              </.button>
+            <% end %>
+          </.td>
+          <.td class="col-span-1"><%= job.enabled %></.td>
+          <.td class="col-span-2">
+            <span>
+              <%= live_redirect("Edit",
+                to:
+                  Routes.project_job_edit_path(
+                    @socket,
+                    :edit,
+                    @project.id,
+                    job
+                  ),
+                class: "button"
+              ) %>
+            </span>
+            |
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: job.id,
+                data: [confirm: "Are you sure?"]
+              ) %>
+            </span>
+          </.td>
         </.tr>
-        <%= for job <- @page.entries do %>
-          <.tr id={"job-#{job.id}"}>
-            <.td class="col-span-2"><%= job.name %></.td>
-            <.td class="col-span-3"><%= job.body %></.td>
-            <.td class="col-span-4">
-              <%= if job.trigger.type == :webhook do %>
-                <.button
-                  title="Click to copy the webhook url"
-                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.innerText); e.preventDefault(); })(event)"
-                >
-                  <%= Routes.webhooks_url(@socket, :create, [job.id]) %>
-                </.button>
-              <% end %>
-            </.td>
-            <.td class="col-span-1"><%= job.enabled %></.td>
-            <.td class="col-span-2">
-              <span>
-                <%= live_redirect("Show",
-                  to:
-                    Routes.project_job_index_path(
-                      @socket,
-                      :show,
-                      @project.id,
-                      job
-                    )
-                ) %>
-              </span>
-              |
-              <span>
-                <%= live_redirect("Edit",
-                  to:
-                    Routes.project_job_edit_path(
-                      @socket,
-                      :edit,
-                      @project.id,
-                      job
-                    ),
-                  class: "button"
-                ) %>
-              </span>
-              |
-              <span>
-                <%= link("Delete",
-                  to: "#",
-                  phx_click: "delete",
-                  phx_value_id: job.id,
-                  data: [confirm: "Are you sure?"]
-                ) %>
-              </span>
-            </.td>
-          </.tr>
-        <% end %>
-      </.table>
+      <% end %>
+    </.table>
 
-      <.divider />
-      <LightningWeb.Pagination.pagination_bar
-        page={@page}
-        url={@pagination_path}
-      />
-    <% end %>
+    <.divider />
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   </Layout.centered>
 </Layout.page_content>

@@ -16,7 +16,7 @@ defmodule LightningWeb.JobLive.Index do
     {:ok,
      socket
      |> assign(
-       active_menu_item: :jobs,
+       active_menu_item: :overview,
        pagination_path:
          &Routes.project_job_index_path(
            socket,
@@ -43,32 +43,6 @@ defmodule LightningWeb.JobLive.Index do
     )
   end
 
-  defp apply_action(socket, :show, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Job")
-    |> assign(:job, Jobs.get_job!(id))
-  end
-
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Job")
-    |> assign(:job, Jobs.get_job!(id))
-  end
-
-  defp apply_action(socket, :new, _params) do
-    socket
-    |> assign(:page_title, "New Job")
-    |> assign(
-      :adaptors,
-      Lightning.AdaptorRegistry.all() |> Enum.map(fn %{name: name} -> name end)
-    )
-    |> assign(
-      :credentials,
-      Lightning.Credentials.list_credentials()
-    )
-    |> assign(:job, %Job{project_id: socket.assigns.project.id})
-  end
-
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     job = Jobs.get_job!(id)
@@ -81,47 +55,5 @@ defmodule LightningWeb.JobLive.Index do
          Jobs.jobs_for_project_query(socket.assigns.project)
          |> Lightning.Repo.paginate(%{})
      )}
-  end
-
-  def show_job(assigns) do
-    ~H"""
-    <ul>
-      <li>
-        <strong>Name:</strong>
-        <%= @job.name %>
-      </li>
-
-      <li>
-        <strong>Body:</strong>
-        <%= @job.body %>
-      </li>
-
-      <li>
-        <strong>Enabled:</strong>
-        <%= @job.enabled %>
-      </li>
-    </ul>
-
-    <span>
-      <%= live_redirect("Back",
-        to: Routes.project_job_index_path(@socket, :index, @project.id)
-      ) %>
-    </span>
-    |
-    <span>
-    <%= live_redirect("Edit",
-      to: Routes.project_job_edit_path(@socket, :edit, @job.project_id, @job),
-      class: "button"
-    ) %>
-    </span> |
-    <span>
-    <%= link("Delete",
-      to: "#",
-      phx_click: "delete",
-      phx_value_id: @job.id,
-      data: [confirm: "Are you sure?"]
-    ) %>
-    </span>
-    """
   end
 end

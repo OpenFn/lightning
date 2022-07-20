@@ -91,9 +91,8 @@ defmodule LightningWeb.Router do
     live_session :default, on_mount: LightningWeb.InitAssigns do
       scope "/projects/:project_id", as: :project do
         live "/jobs", JobLive.Index, :index
-        live "/jobs/new", JobLive.Index, :new
-        live "/jobs/:id", JobLive.Index, :show
-        live "/jobs/:id/edit", JobLive.Edit, :edit
+        live "/jobs/new", JobLive.Edit, :new
+        live "/jobs/:id", JobLive.Edit, :edit
 
         live "/runs", RunLive.Index, :index
         live "/runs/:id", RunLive.Index, :show

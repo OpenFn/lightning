@@ -49,24 +49,25 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, index_live, _html} =
         live(conn, Routes.project_job_index_path(conn, :index, project.id))
 
-      assert index_live |> element("a", "New Job") |> render_click() =~
-               "New Job"
+      {:ok, edit_live, _html} =
+        index_live
+        |> element("a", "New Job")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_edit_path(conn, :new, project.id)
+        )
 
-      assert_patch(
-        index_live,
-        Routes.project_job_index_path(conn, :new, project.id)
-      )
-
-      assert index_live
+      assert edit_live
              |> form("#job-form", job: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       # Set the adaptor name to populate the version dropdown
-      assert index_live
+      assert edit_live
              |> form("#job-form", job: %{adaptor_name: "@openfn/language-common"})
              |> render_change()
 
-      assert index_live
+      assert edit_live
              |> element("#adaptorVersionField")
              |> render()
              |> parse()
@@ -82,7 +83,7 @@ defmodule LightningWeb.JobLiveTest do
              ]
 
       {:ok, _, html} =
-        index_live
+        edit_live
         |> form("#job-form", job: @create_attrs)
         |> render_submit()
         |> follow_redirect(
@@ -187,46 +188,6 @@ defmodule LightningWeb.JobLiveTest do
                "adaptor" => "",
                "adaptor_name" => ""
              }
-    end
-  end
-
-  describe "Show" do
-    test "displays job", %{conn: conn, job: job, project: project} do
-      {:ok, _show_live, html} =
-        live(conn, Routes.project_job_index_path(conn, :show, project, job))
-
-      # assert html =~ "Show Job"
-      assert html =~ job.name
-    end
-
-    test "updates job within modal", %{conn: conn, job: job, project: project} do
-      {:ok, show_live, _html} =
-        live(conn, Routes.project_job_index_path(conn, :show, project, job))
-
-      {:ok, view, _} =
-        show_live
-        |> element("a", "Edit")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.project_job_edit_path(conn, :edit, project, job)
-        )
-
-      assert view
-             |> form("#job-form", job: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      {:ok, _, html} =
-        view
-        |> form("#job-form", job: @update_attrs)
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.project_job_index_path(conn, :index, project)
-        )
-
-      assert html =~ "Job updated successfully"
-      assert html =~ "some updated body"
     end
   end
 end

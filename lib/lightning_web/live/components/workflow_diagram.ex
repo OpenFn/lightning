@@ -33,8 +33,8 @@ defmodule LightningWeb.Components.WorkflowDiagram do
     ~H"""
     <div class="relative h-full">
       <%= if @selected_job do %>
-        <div class="absolute top-0 right-0 m-2 z-10 mt-[5%] mr-4">
-          <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5  p-3">
+        <div class="absolute top-0 right-0 m-2 z-10">
+          <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
             <.live_component
               module={LightningWeb.JobLive.InspectorFormComponent}
               id={@selected_job.id}
