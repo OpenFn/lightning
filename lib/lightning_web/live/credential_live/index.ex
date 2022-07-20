@@ -5,7 +5,6 @@ defmodule LightningWeb.CredentialLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
-  alias Lightning.Projects
 
   @impl true
   def mount(_params, _session, socket) do
@@ -44,9 +43,5 @@ defmodule LightningWeb.CredentialLive.Index do
 
   defp list_credentials(user_id) do
     Credentials.list_credentials_for_user(user_id)
-  end
-
-  defp list_projects(socket) do
-    Projects.get_projects_for_user(socket.assigns.current_user)
   end
 end
