@@ -75,4 +75,8 @@ defmodule Lightning.Invocation.Dataclip do
         changeset
     end
   end
+
+  def get_types do
+    @source_types
+  end
 end

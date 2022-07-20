@@ -5,16 +5,20 @@ defmodule LightningWeb.DataclipLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Invocation
+  import LightningWeb.Components.Form
 
   @impl true
   def update(%{dataclip: dataclip, project: project} = assigns, socket) do
+    types = Lightning.Invocation.Dataclip.get_types()
+
     changeset =
       Invocation.change_dataclip(dataclip, %{"project_id" => project.id})
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:changeset, changeset)}
+     |> assign(:changeset, changeset)
+     |> assign(:types, Enum.zip(types, types))}
   end
 
   @impl true
