@@ -217,7 +217,9 @@ defmodule LightningWeb.Components.Form do
       <div class="ml-3 text-sm">
         <%= error_tag(@form, @id, class: error_tag_classes) %>
         <%= label(@form, @id, class: label_classes) %>
-        <%= render_slot(@inner_block) %>
+        <%= if assigns[:inner_block] do %>
+          <%= render_slot(@inner_block) %>
+        <% end %>
       </div>
     </div>
     """

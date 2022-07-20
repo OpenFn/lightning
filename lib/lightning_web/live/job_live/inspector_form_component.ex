@@ -57,89 +57,84 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         phx-change="validate"
         phx-submit="save"
       >
-        <div class="grid gap-6">
-          <div class="">
+        <div class="md:grid md:grid-cols-2 md:gap-4">
+          <div class="md:col-span-1">
             <Form.text_field form={f} id={:name} />
           </div>
-          <div class="">
-            <Form.check_box form={f} id={:enabled}>
-              <p class="text-secondary-500">
-                Job will process messages when triggered
-              </p>
-            </Form.check_box>
+          <div class="md:col-span-1">
+            <Form.check_box form={f} id={:enabled} />
           </div>
-          <div class="col-span-3">
-            <div class="grid grid-cols-6 gap-6">
-              <%= inputs_for f, :trigger, fn ft -> %>
-                <div class="col-span-3">
-                  <%= label ft, :type, class: "block" do %>
-                    <span class="block text-sm font-medium text-secondary-700">
-                      Trigger
-                    </span>
-                    <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
-                    <Form.select_field
-                      form={ft}
-                      name={:type}
-                      prompt=""
-                      id="triggerType"
-                      values={
-                        [
-                          Cron: "cron",
-                          Webhook: "webhook",
-                          "On Job Success": "on_job_success",
-                          "On Job Failure": "on_job_failure"
-                        ]
-                      }
-                    />
-                  <% end %>
-                  <%= if ft.data.id && ft.data.job_id do %>
-                    <!-- Webhook URL copying -->
-                    <a
-                      id="copyWebhookUrl"
-                      href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
-                      onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-                      target="_blank"
-                    >
-                      Copy webhook url
-                    </a>
-                  <% end %>
-                </div>
-                <div class="col-span-3">
-                  <%= if requires_upstream_job?(ft.source) do %>
-                    <%= label ft, :upstream_job_id, class: "block" do %>
-                      <span class="block text-sm font-medium text-secondary-700">
-                        Upstream Job
-                      </span>
-                      <%= error_tag(ft, :upstream_job_id,
-                        class: "block w-full rounded-md"
-                      ) %>
-                      <Form.select_field
-                        form={ft}
-                        name={:upstream_job_id}
-                        prompt=""
-                        id="upstreamJob"
-                        values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
-                      />
-                    <% end %>
-                  <% end %>
-                  <%= if requires_cron_job?(ft.source) do %>
-                    <Form.text_field form={ft} id={:cron_expression} />
-                  <% end %>
-                </div>
+
+          <div class="md:col-span-1">
+            <%= inputs_for f, :trigger, fn ft -> %>
+              <%= label ft, :type, class: "block" do %>
+                <span class="block text-sm font-medium text-secondary-700">
+                  Trigger
+                </span>
+                <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
+                <Form.select_field
+                  form={ft}
+                  name={:type}
+                  prompt=""
+                  id="triggerType"
+                  values={
+                    [
+                      Cron: "cron",
+                      Webhook: "webhook",
+                      "On Job Success": "on_job_success",
+                      "On Job Failure": "on_job_failure"
+                    ]
+                  }
+                />
               <% end %>
-            </div>
+
+              <%= if ft.data.id && ft.data.job_id do %>
+                <a
+                  id="copyWebhookUrl"
+                  href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
+                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                  target="_blank"
+                >
+                  Copy webhook url
+                </a>
+              <% end %>
+
+              <%= if requires_upstream_job?(ft.source) do %>
+                <%= label ft, :upstream_job_id, class: "block" do %>
+                  <span class="block text-sm font-medium text-secondary-700">
+                    Upstream Job
+                  </span>
+                  <%= error_tag(ft, :upstream_job_id,
+                    class: "block w-full rounded-md"
+                  ) %>
+                  <Form.select_field
+                    form={ft}
+                    name={:upstream_job_id}
+                    prompt=""
+                    id="upstreamJob"
+                    values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+                  />
+                <% end %>
+              <% end %>
+              <%= if requires_cron_job?(ft.source) do %>
+                <Form.text_field form={ft} id={:cron_expression} />
+              <% end %>
+            <% end %>
           </div>
-          <div class="">
+
+          <div class="md:col-span-1">
             <Components.Jobs.credential_select form={f} credentials={@credentials} />
           </div>
-          <div class="">
+
+          <div class="md:col-span-1">
             <Components.Jobs.adaptor_name_select
               form={f}
               adaptor_name={@adaptor_name}
               adaptors={@adaptors}
             />
           </div>
-          <div class="">
+
+          <div class="md:col-span-1">
             <Components.Jobs.adaptor_version_select
               form={f}
               adaptor_name={@adaptor_name}
@@ -148,23 +143,27 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
         </div>
         <Form.divider />
-        <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
-        <br />
-        <Form.text_area form={f} id={:body} />
-        <div class="w-full">
-          <span>
-            <%= live_redirect("Cancel",
-              class:
-                "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-              to: Routes.project_dashboard_index_path(@socket, :show, @project.id)
-            ) %>
-          </span>
-          <Form.submit_button
-            value="Save"
-            disable_with="Saving"
-            changeset={@changeset}
-            class="w-full"
-          />
+        <div class="md:grid md:grid-cols-2 md:gap-4">
+          <div class="md:col-span-2">
+            <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
+          </div>
+          <div class="md:col-span-2">
+            <Form.text_area form={f} id={:body} />
+          </div>
+          <div class="md:col-span-2 w-full">
+            <span>
+              <%= live_redirect("Cancel",
+                class:
+                  "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+                to: Routes.project_dashboard_index_path(@socket, :show, @project.id)
+              ) %>
+            </span>
+            <Form.submit_button
+              value="Save"
+              disable_with="Saving"
+              changeset={@changeset}
+            />
+          </div>
         </div>
       </.form>
     </div>
