@@ -1,34 +1,36 @@
 <Layout.page_content>
   <:header>
     <Layout.header title={@page_title} socket={@socket}>
-      <%= live_redirect to: Routes.project_job_index_path(@socket, :index, @project.id) do %>
-        <Common.button>
-          <div class="h-full">
-            <Heroicons.Solid.table class="h-4 w-4 inline-block" />
-          </div>
-        </Common.button>
-      <% end %>
-      &nbsp;&nbsp;
-      <%= live_redirect to: Routes.project_job_edit_path(@socket, :new, @project.id) do %>
-        <Common.button>
-          <div class="h-full">
-            <Heroicons.Outline.plus class="h-4 w-4 inline-block" />
-            <span class="inline-block align-middle">New Job</span>
-          </div>
-        </Common.button>
+      <%= if assigns[:project] do %>
+        <%= live_redirect to: Routes.project_job_index_path(@socket, :index, @project.id) do %>
+          <Common.button>
+            <div class="h-full">
+              <Heroicons.Solid.table class="h-4 w-4 inline-block" />
+            </div>
+          </Common.button>
+        <% end %>
+        &nbsp;&nbsp;
+        <%= live_redirect to: Routes.project_job_edit_path(@socket, :new, @project.id) do %>
+          <Common.button>
+            <div class="h-full">
+              <Heroicons.Outline.plus class="h-4 w-4 inline-block" />
+              <span class="inline-block align-middle">New Job</span>
+            </div>
+          </Common.button>
+        <% end %>
       <% end %>
     </Layout.header>
   </:header>
-  <%= if @projects == nil do %>
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      No project found, please talk to your administrator.
-    </div>
-  <% else %>
+  <%= if assigns[:project] do %>
     <.live_component
       module={LightningWeb.Components.WorkflowDiagram}
       id={@project.id}
       project={@project}
       selected_id={@selected_id}
     />
+  <% else %>
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      No project found, please talk to your administrator.
+    </div>
   <% end %>
 </Layout.page_content>
