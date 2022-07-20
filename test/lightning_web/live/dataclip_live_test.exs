@@ -6,7 +6,7 @@ defmodule LightningWeb.DataclipLiveTest do
 
   @create_attrs %{body: "{}", type: :http_request}
   @update_attrs %{body: "{}", type: :global}
-  @invalid_attrs %{body: nil, type: nil}
+  @invalid_attrs %{body: nil, type: :global}
 
   defp create_dataclip(%{project: project}) do
     dataclip = dataclip_fixture(project_id: project.id)
@@ -42,7 +42,7 @@ defmodule LightningWeb.DataclipLiveTest do
 
       assert html =~ "Dataclips"
 
-      table = view |> element("section#inner") |> render()
+      table = view |> element("section#inner_content") |> render()
       assert table =~ "dataclip-#{dataclip.id}"
       refute table =~ "dataclip-#{other_dataclip.id}"
     end
