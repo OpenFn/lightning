@@ -87,7 +87,7 @@ defmodule LightningWeb.UserLiveTest do
     end
   end
 
-  describe "Index for user" do
+  describe "Index and edit for user" do
     setup :register_and_log_in_user
 
     test "a regular user cannot access the users list", %{
@@ -96,6 +96,17 @@ defmodule LightningWeb.UserLiveTest do
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.user_index_path(conn, :index))
+        |> follow_redirect(conn, "/")
+
+      assert html =~ "You can&#39;t access that page"
+    end
+
+    test "a regular user cannot access a user edit page", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _index_live, html} =
+        live(conn, Routes.user_edit_path(conn, :edit, user.id))
         |> follow_redirect(conn, "/")
 
       assert html =~ "You can&#39;t access that page"
