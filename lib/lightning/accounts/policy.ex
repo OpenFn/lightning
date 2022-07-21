@@ -11,7 +11,7 @@ defmodule Lightning.Accounts.Policy do
 
   # Regular users can't access user management page
   def authorize(action, %User{role: :user} = _user, _params)
-      when action in ~w[index]a,
+      when action in ~w[index show]a,
       do: false
 
   # Default blacklist

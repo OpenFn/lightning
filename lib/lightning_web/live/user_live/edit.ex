@@ -10,9 +10,22 @@ defmodule LightningWeb.UserLive.Edit do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(active_menu_item: :users)}
+    case Bodyguard.permit(
+           Lightning.Accounts.Policy,
+           :index,
+           socket.assigns.current_user
+         ) do
+      :ok ->
+        {:ok,
+         socket
+         |> assign(active_menu_item: :users),
+         layout: {LightningWeb.LayoutView, "settings.html"}}
+
+      {:error, :unauthorized} ->
+        {:ok,
+         put_flash(socket, :error, "You can't access that page")
+         |> push_redirect(to: "/")}
+    end
   end
 
   @impl true
