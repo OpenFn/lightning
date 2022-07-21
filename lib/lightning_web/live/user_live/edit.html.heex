@@ -1,9 +1,6 @@
 <Layout.page_content>
   <:header>
-    <Layout.header
-      socket={@socket}
-      title={"#{@user.first_name} #{@user.last_name}"}
-    />
+    <Layout.header socket={@socket} title={@page_title} />
   </:header>
   <Layout.centered>
     <.live_component

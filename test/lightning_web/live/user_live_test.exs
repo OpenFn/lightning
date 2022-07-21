@@ -31,17 +31,21 @@ defmodule LightningWeb.UserLiveTest do
     test "saves new user", %{conn: conn} do
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
-      assert index_live |> element("a", "New User") |> render_click() =~
-               "New User"
+      {:ok, edit_live, _html} =
+        index_live
+        |> element("a", "New User")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.user_edit_path(conn, :new)
+        )
 
-      assert_patch(index_live, Routes.user_index_path(conn, :new))
-
-      assert index_live
+      assert edit_live
              |> form("#user-form", user: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       {:ok, _, html} =
-        index_live
+        edit_live
         |> form("#user-form", user: @create_attrs)
         |> render_submit()
         |> follow_redirect(conn, Routes.user_index_path(conn, :index))
@@ -83,7 +87,7 @@ defmodule LightningWeb.UserLiveTest do
     end
   end
 
-  describe "Index for user" do
+  describe "Index and edit for user" do
     setup :register_and_log_in_user
 
     test "a regular user cannot access the users list", %{
@@ -92,6 +96,17 @@ defmodule LightningWeb.UserLiveTest do
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.user_index_path(conn, :index))
+        |> follow_redirect(conn, "/")
+
+      assert html =~ "You can&#39;t access that page"
+    end
+
+    test "a regular user cannot access a user edit page", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, _index_live, html} =
+        live(conn, Routes.user_edit_path(conn, :edit, user.id))
         |> follow_redirect(conn, "/")
 
       assert html =~ "You can&#39;t access that page"
