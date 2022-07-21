@@ -89,7 +89,6 @@ LightningWeb.UserConfirmationView.html
 LightningWeb.UserLive.Edit.html
 LightningWeb.UserLive.FormComponent.html
 LightningWeb.UserLive.Index.html
-LightningWeb.UserLive.Show.html
 LightningWeb.UserRegistrationController.html
 LightningWeb.UserRegistrationView.html
 LightningWeb.UserResetPasswordController.html
@@ -111,8 +110,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-a468f9d297.js
-dist/sidebar_items-dac5c51df6.js
+dist/search_items-6d36c1e4f0.js
+dist/sidebar_items-f1d6a06e03.js
 index.html
 readme.html
 search.html

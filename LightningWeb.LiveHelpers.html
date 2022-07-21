@@ -10,7 +10,7 @@
     <title>LightningWeb.LiveHelpers — Lightning v0.1.7</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-dac5c51df6.js"></script>
+    <script src="dist/sidebar_items-f1d6a06e03.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -141,6 +141,8 @@ Lightning
 
         </div>
 
+          <div class="summary-synopsis"><p>Renders a live component inside a modal.</p></div>
+
       </div>
 
       <div class="summary-row">
@@ -148,16 +150,6 @@ Lightning
           <a href="#live_nav_block/1" translate="no">live_nav_block(assigns)</a>
 
         </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#modal/1" translate="no">modal(assigns)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Renders a live component inside a modal.</p></div>
 
       </div>
 
@@ -184,7 +176,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">live_error_block(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L81" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L51" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -206,7 +198,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">live_info_block(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L64" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L34" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -216,7 +208,23 @@ Functions
 
   <section class="docstring">
 
-
+<p>Renders a live component inside a modal.</p><p>The rendered modal receives a <code class="inline">:return_to</code> option to properly update
+the URL when the modal is closed.</p><h2 id="live_info_block/1-examples" class="section-heading">
+  <a href="#live_info_block/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">modal</span><span class="w"> </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="4038588485-1">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="4038588485-2">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="4038588485-2">)</span><span class="p" data-group-id="4038588485-1">}</span><span class="o">&gt;</span><span class="w">
+  </span><span class="o">&lt;</span><span class="o">.</span><span class="n">live_component</span><span class="w">
+    </span><span class="n">module</span><span class="o">=</span><span class="p" data-group-id="4038588485-3">{</span><span class="nc">LightningWeb.JobLive.BigFormComponent</span><span class="p" data-group-id="4038588485-3">}</span><span class="w">
+    </span><span class="n">id</span><span class="o">=</span><span class="p" data-group-id="4038588485-4">{</span><span class="na">@job</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="4038588485-4">}</span><span class="w">
+    </span><span class="n">title</span><span class="o">=</span><span class="p" data-group-id="4038588485-5">{</span><span class="na">@page_title</span><span class="p" data-group-id="4038588485-5">}</span><span class="w">
+    </span><span class="n">action</span><span class="o">=</span><span class="p" data-group-id="4038588485-6">{</span><span class="na">@live_action</span><span class="p" data-group-id="4038588485-6">}</span><span class="w">
+    </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="4038588485-7">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="4038588485-8">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="4038588485-8">)</span><span class="p" data-group-id="4038588485-7">}</span><span class="w">
+    </span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="na">@job</span><span class="w">
+  </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
+</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">modal</span><span class="o">&gt;</span></code></pre>
   </section>
 </section>
 <section class="detail" id="live_nav_block/1">
@@ -228,7 +236,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">live_nav_block(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L98" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L68" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -239,44 +247,6 @@ Functions
   <section class="docstring">
 
 
-  </section>
-</section>
-<section class="detail" id="modal/1">
-
-  <div class="detail-header">
-    <a href="#modal/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">modal(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L33" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Renders a live component inside a modal.</p><p>The rendered modal receives a <code class="inline">:return_to</code> option to properly update
-the URL when the modal is closed.</p><h2 id="modal/1-examples" class="section-heading">
-  <a href="#modal/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
-  </a>
-  Examples
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">modal</span><span class="w"> </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="6587278471-1">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="6587278471-2">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="6587278471-2">)</span><span class="p" data-group-id="6587278471-1">}</span><span class="o">&gt;</span><span class="w">
-  </span><span class="o">&lt;</span><span class="o">.</span><span class="n">live_component</span><span class="w">
-    </span><span class="n">module</span><span class="o">=</span><span class="p" data-group-id="6587278471-3">{</span><span class="nc">LightningWeb.JobLive.BigFormComponent</span><span class="p" data-group-id="6587278471-3">}</span><span class="w">
-    </span><span class="n">id</span><span class="o">=</span><span class="p" data-group-id="6587278471-4">{</span><span class="na">@job</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="6587278471-4">}</span><span class="w">
-    </span><span class="n">title</span><span class="o">=</span><span class="p" data-group-id="6587278471-5">{</span><span class="na">@page_title</span><span class="p" data-group-id="6587278471-5">}</span><span class="w">
-    </span><span class="n">action</span><span class="o">=</span><span class="p" data-group-id="6587278471-6">{</span><span class="na">@live_action</span><span class="p" data-group-id="6587278471-6">}</span><span class="w">
-    </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="6587278471-7">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="6587278471-8">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="6587278471-8">)</span><span class="p" data-group-id="6587278471-7">}</span><span class="w">
-    </span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="na">@job</span><span class="w">
-  </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
-</span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">modal</span><span class="o">&gt;</span></code></pre>
   </section>
 </section>
 
