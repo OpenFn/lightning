@@ -5,8 +5,6 @@ defmodule LightningWeb.LiveHelpers do
   import Phoenix.LiveView
   import Phoenix.LiveView.Helpers
 
-  alias Phoenix.LiveView.JS
-
   alias PetalComponents.Heroicons
 
   alias LightningWeb.Components.{Common, Icon}
