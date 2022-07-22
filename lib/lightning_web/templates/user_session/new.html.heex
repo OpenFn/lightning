@@ -19,63 +19,61 @@
     <Layout.header title="Log in" />
   </:header>
   <Layout.centered>
-    <main class="container">
-      <div id="login">
-        <.form
-          let={f}
-          for={@conn}
-          action={Routes.user_session_path(@conn, :create)}
-          as={:user}
-        >
-          <div class="grid grid-cols-6 gap-6">
-            <div class="col-span-3">
-              <%= if @error_message do %>
-                <div class="alert alert-danger">
-                  <p><%= @error_message %></p>
-                </div>
-              <% end %>
-            </div>
+    <div id="login">
+      <.form
+        let={f}
+        for={@conn}
+        action={Routes.user_session_path(@conn, :create)}
+        as={:user}
+      >
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <%= if @error_message do %>
+              <div class="alert alert-danger">
+                <p><%= @error_message %></p>
+              </div>
+            <% end %>
           </div>
-
-          <div class="grid grid-cols-6 gap-6">
-            <div class="col-span-3">
-              <.email_field form={f} id={:email} required={true} />
-              <.divider />
-            </div>
-          </div>
-          <div class="grid grid-cols-6 gap-6">
-            <div class="col-span-3">
-              <.password_field form={f} id={:password} required={true} />
-              <.divider />
-            </div>
-          </div>
-          <div class="grid grid-cols-6 gap-6">
-            <div class="col-span-3">
-              <.check_box form={f} id={:remember_me}>
-                <span>Keep me logged in for 60 days</span>
-              </.check_box>
-              <.divider />
-            </div>
-          </div>
-          <div class="grid grid-cols-6 gap-6">
-            <div class="col-span-3">
-              <.submit_button value="Log in" />
-              <.divider />
-            </div>
-          </div>
-        </.form>
+        </div>
 
         <div class="grid grid-cols-6 gap-6">
           <div class="col-span-3">
-            <p>
-              <%= link("Register", to: Routes.user_registration_path(@conn, :new)) %> | <%= link(
-                "Forgot your password?",
-                to: Routes.user_reset_password_path(@conn, :new)
-              ) %>
-            </p>
+            <.email_field form={f} id={:email} required={true} />
+            <.divider />
           </div>
         </div>
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.password_field form={f} id={:password} required={true} />
+            <.divider />
+          </div>
+        </div>
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.check_box form={f} id={:remember_me}>
+              <span>Keep me logged in for 60 days</span>
+            </.check_box>
+            <.divider />
+          </div>
+        </div>
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-3">
+            <.submit_button value="Log in" />
+            <.divider />
+          </div>
+        </div>
+      </.form>
+
+      <div class="grid grid-cols-6 gap-6">
+        <div class="col-span-3">
+          <p>
+            <%= link("Register", to: Routes.user_registration_path(@conn, :new)) %> | <%= link(
+              "Forgot your password?",
+              to: Routes.user_reset_password_path(@conn, :new)
+            ) %>
+          </p>
+        </div>
       </div>
-    </main>
+    </div>
   </Layout.centered>
 </Layout.page_content>
