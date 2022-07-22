@@ -44,7 +44,6 @@ LightningWeb.API.ProjectView.html
 LightningWeb.API.RunController.html
 LightningWeb.API.RunView.html
 LightningWeb.ChangesetView.html
-LightningWeb.Components.MainSection.html
 LightningWeb.Components.WorkflowDiagram.html
 LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
@@ -107,8 +106,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-e87c550ec8.js
-dist/sidebar_items-83d45f45b6.js
+dist/search_items-e27dbf3086.js
+dist/sidebar_items-642ce7cf87.js
 index.html
 readme.html
 search.html
