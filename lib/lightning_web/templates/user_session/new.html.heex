@@ -14,9 +14,11 @@
   </div>
 </nav>
 
-<MainSection.header title="Log in" />
-<MainSection.main>
-  <main class="container">
+<Layout.page_content>
+  <:header>
+    <Layout.header title="Log in" />
+  </:header>
+  <Layout.centered>
     <div id="login">
       <.form
         let={f}
@@ -73,5 +75,5 @@
         </div>
       </div>
     </div>
-  </main>
-</MainSection.main>
+  </Layout.centered>
+</Layout.page_content>
