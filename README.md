@@ -13,7 +13,7 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
 - If you want to [_**CONTRIBUTE**_](#contribute-to-this-project) to the project,
   we recommend setting up Elixir on your local machine.
 
-### **Run** via Docker
+## **Run** via Docker
 
 1. Install [Docker](https://docs.docker.com/engine/install/)
 2. Clone the repo using git
