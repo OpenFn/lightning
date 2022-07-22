@@ -61,10 +61,10 @@ your Postgres setup and your ENVs.
 
 #### Database Setup
 
-**If you're already using Postgres**, run `createdb lightning_dev` to create a
-new database for use with Lightning.
+If you're already using Postgres locally, create a new database called
+`lightning_dev`, for example.
 
-**If you'd rather use Docker** to set up a Postgres DB, create a new volume and
+If you'd rather use Docker to set up a Postgres DB, create a new volume and
 image:
 
 ```sh
