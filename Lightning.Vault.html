@@ -7,10 +7,10 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.1.7">
 
-    <title>LightningWeb.Components.Settings — Lightning v0.1.7</title>
+    <title>Lightning.Vault — Lightning v0.1.7</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-f1d6a06e03.js"></script>
+    <script src="dist/sidebar_items-83d45f45b6.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -79,6 +79,8 @@ Lightning
         <li><a id="modules-list-link" href="#full-list">Modules</a></li>
 
 
+        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+
     </ul>
   </div>
 
@@ -97,19 +99,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/settings.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.Components.Settings</span> 
+  <span translate="no">Lightning.Vault</span> 
   <small class="app-vsn" translate="no">(Lightning v0.1.7)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Components for Settings live session</p>
+<p>Module for handling the encryption and decryption of database fields.</p>
   </section>
 
 
@@ -129,7 +131,17 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#menu_item/1" translate="no">menu_item(assigns)</a>
+          <a href="#child_spec/1" translate="no">child_spec(init_arg)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#start_link/1" translate="no">start_link(config \\ [])</a>
 
         </div>
 
@@ -149,16 +161,40 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="menu_item/1">
+<section class="detail" id="child_spec/1">
 
   <div class="detail-header">
-    <a href="#menu_item/1" class="detail-link" title="Link to this function">
+    <a href="#child_spec/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">menu_item(assigns)</h1>
+    <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/components/settings.ex#L7" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L5" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="start_link/1">
+
+    <span id="start_link/0"></span>
+
+  <div class="detail-header">
+    <a href="#start_link/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">start_link(config \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L5" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

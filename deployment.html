@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.1.7">
 
-    <title>LightningWeb.UserLive.Edit — Lightning v0.1.7</title>
+    <title>Deployment — Lightning v0.1.7</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-83d45f45b6.js"></script>
@@ -18,7 +18,7 @@
 
 
   </head>
-  <body data-type="modules">
+  <body data-type="extras">
     <script>
 
       try {
@@ -99,86 +99,58 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/user_live/edit.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/DEPLOYMENT.md#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.UserLive.Edit</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.1.7)</small>
-
+  <span>Deployment</span>
 </h1>
 
+<h2 id="encryption" class="section-heading">
+  <a href="#encryption" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">encryption</p>
+  </a>
+  Encryption
+</h2>
+<p>Lightning enforces encryption at rest for Credentials, for which an 
+encryption key must be provided when running in production.</p><p>The key is expected to be a randomized set of bytes, 32 long; and Base64
+encoded when setting the environment variable.</p><p>There is a mix task that can generate keys in the correct shape for use
+as an environment variable:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.gen_encryption_key
+</span><span class="">0bJ9w+hn4ebQrsCaWXuA9JY49fP9kbHmywGd5K7k+/s=
+</span></code></pre><p>Copy the key and set it as <code class="inline">PRIMARY_ENCRYPTION_KEY</code> in your environment.</p><h2 id="environment-variables" class="section-heading">
+  <a href="#environment-variables" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">environment-variables</p>
+  </a>
+  Environment Variables
+</h2>
+<ul><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code><br/>Base64 encoded 32 character long string. See <a href="#encryption">Encryption</a>.</li></ul>
+<div class="bottom-actions">
+  <div class="bottom-actions-item">
 
-  <section id="moduledoc">
-<p>LiveView for editing a single job, which inturn uses <code class="inline">LightningWeb.JobLive.BigFormComponent</code>
-for common functionality.</p>
-  </section>
-
-
-  <section id="summary" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#summary">
-        <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
+      <a href="readme.html" class="bottom-actions-button" rel="prev">
+        <span class="subheader">
+          ← Previous Page
+        </span>
+        <span class="title">
+Lightning
+        </span>
       </a>
-      Summary
-    </h1>
-
-  <div class="summary-functions summary">
-    <h2>
-      <a href="#functions">Functions</a>
-    </h2>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#render/1" translate="no">render(arg)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.11/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p></div>
-
-      </div>
 
   </div>
+  <div class="bottom-actions-item">
 
-  </section>
-
-
-  <section id="functions" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
-        <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
+      <a href="changelog.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Changelog
+        </span>
       </a>
-Functions
-    </h1>
-    <div class="functions-list">
-<section class="detail" id="render/1">
-
-  <div class="detail-header">
-    <a href="#render/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">render(arg)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/user_live/edit.ex#L1" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
 
   </div>
-
-  <section class="docstring">
-
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.11/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p>
-  </section>
-</section>
-
-    </div>
-  </section>
+</div>
 
       <footer class="footer">
 

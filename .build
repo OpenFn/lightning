@@ -34,6 +34,7 @@ Lightning.Projects.ProjectUser.html
 Lightning.Projects.html
 Lightning.Release.html
 Lightning.Repo.html
+Lightning.Vault.html
 Lightning.html
 LightningWeb.API.Helpers.html
 LightningWeb.API.JobController.html
@@ -43,13 +44,7 @@ LightningWeb.API.ProjectView.html
 LightningWeb.API.RunController.html
 LightningWeb.API.RunView.html
 LightningWeb.ChangesetView.html
-LightningWeb.Components.Common.html
-LightningWeb.Components.Form.html
-LightningWeb.Components.Icon.html
-LightningWeb.Components.Jobs.html
-LightningWeb.Components.Layout.html
 LightningWeb.Components.MainSection.html
-LightningWeb.Components.Settings.html
 LightningWeb.Components.WorkflowDiagram.html
 LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
@@ -99,10 +94,12 @@ LightningWeb.UserSettingsController.html
 LightningWeb.UserSettingsView.html
 LightningWeb.WebhooksController.html
 LightningWeb.html
+Mix.Tasks.Lightning.GenEncryptionKey.html
 ObanPruner.html
 api-reference.html
 assets/logo.png
 changelog.html
+deployment.html
 dist/app-a088a6cc33ae3464193e.js
 dist/elixir-d5ff82e6b0f5651c0ac0.css
 dist/html/fonts/remixicon.eot
@@ -110,8 +107,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-6d36c1e4f0.js
-dist/sidebar_items-f1d6a06e03.js
+dist/search_items-e87c550ec8.js
+dist/sidebar_items-83d45f45b6.js
 index.html
 readme.html
 search.html

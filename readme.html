@@ -10,7 +10,7 @@
     <title>Lightning — Lightning v0.1.7</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-f1d6a06e03.js"></script>
+    <script src="dist/sidebar_items-83d45f45b6.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -79,6 +79,8 @@ Lightning
         <li><a id="modules-list-link" href="#full-list">Modules</a></li>
 
 
+        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+
     </ul>
   </div>
 
@@ -107,7 +109,13 @@ Lightning
 
 <p>Lightning extends the existing <a href="https://www.openfn.org">OpenFn</a> Digital Public
 Good, providing a web UI to visually manage complex workflow automation
-projects.</p><h2 id="setting-up" class="section-heading">
+projects.</p><h2 id="deployment" class="section-heading">
+  <a href="#deployment" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">deployment</p>
+  </a>
+  Deployment
+</h2>
+<p>See <a href="deployment.html">Deployment</a> for more detailed information.</p><h2 id="setting-up" class="section-heading">
   <a href="#setting-up" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">setting-up</p>
   </a>
@@ -121,7 +129,13 @@ necessary files to get everything setup using Docker Compose.</p><p>If you'd lik
   Steps
 </h3>
 <ul><li>Install <a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Check out the repo using git</li><li>Copy the <code class="inline">.env.example</code> file to <code class="inline">.env</code></li><li>Run <code class="inline">docker compose run --rm web mix ecto.migrate</code><br/>This will build the container, and set the database up with the up to date schema.</li></ul><p>Once you've done that, you can run <code class="inline">docker compose up</code> every time you want to
-start up the server.</p><p>By default the application will be available from <a href="http://localhost:4000/">localhost:4000</a>.</p><p><strong>Troubleshooting</strong></p><p>If you're actively working with docker, start experiencing issues and would like
+start up the server.</p><p>By default the application will be available from <a href="http://localhost:4000/">localhost:4000</a>.</p><h3 id="troubleshooting" class="section-heading">
+  <a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">troubleshooting</p>
+  </a>
+  Troubleshooting
+</h3>
+<p>If you're actively working with docker, start experiencing issues and would like
 to start from scratch you can clean up everything and start over like this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove any ignored files and reset your .env to it&#39;s example
 </span><span class="">git clean -fdx &amp;&amp; cp .env.example .env
 </span><span class=""># You can skip the line below if you want to keep your database
@@ -214,12 +228,12 @@ API Reference
   </div>
   <div class="bottom-actions-item">
 
-      <a href="changelog.html" class="bottom-actions-button" rel="next">
+      <a href="deployment.html" class="bottom-actions-button" rel="next">
         <span class="subheader">
           Next Page →
         </span>
         <span class="title">
-Changelog
+Deployment
         </span>
       </a>
 
