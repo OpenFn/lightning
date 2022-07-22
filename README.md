@@ -18,23 +18,14 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
 1. Install [Docker](https://docs.docker.com/engine/install/)
 2. Clone the repo using git
 3. Copy the `.env.example` file to `.env`
-4. Run docker compose with either a
-   [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
-   or building your own.
-
-| Option         | Command                                                                    |
-| -------------- | -------------------------------------------------------------------------- |
-| Pre-built      | `docker compose run --rm web mix ecto.migrate`                             |
-| Build your own | `docker compose run -f docker-compose.build.yml --rm web mix ecto.migrate` |
-
-Once you've done that, run `docker compose up` every time you want to start up
-the server.
+4. Run `docker compose run --rm web mix ecto.migrate`
 
 By default the application will be running at
 [localhost:4000](http://localhost:4000/).
 
-See ["Problems with Docker"](#problems-with-docker) for additional
-troubleshooting help.
+You can then rebuild and run with `docker compose build` and `docker compose up`. See ["Problems with Docker"](#problems-with-docker) for additional
+troubleshooting help. Note that you can also create your own `docker-compose.yml` file, configuring a postgres database and using a [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
+from Dockerhub.
 
 ## **Deploy** on external infrastructure
 
@@ -95,6 +86,7 @@ mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
 mix openfn.install.runtime
+npm install --prefix assets
 ```
 
 ### Run the app
