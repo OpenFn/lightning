@@ -3,6 +3,7 @@ defmodule Lightning.Vault do
   Module for handling the encryption and decryption of database fields.
   """
   use Cloak.Vault, otp_app: :lightning
+  require Logger
 
   @impl GenServer
   def init(config) do
@@ -10,7 +11,7 @@ defmodule Lightning.Vault do
       System.get_env("PRIMARY_ENCRYPTION_KEY", config[:primary_encryption_key])
 
     if !key do
-      IO.puts("""
+      Logger.error("""
       An encryption key must be provided via an env variable:
 
       PRIMARY_ENCRYPTION_KEY=...
