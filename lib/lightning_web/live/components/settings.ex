@@ -1,7 +1,5 @@
 defmodule LightningWeb.Components.Settings do
-  @moduledoc """
-  Components for Settings live session
-  """
+  @moduledoc false
   use LightningWeb, :component
 
   def menu_item(assigns) do

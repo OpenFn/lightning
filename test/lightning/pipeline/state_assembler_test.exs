@@ -27,12 +27,23 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     end
 
     test "event triggered by a failed run" do
-      %{run: run} = run_with_failed_source_event()
+      %{run: run} = run_with_failed_webhook_event()
 
       assert StateAssembler.assemble(run) |> Jason.decode!() == %{
                "configuration" => %{"other" => "credential"},
-               "error" => ["1", "2"],
+               "error" => ["I've failed, log log"],
                "data" => %{"foo" => "bar"}
+             }
+    end
+
+    test "event triggered by a failed run that came after a successful one" do
+      %{run: run} = run_with_failed_source_event()
+
+      assert StateAssembler.assemble(run) |> Jason.decode!() == %{
+               "configuration" => %{"third" => "credential"},
+               "error" => ["I've failed, log log"],
+               "data" => "I succeeded",
+               "extra" => ["data"]
              }
     end
 
@@ -51,31 +62,38 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     test "run without source event" do
       %{run: run} = run_without_source_event()
 
-      assert StateAssembler.context_query(run) == %{
-               dataclip_type: :http_request,
-               trigger_type: :webhook
+      assert StateAssembler.context_query(run) == {
+               :http_request,
+               :webhook
              }
     end
 
     test "run with successful source event" do
       %{run: run} = run_with_successful_source_event()
 
-      assert StateAssembler.context_query(run) == %{
-               dataclip_type: :run_result,
-               trigger_type: :on_job_success
+      assert StateAssembler.context_query(run) == {
+               :run_result,
+               :on_job_success
              }
     end
 
     test "run with failed source event" do
-      %{run: run} = run_with_failed_source_event()
+      %{run: run} = run_with_failed_webhook_event()
 
-      assert StateAssembler.context_query(run) == %{
-               dataclip_type: :http_request,
-               trigger_type: :on_job_failure
+      assert StateAssembler.context_query(run) == {
+               :http_request,
+               :on_job_failure
              }
     end
 
-    # failed source event
+    test "run with failed source event that came after a successful one" do
+      %{run: run} = run_with_failed_source_event()
+
+      assert StateAssembler.context_query(run) == {
+               :run_result,
+               :on_job_failure
+             }
+    end
   end
 
   def webhook_event() do
@@ -153,13 +171,13 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     }
   end
 
-  def run_with_failed_source_event() do
+  def run_with_failed_webhook_event() do
     %{event: event} = webhook_event()
 
     run_fixture(
       event_id: event.id,
       exit_code: 1,
-      log: ["1", "2"],
+      log: ["I've failed, log log"],
       result_dataclip: nil
     )
 
@@ -169,6 +187,64 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
         project_credential_id:
           project_credential_fixture(
             body: %{"other" => "credential"},
+            name: "other credential"
+          ).id
+      )
+
+    event =
+      event_fixture(
+        type: :flow,
+        dataclip_id: event.dataclip_id,
+        job_id: job.id,
+        source_id: event.id
+      )
+      |> Repo.preload(:dataclip)
+
+    run = run_fixture(event_id: event.id)
+
+    %{
+      run: run,
+      event: event,
+      job: job,
+      dataclip: event.dataclip
+    }
+  end
+
+  def run_with_failed_source_event() do
+    %{event: event} = run_with_successful_source_event()
+
+    job =
+      job_fixture(
+        trigger: %{type: :on_job_failure},
+        project_credential_id:
+          project_credential_fixture(
+            body: %{"other" => "credential"},
+            name: "other credential"
+          ).id
+      )
+
+    event =
+      event_fixture(
+        type: :flow,
+        dataclip_id: event.dataclip_id,
+        job_id: job.id,
+        source_id: event.id
+      )
+      |> Repo.preload(:dataclip)
+
+    run_fixture(
+      event_id: event.id,
+      exit_code: 1,
+      log: ["I've failed, log log"],
+      result_dataclip: nil
+    )
+
+    job =
+      job_fixture(
+        trigger: %{type: :on_job_failure},
+        project_credential_id:
+          project_credential_fixture(
+            body: %{"third" => "credential"},
             name: "other credential"
           ).id
       )

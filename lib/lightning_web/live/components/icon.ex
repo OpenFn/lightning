@@ -1,11 +1,12 @@
 defmodule LightningWeb.Components.Icon do
-  @moduledoc """
-  For Lightning-specific concepts, we define icons here for ease of management
-  and reuse.
+  @moduledoc false
 
-  Note: we're in the process of migrating away from defining SVGs here and
-  instead using Heroicons from Petal.
-  """
+  # For Lightning-specific concepts, we define icons here for ease of management
+  # and reuse.
+  #
+  # Note: we're in the process of migrating away from defining SVGs here and
+  # instead using Heroicons from Petal.
+
   use LightningWeb, :component
 
   def workflows(assigns), do: Heroicons.Outline.sparkles(assigns)

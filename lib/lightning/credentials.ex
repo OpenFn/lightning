@@ -59,22 +59,6 @@ defmodule Lightning.Credentials do
   def get_credential!(id), do: Repo.get!(Credential, id)
 
   @doc """
-  Gets a single credential body as a string
-  Returns `nil` if the Credential does not exist.
-  """
-  @spec get_credential_body(credential_or_uuid :: Credential.t() | Ecto.UUID.t()) ::
-          String.t() | nil
-  def get_credential_body(%Credential{id: id}), do: get_credential_body(id)
-
-  def get_credential_body(id) when is_binary(id) do
-    from(c in Credential,
-      select: type(c.body, :string),
-      where: c.id == ^id
-    )
-    |> Repo.one()
-  end
-
-  @doc """
   Creates a credential.
 
   ## Examples

@@ -16,8 +16,9 @@ defmodule Lightning.Credentials.Credential do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "credentials" do
-    field :body, :map
     field :name, :string
+
+    field :body, Lightning.Encrypted.Map
     belongs_to :user, User
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]

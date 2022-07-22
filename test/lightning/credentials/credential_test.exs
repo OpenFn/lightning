@@ -11,4 +11,29 @@ defmodule Lightning.Credentials.CredentialTest do
       assert errors[:user_id] == ["can't be blank"]
     end
   end
+
+  describe "encryption" do
+    test "encrypts a credential at rest" do
+      body = %{"foo" => [1]}
+
+      %{id: credential_id, body: decoded_body} =
+        Credential.changeset(%Credential{}, %{
+          name: "Test Credential",
+          body: body,
+          user_id: Lightning.AccountsFixtures.user_fixture().id
+        })
+        |> Lightning.Repo.insert!()
+
+      assert decoded_body == body
+
+      persisted_body =
+        from(c in Credential,
+          select: type(c.body, :string),
+          where: c.id == ^credential_id
+        )
+        |> Lightning.Repo.one!()
+
+      refute persisted_body == body
+    end
+  end
 end

@@ -1,7 +1,5 @@
 defmodule LightningWeb.Components.Common do
-  @moduledoc """
-  Common Components
-  """
+  @moduledoc false
   use LightningWeb, :component
 
   def button(assigns) do
