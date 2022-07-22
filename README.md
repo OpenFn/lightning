@@ -23,8 +23,11 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
 By default the application will be running at
 [localhost:4000](http://localhost:4000/).
 
-You can then rebuild and run with `docker compose build` and `docker compose up`. See ["Problems with Docker"](#problems-with-docker) for additional
-troubleshooting help. Note that you can also create your own `docker-compose.yml` file, configuring a postgres database and using a [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
+You can then rebuild and run with `docker compose build` and
+`docker compose up`. See ["Problems with Docker"](#problems-with-docker) for
+additional troubleshooting help. Note that you can also create your own
+`docker-compose.yml` file, configuring a postgres database and using a
+[pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
 from Dockerhub.
 
 ## **Deploy** on external infrastructure
