@@ -6,13 +6,12 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
 
 ## Getting Started
 
-If you only want to **run** Lightning on your own server, we recommend using
-Docker.
-
-If you want to **deploy** Lightning, we recommend Docker builds and Kubernetes.
-
-If you want to **contribute** to the project, we recommend setting up Elixir on
-your local machine.
+- If you only want to [_**RUN**_](#run-via-docker) Lightning on your own server,
+  we recommend using Docker.
+- If you want to [_**DEPLOY**_](#deploy-on-external-infrastructure) Lightning,
+  we recommend Docker builds and Kubernetes.
+- If you want to [_**CONTRIBUTE**_](#contribute-to-this-project) to the project,
+  we recommend setting up Elixir on your local machine.
 
 ### **Run** via Docker
 
