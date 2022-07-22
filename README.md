@@ -22,10 +22,10 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
    [pre-built image](https://hub.docker.com/repository/docker/openfn/lightning)
    or building your own.
 
-| Option    | Command                                                                    |
-| --------- | -------------------------------------------------------------------------- |
-| Pre-built | `docker compose run --rm web mix ecto.migrate`                             |
-| BYO       | `docker compose run -f docker-compose.build.yml --rm web mix ecto.migrate` |
+| Option         | Command                                                                    |
+| -------------- | -------------------------------------------------------------------------- |
+| Pre-built      | `docker compose run --rm web mix ecto.migrate`                             |
+| Build your own | `docker compose run -f docker-compose.build.yml --rm web mix ecto.migrate` |
 
 Once you've done that, run `docker compose up` every time you want to start up
 the server.
