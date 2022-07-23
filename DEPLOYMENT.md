@@ -16,10 +16,26 @@ mix lightning.gen_encryption_key
 0bJ9w+hn4ebQrsCaWXuA9JY49fP9kbHmywGd5K7k+/s=
 ```
 
-Copy your key (NOT THIS ONE) and set it as `PRIMARY_ENCRYPTION_KEY` in your
+Copy your key _(NOT THIS ONE)_ and set it as `PRIMARY_ENCRYPTION_KEY` in your
 environment.
 
 ## Environment Variables
 
-- `PRIMARY_ENCRYPTION_KEY`  
-  Base64 encoded 32 character long string. See [Encryption](#encryption).
+Note that for secure deployments, it's recommended to use a combination of
+`secrets` and `configMaps` to generate secure environment variables.
+
+- `SECRET_KEY_BASE` - a secret key used as a base to generate secrets for
+  encrypting and signing data.
+- `PRIMARY_ENCRYPTION_KEY` - a base64 encoded 32 character long string.
+  See [Encryption](#encryption).
+- `ADAPTORS_PATH` - where you store your locally installed adaptors
+- `LIGHTNING_LISTEN_ADDRESS`": "0.0.0.0",
+- `LOG_LEVEL` - how noisy you want the logs to be (e.g. `debug`, `info`)
+- `MIX_ENV` - your mix env, likely `prod` for deployment
+- `NODE_ENV` - node env, likely `production` for deployment
+- `ORIGINS` - the allowed origins for web traffic to the backend
+- `PORT` - the port your Phoenix app runs on
+- `SENTRY_DSN` - if using Sentry for error monitoring, your DSN
+- `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
+- `URL_PORT` - the port, usually `443` for production
+- `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
