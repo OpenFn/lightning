@@ -15,7 +15,7 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
 
 ## **Run** via Docker
 
-1. Install [Docker](https://docs.docker.com/engine/install/)
+1. Install the latest version of [Docker](https://docs.docker.com/engine/install/)
 2. Clone the repo using git
 3. Copy the `.env.example` file to `.env`
 4. Run `docker compose run --rm web mix ecto.migrate`
@@ -157,6 +157,18 @@ You can generate the HTML and EPUB documentation locally using:
 ## Troubleshooting
 
 ### Problems with Docker
+
+#### Versions
+
+The build may not work on old versions of Docker and Docker compose. It has been
+tested against:
+
+```
+Docker version 20.10.17, build 100c701
+Docker Compose version v2.6.0
+```
+
+#### Starting from scratch
 
 If you're actively working with docker, you start experiencing issues, and you
 would like to start from scratch you can clean up everything and start over like
