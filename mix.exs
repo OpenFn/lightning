@@ -61,7 +61,7 @@ defmodule Lightning.MixProject do
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:oban, "~> 2.12"},
+      {:oban, "~> 2.13"},
       {:petal_components, "~> 0.17"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
