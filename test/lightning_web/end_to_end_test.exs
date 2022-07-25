@@ -3,7 +3,6 @@ defmodule LightningWeb.EndToEndTest do
   use Oban.Testing, repo: Lightning.Repo
 
   import Lightning.{
-    ProjectsFixtures,
     JobsFixtures,
     CredentialsFixtures
   }
@@ -44,17 +43,12 @@ defmodule LightningWeb.EndToEndTest do
       assert %{success: 1, cancelled: 0, discard: 0, failure: 0, snoozed: 0} ==
                Oban.drain_queue(Oban, queue: :runs)
 
-      run =
-        Invocation.get_run!(run_id)
-        |> IO.inspect(label: "the run when it's done")
+      run = Invocation.get_run!(run_id)
 
       assert run.finished_at != nil
       assert run.exit_code == 0
     end)
   end
-
-  defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.7 (Node.js v16."
-  defp expected_adaptor, do: "@openfn/language-http@4.0.0"
 
   def message_expression do
     "fn(state => {
