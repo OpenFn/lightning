@@ -19,6 +19,7 @@ defmodule Lightning.Credentials.Credential do
     field :name, :string
 
     field :body, Lightning.Encrypted.Map
+    field :production, :boolean, default: false
     belongs_to :user, User
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
