@@ -10,7 +10,7 @@
     <title>Lightning — Lightning v0.1.7</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-642ce7cf87.js"></script>
+    <script src="dist/sidebar_items-52f4044820.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -109,57 +109,54 @@ Lightning
 
 <p>Lightning extends the existing <a href="https://www.openfn.org">OpenFn</a> Digital Public
 Good, providing a web UI to visually manage complex workflow automation
-projects.</p><h2 id="deployment" class="section-heading">
-  <a href="#deployment" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">deployment</p>
+projects. Learn more about OpenFn at <a href="https://docs.openfn.org">docs.openfn.org</a>.</p><h2 id="getting-started" class="section-heading">
+  <a href="#getting-started" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">getting-started</p>
   </a>
-  Deployment
+  Getting Started
 </h2>
-<p>See <a href="deployment.html">Deployment</a> for more detailed information.</p><h2 id="setting-up" class="section-heading">
-  <a href="#setting-up" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">setting-up</p>
+<ul><li>If you only want to <a href="#run-via-docker"><em><strong>RUN</strong></em></a> Lightning on your own server,
+we recommend using Docker.</li><li>If you want to <a href="#deploy-on-external-infrastructure"><em><strong>DEPLOY</strong></em></a> Lightning,
+we recommend Docker builds and Kubernetes.</li><li>If you want to <a href="#contribute-to-this-project"><em><strong>CONTRIBUTE</strong></em></a> to the project,
+we recommend setting up Elixir on your local machine.</li></ul><h2 id="run-via-docker" class="section-heading">
+  <a href="#run-via-docker" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">run-via-docker</p>
   </a>
-  Setting up
+  <strong>Run</strong> via Docker
 </h2>
-<p>The easiest way to set up Lightning is via Docker. We have included the
-necessary files to get everything setup using Docker Compose.</p><p>If you'd like to contribute or set things up locally for development, checkout the <a href="#contributing">Contributing</a> section.</p><h3 id="steps" class="section-heading">
-  <a href="#steps" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">steps</p>
+<ol><li>Install the latest version of <a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Clone the repo using git</li><li>Copy the <code class="inline">.env.example</code> file to <code class="inline">.env</code></li><li>Run <code class="inline">docker compose run --rm web mix ecto.migrate</code></li></ol><p>By default the application will be running at
+<a href="http://localhost:4000/">localhost:4000</a>.</p><p>You can then rebuild and run with <code class="inline">docker compose build</code> and
+<code class="inline">docker compose up</code>. See <a href="#problems-with-docker">&quot;Problems with Docker&quot;</a> for
+additional troubleshooting help. Note that you can also create your own
+<code class="inline">docker-compose.yml</code> file, configuring a postgres database and using a
+<a href="https://hub.docker.com/repository/docker/openfn/lightning">pre-built image</a>
+from Dockerhub.</p><h2 id="deploy-on-external-infrastructure" class="section-heading">
+  <a href="#deploy-on-external-infrastructure" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">deploy-on-external-infrastructure</p>
   </a>
-  Steps
-</h3>
-<ul><li>Install <a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Check out the repo using git</li><li>Copy the <code class="inline">.env.example</code> file to <code class="inline">.env</code></li><li>Run <code class="inline">docker compose run --rm web mix ecto.migrate</code><br/>This will build the container, and set the database up with the up to date schema.</li></ul><p>Once you've done that, you can run <code class="inline">docker compose up</code> every time you want to
-start up the server.</p><p>By default the application will be available from <a href="http://localhost:4000/">localhost:4000</a>.</p><h3 id="troubleshooting" class="section-heading">
-  <a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">troubleshooting</p>
-  </a>
-  Troubleshooting
-</h3>
-<p>If you're actively working with docker, start experiencing issues and would like
-to start from scratch you can clean up everything and start over like this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove any ignored files and reset your .env to it&#39;s example
-</span><span class="">git clean -fdx &amp;&amp; cp .env.example .env
-</span><span class=""># You can skip the line below if you want to keep your database
-</span><span class="">docker compose down --rmi all --volumes
-</span><span class="">
-</span><span class="">docker compose build --no-cache web &amp;&amp; \
-</span><span class="">  docker compose create --force-recreate
-</span><span class="">
-</span><span class="">docker compose run --rm web mix ecto.migrate
-</span><span class="">docker compose up
-</span></code></pre><h2 id="contributing" class="section-heading">
-  <a href="#contributing" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">contributing</p>
-  </a>
-  Contributing
+  <strong>Deploy</strong> on external infrastructure
 </h2>
-<p>We appreciate any contribution to Lightning.</p><h3 id="setting-up-locally" class="section-heading">
-  <a href="#setting-up-locally" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">setting-up-locally</p>
+<p>See <a href="deployment.html">Deployment</a> for more detailed information.</p><h2 id="contribute-to-this-project" class="section-heading">
+  <a href="#contribute-to-this-project" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">contribute-to-this-project</p>
   </a>
-  Setting up locally
+  <strong>Contribute</strong> to this project
+</h2>
+<p>Lightning is built in <a href="https://elixir-lang.org/">Elixir</a>, harnessing the
+<a href="https://www.phoenixframework.org/">Phoenix Framework</a>. Currently, the only
+unbundled dependency is a <a href="https://www.postgresql.org/">PostgreSQL</a> database.</p><h3 id="set-up-your-environment" class="section-heading">
+  <a href="#set-up-your-environment" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">set-up-your-environment</p>
+  </a>
+  Set up your environment
 </h3>
-<p><strong>Database</strong></p><p>Ensure you have a PostgreSQL database setup and running, here is an example
-to get it running quickly using docker.</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
+<h4>Clone the repo and set ENVs</h4><pre><code class="makeup sh" translate="no"><span class="">git clone git@github.com:OpenFn/Lightning.git
+</span><span class="">cd Lightning
+</span><span class="">cp .env.example .env # and adjust as necessary!
+</span></code></pre><p>Take note of database names and ports in particular—they've got to match across
+your Postgres setup and your ENVs.</p><h4>Database Setup</h4><p>If you're already using Postgres locally, create a new database called
+<code class="inline">lightning_dev</code>, for example.</p><p>If you'd rather use Docker to set up a Postgres DB, create a new volume and
+image:</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
 </span><span class="">
 </span><span class="">docker create \
 </span><span class="">  --name lightning-postgres \
@@ -169,50 +166,82 @@ to get it running quickly using docker.</p><pre><code class="makeup sh" translat
 </span><span class="">  postgres:14.1-alpine
 </span><span class="">
 </span><span class="">docker start lightning-postgres
-</span></code></pre><p><strong>Elixir &amp; Ecto</strong></p><p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to help with our local environments.
-Included in the repo is a <code class="inline">.tool-versions</code> file that is read by asdf in order
-to dynamically make the specified versions of Elixir and Erlang available.</p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
+</span></code></pre><h4>Elixir &amp; Ecto Setup</h4><p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
+environments. Included in the repo is a <code class="inline">.tool-versions</code> file that is read by
+asdf in order to dynamically make the specified versions of Elixir and Erlang
+available.</p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
 </span><span class="">mix local.hex
 </span><span class="">mix deps.get
 </span><span class="">mix local.rebar --force
 </span><span class="">mix ecto.create # Create a development database in Postgres
 </span><span class="">mix ecto.migrate
 </span><span class="">mix openfn.install.runtime
+</span><span class="">npm install --prefix assets
 </span></code></pre><h3 id="run-the-app" class="section-heading">
   <a href="#run-the-app" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">run-the-app</p>
   </a>
   Run the app
 </h3>
-<p>Lightning is a web app. To run it, start the development server by running <a href="https://hexdocs.pm/phoenix/1.6.11/Mix.Tasks.Phx.Server.html"><code class="inline">mix phx.server</code></a>.
-Once the server has started, head to <a href="http://localhost:4000"><code class="inline">localhost:4000</code></a> in your browser.</p><h2 id="running-tests" class="section-heading">
-  <a href="#running-tests" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">running-tests</p>
+<p>Lightning is a web app. To run it in interactive Elixir mode, start the
+development server by running with your environment variables by running:</p><pre><code class="makeup sh" translate="no"><span class="">env $(cat .env | grep -v &quot;#&quot; | xargs ) iex -S mix phx.server
+</span></code></pre><p>Once the server has started, head to <a href="http://localhost:4000"><code class="inline">localhost:4000</code></a>
+in your browser.</p><h3 id="run-the-tests" class="section-heading">
+  <a href="#run-the-tests" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">run-the-tests</p>
   </a>
-  Running Tests
-</h2>
+  Run the tests
+</h3>
 <p>Before the first time running the tests, you need a test database setup.</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix ecto.create
 </span></code></pre><p>And then after that run the tests using:</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix test
-</span></code></pre><p>We also have <code class="inline">test.watch</code> installed which can be used to rerun the tests on file changes.</p><h2 id="security-and-standards" class="section-heading">
+</span></code></pre><p>We also have <code class="inline">test.watch</code> installed which can be used to rerun the tests on file
+changes.</p><h3 id="security-and-standards" class="section-heading">
   <a href="#security-and-standards" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">security-and-standards</p>
   </a>
   Security and Standards
-</h2>
+</h3>
 <p>We use a host of common Elixir static analysis tools to help us avoid common
 pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
-have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.1.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings.
-See <a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.4/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards.
-See <a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.11.1/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See <a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be
-used in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code.
-See <a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
-defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote><h2 id="generating-documentation" class="section-heading">
+have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.1.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
+<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.4/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards. See
+<a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.11.1/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See
+<a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be used
+in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code. See
+<a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
+defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote><h3 id="generating-documentation" class="section-heading">
   <a href="#generating-documentation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">generating-documentation</p>
   </a>
   Generating Documentation
+</h3>
+<p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.28.3/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p><h2 id="troubleshooting" class="section-heading">
+  <a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">troubleshooting</p>
+  </a>
+  Troubleshooting
 </h2>
-<p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.28.3/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p>
+<h3 id="problems-with-docker" class="section-heading">
+  <a href="#problems-with-docker" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">problems-with-docker</p>
+  </a>
+  Problems with Docker
+</h3>
+<h4>Versions</h4><p>The build may not work on old versions of Docker and Docker compose. It has been
+tested against:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Docker</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="mf">20.10</span><span class="o">.</span><span class="mi">17</span><span class="p">,</span><span class="w"> </span><span class="n">build</span><span class="w"> </span><span class="mi">100</span><span class="n">c701</span><span class="w">
+</span><span class="nc">Docker</span><span class="w"> </span><span class="nc">Compose</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="n">v2</span><span class="o">.</span><span class="mf">6.0</span></code></pre><h4>Starting from scratch</h4><p>If you're actively working with docker, you start experiencing issues, and you
+would like to start from scratch you can clean up everything and start over like
+this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove any ignored files and reset your .env to it&#39;s example
+</span><span class="">git clean -fdx &amp;&amp; cp .env.example .env
+</span><span class=""># You can skip the line below if you want to keep your database
+</span><span class="">docker compose down --rmi all --volumes
+</span><span class="">
+</span><span class="">docker compose build --no-cache web &amp;&amp; \
+</span><span class="">  docker compose create --force-recreate
+</span><span class="">
+</span><span class="">docker compose run --rm web mix ecto.migrate
+</span><span class="">docker compose up
+</span></code></pre>
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 

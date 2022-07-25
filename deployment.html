@@ -10,7 +10,7 @@
     <title>Deployment — Lightning v0.1.7</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-642ce7cf87.js"></script>
+    <script src="dist/sidebar_items-52f4044820.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -113,18 +113,23 @@ Lightning
   </a>
   Encryption
 </h2>
-<p>Lightning enforces encryption at rest for Credentials, for which an 
-encryption key must be provided when running in production.</p><p>The key is expected to be a randomized set of bytes, 32 long; and Base64
-encoded when setting the environment variable.</p><p>There is a mix task that can generate keys in the correct shape for use
-as an environment variable:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.gen_encryption_key
+<p>Lightning enforces encryption at rest for Credentials, for which an encryption
+key must be provided when running in production.</p><p>The key is expected to be a randomized set of bytes, 32 long; and Base64 encoded
+when setting the environment variable.</p><p>There is a mix task that can generate keys in the correct shape for use as an
+environment variable:</p><pre><code class="makeup sh" translate="no"><span class="">mix lightning.gen_encryption_key
 </span><span class="">0bJ9w+hn4ebQrsCaWXuA9JY49fP9kbHmywGd5K7k+/s=
-</span></code></pre><p>Copy the key and set it as <code class="inline">PRIMARY_ENCRYPTION_KEY</code> in your environment.</p><h2 id="environment-variables" class="section-heading">
+</span></code></pre><p>Copy your key <em>(NOT THIS ONE)</em> and set it as <code class="inline">PRIMARY_ENCRYPTION_KEY</code> in your
+environment.</p><h2 id="environment-variables" class="section-heading">
   <a href="#environment-variables" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">environment-variables</p>
   </a>
   Environment Variables
 </h2>
-<ul><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code><br/>Base64 encoded 32 character long string. See <a href="#encryption">Encryption</a>.</li></ul>
+<p>Note that for secure deployments, it's recommended to use a combination of
+<code class="inline">secrets</code> and <code class="inline">configMaps</code> to generate secure environment variables.</p><ul><li><code class="inline">SECRET_KEY_BASE</code> - a secret key used as a base to generate secrets for
+encrypting and signing data.</li><li><code class="inline">PRIMARY_ENCRYPTION_KEY</code> - a base64 encoded 32 character long string.
+See <a href="#encryption">Encryption</a>.</li><li><code class="inline">ADAPTORS_PATH</code> - where you store your locally installed adaptors</li><li><code class="inline">LIGHTNING_LISTEN_ADDRESS</code>&quot; - the address the web server should bind to,
+defaults to <code class="inline">0.0.0.0</code></li><li><code class="inline">LOG_LEVEL</code> - how noisy you want the logs to be (e.g. <code class="inline">debug</code>, <code class="inline">info</code>)</li><li><code class="inline">MIX_ENV</code> - your mix env, likely <code class="inline">prod</code> for deployment</li><li><code class="inline">NODE_ENV</code> - node env, likely <code class="inline">production</code> for deployment</li><li><code class="inline">ORIGINS</code> - the allowed origins for web traffic to the backend</li><li><code class="inline">PORT</code> - the port your Phoenix app runs on</li><li><code class="inline">SENTRY_DSN</code> - if using Sentry for error monitoring, your DSN</li><li><code class="inline">URL_HOST</code> - the host, used for writing urls (e.g., <code class="inline">demo.openfn.org</code>)</li><li><code class="inline">URL_PORT</code> - the port, usually <code class="inline">443</code> for production</li><li><code class="inline">URL_SCHEME</code> - the scheme for writing urls, (e.g., <code class="inline">https</code>)</li></ul>
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
