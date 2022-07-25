@@ -38,6 +38,7 @@ config :lightning, Oban,
   dispatch_cooldown: 100,
   queues: [
     scheduler: 1,
+    background: 1,
     runs: System.get_env("GLOBAL_RUNS_CONCURRENCY", "1") |> String.to_integer()
   ]
 
