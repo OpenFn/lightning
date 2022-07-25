@@ -30,7 +30,7 @@ defmodule Lightning.Credentials.Credential do
   @doc false
   def changeset(credential, attrs) do
     credential
-    |> cast(attrs, [:name, :body, :user_id])
+    |> cast(attrs, [:name, :body, :production, :user_id])
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)

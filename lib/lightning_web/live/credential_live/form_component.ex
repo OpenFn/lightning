@@ -124,6 +124,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp save_credential(socket, :edit, credential_params) do
+    IO.inspect(credential_params, label: "Credentials")
+
     case Credentials.update_credential(
            socket.assigns.credential,
            credential_params

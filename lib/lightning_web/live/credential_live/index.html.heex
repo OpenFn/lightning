@@ -16,6 +16,7 @@
       <.tr>
         <.th>Name</.th>
         <.th>Body</.th>
+        <.th>Production</.th>
         <.th>Actions</.th>
       </.tr>
 
@@ -23,6 +24,12 @@
         <.tr id={"credential-#{credential.id}"}>
           <.td><%= credential.name %></.td>
           <.td><%= credential.body %></.td>
+          <.td>
+            <%= if credential.production do %>
+              <Heroicons.Outline.exclamation class="w-5 h-5 text-secondary-500" />
+              Production
+            <% end %>
+          </.td>
 
           <.td>
             <span>
