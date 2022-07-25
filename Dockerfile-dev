@@ -15,20 +15,20 @@
 ARG ELIXIR_VERSION=1.13.4
 ARG OTP_VERSION=24.2.1
 ARG DEBIAN_VERSION=bullseye-20210902-slim
+ARG NODE_VERSION=16.15.1
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
 FROM ${BUILDER_IMAGE} as dev
+ARG NODE_VERSION
 
 # install build and dev dependencies
 RUN apt-get update -y && apt-get install -y \
   build-essential curl git inotify-tools
 
-# isntall nodejs using nodesource
-# https://github.com/nodesource/distributions/blob/master/README.md#deb
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
-RUN apt-get install -y nodejs
+COPY bin/install_node bin/install_node
+RUN bin/install_node ${NODE_VERSION}
 
 RUN apt-get clean && rm -f /var/lib/apt/lists/*_*
 
