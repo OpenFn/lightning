@@ -1,5 +1,6 @@
 x-lightning: &default-app
   build:
+    dockerfile: Dockerfile-dev
     context: "."
     target: "${MIX_ENV:-dev}"
     args:
