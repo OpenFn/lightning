@@ -25,7 +25,12 @@
             class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96"
           ) %>
         </div>
+
+        <div class="mt-2">
+          <LightningWeb.Components.Form.check_box form={f} id={:production} />
+        </div>
       </div>
+
       <div class="col-span-3">
         <%= label(f, :project_credentials, "Project Access",
           class: "block text-sm font-medium text-secondary-700"
