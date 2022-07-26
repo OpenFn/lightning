@@ -203,8 +203,8 @@ changes.</p><h3 id="security-and-standards" class="section-heading">
 </h3>
 <p>We use a host of common Elixir static analysis tools to help us avoid common
 pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
-have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.1.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
-<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.4/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards. See
+have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.2.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
+<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.5/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards. See
 <a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.11.1/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See
 <a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be used
 in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code. See
