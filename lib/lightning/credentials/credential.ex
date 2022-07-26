@@ -35,4 +35,14 @@ defmodule Lightning.Credentials.Credential do
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
   end
+
+  def validate_transfer_ownership(changeset, field, options \\ []) do
+    validate_change(changeset, field, fn _, user ->
+
+      case String.starts_with?(url, @our_url) do
+        true -> []
+        false -> [{field, options[:message] || "Unexpected URL"}]
+      end
+    end)
+  end
 end
