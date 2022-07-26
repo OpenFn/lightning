@@ -270,7 +270,7 @@ defmodule Lightning.JobsTest do
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
       job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
 
-      _result = Scheduler.enqueue_cronjobs()
+      Scheduler.enqueue_cronjobs()
 
       %{event_id: event_id} = Repo.one(Lightning.Invocation.Run)
       %{job_id: job_id} = Repo.get(Lightning.Invocation.Event, event_id)

@@ -13,7 +13,13 @@ defmodule Lightning.MixProject do
       deps: deps(),
       dialyzer: [plt_add_apps: [:mix]],
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [verify: :test],
+      preferred_cli_env: [
+        verify: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ],
 
       # Docs
       name: "Lightning",
@@ -48,7 +54,7 @@ defmodule Lightning.MixProject do
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_sql, "~> 3.6"},
-      {:engine, github: "OpenFn/engine", tag: "v0.6.0"},
+      {:engine, github: "OpenFn/engine", tag: "v0.7.2"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.4", only: [:test, :dev]},
@@ -61,7 +67,7 @@ defmodule Lightning.MixProject do
       {:junit_formatter, "~> 3.0", only: [:test]},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:oban, "~> 2.12"},
+      {:oban, "~> 2.13"},
       {:petal_components, "~> 0.17"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},

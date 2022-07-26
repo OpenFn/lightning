@@ -38,7 +38,7 @@ jobs:
       - checkout
 
       - restore_cache:
-          key: testing-elixir-v<< parameters.version >>
+          key: testing-elixir-v1-<< parameters.version >>
 
       - run: mix local.hex --force
       - run: mix local.rebar --force
@@ -46,7 +46,7 @@ jobs:
       - run: MIX_ENV=test mix openfn.install.runtime
 
       - save_cache:
-          key: testing-elixir-v<< parameters.version >>
+          key: testing-elixir-v1-<< parameters.version >>
           paths:
             - _build
             - deps
@@ -54,11 +54,11 @@ jobs:
 
       - restore_cache:
           keys:
-            - -v<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
-            - -v<< parameters.version >>-plt-cache
+            - -v1-<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+            - -v1-<< parameters.version >>-plt-cache
       - run: MIX_ENV=test mix dialyzer --plt
       - save_cache:
-          key: -v<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+          key: -v1-<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
           paths:
             - _build
             - ~/.mix

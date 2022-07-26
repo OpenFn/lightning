@@ -147,6 +147,7 @@ defmodule Lightning.Pipeline.Runner do
   @spec find_or_install_adaptor(adaptor :: String.t()) :: Engine.Adaptor.t()
   def find_or_install_adaptor(adaptor) when is_binary(adaptor) do
     package_spec = resolve_package_name(adaptor)
+
     adaptor = find_adaptor(:adaptor_service, package_spec)
 
     if is_nil(adaptor) do
