@@ -1,5 +1,5 @@
 defmodule LightningWeb.API.RunControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   import Lightning.InvocationFixtures
 

@@ -106,6 +106,7 @@ defmodule LightningWeb do
       import PetalComponents.Dropdown
       import PetalComponents.Table
       import PetalComponents.Typography
+      import PetalComponents.Badge
       alias PetalComponents.Heroicons
 
       alias LightningWeb.Components

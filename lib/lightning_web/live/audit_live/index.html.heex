@@ -1,0 +1,50 @@
+<Layout.page_content>
+  <:header>
+    <Layout.header socket={@socket} title="Audit" />
+  </:header>
+  <Layout.centered>
+    <.table>
+      <.tr>
+        <.th>Occurred</.th>
+        <.th class="text-center">Event</.th>
+        <.th>Actor</.th>
+        <.th>Subject</.th>
+      </.tr>
+
+      <%= for audit <- @page.entries do %>
+        <.tr id={"audit-#{audit.id}"} class="border-dotted border-gray-100">
+          <.td>
+            <%= audit.inserted_at |> Calendar.strftime("%c") %>
+          </.td>
+          <.td class="text-center">
+            <.badge color="success" label={audit.event} />
+          </.td>
+          <.td><%= audit.actor.email %></.td>
+          <.td>
+            <div class="flex flex-col overflow-hidden">
+              <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
+                Credential
+              </div>
+              <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
+                <%= audit.row_id |> String.slice(0..7) %>
+              </div>
+            </div>
+          </.td>
+        </.tr>
+
+        <.tr>
+          <%= if audit.metadata.after do %>
+            <.td colspan="4" class="font-mono text-xs break-all">
+              <.diff metadata={audit.metadata} />
+            </.td>
+          <% else %>
+            <.td colspan="4" class="font-mono text-xs">
+              No changes
+            </.td>
+          <% end %>
+        </.tr>
+      <% end %>
+    </.table>
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
+  </Layout.centered>
+</Layout.page_content>

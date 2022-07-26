@@ -84,6 +84,8 @@ defmodule LightningWeb.Router do
       live "/settings/projects", ProjectLive.Index, :index
       live "/settings/projects/new", ProjectLive.Index, :new
       live "/settings/projects/:id", ProjectLive.Index, :edit
+
+      live "/settings/audit", AuditLive.Index, :index
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do

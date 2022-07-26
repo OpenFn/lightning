@@ -1,5 +1,5 @@
 defmodule LightningWeb.PaginationTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias LightningWeb.Pagination
 

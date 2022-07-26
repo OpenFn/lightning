@@ -6,9 +6,9 @@ defmodule Lightning.Credentials do
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
   alias Lightning.Repo
+  alias Ecto.Multi
 
-  alias Lightning.Credentials.Credential
-  alias Lightning.Credentials.SensitiveValues
+  alias Lightning.Credentials.{Audit, Credential, SensitiveValues}
   alias Lightning.Projects.Project
 
   @doc """
@@ -72,9 +72,22 @@ defmodule Lightning.Credentials do
 
   """
   def create_credential(attrs \\ %{}) do
-    %Credential{}
-    |> Credential.changeset(attrs |> coerce_json_field("body"))
-    |> Repo.insert()
+    Multi.new()
+    |> Multi.insert(
+      :credential,
+      Credential.changeset(%Credential{}, attrs |> coerce_json_field("body"))
+    )
+    |> Multi.insert(:audit, fn %{credential: credential} ->
+      Audit.event("created", credential.id, credential.user_id)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:error, :credential, changeset, _changes} ->
+        {:error, changeset}
+
+      {:ok, %{credential: credential}} ->
+        {:ok, credential}
+    end
   end
 
   @doc """
@@ -90,9 +103,72 @@ defmodule Lightning.Credentials do
 
   """
   def update_credential(%Credential{} = credential, attrs) do
-    credential
-    |> Credential.changeset(attrs |> coerce_json_field("body"))
-    |> Repo.update()
+    changeset = change_credential(credential, attrs)
+
+    Multi.new()
+    |> Multi.update(:credential, changeset)
+    |> derive_events(changeset)
+    |> Repo.transaction()
+    |> case do
+      {:error, :credential, changeset, _changes} ->
+        {:error, changeset}
+
+      {:ok, %{credential: credential}} ->
+        {:ok, credential}
+    end
+  end
+
+  defp derive_events(
+         multi,
+         %Ecto.Changeset{data: %Credential{}} = changeset
+       ) do
+    multi
+    |> Multi.insert(
+      :audit,
+      fn %{credential: credential} ->
+        Audit.event("updated", credential.id, credential.user_id, changeset)
+      end
+    )
+    |> Multi.append(
+      Ecto.Changeset.get_change(changeset, :project_credentials, [])
+      |> Enum.reduce(Multi.new(), fn changeset, multi ->
+        multi
+        |> Multi.append(derive_events(multi, changeset))
+      end)
+    )
+  end
+
+  defp derive_events(
+         multi,
+         %Ecto.Changeset{
+           data: %Lightning.Projects.ProjectCredential{}
+         } = changeset
+       ) do
+    multi
+    |> Multi.insert(
+      {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
+      fn %{credential: credential} ->
+        case changeset.action do
+          :insert ->
+            "added_to_project"
+            |> Audit.event(credential.id, credential.user_id, %{
+              before: %{project_id: nil},
+              after: %{
+                project_id: Ecto.Changeset.get_field(changeset, :project_id)
+              }
+            })
+
+          :delete ->
+            "removed_from_project"
+            |> Audit.event(credential.id, credential.user_id, %{
+              before: %{
+                project_id: Ecto.Changeset.get_field(changeset, :project_id)
+              },
+              after: %{project_id: nil}
+            })
+        end
+      end
+    )
   end
 
   @doc """
