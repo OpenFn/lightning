@@ -124,7 +124,8 @@ we recommend setting up Elixir on your local machine.</li></ul><h2 id="run-via-d
   </a>
   <strong>Run</strong> via Docker
 </h2>
-<ol><li>Install the latest version of <a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Clone the repo using git</li><li>Copy the <code class="inline">.env.example</code> file to <code class="inline">.env</code></li><li>Run <code class="inline">docker compose run --rm web mix ecto.migrate</code></li></ol><p>By default the application will be running at
+<ol><li>Install the latest version of
+<a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Clone the repo using git</li><li>Copy the <code class="inline">.env.example</code> file to <code class="inline">.env</code></li><li>Run <code class="inline">docker compose run --rm web mix ecto.migrate</code></li></ol><p>By default the application will be running at
 <a href="http://localhost:4000/">localhost:4000</a>.</p><p>You can then rebuild and run with <code class="inline">docker compose build</code> and
 <code class="inline">docker compose up</code>. See <a href="#problems-with-docker">&quot;Problems with Docker&quot;</a> for
 additional troubleshooting help. Note that you can also create your own
@@ -142,7 +143,9 @@ from Dockerhub.</p><h2 id="deploy-on-external-infrastructure" class="section-hea
   </a>
   <strong>Contribute</strong> to this project
 </h2>
-<p>Lightning is built in <a href="https://elixir-lang.org/">Elixir</a>, harnessing the
+<p>First, thanks for being here! You're contributing to a digital public good that
+will always be free and open source and aimed at serving innovative NGOs,
+governments, and social impact organizations the world over! You rock. ❤️</p><p>FYI, Lightning is built in <a href="https://elixir-lang.org/">Elixir</a>, harnessing the
 <a href="https://www.phoenixframework.org/">Phoenix Framework</a>. Currently, the only
 unbundled dependency is a <a href="https://www.postgresql.org/">PostgreSQL</a> database.</p><h3 id="set-up-your-environment" class="section-heading">
   <a href="#set-up-your-environment" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
@@ -150,7 +153,14 @@ unbundled dependency is a <a href="https://www.postgresql.org/">PostgreSQL</a> d
   </a>
   Set up your environment
 </h3>
-<h4>Clone the repo and set ENVs</h4><pre><code class="makeup sh" translate="no"><span class="">git clone git@github.com:OpenFn/Lightning.git
+<p>If you have push access to this repository (are you an authorized maintainer?)
+then you'll be able to make changes and push them to a feature branch before
+submitting a pull request. If you're new to OpenFn, you'll need to
+<a href="https://github.com/OpenFn/Lightning/fork"><strong>make a fork</strong></a> and push your
+changes there.</p><p>Once you're ready to submit a pull request, you can click the &quot;compare across
+forks&quot; link on GitHub's
+<a href="https://github.com/OpenFn/Lightning/compare">pull request</a> interface and then
+open one for review.</p><h4>Clone the repo and set ENVs</h4><pre><code class="makeup sh" translate="no"><span class="">git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
 </span><span class="">cd Lightning
 </span><span class="">cp .env.example .env # and adjust as necessary!
 </span></code></pre><p>Take note of database names and ports in particular—they've got to match across
