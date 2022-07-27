@@ -18,26 +18,36 @@ defmodule Lightning.Pipeline.Runner do
     import Lightning.Invocation, only: [update_run: 2]
 
     @impl true
-    def on_start(run) do
+    def on_start(run: run, scrubber: _) do
       update_run(run, %{started_at: DateTime.utc_now()})
     end
 
     @impl true
-    def on_finish(result, run) do
-      if Logger.compare_levels(Logger.level(), :debug) == :eq do
+    def on_finish(result, run: run, scrubber: scrubber) do
+      debug do
         result.log
         |> Enum.each(fn line ->
           Logger.debug("#{String.slice(run.id, -5..-1)} : #{line}")
         end)
       end
 
+      scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
+
       update_run(run, %{
         finished_at: DateTime.utc_now(),
         exit_code: result.exit_code,
-        log: result.log
+        log: scrubbed_log
       })
 
       Runner.create_dataclip_from_result(result, run)
+    end
+
+    defp debug(do: block) do
+      if Logger.compare_levels(Logger.level(), :debug) == :eq do
+        # coveralls-ignore-start
+        block.call()
+        # coveralls-ignore-stop
+      end
     end
   end
 
@@ -59,9 +69,15 @@ defmodule Lightning.Pipeline.Runner do
   """
   @spec start(run :: Invocation.Run.t(), opts :: []) :: Engine.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
-    run = Lightning.Repo.preload(run, :event)
+    run = Lightning.Repo.preload(run, event: [job: :credential])
 
     %{body: expression, adaptor: adaptor} = get_job!(run.event.job_id)
+
+    {:ok, scrubber} =
+      Lightning.Scrubber.start_link(
+        samples:
+          Lightning.Credentials.sensitive_values_for(run.event.job.credential)
+      )
 
     state = Lightning.Pipeline.StateAssembler.assemble(run)
 
@@ -88,7 +104,10 @@ defmodule Lightning.Pipeline.Runner do
       timeout: 60_000
     }
 
-    Handler.start(runspec, Keyword.merge(opts, context: run))
+    Handler.start(
+      runspec,
+      Keyword.merge(opts, context: [run: run, scrubber: scrubber])
+    )
   end
 
   # In order to run a flow job, `start/2` is called, and on a result

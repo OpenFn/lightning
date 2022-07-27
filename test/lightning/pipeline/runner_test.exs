@@ -7,7 +7,7 @@ defmodule Lightning.Pipeline.RunnerTest do
   import Lightning.CredentialsFixtures
 
   test "start/2 takes a run and executes it" do
-    credential_body = %{"username" => "quux"}
+    credential_body = %{"username" => "quux", "password" => "immasecret"}
 
     project_credential =
       project_credential_fixture(name: "test credential", body: credential_body)
@@ -60,6 +60,7 @@ defmodule Lightning.Pipeline.RunnerTest do
 
     log = Enum.join(run.log, "\n")
     assert log =~ "@openfn/language-common"
+    refute log =~ ~S(password":"immasecret")
 
     assert length(run.log) > 0
   end

@@ -249,7 +249,7 @@ defmodule Lightning.Invocation do
     from(r in Run,
       join: p in assoc(r, :project),
       where: p.id == ^project_id,
-      order_by: [desc: r.inserted_at]
+      order_by: [desc: r.inserted_at, desc: r.started_at]
     )
     |> Repo.paginate(params)
   end
