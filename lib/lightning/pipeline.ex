@@ -47,9 +47,9 @@ defmodule Lightning.Pipeline do
       end)
       |> Enum.map(fn attrs ->
         {:ok, %{event: event}} = Invocation.create(attrs)
-        event
+        new(%{event_id: event.id})
       end)
-      |> Enum.each(&process/1)
+      |> Enum.each(&Oban.insert/1)
     end
 
     :ok
