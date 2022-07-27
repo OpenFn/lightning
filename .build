@@ -9,6 +9,7 @@ Lightning.AdaptorRegistry.Npm.html
 Lightning.AdaptorRegistry.html
 Lightning.Credentials.Credential.html
 Lightning.Credentials.Policy.html
+Lightning.Credentials.SensitiveValues.html
 Lightning.Credentials.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
@@ -34,6 +35,7 @@ Lightning.Projects.ProjectUser.html
 Lightning.Projects.html
 Lightning.Release.html
 Lightning.Repo.html
+Lightning.Scrubber.html
 Lightning.Vault.html
 Lightning.html
 LightningWeb.API.Helpers.html
@@ -106,8 +108,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-d6fb75aa9a.js
-dist/sidebar_items-52f4044820.js
+dist/search_items-32df7f327e.js
+dist/sidebar_items-9d56ed458d.js
 index.html
 readme.html
 search.html
