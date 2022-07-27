@@ -14,8 +14,6 @@ and this project adheres to
   dropdown
 - Create and edit dataclips
 - Add a production tag to credentials
-- Sensitive credential values are scrubbed from run logs
-- All credentials are encrypted at REST
 - View a dropdown of operations and their description for the language-common
   adaptor
 
@@ -26,6 +24,11 @@ and this project adheres to
 ### Fixed
 
 - Run Lightning with docker
+
+### Security
+
+- Sensitive credential values are scrubbed from run logs
+- All credentials are encrypted at REST
 
 ## [0.1.7] - 2022-06-24
 
