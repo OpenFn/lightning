@@ -39,7 +39,7 @@ defmodule LightningWeb.Components.Layout do
             </:trigger_element>
             <.dropdown_menu_item
               link_type="live_redirect"
-              to={Routes.user_settings_path(@socket, :edit)}
+              to={Routes.profile_edit_path(@socket, :edit)}
             >
               <Heroicons.Outline.cog class="w-5 h-5 text-secondary-500" />
               User Profile

@@ -1,0 +1,24 @@
+<Layout.page_content>
+  <:header>
+    <Layout.header socket={@socket} title={"#{@page_title}"} />
+  </:header>
+  <Layout.centered>
+
+  <h3>Change email</h3>
+<%# 
+  <%= label(@current_user, :name) %> %>
+
+
+<%# <.form
+  let={f}
+  for={@current_user.email_changeset}
+  action={Routes.user_settings_path(@conn, :update)}
+  id="update_email"
+>
+</.form> %>
+ 
+    <%# <.live_component
+        
+    /> %>
+  </Layout.centered>
+</Layout.page_content>
