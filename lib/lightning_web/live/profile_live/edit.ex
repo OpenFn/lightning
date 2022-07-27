@@ -4,8 +4,15 @@ defmodule LightningWeb.ProfileLive.Edit do
   `LightningWeb.JobLive.JobFormComponent` for common functionality.
   """
   use LightningWeb, :live_view
+  alias Lightning.Accounts
+  # alias LightningWeb.UserAuth
 
-  alias Lightning.Invocation
+  # import Plug.Conn
+  # @behaviour Plug
+
+  # plug :assign_email_and_password_changesets
+
+  # alias Lightning.Invocation
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -27,6 +34,16 @@ defmodule LightningWeb.ProfileLive.Edit do
   defp apply_action(socket, :edit, params) do
     socket
     |> assign(:page_title, "Settings")
-    |> assign(:current_user, params)
+    |> assign(:email_changeset, Accounts.change_user_email(params))
+    |> assign(:password_changeset, Accounts.change_user_password(params))
+    # |> assign(:current_user, params)
   end
+
+  # defp assign_email_and_password_changesets(conn, _opts) do
+  #   user = conn.assigns.current_user
+
+  #   conn
+  #   |> assign(:email_changeset, Accounts.change_user_email(user))
+  #   |> assign(:password_changeset, Accounts.change_user_password(user))
+  # end
 end
