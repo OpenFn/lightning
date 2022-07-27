@@ -15,7 +15,8 @@ projects. Learn more about OpenFn at [docs.openfn.org](https://docs.openfn.org).
 
 ## **Run** via Docker
 
-1. Install the latest version of [Docker](https://docs.docker.com/engine/install/)
+1. Install the latest version of
+   [Docker](https://docs.docker.com/engine/install/)
 2. Clone the repo using git
 3. Copy the `.env.example` file to `.env`
 4. Run `docker compose run --rm web mix ecto.migrate`
@@ -36,16 +37,31 @@ See [Deployment](DEPLOYMENT.md) for more detailed information.
 
 ## **Contribute** to this project
 
-Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
+First, thanks for being here! You're contributing to a digital public good that
+will always be free and open source and aimed at serving innovative NGOs,
+governments, and social impact organizations the world over! You rock. ❤️
+
+FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
 [Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
 unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
 
 ### Set up your environment
 
+If you have push access to this repository (are you an authorized maintainer?)
+then you'll be able to make changes and push them to a feature branch before
+submitting a pull request. If you're new to OpenFn, you'll need to
+[**make a fork**](https://github.com/OpenFn/Lightning/fork) and push your
+changes there.
+
+Once you're ready to submit a pull request, you can click the "compare across
+forks" link on GitHub's
+[pull request](https://github.com/OpenFn/Lightning/compare) interface and then
+open one for review.
+
 #### Clone the repo and set ENVs
 
 ```sh
-git clone git@github.com:OpenFn/Lightning.git
+git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
 cd Lightning
 cp .env.example .env # and adjust as necessary!
 ```
