@@ -20,7 +20,7 @@ defmodule LightningWeb.ProfileLive.Edit do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(_params, _url, socket) do
     {:noreply,
      apply_action(
        socket,
@@ -34,7 +34,8 @@ defmodule LightningWeb.ProfileLive.Edit do
     |> assign(:page_title, "Settings")
     |> assign(:email_changeset, Accounts.change_user_email(params))
     |> assign(:password_changeset, Accounts.change_user_password(params))
-    # |> assign(:current_user, params)
+    |> IO.inspect(label: "This is what I'm working with......")
+    |> assign(:current_user, params)
   end
 
   # defp assign_email_and_password_changesets(conn, _opts) do
