@@ -14,8 +14,6 @@ defmodule LightningWeb.ProfileLive.Edit do
 
   # alias Lightning.Invocation
 
-  on_mount {LightningWeb.Hooks, :project_scope}
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}
