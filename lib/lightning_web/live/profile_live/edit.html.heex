@@ -5,12 +5,10 @@
   <Layout.centered>
     <.live_component
       module={LightningWeb.ProfileLive.FormComponent}
-      id={@current_user.id || :new}
-      email_changeset={@email_changeset}
+      id={@current_user.id}
       title={@page_title}
       action={@live_action}
       password_changeset={@password_changeset}
-      return_to={Routes.profile_edit_path(@socket, :edit)}
     />
   </Layout.centered>
 </Layout.page_content>

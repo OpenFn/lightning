@@ -5,14 +5,6 @@ defmodule LightningWeb.ProfileLive.Edit do
   """
   use LightningWeb, :live_view
   alias Lightning.Accounts
-  # alias LightningWeb.UserAuth
-
-  # import Plug.Conn
-  # @behaviour Plug
-
-  # plug :assign_email_and_password_changesets
-
-  # alias Lightning.Invocation
 
   @impl true
   def mount(_params, _session, socket) do
@@ -30,19 +22,11 @@ defmodule LightningWeb.ProfileLive.Edit do
   end
 
   defp apply_action(socket, :edit, params) do
+    IO.inspect("ehhhh")
     socket
     |> assign(:page_title, "Settings")
     |> assign(:email_changeset, Accounts.change_user_email(params))
     |> assign(:password_changeset, Accounts.change_user_password(params))
-    |> IO.inspect(label: "This is what I'm working with......")
     |> assign(:current_user, params)
   end
-
-  # defp assign_email_and_password_changesets(conn, _opts) do
-  #   user = conn.assigns.current_user
-
-  #   conn
-  #   |> assign(:email_changeset, Accounts.change_user_email(user))
-  #   |> assign(:password_changeset, Accounts.change_user_password(user))
-  # end
 end
