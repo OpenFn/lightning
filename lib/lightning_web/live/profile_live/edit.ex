@@ -4,7 +4,6 @@ defmodule LightningWeb.ProfileLive.Edit do
   `LightningWeb.JobLive.JobFormComponent` for common functionality.
   """
   use LightningWeb, :live_view
-  alias Lightning.Accounts
 
   @impl true
   def mount(_params, _session, socket) do
@@ -22,11 +21,8 @@ defmodule LightningWeb.ProfileLive.Edit do
   end
 
   defp apply_action(socket, :edit, params) do
-    IO.inspect("ehhhh")
     socket
     |> assign(:page_title, "Settings")
-    |> assign(:email_changeset, Accounts.change_user_email(params))
-    |> assign(:password_changeset, Accounts.change_user_password(params))
-    |> assign(:current_user, params)
+    |> assign(:user, params)
   end
 end

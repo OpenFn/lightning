@@ -27,6 +27,7 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   def handle_event("save", %{"user" => user_params}, socket) do
+    IO.inspect("Saving user......")
     save_user(socket, socket.assigns.action, user_params)
   end
 

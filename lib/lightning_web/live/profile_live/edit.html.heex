@@ -6,9 +6,9 @@
     <.live_component
       module={LightningWeb.ProfileLive.FormComponent}
       id={@current_user.id}
+      user={@user}
       title={@page_title}
       action={@live_action}
-      password_changeset={@password_changeset}
     />
   </Layout.centered>
 </Layout.page_content>
