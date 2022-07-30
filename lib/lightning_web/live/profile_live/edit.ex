@@ -1,7 +1,6 @@
 defmodule LightningWeb.ProfileLive.Edit do
   @moduledoc """
-  LiveView for editing a single dataclip, which inturn uses
-  `LightningWeb.JobLive.JobFormComponent` for common functionality.
+  LiveView for editing your user profile.
   """
   use LightningWeb, :live_view
 
