@@ -1,6 +1,6 @@
 defmodule LightningWeb.ProfileLive.Edit do
   @moduledoc """
-  LiveView for editing your user profile.
+  LiveView for user profile page.
   """
   use LightningWeb, :live_view
 
