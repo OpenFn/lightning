@@ -7,6 +7,10 @@
    phx-target={@myself}
    id="update_email"
    >
+   <span class="text-xl">Change email</span>
+   <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+   </div>
    <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
          <%= label(f, :email,
@@ -72,6 +76,10 @@
    phx-target={@myself}
    id="update_password"
    >
+   <span class="text-xl">Change password</span>
+   <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+   </div>
    <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
          <%= label(f, :current_password,
