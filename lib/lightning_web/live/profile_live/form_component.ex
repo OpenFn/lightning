@@ -1,6 +1,6 @@
 defmodule LightningWeb.ProfileLive.FormComponent do
   @moduledoc """
-  Form component for creating and editing users
+  Form component update profile email and password
   """
   use LightningWeb, :live_component
 
@@ -8,19 +8,17 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def update(%{user: user} = _assigns, socket) do
-    IO.inspect("update")
-    IO.inspect(user)
 
     {:ok,
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
-     |> IO.inspect(label: "Changeset")
+     |> assign(:email_changeset, Accounts.change_user_email(user))
      |> assign(:id, user.id)}
   end
 
   @impl true
   def handle_event(
-        "save",
+        "save_password",
         %{
           "user" => %{
             "current_password" => current_password,
@@ -46,7 +44,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
-  def handle_event("validate", %{"user" => %{"id" => id}} = _user_params, socket) do
+  def handle_event("validate_password", %{"user" => %{"id" => id}} = _user_params, socket) do
     changeset =
       id
       |> Accounts.get_user!()
@@ -55,6 +53,22 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     {:noreply,
      socket
      |> assign(:password_changeset, changeset)
+     |> Map.put(:action, :validate)
+     |> assign(:id, id)}
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event("validate_email", %{"user" => %{"id" => id}} = _user_params, socket) do
+    changeset =
+      id
+      |> Accounts.get_user!()
+      |> Accounts.change_user_email()
+
+    {:noreply,
+     socket
+     |> assign(:email_changeset, changeset)
      |> Map.put(:action, :validate)
      |> assign(:id, id)}
 
