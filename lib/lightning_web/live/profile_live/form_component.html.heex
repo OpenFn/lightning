@@ -44,13 +44,22 @@
       <div class="py-5"></div>
    </div>
    <%= hidden_input(f, :id) %>
-   <span>
-   <%= submit("update email",
-      phx_disable_with: "Saving...",
-      class:
-        "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-      ) %>
-   </span>
+   <div>
+      <span>
+        <%= live_redirect("Cancel",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+          to: Routes.settings_index_path(@socket, :index)
+        ) %>
+      </span>
+      <span>
+        <%= submit("Update email",
+          phx_disable_with: "Saving...",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        ) %>
+      </span>
+    </div>
    <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5"></div>
    </div>
@@ -118,12 +127,21 @@
       <div class="py-5"></div>
    </div>
    <%= hidden_input(f, :id) %>
-   <span>
-   <%= submit("update password",
-      phx_disable_with: "Saving...",
-      class:
-        "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-      ) %>
-   </span>
+  <div>
+      <span>
+        <%= live_redirect("Cancel",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+          to: Routes.settings_index_path(@socket, :index)
+        ) %>
+      </span>
+      <span>
+        <%= submit("Update password",
+          phx_disable_with: "Saving...",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        ) %>
+      </span>
+    </div>
    </.form>
 </div>
