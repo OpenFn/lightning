@@ -8,9 +8,13 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def update(%{user: user} = _assigns, socket) do
+    IO.inspect("update")
+    IO.inspect(user)
+
     {:ok,
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
+     |> IO.inspect(label: "Changeset")
      |> assign(:id, user.id)}
   end
 
@@ -19,27 +23,24 @@ defmodule LightningWeb.ProfileLive.FormComponent do
         "save",
         %{
           "user" => %{
-            "current_password" => _current_password,
+            "current_password" => current_password,
             "password" => password,
-            "password_confirmation" => _password_confirmation,
             "id" => id
           }
-        } = user_params,
+        } = _user_params,
         socket
       ) do
     user = Accounts.get_user!(id)
 
-    case Accounts.apply_user_email(user, password, user_params) do
+    case Accounts.update_user_password(user, current_password, %{password: password}) do
       {:ok, _user} ->
-        IO.inspect(1)
+
         {:noreply,
          socket
          |> put_flash(:info, "Profile updated successfully")
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        IO.inspect(2)
-        IO.inspect(changeset)
         {:noreply, assign(socket, :changeset, changeset)}
     end
   end
