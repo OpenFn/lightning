@@ -39,7 +39,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:noreply, assign(socket, :password_changeset, changeset)}
     end
   end
 
@@ -68,7 +68,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:noreply, assign(socket, :email_changeset, changeset)}
     end
   end
 
@@ -89,7 +89,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
      |> Map.put(:action, :validate)
      |> assign(:id, id)}
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply, assign(socket, :password_changeset, changeset)}
   end
 
   @impl true
@@ -109,6 +109,6 @@ defmodule LightningWeb.ProfileLive.FormComponent do
      |> Map.put(:action, :validate)
      |> assign(:id, id)}
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply, assign(socket, :email_changeset, changeset)}
   end
 end
