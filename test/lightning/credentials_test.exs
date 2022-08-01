@@ -52,7 +52,14 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "create_credential/1 with valid data creates a credential" do
-      valid_attrs = %{body: %{}, name: "some name", user_id: user_fixture().id}
+      valid_attrs = %{
+        body: %{},
+        name: "some name",
+        user_id: user_fixture().id,
+        project_credentials: [
+          %{project_id: project_fixture().id}
+        ]
+      }
 
       assert {:ok, %Credential{} = credential} =
                Credentials.create_credential(valid_attrs)
@@ -74,8 +81,29 @@ defmodule Lightning.CredentialsTest do
 
     test "update_credential/2 with valid data updates the credential" do
       user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-      update_attrs = %{body: %{}, name: "some updated name"}
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          project_credentials: [
+            %{project_id: project_fixture().id}
+          ]
+        )
+
+      original_project_credential =
+        Enum.at(credential.project_credentials, 0)
+        |> Map.from_struct()
+
+      new_project = project_fixture()
+
+      update_attrs = %{
+        body: %{},
+        name: "some updated name",
+        project_credentials: %{
+          "0" => original_project_credential,
+          "1" => %{project_id: new_project.id}
+        }
+      }
 
       assert {:ok, %Credential{} = credential} =
                Credentials.update_credential(credential, update_attrs)
