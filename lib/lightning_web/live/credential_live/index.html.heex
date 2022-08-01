@@ -34,12 +34,6 @@
           </.td>
           <.td>
             <span>
-              <%= live_redirect("Transfer Ownership",
-                to: Routes.credential_edit_path(@socket, :transfer_ownership, credential)
-              ) %>
-            </span>
-            |
-            <span>
               <%= live_redirect("Edit",
                 to: Routes.credential_edit_path(@socket, :edit, credential)
               ) %>

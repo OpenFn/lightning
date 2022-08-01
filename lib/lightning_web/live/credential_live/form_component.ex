@@ -12,6 +12,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @impl true
   def update(%{credential: credential, projects: projects} = assigns, socket) do
     changeset = Credentials.change_credential(credential)
+    IO.inspect(changeset)
 
     all_projects = projects |> Enum.map(&{&1.name, &1.id})
 
@@ -22,7 +23,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        all_projects: all_projects,
        changeset: changeset,
        available_projects: filter_available_projects(changeset, all_projects),
-       selected_project: ""
+       selected_project: "",
+       users: Lightning.Accounts.list_users()
      )}
   end
 

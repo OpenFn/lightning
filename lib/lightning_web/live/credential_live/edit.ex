@@ -26,7 +26,8 @@ defmodule LightningWeb.CredentialLive.Edit do
       credential:
         Credentials.get_credential!(id)
         |> Lightning.Repo.preload(:project_credentials),
-      projects: list_projects(socket)
+      projects: list_projects(socket),
+      users: list_users()
     )
   end
 
@@ -39,16 +40,22 @@ defmodule LightningWeb.CredentialLive.Edit do
     )
   end
 
-  defp apply_action(socket, :transfer_ownership, _params) do
+  defp apply_action(socket, :transfer_ownership, %{"id" => id}) do
     socket
     |> assign(:page_title, "Transfer Credential Ownership")
     |> assign(
-      credential: %Credential{user_id: socket.assigns.current_user.id},
-      users: list_users(socket)
+      credential:
+        Credentials.get_credential!(id)
+        |> Lightning.Repo.preload(:project_credentials),
+      projects: list_projects(socket)
     )
   end
 
   defp list_projects(socket) do
     Projects.get_projects_for_user(socket.assigns.current_user)
+  end
+
+  defp list_users() do
+    Lightning.Accounts.list_users()
   end
 end
