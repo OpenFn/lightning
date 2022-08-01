@@ -15,6 +15,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     all_projects = projects |> Enum.map(&{&1.name, &1.id})
 
+    body_schema = fake_body_schema()
+    body_changeset = Lightning.Credentials.Schema.changeset(body_schema, %{})
+
     {:ok,
      socket
      |> assign(assigns)
@@ -22,8 +25,79 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        all_projects: all_projects,
        changeset: changeset,
        available_projects: filter_available_projects(changeset, all_projects),
-       selected_project: ""
+       selected_project: "",
+       body_schema: body_schema,
+       body_changeset: body_changeset
      )}
+  end
+
+  defp fake_body_schema() do
+    """
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "description": "The username used to log in"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "description": "The password used to log in",
+          "writeOnly": true
+        },
+        "hostUrl": {
+          "title": "Host URL",
+          "type": "string",
+          "description": "The destination server Url",
+          "format": "uri"
+        }
+      },
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["hostUrl", "password", "username"]
+    }
+    """
+    |> Jason.decode!()
+    |> ExJsonSchema.Schema.resolve()
+  end
+
+  def input(form, field) do
+    type = Phoenix.HTML.Form.input_type(form, field)
+    apply(Phoenix.HTML.Form, type, [form, field])
+  end
+
+  def schema_input(schema_root, form, field) do
+    properties =
+      schema_root.schema
+      |> Map.get("properties")
+      |> Map.get(field |> to_string())
+      |> IO.inspect()
+
+    text = properties |> Map.get("title")
+
+    type =
+      case properties do
+        %{"format" => "uri"} -> :url_input
+        %{"type" => "string", "writeOnly" => true} -> :password_input
+        %{"type" => "string"} -> :text_input
+      end
+
+    [
+      label(form, field, text,
+        class: "block text-sm font-medium text-secondary-700"
+      ),
+      error_tag(form, field),
+      apply(Phoenix.HTML.Form, type, [
+        form,
+        field,
+        [
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ]
+      ])
+    ]
   end
 
   @impl true
