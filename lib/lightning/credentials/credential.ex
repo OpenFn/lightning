@@ -34,15 +34,18 @@ defmodule Lightning.Credentials.Credential do
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
+    |> validate_transfer_ownership()
   end
 
-  def validate_transfer_ownership(changeset, field, options \\ []) do
-    validate_change(changeset, field, fn _, user ->
 
-      case String.starts_with?(url, @our_url) do
-        true -> []
-        false -> [{field, options[:message] || "Unexpected URL"}]
+  defp validate_transfer_ownership(changeset) do
+    user_id = get_field(changeset, :user_id)
+    credential_id = get_field(changeset, :id)
+    if credential_id != nil do
+      case !!Lightning.Credentials.can_credential_be_shared_to_user(credential_id, user_id) do
+        true -> changeset
+        false -> add_error(changeset, :user_id, "User can't be transfer this credential")
       end
-    end)
+    end
   end
 end
