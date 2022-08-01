@@ -16,11 +16,11 @@ defmodule Lightning.Jobs do
     Repo.all(Job |> preload(:trigger))
   end
 
-  def list_cron_jobs do
+  def list_active_cron_jobs do
     Repo.all(
       from j in Job,
         join: t in assoc(j, :trigger),
-        where: t.type == :cron,
+        where: t.type == :cron and j.enabled == true,
         preload: [trigger: t]
     )
   end
@@ -49,8 +49,13 @@ defmodule Lightning.Jobs do
     end
   end
 
-  def find_cron_triggers(timestamp) do
-    list_cron_jobs()
+  @doc """
+  Returns a list of jobs to execute, given a current timestamp in Unix. This is
+  used by the scheduler, which calls this function once every minute.
+  """
+  @spec get_jobs_for_cron_execution(integer) :: [Job.t()]
+  def get_jobs_for_cron_execution(timestamp) do
+    list_active_cron_jobs()
     |> Enum.filter(fn job ->
       cron_expression = Map.get(Map.get(job, :trigger), :cron_expression)
       {:ok, cron} = Crontab.CronExpression.Parser.parse(cron_expression)
