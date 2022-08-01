@@ -106,6 +106,7 @@ defmodule LightningWeb.Router do
 
       live "/credentials", CredentialLive.Index, :index
       live "/credentials/new", CredentialLive.Edit, :new
+      live "/credentials/transfer", CredentialLive.Edit, :transfer_ownership
       live "/credentials/:id", CredentialLive.Edit, :edit
 
       live "/", DashboardLive.Index, :index
