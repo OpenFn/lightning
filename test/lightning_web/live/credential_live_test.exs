@@ -154,5 +154,34 @@ defmodule LightningWeb.CredentialLiveTest do
              )
              |> render_submit() =~ "some updated body"
     end
+
+    # test "updates credential for transfering", %{conn: conn, credential: credential} do
+    #   {:ok, index_live, _html} =
+    #     live(conn, Routes.credential_index_path(conn, :index))
+
+    #   {:ok, form_live, _} =
+    #     index_live
+    #     |> element("#credential-#{credential.id} a", "Edit")
+    #     |> render_click()
+    #     |> follow_redirect(
+    #       conn,
+    #       Routes.credential_edit_path(conn, :edit, credential)
+    #     )
+
+    #     # @update_attrs %{
+    #     #   body: "some updated body",
+    #     #   name: "some updated name"
+    #     # }
+    #     # @invalid_attrs %{body: nil, name: nil}
+
+    #   assert form_live
+    #          |> form("#credential-form", credential: %{body: "some body", name: "some name", user_id: "hbjsinokak"})
+    #          |> render_change() =~ "can&#39;t be blank"
+
+    #   # assert form_live
+    #   #        |> form("#credential-form", credential: @update_attrs)
+    #   #        |> render_submit() =~ "some updated body"
+    # end
+
   end
 end

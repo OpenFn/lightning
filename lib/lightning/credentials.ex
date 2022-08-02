@@ -236,12 +236,20 @@ defmodule Lightning.Credentials do
     end
 
   def can_credential_be_shared_to_user(credential_id, user_id) do
-    from(pu in Lightning.Projects.ProjectUser,
-      join: pc in Lightning.Projects.ProjectCredential,
-      on: pu.project_id == pc.project_id,
-      where: pu.user_id == ^user_id and pc.credential_id == ^credential_id,
-      select: count(pu.id)
-    )
-    |> Repo.one()
+    projects_credentials =
+      from(pc in Lightning.Projects.ProjectCredential,
+        where: pc.credential_id == ^credential_id,
+        select: pc.project_id
+      )
+      |> Repo.all()
+
+    projects_users =
+      from(pu in Lightning.Projects.ProjectUser,
+        where: pu.user_id == ^user_id,
+        select: pu.project_id
+      )
+      |> Repo.all()
+
+    Enum.sort(projects_credentials) == Enum.sort(projects_users)
   end
 end

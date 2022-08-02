@@ -42,7 +42,7 @@ defmodule Lightning.Credentials.Credential do
     credential_id = get_field(changeset, :id)
 
     if credential_id != nil do
-      case !!Lightning.Credentials.can_credential_be_shared_to_user(
+      case Lightning.Credentials.can_credential_be_shared_to_user(
              credential_id,
              user_id
            ) do
@@ -53,7 +53,7 @@ defmodule Lightning.Credentials.Credential do
           add_error(
             changeset,
             :user_id,
-            "User can't be transfer this credential"
+            "Transfer impossible, this user doesn't have access to some of the projects using this credential; please grant the user access to all the project using this credential or share it with another user"
           )
       end
     else

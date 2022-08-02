@@ -162,6 +162,34 @@ defmodule Lightning.CredentialsTest do
       credential = credential_fixture(user_id: user.id)
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
     end
+
+    test "can credential be transfered query" do
+      %{id: user_id_1} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id_3} = Lightning.AccountsFixtures.user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id} = project} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user_id_1, user_id: user_id_2}]
+        })
+
+      credential =
+        Lightning.CredentialsFixtures.credential_fixture(
+          user_id: user_id_1,
+          project_credentials: [%{project_id: project_id}]
+        )
+
+      assert Credentials.can_credential_be_shared_to_user(
+               credential.id,
+               user_id_2
+             ) == true
+
+      assert Credentials.can_credential_be_shared_to_user(
+               credential.id,
+               user_id_3
+             ) == false
+    end
   end
 
   describe "get_sensitive_values/1" do
