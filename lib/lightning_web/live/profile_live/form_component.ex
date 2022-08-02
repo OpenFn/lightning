@@ -18,20 +18,14 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   @impl true
   def handle_event(
         "save_password",
-        %{
-          "user" => %{
-            "current_password" => current_password,
-            "password" => password,
-            "id" => id
-          }
-        } = _user_params,
+        %{"user" => %{"current_password" => current_password} = user_params},
         socket
       ) do
-    user = Accounts.get_user!(id)
-
-    case Accounts.update_user_password(user, current_password, %{
-           password: password
-         }) do
+    case Accounts.update_user_password(
+           socket.assigns.user,
+           current_password,
+           user_params
+         ) do
       {:ok, _user} ->
         {:noreply,
          socket
@@ -79,7 +73,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Accounts.change_user_password(user_params)
       |> Map.put(:action, :validate_password)
 
-     {:noreply, assign(socket, :password_changeset, changeset)}
+    {:noreply, assign(socket, :password_changeset, changeset)}
   end
 
   @impl true
@@ -89,6 +83,6 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Accounts.change_user_email(user_params)
       |> Map.put(:action, :validate_email)
 
-     {:noreply, assign(socket, :email_changeset, changeset)}
+    {:noreply, assign(socket, :email_changeset, changeset)}
   end
 end
