@@ -99,10 +99,10 @@ defmodule Lightning.CredentialsTest do
       update_attrs = %{
         body: %{},
         name: "some updated name",
-        project_credentials: %{
-          "0" => original_project_credential,
-          "1" => %{project_id: new_project.id}
-        }
+        project_credentials: [
+          original_project_credential,
+          %{project_id: new_project.id}
+        ]
       }
 
       assert {:ok, %Credential{} = credential} =
@@ -110,6 +110,27 @@ defmodule Lightning.CredentialsTest do
 
       assert credential.body == %{}
       assert credential.name == "some updated name"
+
+      audit_events =
+        from(a in Audit,
+          where: a.row_id == ^credential.id,
+          select: {a.event, type(a.metadata, :map)}
+        )
+        |> Repo.all()
+
+      assert {"created", %{"after" => nil, "before" => nil}} in audit_events
+
+      assert {"updated",
+              %{
+                "before" => %{"name" => "some name"},
+                "after" => %{"name" => "some updated name"}
+              }} in audit_events
+
+      assert {"added_to_project",
+              %{
+                "before" => %{"project_id" => nil},
+                "after" => %{"project_id" => new_project.id}
+              }} in audit_events
     end
 
     test "update_credential/2 with invalid data returns error changeset" do

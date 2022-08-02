@@ -122,6 +122,12 @@ defmodule Lightning.Credentials do
          multi,
          %Ecto.Changeset{data: %Credential{}} = changeset
        ) do
+    project_credentials_multi =
+      Ecto.Changeset.get_change(changeset, :project_credentials, [])
+      |> Enum.reduce(Multi.new(), fn changeset, multi ->
+        derive_event(multi, changeset)
+      end)
+
     multi
     |> Multi.insert(
       :audit,
@@ -129,46 +135,58 @@ defmodule Lightning.Credentials do
         Audit.event("updated", credential.id, credential.user_id, changeset)
       end
     )
-    |> Multi.append(
-      Ecto.Changeset.get_change(changeset, :project_credentials, [])
-      |> Enum.reduce(Multi.new(), fn changeset, multi ->
-        multi
-        |> Multi.append(derive_events(multi, changeset))
-      end)
-    )
+    |> Multi.append(project_credentials_multi)
   end
 
-  defp derive_events(
+  defp derive_event(
          multi,
          %Ecto.Changeset{
+           action: :delete,
            data: %Lightning.Projects.ProjectCredential{}
          } = changeset
        ) do
-    multi
-    |> Multi.insert(
+    Multi.insert(
+      multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        case changeset.action do
-          :insert ->
-            "added_to_project"
-            |> Audit.event(credential.id, credential.user_id, %{
-              before: %{project_id: nil},
-              after: %{
-                project_id: Ecto.Changeset.get_field(changeset, :project_id)
-              }
-            })
-
-          :delete ->
-            "removed_from_project"
-            |> Audit.event(credential.id, credential.user_id, %{
-              before: %{
-                project_id: Ecto.Changeset.get_field(changeset, :project_id)
-              },
-              after: %{project_id: nil}
-            })
-        end
+        "removed_from_project"
+        |> Audit.event(credential.id, credential.user_id, %{
+          before: %{
+            project_id: Ecto.Changeset.get_field(changeset, :project_id)
+          },
+          after: %{project_id: nil}
+        })
       end
     )
+  end
+
+  defp derive_event(
+         multi,
+         %Ecto.Changeset{
+           action: :insert,
+           data: %Lightning.Projects.ProjectCredential{}
+         } = changeset
+       ) do
+    Multi.insert(
+      multi,
+      {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
+      fn %{credential: credential} ->
+        "added_to_project"
+        |> Audit.event(credential.id, credential.user_id, %{
+          before: %{project_id: nil},
+          after: %{
+            project_id: Ecto.Changeset.get_field(changeset, :project_id)
+          }
+        })
+      end
+    )
+  end
+
+  defp derive_event(multi, %Ecto.Changeset{
+         action: :update,
+         data: %Lightning.Projects.ProjectCredential{}
+       }) do
+    multi
   end
 
   @doc """

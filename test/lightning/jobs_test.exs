@@ -36,7 +36,7 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
-      job_0 = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+      _job_0 = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
 
       job_1 = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
 

@@ -12,6 +12,39 @@ defmodule Lightning.Credentials.Audit do
       "removed_from_project"
     ]
 
+  defmodule Metadata do
+    @moduledoc false
+
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field :before, :map
+      field :after, :map
+    end
+
+    @doc false
+    def changeset(metadata, attrs \\ %{}) do
+      metadata
+      |> cast(attrs, [:before, :after])
+      |> update_change(:before, &encrypt_body/1)
+      |> update_change(:after, &encrypt_body/1)
+    end
+
+    defp encrypt_body(changes) when is_map(changes) do
+      if Map.has_key?(changes, :body) do
+        changes
+        |> Map.update(:body, nil, fn val ->
+          {:ok, val} = Lightning.Encrypted.Map.dump(val)
+          val |> Base.encode64()
+        end)
+      else
+        changes
+      end
+    end
+  end
+
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -23,11 +56,7 @@ defmodule Lightning.Credentials.Audit do
   schema "credentials_audit" do
     field :event, :string
 
-    embeds_one :metadata, Metadata do
-      field :before, :map
-      field :after, :map
-    end
-
+    embeds_one :metadata, Metadata
     belongs_to :row, Credential
     belongs_to :actor, User
 
@@ -38,27 +67,7 @@ defmodule Lightning.Credentials.Audit do
   def changeset(%__MODULE__{} = audit, attrs) do
     audit
     |> cast(attrs, [:event, :row_id, :actor_id])
-    |> cast_embed(:metadata, with: &metadata_changeset/2)
+    |> cast_embed(:metadata)
     |> validate_required([:event, :row_id, :actor_id])
-  end
-
-  @doc false
-  def metadata_changeset(metadata, attrs \\ %{}) do
-    metadata
-    |> cast(attrs, [:before, :after])
-    |> update_change(:before, &encrypt_body/1)
-    |> update_change(:after, &encrypt_body/1)
-  end
-
-  defp encrypt_body(changes) when is_map(changes) do
-    if Map.has_key?(changes, :body) do
-      changes
-      |> Map.update(:body, nil, fn val ->
-        {:ok, val} = Lightning.Encrypted.Map.dump(val)
-        val |> Base.encode64()
-      end)
-    else
-      changes
-    end
   end
 end
