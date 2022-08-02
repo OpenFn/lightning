@@ -9,6 +9,24 @@ defmodule LightningWeb.ProfileLiveTest do
     password_confirmation: "some new password"
   }
 
+  @invalid_empty_password_attrs %{
+    current_password: "",
+    password: "",
+    password_confirmation: ""
+  }
+
+  @invalid_too_short_password_attrs %{
+    current_password: "",
+    password: "abc",
+    password_confirmation: ""
+  }
+
+  @invalid_dont_match_password_attrs %{
+    current_password: "test",
+    password: "password1",
+    password_confirmation: "password2"
+  }
+
   describe "Edit user profile" do
     setup :register_and_log_in_superuser
 
@@ -21,17 +39,27 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "save password", %{conn: conn, user: user} do
-      {:ok, profile_live, html} =
+      {:ok, profile_live, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
-      {:ok, _, html} =
-        profile_live
-        |> form("#job-form", job: @invalid_attrs)
-        |> render_change() =~
-          "can&#39;t be blank"
-          # |> form("#update_password", password_changeset: @update_password_attrs)
-          # |> render_submit()
-          # |> follow_redirect(conn, Routes.profile_edit_path(conn, :edit))
+      assert profile_live
+             |> form("#password_form", user: @invalid_empty_password_attrs)
+             |> render_change() =~ "can&#39;t be blank"
+
+      assert profile_live
+             |> form("#password_form", user: @invalid_dont_match_password_attrs)
+             |> render_change() =~ "does not match password"
+
+      assert profile_live
+             |> form("#password_form", user: @invalid_too_short_password_attrs)
+             |> render_change() =~ "should be at least 8 character(s)"
+
+      # {:ok, _, html} =
+      #   profile_live
+      #   |> form("#password_form", user: @update_password_attrs)
+      #   |> render_submit()
+
+      # assert html =~ "Profile password updated successfully"
     end
   end
 end
