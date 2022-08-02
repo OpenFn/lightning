@@ -37,15 +37,27 @@ defmodule Lightning.Credentials.Credential do
     |> validate_transfer_ownership()
   end
 
-
   defp validate_transfer_ownership(changeset) do
     user_id = get_field(changeset, :user_id)
     credential_id = get_field(changeset, :id)
+
     if credential_id != nil do
-      case !!Lightning.Credentials.can_credential_be_shared_to_user(credential_id, user_id) do
-        true -> changeset
-        false -> add_error(changeset, :user_id, "User can't be transfer this credential")
+      case !!Lightning.Credentials.can_credential_be_shared_to_user(
+             credential_id,
+             user_id
+           ) do
+        true ->
+          changeset
+
+        false ->
+          add_error(
+            changeset,
+            :user_id,
+            "User can't be transfer this credential"
+          )
       end
+    else
+      changeset
     end
   end
 end
