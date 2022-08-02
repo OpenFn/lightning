@@ -7,6 +7,10 @@ Lightning.Accounts.UserToken.html
 Lightning.Accounts.html
 Lightning.AdaptorRegistry.Npm.html
 Lightning.AdaptorRegistry.html
+Lightning.Auditing.Model.html
+Lightning.Auditing.Policy.html
+Lightning.Auditing.html
+Lightning.Credentials.Audit.html
 Lightning.Credentials.Credential.html
 Lightning.Credentials.Policy.html
 Lightning.Credentials.SensitiveValues.html
@@ -45,6 +49,7 @@ LightningWeb.API.ProjectController.html
 LightningWeb.API.ProjectView.html
 LightningWeb.API.RunController.html
 LightningWeb.API.RunView.html
+LightningWeb.AuditLive.Index.html
 LightningWeb.ChangesetView.html
 LightningWeb.Components.WorkflowDiagram.html
 LightningWeb.CredentialLive.Edit.html
@@ -108,8 +113,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-e56bf6e34f.js
-dist/sidebar_items-30ad3f8b89.js
+dist/search_items-378c1f613a.js
+dist/sidebar_items-55a9a21c8c.js
 index.html
 readme.html
 search.html
