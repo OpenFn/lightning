@@ -2,14 +2,11 @@ defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Credentials
-  import Lightning.CredentialsFixtures
+  alias Lightning.Credentials.{Credential, Audit}
+  import Lightning.{CredentialsFixtures, AccountsFixtures, ProjectsFixtures}
+  import Ecto.Query
 
   describe "Model interactions" do
-    alias Lightning.Credentials.Credential
-
-    import Lightning.AccountsFixtures
-    import Lightning.ProjectsFixtures
-
     @invalid_attrs %{body: nil, name: nil}
 
     test "list_credentials_for_user/1 returns all credentials for given user" do
@@ -55,13 +52,26 @@ defmodule Lightning.CredentialsTest do
     end
 
     test "create_credential/1 with valid data creates a credential" do
-      valid_attrs = %{body: %{}, name: "some name", user_id: user_fixture().id}
+      valid_attrs = %{
+        body: %{},
+        name: "some name",
+        user_id: user_fixture().id,
+        project_credentials: [
+          %{project_id: project_fixture().id}
+        ]
+      }
 
       assert {:ok, %Credential{} = credential} =
                Credentials.create_credential(valid_attrs)
 
       assert credential.body == %{}
       assert credential.name == "some name"
+
+      assert from(a in Audit,
+               where: a.row_id == ^credential.id and a.event == "created"
+             )
+             |> Repo.one!(),
+             "Has exactly one 'created' event"
     end
 
     test "create_credential/1 with invalid data returns error changeset" do
@@ -71,14 +81,56 @@ defmodule Lightning.CredentialsTest do
 
     test "update_credential/2 with valid data updates the credential" do
       user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-      update_attrs = %{body: %{}, name: "some updated name"}
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          project_credentials: [
+            %{project_id: project_fixture().id}
+          ]
+        )
+
+      original_project_credential =
+        Enum.at(credential.project_credentials, 0)
+        |> Map.from_struct()
+
+      new_project = project_fixture()
+
+      update_attrs = %{
+        body: %{},
+        name: "some updated name",
+        project_credentials: [
+          original_project_credential,
+          %{project_id: new_project.id}
+        ]
+      }
 
       assert {:ok, %Credential{} = credential} =
                Credentials.update_credential(credential, update_attrs)
 
       assert credential.body == %{}
       assert credential.name == "some updated name"
+
+      audit_events =
+        from(a in Audit,
+          where: a.row_id == ^credential.id,
+          select: {a.event, type(a.metadata, :map)}
+        )
+        |> Repo.all()
+
+      assert {"created", %{"after" => nil, "before" => nil}} in audit_events
+
+      assert {"updated",
+              %{
+                "before" => %{"name" => "some name"},
+                "after" => %{"name" => "some updated name"}
+              }} in audit_events
+
+      assert {"added_to_project",
+              %{
+                "before" => %{"project_id" => nil},
+                "after" => %{"project_id" => new_project.id}
+              }} in audit_events
     end
 
     test "update_credential/2 with invalid data returns error changeset" do

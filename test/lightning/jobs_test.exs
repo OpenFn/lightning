@@ -20,18 +20,36 @@ defmodule Lightning.JobsTest do
       assert Jobs.list_jobs() == [Jobs.get_job!(job.id)]
     end
 
-    test "list_cron_jobs/0 returns all jobs" do
+    test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
       job_fixture()
-      job = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
-      assert Jobs.list_cron_jobs() == [Jobs.get_job!(job.id)]
+
+      enabled_job =
+        job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+
+      _disabled_job =
+        job_fixture(
+          trigger: %{type: :cron, cron_expression: "5 0 * 8 *"},
+          enabled: false
+        )
+
+      assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
     end
 
-    test "find_cron_triggers/0 filter jobs on its cron trigger based off a given time" do
-      job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+    test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
+      _job_0 = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
 
       job_1 = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
 
-      assert Jobs.find_cron_triggers(DateTime.utc_now() |> DateTime.to_unix()) ==
+      _disabled_job =
+        job_fixture(
+          trigger: %{type: :cron, cron_expression: "* * * * *"},
+          enabled: false
+        )
+
+      assert Jobs.get_jobs_for_cron_execution(
+               DateTime.utc_now()
+               |> DateTime.to_unix()
+             ) ==
                [Jobs.get_job!(job_1.id)]
     end
 

@@ -10,15 +10,26 @@
           />
         </div>
         <Settings.menu_item
-          text="Projects"
           to={Routes.project_index_path(@socket, :index)}
           active={@active_menu_item == :projects}
-        />
+        >
+          <Heroicons.Outline.library class="h-5 w-5 inline-block mr-2" />
+          <span class="inline-block align-middle">Projects</span>
+        </Settings.menu_item>
         <Settings.menu_item
-          text="Users"
           to={Routes.user_index_path(@socket, :index)}
           active={@active_menu_item == :users}
-        />
+        >
+          <Heroicons.Outline.user_group class="h-5 w-5 inline-block mr-2" />
+          <span class="inline-block align-middle">Users</span>
+        </Settings.menu_item>
+        <Settings.menu_item
+          to={Routes.audit_index_path(@socket, :index)}
+          active={@active_menu_item == :audit}
+        >
+          <Heroicons.Outline.archive class="h-5 w-5 inline-block mr-2" />
+          <span class="inline-block align-middle">Audit</span>
+        </Settings.menu_item>
         <div class="grow"></div>
         <Settings.menu_item to={Routes.dashboard_index_path(@socket, :index)}>
           <Icon.left class="h-5 w-5 inline-block mr-2" />

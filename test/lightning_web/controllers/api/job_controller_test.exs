@@ -1,5 +1,5 @@
 defmodule LightningWeb.API.JobControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   import Lightning.JobsFixtures
 

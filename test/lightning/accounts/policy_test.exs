@@ -1,5 +1,5 @@
 defmodule Lightning.Accounts.PolicyTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Accounts.User
 

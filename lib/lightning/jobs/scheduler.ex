@@ -29,7 +29,7 @@ defmodule Lightning.Jobs.Scheduler do
   def enqueue_cronjobs(date_time \\ DateTime.utc_now()) do
     date_time
     |> DateTime.to_unix()
-    |> Jobs.find_cron_triggers()
+    |> Jobs.get_jobs_for_cron_execution()
     |> Enum.each(fn %Jobs.Job{id: id, project_id: project_id} ->
       {:ok, %{event: event, run: run}} = invoke_cronjob(id, project_id)
 

@@ -1,3 +1,5 @@
+# Report which tests are syncronous
+# Rexbug.start("ExUnit.Server.add_sync_module/_")
 Mimic.copy(:hackney)
 Mimic.copy(Lightning.Pipeline.Runner)
 

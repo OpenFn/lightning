@@ -1,5 +1,5 @@
 defmodule Lightning.ProjectsTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Projects
   alias Lightning.Projects.Project

@@ -1,5 +1,5 @@
 defmodule LightningWeb.EndToEndTest do
-  use LightningWeb.ConnCase, async: false
+  use LightningWeb.ConnCase, async: true
   use Oban.Testing, repo: Lightning.Repo
 
   import Lightning.{

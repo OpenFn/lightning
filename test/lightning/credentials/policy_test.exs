@@ -1,5 +1,5 @@
 defmodule Lightning.Credentials.PolicyTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   describe "Accounts policy" do
     test "users can only access their credentials" do

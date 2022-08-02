@@ -4,23 +4,24 @@ defmodule Lightning.CredentialsFixtures do
   entities via the `Lightning.Credentials` context.
   """
 
+  def credential_attrs(attrs \\ []) when is_list(attrs) do
+    Keyword.put_new_lazy(attrs, :user_id, fn ->
+      Lightning.AccountsFixtures.user_fixture().id
+    end)
+    |> Enum.into(%{
+      body: %{},
+      name: "some name"
+    })
+  end
+
   @doc """
   Generate a credential.
   """
   @spec credential_fixture(attrs :: Keyword.t()) ::
           Lightning.Credentials.Credential.t()
   def credential_fixture(attrs \\ []) when is_list(attrs) do
-    attrs =
-      Keyword.put_new_lazy(attrs, :user_id, fn ->
-        Lightning.AccountsFixtures.user_fixture().id
-      end)
-
     {:ok, credential} =
-      attrs
-      |> Enum.into(%{
-        body: %{},
-        name: "some name"
-      })
+      credential_attrs(attrs)
       |> Lightning.Credentials.create_credential()
 
     credential

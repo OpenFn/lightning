@@ -1,5 +1,5 @@
 defmodule LightningWeb.API.ProjectControllerTest do
-  use LightningWeb.ConnCase
+  use LightningWeb.ConnCase, async: true
 
   import Lightning.ProjectsFixtures
 

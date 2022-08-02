@@ -1,5 +1,5 @@
 defmodule Lightning.Jobs.PolicyTest do
-  use Lightning.DataCase
+  use Lightning.DataCase, async: true
 
   alias Lightning.Accounts.User
   import Lightning.ProjectsFixtures

@@ -46,6 +46,8 @@ defmodule Lightning.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      # {:engine, path: "../engine"},
+      # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 2.0"},
       {:bodyguard, "~> 2.2"},
       {:cloak_ecto, "~> 1.2.0"},
@@ -69,12 +71,12 @@ defmodule Lightning.MixProject do
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
       {:oban, "~> 2.13"},
       {:petal_components, "~> 0.17"},
+      {:phoenix, "~> 1.6.7"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.2"},
       {:phoenix_live_dashboard, "~> 0.6.5"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 0.17.10"},
-      {:phoenix, "~> 1.6.7"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:scrivener_ecto, "~> 2.7"},
@@ -83,7 +85,6 @@ defmodule Lightning.MixProject do
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
-      # {:engine, path: "../engine"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:temp, "~> 0.4"},
