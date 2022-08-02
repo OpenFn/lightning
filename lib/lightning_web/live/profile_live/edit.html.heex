@@ -6,9 +6,9 @@
     <.live_component
       module={LightningWeb.ProfileLive.FormComponent}
       id={@current_user.id}
-      user={@user}
       title={@page_title}
       action={@live_action}
+      user={@user}
       return_to={Routes.profile_edit_path(@socket, :edit)}
     />
   </Layout.centered>
