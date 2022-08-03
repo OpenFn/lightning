@@ -17,21 +17,9 @@
         ) %>
 
         <div class="mt-2">
-          <.form
-            let={f}
-            as="credential_body"
-            for={@body_changeset}
-            id="credential-body-form"
-            phx-target={@myself}
-            phx-change="validate"
-            phx-submit="save"
-          >
-            <%= for {field, _type} <- f.source.types do %>
-              <%= schema_input(@body_schema, f, field) %>
-            <% end %>
-          </.form>
-
-     
+          <%= for {field, _type} <- @body_changeset.types do %>
+            <%= schema_input(@body_schema, @body_changeset, field) %>
+          <% end %>
         </div>
 
         <div class="mt-2">
@@ -107,11 +95,11 @@
         ) %>
       </span>
       <span>
-        <%= submit("Save",
-          phx_disable_with: "Saving...",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        ) %>
+        <.submit_button
+          disabled_with="Saving..."
+          disabled={!@changeset.valid? || !@body_changeset.valid?}
+          value="Save"
+        />
       </span>
     </div>
   </.form>

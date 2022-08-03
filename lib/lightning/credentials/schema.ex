@@ -12,10 +12,11 @@ defmodule Lightning.Credentials.Schema do
 
   def changeset(schema, attrs) do
     validation = Validator.validate(schema, attrs, error_formatter: false)
+
     types = get_types(schema)
 
     changeset =
-      {%{}, types}
+      {types |> Map.keys() |> Enum.map(&{&1, nil}) |> Map.new(), types}
       |> Changeset.cast(attrs, Map.keys(types))
 
     case validation do
@@ -38,6 +39,9 @@ defmodule Lightning.Credentials.Schema do
         Enum.reduce(fields, changeset, fn field, changeset ->
           Changeset.add_error(changeset, field, "Can't be blank")
         end)
+
+      %{actual: 0, expected: _} ->
+        Changeset.add_error(changeset, field, "Can't be blank")
     end
   end
 

@@ -31,29 +31,27 @@ defmodule LightningWeb.Components.Form do
       hover:bg-primary-700
     ] ++ base_classes
 
-    disabled =
-      if assigns[:changeset] do
-        !assigns.changeset.valid?
-      else
-        false
-      end
-
-    class =
-      if disabled do
-        inactive_classes
-      else
-        active_classes
-      end
-      |> Enum.concat(List.wrap(assigns[:class]))
-
     assigns =
       assigns
-      |> assign(class: class, disabled: disabled)
+      |> assign_new(:disabled, fn ->
+        if assigns[:changeset] do
+          !assigns.changeset.valid?
+        else
+          false
+        end
+      end)
+      |> assign_new(:class, fn %{disabled: disabled} ->
+        if disabled do
+          inactive_classes
+        else
+          active_classes
+        end
+        |> Enum.concat(List.wrap(assigns[:class]))
+      end)
       |> assign_new(:disabled_with, fn -> "" end)
 
     ~H"""
     <%= submit(@value,
-      type: "submit",
       phx_disable_with: @disabled_with,
       disabled: @disabled,
       class: @class

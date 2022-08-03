@@ -16,7 +16,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     all_projects = projects |> Enum.map(&{&1.name, &1.id})
 
     body_schema = fake_body_schema()
-    body_changeset = Lightning.Credentials.Schema.changeset(body_schema, %{})
+
+    body_changeset =
+      Lightning.Credentials.Schema.changeset(body_schema, credential.body)
 
     {:ok,
      socket
@@ -39,19 +41,22 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         "username": {
           "title": "Username",
           "type": "string",
-          "description": "The username used to log in"
+          "description": "The username used to log in",
+          "minLength": 1
         },
         "password": {
           "title": "Password",
           "type": "string",
           "description": "The password used to log in",
-          "writeOnly": true
+          "writeOnly": true,
+          "minLength": 1
         },
         "hostUrl": {
           "title": "Host URL",
           "type": "string",
           "description": "The destination server Url",
-          "format": "uri"
+          "format": "uri",
+          "minLength": 1
         }
       },
       "type": "object",
@@ -68,12 +73,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     apply(Phoenix.HTML.Form, type, [form, field])
   end
 
-  def schema_input(schema_root, form, field) do
+  def schema_input(schema_root, changeset, field) do
+    # credential[project_credentials][0][project_id]
     properties =
       schema_root.schema
       |> Map.get("properties")
       |> Map.get(field |> to_string())
-      |> IO.inspect()
 
     text = properties |> Map.get("title")
 
@@ -84,30 +89,53 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         %{"type" => "string"} -> :text_input
       end
 
+    value = changeset |> Ecto.Changeset.get_field(field)
+
     [
-      label(form, field, text,
+      label(:body, field, text,
         class: "block text-sm font-medium text-secondary-700"
       ),
-      error_tag(form, field),
+      Enum.map(
+        Keyword.get_values(changeset.errors, field) |> Enum.slice(0..0),
+        fn error ->
+          content_tag(:span, translate_error(error),
+            phx_feedback_for: input_name(:body, field)
+          )
+        end
+      ),
       apply(Phoenix.HTML.Form, type, [
-        form,
+        :body,
         field,
         [
-          class:
-            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+          value: value,
+          class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
+               w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
         ]
       ])
     ]
   end
 
   @impl true
-  def handle_event("validate", %{"credential" => credential_params}, socket) do
+  def handle_event(
+        "validate",
+        %{"credential" => credential_params, "body" => body_params},
+        socket
+      ) do
+    body_changeset =
+      Lightning.Credentials.Schema.changeset(
+        socket.assigns.body_schema,
+        body_params
+      )
+      |> Map.put(:action, :validate)
+
     changeset =
       socket.assigns.credential
       |> Credentials.change_credential(credential_params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply,
+     socket
+     |> assign(changeset: changeset, body_changeset: body_changeset)}
   end
 
   @impl true
@@ -193,8 +221,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(changeset: changeset, available_projects: available_projects)}
   end
 
-  def handle_event("save", %{"credential" => credential_params}, socket) do
-    save_credential(socket, socket.assigns.action, credential_params)
+  def handle_event(
+        "save",
+        %{"credential" => credential_params, "body" => body_params},
+        socket
+      ) do
+    save_credential(
+      socket,
+      socket.assigns.action,
+      credential_params |> Map.put("body", body_params)
+    )
   end
 
   defp save_credential(socket, :edit, credential_params) do
