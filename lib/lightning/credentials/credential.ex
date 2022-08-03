@@ -42,19 +42,28 @@ defmodule Lightning.Credentials.Credential do
     credential_id = get_field(changeset, :id)
 
     if credential_id != nil do
-      case Lightning.Credentials.can_credential_be_shared_to_user(
-             credential_id,
-             user_id
-           ) do
-        true ->
-          changeset
+      diff =
+        Lightning.Credentials.invalid_projects_for_user(
+          credential_id,
+          user_id
+        )
 
-        false ->
-          add_error(
-            changeset,
-            :user_id,
-            "Transfer impossible, this user doesn't have access to some of the projects using this credential; please grant the user access to all the project using this credential or share it with another user"
-          )
+      if Enum.empty?(diff) do
+        changeset
+      else
+        owner = Lightning.Accounts.get_user!(user_id)
+
+        diff_projects_names =
+          diff
+          |> Enum.map(fn project_id ->
+            Lightning.Projects.get_project!(project_id).name
+          end)
+
+        add_error(
+          changeset,
+          :user_id,
+          "Invalid owner: #{owner.first_name} #{owner.last_name} doesn't have access to #{Enum.join(diff_projects_names, ", ")}. Please grant them access or select another owner."
+        )
       end
     else
       changeset

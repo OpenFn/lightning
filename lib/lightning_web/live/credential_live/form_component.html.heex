@@ -46,13 +46,16 @@
             <%= label(f, :owner,
               class: "block text-sm font-medium text-secondary-700"
             ) %>
-            <.select_field
-              form={f}
-              name={:user_id}
-              id="user"
-              prompt=""
-              values={@users |> Enum.map(fn user -> user.id end)}
-            />
+            <%= select(
+              f,
+              :user_id,
+              Enum.map(@users, fn user ->
+                [
+                  key: "#{user.first_name} #{user.last_name} (#{user.email})",
+                  value: user.id
+                ]
+              end)
+            ) %>
             <%= error_tag(f, :user_id) %>
           </div>
         <% end %>

@@ -246,21 +246,21 @@ defmodule Lightning.Credentials do
       iex> can_credential_be_shared_to_user(credential_id, user_id)
       false
   """
-  def can_credential_be_shared_to_user(credential_id, user_id) do
-    projects_credentials =
+  def invalid_projects_for_user(credential_id, user_id) do
+    project_credentials =
       from(pc in Lightning.Projects.ProjectCredential,
         where: pc.credential_id == ^credential_id,
         select: pc.project_id
       )
       |> Repo.all()
 
-    projects_users =
+    project_users =
       from(pu in Lightning.Projects.ProjectUser,
         where: pu.user_id == ^user_id,
         select: pu.project_id
       )
       |> Repo.all()
 
-    Enum.sort(projects_credentials) == Enum.sort(projects_users)
+    project_credentials -- project_users
   end
 end

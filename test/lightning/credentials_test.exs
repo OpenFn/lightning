@@ -168,7 +168,7 @@ defmodule Lightning.CredentialsTest do
       %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
       %{id: user_id_3} = Lightning.AccountsFixtures.user_fixture()
 
-      {:ok, %Lightning.Projects.Project{id: project_id} = project} =
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{
           name: "some-name",
           project_users: [%{user_id: user_id_1, user_id: user_id_2}]
@@ -180,15 +180,15 @@ defmodule Lightning.CredentialsTest do
           project_credentials: [%{project_id: project_id}]
         )
 
-      assert Credentials.can_credential_be_shared_to_user(
+      assert Credentials.invalid_projects_for_user(
                credential.id,
                user_id_2
-             ) == true
+             ) == []
 
-      assert Credentials.can_credential_be_shared_to_user(
+      assert Credentials.invalid_projects_for_user(
                credential.id,
                user_id_3
-             ) == false
+             ) == [project_id]
     end
   end
 

@@ -12,22 +12,41 @@ defmodule Lightning.Credentials.CredentialTest do
     end
 
     test "user_id not valid for transfer" do
-      %{id: user_id} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id, first_name: first_name, last_name: last_name} =
+        Lightning.AccountsFixtures.user_fixture(
+          first_name: "Elias",
+          last_name: "BA"
+        )
 
       Lightning.Projects.create_project(%{
-        name: "some-name",
+        name: "project-a",
         project_users: [%{user_id: user_id}]
       })
 
+      {:ok, %Lightning.Projects.Project{id: project_id_b, name: project_name_b}} =
+        Lightning.Projects.create_project(%{
+          name: "project-b"
+        })
+
+      {:ok, %Lightning.Projects.Project{id: project_id_c, name: project_name_c}} =
+        Lightning.Projects.create_project(%{
+          name: "project-c"
+        })
+
       errors =
         Credential.changeset(
-          Lightning.CredentialsFixtures.credential_fixture(),
+          Lightning.CredentialsFixtures.credential_fixture(
+            project_credentials: [
+              %{project_id: project_id_b},
+              %{project_id: project_id_c}
+            ]
+          ),
           %{user_id: user_id}
         )
         |> errors_on()
 
       assert errors[:user_id] == [
-               "Transfer impossible, this user doesn't have access to some of the projects using this credential; please grant the user access to all the project using this credential or share it with another user"
+               "Invalid owner: #{first_name} #{last_name} doesn't have access to #{project_name_b}, #{project_name_c}. Please grant them access or select another owner."
              ]
     end
 
@@ -35,7 +54,7 @@ defmodule Lightning.Credentials.CredentialTest do
       %{id: user_id_1} = Lightning.AccountsFixtures.user_fixture()
       %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
 
-      {:ok, %Lightning.Projects.Project{id: project_id} = project} =
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{
           name: "some-name",
           project_users: [%{user_id: user_id_1, user_id: user_id_2}]
