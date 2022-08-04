@@ -17,8 +17,8 @@
         ) %>
 
         <div class="mt-2">
-          <%= for {field, _type} <- @body_changeset.types do %>
-            <%= schema_input(@body_schema, @body_changeset, field) %>
+          <%= for {field, _type} <- @schema.types do %>
+            <%= schema_input(@schema.schema_root, @body_changeset, field) %>
           <% end %>
         </div>
 

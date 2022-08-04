@@ -4,7 +4,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.{Credentials}
+  alias Lightning.Credentials
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
@@ -15,10 +15,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
     all_projects = projects |> Enum.map(&{&1.name, &1.id})
 
-    body_schema = fake_body_schema()
+    schema = Credentials.Schema.new(fake_body_schema(), credential.body || %{})
 
-    body_changeset =
-      Lightning.Credentials.Schema.changeset(body_schema, credential.body)
+    body_changeset = Credentials.Schema.changeset(schema, %{})
 
     {:ok,
      socket
@@ -28,7 +27,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        changeset: changeset,
        available_projects: filter_available_projects(changeset, all_projects),
        selected_project: "",
-       body_schema: body_schema,
+       schema: schema,
        body_changeset: body_changeset
      )}
   end
@@ -65,7 +64,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     }
     """
     |> Jason.decode!()
-    |> ExJsonSchema.Schema.resolve()
   end
 
   def input(form, field) do
@@ -123,7 +121,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       ) do
     body_changeset =
       Lightning.Credentials.Schema.changeset(
-        socket.assigns.body_schema,
+        socket.assigns.schema,
         body_params
       )
       |> Map.put(:action, :validate)
