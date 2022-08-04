@@ -19,7 +19,7 @@ open source OpenFn Integration Toolkit toolkit at
 
 1. Install the latest version of
    [Docker](https://docs.docker.com/engine/install/)
-2. Clone the repo using git
+2. Clone [this repo](https://github.com/OpenFn/Lightning) using git
 3. Copy the `.env.example` file to `.env`
 4. Run `docker compose run --rm web mix ecto.migrate`
 
