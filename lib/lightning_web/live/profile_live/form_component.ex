@@ -26,11 +26,18 @@ defmodule LightningWeb.ProfileLive.FormComponent do
            current_password,
            user_params
          ) do
-      {:ok, _user} ->
+      {:ok, user} ->
         {:noreply,
          socket
          |> put_flash(:info, "Profile password updated successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+         |> redirect(
+           to:
+             Routes.user_session_path(
+               socket,
+               :exchange_token,
+               Accounts.generate_auth_token(user) |> Base.url_encode64()
+             )
+         )}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :password_changeset, changeset)}
