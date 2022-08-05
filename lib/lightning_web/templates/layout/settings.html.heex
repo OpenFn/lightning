@@ -31,6 +31,14 @@
           <span class="inline-block align-middle">Audit</span>
         </Settings.menu_item>
         <div class="grow"></div>
+        <div
+          class="mx-4 px-3 py-2 pl-4 rounded-md text-sm font-medium rounded-md block text-primary-300"
+          title={
+            "You are running Lightning version #{elem(:application.get_key(:lightning, :vsn), 1)}"
+          }
+        >
+          v<%= elem(:application.get_key(:lightning, :vsn), 1) %>
+        </div>
         <Settings.menu_item to={Routes.dashboard_index_path(@socket, :index)}>
           <Icon.left class="h-5 w-5 inline-block mr-2" />
           <span class="inline-block align-middle">Back</span>

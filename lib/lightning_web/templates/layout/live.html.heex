@@ -10,6 +10,9 @@
                 Routes.static_path(@socket || @conn, "/images/logo-white.svg")
               }
               alt="OpenFn"
+              title={
+                "Lightning v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+              }
             />
           <% end %>
         </div>
