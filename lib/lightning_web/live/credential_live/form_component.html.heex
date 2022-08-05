@@ -17,9 +17,32 @@
         ) %>
 
         <div class="mt-2">
-          <%= for {field, _type} <- @schema.types do %>
-            <%= schema_input(@schema.schema_root, @body_changeset, field) %>
-          <% end %>
+          <%= label(f, :schema,
+            class: "block text-sm font-medium text-secondary-700 mb-1"
+          ) %>
+          <.select_field
+            form={f}
+            name={:schema}
+            values={[Raw: "raw", DHIS2: "dhis2"]}
+          />
+        </div>
+
+        <div class="mt-2">
+          <div class="rounded-md border p-4 bg-gray-50">
+            <%= unless @schema do %>
+              <%= label(f, :body,
+                class: "block text-sm font-medium text-secondary-700"
+              ) %>
+              <%= error_tag(f, :body, class: "block w-full rounded-md") %>
+              <%= textarea(f, :body,
+                class: "rounded-md w-full font-mono bg-slate-800 text-slate-100"
+              ) %>
+            <% else %>
+              <%= for {field, _type} <- @schema.types do %>
+                <%= schema_input(@schema.schema_root, @schema_changeset, field) %>
+              <% end %>
+            <% end %>
+          </div>
         </div>
 
         <div class="mt-2">
@@ -97,7 +120,7 @@
       <span>
         <.submit_button
           disabled_with="Saving..."
-          disabled={!@changeset.valid? || !@body_changeset.valid?}
+          disabled={!@valid}
           value="Save"
         />
       </span>
