@@ -24,12 +24,15 @@ defmodule Lightning.Pipeline.Runner do
 
     @impl true
     def on_finish(result, run: run, scrubber: scrubber) do
-      debug do
+      Logger.debug(fn ->
+        # coveralls-ignore-start
         result.log
-        |> Enum.each(fn line ->
-          Logger.debug("#{String.slice(run.id, -5..-1)} : #{line}")
+        |> Enum.map(fn line ->
+          "\n#{String.slice(run.id, -5..-1)} : #{line}"
         end)
-      end
+
+        # coveralls-ignore-stop
+      end)
 
       scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
 
@@ -40,14 +43,6 @@ defmodule Lightning.Pipeline.Runner do
       })
 
       Runner.create_dataclip_from_result(result, run)
-    end
-
-    defp debug(do: block) do
-      if Logger.compare_levels(Logger.level(), :debug) == :eq do
-        # coveralls-ignore-start
-        block.call()
-        # coveralls-ignore-stop
-      end
     end
   end
 
