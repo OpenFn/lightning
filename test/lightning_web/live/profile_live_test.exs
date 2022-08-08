@@ -55,13 +55,20 @@ defmodule LightningWeb.ProfileLiveTest do
              |> form("#password_form", user: @invalid_too_short_password_attrs)
              |> render_change() =~ "should be at least 8 character(s)"
 
-      {:ok, view, html} =
+      {:ok, conn} =
         profile_live
         |> form("#password_form", user: @update_password_attrs)
         |> render_submit()
-        |> follow_redirect(conn, Routes.user_session_path(conn, :new))
+        |> follow_redirect(conn)
 
-        assert_redirected profile_live, Routes.user_session_path(conn, :new)
+      assert "/" = redirected_path = redirected_to(conn, 302)
+
+      html =
+        get(recycle(conn), redirected_path)
+        |> html_response(200)
+
+      assert html =~ "Password changed successfully."
+      assert html =~ "Projects"
     end
   end
 end

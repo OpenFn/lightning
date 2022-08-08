@@ -29,6 +29,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       {:ok, user} ->
         {:noreply,
          socket
+         |> put_flash(:info, "Password changed successfully.")
          |> redirect(
            to:
              Routes.user_session_path(
