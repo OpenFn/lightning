@@ -55,6 +55,18 @@ defmodule LightningWeb.ProfileLiveTest do
              |> form("#password_form", user: @invalid_too_short_password_attrs)
              |> render_change() =~ "should be at least 8 character(s)"
 
+      assert profile_live
+             |> form("#password_form", user: @invalid_empty_password_attrs)
+             |> render_submit() =~ "can&#39;t be blank"
+
+      assert profile_live
+             |> form("#password_form", user: @invalid_dont_match_password_attrs)
+             |> render_submit() =~ "does not match password"
+
+      assert profile_live
+             |> form("#password_form", user: @invalid_too_short_password_attrs)
+             |> render_submit() =~ "should be at least 8 character(s)"
+
       {:ok, conn} =
         profile_live
         |> form("#password_form", user: @update_password_attrs)
