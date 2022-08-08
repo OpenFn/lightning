@@ -5,9 +5,9 @@ defmodule LightningWeb.ProfileLiveTest do
   import Lightning.AccountsFixtures
 
   @update_password_attrs %{
-    current_password: "some current password",
-    password: "some new password",
-    password_confirmation: "some new password"
+    current_password: valid_user_password(),
+    password: "password1",
+    password_confirmation: "password1"
   }
 
   @invalid_empty_password_attrs %{
@@ -23,7 +23,7 @@ defmodule LightningWeb.ProfileLiveTest do
   }
 
   @invalid_dont_match_password_attrs %{
-    current_password: valid_user_password(),
+    current_password: "",
     password: "password1",
     password_confirmation: "password2"
   }
