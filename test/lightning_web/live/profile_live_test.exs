@@ -2,6 +2,7 @@ defmodule LightningWeb.ProfileLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Lightning.AccountsFixtures
 
   @update_password_attrs %{
     current_password: "some current password",
@@ -22,7 +23,7 @@ defmodule LightningWeb.ProfileLiveTest do
   }
 
   @invalid_dont_match_password_attrs %{
-    current_password: "test",
+    current_password: valid_user_password(),
     password: "password1",
     password_confirmation: "password2"
   }
@@ -54,11 +55,13 @@ defmodule LightningWeb.ProfileLiveTest do
              |> form("#password_form", user: @invalid_too_short_password_attrs)
              |> render_change() =~ "should be at least 8 character(s)"
 
-      {:ok, _, html} =
+      {:ok, view, html} =
         profile_live
         |> form("#password_form", user: @update_password_attrs)
         |> render_submit()
         |> follow_redirect(conn, Routes.user_session_path(conn, :new))
+
+        assert_redirected profile_live, Routes.user_session_path(conn, :new)
     end
   end
 end
