@@ -62,14 +62,15 @@ defmodule LightningWeb.ProfileLive.FormComponent do
            user,
            "todo: implement token functionality in seperate PR"
          ) do
-      {:ok, _user} ->
+      :ok ->
         {:noreply,
          socket
          |> put_flash(:info, "Profile email updated successfully")
          |> push_redirect(to: socket.assigns.return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :email_changeset, changeset)}
+      :error ->
+        # TODO: Implement this in separate PR
+        {:noreply, assign(socket, :email_changeset, %{})}
     end
   end
 
