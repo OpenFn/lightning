@@ -69,7 +69,6 @@ defmodule LightningWeb.ProfileLive.FormComponent do
          |> push_redirect(to: socket.assigns.return_to)}
 
       :error ->
-        # TODO: Implement this in separate PR
         {:noreply, assign(socket, :email_changeset, %{})}
     end
   end
