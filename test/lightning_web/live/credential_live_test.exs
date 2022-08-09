@@ -111,5 +111,28 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form", credential: @update_attrs)
              |> render_submit() =~ "some updated body"
     end
+
+    test "marks a credential for use in a 'production' system", %{
+      conn: conn,
+      credential: credential
+    } do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#credential-#{credential.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :edit, credential)
+        )
+
+      assert form_live
+             |> form("#credential-form",
+               credential: Map.put(@update_attrs, :production, true)
+             )
+             |> render_submit() =~ "some updated body"
+    end
   end
 end
