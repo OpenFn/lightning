@@ -173,14 +173,18 @@ You can generate the HTML and EPUB documentation locally using:
 `mix docs` and opening `doc/index.html` in your browser.
 
 ## Troubleshooting
-### Problem with Debian
-If your getting this error on debian 
+
+### Problems with Debian
+
+If you're getting this error on debian
+
 ```
 ==> earmark_parser
 Compiling 1 file (.yrl)
 /usr/lib/erlang/lib/parsetools-2.3.1/include/yeccpre.hrl: no such file or directory
 could not compile dependency :earmark_parser, "mix compile" failed. You can recompile this dependency with "mix deps.compile earmark_parser", update it with "mix deps.update earmark_parser" or clean it with "mix deps.clean earmark_parser"
 ```
+
 You need to install erlang development environment `sudo apt install erlang-dev`
 [refer to this issue](https://github.com/elixir-lang/ex_doc/issues/1441)
 
