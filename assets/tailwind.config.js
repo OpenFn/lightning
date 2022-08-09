@@ -2,6 +2,7 @@
 // https://tailwindcss.com/docs/configuration
 
 module.exports = {
+  darkMode: "class",
   content: [
     "./js/**/*.{js,jsx,ts,tsx}",
     "../lib/*_web.ex",
