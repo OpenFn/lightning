@@ -280,7 +280,8 @@ defmodule Lightning.Invocation do
   @doc """
   Fetches a run and preloads the job via the run's event.
   """
-  def get_run_with_job!(id), do: get_run!(id) |> Repo.preload(:job)
+  def get_run_with_job!(id),
+    do: from(r in Run, where: r.id == ^id, preload: :job) |> Repo.one!()
 
   @doc """
   Creates a run.
