@@ -42,7 +42,7 @@ defmodule LightningWeb.RunLive.Index do
   defp apply_action(socket, :show, %{"id" => id}) do
     socket
     |> assign(:page_title, "Run")
-    |> assign(:run, Invocation.get_run!(id))
+    |> assign(:run, Invocation.get_run_with_job!(id))
   end
 
   @impl true
@@ -71,7 +71,11 @@ defmodule LightningWeb.RunLive.Index do
           <b>Finished:</b> <%= @run.finished_at %>
         </.p>
         <.p>
-          <b>Logs:</b>
+          <b>Job:</b> <%= @run.job.name %>
+        </.p>
+        <br />
+        <.p>
+          <b>Logs</b>
         </.p>
         <div class="font-mono text-sm">
           <%= for line <- @run.log || [] do %>

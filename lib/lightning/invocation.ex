@@ -249,7 +249,8 @@ defmodule Lightning.Invocation do
     from(r in Run,
       join: p in assoc(r, :project),
       where: p.id == ^project_id,
-      order_by: [desc: r.inserted_at, desc: r.started_at]
+      order_by: [desc: r.inserted_at, desc: r.started_at],
+      preload: :job
     )
     |> Repo.paginate(params)
   end
@@ -270,10 +271,16 @@ defmodule Lightning.Invocation do
   """
   @spec get_run!(Ecto.UUID.t() | Event.t()) :: Run.t()
   def get_run!(%Event{id: event_id}) do
-    from(r in Run, where: r.event_id == ^event_id) |> Repo.one!()
+    from(r in Run, where: r.event_id == ^event_id)
+    |> Repo.one!()
   end
 
   def get_run!(id), do: Repo.get!(Run, id)
+
+  @doc """
+  Fetches a run and preloads the job via the run's event.
+  """
+  def get_run_with_job!(id), do: get_run!(id) |> Repo.preload(:job)
 
   @doc """
   Creates a run.

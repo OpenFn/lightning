@@ -35,7 +35,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Credentials"
 
       assert html =~
-               credential.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
     end
 
     test "saves new credential", %{conn: conn, project: project} do
