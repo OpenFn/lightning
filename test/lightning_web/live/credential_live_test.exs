@@ -4,6 +4,8 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.CredentialsFixtures
 
+  alias Lightning.Credentials
+
   @create_attrs %{
     body: "some body",
     name: "some name"
@@ -19,15 +21,21 @@ defmodule LightningWeb.CredentialLiveTest do
     %{credential: credential}
   end
 
+  defp create_project_credential(%{user: user}) do
+    project_credential = project_credential_fixture(user_id: user.id)
+    %{project_credential: project_credential}
+  end
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
   describe "Index" do
-    setup [:create_credential]
+    setup [:create_credential, :create_project_credential]
 
     test "lists all credentials", %{
       conn: conn,
-      credential: credential
+      credential: credential,
+      project_credential: project_credential
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.credential_index_path(conn, :index))
@@ -35,7 +43,19 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Credentials"
 
       assert html =~
-               credential.body |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+
+      [[], project_names] =
+        Credentials.list_credentials_for_user(credential.user_id)
+        |> Enum.map(fn c ->
+          Enum.map(c.projects, fn p -> p.name end)
+        end)
+
+      assert html =~ project_names |> Enum.join(", ")
+
+      assert html =~ "Edit"
+      assert html =~ "Delete"
+      assert html =~ "Production"
     end
 
     test "saves new credential", %{conn: conn, project: project} do

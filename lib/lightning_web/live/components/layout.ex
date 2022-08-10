@@ -21,7 +21,7 @@ defmodule LightningWeb.Components.Layout do
 
   def header(assigns) do
     ~H"""
-    <div class="flex-none bg-white shadow-sm z-10">
+    <div class="flex-none bg-white shadow-sm z-20">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
         <h1 class="text-3xl font-bold text-secondary-900">
           <%= @title %>

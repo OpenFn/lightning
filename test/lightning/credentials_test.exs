@@ -12,8 +12,12 @@ defmodule Lightning.CredentialsTest do
     test "list_credentials_for_user/1 returns all credentials for given user" do
       user_1 = user_fixture()
       user_2 = user_fixture()
-      credential_1 = credential_fixture(user_id: user_1.id)
-      credential_2 = credential_fixture(user_id: user_2.id)
+
+      credential_1 =
+        credential_fixture(user_id: user_1.id) |> Repo.preload(:projects)
+
+      credential_2 =
+        credential_fixture(user_id: user_2.id) |> Repo.preload(:projects)
 
       assert Credentials.list_credentials_for_user(user_1.id) == [
                credential_1

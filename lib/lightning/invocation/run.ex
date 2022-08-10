@@ -23,6 +23,7 @@ defmodule Lightning.Invocation.Run do
     field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
     belongs_to :event, Event
+    has_one :job, through: [:event, :job]
     has_one :project, through: [:event, :project]
     has_one :source_dataclip, through: [:event, :dataclip]
 

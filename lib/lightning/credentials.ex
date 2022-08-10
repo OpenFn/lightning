@@ -39,7 +39,7 @@ defmodule Lightning.Credentials do
 
   """
   def list_credentials_for_user(user_id) do
-    from(c in Credential, where: c.user_id == ^user_id)
+    from(c in Credential, where: c.user_id == ^user_id, preload: :projects)
     |> Repo.all()
   end
 
