@@ -1,4 +1,8 @@
 defmodule Lightning.Credentials.Schema do
+  @moduledoc """
+  Dynamic changeset module which uses a JsonSchema (parsed with `ExJsonSchema`)
+  to validate credentials based on the schema provided.
+  """
   alias ExJsonSchema.Validator
   import Ecto.Changeset
 
@@ -67,9 +71,10 @@ defmodule Lightning.Credentials.Schema do
 
   defp get_types(schema_root) do
     schema_root.schema
-    |> Map.get("properties")
+    |> Map.get("properties", [])
     |> Enum.map(fn {k, properties} ->
-      {k |> String.to_atom(), Map.get(properties, "type") |> String.to_atom()}
+      {k |> String.to_atom(),
+       Map.get(properties, "type", "string") |> String.to_atom()}
     end)
     |> Enum.reverse()
     |> Map.new()
