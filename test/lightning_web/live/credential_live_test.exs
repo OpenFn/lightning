@@ -101,6 +101,56 @@ defmodule LightningWeb.CredentialLiveTest do
       |> render_submit()
     end
 
+    test "saves new dhis2 credential", %{conn: conn} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      new_live
+      |> form("#credential-form", credential: %{schema: "dhis2"})
+      |> render_change()
+
+      refute new_live |> has_element?("#credential-form_body")
+
+      assert new_live
+             |> form("#credential-form", body: %{username: ""})
+             |> render_change() =~ "can&#39;t be blank"
+
+      assert new_live |> submit_disabled()
+
+      assert new_live
+             |> form("#credential-form",
+               credential: %{name: "My Credential"},
+               body: %{username: "foo", password: "bar", hostUrl: "baz"}
+             )
+             |> render_change() =~ "expected to be a URI"
+
+      assert new_live
+             |> form("#credential-form",
+               body: %{hostUrl: "http://localhost"}
+             )
+             |> render_change()
+
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        new_live
+        |> form("#credential-form")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+    end
+
     test "deletes credential in listing", %{conn: conn, credential: credential} do
       {:ok, index_live, _html} =
         live(
@@ -163,5 +213,9 @@ defmodule LightningWeb.CredentialLiveTest do
              )
              |> render_submit() =~ "some updated body"
     end
+  end
+
+  defp submit_disabled(live) do
+    live |> has_element?("button[disabled][type=submit]")
   end
 end
