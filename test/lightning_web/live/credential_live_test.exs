@@ -132,7 +132,6 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render_submit() =~ "some updated body"
     end
 
-    test "marks a credential for use in a 'production' system", %{
     test "transfers a credential to a new owner", %{
       conn: conn,
       credential: credential
@@ -156,9 +155,12 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render_submit() =~ "some updated body"
     end
 
-    # test "updates credential for transfering", %{conn: conn, credential: credential} do
-    #   {:ok, index_live, _html} =
-    #     live(conn, Routes.credential_index_path(conn, :index))
+    test "updates credential for transfering", %{
+      conn: conn,
+      credential: credential
+    } do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       %{
         id: user_id_1,
@@ -181,10 +183,10 @@ defmodule LightningWeb.CredentialLiveTest do
         email: email_3
       } = Lightning.AccountsFixtures.user_fixture()
 
-    #   # assert form_live
-    #   #        |> form("#credential-form", credential: @update_attrs)
-    #   #        |> render_submit() =~ "some updated body"
-    # end
+      #   # assert form_live
+      #   #        |> form("#credential-form", credential: @update_attrs)
+      #   #        |> render_submit() =~ "some updated body"
+      # end
 
       {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{

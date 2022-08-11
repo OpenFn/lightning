@@ -234,6 +234,7 @@ defmodule Lightning.Credentials do
     else
       SensitiveValues.secret_values(body)
     end
+  end
 
   @doc """
   Returns a boolean for saying whether a user can be transferred one credential or not.
