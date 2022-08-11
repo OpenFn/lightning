@@ -23,7 +23,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        changeset: changeset,
        available_projects: filter_available_projects(changeset, all_projects),
        selected_project: "",
-       users: Lightning.Accounts.list_users()
+       users:
+         Enum.map(Lightning.Accounts.list_users(), fn user ->
+           [
+             key: "#{user.first_name} #{user.last_name} (#{user.email})",
+             value: user.id
+           ]
+         end)
      )}
   end
 

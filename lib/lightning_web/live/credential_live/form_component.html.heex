@@ -26,36 +26,23 @@
           ) %>
         </div>
 
-        <div class="mt-2">
-          <LightningWeb.Components.Form.check_box form={f} id={:production} />
-          <%= label(f, :owner,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <.select_field
-            form={f}
-            name={:user_id}
-            id="user"
-            prompt=""
-            values={@users |> Enum.map(fn user -> user.id end)}
-          />
-          <%= error_tag(f, :user_id) %>
-        </div>
-
         <%= if @action in [:edit] do %>
           <div class="mt-2">
             <%= label(f, :owner,
               class: "block text-sm font-medium text-secondary-700"
             ) %>
-            <.select_field
+            <%= error_tag(f, :user_id) %>
+            <LightningWeb.Components.Form.select_field
               form={f}
               name={:user_id}
-              id="user"
-              prompt=""
-              values={@users |> Enum.map(fn user -> user.id end)}
+              values={@users}
             />
-            <%= error_tag(f, :user_id) %>
           </div>
         <% end %>
+
+        <div class="mt-2">
+          <LightningWeb.Components.Form.check_box form={f} id={:production} />
+        </div>
       </div>
 
       <div class="col-span-3">
@@ -126,11 +113,11 @@
         ) %>
       </span>
       <span>
-        <%= submit("Save",
-          phx_disable_with: "Saving...",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        ) %>
+        <LightningWeb.Components.Form.submit_button
+          value="Save"
+          disable_with="Saving..."
+          changeset={@changeset}
+        />
       </span>
     </div>
   </.form>
