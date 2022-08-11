@@ -60,6 +60,7 @@ defmodule Lightning.CredentialsTest do
         body: %{},
         name: "some name",
         user_id: user_fixture().id,
+        schema: "raw",
         project_credentials: [
           %{project_id: project_fixture().id}
         ]

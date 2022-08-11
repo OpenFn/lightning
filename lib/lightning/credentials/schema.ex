@@ -50,18 +50,18 @@ defmodule Lightning.Credentials.Schema do
 
     case error do
       %{expected: "uri"} ->
-        add_error(changeset, field, "Expected to be a URI")
+        add_error(changeset, field, "expected to be a URI")
 
       %{missing: fields} ->
         Enum.reduce(fields, changeset, fn field, changeset ->
-          add_error(changeset, field, "Can't be blank")
+          add_error(changeset, field, "can't be blank")
         end)
 
       %{actual: 0, expected: _} ->
-        add_error(changeset, field, "Can't be blank")
+        add_error(changeset, field, "can't be blank")
 
       %{actual: "null", expected: ["string"]} ->
-        add_error(changeset, field, "Can't be blank")
+        add_error(changeset, field, "can't be blank")
     end
   end
 

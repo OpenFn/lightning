@@ -90,8 +90,8 @@ defmodule Lightning.Credentials.SchemaTest do
              "Should be able to find existing keys via atoms"
 
       errors = errors_on(changeset)
-      assert {:username, ["Can't be blank"]} in errors
-      assert {:hostUrl, ["Can't be blank"]} in errors
+      assert {:username, ["can't be blank"]} in errors
+      assert {:hostUrl, ["can't be blank"]} in errors
 
       schema = Schema.new(schema_map, %{"username" => "initial_username"})
 

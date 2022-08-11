@@ -20,7 +20,8 @@ defmodule Lightning.Credentials.CredentialTest do
         Credential.changeset(%Credential{}, %{
           name: "Test Credential",
           body: body,
-          user_id: Lightning.AccountsFixtures.user_fixture().id
+          user_id: Lightning.AccountsFixtures.user_fixture().id,
+          schema: "raw"
         })
         |> Lightning.Repo.insert!()
 

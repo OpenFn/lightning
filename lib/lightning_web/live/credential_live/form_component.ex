@@ -20,7 +20,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(assigns)
      |> assign(
        all_projects: all_projects,
-       changeset: changeset,
+       changeset: nil,
        available_projects: filter_available_projects(changeset, all_projects),
        selected_project: "",
        schema: nil
@@ -29,7 +29,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign_valid()}
   end
 
-  defp fake_body_schema() do
+  defp fake_body_schema(_schema) do
     """
     {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -85,23 +85,24 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       label(:body, field, text,
         class: "block text-sm font-medium text-secondary-700"
       ),
-      Enum.map(
-        Keyword.get_values(changeset.errors, field) |> Enum.slice(0..0),
-        fn error ->
-          content_tag(:span, translate_error(error),
-            phx_feedback_for: input_name(:body, field)
-          )
-        end
-      ),
       apply(Phoenix.HTML.Form, type, [
         :body,
         field,
         [
-          value: value,
+          value: value || "",
           class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
                w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
         ]
-      ])
+      ]),
+      Enum.map(
+        Keyword.get_values(changeset.errors, field) |> Enum.slice(0..0),
+        fn error ->
+          content_tag(:span, translate_error(error),
+            phx_feedback_for: input_id(:body, field),
+            class: "block w-full"
+          )
+        end
+      )
     ]
   end
 
@@ -121,25 +122,29 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp assign_params_changes(socket, params \\ %{}) do
+    socket =
+      assign(socket,
+        changeset:
+          create_changeset(
+            socket.assigns.credential,
+            params |> Map.get("credential", %{})
+          )
+      )
+
     %{changeset: changeset, schema: schema} = socket.assigns
 
-    case {schema, params["credential"]["schema"]} do
-      {_, "raw"} ->
+    case {schema, changeset |> fetch_field!(:schema)} do
+      {_schema, nil} ->
         socket
-        |> assign(
-          schema: nil,
-          schema_changeset: nil,
-          changeset:
-            create_changeset(
-              socket.assigns.credential,
-              params |> Map.get("credential")
-            )
-        )
 
-      {nil, _schema_type} ->
+      {schema, "raw"} ->
+        socket
+        |> assign(schema: nil, schema_changeset: nil)
+
+      {nil, schema_type} when not is_nil(schema_type) ->
         schema =
           Credentials.Schema.new(
-            fake_body_schema(),
+            fake_body_schema(schema_type),
             changeset |> fetch_field!(:body) || %{}
           )
 
@@ -158,8 +163,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           changeset: changeset
         )
 
-      {schema, _schema_type} ->
-        schema_changeset = create_schema_changeset(schema, params)
+      {schema, schema_type} ->
+        schema_changeset =
+          create_schema_changeset(schema, params)
+          |> Map.put(:action, :validate)
 
         changeset =
           create_changeset(
@@ -181,7 +188,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   defp create_schema_changeset(schema, params) do
     Credentials.Schema.changeset(schema, params |> Map.get("body", %{}))
-    |> Map.put(:action, :validate)
   end
 
   defp create_changeset(credential, params) do

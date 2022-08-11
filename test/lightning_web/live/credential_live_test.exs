@@ -34,8 +34,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "lists all credentials", %{
       conn: conn,
-      credential: credential,
-      project_credential: project_credential
+      credential: credential
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.credential_index_path(conn, :index))
@@ -56,13 +55,15 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Edit"
       assert html =~ "Delete"
       assert html =~ "Production"
+      assert html =~ credential.schema
+      assert html =~ credential.name
     end
 
-    test "saves new credential", %{conn: conn, project: project} do
+    test "saves new raw credential", %{conn: conn, project: project} do
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
-      {:ok, edit_live, _html} =
+      {:ok, new_live, _html} =
         index_live
         |> element("a", "New Credential")
         |> render_click()
@@ -71,23 +72,31 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
-      assert edit_live
-             |> form("#credential-form", credential: @invalid_attrs)
+      refute new_live |> has_element?("#credential-form_body")
+
+      new_live
+      |> form("#credential-form", credential: %{schema: "raw"})
+      |> render_change()
+
+      assert new_live |> has_element?("#credential-form_body")
+
+      assert new_live
+             |> form("#credential-form", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert edit_live
+      assert new_live
              |> form("#credential-form", credential: @create_attrs)
              |> render_change()
 
-      edit_live
+      new_live
       |> element("#project_list")
       |> render_hook("select_item", %{"id" => project.id})
 
-      edit_live
+      new_live
       |> element("button", "Add")
       |> render_click()
 
-      edit_live
+      new_live
       |> form("#credential-form")
       |> render_submit()
     end

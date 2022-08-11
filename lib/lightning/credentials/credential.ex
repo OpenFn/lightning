@@ -20,7 +20,7 @@ defmodule Lightning.Credentials.Credential do
 
     field :body, Lightning.Encrypted.Map
     field :production, :boolean, default: false
-    field :schema, :string, default: "raw"
+    field :schema, :string
     belongs_to :user, User
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
@@ -33,7 +33,7 @@ defmodule Lightning.Credentials.Credential do
     credential
     |> cast(attrs, [:name, :body, :production, :user_id, :schema])
     |> cast_assoc(:project_credentials)
-    |> validate_required([:name, :body, :user_id])
+    |> validate_required([:name, :body, :user_id, :schema])
     |> assoc_constraint(:user)
   end
 end

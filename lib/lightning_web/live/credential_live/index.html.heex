@@ -16,6 +16,7 @@
       <.tr>
         <.th>Name</.th>
         <.th>Projects with Access</.th>
+        <.th>Schema</.th>
         <.th>Production</.th>
         <.th>Actions</.th>
       </.tr>
@@ -24,6 +25,7 @@
         <.tr id={"credential-#{credential.id}"}>
           <.td><%= credential.name %></.td>
           <.td><%= credential.project_names %></.td>
+          <.td><%= credential.schema %></.td>
           <.td>
             <%= if credential.production do %>
               <div class="flex">
