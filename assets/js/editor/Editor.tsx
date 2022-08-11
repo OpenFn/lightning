@@ -16,43 +16,18 @@ const options: MonacoProps['options'] = {
   codeLens: false,
 };
 
-let libContent=`
-type noCodeSuggestionType =
-    "noCodeSuggestion1" |
-    "noCodeSuggestion2"
-
-interface interfaceA {
-    no_code_suggestion?: noCodeSuggestionType
-}
-
-interface interfaceB {
-    interface_a?: interfaceA
-}
-
-interface TEST {
-    find_by(attrs: interfaceB): void
-    find_by_b(attrs: noCodeSuggestionType): void
-}
-
-declare var $test: TEST
-`
-
-
+// Using globals will let us defien top-level functions
+// Note that we need to export here or else the file seems to be ignored
 const dts = `
-declare module 'jam' {
-  export declare function test(): void;
-}
-
 declare global {
   function wibble(x: string): string;
   
   function each(path: string, operation: () => void): void;
+
+  function combine(operation: () => void): void;
 }
 
-export type whatever = string;
-
-
-declare var hello = "world";
+export default {};
 `
 
 export default function Editor({ source }: EditorProps) {
@@ -60,23 +35,19 @@ export default function Editor({ source }: EditorProps) {
     console.log('loading libs')
     console.log(monaco)
     // TODO this typing is actually wrong?
-    monaco.languages.typescript.typescriptDefaults.addExtraLib(dts);
-    //monaco.languages.typescript.typescriptDefaults.addExtraLib(dts, 'file://node_modules/jam.d.ts');
-    // monaco.languages.typescript.typescriptDefaults.setExtraLibs([{
-    //   content: dts
-    // }]);
+    monaco.languages.typescript.javascriptDefaults.addExtraLib(dts);
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      allowJs: true,
-      checkJs: true,
-      allowNonTsExtensions: true,
+      // allowJs: true,
+      // checkJs: true,
+      // allowNonTsExtensions: true,
       noLib: true,
-      noresolve: true,
+      // noresolve: true,
     });
   }
 
   return (<Monaco
     height="300px"
-    defaultLanguage="typescript"
+    defaultLanguage="javascript"
     defaultValue="// loading..."
     value={source}
     options={options}
