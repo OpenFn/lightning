@@ -148,7 +148,15 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
             <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
           </div>
           <div class="md:col-span-2">
-            <Form.text_area form={f} id={:body} />
+            <div
+              phx-hook="Editor"
+              phx-update="ignore"
+              data-source={f.data.body}
+              id="editor-component"
+            >
+              <!--placeholder -->
+              <h2>loading</h2>
+            </div>
           </div>
           <div class="md:col-span-2 w-full">
             <span>

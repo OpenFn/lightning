@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@monaco-editor/react": "^4.4.5",
     "@openfn/compiler": "0.0.1",
     "@openfn/workflow-diagram": "^0.0.5",
     "blueimp-md5": "^2.19.0",
