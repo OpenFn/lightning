@@ -15,12 +15,7 @@ defmodule LightningWeb.ErrorHelpers do
       content_tag(
         :span,
         translate_error(error),
-        Keyword.merge(
-          [
-            phx_feedback_for: input_name(form, field)
-          ],
-          attrs
-        )
+        Keyword.merge([phx_feedback_for: input_name(form, field)], attrs)
       )
     end)
   end

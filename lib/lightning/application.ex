@@ -20,6 +20,8 @@ defmodule Lightning.Application do
        [name: :adaptor_service]
        |> Keyword.merge(Application.get_env(:lightning, :adaptor_service))}
 
+    auth_providers_cache_childspec = {Cachex, name: :auth_providers}
+
     children = [
       Lightning.Vault,
       # Start the Ecto repository
@@ -30,6 +32,7 @@ defmodule Lightning.Application do
       LightningWeb.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: Lightning.PubSub},
+      auth_providers_cache_childspec,
       # Start the Endpoint (http/https)
       LightningWeb.Endpoint,
       adaptor_registry_childspec,

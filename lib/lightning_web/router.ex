@@ -31,6 +31,9 @@ defmodule LightningWeb.Router do
     post "/users/confirm", UserConfirmationController, :create
     get "/users/confirm/:token", UserConfirmationController, :edit
     post "/users/confirm/:token", UserConfirmationController, :update
+
+    get "/authenticate/:provider", OidcController, :show
+    get "/authenticate/:provider/callback", OidcController, :new
   end
 
   ## JSON API
@@ -83,6 +86,9 @@ defmodule LightningWeb.Router do
       live "/settings/projects/:id", ProjectLive.Index, :edit
 
       live "/settings/audit", AuditLive.Index, :index
+
+      live "/settings/authentication", AuthProvidersLive.Index, :edit
+      live "/settings/authentication/new", AuthProvidersLive.Index, :new
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do

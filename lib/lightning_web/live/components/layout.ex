@@ -6,7 +6,7 @@ defmodule LightningWeb.Components.Layout do
   def page_content(assigns) do
     ~H"""
     <div class="flex h-full w-full flex-col">
-      <%= render_slot(@header) %>
+      <%= if assigns[:header], do: render_slot(@header) %>
       <div class="flex-auto bg-secondary-100 relative">
         <section
           id="inner_content"

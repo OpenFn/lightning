@@ -1,0 +1,111 @@
+defmodule LightningWeb.OidcControllerTest do
+  use LightningWeb.ConnCase, async: true
+
+  import Lightning.BypassHelpers
+  import Lightning.AccountsFixtures
+  alias Lightning.AuthProviders
+
+  setup do
+    bypass = Bypass.open()
+
+    wellknown = %AuthProviders.WellKnown{
+      authorization_endpoint: "#{endpoint_url(bypass)}/authorization_endpoint",
+      token_endpoint: "#{endpoint_url(bypass)}/token_endpoint",
+      userinfo_endpoint: "#{endpoint_url(bypass)}/userinfo_endpoint"
+    }
+
+    handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+
+    {:ok, handler} =
+      AuthProviders.Handler.new(handler_name,
+        wellknown: wellknown,
+        client_id: "id",
+        client_secret: "secret",
+        redirect_uri: "http://localhost/callback_url"
+      )
+
+    AuthProviders.create_handler(handler)
+
+    on_exit(fn -> AuthProviders.remove_handler(handler) end)
+
+    {:ok, handler: handler, bypass: bypass}
+  end
+
+  describe "GET /authenticate/:provider" do
+    test "redirects to provider authorize_url", %{conn: conn, handler: handler} do
+      conn = conn |> get(Routes.oidc_path(conn, :show, handler.name))
+
+      assert redirected_to(conn) ==
+               AuthProviders.Handler.authorize_url(handler)
+    end
+
+    test "redirects to / when already logged in", %{conn: conn, handler: handler} do
+      user = user_fixture()
+
+      conn =
+        conn
+        |> log_in_user(user)
+        |> get(Routes.oidc_path(conn, :show, handler.name))
+
+      assert redirected_to(conn) == "/"
+    end
+
+    test "renders a 404 when a provider is missing", %{conn: conn} do
+      response = get(conn, Routes.oidc_path(conn, :show, "doesntexist"))
+
+      assert response.resp_body =~ "Not Found"
+      assert response.status == 404
+    end
+  end
+
+  describe "GET /authenticate/:provider/callback" do
+    test "logs the given person in", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+
+      user = Lightning.AccountsFixtures.user_fixture()
+      expect_userinfo(bypass, handler.wellknown, %{"email" => user.email})
+
+      conn =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == "/"
+    end
+
+    test "renders a 404 when a provider is missing", %{conn: conn} do
+      response =
+        conn
+        |> get(Routes.oidc_path(conn, :new, "bar", %{"code" => "callback_code"}))
+
+      assert response.resp_body =~ "Not Found"
+      assert response.status == 404
+    end
+
+    test "renders an error when a handler returns an error", %{
+      conn: conn,
+      handler: handler,
+      bypass: bypass
+    } do
+      expect_token_failure(bypass, handler.wellknown, %{
+        "error" => "invalid_client",
+        "error_description" => "No client credentials found."
+      })
+
+      response =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert response.resp_body =~ "invalid_client"
+      assert response.resp_body =~ "No client credentials found"
+      assert response.status == 401
+    end
+  end
+end

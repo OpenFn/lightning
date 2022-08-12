@@ -23,6 +23,7 @@ defmodule LightningWeb do
 
       import Plug.Conn
       import LightningWeb.Gettext
+      import LightningWeb.UserAuth, only: [fetch_current_user: 2]
       alias LightningWeb.Router.Helpers, as: Routes
     end
   end
