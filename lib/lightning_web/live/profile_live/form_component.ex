@@ -56,10 +56,13 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event("validate_email", %{"user" => user_params}, socket) do
+    IO.inspect("enter")
+
     changeset =
       socket.assigns.user
       |> Accounts.change_user_email(user_params)
       |> Map.put(:action, :validate_email)
+      |> IO.inspect(label: "Changeset")
 
     {:noreply, assign(socket, :email_changeset, changeset)}
   end

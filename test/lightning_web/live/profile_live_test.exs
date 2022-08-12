@@ -82,5 +82,14 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "Password changed successfully."
       assert html =~ "Projects"
     end
+
+    test "validate email", %{conn: conn, user: user} do
+      {:ok, profile_live, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
+
+      assert profile_live
+             |> form("#email_form", user: %{email: user.email})
+             |> render_change() =~ "did not change"
+    end
   end
 end
