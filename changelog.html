@@ -121,7 +121,13 @@ and this project adheres to
   </a>
   Added
 </h3>
-<ul><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li></ul><h3 id="fixed" class="section-heading">
+<ul><li>Transfer credential ownership to another user.</li><li>Create credentials via form interface which is defined by a JSON schema. (The
+available JSON schemas will be provided by adaptors, in most cases: e.g.,
+<code class="inline">language-dhis2</code> provides a single schema which defines the required
+attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides
+multiple schemas—things like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes
+for <code class="inline">state.configuration</code> which might be used by lots of different
+jobs/adaptors.)</li><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li></ul><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">fixed</p>
   </a>
