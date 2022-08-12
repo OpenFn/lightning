@@ -17,13 +17,37 @@
         ) %>
 
         <div class="mt-2">
-          <%= label(f, :body,
-            class: "block text-sm font-medium text-secondary-700"
+          <%= label(f, :schema,
+            class: "block text-sm font-medium text-secondary-700 mb-1"
           ) %>
-          <%= error_tag(f, :body) %>
-          <%= textarea(f, :body,
-            class: "rounded-md w-full font-mono bg-slate-800 text-slate-50 h-96"
-          ) %>
+          <.select_field
+            form={f}
+            name={:schema}
+            values={[Raw: "raw", DHIS2: "dhis2"]}
+            prompt="Choose a schema"
+          />
+        </div>
+
+        <div class="mt-2">
+          <div class="rounded-md border p-4 bg-gray-50">
+            <%= case input_value(f, :schema) do %>
+              <% "raw" -> %>
+                <%= label(f, :body,
+                  class: "block text-sm font-medium text-secondary-700"
+                ) %>
+                <%= error_tag(f, :body, class: "block w-full rounded-md") %>
+                <%= textarea(f, :body,
+                  class:
+                    "rounded-md w-full font-mono bg-slate-800 text-slate-100"
+                ) %>
+              <% s when byte_size(s) > 0 -> %>
+                <%= for {field, _type} <- @schema.types do %>
+                  <%= schema_input(@schema.schema_root, @schema_changeset, field) %>
+                <% end %>
+              <% _ -> %>
+                <p>Select a credential schema</p>
+            <% end %>
+          </div>
         </div>
 
         <%= if @action in [:edit] do %>
@@ -116,6 +140,7 @@
         <LightningWeb.Components.Form.submit_button
           value="Save"
           disable_with="Saving..."
+          disabled={!@valid}
           changeset={@changeset}
         />
       </span>

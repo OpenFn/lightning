@@ -122,20 +122,26 @@ defmodule Lightning.Credentials do
          multi,
          %Ecto.Changeset{data: %Credential{}} = changeset
        ) do
-    project_credentials_multi =
-      Ecto.Changeset.get_change(changeset, :project_credentials, [])
-      |> Enum.reduce(Multi.new(), fn changeset, multi ->
-        derive_event(multi, changeset)
-      end)
+    case changeset.changes do
+      map when map_size(map) == 0 ->
+        multi
 
-    multi
-    |> Multi.insert(
-      :audit,
-      fn %{credential: credential} ->
-        Audit.event("updated", credential.id, credential.user_id, changeset)
-      end
-    )
-    |> Multi.append(project_credentials_multi)
+      _ ->
+        project_credentials_multi =
+          Ecto.Changeset.get_change(changeset, :project_credentials, [])
+          |> Enum.reduce(Multi.new(), fn changeset, multi ->
+            derive_event(multi, changeset)
+          end)
+
+        multi
+        |> Multi.insert(
+          :audit,
+          fn %{credential: credential} ->
+            Audit.event("updated", credential.id, credential.user_id, changeset)
+          end
+        )
+        |> Multi.append(project_credentials_multi)
+    end
   end
 
   defp derive_event(

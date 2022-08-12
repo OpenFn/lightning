@@ -10,7 +10,8 @@ defmodule Lightning.CredentialsFixtures do
     end)
     |> Enum.into(%{
       body: %{},
-      name: "some name"
+      name: "some name",
+      schema: "raw"
     })
   end
 

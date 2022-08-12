@@ -4,8 +4,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.{Credentials}
-  import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
+  alias Lightning.Credentials
+  import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3, get_field: 3]
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
@@ -20,7 +20,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(assigns)
      |> assign(
        all_projects: all_projects,
-       changeset: changeset,
+       changeset: nil,
        available_projects: filter_available_projects(changeset, all_projects),
        selected_project: "",
        users:
@@ -29,18 +29,186 @@ defmodule LightningWeb.CredentialLive.FormComponent do
              key: "#{user.first_name} #{user.last_name} (#{user.email})",
              value: user.id
            ]
-         end)
-     )}
+         end),
+       schema: nil
+     )
+     |> assign_params_changes()
+     |> assign_valid()}
+  end
+
+  defp fake_body_schema(_schema) do
+    """
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "properties": {
+        "username": {
+          "title": "Username",
+          "type": "string",
+          "description": "The username used to log in",
+          "minLength": 1
+        },
+        "password": {
+          "title": "Password",
+          "type": "string",
+          "description": "The password used to log in",
+          "writeOnly": true,
+          "minLength": 1
+        },
+        "hostUrl": {
+          "title": "Host URL",
+          "type": "string",
+          "description": "The destination server Url",
+          "format": "uri",
+          "minLength": 1
+        }
+      },
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["hostUrl", "password", "username"]
+    }
+    """
+    |> Jason.decode!()
+  end
+
+  def schema_input(schema_root, changeset, field) do
+    # credential[project_credentials][0][project_id]
+    properties =
+      schema_root.schema
+      |> Map.get("properties")
+      |> Map.get(field |> to_string())
+
+    text = properties |> Map.get("title")
+
+    type =
+      case properties do
+        %{"format" => "uri"} -> :url_input
+        %{"type" => "string", "writeOnly" => true} -> :password_input
+        %{"type" => "string"} -> :text_input
+      end
+
+    value = changeset |> get_field(field, nil)
+
+    [
+      label(:body, field, text,
+        class: "block text-sm font-medium text-secondary-700"
+      ),
+      apply(Phoenix.HTML.Form, type, [
+        :body,
+        field,
+        [
+          value: value || "",
+          class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
+               w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
+        ]
+      ]),
+      Enum.map(
+        Keyword.get_values(changeset.errors, field) |> Enum.slice(0..0),
+        fn error ->
+          content_tag(:span, translate_error(error),
+            phx_feedback_for: input_id(:body, field),
+            class: "block w-full"
+          )
+        end
+      )
+    ]
+  end
+
+  defp assign_valid(socket) do
+    socket
+    |> assign(
+      valid:
+        case socket.assigns do
+          %{changeset: changeset, schema_changeset: schema_changeset}
+          when not is_nil(schema_changeset) ->
+            changeset.valid? && schema_changeset.valid?
+
+          %{changeset: changeset} ->
+            changeset.valid?
+        end
+    )
+  end
+
+  defp assign_params_changes(socket, params \\ %{}) do
+    socket =
+      assign(socket,
+        changeset:
+          create_changeset(
+            socket.assigns.credential,
+            params |> Map.get("credential", %{})
+          )
+      )
+
+    %{changeset: changeset, schema: schema} = socket.assigns
+
+    case {schema, changeset |> fetch_field!(:schema)} do
+      {_schema, nil} ->
+        socket
+
+      {schema, "raw"} ->
+        socket
+        |> assign(schema: nil, schema_changeset: nil)
+
+      {nil, schema_type} when not is_nil(schema_type) ->
+        schema =
+          Credentials.Schema.new(
+            fake_body_schema(schema_type),
+            changeset |> fetch_field!(:body) || %{}
+          )
+
+        schema_changeset = create_schema_changeset(schema, params)
+
+        changeset =
+          create_changeset(
+            socket.assigns.credential,
+            merge_schema_body(params["credential"], schema_changeset)
+          )
+
+        socket
+        |> assign(
+          schema: schema,
+          schema_changeset: schema_changeset,
+          changeset: changeset
+        )
+
+      {schema, schema_type} ->
+        schema_changeset =
+          create_schema_changeset(schema, params)
+          |> Map.put(:action, :validate)
+
+        changeset =
+          create_changeset(
+            socket.assigns.credential,
+            merge_schema_body(params["credential"], schema_changeset)
+          )
+
+        socket
+        |> assign(schema_changeset: schema_changeset, changeset: changeset)
+    end
+  end
+
+  defp merge_schema_body(nil, _schema_changeset), do: %{}
+
+  defp merge_schema_body(params, schema_changeset) do
+    schema_body = Ecto.Changeset.apply_changes(schema_changeset)
+    Map.put(params, "body", schema_body)
+  end
+
+  defp create_schema_changeset(schema, params) do
+    Credentials.Schema.changeset(schema, params |> Map.get("body", %{}))
+  end
+
+  defp create_changeset(credential, params) do
+    credential
+    |> Credentials.change_credential(params)
+    |> Map.put(:action, :validate)
   end
 
   @impl true
-  def handle_event("validate", %{"credential" => credential_params}, socket) do
-    changeset =
-      socket.assigns.credential
-      |> Credentials.change_credential(credential_params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :changeset, changeset)}
+  def handle_event("validate", params, socket) do
+    {:noreply,
+     socket
+     |> assign_params_changes(params)
+     |> assign_valid()}
   end
 
   @impl true
@@ -126,8 +294,28 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(changeset: changeset, available_projects: available_projects)}
   end
 
-  def handle_event("save", %{"credential" => credential_params}, socket) do
-    save_credential(socket, socket.assigns.action, credential_params)
+  def handle_event(
+        "save",
+        %{"credential" => credential_params, "body" => body_params},
+        socket
+      ) do
+    save_credential(
+      socket,
+      socket.assigns.action,
+      credential_params |> Map.put("body", body_params)
+    )
+  end
+
+  def handle_event(
+        "save",
+        %{"credential" => credential_params},
+        socket
+      ) do
+    save_credential(
+      socket,
+      socket.assigns.action,
+      credential_params
+    )
   end
 
   defp save_credential(socket, :edit, credential_params) do
