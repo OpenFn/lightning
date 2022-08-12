@@ -78,6 +78,8 @@ LightningWeb.LiveHelpers.html
 LightningWeb.PageView.html
 LightningWeb.Pagination.html
 LightningWeb.Plugs.FirstSetup.html
+LightningWeb.ProfileLive.Edit.html
+LightningWeb.ProfileLive.FormComponent.html
 LightningWeb.ProjectLive.FormComponent.html
 LightningWeb.ProjectLive.Index.html
 LightningWeb.Router.Helpers.html
@@ -114,8 +116,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-114a77a7ab.js
-dist/sidebar_items-cdf27f87ef.js
+dist/search_items-ab132af204.js
+dist/sidebar_items-9fdbdcf80e.js
 index.html
 readme.html
 search.html
