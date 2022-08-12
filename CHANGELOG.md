@@ -24,6 +24,7 @@ and this project adheres to
 ### Fixed
 
 - User menu (top right) appears on top of all other components.
+- User profile screen integrated with the rest of the liveview app.
 
 ## [0.1.11] - 2022-08-05
 
