@@ -45,35 +45,6 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
-  def handle_event(
-        "save_email",
-        %{
-          "user" => %{
-            "current_password" => _current_password,
-            "email" => _email,
-            "id" => id
-          }
-        } = _user_params,
-        socket
-      ) do
-    user = Accounts.get_user!(id)
-
-    case Accounts.update_user_email(
-           user,
-           "todo: implement token functionality in seperate PR"
-         ) do
-      :ok ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Profile email updated successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
-
-      :error ->
-        {:noreply, assign(socket, :email_changeset, %{})}
-    end
-  end
-
-  @impl true
   def handle_event("validate_password", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user

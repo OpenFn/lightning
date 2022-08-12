@@ -56,16 +56,15 @@
         ) %>
       </span>
       <span>
-        <%= submit("Update email",
-          phx_disable_with: "Saving...",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        ) %>
+        <button type="button" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-25"
+          disabled>Update email
+        </button>
       </span>
     </div>
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5"></div>
     </div>
+    <%= hidden_input(f, :id) %>
   </.form>
   <.form
     let={f}
