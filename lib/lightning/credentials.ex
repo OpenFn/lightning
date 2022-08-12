@@ -122,20 +122,26 @@ defmodule Lightning.Credentials do
          multi,
          %Ecto.Changeset{data: %Credential{}} = changeset
        ) do
-    project_credentials_multi =
-      Ecto.Changeset.get_change(changeset, :project_credentials, [])
-      |> Enum.reduce(Multi.new(), fn changeset, multi ->
-        derive_event(multi, changeset)
-      end)
+    case changeset.changes do
+      map when map_size(map) == 0 ->
+        multi
 
-    multi
-    |> Multi.insert(
-      :audit,
-      fn %{credential: credential} ->
-        Audit.event("updated", credential.id, credential.user_id, changeset)
-      end
-    )
-    |> Multi.append(project_credentials_multi)
+      _ ->
+        project_credentials_multi =
+          Ecto.Changeset.get_change(changeset, :project_credentials, [])
+          |> Enum.reduce(Multi.new(), fn changeset, multi ->
+            derive_event(multi, changeset)
+          end)
+
+        multi
+        |> Multi.insert(
+          :audit,
+          fn %{credential: credential} ->
+            Audit.event("updated", credential.id, credential.user_id, changeset)
+          end
+        )
+        |> Multi.append(project_credentials_multi)
+    end
   end
 
   defp derive_event(
@@ -234,5 +240,34 @@ defmodule Lightning.Credentials do
     else
       SensitiveValues.secret_values(body)
     end
+  end
+
+  @doc """
+  Returns a boolean for saying whether a user can be transferred one credential or not.
+
+  ## Examples
+
+      iex> can_credential_be_shared_to_user(credential_id, user_id)
+      true
+
+      iex> can_credential_be_shared_to_user(credential_id, user_id)
+      false
+  """
+  def invalid_projects_for_user(credential_id, user_id) do
+    project_credentials =
+      from(pc in Lightning.Projects.ProjectCredential,
+        where: pc.credential_id == ^credential_id,
+        select: pc.project_id
+      )
+      |> Repo.all()
+
+    project_users =
+      from(pu in Lightning.Projects.ProjectUser,
+        where: pu.user_id == ^user_id,
+        select: pu.project_id
+      )
+      |> Repo.all()
+
+    project_credentials -- project_users
   end
 end

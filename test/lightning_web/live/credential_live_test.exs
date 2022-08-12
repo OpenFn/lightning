@@ -34,8 +34,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
     test "lists all credentials", %{
       conn: conn,
-      credential: credential,
-      project_credential: project_credential
+      credential: credential
     } do
       {:ok, _index_live, html} =
         live(conn, Routes.credential_index_path(conn, :index))
@@ -56,13 +55,15 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Edit"
       assert html =~ "Delete"
       assert html =~ "Production"
+      assert html =~ credential.schema
+      assert html =~ credential.name
     end
 
-    test "saves new credential", %{conn: conn, project: project} do
+    test "saves new raw credential", %{conn: conn, project: project} do
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
-      {:ok, edit_live, _html} =
+      {:ok, new_live, _html} =
         index_live
         |> element("a", "New Credential")
         |> render_click()
@@ -71,25 +72,83 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
-      assert edit_live
-             |> form("#credential-form", credential: @invalid_attrs)
+      refute new_live |> has_element?("#credential-form_body")
+
+      new_live
+      |> form("#credential-form", credential: %{schema: "raw"})
+      |> render_change()
+
+      assert new_live |> has_element?("#credential-form_body")
+
+      assert new_live
+             |> form("#credential-form", credential: %{name: ""})
              |> render_change() =~ "can&#39;t be blank"
 
-      assert edit_live
+      assert new_live
              |> form("#credential-form", credential: @create_attrs)
              |> render_change()
 
-      edit_live
+      new_live
       |> element("#project_list")
       |> render_hook("select_item", %{"id" => project.id})
 
-      edit_live
+      new_live
       |> element("button", "Add")
       |> render_click()
 
-      edit_live
+      new_live
       |> form("#credential-form")
       |> render_submit()
+    end
+
+    test "saves new dhis2 credential", %{conn: conn} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      new_live
+      |> form("#credential-form", credential: %{schema: "dhis2"})
+      |> render_change()
+
+      refute new_live |> has_element?("#credential-form_body")
+
+      assert new_live
+             |> form("#credential-form", body: %{username: ""})
+             |> render_change() =~ "can&#39;t be blank"
+
+      assert new_live |> submit_disabled()
+
+      assert new_live
+             |> form("#credential-form",
+               credential: %{name: "My Credential"},
+               body: %{username: "foo", password: "bar", hostUrl: "baz"}
+             )
+             |> render_change() =~ "expected to be a URI"
+
+      assert new_live
+             |> form("#credential-form",
+               body: %{hostUrl: "http://localhost"}
+             )
+             |> render_change()
+
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        new_live
+        |> form("#credential-form")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
     end
 
     test "deletes credential in listing", %{conn: conn, credential: credential} do
@@ -132,7 +191,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render_submit() =~ "some updated body"
     end
 
-    test "marks a credential for use in a 'production' system", %{
+    test "transfers a credential to a new owner", %{
       conn: conn,
       credential: credential
     } do
@@ -154,5 +213,62 @@ defmodule LightningWeb.CredentialLiveTest do
              )
              |> render_submit() =~ "some updated body"
     end
+
+    test "updates credential for transfering", %{
+      conn: conn,
+      credential: credential
+    } do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      %{
+        id: user_id_1,
+        first_name: first_name_1,
+        last_name: last_name_1,
+        email: email_1
+      } = Lightning.AccountsFixtures.user_fixture()
+
+      %{
+        id: user_id_2,
+        first_name: first_name_2,
+        last_name: last_name_2,
+        email: email_2
+      } = Lightning.AccountsFixtures.user_fixture()
+
+      %{
+        id: user_id_3,
+        first_name: first_name_3,
+        last_name: last_name_3,
+        email: email_3
+      } = Lightning.AccountsFixtures.user_fixture()
+
+      #   # assert form_live
+      #   #        |> form("#credential-form", credential: @update_attrs)
+      #   #        |> render_submit() =~ "some updated body"
+      # end
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user_id_1, user_id: user_id_2}]
+        })
+
+      {:ok, form_live, html} =
+        index_live
+        |> element("#credential-#{credential.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :edit, credential)
+        )
+
+      assert html =~ user_id_1
+      assert html =~ user_id_2
+      assert html =~ user_id_3
+    end
+  end
+
+  defp submit_disabled(live) do
+    live |> has_element?("button[disabled][type=submit]")
   end
 end

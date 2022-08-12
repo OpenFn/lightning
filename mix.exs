@@ -60,6 +60,7 @@ defmodule Lightning.MixProject do
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:excoveralls, "~> 0.14.4", only: [:test, :dev]},
+      {:ex_json_schema, "~> 0.9.1"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.18"},
       {:hackney, "~> 1.8"},

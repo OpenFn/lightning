@@ -60,6 +60,7 @@ defmodule Lightning.CredentialsTest do
         body: %{},
         name: "some name",
         user_id: user_fixture().id,
+        schema: "raw",
         project_credentials: [
           %{project_id: project_fixture().id}
         ]
@@ -86,11 +87,17 @@ defmodule Lightning.CredentialsTest do
     test "update_credential/2 with valid data updates the credential" do
       user = user_fixture()
 
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user.id}]
+        })
+
       credential =
         credential_fixture(
           user_id: user.id,
           project_credentials: [
-            %{project_id: project_fixture().id}
+            %{project_id: project_id}
           ]
         )
 
@@ -161,6 +168,34 @@ defmodule Lightning.CredentialsTest do
       user = user_fixture()
       credential = credential_fixture(user_id: user.id)
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
+    end
+
+    test "can credential be transfered query" do
+      %{id: user_id_1} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
+      %{id: user_id_3} = Lightning.AccountsFixtures.user_fixture()
+
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: user_id_1, user_id: user_id_2}]
+        })
+
+      credential =
+        Lightning.CredentialsFixtures.credential_fixture(
+          user_id: user_id_1,
+          project_credentials: [%{project_id: project_id}]
+        )
+
+      assert Credentials.invalid_projects_for_user(
+               credential.id,
+               user_id_2
+             ) == []
+
+      assert Credentials.invalid_projects_for_user(
+               credential.id,
+               user_id_3
+             ) == [project_id]
     end
   end
 
