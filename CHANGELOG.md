@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+- Transfer credential ownership to another user.
+- Create credentials via form interface which is defined by a JSON schema. (The
+  available JSON schemas will be provided by adaptors, in most cases: e.g.,
+  `language-dhis2` provides a single schema which defines the required
+  attributes for `state.configuration`, while `language-common` provides
+  multiple schemas—things like "oauth" or "basic auth" which define attributes
+  for `state.configuration` which might be used by lots of different
+  jobs/adaptors.)
 - Show "projects with access" in credentials list view.
 - Show job in runs list and run view.
 
