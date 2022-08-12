@@ -29,12 +29,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
              key: "#{user.first_name} #{user.last_name} (#{user.email})",
              value: user.id
            ]
-         end)
+         end),
        schema: nil
      )
      |> assign_params_changes()
      |> assign_valid()}
-
   end
 
   defp fake_body_schema(_schema) do
