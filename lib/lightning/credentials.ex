@@ -241,4 +241,33 @@ defmodule Lightning.Credentials do
       SensitiveValues.secret_values(body)
     end
   end
+
+  @doc """
+  Returns a boolean for saying whether a user can be transferred one credential or not.
+
+  ## Examples
+
+      iex> can_credential_be_shared_to_user(credential_id, user_id)
+      true
+
+      iex> can_credential_be_shared_to_user(credential_id, user_id)
+      false
+  """
+  def invalid_projects_for_user(credential_id, user_id) do
+    project_credentials =
+      from(pc in Lightning.Projects.ProjectCredential,
+        where: pc.credential_id == ^credential_id,
+        select: pc.project_id
+      )
+      |> Repo.all()
+
+    project_users =
+      from(pu in Lightning.Projects.ProjectUser,
+        where: pu.user_id == ^user_id,
+        select: pu.project_id
+      )
+      |> Repo.all()
+
+    project_credentials -- project_users
+  end
 end
