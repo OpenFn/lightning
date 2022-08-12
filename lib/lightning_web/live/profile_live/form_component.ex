@@ -56,7 +56,6 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event("validate_email", %{"user" => user_params}, socket) do
-
     changeset =
       socket.assigns.user
       |> Accounts.change_user_email(user_params)
