@@ -5,7 +5,7 @@
 <.form
   let={f}
   for={@email_changeset}
-  action={Routes.user_settings_path(@conn, :update)}
+  action={Routes.profile_edit_path(@conn, :edit)}
   id="update_email"
 >
   <%= if @email_changeset.action do %>
@@ -38,7 +38,7 @@
 <.form
   let={f}
   for={@password_changeset}
-  action={Routes.user_settings_path(@conn, :update)}
+  action={Routes.profile_edit_path(@conn, :edit)}
   id="update_password"
 >
   <%= if @password_changeset.action do %>

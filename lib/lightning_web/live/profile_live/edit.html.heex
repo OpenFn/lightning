@@ -1,0 +1,15 @@
+<Layout.page_content>
+  <:header>
+    <Layout.header socket={@socket} title={"#{@page_title}"} />
+  </:header>
+  <Layout.centered>
+    <.live_component
+      module={LightningWeb.ProfileLive.FormComponent}
+      id={@current_user.id}
+      title={@page_title}
+      action={@live_action}
+      user={@user}
+      return_to={Routes.profile_edit_path(@socket, :edit)}
+    />
+  </Layout.centered>
+</Layout.page_content>
