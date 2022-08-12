@@ -17,14 +17,14 @@
         ) %>
 
         <div class="mt-2">
-          <%= label(f, :schema,
+          <%= label(f, :type,
             class: "block text-sm font-medium text-secondary-700 mb-1"
           ) %>
           <.select_field
             form={f}
             name={:schema}
             values={[Raw: "raw", DHIS2: "dhis2"]}
-            prompt="Choose a schema"
+            prompt="Choose a type"
           />
         </div>
 
@@ -45,7 +45,7 @@
                   <%= schema_input(@schema.schema_root, @schema_changeset, field) %>
                 <% end %>
               <% _ -> %>
-                <p>Select a credential schema</p>
+                <p>Select a credential type</p>
             <% end %>
           </div>
         </div>
