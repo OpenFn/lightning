@@ -1,4 +1,8 @@
-# TODO: Ensure that all this behaviour appears in live view.
+# ==============================================================================
+# Issue #247: https://github.com/OpenFn/Lightning/issues/247
+# Ensure that all this behaviour appears in live view.
+# ==============================================================================
+
 # defmodule LightningWeb.UserSettingsController do
 #   use LightningWeb, :controller
 

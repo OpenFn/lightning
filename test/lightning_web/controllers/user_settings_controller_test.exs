@@ -1,4 +1,8 @@
-# TODO: ensure this functionality is all ported to the live view
+# ==============================================================================
+# Issue #247: https://github.com/OpenFn/Lightning/issues/247
+# Ensure that all this behaviour appears in live view.
+# ==============================================================================
+
 # defmodule LightningWeb.UserSettingsControllerTest do
 #   use LightningWeb.ConnCase, async: true
 
