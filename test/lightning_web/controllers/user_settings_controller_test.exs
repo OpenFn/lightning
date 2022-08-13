@@ -1,152 +1,157 @@
-defmodule LightningWeb.UserSettingsControllerTest do
-  use LightningWeb.ConnCase, async: true
+# ==============================================================================
+# Issue #247: https://github.com/OpenFn/Lightning/issues/247
+# Ensure that all this behaviour appears in live view.
+# ==============================================================================
 
-  alias Lightning.Accounts
-  import Lightning.AccountsFixtures
+# defmodule LightningWeb.UserSettingsControllerTest do
+#   use LightningWeb.ConnCase, async: true
 
-  setup :register_and_log_in_user
+#   alias Lightning.Accounts
+#   import Lightning.AccountsFixtures
 
-  describe "GET /profile" do
-    test "renders settings page", %{conn: conn} do
-      conn = get(conn, Routes.user_settings_path(conn, :edit))
-      response = html_response(conn, 200)
-      assert response =~ "<h1>Settings</h1>"
-    end
+#   setup :register_and_log_in_user
 
-    test "redirects if user is not logged in" do
-      conn = build_conn()
-      conn = get(conn, Routes.user_settings_path(conn, :edit))
-      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
-    end
-  end
+#   describe "GET /profile" do
+#     test "renders settings page", %{conn: conn} do
+#       conn = get(conn, Routes.user_settings_path(conn, :edit))
+#       response = html_response(conn, 200)
+#       assert response =~ "<h1>Settings</h1>"
+#     end
 
-  describe "PUT /profile (change password form)" do
-    test "updates the user password and resets tokens", %{conn: conn, user: user} do
-      new_password_conn =
-        put(conn, Routes.user_settings_path(conn, :update), %{
-          "action" => "update_password",
-          "current_password" => valid_user_password(),
-          "user" => %{
-            "password" => "new valid password",
-            "password_confirmation" => "new valid password"
-          }
-        })
+#     test "redirects if user is not logged in" do
+#       conn = build_conn()
+#       conn = get(conn, Routes.user_settings_path(conn, :edit))
+#       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+#     end
+#   end
 
-      assert redirected_to(new_password_conn) ==
-               Routes.user_settings_path(conn, :edit)
+#   describe "PUT /profile (change password form)" do
+#     test "updates the user password and resets tokens", %{conn: conn, user: user} do
+#       new_password_conn =
+#         put(conn, Routes.user_settings_path(conn, :update), %{
+#           "action" => "update_password",
+#           "current_password" => valid_user_password(),
+#           "user" => %{
+#             "password" => "new valid password",
+#             "password_confirmation" => "new valid password"
+#           }
+#         })
 
-      assert get_session(new_password_conn, :user_token) !=
-               get_session(conn, :user_token)
+#       assert redirected_to(new_password_conn) ==
+#                Routes.user_settings_path(conn, :edit)
 
-      assert get_flash(new_password_conn, :info) =~
-               "Password updated successfully"
+#       assert get_session(new_password_conn, :user_token) !=
+#                get_session(conn, :user_token)
 
-      assert Accounts.get_user_by_email_and_password(
-               user.email,
-               "new valid password"
-             )
-    end
+#       assert get_flash(new_password_conn, :info) =~
+#                "Password updated successfully"
 
-    test "does not update password on invalid data", %{conn: conn} do
-      old_password_conn =
-        put(conn, Routes.user_settings_path(conn, :update), %{
-          "action" => "update_password",
-          "current_password" => "invalid",
-          "user" => %{
-            "password" => "too short",
-            "password_confirmation" => "does not match"
-          }
-        })
+#       assert Accounts.get_user_by_email_and_password(
+#                user.email,
+#                "new valid password"
+#              )
+#     end
 
-      response = html_response(old_password_conn, 200)
-      assert response =~ "<h1>Settings</h1>"
-      assert response =~ "does not match password"
-      assert response =~ "is not valid"
+#     test "does not update password on invalid data", %{conn: conn} do
+#       old_password_conn =
+#         put(conn, Routes.user_settings_path(conn, :update), %{
+#           "action" => "update_password",
+#           "current_password" => "invalid",
+#           "user" => %{
+#             "password" => "too short",
+#             "password_confirmation" => "does not match"
+#           }
+#         })
 
-      assert get_session(old_password_conn, :user_token) ==
-               get_session(conn, :user_token)
-    end
-  end
+#       response = html_response(old_password_conn, 200)
+#       assert response =~ "<h1>Settings</h1>"
+#       assert response =~ "does not match password"
+#       assert response =~ "is not valid"
 
-  describe "PUT /profile (change email form)" do
-    @tag :capture_log
-    test "updates the user email", %{conn: conn, user: user} do
-      conn =
-        put(conn, Routes.user_settings_path(conn, :update), %{
-          "action" => "update_email",
-          "current_password" => valid_user_password(),
-          "user" => %{"email" => unique_user_email()}
-        })
+#       assert get_session(old_password_conn, :user_token) ==
+#                get_session(conn, :user_token)
+#     end
+#   end
 
-      assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
-      assert get_flash(conn, :info) =~ "A link to confirm your email"
-      assert Accounts.get_user_by_email(user.email)
-    end
+#   describe "PUT /profile (change email form)" do
+#     @tag :capture_log
+#     test "updates the user email", %{conn: conn, user: user} do
+#       conn =
+#         put(conn, Routes.user_settings_path(conn, :update), %{
+#           "action" => "update_email",
+#           "current_password" => valid_user_password(),
+#           "user" => %{"email" => unique_user_email()}
+#         })
 
-    test "does not update email on invalid data", %{conn: conn} do
-      conn =
-        put(conn, Routes.user_settings_path(conn, :update), %{
-          "action" => "update_email",
-          "current_password" => "invalid",
-          "user" => %{"email" => "with spaces"}
-        })
+#       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
+#       assert get_flash(conn, :info) =~ "A link to confirm your email"
+#       assert Accounts.get_user_by_email(user.email)
+#     end
 
-      response = html_response(conn, 200)
-      assert response =~ "<h1>Settings</h1>"
-      assert response =~ "must have the @ sign and no spaces"
-      assert response =~ "is not valid"
-    end
-  end
+#     test "does not update email on invalid data", %{conn: conn} do
+#       conn =
+#         put(conn, Routes.user_settings_path(conn, :update), %{
+#           "action" => "update_email",
+#           "current_password" => "invalid",
+#           "user" => %{"email" => "with spaces"}
+#         })
 
-  describe "GET /profile/confirm_email/:token" do
-    setup %{user: user} do
-      email = unique_user_email()
+#       response = html_response(conn, 200)
+#       assert response =~ "<h1>Settings</h1>"
+#       assert response =~ "must have the @ sign and no spaces"
+#       assert response =~ "is not valid"
+#     end
+#   end
 
-      token =
-        extract_user_token(fn url ->
-          Accounts.deliver_update_email_instructions(
-            %{user | email: email},
-            user.email,
-            url
-          )
-        end)
+#   describe "GET /profile/confirm_email/:token" do
+#     setup %{user: user} do
+#       email = unique_user_email()
 
-      %{token: token, email: email}
-    end
+#       token =
+#         extract_user_token(fn url ->
+#           Accounts.deliver_update_email_instructions(
+#             %{user | email: email},
+#             user.email,
+#             url
+#           )
+#         end)
 
-    test "updates the user email once", %{
-      conn: conn,
-      user: user,
-      token: token,
-      email: email
-    } do
-      conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
-      assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
-      assert get_flash(conn, :info) =~ "Email changed successfully"
-      refute Accounts.get_user_by_email(user.email)
-      assert Accounts.get_user_by_email(email)
+#       %{token: token, email: email}
+#     end
 
-      conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
-      assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
+#     test "updates the user email once", %{
+#       conn: conn,
+#       user: user,
+#       token: token,
+#       email: email
+#     } do
+#       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
+#       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
+#       assert get_flash(conn, :info) =~ "Email changed successfully"
+#       refute Accounts.get_user_by_email(user.email)
+#       assert Accounts.get_user_by_email(email)
 
-      assert get_flash(conn, :error) =~
-               "Email change link is invalid or it has expired"
-    end
+#       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
+#       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
 
-    test "does not update email with invalid token", %{conn: conn, user: user} do
-      conn = get(conn, Routes.user_settings_path(conn, :confirm_email, "oops"))
-      assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
+#       assert get_flash(conn, :error) =~
+#                "Email change link is invalid or it has expired"
+#     end
 
-      assert get_flash(conn, :error) =~
-               "Email change link is invalid or it has expired"
+#     test "does not update email with invalid token", %{conn: conn, user: user} do
+#       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, "oops"))
+#       assert redirected_to(conn) == Routes.user_settings_path(conn, :edit)
 
-      assert Accounts.get_user_by_email(user.email)
-    end
+#       assert get_flash(conn, :error) =~
+#                "Email change link is invalid or it has expired"
 
-    test "redirects if user is not logged in", %{token: token} do
-      conn = build_conn()
-      conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
-      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
-    end
-  end
-end
+#       assert Accounts.get_user_by_email(user.email)
+#     end
+
+#     test "redirects if user is not logged in", %{token: token} do
+#       conn = build_conn()
+#       conn = get(conn, Routes.user_settings_path(conn, :confirm_email, token))
+#       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+#     end
+#   end
+# end

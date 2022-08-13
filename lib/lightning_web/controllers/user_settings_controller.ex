@@ -1,74 +1,79 @@
-defmodule LightningWeb.UserSettingsController do
-  use LightningWeb, :controller
+# ==============================================================================
+# Issue #247: https://github.com/OpenFn/Lightning/issues/247
+# Ensure that all this behaviour appears in live view.
+# ==============================================================================
 
-  alias Lightning.Accounts
-  alias LightningWeb.UserAuth
+# defmodule LightningWeb.UserSettingsController do
+#   use LightningWeb, :controller
 
-  plug :assign_email_and_password_changesets
+#   alias Lightning.Accounts
+#   alias LightningWeb.UserAuth
 
-  def edit(conn, _params) do
-    render(conn, "edit.html")
-  end
+#   plug :assign_email_and_password_changesets
 
-  def update(conn, %{"action" => "update_email"} = params) do
-    %{"current_password" => password, "user" => user_params} = params
-    user = conn.assigns.current_user
+#   def edit(conn, _params) do
+#     render(conn, "edit.html")
+#   end
 
-    case Accounts.apply_user_email(user, password, user_params) do
-      {:ok, applied_user} ->
-        Accounts.deliver_update_email_instructions(
-          applied_user,
-          user.email,
-          &Routes.user_settings_url(conn, :confirm_email, &1)
-        )
+#   def update(conn, %{"action" => "update_email"} = params) do
+#     %{"current_password" => password, "user" => user_params} = params
+#     user = conn.assigns.current_user
 
-        conn
-        |> put_flash(
-          :info,
-          "A link to confirm your email change has been sent to the new address."
-        )
-        |> redirect(to: Routes.user_settings_path(conn, :edit))
+#     case Accounts.apply_user_email(user, password, user_params) do
+#       {:ok, applied_user} ->
+#         Accounts.deliver_update_email_instructions(
+#           applied_user,
+#           user.email,
+#           &Routes.user_settings_url(conn, :confirm_email, &1)
+#         )
 
-      {:error, changeset} ->
-        render(conn, "edit.html", email_changeset: changeset)
-    end
-  end
+#         conn
+#         |> put_flash(
+#           :info,
+#           "A link to confirm your email change has been sent to the new address."
+#         )
+#         |> redirect(to: Routes.user_settings_path(conn, :edit))
 
-  def update(conn, %{"action" => "update_password"} = params) do
-    %{"current_password" => password, "user" => user_params} = params
-    user = conn.assigns.current_user
+#       {:error, changeset} ->
+#         render(conn, "edit.html", email_changeset: changeset)
+#     end
+#   end
 
-    case Accounts.update_user_password(user, password, user_params) do
-      {:ok, user} ->
-        conn
-        |> put_flash(:info, "Password updated successfully.")
-        |> put_session(:user_return_to, Routes.user_settings_path(conn, :edit))
-        |> UserAuth.log_in_user(user)
+#   def update(conn, %{"action" => "update_password"} = params) do
+#     %{"current_password" => password, "user" => user_params} = params
+#     user = conn.assigns.current_user
 
-      {:error, changeset} ->
-        render(conn, "edit.html", password_changeset: changeset)
-    end
-  end
+#     case Accounts.update_user_password(user, password, user_params) do
+#       {:ok, user} ->
+#         conn
+#         |> put_flash(:info, "Password updated successfully.")
+#         |> put_session(:user_return_to, Routes.user_settings_path(conn, :edit))
+#         |> UserAuth.log_in_user(user)
 
-  def confirm_email(conn, %{"token" => token}) do
-    case Accounts.update_user_email(conn.assigns.current_user, token) do
-      :ok ->
-        conn
-        |> put_flash(:info, "Email changed successfully.")
-        |> redirect(to: Routes.user_settings_path(conn, :edit))
+#       {:error, changeset} ->
+#         render(conn, "edit.html", password_changeset: changeset)
+#     end
+#   end
 
-      :error ->
-        conn
-        |> put_flash(:error, "Email change link is invalid or it has expired.")
-        |> redirect(to: Routes.user_settings_path(conn, :edit))
-    end
-  end
+#   def confirm_email(conn, %{"token" => token}) do
+#     case Accounts.update_user_email(conn.assigns.current_user, token) do
+#       :ok ->
+#         conn
+#         |> put_flash(:info, "Email changed successfully.")
+#         |> redirect(to: Routes.user_settings_path(conn, :edit))
 
-  defp assign_email_and_password_changesets(conn, _opts) do
-    user = conn.assigns.current_user
+#       :error ->
+#         conn
+#         |> put_flash(:error, "Email change link is invalid or it has expired.")
+#         |> redirect(to: Routes.user_settings_path(conn, :edit))
+#     end
+#   end
 
-    conn
-    |> assign(:email_changeset, Accounts.change_user_email(user))
-    |> assign(:password_changeset, Accounts.change_user_password(user))
-  end
-end
+#   defp assign_email_and_password_changesets(conn, _opts) do
+#     user = conn.assigns.current_user
+
+#     conn
+#     |> assign(:email_changeset, Accounts.change_user_email(user))
+#     |> assign(:password_changeset, Accounts.change_user_password(user))
+#   end
+# end
