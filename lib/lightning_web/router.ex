@@ -70,9 +70,6 @@ defmodule LightningWeb.Router do
   scope "/", LightningWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    # TODO: Move to live view once confirm_email is ported
-    # get "/profile/confirm_email/:token", UserSettingsController, :confirm_email
-
     live_session :settings, on_mount: LightningWeb.InitAssigns do
       live "/settings", SettingsLive.Index, :index
 
