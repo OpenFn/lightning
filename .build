@@ -99,7 +99,6 @@ LightningWeb.UserResetPasswordController.html
 LightningWeb.UserResetPasswordView.html
 LightningWeb.UserSessionController.html
 LightningWeb.UserSessionView.html
-LightningWeb.UserSettingsController.html
 LightningWeb.UserSettingsView.html
 LightningWeb.WebhooksController.html
 LightningWeb.html
@@ -116,8 +115,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-a99c1d02b3.js
-dist/sidebar_items-9fdbdcf80e.js
+dist/search_items-c6e9071f84.js
+dist/sidebar_items-2c53f61d4d.js
 index.html
 readme.html
 search.html
