@@ -5,14 +5,17 @@ title: ""
 labels: ""
 ---
 
-**Is your feature request related to a problem? Please describe.** A clear and
-concise description of what the problem is. Ex. I'm always frustrated when [...]
+**Is your feature request related to a problem? Please describe.**
 
-**Describe the solution you'd like** A clear and concise description of what you
-want to happen.
+A clear and concise description of what the problem is. Ex. What would this
+feature enable you to do ? How would it improve your experience of Lightning ?
 
-**Describe alternatives you've considered** A clear and concise description of
-any alternative solutions or features you've considered.
+**Tell us about your idea - describe the solution you'd like.**
 
-**Additional context** Add any other context or screenshots about the feature
+A clear and concise description of what you want to happen.
+
+**Additional context**
+
+Walk us through the last time you encountered this problem. How often are you
+faced with this issue ? Add any other context or screenshots about the feature
 request here.
