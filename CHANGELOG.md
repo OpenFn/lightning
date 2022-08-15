@@ -6,20 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [unreleased]
+## [0.1.12] - 2022-08-15
 
 ### Added
 
 - Transfer credential ownership to another user.
-- Create credentials via form interface which is defined by a JSON schema. (The
-  available JSON schemas will be provided by adaptors, in most cases: e.g.,
-  `language-dhis2` provides a single schema which defines the required
-  attributes for `state.configuration`, while `language-common` provides
-  multiple schemas—things like "oauth" or "basic auth" which define attributes
-  for `state.configuration` which might be used by lots of different
-  jobs/adaptors.)
+- Create credentials via a form interface\*
 - Show "projects with access" in credentials list view.
 - Show job in runs list and run view.
+
+\*The form is defined by a JSON schema provided by an adaptor, in most cases:
+e.g., `language-dhis2` provides a single schema which defines the required
+attributes for `state.configuration`, while `language-common` provides multiple
+credential schemas like "oauth" or "basic auth" which define attributes for
+`state.configuration` and which might be used by lots of different jobs.)
 
 ### Fixed
 
