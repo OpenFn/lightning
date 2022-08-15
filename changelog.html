@@ -10,7 +10,7 @@
     <title>Changelog — Lightning v0.1.11</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-2c53f61d4d.js"></script>
+    <script src="dist/sidebar_items-998a0e8686.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -109,11 +109,11 @@ Lightning
 
 <p>All notable changes to this project will be documented in this file.</p><p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>,
 and this project adheres to
-<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="unreleased" class="section-heading">
-  <a href="#unreleased" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">unreleased</p>
+<a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p><h2 id="0-1-12-2022-08-15" class="section-heading">
+  <a href="#0-1-12-2022-08-15" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">0-1-12-2022-08-15</p>
   </a>
-  [unreleased]
+  [0.1.12] - 2022-08-15
 </h2>
 <h3 id="added" class="section-heading">
   <a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
@@ -121,13 +121,11 @@ and this project adheres to
   </a>
   Added
 </h3>
-<ul><li>Transfer credential ownership to another user.</li><li>Create credentials via form interface which is defined by a JSON schema. (The
-available JSON schemas will be provided by adaptors, in most cases: e.g.,
-<code class="inline">language-dhis2</code> provides a single schema which defines the required
-attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides
-multiple schemas—things like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes
-for <code class="inline">state.configuration</code> which might be used by lots of different
-jobs/adaptors.)</li><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li></ul><h3 id="fixed" class="section-heading">
+<ul><li>Transfer credential ownership to another user.</li><li>Create credentials via a form interface*</li><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li></ul><p>*The form is defined by a JSON schema provided by an adaptor, in most cases:
+e.g., <code class="inline">language-dhis2</code> provides a single schema which defines the required
+attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides multiple
+credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes for
+<code class="inline">state.configuration</code> and which might be used by lots of different jobs.)</p><h3 id="fixed" class="section-heading">
   <a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">fixed</p>
   </a>
