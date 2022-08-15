@@ -170,7 +170,7 @@ defmodule Lightning.CredentialsTest do
       assert %Ecto.Changeset{} = Credentials.change_credential(credential)
     end
 
-    test "can credential be transfered query" do
+    test "invalid_projects_for_user/2 returns a list of invalid projects, given a credential and a user" do
       %{id: user_id_1} = Lightning.AccountsFixtures.user_fixture()
       %{id: user_id_2} = Lightning.AccountsFixtures.user_fixture()
       %{id: user_id_3} = Lightning.AccountsFixtures.user_fixture()
@@ -195,7 +195,8 @@ defmodule Lightning.CredentialsTest do
       assert Credentials.invalid_projects_for_user(
                credential.id,
                user_id_3
-             ) == [project_id]
+             ) ==
+               [project_id]
     end
   end
 

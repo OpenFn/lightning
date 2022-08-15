@@ -236,9 +236,9 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some updated name"
     end
 
-    test "transfers a credential to another owner", %{
+    test "blocks credential transfer to invalid owner; allows to valid owner", %{
       conn: conn,
-      user: first_owner_user
+      user: first_owner
     } do
       user_2 = Lightning.AccountsFixtures.user_fixture()
       user_3 = Lightning.AccountsFixtures.user_fixture()
@@ -246,12 +246,12 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{
           name: "some-name",
-          project_users: [%{user_id: first_owner_user.id, user_id: user_2.id}]
+          project_users: [%{user_id: first_owner.id, user_id: user_2.id}]
         })
 
       credential =
         credential_fixture(
-          user_id: first_owner_user.id,
+          user_id: first_owner.id,
           name: "the one for giving away",
           project_credentials: [
             %{project_id: project_id}
@@ -274,7 +274,7 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :edit, credential)
         )
 
-      assert html =~ first_owner_user.id
+      assert html =~ first_owner.id
       assert html =~ user_2.id
       assert html =~ user_3.id
 
