@@ -40,15 +40,6 @@
                 to: Routes.credential_edit_path(@socket, :edit, credential)
               ) %>
             </span>
-            |
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: credential.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
-            </span>
           </.td>
         </.tr>
       <% end %>

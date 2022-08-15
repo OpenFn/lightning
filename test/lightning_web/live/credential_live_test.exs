@@ -58,7 +58,6 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ project_names |> Enum.join(", ")
 
       assert html =~ "Edit"
-      assert html =~ "Delete"
       assert html =~ "Production"
       assert html =~ credential.schema
       assert html =~ credential.name
@@ -156,6 +155,8 @@ defmodule LightningWeb.CredentialLiveTest do
         )
     end
 
+    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
+    @tag :skip
     test "deletes credential without a shared project", %{
       conn: conn,
       credential: credential
@@ -172,6 +173,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute has_element?(index_live, "#credential-#{credential.id}")
     end
+
+    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
+    @tag :skip
+    test "deletes a credential with a shared project"
+    # displays warning
+    # removes project_credential
+    # removes from any jobs that are currently using it
   end
 
   describe "Edit" do

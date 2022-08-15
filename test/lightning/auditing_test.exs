@@ -5,7 +5,7 @@ defmodule Lightning.AuditingTest do
   import Lightning.CredentialsFixtures
 
   describe "list_all/1" do
-    test "" do
+    test "When a credential is created, it should appear in the audit trail" do
       %{id: credential_id} = credential_fixture()
 
       %{entries: [entry]} = Auditing.list_all()

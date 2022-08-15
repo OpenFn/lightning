@@ -6,7 +6,7 @@ defmodule LightningWeb.AuditLiveTest do
   describe "Index as a regular user" do
     setup :register_and_log_in_user
 
-    test "cannot access the users page", %{conn: conn} do
+    test "cannot access the audit trail", %{conn: conn} do
       {:ok, _index_live, html} =
         live(conn, Routes.audit_index_path(conn, :index))
         |> follow_redirect(conn, "/")
@@ -15,7 +15,7 @@ defmodule LightningWeb.AuditLiveTest do
     end
   end
 
-  describe "Index" do
+  describe "Index as a superuser" do
     setup [:register_and_log_in_superuser]
 
     test "lists all audit entries", %{conn: conn} do
