@@ -5,9 +5,9 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.28.3">
-    <meta name="project" content="Lightning v0.1.11">
+    <meta name="project" content="Lightning v0.1.12">
 
-    <title>Lightning.Invocation — Lightning v0.1.11</title>
+    <title>Lightning.Invocation — Lightning v0.1.12</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-998a0e8686.js"></script>
@@ -70,7 +70,7 @@
 Lightning
       </a>
       <strong class="sidebar-projectVersion" translate="no">
-        v0.1.11
+        v0.1.12
       </strong>
     </div>
     <ul class="sidebar-listNav">
@@ -105,7 +105,7 @@ Lightning
     </a>
 
   <span translate="no">Lightning.Invocation</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.1.11)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.1.12)</small>
 
 </h1>
 
@@ -383,8 +383,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="4219658128-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="4219658128-1">)</span><span class="w">
-</span><span class="p" data-group-id="4219658128-2">%</span><span class="nc" data-group-id="4219658128-2">Ecto.Changeset</span><span class="p" data-group-id="4219658128-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4219658128-3">%</span><span class="nc" data-group-id="4219658128-3">Dataclip</span><span class="p" data-group-id="4219658128-3">{</span><span class="p" data-group-id="4219658128-3">}</span><span class="p" data-group-id="4219658128-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="3186011306-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="3186011306-1">)</span><span class="w">
+</span><span class="p" data-group-id="3186011306-2">%</span><span class="nc" data-group-id="3186011306-2">Ecto.Changeset</span><span class="p" data-group-id="3186011306-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="3186011306-3">%</span><span class="nc" data-group-id="3186011306-3">Dataclip</span><span class="p" data-group-id="3186011306-3">{</span><span class="p" data-group-id="3186011306-3">}</span><span class="p" data-group-id="3186011306-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_run/2">
@@ -414,8 +414,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="2735827554-1">(</span><span class="n">run</span><span class="p" data-group-id="2735827554-1">)</span><span class="w">
-</span><span class="p" data-group-id="2735827554-2">%</span><span class="nc" data-group-id="2735827554-2">Ecto.Changeset</span><span class="p" data-group-id="2735827554-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2735827554-3">%</span><span class="nc" data-group-id="2735827554-3">Run</span><span class="p" data-group-id="2735827554-3">{</span><span class="p" data-group-id="2735827554-3">}</span><span class="p" data-group-id="2735827554-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="2904013526-1">(</span><span class="n">run</span><span class="p" data-group-id="2904013526-1">)</span><span class="w">
+</span><span class="p" data-group-id="2904013526-2">%</span><span class="nc" data-group-id="2904013526-2">Ecto.Changeset</span><span class="p" data-group-id="2904013526-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2904013526-3">%</span><span class="nc" data-group-id="2904013526-3">Run</span><span class="p" data-group-id="2904013526-3">{</span><span class="p" data-group-id="2904013526-3">}</span><span class="p" data-group-id="2904013526-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create/1">
@@ -517,11 +517,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="9331179307-1">(</span><span class="p" data-group-id="9331179307-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9331179307-2">}</span><span class="p" data-group-id="9331179307-1">)</span><span class="w">
-</span><span class="p" data-group-id="9331179307-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9331179307-4">%</span><span class="nc" data-group-id="9331179307-4">Dataclip</span><span class="p" data-group-id="9331179307-4">{</span><span class="p" data-group-id="9331179307-4">}</span><span class="p" data-group-id="9331179307-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4867682735-1">(</span><span class="p" data-group-id="4867682735-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4867682735-2">}</span><span class="p" data-group-id="4867682735-1">)</span><span class="w">
+</span><span class="p" data-group-id="4867682735-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4867682735-4">%</span><span class="nc" data-group-id="4867682735-4">Dataclip</span><span class="p" data-group-id="4867682735-4">{</span><span class="p" data-group-id="4867682735-4">}</span><span class="p" data-group-id="4867682735-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="9331179307-5">(</span><span class="p" data-group-id="9331179307-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9331179307-6">}</span><span class="p" data-group-id="9331179307-5">)</span><span class="w">
-</span><span class="p" data-group-id="9331179307-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9331179307-8">%</span><span class="nc" data-group-id="9331179307-8">Ecto.Changeset</span><span class="p" data-group-id="9331179307-8">{</span><span class="p" data-group-id="9331179307-8">}</span><span class="p" data-group-id="9331179307-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4867682735-5">(</span><span class="p" data-group-id="4867682735-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4867682735-6">}</span><span class="p" data-group-id="4867682735-5">)</span><span class="w">
+</span><span class="p" data-group-id="4867682735-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4867682735-8">%</span><span class="nc" data-group-id="4867682735-8">Ecto.Changeset</span><span class="p" data-group-id="4867682735-8">{</span><span class="p" data-group-id="4867682735-8">}</span><span class="p" data-group-id="4867682735-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_event/1">
@@ -551,11 +551,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_event</span><span class="p" data-group-id="5259829958-1">(</span><span class="p" data-group-id="5259829958-2">%{</span><span class="ss">type</span><span class="p">:</span><span class="w"> </span><span class="ss">:webhook</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip_id</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="5259829958-2">}</span><span class="p" data-group-id="5259829958-1">)</span><span class="w">
-</span><span class="p" data-group-id="5259829958-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5259829958-4">%</span><span class="nc" data-group-id="5259829958-4">Dataclip</span><span class="p" data-group-id="5259829958-4">{</span><span class="p" data-group-id="5259829958-4">}</span><span class="p" data-group-id="5259829958-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_event</span><span class="p" data-group-id="4514314949-1">(</span><span class="p" data-group-id="4514314949-2">%{</span><span class="ss">type</span><span class="p">:</span><span class="w"> </span><span class="ss">:webhook</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip_id</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="4514314949-2">}</span><span class="p" data-group-id="4514314949-1">)</span><span class="w">
+</span><span class="p" data-group-id="4514314949-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4514314949-4">%</span><span class="nc" data-group-id="4514314949-4">Dataclip</span><span class="p" data-group-id="4514314949-4">{</span><span class="p" data-group-id="4514314949-4">}</span><span class="p" data-group-id="4514314949-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="5259829958-5">(</span><span class="p" data-group-id="5259829958-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5259829958-6">}</span><span class="p" data-group-id="5259829958-5">)</span><span class="w">
-</span><span class="p" data-group-id="5259829958-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5259829958-8">%</span><span class="nc" data-group-id="5259829958-8">Ecto.Changeset</span><span class="p" data-group-id="5259829958-8">{</span><span class="p" data-group-id="5259829958-8">}</span><span class="p" data-group-id="5259829958-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4514314949-5">(</span><span class="p" data-group-id="4514314949-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4514314949-6">}</span><span class="p" data-group-id="4514314949-5">)</span><span class="w">
+</span><span class="p" data-group-id="4514314949-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4514314949-8">%</span><span class="nc" data-group-id="4514314949-8">Ecto.Changeset</span><span class="p" data-group-id="4514314949-8">{</span><span class="p" data-group-id="4514314949-8">}</span><span class="p" data-group-id="4514314949-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_run/1">
@@ -585,11 +585,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="8304510353-1">(</span><span class="p" data-group-id="8304510353-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8304510353-2">}</span><span class="p" data-group-id="8304510353-1">)</span><span class="w">
-</span><span class="p" data-group-id="8304510353-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8304510353-4">%</span><span class="nc" data-group-id="8304510353-4">Run</span><span class="p" data-group-id="8304510353-4">{</span><span class="p" data-group-id="8304510353-4">}</span><span class="p" data-group-id="8304510353-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="4683095390-1">(</span><span class="p" data-group-id="4683095390-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4683095390-2">}</span><span class="p" data-group-id="4683095390-1">)</span><span class="w">
+</span><span class="p" data-group-id="4683095390-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4683095390-4">%</span><span class="nc" data-group-id="4683095390-4">Run</span><span class="p" data-group-id="4683095390-4">{</span><span class="p" data-group-id="4683095390-4">}</span><span class="p" data-group-id="4683095390-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="8304510353-5">(</span><span class="p" data-group-id="8304510353-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8304510353-6">}</span><span class="p" data-group-id="8304510353-5">)</span><span class="w">
-</span><span class="p" data-group-id="8304510353-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8304510353-8">%</span><span class="nc" data-group-id="8304510353-8">Ecto.Changeset</span><span class="p" data-group-id="8304510353-8">{</span><span class="p" data-group-id="8304510353-8">}</span><span class="p" data-group-id="8304510353-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="4683095390-5">(</span><span class="p" data-group-id="4683095390-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4683095390-6">}</span><span class="p" data-group-id="4683095390-5">)</span><span class="w">
+</span><span class="p" data-group-id="4683095390-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4683095390-8">%</span><span class="nc" data-group-id="4683095390-8">Ecto.Changeset</span><span class="p" data-group-id="4683095390-8">{</span><span class="p" data-group-id="4683095390-8">}</span><span class="p" data-group-id="4683095390-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_dataclip/1">
@@ -617,11 +617,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="7812898832-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="7812898832-1">)</span><span class="w">
-</span><span class="p" data-group-id="7812898832-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7812898832-3">%</span><span class="nc" data-group-id="7812898832-3">Dataclip</span><span class="p" data-group-id="7812898832-3">{</span><span class="p" data-group-id="7812898832-3">}</span><span class="p" data-group-id="7812898832-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="1296079659-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="1296079659-1">)</span><span class="w">
+</span><span class="p" data-group-id="1296079659-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1296079659-3">%</span><span class="nc" data-group-id="1296079659-3">Dataclip</span><span class="p" data-group-id="1296079659-3">{</span><span class="p" data-group-id="1296079659-3">}</span><span class="p" data-group-id="1296079659-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="7812898832-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="7812898832-4">)</span><span class="w">
-</span><span class="p" data-group-id="7812898832-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7812898832-6">%</span><span class="nc" data-group-id="7812898832-6">Ecto.Changeset</span><span class="p" data-group-id="7812898832-6">{</span><span class="p" data-group-id="7812898832-6">}</span><span class="p" data-group-id="7812898832-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="1296079659-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="1296079659-4">)</span><span class="w">
+</span><span class="p" data-group-id="1296079659-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1296079659-6">%</span><span class="nc" data-group-id="1296079659-6">Ecto.Changeset</span><span class="p" data-group-id="1296079659-6">{</span><span class="p" data-group-id="1296079659-6">}</span><span class="p" data-group-id="1296079659-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_run/1">
@@ -649,11 +649,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="3928493367-1">(</span><span class="n">run</span><span class="p" data-group-id="3928493367-1">)</span><span class="w">
-</span><span class="p" data-group-id="3928493367-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3928493367-3">%</span><span class="nc" data-group-id="3928493367-3">Run</span><span class="p" data-group-id="3928493367-3">{</span><span class="p" data-group-id="3928493367-3">}</span><span class="p" data-group-id="3928493367-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="7473307751-1">(</span><span class="n">run</span><span class="p" data-group-id="7473307751-1">)</span><span class="w">
+</span><span class="p" data-group-id="7473307751-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7473307751-3">%</span><span class="nc" data-group-id="7473307751-3">Run</span><span class="p" data-group-id="7473307751-3">{</span><span class="p" data-group-id="7473307751-3">}</span><span class="p" data-group-id="7473307751-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="3928493367-4">(</span><span class="n">run</span><span class="p" data-group-id="3928493367-4">)</span><span class="w">
-</span><span class="p" data-group-id="3928493367-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3928493367-6">%</span><span class="nc" data-group-id="3928493367-6">Ecto.Changeset</span><span class="p" data-group-id="3928493367-6">{</span><span class="p" data-group-id="3928493367-6">}</span><span class="p" data-group-id="3928493367-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="7473307751-4">(</span><span class="n">run</span><span class="p" data-group-id="7473307751-4">)</span><span class="w">
+</span><span class="p" data-group-id="7473307751-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7473307751-6">%</span><span class="nc" data-group-id="7473307751-6">Ecto.Changeset</span><span class="p" data-group-id="7473307751-6">{</span><span class="p" data-group-id="7473307751-6">}</span><span class="p" data-group-id="7473307751-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip!/1">
@@ -687,10 +687,10 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="5337043826-1">(</span><span class="mi">123</span><span class="p" data-group-id="5337043826-1">)</span><span class="w">
-</span><span class="p" data-group-id="5337043826-2">%</span><span class="nc" data-group-id="5337043826-2">Dataclip</span><span class="p" data-group-id="5337043826-2">{</span><span class="p" data-group-id="5337043826-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="8339412403-1">(</span><span class="mi">123</span><span class="p" data-group-id="8339412403-1">)</span><span class="w">
+</span><span class="p" data-group-id="8339412403-2">%</span><span class="nc" data-group-id="8339412403-2">Dataclip</span><span class="p" data-group-id="8339412403-2">{</span><span class="p" data-group-id="8339412403-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="5337043826-3">(</span><span class="mi">456</span><span class="p" data-group-id="5337043826-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="8339412403-3">(</span><span class="mi">456</span><span class="p" data-group-id="8339412403-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -726,14 +726,14 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="2678308512-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="2678308512-1">)</span><span class="w">
-</span><span class="p" data-group-id="2678308512-2">%</span><span class="nc" data-group-id="2678308512-2">Dataclip</span><span class="p" data-group-id="2678308512-2">{</span><span class="p" data-group-id="2678308512-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="1151478421-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="1151478421-1">)</span><span class="w">
+</span><span class="p" data-group-id="1151478421-2">%</span><span class="nc" data-group-id="1151478421-2">Dataclip</span><span class="p" data-group-id="1151478421-2">{</span><span class="p" data-group-id="1151478421-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="2678308512-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="2678308512-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="1151478421-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="1151478421-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="2678308512-4">(</span><span class="p" data-group-id="2678308512-5">%</span><span class="nc" data-group-id="2678308512-5">Run</span><span class="p" data-group-id="2678308512-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="2678308512-5">}</span><span class="p" data-group-id="2678308512-4">)</span><span class="w">
-</span><span class="p" data-group-id="2678308512-6">%</span><span class="nc" data-group-id="2678308512-6">Dataclip</span><span class="p" data-group-id="2678308512-6">{</span><span class="p" data-group-id="2678308512-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="1151478421-4">(</span><span class="p" data-group-id="1151478421-5">%</span><span class="nc" data-group-id="1151478421-5">Run</span><span class="p" data-group-id="1151478421-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="1151478421-5">}</span><span class="p" data-group-id="1151478421-4">)</span><span class="w">
+</span><span class="p" data-group-id="1151478421-6">%</span><span class="nc" data-group-id="1151478421-6">Dataclip</span><span class="p" data-group-id="1151478421-6">{</span><span class="p" data-group-id="1151478421-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip_query/1">
@@ -812,10 +812,10 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="1408866408-1">(</span><span class="mi">123</span><span class="p" data-group-id="1408866408-1">)</span><span class="w">
-</span><span class="p" data-group-id="1408866408-2">%</span><span class="nc" data-group-id="1408866408-2">Run</span><span class="p" data-group-id="1408866408-2">{</span><span class="p" data-group-id="1408866408-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="9819902150-1">(</span><span class="mi">123</span><span class="p" data-group-id="9819902150-1">)</span><span class="w">
+</span><span class="p" data-group-id="9819902150-2">%</span><span class="nc" data-group-id="9819902150-2">Run</span><span class="p" data-group-id="9819902150-2">{</span><span class="p" data-group-id="9819902150-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="1408866408-3">(</span><span class="mi">456</span><span class="p" data-group-id="1408866408-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="9819902150-3">(</span><span class="mi">456</span><span class="p" data-group-id="9819902150-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -872,8 +872,8 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="6576875642-1">(</span><span class="p" data-group-id="6576875642-1">)</span><span class="w">
-</span><span class="p" data-group-id="6576875642-2">[</span><span class="p" data-group-id="6576875642-3">%</span><span class="nc" data-group-id="6576875642-3">Dataclip</span><span class="p" data-group-id="6576875642-3">{</span><span class="p" data-group-id="6576875642-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6576875642-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="3992002885-1">(</span><span class="p" data-group-id="3992002885-1">)</span><span class="w">
+</span><span class="p" data-group-id="3992002885-2">[</span><span class="p" data-group-id="3992002885-3">%</span><span class="nc" data-group-id="3992002885-3">Dataclip</span><span class="p" data-group-id="3992002885-3">{</span><span class="p" data-group-id="3992002885-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3992002885-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_dataclips/1">
@@ -960,8 +960,8 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="1263382852-1">(</span><span class="p" data-group-id="1263382852-1">)</span><span class="w">
-</span><span class="p" data-group-id="1263382852-2">[</span><span class="p" data-group-id="1263382852-3">%</span><span class="nc" data-group-id="1263382852-3">Run</span><span class="p" data-group-id="1263382852-3">{</span><span class="p" data-group-id="1263382852-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1263382852-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="0128223733-1">(</span><span class="p" data-group-id="0128223733-1">)</span><span class="w">
+</span><span class="p" data-group-id="0128223733-2">[</span><span class="p" data-group-id="0128223733-3">%</span><span class="nc" data-group-id="0128223733-3">Run</span><span class="p" data-group-id="0128223733-3">{</span><span class="p" data-group-id="0128223733-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0128223733-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_runs_for_project/2">
@@ -1013,11 +1013,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="1181650930-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1181650930-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1181650930-2">}</span><span class="p" data-group-id="1181650930-1">)</span><span class="w">
-</span><span class="p" data-group-id="1181650930-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1181650930-4">%</span><span class="nc" data-group-id="1181650930-4">Dataclip</span><span class="p" data-group-id="1181650930-4">{</span><span class="p" data-group-id="1181650930-4">}</span><span class="p" data-group-id="1181650930-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="1076142911-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1076142911-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1076142911-2">}</span><span class="p" data-group-id="1076142911-1">)</span><span class="w">
+</span><span class="p" data-group-id="1076142911-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1076142911-4">%</span><span class="nc" data-group-id="1076142911-4">Dataclip</span><span class="p" data-group-id="1076142911-4">{</span><span class="p" data-group-id="1076142911-4">}</span><span class="p" data-group-id="1076142911-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="1181650930-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1181650930-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1181650930-6">}</span><span class="p" data-group-id="1181650930-5">)</span><span class="w">
-</span><span class="p" data-group-id="1181650930-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1181650930-8">%</span><span class="nc" data-group-id="1181650930-8">Ecto.Changeset</span><span class="p" data-group-id="1181650930-8">{</span><span class="p" data-group-id="1181650930-8">}</span><span class="p" data-group-id="1181650930-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="1076142911-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1076142911-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1076142911-6">}</span><span class="p" data-group-id="1076142911-5">)</span><span class="w">
+</span><span class="p" data-group-id="1076142911-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1076142911-8">%</span><span class="nc" data-group-id="1076142911-8">Ecto.Changeset</span><span class="p" data-group-id="1076142911-8">{</span><span class="p" data-group-id="1076142911-8">}</span><span class="p" data-group-id="1076142911-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_run/2">
@@ -1045,11 +1045,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="4323990005-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4323990005-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="4323990005-2">}</span><span class="p" data-group-id="4323990005-1">)</span><span class="w">
-</span><span class="p" data-group-id="4323990005-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4323990005-4">%</span><span class="nc" data-group-id="4323990005-4">Run</span><span class="p" data-group-id="4323990005-4">{</span><span class="p" data-group-id="4323990005-4">}</span><span class="p" data-group-id="4323990005-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="9447197865-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9447197865-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="9447197865-2">}</span><span class="p" data-group-id="9447197865-1">)</span><span class="w">
+</span><span class="p" data-group-id="9447197865-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9447197865-4">%</span><span class="nc" data-group-id="9447197865-4">Run</span><span class="p" data-group-id="9447197865-4">{</span><span class="p" data-group-id="9447197865-4">}</span><span class="p" data-group-id="9447197865-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="4323990005-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4323990005-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4323990005-6">}</span><span class="p" data-group-id="4323990005-5">)</span><span class="w">
-</span><span class="p" data-group-id="4323990005-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4323990005-8">%</span><span class="nc" data-group-id="4323990005-8">Ecto.Changeset</span><span class="p" data-group-id="4323990005-8">{</span><span class="p" data-group-id="4323990005-8">}</span><span class="p" data-group-id="4323990005-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="9447197865-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9447197865-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9447197865-6">}</span><span class="p" data-group-id="9447197865-5">)</span><span class="w">
+</span><span class="p" data-group-id="9447197865-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9447197865-8">%</span><span class="nc" data-group-id="9447197865-8">Ecto.Changeset</span><span class="p" data-group-id="9447197865-8">{</span><span class="p" data-group-id="9447197865-8">}</span><span class="p" data-group-id="9447197865-7">}</span></code></pre>
   </section>
 </section>
 
