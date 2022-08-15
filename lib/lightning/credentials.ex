@@ -243,15 +243,19 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
-  Returns a boolean for saying whether a user can be transferred one credential or not.
+  Given a credential and a user, returns a list of invalid projects—i.e., those
+  that the credential is shared with but that the user does not have access to.
+
+  This is used to generate a validation error when a credential cannot be
+  transferred.
 
   ## Examples
 
       iex> can_credential_be_shared_to_user(credential_id, user_id)
-      true
+      []
 
       iex> can_credential_be_shared_to_user(credential_id, user_id)
-      false
+      ["52ea8758-6ce5-43d7-912f-6a1e1f11dc55"]
   """
   def invalid_projects_for_user(credential_id, user_id) do
     project_credentials =

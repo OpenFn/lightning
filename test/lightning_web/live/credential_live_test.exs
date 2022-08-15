@@ -8,13 +8,15 @@ defmodule LightningWeb.CredentialLiveTest do
 
   @create_attrs %{
     body: "some body",
-    name: "some name"
+    name: "{\"a\":\"secret\"}"
   }
+
   @update_attrs %{
-    body: "some updated body",
+    body: "{\"a\":\"new_secret\"}",
     name: "some updated name"
   }
-  @invalid_attrs %{body: nil, name: nil}
+
+  @invalid_attrs %{body: nil, name: "this won't work"}
 
   defp create_credential(%{user: user}) do
     credential = credential_fixture(user_id: user.id)
@@ -40,6 +42,8 @@ defmodule LightningWeb.CredentialLiveTest do
         live(conn, Routes.credential_index_path(conn, :index))
 
       assert html =~ "Credentials"
+      assert html =~ "Projects with Access"
+      assert html =~ "Type"
 
       assert html =~
                credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
@@ -152,7 +156,10 @@ defmodule LightningWeb.CredentialLiveTest do
         )
     end
 
-    test "deletes credential in listing", %{conn: conn, credential: credential} do
+    test "deletes credential without a shared project", %{
+      conn: conn,
+      credential: credential
+    } do
       {:ok, index_live, _html} =
         live(
           conn,
@@ -170,7 +177,7 @@ defmodule LightningWeb.CredentialLiveTest do
   describe "Edit" do
     setup [:create_credential]
 
-    test "updates credential in listing", %{conn: conn, credential: credential} do
+    test "updates a credential", %{conn: conn, credential: credential} do
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
@@ -187,12 +194,19 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form", credential: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
-      assert form_live
-             |> form("#credential-form", credential: @update_attrs)
-             |> render_submit() =~ "some updated body"
+      {:ok, index_live, html} =
+        form_live
+        |> form("#credential-form", credential: @update_attrs)
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      assert html =~ "some updated name"
     end
 
-    test "transfers a credential to a new owner", %{
+    test "marks a credential for use in a 'production' system", %{
       conn: conn,
       credential: credential
     } do
@@ -208,51 +222,48 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :edit, credential)
         )
 
-      assert form_live
-             |> form("#credential-form",
-               credential: Map.put(@update_attrs, :production, true)
-             )
-             |> render_submit() =~ "some updated body"
+      {:ok, index_live, html} =
+        form_live
+        |> form("#credential-form",
+          credential: Map.put(@update_attrs, :production, true)
+        )
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      assert html =~ "some updated name"
     end
 
-    test "updates credential for transfering", %{
+    test "blocks credential transfer to invalid owner; allows to valid owner", %{
       conn: conn,
-      credential: credential
+      user: first_owner
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
-
-      %{
-        id: user_id_1,
-        first_name: first_name_1,
-        last_name: last_name_1,
-        email: email_1
-      } = Lightning.AccountsFixtures.user_fixture()
-
-      %{
-        id: user_id_2,
-        first_name: first_name_2,
-        last_name: last_name_2,
-        email: email_2
-      } = Lightning.AccountsFixtures.user_fixture()
-
-      %{
-        id: user_id_3,
-        first_name: first_name_3,
-        last_name: last_name_3,
-        email: email_3
-      } = Lightning.AccountsFixtures.user_fixture()
-
-      #   # assert form_live
-      #   #        |> form("#credential-form", credential: @update_attrs)
-      #   #        |> render_submit() =~ "some updated body"
-      # end
+      user_2 = Lightning.AccountsFixtures.user_fixture()
+      user_3 = Lightning.AccountsFixtures.user_fixture()
 
       {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{
           name: "some-name",
-          project_users: [%{user_id: user_id_1, user_id: user_id_2}]
+          project_users: [%{user_id: first_owner.id, user_id: user_2.id}]
         })
+
+      credential =
+        credential_fixture(
+          user_id: first_owner.id,
+          name: "the one for giving away",
+          project_credentials: [
+            %{project_id: project_id}
+          ]
+        )
+
+      {:ok, index_live, html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      # both credentials appear in the list
+      assert html =~ "some name"
+      assert html =~ "the one for giving away"
 
       {:ok, form_live, html} =
         index_live
@@ -263,9 +274,36 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :edit, credential)
         )
 
-      assert html =~ user_id_1
-      assert html =~ user_id_2
-      assert html =~ user_id_3
+      assert html =~ first_owner.id
+      assert html =~ user_2.id
+      assert html =~ user_3.id
+
+      assert form_live
+             |> form("#credential-form",
+               credential: Map.put(@update_attrs, :user_id, user_3.id)
+             )
+             |> render_change() =~ "Invalid owner"
+
+      #  Can't transfer to user who doesn't have access to right projects
+      assert form_live |> submit_disabled()
+
+      {:ok, index_live, html} =
+        form_live
+        |> form("#credential-form",
+          credential: %{
+            body: "{\"a\":\"new_secret\"}",
+            user_id: user_2.id
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      # Once the transfer is made, the credential should not show up in the list
+      assert html =~ "some name"
+      refute html =~ "the one for giving away"
     end
   end
 
