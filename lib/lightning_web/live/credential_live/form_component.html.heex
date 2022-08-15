@@ -17,9 +17,11 @@
         ) %>
 
         <div class="mt-2">
-          <%= label(f, :type,
+          <%= label(f, :schema,
             class: "block text-sm font-medium text-secondary-700 mb-1"
-          ) %>
+          ) do %>
+            Type
+          <% end %>
           <.select_field
             form={f}
             name={:schema}
