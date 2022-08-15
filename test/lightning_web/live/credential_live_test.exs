@@ -46,6 +46,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       [[], project_names] =
         Credentials.list_credentials_for_user(credential.user_id)
+        |> Enum.sort_by(&(&1.project_credentials |> length))
         |> Enum.map(fn c ->
           Enum.map(c.projects, fn p -> p.name end)
         end)
