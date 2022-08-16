@@ -14,7 +14,6 @@ defmodule Lightning.Credentials.AuditTest do
       {:ok, audit} =
         Audit.event("created", credential.id, user.id)
         |> Audit.save()
-        |> IO.inspect()
 
       assert audit.row_id == credential.id
       assert %{before: nil, after: nil} = audit.metadata

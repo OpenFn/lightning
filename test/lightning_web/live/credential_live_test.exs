@@ -7,16 +7,16 @@ defmodule LightningWeb.CredentialLiveTest do
   alias Lightning.Credentials
 
   @create_attrs %{
-    body: "some body",
-    name: "{\"a\":\"secret\"}"
+    name: "some body",
+    body: "{\"a\":\"secret\"}"
   }
 
   @update_attrs %{
-    body: "{\"a\":\"new_secret\"}",
-    name: "some updated name"
+    name: "some updated name",
+    body: "{\"a\":\"new_secret\"}"
   }
 
-  @invalid_attrs %{body: nil, name: "this won't work"}
+  @invalid_attrs %{name: "this won't work", body: nil}
 
   defp create_credential(%{user: user}) do
     credential = credential_fixture(user_id: user.id)
