@@ -69,7 +69,14 @@ defmodule Lightning.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:first_name, :last_name, :email, :password, :disabled, :scheduled_deletion])
+    |> cast(attrs, [
+      :first_name,
+      :last_name,
+      :email,
+      :password,
+      :disabled,
+      :scheduled_deletion
+    ])
     |> validate_email()
     |> validate_password(opts)
   end

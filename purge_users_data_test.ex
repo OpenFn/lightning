@@ -19,14 +19,18 @@ defmodule OpenFn.DbCleanupServiceTest do
     assert 1 == Enum.count(remaining_creds)
     assert 3 == Enum.count(remaining_users)
 
-    assert remaining_creds |> Enum.any?(fn x -> x.user_id == owner.user.id end) |> Kernel.not()
+    assert remaining_creds
+           |> Enum.any?(fn x -> x.user_id == owner.user.id end)
+           |> Kernel.not()
 
     assert 1 ==
              remaining_creds
              |> Enum.filter(fn x -> x.user_id == collaborator.user.id end)
              |> Enum.count()
 
-    assert remaining_users |> Enum.any?(fn x -> x.id == owner.user.id end) |> Kernel.not()
+    assert remaining_users
+           |> Enum.any?(fn x -> x.id == owner.user.id end)
+           |> Kernel.not()
 
     assert 1 ==
              remaining_users
