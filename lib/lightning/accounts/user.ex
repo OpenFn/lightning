@@ -77,6 +77,7 @@ defmodule Lightning.Accounts.User do
       :disabled,
       :scheduled_deletion
     ])
+    |> cast(attrs, [:first_name, :last_name, :email, :password, :disabled, :scheduled_deletion])
     |> validate_email()
     |> validate_password(opts)
   end
