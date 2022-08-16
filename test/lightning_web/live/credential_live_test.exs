@@ -202,7 +202,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form", credential: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
-      {:ok, index_live, html} =
+      {:ok, _index_live, html} =
         form_live
         |> form("#credential-form", credential: @update_attrs)
         |> render_submit()
@@ -230,7 +230,7 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :edit, credential)
         )
 
-      {:ok, index_live, html} =
+      {:ok, _index_live, html} =
         form_live
         |> form("#credential-form",
           credential: Map.put(@update_attrs, :production, true)
@@ -254,7 +254,7 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{
           name: "some-name",
-          project_users: [%{user_id: first_owner.id, user_id: user_2.id}]
+          project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
         })
 
       credential =
@@ -295,7 +295,7 @@ defmodule LightningWeb.CredentialLiveTest do
       #  Can't transfer to user who doesn't have access to right projects
       assert form_live |> submit_disabled()
 
-      {:ok, index_live, html} =
+      {:ok, _index_live, html} =
         form_live
         |> form("#credential-form",
           credential: %{

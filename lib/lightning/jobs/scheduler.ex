@@ -31,7 +31,7 @@ defmodule Lightning.Jobs.Scheduler do
     |> DateTime.to_unix()
     |> Jobs.get_jobs_for_cron_execution()
     |> Enum.each(fn %Jobs.Job{id: id, project_id: project_id} ->
-      {:ok, %{event: event, run: run}} = invoke_cronjob(id, project_id)
+      {:ok, %{event: event, run: _run}} = invoke_cronjob(id, project_id)
 
       Pipeline.new(%{event_id: event.id})
       |> Oban.insert()
