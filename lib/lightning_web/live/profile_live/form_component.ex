@@ -12,6 +12,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
      |> assign(:email_changeset, Accounts.change_user_email(user))
+     |> assign(:scheduled_deletion_changeset, Accounts.change_user_scheduled_deletion(user))
      |> assign(assigns)}
   end
 
@@ -62,5 +63,15 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event("validate_scheduled_deletion", %{"user" => user_params}, socket) do
+    changeset =
+      socket.assigns.user
+      |> Accounts.change_user_scheduled_deletion(user_params)
+      |> Map.put(:action, :validate_scheduled_deletion)
+
+    {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
   end
 end

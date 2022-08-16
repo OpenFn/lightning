@@ -156,5 +156,55 @@
         ) %>
       </span>
     </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+  </.form>
+  <.form
+    let={f}
+    for={@scheduled_deletion_changeset}
+    phx-change="validate_scheduled_deletion"
+    phx-submit="save_scheduled_deletion"
+    phx-target={@myself}
+    id="scheduled_deletion_form"
+  >
+    <span class="text-xl">Delete Account</span>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :email, "Enter your email to delete your account",
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <%= text_input(f, :password,
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :email,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <div>
+      <span>
+        <%= live_redirect("Cancel",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+          to: Routes.settings_index_path(@socket, :index)
+        ) %>
+      </span>
+      <span>
+        <%= submit("Purge data and delete account",
+          phx_disable_with: "Saving...",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+        ) %>
+      </span>
+    </div>
   </.form>
 </div>

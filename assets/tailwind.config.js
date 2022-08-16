@@ -31,6 +31,9 @@ module.exports = {
         "secondary-200": "#e5e7eb",
         "secondary-100": "#f3f4f6",
         "secondary-50": "#f9fafb",
+        // danger
+        "danger-500": "#ef4444",
+        "danger-700": "#b91c1c"
       },
     },
   },
