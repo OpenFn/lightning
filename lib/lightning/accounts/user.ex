@@ -27,6 +27,7 @@ defmodule Lightning.Accounts.User do
     field(:confirmed_at, :naive_datetime)
     field(:role, RolesEnum, default: :user)
     field(:disabled, :boolean, default: false)
+    field(:scheduled_deletion, :utc_datetime)
 
     has_many :credentials, Lightning.Credentials.Credential
     has_many :project_users, Lightning.Projects.ProjectUser
@@ -68,7 +69,7 @@ defmodule Lightning.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:first_name, :last_name, :email, :password, :disabled])
+    |> cast(attrs, [:first_name, :last_name, :email, :password, :disabled, :scheduled_deletion])
     |> validate_email()
     |> validate_password(opts)
   end
