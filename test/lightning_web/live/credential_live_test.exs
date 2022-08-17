@@ -175,6 +175,12 @@ defmodule LightningWeb.CredentialLiveTest do
       assert new_live |> submit_disabled()
 
       assert new_live
+             |> form("#credential-form")
+             |> render_submit() =~ "can&#39;t be blank"
+
+      refute_redirected(new_live, Routes.credential_index_path(conn, :index))
+
+      assert new_live
              |> form("#credential-form",
                credential: %{name: "My Credential"},
                body: %{username: "foo", password: "bar", hostUrl: "baz"}
@@ -226,6 +232,8 @@ defmodule LightningWeb.CredentialLiveTest do
       assert form_live
              |> form("#credential-form", credential: @invalid_attrs)
              |> render_submit() =~ "can&#39;t be blank"
+
+      refute_redirected(form_live, Routes.credential_index_path(conn, :index))
 
       {:ok, _index_live, html} =
         form_live
