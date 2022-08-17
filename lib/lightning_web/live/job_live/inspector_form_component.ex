@@ -153,7 +153,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               phx-update="ignore"
               id="editor-component"
             >
-              <Form.text_area form={f} id={:body} [class="hidden"]/>
+              <Form.code_area form={f} id={:body} [class="hidden"]/>
             </div>
 
           </div>

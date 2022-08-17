@@ -61,15 +61,14 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  def text_area(assigns) do
+  def code_area(assigns) do
     classes = ~w[
-      rounded-md
       w-full
       font-mono
-      bg-slate-800
-      text-slate-50
       h-96
       min-h-full
+      border-secondary-300
+      text-sm
     ]
 
     ~H"""
@@ -176,6 +175,22 @@ defmodule LightningWeb.Components.Form do
     ~H"""
     <%= label(@form, @id, class: label_classes) %>
     <%= error_tag(@form, @id, class: error_classes) %>
+    <%= text_input(@form, @id, class: input_classes) %>
+    """
+  end
+
+  def code_field(assigns) do
+    input_classes = ~w[
+      mt-1
+      focus:ring-primary-500
+      focus:border-primary-500
+      block w-full
+      shadow-sm
+      sm:text-sm
+      border-secondary-300
+      rounded-md
+    ]
+    ~H"""
     <%= text_input(@form, @id, class: input_classes) %>
     """
   end

@@ -14,7 +14,15 @@ const options: MonacoProps['options'] = {
   minimap: {
     enabled: false
   },
+  scrollBeyondLastLine: false,
+  showFoldingControls: 'always',
+  
+  // Hide the right-hand "overview" ruler
+  overviewRulerLanes: 0,
+  overviewRulerBorder: false,
+
   codeLens: false,
+  wordBasedSuggestions: false,
 };
 
 // Using globals will let us defien top-level functions
@@ -51,12 +59,14 @@ export default function Editor({ source, onChange }: EditorProps) {
   }, []);
 
   return (<Monaco
-    height="300px"
     defaultLanguage="javascript"
     defaultValue="// loading..."
     value={source}
     options={options}
     beforeMount={handleEditorWillMount}
     onChange={handleChange}
+    // Styles to match tailwind, should these be passed in?
+    height="24rem"
+    className="rounded-md border border-secondary-300 shadow-sm overflow-hidden"
   />)
 }
