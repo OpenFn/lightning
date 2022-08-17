@@ -31,7 +31,6 @@ defmodule Lightning.Accounts do
     :ok
   end
 
-
   @doc """
   Perform, when called with %{"type" => "purge_deleted"} will find users that are ready for permanent deletion and purge them.
   """
@@ -193,8 +192,10 @@ defmodule Lightning.Accounts do
     User.email_changeset(user, attrs)
   end
 
-  def change_user_scheduled_deletion(user, attrs \\ %{}) do
-    User.email_changeset(user, attrs)
+  def change_user_scheduled_deletion(user) do
+    User.scheduled_deletion_changeset(user, %{
+      :scheduled_deletion => DateTime.utc_now() |> Timex.shift(days: 7)
+    })
   end
 
   @doc """
@@ -312,6 +313,20 @@ defmodule Lightning.Accounts do
       :tokens,
       UserToken.user_and_contexts_query(user, :all)
     )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{user: user}} -> {:ok, user}
+      {:error, :user, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  def schedule_user_deletion(user) do
+    changeset =
+      user
+      |> change_user_scheduled_deletion()
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:user, changeset)
     |> Repo.transaction()
     |> case do
       {:ok, %{user: user}} -> {:ok, user}

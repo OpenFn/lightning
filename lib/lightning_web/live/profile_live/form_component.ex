@@ -12,7 +12,10 @@ defmodule LightningWeb.ProfileLive.FormComponent do
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
      |> assign(:email_changeset, Accounts.change_user_email(user))
-     |> assign(:scheduled_deletion_changeset, Accounts.change_user_scheduled_deletion(user))
+     |> assign(
+       :scheduled_deletion_changeset,
+       Accounts.change_user_scheduled_deletion(user)
+     )
      |> assign(assigns)}
   end
 
@@ -66,14 +69,33 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
-  def handle_event("validate_scheduled_deletion", %{"user" => user_params}, socket) do
-    IO.inspect(user_params, label: "USER PARAMS")
+  def handle_event(
+        "validate_scheduled_deletion",
+        %{"user" => _user_params},
+        socket
+      ) do
     changeset =
       socket.assigns.user
-      |> Accounts.change_user_email(user_params)
-      |> IO.inspect(label: "VALIDATE")
+      |> Accounts.change_user_scheduled_deletion()
       |> Map.put(:action, :validate_scheduled_deletion)
 
     {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+  end
+
+  @impl true
+  def handle_event(
+        "save_scheduled_deletion",
+        %{"user" => %{"email" => _email} = _user_params},
+        socket
+      ) do
+    case Accounts.schedule_user_deletion(socket.assigns.user) do
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "User scheduled for deletion")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+    end
   end
 end
