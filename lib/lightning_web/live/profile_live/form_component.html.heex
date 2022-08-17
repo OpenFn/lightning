@@ -177,7 +177,7 @@
         <%= label(f, :email, "Enter your email to delete your account",
           class: "block text-sm font-medium text-secondary-700"
         ) %>
-        <%= text_input(f, :password,
+        <%= text_input(f, :email, value: "",
           class: "block w-full rounded-md",
           phx_debounce: "blur"
         ) %>

@@ -158,14 +158,15 @@ defmodule Lightning.Accounts.User do
     end
   end
 
-  def scheduled_deletion_changeset(user, attrs) do
-    user
-    |> cast(attrs, [:scheduled_deletion])
-    |> case do
-      %{changes: %{scheduled_deletion: _}} = changeset -> changeset
-      %{} = changeset -> add_error(changeset, :scheduled_deletion, "did not change")
-    end
-  end
+  # def scheduled_deletion_changeset(user, attrs) do
+  #   user
+  #   |> cast(attrs, [:scheduled_deletion])
+  #   |> IO.inspect(label: "WHAT's IN HERE ?")
+  #   |> case do
+  #     %{changes: %{scheduled_deletion: _}} = changeset -> changeset
+  #     %{} = changeset -> add_error(changeset, :scheduled_deletion, "did not change")
+  #   end
+  # end
 
   @doc """
   A user changeset for changing the password.

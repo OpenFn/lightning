@@ -67,9 +67,11 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event("validate_scheduled_deletion", %{"user" => user_params}, socket) do
+    IO.inspect(user_params, label: "USER PARAMS")
     changeset =
       socket.assigns.user
-      |> Accounts.change_user_scheduled_deletion(user_params)
+      |> Accounts.change_user_email(user_params)
+      |> IO.inspect(label: "VALIDATE")
       |> Map.put(:action, :validate_scheduled_deletion)
 
     {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}

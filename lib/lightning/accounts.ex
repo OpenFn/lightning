@@ -3,10 +3,54 @@ defmodule Lightning.Accounts do
   The Accounts context.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
+  require Logger
+
   alias Lightning.Accounts.{User, UserToken, UserNotifier}
+
+  def purge_user(id) do
+    Logger.debug(fn -> "Purging user ##{id}..." end)
+
+    [
+      "DELETE FROM credentials WHERE user_id = $1;",
+      "DELETE FROM project_users WHERE user_id = $1;",
+      "DELETE FROM users WHERE id = $1;"
+    ]
+    |> Enum.each(fn x ->
+      {:ok, result} = Ecto.Adapters.SQL.query(Repo, x, [id])
+      Logger.info(fn -> "Manual purge #{x} returned #{inspect(result)}." end)
+    end)
+
+    Logger.debug(fn -> "User ##{id} purged." end)
+    :ok
+  end
+
+
+  @doc """
+  Perform, when called with %{"type" => "purge_deleted"} will find users that are ready for permanent deletion and purge them.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    users =
+      past_deletion_date()
+      |> Repo.all()
+
+    :ok = Enum.each(users, fn u -> purge_user(u.id) end)
+
+    {:ok, %{users_deleted: users}}
+  end
+
+  def past_deletion_date() do
+    from(u in User,
+      where: u.scheduled_deletion <= ago(0, "second")
+    )
+  end
 
   @doc """
   Returns the list of users.
@@ -150,7 +194,7 @@ defmodule Lightning.Accounts do
   end
 
   def change_user_scheduled_deletion(user, attrs \\ %{}) do
-    User.scheduled_deletion_changeset(user, attrs)
+    User.email_changeset(user, attrs)
   end
 
   @doc """
