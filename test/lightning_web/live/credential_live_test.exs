@@ -197,6 +197,9 @@ defmodule LightningWeb.CredentialLiveTest do
           conn,
           Routes.credential_index_path(conn, :index)
         )
+
+      {_path, flash} = assert_redirect(new_live)
+      assert flash == %{"info" => "Credential created successfully"}
     end
   end
 
@@ -229,6 +232,9 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_index_path(conn, :index)
         )
 
+      {_path, flash} = assert_redirect(form_live)
+      assert flash == %{"info" => "Credential updated successfully"}
+
       assert html =~ "some updated name"
     end
 
@@ -260,6 +266,9 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       assert html =~ "some updated name"
+
+      {_path, flash} = assert_redirect(form_live)
+      assert flash == %{"info" => "Credential updated successfully"}
     end
 
     test "blocks credential transfer to invalid owner; allows to valid owner", %{
@@ -326,6 +335,9 @@ defmodule LightningWeb.CredentialLiveTest do
           conn,
           Routes.credential_index_path(conn, :index)
         )
+
+      {_path, flash} = assert_redirect(form_live)
+      assert flash == %{"info" => "Credential updated successfully"}
 
       # Once the transfer is made, the credential should not show up in the list
       assert html =~ "some name"
