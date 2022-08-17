@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import Monaco from "@monaco-editor/react";
 import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types";
 
 type EditorProps = {
   source?: string;
+  onChange?: (newSource: string) => void;
 }
 
 // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.IStandaloneEditorConstructionOptions.html
@@ -20,7 +21,7 @@ const options: MonacoProps['options'] = {
 // Note that we need to export here or else the file seems to be ignored
 const dts = `
 declare global {
-  function wibble(x: string): string;
+  function fn(f: () => void): void;
   
   function each(path: string, operation: () => void): void;
 
@@ -30,10 +31,14 @@ declare global {
 export default {};
 `
 
-export default function Editor({ source }: EditorProps) {
-  const handleEditorWillMount = (monaco: typeof Monaco) => {
-    console.log('loading libs')
-    console.log(monaco)
+export default function Editor({ source, onChange }: EditorProps) {
+  const handleChange = useCallback((newSource: string) => {
+    if (onChange) {
+      onChange(newSource)
+    }
+  }, [onChange]);
+
+  const handleEditorWillMount = useCallback((monaco: typeof Monaco) => {
     // TODO this typing is actually wrong?
     monaco.languages.typescript.javascriptDefaults.addExtraLib(dts);
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -43,7 +48,7 @@ export default function Editor({ source }: EditorProps) {
       noLib: true,
       // noresolve: true,
     });
-  }
+  }, []);
 
   return (<Monaco
     height="300px"
@@ -52,5 +57,6 @@ export default function Editor({ source }: EditorProps) {
     value={source}
     options={options}
     beforeMount={handleEditorWillMount}
+    onChange={handleChange}
   />)
 }

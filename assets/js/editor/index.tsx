@@ -6,44 +6,42 @@ interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
   mounted(): void;
   destroyed(): void;
-  render(source: string): void;
-  handleEvent(name: string, fn: () => void): void;
   el: HTMLElement;
-  liveSocket: any;
-  observer: MutationObserver;
 }
 
 export default {
   mounted(this: EditorEntrypoint) {
     import('./Editor').then((module) => {
       const EditorComponent = module.default as typeof Editor;
-      this.componentRoot = createRoot(this.el);
+      const form = this.el.children[0] as HTMLTextAreaElement;
 
-      const render = (source?: string) => {
-        this.componentRoot?.render(<EditorComponent source={source} />);
+      // Hide the default text box
+      form.style.display = "none";
+
+      // Insert a new div for the live editor
+      const monaco = document.createElement("div");
+      this.el.appendChild(monaco)
+      this.componentRoot = createRoot(monaco);
+
+      
+      const handleChange = (src: string) => {
+        if (form) {
+          form.value = src
+        }
       };
 
-      render(this.el.dataset.source);
+      const render = (source?: string) => {
+        this.componentRoot?.render(
+          <EditorComponent
+            source={source}
+            onChange={handleChange}
+        />);
+      };
 
-      // Detect changes to the `data-source` attribute on the component.
-      this.observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (
-            mutation.type === "attributes" &&
-            mutation.attributeName == "data-source"
-          ) {
-            console.log('**')
-            render((mutation.target as HTMLElement).dataset.source)
-          }
-        });
-      });
-
-      this.observer.observe(this.el, { attributes: true });
-
+      render(form.value);
     });
   },
   destroyed() {
     this.componentRoot?.unmount();
-    this.observer?.disconnect();
   },
 } as EditorEntrypoint
