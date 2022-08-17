@@ -144,6 +144,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert path == "/credentials"
 
       assert html =~ project.name
+      assert html =~ "some name"
     end
 
     test "allows the user to define and save a new dhis2 credential", %{

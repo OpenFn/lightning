@@ -38,7 +38,6 @@
         <% end %>
       </div>
     </nav>
-    <% assigns[:flash] |> IO.inspect(label: "did the flash get rendered?") %>
     <main class="flex-auto">
       <.live_info_block flash={@flash} />
       <.live_error_block flash={@flash} />
