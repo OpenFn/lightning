@@ -57,7 +57,7 @@ defmodule Lightning.Credentials.CredentialTest do
       {:ok, %Lightning.Projects.Project{id: project_id}} =
         Lightning.Projects.create_project(%{
           name: "some-name",
-          project_users: [%{user_id: user_id_1, user_id: user_id_2}]
+          project_users: [%{user_id: user_id_1}, %{user_id: user_id_2}]
         })
 
       credential =

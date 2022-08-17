@@ -144,7 +144,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       {_schema, nil} ->
         socket
 
-      {schema, "raw"} ->
+      {_schema, "raw"} ->
         socket
         |> assign(schema: nil, schema_changeset: nil)
 
@@ -170,7 +170,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           changeset: changeset
         )
 
-      {schema, schema_type} ->
+      {schema, _schema_type} ->
         schema_changeset =
           create_schema_changeset(schema, params)
           |> Map.put(:action, :validate)

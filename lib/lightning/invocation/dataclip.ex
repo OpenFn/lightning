@@ -19,6 +19,7 @@ defmodule Lightning.Invocation.Dataclip do
   import Ecto.Changeset
 
   alias Lightning.Invocation.Event
+  alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

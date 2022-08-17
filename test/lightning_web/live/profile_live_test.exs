@@ -31,7 +31,7 @@ defmodule LightningWeb.ProfileLiveTest do
   describe "Edit user profile" do
     setup :register_and_log_in_superuser
 
-    test "load edit page", %{conn: conn, user: user} do
+    test "load edit page", %{conn: conn} do
       {:ok, _profile_live, html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
@@ -39,7 +39,7 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "Change password"
     end
 
-    test "save password", %{conn: conn, user: user} do
+    test "save password", %{conn: conn} do
       {:ok, profile_live, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
