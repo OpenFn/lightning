@@ -33,8 +33,10 @@ export default {
       const render = (source?: string) => {
         this.componentRoot?.render(
           <EditorComponent
+            adaptorName="@openfn/language-common"
+            adaptorVersion="2.0.0-rc2"
             source={source}
-            onChange={handleChange}
+              onChange={handleChange}
         />);
       };
 
