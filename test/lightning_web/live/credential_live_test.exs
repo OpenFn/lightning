@@ -223,6 +223,10 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form", credential: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
+      assert form_live
+             |> form("#credential-form", credential: @invalid_attrs)
+             |> render_submit() =~ "can&#39;t be blank"
+
       {:ok, _index_live, html} =
         form_live
         |> form("#credential-form", credential: @update_attrs)
