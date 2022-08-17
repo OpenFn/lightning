@@ -161,7 +161,9 @@ defmodule Lightning.Accounts.User do
 
   def scheduled_deletion_changeset(user, attrs) do
     user
-    |> cast(attrs, [:scheduled_deletion])
+    |> cast(attrs, [:scheduled_deletion, :email])
+    |> validate_email()
+    |> validate_email_for_scheduled_deletion(attrs["email"])
   end
 
   @doc """
@@ -221,14 +223,18 @@ defmodule Lightning.Accounts.User do
     end
   end
 
-  @doc """
-  Validates the email for schedule deletion.
-  """
-  def validate_email_for_schedule_deletion(changeset) do
-    if changeset.changes[:email] == changeset.data.email do
+  defp validate_email_for_scheduled_deletion(changeset, email) do
+    IO.inspect(email, label: "EMAIL")
+    IO.inspect(changeset.data.email, label: "EMAIL")
+
+    if email == changeset.data.email do
       changeset
     else
-      add_error(changeset, :scheduled_deletion, "is not valid")
+      add_error(
+        changeset,
+        :scheduled_deletion,
+        "This email doesn't match your current email"
+      )
     end
   end
 end

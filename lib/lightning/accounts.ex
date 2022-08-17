@@ -192,12 +192,6 @@ defmodule Lightning.Accounts do
     User.email_changeset(user, attrs)
   end
 
-  def change_user_scheduled_deletion(user) do
-    User.scheduled_deletion_changeset(user, %{
-      :scheduled_deletion => DateTime.utc_now() |> Timex.shift(days: 7)
-    })
-  end
-
   @doc """
   Emulates that the email will change without actually changing
   it in the database.
@@ -322,8 +316,9 @@ defmodule Lightning.Accounts do
 
   def schedule_user_deletion(user) do
     changeset =
-      user
-      |> change_user_scheduled_deletion()
+      User.scheduled_deletion_changeset(user, %{
+        :scheduled_deletion => DateTime.utc_now() |> Timex.shift(days: 7)
+      })
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, changeset)
