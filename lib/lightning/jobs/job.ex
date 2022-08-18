@@ -26,17 +26,18 @@ defmodule Lightning.Jobs.Job do
   alias Lightning.Projects.{Project, ProjectCredential}
 
   @type t :: %__MODULE__{
-    __meta__: Ecto.Schema.Metadata.t(),
-    id: Ecto.UUID.t() | nil,
-    body: String.t() | nil,
-    enabled: boolean(),
-    name: String.t() | nil,
-    adaptor: String.t() | nil, # TODO rename to adaptor_name?
-    # adaptor_version: String.t() | nil,
-    trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
-    credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
-    project: nil | Project.t() | Ecto.Association.NotLoaded.t()
-  }
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          body: String.t() | nil,
+          enabled: boolean(),
+          name: String.t() | nil,
+          # TODO rename to adaptor_name?
+          adaptor: String.t() | nil,
+          # adaptor_version: String.t() | nil,
+          trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
+          credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
+          project: nil | Project.t() | Ecto.Association.NotLoaded.t()
+        }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

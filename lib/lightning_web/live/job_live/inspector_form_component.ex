@@ -157,7 +157,6 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
             >
               <Form.code_area form={f} id={:body} />
             </div>
-
           </div>
           <div class="md:col-span-2 w-full">
             <span>

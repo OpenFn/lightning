@@ -194,6 +194,7 @@ defmodule LightningWeb.Components.Form do
       border-secondary-300
       rounded-md
     ]
+
     ~H"""
     <%= text_input(@form, @id, class: input_classes) %>
     """
