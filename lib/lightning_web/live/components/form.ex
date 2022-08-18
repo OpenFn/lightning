@@ -65,7 +65,6 @@ defmodule LightningWeb.Components.Form do
     classes = ~w[
       w-full
       font-mono
-      h-96
       min-h-full
       text-sm
       resize-none

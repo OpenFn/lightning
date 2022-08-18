@@ -24,12 +24,12 @@ export default {
 
       // Hide the default text box
       this.field.style.display = "none";
-
       
       // Insert a new div for the live editor
-      const monaco = document.createElement("div");
-      this.el.appendChild(monaco)
-      this.componentRoot = createRoot(monaco);
+      const root = document.createElement("div");
+      root.style.height="100%";
+      this.el.appendChild(root)
+      this.componentRoot = createRoot(root);
       
       
       this.setupObserver()

@@ -35,10 +35,11 @@ type Lib = {
 // TODO this can take a little while to run, we should consider giving some feedback to the user
 async function loadDTS(specifier: string): Promise<Lib[]> {
   // Work out the module name from the specifier
-  // (This gets a bit gnrly with @openfn/ module names)
-  const parts = specifier.split('@')
-  parts.pop() // remove the version
-  const name = parts.join('@');
+  // (his gets a bit tricky with @openfn/ module names)
+  const nameParts = specifier.split('@')
+  nameParts.pop() // remove the version
+  const name = nameParts.join('@');
+
   const results: Lib[] = [];
   for await (const fileName of fetchDTSListing(specifier)) {
     if (!fileName.startsWith('node_modules')) {
@@ -55,7 +56,6 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [monaco, setMonaco] = useState<typeof Monaco>();
 
-  
   const handleSourceChange = useCallback((newSource: string) => {
     if (onChange) {
       onChange(newSource)
@@ -71,9 +71,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   }, []);
   
   useEffect(() => {
-    if (adaptor) {
-      loadDTS(adaptor).then(l => setLib(l));
-    }
+    loadDTS(adaptor).then(l => setLib(l));
   }, [adaptor])
 
   useEffect(() => {
@@ -84,12 +82,10 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   
   return (<Monaco
     defaultLanguage="javascript"
-    defaultValue="// loading..."
+    loading=""
     value={source}
     options={options}
     beforeMount={handleEditorWillMount}
     onChange={handleSourceChange}
-    // Styles to match tailwind, should these be passed in?
-    height="24rem"
   />)
 }
