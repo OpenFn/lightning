@@ -97,7 +97,8 @@ defmodule LightningWeb.ProfileLive.FormComponent do
       {:ok, _user} ->
         {:noreply,
          socket
-         |> put_flash(:info, "User scheduled for deletion")}
+         |> put_flash(:info, "User scheduled for deletion")
+         |> push_redirect(to: Routes.user_session_path(socket, :delete))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}

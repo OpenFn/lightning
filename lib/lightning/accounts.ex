@@ -327,6 +327,10 @@ defmodule Lightning.Accounts do
 
     Ecto.Multi.new()
     |> Ecto.Multi.update(:user, changeset)
+    |> Ecto.Multi.delete_all(
+      :tokens,
+      UserToken.user_and_contexts_query(user, :all)
+    )
     |> Repo.transaction()
     |> case do
       {:ok, %{user: user}} -> {:ok, user}
