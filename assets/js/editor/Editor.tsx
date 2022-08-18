@@ -5,9 +5,8 @@ import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types
 import { fetchDTSListing, fetchFile } from '@openfn/compiler';
 
 type EditorProps = {
-  source?: string;
-  adaptorName: string;
-  adaptorVersion: string;
+  source: string;
+  adaptor: string; // fully specified adaptor name - <id>@<version>
   onChange?: (newSource: string) => void;
 }
 
@@ -33,21 +32,26 @@ type Lib = {
   content: string;
 }
 
-async function loadDTS(adaptorName: string, adaptorVersion: string): Promise<Lib[]> {
+// TODO this can take a little while to run, we should consider giving some feedback to the user
+async function loadDTS(specifier: string): Promise<Lib[]> {
+  // Work out the module name from the specifier
+  // (This gets a bit gnrly with @openfn/ module names)
+  const parts = specifier.split('@')
+  parts.pop() // remove the version
+  const name = parts.join('@');
   const results: Lib[] = [];
-  const packagePath = `${adaptorName}@${adaptorVersion}`;
-  for await (const fileName of fetchDTSListing(packagePath)) {
+  for await (const fileName of fetchDTSListing(specifier)) {
     if (!fileName.startsWith('node_modules')) {
-      const f = await fetchFile(`${packagePath}${fileName}`)
+      const f = await fetchFile(`${specifier}${fileName}`)
       results.push({
-        content: `declare module "${adaptorName}" { ${f} }`,
+        content: `declare module "${name}" { ${f} }`,
       });
     }
   }
   return results;
 }
 
-export default function Editor({ source, adaptorName, adaptorVersion, onChange }: EditorProps) {
+export default function Editor({ source, adaptor, onChange }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [monaco, setMonaco] = useState<typeof Monaco>();
 
@@ -67,10 +71,10 @@ export default function Editor({ source, adaptorName, adaptorVersion, onChange }
   }, []);
   
   useEffect(() => {
-    if (adaptorName) {
-      loadDTS(adaptorName, adaptorVersion).then(l => setLib(l));
+    if (adaptor) {
+      loadDTS(adaptor).then(l => setLib(l));
     }
-  }, [adaptorName])
+  }, [adaptor])
 
   useEffect(() => {
     if (monaco) {

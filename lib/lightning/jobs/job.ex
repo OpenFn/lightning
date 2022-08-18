@@ -26,16 +26,17 @@ defmodule Lightning.Jobs.Job do
   alias Lightning.Projects.{Project, ProjectCredential}
 
   @type t :: %__MODULE__{
-          __meta__: Ecto.Schema.Metadata.t(),
-          id: Ecto.UUID.t() | nil,
-          body: String.t() | nil,
-          enabled: boolean(),
-          name: String.t() | nil,
-          adaptor: String.t() | nil,
-          trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
-          credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
-          project: nil | Project.t() | Ecto.Association.NotLoaded.t()
-        }
+    __meta__: Ecto.Schema.Metadata.t(),
+    id: Ecto.UUID.t() | nil,
+    body: String.t() | nil,
+    enabled: boolean(),
+    name: String.t() | nil,
+    adaptor: String.t() | nil, # TODO rename to adaptor_name?
+    # adaptor_version: String.t() | nil,
+    trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
+    credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
+    project: nil | Project.t() | Ecto.Association.NotLoaded.t()
+  }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -44,6 +45,7 @@ defmodule Lightning.Jobs.Job do
     field :enabled, :boolean, default: false
     field :name, :string
     field :adaptor, :string
+    # field :adaptor_version, :string
 
     has_one :trigger, Trigger
     has_many :events, Lightning.Invocation.Event
@@ -64,6 +66,7 @@ defmodule Lightning.Jobs.Job do
       :body,
       :enabled,
       :adaptor,
+      # :adaptor_version,
       :project_credential_id,
       :project_id
     ])

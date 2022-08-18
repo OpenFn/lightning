@@ -4,46 +4,71 @@ import Editor from './Editor';
 
 interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
-  mounted(): void;
   destroyed(): void;
   el: HTMLElement;
+  field: HTMLTextAreaElement;
+  handleContentChange(content: string): void;
+  mounted(): void;
+  observer: MutationObserver | null;
+  render(): void;
+  setupObserver(): void;
 }
+
+let EditorComponent: typeof Editor | undefined;
 
 export default {
   mounted(this: EditorEntrypoint) {
     import('./Editor').then((module) => {
-      const EditorComponent = module.default as typeof Editor;
-      const form = this.el.children[0] as HTMLTextAreaElement;
+      EditorComponent = module.default as typeof Editor;
+      this.field = this.el.children[0] as HTMLTextAreaElement;
 
       // Hide the default text box
-      form.style.display = "none";
+      this.field.style.display = "none";
 
+      
       // Insert a new div for the live editor
       const monaco = document.createElement("div");
       this.el.appendChild(monaco)
       this.componentRoot = createRoot(monaco);
-
       
-      const handleChange = (src: string) => {
-        if (form) {
-          form.value = src
-        }
-      };
-
-      const render = (source?: string) => {
-        this.componentRoot?.render(
-          <EditorComponent
-            adaptorName="@openfn/language-common"
-            adaptorVersion="2.0.0-rc2"
-            source={source}
-              onChange={handleChange}
-        />);
-      };
-
-      render(form.value);
+      
+      this.setupObserver()
+      this.render();
     });
+  },
+  handleContentChange(content: string) {
+    if (this.field) {
+      this.field.value = content
+    }
+  },
+  render() {
+    const { adaptor } = this.el.dataset;
+    const source = this.field.value;
+    if (EditorComponent && adaptor && source) {
+      this.componentRoot?.render(
+        <EditorComponent
+          adaptor={adaptor}
+          source={source}
+          onChange={this.handleContentChange}
+      />);
+    }
+  },
+  setupObserver() {
+    this.observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName == "data-adaptor"
+        ) {
+          this.render()
+        }
+      });
+    });
+
+    this.observer.observe(this.el, { attributes: true });
   },
   destroyed() {
     this.componentRoot?.unmount();
-  },
+    this.observer?.disconnect();
+  }
 } as EditorEntrypoint

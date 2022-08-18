@@ -153,6 +153,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               phx-update="ignore"
               id="editor-component"
               class="rounded-md border border-secondary-300 shadow-sm"
+              data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
             >
               <Form.code_area form={f} id={:body} />
             </div>
