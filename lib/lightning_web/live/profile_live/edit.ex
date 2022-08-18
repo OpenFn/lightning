@@ -25,9 +25,9 @@ defmodule LightningWeb.ProfileLive.Edit do
     |> assign(:user, params)
   end
 
-  defp apply_action(socket, :delete, params) do
+  defp apply_action(socket, :modal, params) do
     socket
-    |> assign(:page_title, "Delete user")
+    |> assign(:page_title, "Settings")
     |> assign(:user, params)
   end
 end

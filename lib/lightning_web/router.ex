@@ -105,7 +105,7 @@ defmodule LightningWeb.Router do
       live "/credentials/:id", CredentialLive.Edit, :edit
 
       live "/profile", ProfileLive.Edit, :edit
-      live "/profile/delete", ProfileLive.Edit, :delete
+      live "/profile/delete", ProfileLive.Edit, :modal
 
       live "/", DashboardLive.Index, :index
     end

@@ -104,4 +104,9 @@ defmodule LightningWeb.ProfileLive.FormComponent do
         {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
     end
   end
+
+  @impl true
+  def handle_event("close_modal", _, socket) do
+    {:noreply, push_patch(socket, to: Routes.profile_edit_path(socket, :edit))}
+  end
 end

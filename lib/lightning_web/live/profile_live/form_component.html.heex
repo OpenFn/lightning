@@ -1,227 +1,227 @@
 <div id={"user-#{@user.id}"}>
-  <%= if @action in [:delete] do %>
-    <.form
-      let={f}
-      for={@scheduled_deletion_changeset}
-      phx-change="validate_scheduled_deletion"
-      phx-submit="save_scheduled_deletion"
-      phx-target={@myself}
-      id="scheduled_deletion_form"
+  <%= if @action == :modal do %>
+    <PetalComponents.Modal.modal
+      max_width="sm"
+      title="Delete user"
+      close_modal_target={@myself}
     >
-      <span>Your account and credential data will be deleted</span>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
-      </div>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3">
-          <%= label(f, :scheduled_deletion_email, "Email",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= text_input(f, :scheduled_deletion_email,
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <%= error_tag(f, :scheduled_deletion_email,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
+      <.form
+        let={f}
+        for={@scheduled_deletion_changeset}
+        phx-change="validate_scheduled_deletion"
+        phx-submit="save_scheduled_deletion"
+        phx-target={@myself}
+        id="scheduled_deletion_form"
+      >
+        <span>Your account and credential data will be deleted</span>
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
         </div>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <div>
-        <span>
-          <%= live_redirect("Cancel",
-            class:
-              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-            to: Routes.profile_edit_path(@socket, :edit)
-          ) %>
-        </span>
-        <span>
+        <div class="grid grid-cols-12 gap-12">
+          <div class="col-span-8">
+            <%= label(f, :scheduled_deletion_email, "Email",
+              class: "block text-sm font-medium text-secondary-700"
+            ) %>
+            <%= text_input(f, :scheduled_deletion_email,
+              class: "block w-full rounded-md",
+              phx_debounce: "blur"
+            ) %>
+            <%= error_tag(f, :scheduled_deletion_email,
+              class:
+                "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+            ) %>
+          </div>
+        </div>
+
+        <%= hidden_input(f, :id) %>
+
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-5"></div>
+        </div>
+        <div class="flex justify-end">
+          <PetalComponents.Button.button
+            label="Cancel"
+            phx-click={PetalComponents.Modal.hide_modal(@myself)}
+          />
+
           <%= submit("Delete account",
             phx_disable_with: "Deleting...",
             class:
-              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
-          ) %>
-        </span>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <%= hidden_input(f, :id) %>
-    </.form>
-  <% else %>
-    <.form
-      let={f}
-      for={@email_changeset}
-      phx-change="validate_email"
-      phx-submit="save_email"
-      phx-target={@myself}
-      id="email_form"
-    >
-      <span class="text-xl">Change email</span>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
-      </div>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3">
-          <%= label(f, :email,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= text_input(f, :email,
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <%= error_tag(f, :email,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+              "inline-flex justify-center mx-2 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
           ) %>
         </div>
+      </.form>
+    </PetalComponents.Modal.modal>
+  <% end %>
+  <.form
+    let={f}
+    for={@email_changeset}
+    phx-change="validate_email"
+    phx-submit="save_email"
+    phx-target={@myself}
+    id="email_form"
+  >
+    <span class="text-xl">Change email</span>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :email,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <%= text_input(f, :email,
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :email,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
       </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :current_password,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <%= password_input(f, :current_password,
+          value: input_value(f, :current_password),
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :current_password,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
       </div>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3">
-          <%= label(f, :current_password,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= password_input(f, :current_password,
-            value: input_value(f, :current_password),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <%= error_tag(f, :current_password,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
-        </div>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <div>
-        <span>
-          <%= live_redirect("Cancel",
-            class:
-              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-            to: Routes.settings_index_path(@socket, :index)
-          ) %>
-        </span>
-        <span>
-          <button
-            type="button"
-            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-25"
-            disabled
-          >
-            Update email
-          </button>
-        </span>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <%= hidden_input(f, :id) %>
-    </.form>
-    <.form
-      let={f}
-      for={@password_changeset}
-      phx-change="validate_password"
-      phx-submit="save_password"
-      phx-target={@myself}
-      id="password_form"
-    >
-      <span class="text-xl">Change password</span>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-2"></div>
-      </div>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3">
-          <%= label(f, :password, "New password",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= password_input(f, :password,
-            value: input_value(f, :password),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <%= error_tag(f, :password,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
-        </div>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3">
-          <%= label(f, :password_confirmation, "Confirm new password",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= password_input(f, :password_confirmation,
-            value: input_value(f, :password_confirmation),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <%= error_tag(f, :password_confirmation,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
-        </div>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3">
-          <%= label(f, :current_password,
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= password_input(f, :current_password,
-            value: input_value(f, :current_password),
-            class: "block w-full rounded-md",
-            phx_debounce: "blur"
-          ) %>
-          <%= error_tag(f, :current_password,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
-        </div>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-      <div>
-        <span>
-          <%= live_redirect("Cancel",
-            class:
-              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-            to: Routes.settings_index_path(@socket, :index)
-          ) %>
-        </span>
-        <span>
-          <%= submit("Update password",
-            phx_disable_with: "Saving...",
-            class:
-              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-          ) %>
-        </span>
-      </div>
-      <div class="hidden sm:block" aria-hidden="true">
-        <div class="py-5"></div>
-      </div>
-    </.form>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
     <div>
-      <%= live_redirect to: Routes.profile_edit_path(@socket, :delete) do %>
+      <span>
+        <%= live_redirect("Cancel",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+          to: Routes.settings_index_path(@socket, :index)
+        ) %>
+      </span>
+      <span>
         <button
           type="button"
-          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-25"
+          disabled
         >
-          Purge data and delete account
+          Update email
         </button>
-      <% end %>
+      </span>
     </div>
-  <% end %>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <%= hidden_input(f, :id) %>
+  </.form>
+  <.form
+    let={f}
+    for={@password_changeset}
+    phx-change="validate_password"
+    phx-submit="save_password"
+    phx-target={@myself}
+    id="password_form"
+  >
+    <span class="text-xl">Change password</span>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :password, "New password",
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <%= password_input(f, :password,
+          value: input_value(f, :password),
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :password,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :password_confirmation, "Confirm new password",
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <%= password_input(f, :password_confirmation,
+          value: input_value(f, :password_confirmation),
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :password_confirmation,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <div class="grid grid-cols-6 gap-6">
+      <div class="col-span-3">
+        <%= label(f, :current_password,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
+        <%= password_input(f, :current_password,
+          value: input_value(f, :current_password),
+          class: "block w-full rounded-md",
+          phx_debounce: "blur"
+        ) %>
+        <%= error_tag(f, :current_password,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
+      </div>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+    <div>
+      <span>
+        <%= live_redirect("Cancel",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+          to: Routes.settings_index_path(@socket, :index)
+        ) %>
+      </span>
+      <span>
+        <%= submit("Update password",
+          phx_disable_with: "Saving...",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        ) %>
+      </span>
+    </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
+  </.form>
+  <div>
+    <%= live_redirect to: Routes.profile_edit_path(@socket, :modal) do %>
+      <button
+        type="button"
+        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+      >
+        Purge data and delete account
+      </button>
+    <% end %>
+  </div>
 </div>
