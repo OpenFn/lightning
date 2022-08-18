@@ -92,4 +92,27 @@ defmodule LightningWeb.ProfileLiveTest do
              |> render_change() =~ "did not change"
     end
   end
+
+  describe "the profile edit page" do
+    setup :register_and_log_in_user
+    test "allows a user to schedule their own account for deletion", %{conn: conn} do
+      {:ok, profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
+
+      assert html =~ "Purge data and delete account"
+
+      {:ok, _new_live, html} =
+        profile_live
+        |> element("a", "Purge data and delete accoun")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.profile_edit_path(conn, :delete)
+        )
+
+      assert html =~ "Your account and credential data will be deleted"
+
+
+    end
+  end
 end
