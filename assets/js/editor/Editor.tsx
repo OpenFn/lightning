@@ -87,6 +87,5 @@ export default function Editor({ source, adaptorName, adaptorVersion, onChange }
     onChange={handleSourceChange}
     // Styles to match tailwind, should these be passed in?
     height="24rem"
-    className="rounded-md border border-secondary-300 shadow-sm"
   />)
 }

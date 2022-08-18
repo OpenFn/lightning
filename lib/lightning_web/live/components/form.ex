@@ -67,8 +67,12 @@ defmodule LightningWeb.Components.Form do
       font-mono
       h-96
       min-h-full
-      border-secondary-300
       text-sm
+      resize-none
+      border-none
+      bg-transparent
+      rounded-md
+      focus:outline-none
     ]
 
     ~H"""

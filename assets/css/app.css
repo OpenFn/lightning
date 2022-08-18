@@ -1,7 +1,7 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
-
+@import './monaco-style-overrides.css';
 /* This file is for your main application CSS */
 
 /* Alerts and form errors used by phx.new */
@@ -36,6 +36,10 @@
   color: #a94442;
   display: block;
   margin: -1rem 0 2rem;
+}
+
+.bg-transparent {
+  background-color: transparent;
 }
 
 /* LiveView specific classes for your customization */

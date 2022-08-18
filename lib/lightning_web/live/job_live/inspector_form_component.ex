@@ -152,8 +152,9 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               phx-hook="Editor"
               phx-update="ignore"
               id="editor-component"
+              class="rounded-md border border-secondary-300 shadow-sm"
             >
-              <Form.code_area form={f} id={:body} [class="hidden"]/>
+              <Form.code_area form={f} id={:body} />
             </div>
 
           </div>
