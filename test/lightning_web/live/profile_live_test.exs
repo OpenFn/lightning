@@ -95,7 +95,10 @@ defmodule LightningWeb.ProfileLiveTest do
 
   describe "the profile edit page" do
     setup :register_and_log_in_user
-    test "allows a user to schedule their own account for deletion", %{conn: conn} do
+
+    test "allows a user to schedule their own account for deletion", %{
+      conn: conn
+    } do
       {:ok, profile_live, html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
@@ -111,8 +114,6 @@ defmodule LightningWeb.ProfileLiveTest do
         )
 
       assert html =~ "Your account and credential data will be deleted"
-
-
     end
   end
 end
