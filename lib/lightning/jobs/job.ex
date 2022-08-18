@@ -31,9 +31,7 @@ defmodule Lightning.Jobs.Job do
           body: String.t() | nil,
           enabled: boolean(),
           name: String.t() | nil,
-          # TODO rename to adaptor_name?
           adaptor: String.t() | nil,
-          # adaptor_version: String.t() | nil,
           trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
           credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
           project: nil | Project.t() | Ecto.Association.NotLoaded.t()
@@ -46,7 +44,6 @@ defmodule Lightning.Jobs.Job do
     field :enabled, :boolean, default: false
     field :name, :string
     field :adaptor, :string
-    # field :adaptor_version, :string
 
     has_one :trigger, Trigger
     has_many :events, Lightning.Invocation.Event
@@ -67,7 +64,6 @@ defmodule Lightning.Jobs.Job do
       :body,
       :enabled,
       :adaptor,
-      # :adaptor_version,
       :project_credential_id,
       :project_id
     ])
