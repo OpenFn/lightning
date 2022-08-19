@@ -17,7 +17,8 @@
         <.th>First name</.th>
         <.th>Last name</.th>
         <.th>Email</.th>
-        <.th>Password</.th>
+        <.th>Role*</.th>
+        <.th>Enabled?</.th>
         <.th>Actions</.th>
       </.tr>
       <%= for user <- @users do %>
@@ -25,8 +26,12 @@
           <.td><%= user.first_name %></.td>
           <.td><%= user.last_name %></.td>
           <.td><%= user.email %></.td>
-          <.td><%= user.password %></.td>
-
+          <.td><%= user.role %></.td>
+          <.td>
+            <%= if !user.disabled do %>
+              <Heroicons.Solid.check_circle class="w-6 h-6 text-gray-500" />
+            <% end %>
+          </.td>
           <.td>
             <span>
               <%= live_redirect("Edit",
@@ -46,5 +51,12 @@
         </.tr>
       <% end %>
     </.table>
+    <br />
+    <.p>
+      *Note that a <code>superuser</code> can access <em>everything</em> in a
+      Lightning installation across all projects, including this page. Most
+      day-to-day user management (adding and removing collaborators) will be
+      done by project "admins" via the forthcoming project settings page.
+    </.p>
   </Layout.centered>
 </Layout.page_content>
