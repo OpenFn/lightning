@@ -17,7 +17,7 @@ defmodule LightningWeb.UserSessionController do
       %User{disabled: true} ->
         render(conn, "new.html", error_message: "This user account is disabled")
 
-      %User{scheduled_deletion: _x} ->
+      %User{scheduled_deletion: x} when x != nil ->
         render(conn, "new.html",
           error_message: "This user account is scheduled for deletion"
         )
