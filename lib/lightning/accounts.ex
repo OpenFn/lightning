@@ -192,6 +192,15 @@ defmodule Lightning.Accounts do
     User.email_changeset(user, attrs)
   end
 
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the user scheduled_deletion.
+
+  ## Examples
+
+      iex> change_scheduled_deletion(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
   def change_scheduled_deletion(user, attrs \\ %{}) do
     User.scheduled_deletion_changeset(user, attrs)
   end
@@ -319,23 +328,11 @@ defmodule Lightning.Accounts do
   end
 
   def schedule_user_deletion(user, email) do
-    changeset =
-      User.scheduled_deletion_changeset(user, %{
-        "scheduled_deletion" => DateTime.utc_now() |> Timex.shift(days: 7),
-        "scheduled_deletion_email" => email
-      })
-
-    Ecto.Multi.new()
-    |> Ecto.Multi.update(:user, changeset)
-    |> Ecto.Multi.delete_all(
-      :tokens,
-      UserToken.user_and_contexts_query(user, :all)
-    )
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{user: user}} -> {:ok, user}
-      {:error, :user, changeset, _} -> {:error, changeset}
-    end
+    User.scheduled_deletion_changeset(user, %{
+      "scheduled_deletion" => DateTime.utc_now() |> Timex.shift(days: 7),
+      "scheduled_deletion_email" => email
+    })
+    |> Repo.update()
   end
 
   @doc """

@@ -77,14 +77,6 @@ defmodule Lightning.Accounts.User do
       :disabled,
       :scheduled_deletion
     ])
-    |> cast(attrs, [
-      :first_name,
-      :last_name,
-      :email,
-      :password,
-      :disabled,
-      :scheduled_deletion
-    ])
     |> validate_email()
     |> validate_password(opts)
   end
@@ -166,6 +158,9 @@ defmodule Lightning.Accounts.User do
     end
   end
 
+  @doc """
+  A user changeset for changing the scheduled_deletion property.
+  """
   def scheduled_deletion_changeset(user, attrs) do
     user
     |> cast(attrs, [:scheduled_deletion])
