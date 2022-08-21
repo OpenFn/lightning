@@ -12,6 +12,15 @@
     </Layout.header>
   </:header>
   <Layout.centered>
+    <%= if @live_action == :delete do %>
+      <.live_component
+        module={LightningWeb.Components.DeleteUser}
+        id={@user.id}
+        user={@user}
+        logout={false}
+        return_to={Routes.user_index_path(@socket, :index)}
+      />
+    <% end %>
     <.table id="users">
       <.tr>
         <.th>First name</.th>
@@ -40,11 +49,8 @@
             </span>
             |
             <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: user.id,
-                data: [confirm: "Are you sure?"]
+              <%= live_redirect("Delete",
+                to: Routes.user_index_path(@socket, :delete, user)
               ) %>
             </span>
           </.td>

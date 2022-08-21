@@ -61,7 +61,7 @@ defmodule Lightning.Accounts do
 
   """
   def list_users do
-    Repo.all(User)
+    from(u in User, where: is_nil(u.scheduled_deletion)) |> Repo.all()
   end
 
   @doc """
