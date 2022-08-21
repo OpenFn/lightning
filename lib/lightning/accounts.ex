@@ -23,7 +23,9 @@ defmodule Lightning.Accounts do
       "DELETE FROM users WHERE id = $1;"
     ]
     |> Enum.each(fn x ->
-      {:ok, result} = Ecto.Adapters.SQL.query(Repo, x, [id])
+      {:ok, result} =
+        Ecto.Adapters.SQL.query(Repo, x, [Ecto.UUID.dump(id) |> elem(1)])
+
       Logger.info(fn -> "Manual purge #{x} returned #{inspect(result)}." end)
     end)
 
@@ -333,22 +335,6 @@ defmodule Lightning.Accounts do
       "scheduled_deletion_email" => email
     })
     |> Repo.update()
-  end
-
-  @doc """
-  Deletes a user.
-
-  ## Examples
-
-      iex> delete_user(user)
-      {:ok, %User{}}
-
-      iex> delete_user(user)
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def delete_user(%User{} = user) do
-    Repo.delete(user)
   end
 
   ## Session
