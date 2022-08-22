@@ -25,16 +25,16 @@ defmodule LightningWeb.DashboardLiveTest do
       {:ok, index_live, _html} =
         live(conn, Routes.dashboard_index_path(conn, :index))
 
-      # This path does not exist yet
-      # assert index_live
-      #        |> element("nav#side-menu a", "User Profile")
-      #        |> render_click()
-      #        |> follow_redirect(
-      #          conn,
-      #          Routes.profile_index_path(conn, :index)
-      #        )
+      assert {:ok, profile_live, _html} =
+               index_live
+               |> element("nav#side-menu a", "User Profile")
+               |> render_click()
+               |> follow_redirect(
+                 conn,
+                 Routes.profile_edit_path(conn, :edit)
+               )
 
-      assert index_live
+      assert profile_live
              |> element("nav#side-menu a", "Credentials")
              |> render_click()
              |> follow_redirect(

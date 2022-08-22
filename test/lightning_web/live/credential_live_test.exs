@@ -42,21 +42,16 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
-      # This path does not exist yet
-      # assert index_live
-      #        |> element("nav#side-menu a", "User Profile")
-      #        |> render_click()
-      #        |> follow_redirect(
-      #          conn,
-      #          Routes.profile_index_path(conn, :index)
-      #        )
-
       assert index_live
              |> element("nav#side-menu a", "Credentials")
+             |> has_element?()
+
+      assert index_live
+             |> element("nav#side-menu a", "User Profile")
              |> render_click()
              |> follow_redirect(
                conn,
-               Routes.credential_index_path(conn, :index)
+               Routes.profile_edit_path(conn, :edit)
              )
     end
 
