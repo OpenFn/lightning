@@ -18,6 +18,10 @@ defmodule LightningWeb.UserLiveTest do
   }
   @invalid_attrs %{email: nil, first_name: nil, last_name: nil, password: nil}
 
+  @invalid_schedule_deletion_attrs %{
+    scheduled_deletion_email: "invalid@email.com"
+  }
+
   describe "Index for super user" do
     setup :register_and_log_in_superuser
 
@@ -76,14 +80,64 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~ "User updated successfully"
     end
 
-    test "deletes user in listing", %{conn: conn, user: user} do
-      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+    test "allows a superuser to delete users in the users list", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
 
-      assert index_live
-             |> element("#user-#{user.id} a", "Delete")
-             |> render_click()
+      assert html =~ "Users"
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Delete")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+
+      assert form_live
+             |> form("#scheduled_deletion_form",
+               user: @invalid_schedule_deletion_attrs
+             )
+             |> render_change() =~
+               "This email doesn&#39;t match your current email"
+
+      {:ok, index_live, _html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          user: %{
+            scheduled_deletion_email: user.email
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
 
       refute has_element?(index_live, "#user-#{user.id}")
+    end
+
+    test "superuser cancels deletion", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "Users"
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Delete")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+
+      {:ok, index_live, _html} =
+        form_live
+        |> element("button", "Cancel")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.user_index_path(conn, :index)
+        )
+
+      assert has_element?(index_live, "#user-#{user.id}")
     end
   end
 

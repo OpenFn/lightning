@@ -16,6 +16,10 @@ defmodule LightningWeb.ProfileLiveTest do
     password_confirmation: ""
   }
 
+  @invalid_schedule_deletion_attrs %{
+    scheduled_deletion_email: "invalid@email.com"
+  }
+
   @invalid_too_short_password_attrs %{
     current_password: "",
     password: "abc",
@@ -97,23 +101,74 @@ defmodule LightningWeb.ProfileLiveTest do
     setup :register_and_log_in_user
 
     test "allows a user to schedule their own account for deletion", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
       {:ok, profile_live, html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Purge data and delete account"
 
-      {:ok, _new_live, html} =
+      {:ok, new_live, html} =
         profile_live
-        |> element("a", "Purge data and delete accoun")
+        |> element("a", "Purge data and delete account")
         |> render_click()
         |> follow_redirect(
           conn,
-          Routes.profile_edit_path(conn, :delete)
+          Routes.profile_edit_path(conn, :delete, user)
         )
 
       assert html =~ "Your account and credential data will be deleted"
+
+      assert new_live
+             |> form("#scheduled_deletion_form",
+               user: @invalid_schedule_deletion_attrs
+             )
+             |> render_change() =~
+               "This email doesn&#39;t match your current email"
+
+      {:error,
+       {:redirect, %{flash: %{"info" => "Logged out successfully."}, to: "/"}}} =
+        new_live
+        |> form("#scheduled_deletion_form",
+          user: %{
+            scheduled_deletion_email: user.email
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
+    end
+
+    test "user cancels deletion", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
+
+      assert html =~ "Purge data and delete account"
+
+      {:ok, new_live, html} =
+        profile_live
+        |> element("a", "Purge data and delete account")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.profile_edit_path(conn, :delete, user)
+        )
+
+      assert html =~ "Your account and credential data will be deleted"
+
+      {:ok, _new_live, html} =
+        new_live
+        |> element("button", "Cancel")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.profile_edit_path(conn, :edit)
+        )
+
+      assert html =~ "Settings"
     end
   end
 end
