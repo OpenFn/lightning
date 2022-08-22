@@ -84,13 +84,13 @@ defmodule LightningWeb.Components.DeleteUser do
           phx-target={@myself}
           id="scheduled_deletion_form"
         >
-          <span>Your account and credential data will be deleted</span>
+          <span>This user's account and credential data will be deleted</span>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
           <div class="grid grid-cols-12 gap-12">
             <div class="col-span-8">
-              <%= label(f, :scheduled_deletion_email, "Email",
+              <%= label(f, :scheduled_deletion_email, "User email",
                 class: "block text-sm font-medium text-secondary-700"
               ) %>
               <%= text_input(f, :scheduled_deletion_email,
