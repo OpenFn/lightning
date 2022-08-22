@@ -17,10 +17,19 @@ defmodule Lightning.Accounts do
   def purge_user(id) do
     Logger.debug(fn -> "Purging user ##{id}..." end)
 
+    # TODO: @Elias, please use the existing delete functions or create as needed.
+    # This will make it easier to implement delete audit later.
+
+    # TODO: Ensure cascase is set to set jobs to null?
+    # Credentials.delete_for_user(id)
+
+    # TODO: Ensure cascade is set to "project users" when user is deleted.
+    # Accounts.delete_user(id)
+
     [
-      "DELETE FROM credentials WHERE user_id = $1;",
-      "DELETE FROM project_users WHERE user_id = $1;",
-      "DELETE FROM users WHERE id = $1;"
+      # "DELETE FROM credentials WHERE user_id = $1;",
+      # "DELETE FROM project_users WHERE user_id = $1;",
+      # "DELETE FROM users WHERE id = $1;"
     ]
     |> Enum.each(fn x ->
       {:ok, result} =

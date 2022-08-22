@@ -95,10 +95,6 @@ defmodule LightningWeb.ProfileLiveTest do
              |> form("#email_form", user: %{email: user.email})
              |> render_change() =~ "did not change"
     end
-  end
-
-  describe "the profile edit page" do
-    setup :register_and_log_in_user
 
     test "allows a user to schedule their own account for deletion", %{
       conn: conn,
@@ -128,16 +124,14 @@ defmodule LightningWeb.ProfileLiveTest do
              |> render_change() =~
                "This email doesn&#39;t match your current email"
 
-      {:error,
-       {:redirect, %{flash: %{"info" => "Logged out successfully."}, to: "/"}}} =
-        new_live
-        |> form("#scheduled_deletion_form",
-          user: %{
-            scheduled_deletion_email: user.email
-          }
-        )
-        |> render_submit()
-        |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
+      new_live
+      |> form("#scheduled_deletion_form",
+        user: %{
+          scheduled_deletion_email: user.email
+        }
+      )
+      |> render_submit()
+      |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
     end
 
     test "user cancels deletion", %{

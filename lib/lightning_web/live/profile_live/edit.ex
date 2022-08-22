@@ -21,13 +21,13 @@ defmodule LightningWeb.ProfileLive.Edit do
 
   defp apply_action(socket, :edit, params) do
     socket
-    |> assign(:page_title, "Settings")
+    |> assign(:page_title, "User Profile")
     |> assign(:user, params)
   end
 
   defp apply_action(socket, :delete, user) do
     socket
-    |> assign(:page_title, "Users")
+    |> assign(:page_title, "User Profile")
     |> assign(:user, user)
   end
 end

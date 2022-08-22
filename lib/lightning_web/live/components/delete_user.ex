@@ -44,8 +44,6 @@ defmodule LightningWeb.Components.DeleteUser do
       ) do
     case Accounts.schedule_user_deletion(socket.assigns.user, email) do
       {:ok, _user} ->
-        PetalComponents.Modal.hide_modal(socket.assigns.myself)
-
         {:noreply,
          socket
          |> put_flash(:info, "User scheduled for deletion")
@@ -56,16 +54,16 @@ defmodule LightningWeb.Components.DeleteUser do
     end
   end
 
+  @impl true
+  def handle_event("close_modal", _, socket) do
+    {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
+  end
+
   defp logout_after_deletion(%{assigns: %{logout: true}} = socket),
     do: push_redirect(socket, to: Routes.user_session_path(socket, :delete))
 
   defp logout_after_deletion(%{assigns: %{logout: false}} = socket),
     do: push_redirect(socket, to: socket.assigns.return_to)
-
-  @impl true
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
-  end
 
   @impl true
   def render(assigns) do

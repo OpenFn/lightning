@@ -98,7 +98,7 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert response =~ "Log out</span>"
     end
 
-    test "a scheduled for deletion user can't log in", %{
+    test "a user that has been scheduled for deletion can't log in", %{
       conn: conn,
       scheduled_deletion_user: scheduled_deletion_user
     } do

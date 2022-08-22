@@ -220,8 +220,8 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  describe "Oban" do
-    test "Oban removes all users past deletion date" do
+  describe "The default Oban function Accounts.perform/1" do
+    test "removes all users past deletion date when called with type 'purge_deleted'" do
       user_to_delete =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
