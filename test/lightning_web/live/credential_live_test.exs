@@ -32,6 +32,30 @@ defmodule LightningWeb.CredentialLiveTest do
   describe "Index" do
     setup [:create_credential, :create_project_credential]
 
+    test "Side menu has credentials and user profile navigation", %{
+      conn: conn
+    } do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      # This path does not exist yet
+      # assert index_live
+      #        |> element("nav#side-menu a", "User Profile")
+      #        |> render_click()
+      #        |> follow_redirect(
+      #          conn,
+      #          Routes.profile_index_path(conn, :index)
+      #        )
+
+      assert index_live
+             |> element("nav#side-menu a", "Credentials")
+             |> render_click()
+             |> follow_redirect(
+               conn,
+               Routes.credential_index_path(conn, :index)
+             )
+    end
+
     test "lists all credentials", %{
       conn: conn,
       credential: credential,
