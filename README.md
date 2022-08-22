@@ -99,6 +99,13 @@ environments. Included in the repo is a `.tool-versions` file that is read by
 asdf in order to dynamically make the specified versions of Elixir and Erlang
 available.
 
+> P.S make sure you have added the following
+> [asdf plugin](https://github.com/asdf-vm/asdf-plugins) before you install
+
+- [Erlang](https://github.com/asdf-vm/asdf-erlang)
+- [NodeJs](https://github.com/asdf-vm/asdf-nodejs)
+- [Elixir](https://github.com/asdf-vm/asdf-elixir)
+
 ```sh
 asdf install  # Install language versions
 mix local.hex
@@ -173,6 +180,40 @@ You can generate the HTML and EPUB documentation locally using:
 `mix docs` and opening `doc/index.html` in your browser.
 
 ## Troubleshooting
+
+### Problems with Database setup
+
+If your facing this error when you run the app or on `mix ecto.create`
+
+```sh
+[error] Postgrex.Protocol (#PID<0.637.0>) failed to connect: ** (DBConnection.ConnectionError) tcp connect (${POSTGRES_HOST}:5432): non-existing domain - :nxdomain
+[error] Postgrex.Protocol (#PID<0.636.0>) failed to connect: ** (DBConnection.ConnectionError) tcp connect (${POSTGRES_HOST}:5432): non-existing domain - :nxdomain
+```
+
+Make sure in your `.env` the `DATABASE_URL` is does not contain environment
+variables
+
+Change this
+
+```sh
+DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT:-5433}/${POSTGRES_DB}"
+```
+
+To this
+
+```sh
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/lightning_dev"
+```
+
+If your database settings are like this
+
+```sh
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB="lightning_dev"
+```
 
 ### Problems with Debian
 
