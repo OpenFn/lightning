@@ -8,9 +8,8 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts.{User, UserToken}
   import Lightning.{CredentialsFixtures, AccountsFixtures}
 
-  test "list_users/0 returns all users not scheduled for deletion" do
+  test "list_users/0 returns all users" do
     user = user_fixture()
-    user_fixture(scheduled_deletion: DateTime.utc_now() |> Timex.shift(days: 7))
     assert Accounts.list_users() == [user]
   end
 

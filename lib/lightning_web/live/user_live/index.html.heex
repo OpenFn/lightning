@@ -28,6 +28,7 @@
         <.th>Email</.th>
         <.th>Role*</.th>
         <.th>Enabled?</.th>
+        <.th>Scheduled Deletion</.th>
         <.th>Actions</.th>
       </.tr>
       <%= for user <- @users do %>
@@ -41,6 +42,7 @@
               <Heroicons.Solid.check_circle class="w-6 h-6 text-gray-500" />
             <% end %>
           </.td>
+          <.td><%= user.scheduled_deletion %></.td>
           <.td>
             <span>
               <%= live_redirect("Edit",

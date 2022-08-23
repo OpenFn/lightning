@@ -88,6 +88,9 @@ defmodule LightningWeb.UserLiveTest do
 
       assert html =~ "Users"
 
+      refute html =~
+               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
+
       {:ok, form_live, _} =
         index_live
         |> element("#user-#{user.id} a", "Delete")
@@ -101,7 +104,7 @@ defmodule LightningWeb.UserLiveTest do
              |> render_change() =~
                "This email doesn&#39;t match your current email"
 
-      {:ok, index_live, _html} =
+      {:ok, index_live, html} =
         form_live
         |> form("#scheduled_deletion_form",
           user: %{
@@ -111,7 +114,10 @@ defmodule LightningWeb.UserLiveTest do
         |> render_submit()
         |> follow_redirect(conn, Routes.user_index_path(conn, :index))
 
-      refute has_element?(index_live, "#user-#{user.id}")
+      assert has_element?(index_live, "#user-#{user.id}")
+
+      assert html =~
+               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
     end
 
     test "superuser cancels deletion", %{

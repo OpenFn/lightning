@@ -27,9 +27,9 @@ defmodule Lightning.Accounts do
     # Accounts.delete_user(id)
 
     [
-      # "DELETE FROM credentials WHERE user_id = $1;",
-      # "DELETE FROM project_users WHERE user_id = $1;",
-      # "DELETE FROM users WHERE id = $1;"
+      "DELETE FROM credentials WHERE user_id = $1;",
+      "DELETE FROM project_users WHERE user_id = $1;",
+      "DELETE FROM users WHERE id = $1;"
     ]
     |> Enum.each(fn x ->
       {:ok, result} =
@@ -72,7 +72,7 @@ defmodule Lightning.Accounts do
 
   """
   def list_users do
-    from(u in User, where: is_nil(u.scheduled_deletion)) |> Repo.all()
+    Repo.all(User)
   end
 
   @doc """
