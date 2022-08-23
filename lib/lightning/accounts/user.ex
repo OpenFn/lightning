@@ -13,7 +13,6 @@ defmodule Lightning.Accounts.User do
 
   defenum(RolesEnum, :role, [
     :user,
-    :admin,
     :superuser
   ])
 

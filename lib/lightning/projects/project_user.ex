@@ -4,6 +4,8 @@ defmodule Lightning.Projects.ProjectUser do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import EctoEnum
+
   alias Lightning.Projects.Project
   alias Lightning.Accounts.User
 
@@ -14,12 +16,20 @@ defmodule Lightning.Projects.ProjectUser do
           project: Project.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
+  defenum(RolesEnum, :role, [
+    :viewer,
+    :editor,
+    :admin,
+    :owner
+  ])
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "project_users" do
     belongs_to :user, User
     belongs_to :project, Project
     field :delete, :boolean, virtual: true
+    field :role, RolesEnum, default: :editor
 
     timestamps()
   end
