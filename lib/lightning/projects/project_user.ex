@@ -41,7 +41,7 @@ defmodule Lightning.Projects.ProjectUser do
   @doc false
   def changeset(project_user, attrs) do
     project_user
-    |> cast(attrs, [:user_id, :project_id])
+    |> cast(attrs, [:user_id, :project_id, :role])
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
       message: "User already a member of this project."

@@ -19,7 +19,7 @@ defmodule Lightning.Projects do
 
   """
   def list_projects do
-    Repo.all(Project)
+    Repo.all(from(p in Project, order_by: p.name))
   end
 
   @doc """
