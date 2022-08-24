@@ -13,30 +13,39 @@ defmodule Lightning.Accounts do
   require Logger
 
   alias Lightning.Accounts.{User, UserToken, UserNotifier}
+  alias Lightning.Credentials
+  alias Lightning.Projects
 
   def purge_user(id) do
     Logger.debug(fn -> "Purging user ##{id}..." end)
 
-    # TODO: @Elias, please use the existing delete functions or create as needed.
-    # This will make it easier to implement delete audit later.
+    # Remove credentials
+    Credentials.list_credentials_for_user(id)
+    |> Enum.each(&Credentials.delete_credential/1)
 
-    # TODO: Ensure cascase is set to set jobs to null?
-    # Credentials.delete_for_user(id)
-
-    # TODO: Ensure cascade is set to "project users" when user is deleted.
-    # Accounts.delete_user(id)
-
-    [
-      "DELETE FROM credentials WHERE user_id = $1;",
-      "DELETE FROM project_users WHERE user_id = $1;",
-      "DELETE FROM users WHERE id = $1;"
-    ]
-    |> Enum.each(fn x ->
-      {:ok, result} =
-        Ecto.Adapters.SQL.query(Repo, x, [Ecto.UUID.dump(id) |> elem(1)])
-
-      Logger.info(fn -> "Manual purge #{x} returned #{inspect(result)}." end)
+    # Revoke access to projects
+    Projects.get_projects_for_user(%User{id: id})
+    |> Repo.preload(:project_users)
+    |> Enum.each(fn p ->
+      Projects.update_project(
+        p,
+        %{
+          "project_users" => %{
+            "0" => %{
+              "delete" => "true",
+              "user_id" => id,
+              "id" =>
+                Enum.find(p.project_users, fn pu -> pu.user_id == id end)
+                |> Map.get(:id)
+            }
+          }
+        }
+      )
     end)
+
+    User
+    |> Repo.get(id)
+    |> delete_user()
 
     Logger.debug(fn -> "User ##{id} purged." end)
     :ok
