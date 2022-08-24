@@ -48,18 +48,15 @@ defmodule Lightning.Accounts do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
     users =
-      past_deletion_date()
-      |> Repo.all()
+      Repo.all(
+        from(u in User,
+          where: u.scheduled_deletion <= ago(0, "second")
+        )
+      )
 
     :ok = Enum.each(users, fn u -> purge_user(u.id) end)
 
     {:ok, %{users_deleted: users}}
-  end
-
-  def past_deletion_date() do
-    from(u in User,
-      where: u.scheduled_deletion <= ago(0, "second")
-    )
   end
 
   @doc """
@@ -354,6 +351,11 @@ defmodule Lightning.Accounts do
     end
   end
 
+  @doc """
+  Given a user and a confirmation email, this function sets a scheduled deletion
+  date 7 days in the future. Note that subsequent logins will be blocked for
+  users pending deletion.
+  """
   def schedule_user_deletion(user, email) do
     User.scheduled_deletion_changeset(user, %{
       "scheduled_deletion" => DateTime.utc_now() |> Timex.shift(days: 7),
