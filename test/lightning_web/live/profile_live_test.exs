@@ -33,7 +33,7 @@ defmodule LightningWeb.ProfileLiveTest do
   }
 
   describe "Edit user profile" do
-    setup :register_and_log_in_superuser
+    setup :register_and_log_in_user
 
     test "load edit page", %{conn: conn} do
       {:ok, _profile_live, html} =
@@ -103,11 +103,11 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, profile_live, html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
-      assert html =~ "Purge data and delete account"
+      assert html =~ "Delete my account"
 
       {:ok, new_live, html} =
         profile_live
-        |> element("a", "Purge data and delete account")
+        |> element("a", "Delete my account")
         |> render_click()
         |> follow_redirect(
           conn,
@@ -141,11 +141,11 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, profile_live, html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
-      assert html =~ "Purge data and delete account"
+      assert html =~ "Delete my account"
 
       {:ok, new_live, html} =
         profile_live
-        |> element("a", "Purge data and delete account")
+        |> element("a", "Delete my account")
         |> render_click()
         |> follow_redirect(
           conn,
@@ -164,7 +164,7 @@ defmodule LightningWeb.ProfileLiveTest do
           Routes.profile_edit_path(conn, :edit)
         )
 
-      assert html =~ "Settings"
+      assert html =~ "User Profile"
     end
   end
 end

@@ -1,6 +1,7 @@
 defmodule LightningWeb.UserLiveTest do
   use LightningWeb.ConnCase, async: true
 
+  import Lightning.{AccountsFixtures}
   import Phoenix.LiveViewTest
 
   @create_attrs %{
@@ -80,10 +81,47 @@ defmodule LightningWeb.UserLiveTest do
       assert html =~ "User updated successfully"
     end
 
-    test "allows a superuser to delete users in the users list", %{
+    test "stops a superuser from deleting themselves", %{
       conn: conn,
       user: user
     } do
+      {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "Users"
+
+      refute html =~
+               "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#user-#{user.id} a", "Delete")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+
+      assert form_live
+             |> form("#scheduled_deletion_form",
+               user: @invalid_schedule_deletion_attrs
+             )
+             |> render_change() =~
+               "This email doesn&#39;t match your current email"
+
+      assert form_live
+             |> form("#scheduled_deletion_form",
+               user: %{
+                 scheduled_deletion_email: user.email
+               }
+             )
+             |> render_submit() =~
+               "You can&#39;t delete a superuser account."
+
+      refute_redirected(form_live, Routes.user_index_path(conn, :index))
+    end
+
+    test "allows a superuser to delete users in the users list", %{
+      conn: conn
+    } do
+      user = user_fixture()
+
       {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
 
       assert html =~ "Users"

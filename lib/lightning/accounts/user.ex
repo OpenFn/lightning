@@ -164,7 +164,8 @@ defmodule Lightning.Accounts.User do
   def scheduled_deletion_changeset(user, attrs) do
     user
     |> cast(attrs, [:scheduled_deletion])
-    |> validate_email_for_scheduled_deletion(attrs["scheduled_deletion_email"])
+    |> validate_role_for_deletion()
+    |> validate_email_for_deletion(attrs["scheduled_deletion_email"])
   end
 
   @doc """
@@ -224,7 +225,19 @@ defmodule Lightning.Accounts.User do
     end
   end
 
-  defp validate_email_for_scheduled_deletion(changeset, email) do
+  defp validate_role_for_deletion(changeset) do
+    if changeset.data.role == :superuser do
+      add_error(
+        changeset,
+        :scheduled_deletion_email,
+        "You can't delete a superuser account."
+      )
+    else
+      changeset
+    end
+  end
+
+  defp validate_email_for_deletion(changeset, email) do
     if email == changeset.data.email do
       changeset
     else
