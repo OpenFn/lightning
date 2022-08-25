@@ -76,6 +76,7 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  @spec code_area(any) :: Phoenix.LiveView.Rendered.t()
   def code_area(assigns) do
     classes = ~w[
       w-full
@@ -89,6 +90,15 @@ defmodule LightningWeb.Components.Form do
       hidden
       rounded-md
       focus:outline-none
+    ]
+
+    ~H"""
+    <%= textarea(@form, @id, class: classes) %>
+    """
+  end
+  def hidden_input(assigns) do
+    classes = ~w[
+      hidden
     ]
 
     ~H"""

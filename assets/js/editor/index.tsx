@@ -6,7 +6,7 @@ interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
   destroyed(): void;
   el: HTMLElement;
-  field: HTMLTextAreaElement;
+  field?: HTMLTextAreaElement | null;
   handleContentChange(content: string): void;
   mounted(): void;
   observer: MutationObserver | null;
@@ -20,18 +20,14 @@ export default {
   mounted(this: EditorEntrypoint) {
     import('./Editor').then((module) => {
       EditorComponent = module.default as typeof Editor;
-      this.field = this.el.children[0] as HTMLTextAreaElement;
+      this.componentRoot = createRoot(this.el);
 
-      // Hide the default text box
-      this.field.style.display = "none";
-      
-      // Insert a new div for the live editor
-      const root = document.createElement("div");
-      root.style.height="100%";
-      this.el.appendChild(root)
-      this.componentRoot = createRoot(root);
-      
-      
+      const { hiddenInput } = this.el.dataset;
+      if (hiddenInput) {
+        this.field = document.getElementById(hiddenInput) as HTMLTextAreaElement || null
+      } else {
+        console.warn("Warning: no form binding found for editor. Content will not sync.")
+      }
       this.setupObserver()
       this.render();
     });
@@ -43,7 +39,7 @@ export default {
   },
   render() {
     const { adaptor } = this.el.dataset;
-    const source = this.field.value;
+    const source = this.field?.value ?? "";
     if (EditorComponent) {
       this.componentRoot?.render(
         <EditorComponent
