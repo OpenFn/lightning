@@ -85,12 +85,13 @@ defmodule LightningWeb.Components.Form do
       resize-none
       border-none
       bg-transparent
+      text-white
+      hidden
       rounded-md
       focus:outline-none
     ]
 
     ~H"""
-    <%= error_tag(@form, @id) %>
     <%= textarea(@form, @id, class: classes) %>
     """
   end

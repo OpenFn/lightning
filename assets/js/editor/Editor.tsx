@@ -83,6 +83,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   return (<Monaco
     defaultLanguage="javascript"
     loading=""
+    theme="vs-dark"
     value={source}
     options={options}
     beforeMount={handleEditorWillMount}
