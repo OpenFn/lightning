@@ -76,26 +76,6 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  @spec code_area(any) :: Phoenix.LiveView.Rendered.t()
-  def code_area(assigns) do
-    classes = ~w[
-      w-full
-      font-mono
-      min-h-full
-      text-sm
-      resize-none
-      border-none
-      bg-transparent
-      text-white
-      hidden
-      rounded-md
-      focus:outline-none
-    ]
-
-    ~H"""
-    <%= textarea(@form, @id, class: classes) %>
-    """
-  end
   def hidden_input(assigns) do
     classes = ~w[
       hidden
