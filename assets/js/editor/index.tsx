@@ -49,7 +49,7 @@ export default {
         <EditorComponent
           adaptor={adaptor}
           source={source}
-          onChange={this.handleContentChange}
+          onChange={(src) => this.handleContentChange(src)}
       />);
     }
   },
