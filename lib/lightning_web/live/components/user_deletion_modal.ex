@@ -1,4 +1,4 @@
-defmodule LightningWeb.Components.DeleteUser do
+defmodule LightningWeb.Components.UserDeletionModal do
   @moduledoc false
   use LightningWeb, :component
 
