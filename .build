@@ -36,6 +36,7 @@ Lightning.Pipeline.html
 Lightning.Projects.Policy.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
+Lightning.Projects.ProjectUser.RolesEnum.html
 Lightning.Projects.ProjectUser.html
 Lightning.Projects.html
 Lightning.Release.html
@@ -115,8 +116,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-d0a685e9ea.js
-dist/sidebar_items-998a0e8686.js
+dist/search_items-078f88c197.js
+dist/sidebar_items-22069b1ec2.js
 index.html
 readme.html
 search.html
