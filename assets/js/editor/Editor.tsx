@@ -5,8 +5,8 @@ import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types
 import { fetchDTSListing, fetchFile } from '@openfn/compiler';
 
 type EditorProps = {
-  source: string;
-  adaptor: string; // fully specified adaptor name - <id>@<version>
+  source?: string;
+  adaptor?: string; // fully specified adaptor name - <id>@<version>
   onChange?: (newSource: string) => void;
 }
 
@@ -71,7 +71,9 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   }, []);
   
   useEffect(() => {
-    loadDTS(adaptor).then(l => setLib(l));
+    if (adaptor) {
+      loadDTS(adaptor).then(l => setLib(l));
+    }
   }, [adaptor])
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     defaultLanguage="javascript"
     loading=""
     theme="vs-dark"
-    value={source}
+    value={source || '// Write your code here'}
     options={options}
     beforeMount={handleEditorWillMount}
     onChange={handleSourceChange}

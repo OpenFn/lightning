@@ -44,7 +44,7 @@ export default {
   render() {
     const { adaptor } = this.el.dataset;
     const source = this.field.value;
-    if (EditorComponent && adaptor && source) {
+    if (EditorComponent) {
       this.componentRoot?.render(
         <EditorComponent
           adaptor={adaptor}
