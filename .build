@@ -10,6 +10,13 @@ Lightning.AdaptorRegistry.html
 Lightning.Auditing.Model.html
 Lightning.Auditing.Policy.html
 Lightning.Auditing.html
+Lightning.AuthProviders.AuthConfig.html
+Lightning.AuthProviders.CacheWarmer.html
+Lightning.AuthProviders.Handler.html
+Lightning.AuthProviders.Policy.html
+Lightning.AuthProviders.Store.html
+Lightning.AuthProviders.WellKnown.html
+Lightning.AuthProviders.html
 Lightning.Credentials.Audit.html
 Lightning.Credentials.Credential.html
 Lightning.Credentials.Policy.html
@@ -52,6 +59,8 @@ LightningWeb.API.ProjectView.html
 LightningWeb.API.RunController.html
 LightningWeb.API.RunView.html
 LightningWeb.AuditLive.Index.html
+LightningWeb.AuthProvidersLive.FormComponent.html
+LightningWeb.AuthProvidersLive.Index.html
 LightningWeb.ChangesetView.html
 LightningWeb.Components.WorkflowDiagram.html
 LightningWeb.CredentialLive.Edit.html
@@ -76,6 +85,7 @@ LightningWeb.JobLive.Index.html
 LightningWeb.JobLive.InspectorFormComponent.html
 LightningWeb.LayoutView.html
 LightningWeb.LiveHelpers.html
+LightningWeb.OidcController.html
 LightningWeb.PageView.html
 LightningWeb.Pagination.html
 LightningWeb.Plugs.FirstSetup.html
@@ -116,8 +126,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-90326e23a2.js
-dist/sidebar_items-e942caf738.js
+dist/search_items-65eb2f805f.js
+dist/sidebar_items-3e4e5f26eb.js
 index.html
 readme.html
 search.html
