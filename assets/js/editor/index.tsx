@@ -14,10 +14,16 @@ interface EditorEntrypoint {
   setupObserver(): void;
 }
 
+type AttributeMutationRecord = MutationRecord & {
+  attributeName: string,
+  oldValue: string
+}
+
 let EditorComponent: typeof Editor | undefined;
 
 export default {
   mounted(this: EditorEntrypoint) {
+    console.log('> mount')
     import('./Editor').then((module) => {
       EditorComponent = module.default as typeof Editor;
       this.componentRoot = createRoot(this.el);
@@ -51,17 +57,19 @@ export default {
   },
   setupObserver() {
     this.observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (
-          mutation.type === "attributes" &&
-          mutation.attributeName == "data-adaptor"
-        ) {
+      mutations.forEach(mutation => {
+        const { attributeName, oldValue } = mutation as AttributeMutationRecord;
+        const newValue = this.el.getAttribute(attributeName);
+        if (oldValue !== newValue) {
           this.render()
         }
       });
     });
 
-    this.observer.observe(this.el, { attributes: true });
+    this.observer.observe(this.el, {
+      attributeFilter: ['data-adaptor', 'data-job-id'],
+      attributeOldValue: true
+    });
   },
   destroyed() {
     this.componentRoot?.unmount();

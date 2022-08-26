@@ -155,6 +155,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
               data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
               data-hidden-input={Phoenix.HTML.Form.input_id(f, :body)}
+              data-job-id={@id}
             />
             <Form.hidden_input form={f} id={:body} />
           </div>
