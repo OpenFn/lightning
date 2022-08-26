@@ -2,9 +2,11 @@ defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Accounts
+  alias Lightning.Credentials.Credential
+  alias Lightning.Projects.ProjectUser
 
-  import Lightning.AccountsFixtures
   alias Lightning.Accounts.{User, UserToken}
+  import Lightning.{CredentialsFixtures, AccountsFixtures}
 
   test "list_users/0 returns all users" do
     user = user_fixture()
@@ -158,6 +160,85 @@ defmodule Lightning.AccountsTest do
     test "returns a user changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
       assert changeset.required == [:email]
+    end
+  end
+
+  describe "change_scheduled_deletion/2" do
+    test "returns a user changeset" do
+      assert %Ecto.Changeset{} =
+               changeset = Accounts.change_scheduled_deletion(%User{})
+
+      assert changeset.required == []
+    end
+  end
+
+  describe "purge user" do
+    test "purging user removes only that user, their credentials and their projects" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      credential_fixture(user_id: user_1.id)
+      credential_fixture(user_id: user_2.id)
+
+      Lightning.Projects.create_project(%{
+        name: "some-name",
+        project_users: [%{user_id: user_1.id}]
+      })
+
+      Lightning.Projects.create_project(%{
+        name: "some-name",
+        project_users: [%{user_id: user_2.id}]
+      })
+
+      assert 2 == Repo.all(Credential) |> Enum.count()
+      assert 2 == Repo.all(ProjectUser) |> Enum.count()
+      assert 2 == Repo.all(User) |> Enum.count()
+
+      :ok = Accounts.purge_user(user_1.id)
+
+      assert 1 == Repo.all(Credential) |> Enum.count()
+      assert 1 == Repo.all(ProjectUser) |> Enum.count()
+      assert 1 == Repo.all(User) |> Enum.count()
+
+      remaining_creds = Repo.all(Credential)
+      remaining_projs = Repo.all(ProjectUser)
+      remaining_users = Repo.all(User)
+
+      assert 1 == Enum.count(remaining_creds)
+      assert 1 == Enum.count(remaining_projs)
+      assert 1 == Enum.count(remaining_users)
+
+      assert remaining_creds
+             |> Enum.any?(fn x -> x.user_id == user_2.id end)
+
+      assert remaining_projs
+             |> Enum.any?(fn x -> x.user_id == user_2.id end)
+
+      assert remaining_users
+             |> Enum.any?(fn x -> x.id == user_2.id end)
+    end
+  end
+
+  describe "The default Oban function Accounts.perform/1" do
+    test "removes all users past deletion date when called with type 'purge_deleted'" do
+      user_to_delete =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+        )
+
+      user_fixture(
+        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+      )
+
+      count_before = Repo.all(User) |> Enum.count()
+
+      {:ok, %{users_deleted: users_deleted}} =
+        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert count_before - 1 == Repo.all(User) |> Enum.count()
+      assert 1 == users_deleted |> Enum.count()
+
+      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
     end
   end
 
@@ -719,6 +800,13 @@ defmodule Lightning.AccountsTest do
     user = user_fixture()
     assert {:ok, %User{}} = Accounts.delete_user(user)
     assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
+  end
+
+  test "schedule user for deletion" do
+    user = user_fixture()
+    assert user.scheduled_deletion == nil
+    {:ok, user} = Accounts.schedule_user_deletion(user, user.email)
+    assert user.scheduled_deletion != nil
   end
 
   describe "inspect/2" do

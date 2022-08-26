@@ -37,12 +37,10 @@ defmodule LightningWeb.UserLive.Index do
     |> assign(:user, nil)
   end
 
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    user = Accounts.get_user!(id)
-    {:ok, _} = Accounts.delete_user(user)
-
-    {:noreply, assign(socket, :users, list_users())}
+  defp apply_action(socket, :delete, %{"id" => id}) do
+    socket
+    |> assign(:page_title, "Users")
+    |> assign(:user, Accounts.get_user!(id))
   end
 
   defp list_users do

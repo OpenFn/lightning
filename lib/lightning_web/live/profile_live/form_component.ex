@@ -12,6 +12,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
      |> assign(:email_changeset, Accounts.change_user_email(user))
+     |> assign(:user, user)
      |> assign(assigns)}
   end
 

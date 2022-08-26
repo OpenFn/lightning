@@ -4,7 +4,14 @@ defmodule LightningWeb.UserSessionControllerTest do
   import Lightning.AccountsFixtures
 
   setup do
-    %{user: user_fixture(), disabled_user: user_fixture(disabled: true)}
+    %{
+      user: user_fixture(),
+      disabled_user: user_fixture(disabled: true),
+      scheduled_deletion_user:
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(days: 7)
+        )
+    }
   end
 
   describe "GET /users/log_in" do
@@ -89,6 +96,22 @@ defmodule LightningWeb.UserSessionControllerTest do
       response = html_response(conn, 200)
       # assert response =~ user.email
       assert response =~ "Log out</span>"
+    end
+
+    test "a user that has been scheduled for deletion can't log in", %{
+      conn: conn,
+      scheduled_deletion_user: scheduled_deletion_user
+    } do
+      conn =
+        post(conn, Routes.user_session_path(conn, :create), %{
+          "user" => %{
+            "email" => scheduled_deletion_user.email,
+            "password" => valid_user_password()
+          }
+        })
+
+      response = html_response(conn, 200)
+      assert response =~ "This user account is scheduled for deletion"
     end
 
     test "a disabled user can't log in", %{

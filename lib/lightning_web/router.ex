@@ -76,6 +76,7 @@ defmodule LightningWeb.Router do
       live "/settings/users", UserLive.Index, :index
       live "/settings/users/new", UserLive.Edit, :new
       live "/settings/users/:id", UserLive.Edit, :edit
+      live "/settings/users/:id/delete", UserLive.Index, :delete
 
       live "/settings/projects", ProjectLive.Index, :index
       live "/settings/projects/new", ProjectLive.Index, :new
@@ -105,6 +106,7 @@ defmodule LightningWeb.Router do
       live "/credentials/:id", CredentialLive.Edit, :edit
 
       live "/profile", ProfileLive.Edit, :edit
+      live "/profile/:id/delete", ProfileLive.Edit, :delete
 
       live "/", DashboardLive.Index, :index
     end

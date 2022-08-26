@@ -3,10 +3,70 @@ defmodule Lightning.Accounts do
   The Accounts context.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
+  require Logger
+
   alias Lightning.Accounts.{User, UserToken, UserNotifier}
+  alias Lightning.Credentials
+  alias Lightning.Projects
+
+  def purge_user(id) do
+    Logger.debug(fn -> "Purging user ##{id}..." end)
+
+    # Remove credentials
+    Credentials.list_credentials_for_user(id)
+    |> Enum.each(&Credentials.delete_credential/1)
+
+    # Revoke access to projects
+    Projects.get_projects_for_user(%User{id: id})
+    |> Repo.preload(:project_users)
+    |> Enum.each(fn p ->
+      Projects.update_project(
+        p,
+        %{
+          "project_users" => %{
+            "0" => %{
+              "delete" => "true",
+              "user_id" => id,
+              "id" =>
+                Enum.find(p.project_users, fn pu -> pu.user_id == id end)
+                |> Map.get(:id)
+            }
+          }
+        }
+      )
+    end)
+
+    User
+    |> Repo.get(id)
+    |> delete_user()
+
+    Logger.debug(fn -> "User ##{id} purged." end)
+    :ok
+  end
+
+  @doc """
+  Perform, when called with %{"type" => "purge_deleted"} will find users that are ready for permanent deletion and purge them.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    users =
+      Repo.all(
+        from(u in User,
+          where: u.scheduled_deletion <= ago(0, "second")
+        )
+      )
+
+    :ok = Enum.each(users, fn u -> purge_user(u.id) end)
+
+    {:ok, %{users_deleted: users}}
+  end
 
   @doc """
   Returns the list of users.
@@ -150,6 +210,19 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Returns an `%Ecto.Changeset{}` for changing the user scheduled_deletion.
+
+  ## Examples
+
+      iex> change_scheduled_deletion(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  def change_scheduled_deletion(user, attrs \\ %{}) do
+    User.scheduled_deletion_changeset(user, attrs)
+  end
+
+  @doc """
   Emulates that the email will change without actually changing
   it in the database.
 
@@ -228,6 +301,22 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Deletes a user.
+
+  ## Examples
+
+      iex> delete_user(user)
+      {:ok, %User{}}
+
+      iex> delete_user(user)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_user(%User{} = user) do
+    Repo.delete(user)
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for changing the user password.
 
   ## Examples
@@ -272,19 +361,16 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Deletes a user.
-
-  ## Examples
-
-      iex> delete_user(user)
-      {:ok, %User{}}
-
-      iex> delete_user(user)
-      {:error, %Ecto.Changeset{}}
-
+  Given a user and a confirmation email, this function sets a scheduled deletion
+  date 7 days in the future. Note that subsequent logins will be blocked for
+  users pending deletion.
   """
-  def delete_user(%User{} = user) do
-    Repo.delete(user)
+  def schedule_user_deletion(user, email) do
+    User.scheduled_deletion_changeset(user, %{
+      "scheduled_deletion" => DateTime.utc_now() |> Timex.shift(days: 7),
+      "scheduled_deletion_email" => email
+    })
+    |> Repo.update()
   end
 
   ## Session

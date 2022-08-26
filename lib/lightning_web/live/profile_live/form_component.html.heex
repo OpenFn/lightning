@@ -1,4 +1,13 @@
 <div id={"user-#{@user.id}"}>
+  <%= if @action == :delete do %>
+    <.live_component
+      module={LightningWeb.Components.UserDeletionModal}
+      id={@user.id}
+      user={@user}
+      logout={true}
+      return_to={Routes.profile_edit_path(@socket, :edit)}
+    />
+  <% end %>
   <.form
     let={f}
     for={@email_changeset}
@@ -156,5 +165,18 @@
         ) %>
       </span>
     </div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-5"></div>
+    </div>
   </.form>
+  <div>
+    <%= live_redirect to: Routes.profile_edit_path(@socket, :delete, @user) do %>
+      <button
+        type="button"
+        class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+      >
+        Delete my account
+      </button>
+    <% end %>
+  </div>
 </div>

@@ -27,6 +27,7 @@ defmodule Lightning.Accounts.User do
     field(:confirmed_at, :naive_datetime)
     field(:role, RolesEnum, default: :user)
     field(:disabled, :boolean, default: false)
+    field(:scheduled_deletion, :utc_datetime)
 
     has_many :credentials, Lightning.Credentials.Credential
     has_many :project_users, Lightning.Projects.ProjectUser
@@ -68,7 +69,14 @@ defmodule Lightning.Accounts.User do
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:first_name, :last_name, :email, :password, :disabled])
+    |> cast(attrs, [
+      :first_name,
+      :last_name,
+      :email,
+      :password,
+      :disabled,
+      :scheduled_deletion
+    ])
     |> validate_email()
     |> validate_password(opts)
   end
@@ -151,6 +159,16 @@ defmodule Lightning.Accounts.User do
   end
 
   @doc """
+  A user changeset for changing the scheduled_deletion property.
+  """
+  def scheduled_deletion_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:scheduled_deletion])
+    |> validate_role_for_deletion()
+    |> validate_email_for_deletion(attrs["scheduled_deletion_email"])
+  end
+
+  @doc """
   A user changeset for changing the password.
 
   ## Options
@@ -204,6 +222,30 @@ defmodule Lightning.Accounts.User do
       changeset
     else
       add_error(changeset, :current_password, "is not valid")
+    end
+  end
+
+  defp validate_role_for_deletion(changeset) do
+    if changeset.data.role == :superuser do
+      add_error(
+        changeset,
+        :scheduled_deletion_email,
+        "You can't delete a superuser account."
+      )
+    else
+      changeset
+    end
+  end
+
+  defp validate_email_for_deletion(changeset, email) do
+    if email == changeset.data.email do
+      changeset
+    else
+      add_error(
+        changeset,
+        :scheduled_deletion_email,
+        "This email doesn't match your current email"
+      )
     end
   end
 end
