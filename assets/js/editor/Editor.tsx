@@ -72,6 +72,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   
   useEffect(() => {
     if (adaptor) {
+      setLib([]); // instantly clear intelligence
       loadDTS(adaptor).then(l => setLib(l));
     }
   }, [adaptor])
