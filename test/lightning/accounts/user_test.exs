@@ -1,4 +1,4 @@
-defmodule Lightning.Credentials.UserTest do
+defmodule Lightning.Accounts.UserTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Accounts.User
