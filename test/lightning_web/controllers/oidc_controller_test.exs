@@ -78,6 +78,24 @@ defmodule LightningWeb.OidcControllerTest do
       assert redirected_to(conn) == "/"
     end
 
+    test "shows an error when the person doesn't exist", %{
+      conn: conn,
+      bypass: bypass,
+      handler: handler
+    } do
+      expect_token(bypass, handler.wellknown)
+
+      expect_userinfo(bypass, handler.wellknown, %{"email" => "invalid@user.com"})
+
+      conn =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+
     test "renders a 404 when a provider is missing", %{conn: conn} do
       response =
         conn

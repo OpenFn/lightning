@@ -81,7 +81,8 @@ defmodule Lightning.AuthProvidersTest do
             URI.encode_query(%{
               "client_id" => "the client id",
               "redirect_uri" => endpoint_url <> "/redirect_here",
-              "response_type" => "code"
+              "response_type" => "code",
+              "scope" => "openid email profile"
             })
         })
         |> URI.to_string()

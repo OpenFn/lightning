@@ -24,16 +24,18 @@ defmodule LightningWeb.OidcController do
   def new(conn, %{"provider" => provider, "code" => code}) do
     with {:ok, handler} <- AuthProviders.get_handler(provider),
          {:ok, token} <- Handler.get_token(handler, code) do
-      # FAILURE CASE: permission or api error when getting user info
       userinfo = Handler.get_userinfo(handler, token)
-
-      # FAILURE CASE: email not in userinfo
       email = Map.fetch!(userinfo, "email")
 
-      # FAILURE CASE: user not found
-      user = Accounts.get_user_by_email(email)
+      case Accounts.get_user_by_email(email) do
+        nil ->
+          conn
+          |> put_flash(:error, "Could not find user account")
+          |> redirect(to: Routes.user_session_path(conn, :new))
 
-      conn |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+        user ->
+          conn |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+      end
     end
   end
 end

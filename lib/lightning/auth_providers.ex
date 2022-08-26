@@ -6,10 +6,12 @@ defmodule Lightning.AuthProviders do
   alias Lightning.AuthProviders.{AuthConfig, Handler, Store, WellKnown}
   import Ecto.Query
 
+  @spec get_existing() :: AuthConfig.t() | nil
   def get_existing() do
     from(ap in AuthConfig) |> Repo.one()
   end
 
+  @spec get_existing(name :: String.t()) :: AuthConfig.t() | nil
   def get_existing(name) do
     from(ap in AuthConfig, where: ap.name == ^name) |> Repo.one()
   end
@@ -28,7 +30,7 @@ defmodule Lightning.AuthProviders do
     with {:ok, model} <- model |> AuthConfig.changeset(attrs) |> Repo.update() do
       # Drop the handler from the cache, forcing it to be reinitialised
       # next time it's requested.
-      remove_handler(model.name)
+      create_handler(model)
 
       {:ok, model}
     end
@@ -50,8 +52,14 @@ defmodule Lightning.AuthProviders do
     store_impl().get_handlers()
   end
 
-  @spec create_handler(handler :: Handler.t()) ::
-          {:ok, Handler.t()}
+  @spec create_handler(handler_or_config :: Handler.t() | AuthConfig.t()) ::
+          {:ok, Handler.t()} | {:error, term()}
+  def create_handler(%AuthConfig{name: name} = config) do
+    with {:ok, handler} <- Handler.from_model(config) do
+      store_impl().put_handler(name, handler)
+    end
+  end
+
   def create_handler(%Handler{name: name} = handler) do
     store_impl().put_handler(name, handler)
   end

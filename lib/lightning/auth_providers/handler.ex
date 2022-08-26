@@ -80,7 +80,7 @@ defmodule Lightning.AuthProviders.Handler do
 
   @spec authorize_url(handler :: __MODULE__.t()) :: String.t()
   def authorize_url(handler) do
-    OAuth2.Client.authorize_url!(handler.client)
+    OAuth2.Client.authorize_url!(handler.client, scope: "openid email profile")
   end
 
   @spec get_token(handler :: __MODULE__.t(), code :: String.t()) ::
@@ -88,7 +88,7 @@ defmodule Lightning.AuthProviders.Handler do
   def get_token(handler, code) when is_binary(code) do
     case OAuth2.Client.get_token(handler.client,
            code: code,
-           scope: "openid,email,profile"
+           scope: "openid email profile"
          ) do
       {:ok, client} -> {:ok, client.token}
       {:error, %OAuth2.Response{body: body}} -> {:error, body}

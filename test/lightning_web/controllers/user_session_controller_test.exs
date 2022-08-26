@@ -29,14 +29,7 @@ defmodule LightningWeb.UserSessionControllerTest do
   end
 
   setup do
-    %{
-      user: user_fixture(),
-      disabled_user: user_fixture(disabled: true),
-      scheduled_deletion_user:
-        user_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(days: 7)
-        )
-    }
+    %{user: user_fixture()}
   end
 
   describe "GET /users/log_in" do
@@ -116,6 +109,16 @@ defmodule LightningWeb.UserSessionControllerTest do
   end
 
   describe "POST /users/log_in" do
+    setup do
+      %{
+        disabled_user: user_fixture(disabled: true),
+        scheduled_deletion_user:
+          user_fixture(
+            scheduled_deletion: DateTime.utc_now() |> Timex.shift(days: 7)
+          )
+      }
+    end
+
     test "logs the user in", %{conn: conn, user: user} do
       conn =
         post(conn, Routes.user_session_path(conn, :create), %{
