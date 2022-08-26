@@ -29,7 +29,6 @@ const useStore = create<CompilerComponentState>((set, get) => ({
   },
   async loadModule() {
     const specifier = get().specifier!;
-
     set({ loading: true, statusMessage: "Loading compiler...", error: null });
 
     const { Pack, Project, describeDts } = await import("@openfn/compiler");

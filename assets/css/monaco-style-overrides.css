@@ -1,0 +1,27 @@
+/* Fixes for curved borders (what a pain!)*/
+.monaco-editor,
+.monaco-editor .overflow-guard {
+  background-color: transparent !important;
+}
+.monaco-editor .margin {
+  border-top-left-radius: 0.375rem; /* matches rounded-md */
+  border-bottom-left-radius: 0.375rem;
+}
+.monaco-editor .monaco-scrollable-element  {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+}
+
+/* Fix ugly right border */
+.monaco-editor .view-overlays .current-line {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.monaco-editor .line-numbers {
+  color: #7c7c7c !important;
+}
+
+.monaco-editor .line-numbers.active-line-number {
+  color: white !important;
+}

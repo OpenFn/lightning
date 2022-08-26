@@ -76,6 +76,16 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  def hidden_input(assigns) do
+    classes = ~w[
+      hidden
+    ]
+
+    ~H"""
+    <%= textarea(@form, @id, class: classes) %>
+    """
+  end
+
   def password_field(assigns) do
     label_classes = ~w[
       block

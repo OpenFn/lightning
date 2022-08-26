@@ -27,8 +27,9 @@ import topbar from "../vendor/topbar";
 
 import WorkflowDiagram from "./workflow-diagram";
 import Compiler from "./compiler";
+import Editor from "./editor";
 
-let Hooks = { WorkflowDiagram, Compiler };
+let Hooks = { WorkflowDiagram, Compiler, Editor };
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener("change", (event) => {
