@@ -1,8 +1,5 @@
 import Config
 
-# Configure Swoosh
-config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
-
 # Configure your database
 config :lightning, Lightning.Repo,
   username: "postgres",
