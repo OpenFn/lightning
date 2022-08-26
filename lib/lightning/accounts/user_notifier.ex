@@ -42,6 +42,22 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   @doc """
+  Deliver an email to notify the user about their account being deleted
+  """
+  def send_deletion_notification_email(user) do
+    IO.inspect(user, label: "USER")
+
+    deliver(user.email, "Lightning Account Deletion", """
+
+    ==============================
+
+    Hi #{user}, your account is going to be deleted.
+
+    ==============================
+    """)
+  end
+
+  @doc """
   Deliver instructions to reset a user password.
   """
   def deliver_reset_password_instructions(user, url) do

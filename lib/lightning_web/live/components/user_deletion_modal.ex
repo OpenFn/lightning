@@ -5,6 +5,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
   use Phoenix.LiveComponent
 
   alias Lightning.Accounts
+  alias Lightning.Accounts.UserNotifier
 
   @impl true
   def update(%{user: user} = assigns, socket) do
@@ -43,7 +44,9 @@ defmodule LightningWeb.Components.UserDeletionModal do
         socket
       ) do
     case Accounts.schedule_user_deletion(socket.assigns.user, email) do
-      {:ok, _user} ->
+      {:ok, user} ->
+        UserNotifier.send_deletion_notification_email(user)
+
         {:noreply,
          socket
          |> put_flash(:info, "User scheduled for deletion")
