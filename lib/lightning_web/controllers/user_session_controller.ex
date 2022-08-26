@@ -23,9 +23,12 @@ defmodule LightningWeb.UserSessionController do
         |> render("new.html", auth_handler_url: auth_handler_url())
 
       %User{scheduled_deletion: x} when x != nil ->
-        render(conn, "new.html",
-          error_message: "This user account is scheduled for deletion"
+        conn
+        |> put_flash(
+          :error,
+          "This user account is scheduled for deletion"
         )
+        |> render("new.html", auth_handler_url: auth_handler_url())
 
       %User{} = user ->
         UserAuth.log_in_user(conn, user, user_params)
