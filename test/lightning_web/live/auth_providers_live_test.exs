@@ -166,13 +166,31 @@ defmodule LightningWeb.AuthProvidersLiveTest do
 
       assert view
              |> form("#auth-provider-form",
-               auth_provider: %{client_id: "new-client-id"}
+               auth_provider: %{
+                 client_id: "new-client-id",
+                 redirect_host: "http://localhost:3030"
+               }
              )
+             |> render_change()
+
+      assert view
+             |> element("#auth-provider-form")
              |> render_submit() =~ "Authentication Provider updated."
+
+      new_redirect_uri =
+        "http://localhost:3030/authenticate/#{handler_name}/callback"
+
+      assert view
+             |> element(
+               "#redirect-uri-preview",
+               new_redirect_uri
+             )
+             |> render()
 
       {:ok, handler} = AuthProviders.get_handler(handler_name)
 
       assert handler.client.client_id == "new-client-id"
+      assert handler.client.redirect_uri == new_redirect_uri
 
       assert view
              |> element("button", "Remove")

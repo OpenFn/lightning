@@ -30,8 +30,13 @@ defmodule LightningWeb.AuthProvidersLive.Index do
 
   defp apply_action(socket, :edit, _params) do
     if auth_provider = AuthProviders.get_existing() do
+      redirect_host =
+        URI.parse(auth_provider.redirect_uri)
+        |> URI.merge("/")
+        |> URI.to_string()
+
       socket
-      |> assign(auth_provider: auth_provider)
+      |> assign(auth_provider: auth_provider, redirect_host: redirect_host)
     else
       socket
       |> push_redirect(
@@ -43,7 +48,10 @@ defmodule LightningWeb.AuthProvidersLive.Index do
 
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(auth_provider: AuthProviders.new())
+    |> assign(
+      auth_provider: AuthProviders.new(),
+      redirect_host: LightningWeb.Endpoint.struct_url() |> URI.to_string()
+    )
   end
 
   @impl true
@@ -58,6 +66,7 @@ defmodule LightningWeb.AuthProvidersLive.Index do
           module={LightningWeb.AuthProvidersLive.FormComponent}
           id={@auth_provider.id || :new}
           auth_provider={@auth_provider}
+          redirect_host={@redirect_host}
           parent={self()}
         />
       </Layout.centered>

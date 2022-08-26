@@ -17,10 +17,13 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
   import LightningWeb.Components.Form
 
   @impl true
-  def update(%{auth_provider: auth_provider, id: id}, socket) do
+  def update(
+        %{auth_provider: auth_provider, id: id, redirect_host: redirect_host},
+        socket
+      ) do
     form_model = %{
       AuthConfigForm.from_auth_config(auth_provider)
-      | redirect_host: LightningWeb.Endpoint.struct_url() |> URI.to_string(),
+      | redirect_host: redirect_host,
         redirect_path_func: fn name ->
           Routes.oidc_path(socket, :new, name || "")
         end
@@ -226,11 +229,17 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
                 </div>
 
                 <%= if @changeset.valid? do %>
-                  <div class="font-mono border rounded-md mt-4 p-2 text-secondary-700 bg-gray-200 border-slate-300 shadow-sm">
+                  <div
+                    id="redirect-uri-preview"
+                    class="font-mono border rounded-md mt-4 p-2 text-secondary-700 bg-gray-200 border-slate-300 shadow-sm"
+                  >
                     <%= input_value(f, :redirect_uri) %>
                   </div>
                 <% else %>
-                  <div class="font-mono border rounded-md mt-4 p-2 text-gray-400 bg-gray-200 border-slate-300 shadow-sm cursor-not-allowed">
+                  <div
+                    id="redirect-uri-preview"
+                    class="font-mono border rounded-md mt-4 p-2 text-gray-400 bg-gray-200 border-slate-300 shadow-sm cursor-not-allowed"
+                  >
                     <%= input_value(f, :redirect_host) %>&hellip;
                   </div>
                 <% end %>
