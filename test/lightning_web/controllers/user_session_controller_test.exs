@@ -2,16 +2,34 @@ defmodule LightningWeb.UserSessionControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.AccountsFixtures
+  alias Lightning.AuthProviders
+
+  def create_handler(endpoint_url) do
+    wellknown = %AuthProviders.WellKnown{
+      authorization_endpoint: "#{endpoint_url}/authorization_endpoint",
+      token_endpoint: "#{endpoint_url}/token_endpoint",
+      userinfo_endpoint: "#{endpoint_url}/userinfo_endpoint"
+    }
+
+    handler_name = :crypto.strong_rand_bytes(6) |> Base.url_encode64()
+
+    {:ok, handler} =
+      AuthProviders.Handler.new(handler_name,
+        wellknown: wellknown,
+        client_id: "id",
+        client_secret: "secret",
+        redirect_uri: "http://localhost/callback_url"
+      )
+
+    {:ok, _} = AuthProviders.create_handler(handler)
+
+    on_exit(fn -> AuthProviders.remove_handler(handler) end)
+
+    handler
+  end
 
   setup do
-    %{
-      user: user_fixture(),
-      disabled_user: user_fixture(disabled: true),
-      scheduled_deletion_user:
-        user_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(days: 7)
-        )
-    }
+    %{user: user_fixture()}
   end
 
   describe "GET /users/log_in" do
@@ -21,6 +39,7 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert response =~ "Log in"
       assert response =~ "Register</a>"
       assert response =~ "Forgot your password?</a>"
+      refute response =~ "via external provider"
     end
 
     test "redirects if already logged in", %{conn: conn, user: user} do
@@ -28,6 +47,14 @@ defmodule LightningWeb.UserSessionControllerTest do
         conn |> log_in_user(user) |> get(Routes.user_session_path(conn, :new))
 
       assert redirected_to(conn) == "/"
+    end
+
+    test "shows a 'via external provider' button", %{conn: conn} do
+      create_handler("foo")
+
+      conn = get(conn, Routes.user_session_path(conn, :new))
+      response = html_response(conn, 200)
+      assert response =~ "via external provider"
     end
   end
 
@@ -82,6 +109,16 @@ defmodule LightningWeb.UserSessionControllerTest do
   end
 
   describe "POST /users/log_in" do
+    setup do
+      %{
+        disabled_user: user_fixture(disabled: true),
+        scheduled_deletion_user:
+          user_fixture(
+            scheduled_deletion: DateTime.utc_now() |> Timex.shift(days: 7)
+          )
+      }
+    end
+
     test "logs the user in", %{conn: conn, user: user} do
       conn =
         post(conn, Routes.user_session_path(conn, :create), %{

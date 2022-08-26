@@ -30,6 +30,8 @@ defmodule LightningWeb.LiveHelpers do
   """
 
   def live_info_block(assigns) do
+    assigns = assign_new(assigns, :myself, fn -> nil end)
+
     ~H"""
     <%= if info = live_flash(@flash, :info) do %>
       <div class="fixed flex justify-center bottom-3 right-0 left-0 z-[100]">
@@ -38,6 +40,7 @@ defmodule LightningWeb.LiveHelpers do
           role="alert"
           phx-click="lv:clear-flash"
           phx-value-key="info"
+          phx-target={@myself}
         >
           <%= info %>
         </p>
@@ -47,6 +50,8 @@ defmodule LightningWeb.LiveHelpers do
   end
 
   def live_error_block(assigns) do
+    assigns = assign_new(assigns, :myself, fn -> nil end)
+
     ~H"""
     <%= if error = live_flash(@flash, :error) do %>
       <div class="fixed flex justify-center bottom-3 right-0 left-0 z-[100]">
@@ -55,6 +60,7 @@ defmodule LightningWeb.LiveHelpers do
           role="alert"
           phx-click="lv:clear-flash"
           phx-value-key="error"
+          phx-target={@myself}
         >
           <%= error %>
         </p>

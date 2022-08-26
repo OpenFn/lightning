@@ -98,6 +98,8 @@ defmodule LightningWeb.Components.Form do
       block
       w-full
       rounded-md
+      text-sm
+      text-secondary-700
     ]
 
     input_classes = ~w[
@@ -111,12 +113,30 @@ defmodule LightningWeb.Components.Form do
       rounded-md
     ]
 
+    assigns =
+      assigns
+      |> assign(
+        label_classes: label_classes,
+        error_classes: error_classes,
+        input_classes: input_classes
+      )
+      |> assign_new(:label, fn -> nil end)
+      |> assign_new(:hint, fn -> nil end)
+      |> assign_new(:required, fn -> false end)
+      |> assign_new(:value, fn -> nil end)
+
     ~H"""
-    <%= label(@form, @id, class: label_classes) %>
-    <%= error_tag(@form, @id, class: error_classes) %>
+    <%= if @label do %>
+      <%= label(@form, @id, @label, class: @label_classes) %>
+    <% else %>
+      <%= label(@form, @id, class: @label_classes) %>
+    <% end %>
+    <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
+    <%= error_tag(@form, @id, class: @error_classes) %>
     <%= password_input(@form, @id,
-      class: input_classes,
-      required: if(Map.has_key?(assigns, "required"), do: @required, else: false)
+      class: @input_classes,
+      required: @required,
+      value: @value
     ) %>
     """
   end
@@ -156,6 +176,26 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  @doc """
+  Generic text field wrapper for forms. Expects:
+
+  * `form` - The form
+  * `id` - The field key
+
+  And optionally:
+
+  * `label` - To override the string used in the field label.
+
+  An inner block for a 'hint' section which is rendered below the label.
+
+  ```
+  <.text_field form={f} id={:discovery_url} label="Discovery URL">
+    <span class="text-xs text-secondary-500">
+      The URL to the <code>.well-known</code> endpoint.
+    </span>
+  </.text_field>
+  ```
+  """
   def text_field(assigns) do
     label_classes = ~w[
       block
@@ -168,6 +208,8 @@ defmodule LightningWeb.Components.Form do
       block
       w-full
       rounded-md
+      text-sm
+      text-secondary-700
     ]
 
     input_classes = ~w[
@@ -181,10 +223,31 @@ defmodule LightningWeb.Components.Form do
       rounded-md
     ]
 
+    assigns =
+      assigns
+      |> assign(
+        label_classes: label_classes,
+        error_classes: error_classes,
+        input_classes: input_classes
+      )
+      |> assign_new(:label, fn -> nil end)
+      |> assign_new(:hint, fn -> nil end)
+      |> assign_new(:required, fn -> false end)
+      |> assign_new(:disabled, fn -> false end)
+
     ~H"""
-    <%= label(@form, @id, class: label_classes) %>
+    <%= if @label do %>
+      <%= label(@form, @id, @label, class: label_classes) %>
+    <% else %>
+      <%= label(@form, @id, class: label_classes) %>
+    <% end %>
+    <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
     <%= error_tag(@form, @id, class: error_classes) %>
-    <%= text_input(@form, @id, class: input_classes) %>
+    <%= text_input(@form, @id,
+      class: input_classes,
+      required: @required,
+      disabled: @disabled
+    ) %>
     """
   end
 
