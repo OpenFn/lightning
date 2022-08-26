@@ -45,13 +45,15 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver an email to notify the user about their account being deleted
   """
   def send_deletion_notification_email(user) do
-    IO.inspect(user, label: "USER")
-
     deliver(user.email, "Lightning Account Deletion", """
 
     ==============================
 
-    Hi #{user}, your account is going to be deleted.
+    Hi #{user.first_name},
+
+    Your Lightning account has been scheduled for permanent deletion.
+
+    If you don't want this to happen, please contact #{Application.get_env(:lightning, :email_addresses)[:admin]} as soon as possible.
 
     ==============================
     """)

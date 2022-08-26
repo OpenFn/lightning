@@ -12,6 +12,9 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
+config :lightning, :email_addresses,
+  admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
+
 port = String.to_integer(System.get_env("PORT", "4000"))
 url_port = String.to_integer(System.get_env("URL_PORT", "443"))
 url_scheme = System.get_env("URL_SCHEME", "https")
