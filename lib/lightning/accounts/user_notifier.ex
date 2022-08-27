@@ -7,12 +7,14 @@ defmodule Lightning.Accounts.UserNotifier do
 
   alias Lightning.Mailer
 
+  defp admin(), do: Application.get_env(:lightning, :email_addresses)[:admin]
+
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
     email =
       new()
       |> to(recipient)
-      |> from({"Lightning", "contact@example.com"})
+      |> from({"Lightning", admin()})
       |> subject(subject)
       |> text_body(body)
 
@@ -53,7 +55,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Your Lightning account has been scheduled for permanent deletion.
 
-    If you don't want this to happen, please contact #{Application.get_env(:lightning, :email_addresses)[:admin]} as soon as possible.
+    If you don't want this to happen, please contact #{admin()} as soon as possible.
 
     ==============================
     """)

@@ -58,11 +58,10 @@ config :sentry,
   included_environments:
     if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
 
-# ## Configuring the mailer
-#
-# In production you need to configure the mailer to use a different adapter.
-# Also, you may need to configure the Swoosh API client of your choice if you
-# are not using SMTP. Here is an example of the configuration:
+# To actually send emails you need to configure the mailer to use a real
+# adapter. You may configure the swoosh api client of your choice. We
+# automatically configure Mailgun if an API key has been provided. See
+# https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
 if System.get_env("MAILGUN_API_KEY") do
   config :lightning, Lightning.Mailer,
     adapter: Swoosh.Adapters.Mailgun,

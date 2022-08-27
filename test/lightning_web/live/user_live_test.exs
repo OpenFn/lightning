@@ -3,6 +3,7 @@ defmodule LightningWeb.UserLiveTest do
 
   import Lightning.{AccountsFixtures}
   import Phoenix.LiveViewTest
+  import Swoosh.TestAssertions
 
   @create_attrs %{
     email: "test@example.com",
@@ -153,6 +154,8 @@ defmodule LightningWeb.UserLiveTest do
         |> follow_redirect(conn, Routes.user_index_path(conn, :index))
 
       assert has_element?(index_live, "#user-#{user.id}")
+
+      assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
 
       assert html =~
                "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"

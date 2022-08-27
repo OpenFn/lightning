@@ -7,12 +7,14 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
   describe "Notification emails" do
     test "send_deletion_notification_email/1" do
-      {:ok, email} =
-        UserNotifier.send_deletion_notification_email(%User{
-          email: "real@email.com"
-        })
+      UserNotifier.send_deletion_notification_email(%User{
+        email: "real@email.com"
+      })
 
-      assert_email_sent(email)
+      assert_email_sent(
+        subject: "Lightning Account Deletion",
+        to: "real@email.com"
+      )
     end
   end
 end
