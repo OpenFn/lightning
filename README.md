@@ -97,7 +97,10 @@ docker start lightning-postgres
 We use [asdf](https://github.com/asdf-vm/asdf) to configure our local
 environments. Included in the repo is a `.tool-versions` file that is read by
 asdf in order to dynamically make the specified versions of Elixir and Erlang
-available.
+available. You'll need asdf plugins for
+[Erlang](https://github.com/asdf-vm/asdf-erlang),
+[NodeJs](https://github.com/asdf-vm/asdf-nodejs), and
+[Elixir](https://github.com/asdf-vm/asdf-elixir).
 
 ```sh
 asdf install  # Install language versions
@@ -173,6 +176,13 @@ You can generate the HTML and EPUB documentation locally using:
 `mix docs` and opening `doc/index.html` in your browser.
 
 ## Troubleshooting
+
+### Problems with Postgres
+
+If you're having connecting issues with Postgres, check the database section of
+your `.env` to ensure the DB url is correctly set for your environment — note
+that composing a DB url out of other, earlier declared variables, does not work
+while using `xargs`.
 
 ### Problems with Debian
 
