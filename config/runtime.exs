@@ -12,6 +12,9 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
+config :lightning, :email_addresses,
+  admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
+
 port = String.to_integer(System.get_env("PORT", "4000"))
 url_port = String.to_integer(System.get_env("URL_PORT", "443"))
 url_scheme = System.get_env("URL_SCHEME", "https")
@@ -54,6 +57,17 @@ config :sentry,
   environment_name: config_env(),
   included_environments:
     if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
+
+# To actually send emails you need to configure the mailer to use a real
+# adapter. You may configure the swoosh api client of your choice. We
+# automatically configure Mailgun if an API key has been provided. See
+# https://hexdocs.pm/swoosh/Swoosh.html#module-installation for more details.
+if System.get_env("MAILGUN_API_KEY") do
+  config :lightning, Lightning.Mailer,
+    adapter: Swoosh.Adapters.Mailgun,
+    api_key: System.get_env("MAILGUN_API_KEY"),
+    domain: System.get_env("MAILGUN_DOMAIN")
+end
 
 if config_env() == :prod do
   database_url =
@@ -123,22 +137,4 @@ if config_env() == :prod do
   #
   # Then you can assemble a release by calling `mix release`.
   # See `mix help release` for more information.
-
-  # ## Configuring the mailer
-  #
-  # In production you need to configure the mailer to use a different adapter.
-  # Also, you may need to configure the Swoosh API client of your choice if you
-  # are not using SMTP. Here is an example of the configuration:
-  #
-  #     config :lightning, Lightning.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # For this example you need include a HTTP client required by Swoosh API client.
-  # Swoosh supports Hackney and Finch out of the box:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
-  #
-  # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
