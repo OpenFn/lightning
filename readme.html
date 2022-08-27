@@ -181,7 +181,10 @@ image:</p><pre><code class="makeup sh" translate="no"><span class="">docker volu
 </span></code></pre><h4>Elixir &amp; Ecto Setup</h4><p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
 environments. Included in the repo is a <code class="inline">.tool-versions</code> file that is read by
 asdf in order to dynamically make the specified versions of Elixir and Erlang
-available.</p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
+available. You'll need asdf plugins for
+<a href="https://github.com/asdf-vm/asdf-erlang">Erlang</a>,
+<a href="https://github.com/asdf-vm/asdf-nodejs">NodeJs</a>, and
+<a href="https://github.com/asdf-vm/asdf-elixir">Elixir</a>.</p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
 </span><span class="">mix local.hex
 </span><span class="">mix deps.get
 </span><span class="">mix local.rebar --force
@@ -233,14 +236,23 @@ defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</c
   </a>
   Troubleshooting
 </h2>
-<h3 id="problems-with-debian" class="section-heading">
+<h3 id="problems-with-postgres" class="section-heading">
+  <a href="#problems-with-postgres" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">problems-with-postgres</p>
+  </a>
+  Problems with Postgres
+</h3>
+<p>If you're having connecting issues with Postgres, check the database section of
+your <code class="inline">.env</code> to ensure the DB url is correctly set for your environment — note
+that composing a DB url out of other, earlier declared variables, does not work
+while using <code class="inline">xargs</code>.</p><h3 id="problems-with-debian" class="section-heading">
   <a href="#problems-with-debian" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">problems-with-debian</p>
   </a>
   Problems with Debian
 </h3>
 <p>If you're getting this error on debian</p><pre><code class="makeup elixir" translate="no"><span class="o">==</span><span class="o">&gt;</span><span class="w"> </span><span class="n">earmark_parser</span><span class="w">
-</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="8106114551-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="8106114551-1">)</span><span class="w">
+</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="3997981376-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="3997981376-1">)</span><span class="w">
 </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">erlang</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">parsetools</span><span class="o">-</span><span class="mf">2.3</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">yeccpre</span><span class="o">.</span><span class="ss">hrl</span><span class="p">:</span><span class="w"> </span><span class="n">no</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
 </span><span class="n">could</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">compile</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="ss">:earmark_parser</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mix compile&quot;</span><span class="w"> </span><span class="n">failed</span><span class="o">.</span><span class="w"> </span><span class="nc">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">recompile</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.compile earmark_parser&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.update earmark_parser&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">clean</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.clean earmark_parser&quot;</span></code></pre><p>You need to install erlang development environment <code class="inline">sudo apt install erlang-dev</code>
 <a href="https://github.com/elixir-lang/ex_doc/issues/1441">refer to this issue</a></p><h3 id="problems-with-docker" class="section-heading">
