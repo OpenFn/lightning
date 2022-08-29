@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.1.13] - 2022-08-29
+
+### Added
+
+- Allow administrators to configure third party authentication providers
+- Add Monaco editor to the step/job panel
+- Allow users to delete their own accounts. Schedule their user and credentials
+  data for deletion when they do.
+- Allow superusers to delete a user account. Schedule the user's credentials and
+  user data for deletion when they do.
+- If a user is scheduled for deletion, disable their account and prevent them
+  from logging in.
+- The 'User profile' and 'Credentials' page now have a sidebar menu
+
+### Changed
+
+- Project users now have one of the following roles: viewer, editor, admin,
+  owner
+- Users only have the following roles: user, superuser
+
 ## [0.1.12] - 2022-08-15
 
 ### Added
