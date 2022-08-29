@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.1.13] - 2022-08-29
+
 ### Added
 
 - Allow administrators to configure OIDC providers for authentication (note that
