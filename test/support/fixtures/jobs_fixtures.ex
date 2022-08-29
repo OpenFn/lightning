@@ -5,6 +5,7 @@ defmodule Lightning.JobsFixtures do
   """
 
   import Lightning.ProjectsFixtures
+  import Lightning.WorkflowsFixtures
 
   @doc """
   Generate a job.
@@ -19,7 +20,8 @@ defmodule Lightning.JobsFixtures do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{}
+        trigger: %{},
+        workflow_id: workflow_fixture().id
       })
       |> Lightning.Jobs.create_job()
 
