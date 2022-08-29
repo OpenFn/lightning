@@ -3,6 +3,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.AccountsFixtures
+  import Swoosh.TestAssertions
 
   @update_password_attrs %{
     current_password: valid_user_password(),
@@ -132,6 +133,8 @@ defmodule LightningWeb.ProfileLiveTest do
       )
       |> render_submit()
       |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
+
+      assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
     end
 
     test "user cancels deletion", %{

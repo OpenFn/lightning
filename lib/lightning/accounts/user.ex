@@ -137,7 +137,14 @@ defmodule Lightning.Accounts.User do
   """
   def details_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :first_name, :last_name, :role, :disabled])
+    |> cast(attrs, [
+      :email,
+      :first_name,
+      :last_name,
+      :role,
+      :disabled,
+      :scheduled_deletion
+    ])
     |> validate_email()
     |> validate_name()
     |> validate_role()

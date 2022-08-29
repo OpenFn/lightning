@@ -371,6 +371,14 @@ defmodule Lightning.Accounts do
       "scheduled_deletion_email" => email
     })
     |> Repo.update()
+    |> case do
+      {:ok, user} ->
+        UserNotifier.send_deletion_notification_email(user)
+        {:ok, user}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   ## Session

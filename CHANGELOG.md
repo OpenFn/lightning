@@ -8,11 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
-## [0.1.13] - 2022-08-29
-
 ### Added
 
-- Allow administrators to configure third party authentication providers
+- Allow administrators to configure OIDC providers for authentication (note that
+  this is just for authenticating, not yet for creating new accounts via OIDC)
 - Add Monaco editor to the step/job panel
 - Allow users to delete their own accounts. Schedule their user and credentials
   data for deletion when they do.
