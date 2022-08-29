@@ -54,14 +54,14 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-updated-name"
     end
 
-    test "update_workflow/2 with invalid data returns error changeset" do
-      workflow = workflow_fixture()
+    # test "update_workflow/2 with invalid data returns error changeset" do
+    #   workflow = workflow_fixture()
 
-      assert {:error, %Ecto.Changeset{}} =
-               Workflows.update_workflow(workflow, @invalid_attrs)
+    #   assert {:error, %Ecto.Changeset{}} =
+    #            Workflows.update_workflow(workflow, @invalid_attrs)
 
-      assert workflow == Workflows.get_workflow!(workflow.id)
-    end
+    #   assert workflow == Workflows.get_workflow!(workflow.id)
+    # end
 
     test "delete_workflow/1 deletes the workflow" do
       workflow = workflow_fixture()
