@@ -7,7 +7,13 @@ defmodule LightningWeb.JobLive.FormComponent do
   import Phoenix.LiveView,
     only: [assign: 2, assign: 3]
 
-  alias Lightning.{Jobs, AdaptorRegistry, Projects}
+  alias Lightning.{
+    Jobs,
+    AdaptorRegistry,
+    Projects,
+    Workflows,
+    Workflows.Workflow
+  }
 
   defmacro __using__(_opts) do
     quote do
@@ -27,14 +33,33 @@ defmodule LightningWeb.JobLive.FormComponent do
       defdelegate validate(params, socket),
         to: LightningWeb.JobLive.FormComponent
 
+      def insert_workflow_id(params) do
+        params["job"]["trigger"]["type"]
+        |> case do
+          n when n in ["webhook", "cron"] ->
+            {:ok, %Workflow{id: workflow_id}} = Workflows.create_workflow()
+
+            job_attrs =
+              Map.get(params, "job")
+              |> Map.put("workflow_id", workflow_id)
+
+            %{"job" => job_attrs}
+
+          n when n in ["success", "failure"] ->
+            params
+        end
+      end
+
       @impl true
       def handle_event(event, params, socket) do
+        params_with_workflow = insert_workflow_id(params)
+
         case event do
           "validate" ->
-            {:noreply, validate(params, socket)}
+            {:noreply, validate(params_with_workflow, socket)}
 
           "save" ->
-            {:noreply, save(params, socket)}
+            {:noreply, save(params_with_workflow, socket)}
         end
       end
 
