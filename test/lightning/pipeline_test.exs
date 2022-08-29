@@ -49,8 +49,8 @@ defmodule Lightning.PipelineTest do
 
       [
         ~r/╭─[─]+─╮/,
-        ~r/│ ◲ ◱  @openfn\/core#v1.4.7 \(Node.js v1[\d\.]+\) │/,
-        ~r/│ ◳ ◰           @openfn\/language-common@[\d\.]+ │/,
+        ~r/│ ◲ ◱ [ ]+@openfn\/core#v1.4.7 \(Node.js v1[\d\.]+\) │/,
+        ~r/│ ◳ ◰ [ ]+@openfn\/language-common@[\d\.]+ │/,
         ~r/╰─[─]+─╯/,
         "Error: I'm supposed to fail."
       ]

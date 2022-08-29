@@ -12,7 +12,7 @@ defmodule LightningWeb.EndToEndTest do
 
   setup :register_and_log_in_superuser
 
-  defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.7 (Node.js v16.15.0"
+  defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.7 (Node.js v18.8.0"
   defp expected_adaptor, do: "@openfn/language-http@4.0.0"
 
   test "the whole thing", %{conn: conn} do
