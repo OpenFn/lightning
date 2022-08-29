@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Use Node.js 18, soon to be in LTS.
+
 ## [0.1.13] - 2022-08-29
 
 ### Added
