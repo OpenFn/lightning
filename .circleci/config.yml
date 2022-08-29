@@ -10,9 +10,9 @@ commands:
   install_node:
     steps:
       - run:
-          name: "Install Node.js and npm"
+          name: 'Install Node.js and npm'
           command: |
-            curl -sSL "https://nodejs.org/dist/v16.15.0/node-v16.15.0-linux-x64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
+            curl -sSL "https://nodejs.org/dist/v18.8.0/node-v18.8.0-linux-x64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
       - run:
           name: Check current version of node
           command: node -v
@@ -69,23 +69,23 @@ workflows:
   pre-flight checks:
     jobs:
       - build:
-          name: "Check code formatting"
+          name: 'Check code formatting'
           execute:
             - run: MIX_ENV=test mix format --check-formatted
       - build:
-          name: "Check code style"
+          name: 'Check code style'
           execute:
             - run: MIX_ENV=test mix credo --all
       - build:
-          name: "Type check"
+          name: 'Type check'
           execute:
             - run: MIX_ENV=test mix dialyzer
       - build:
-          name: "Check for security vulnerabilities"
+          name: 'Check for security vulnerabilities'
           execute:
             - run: MIX_ENV=test mix sobelow
       - build:
-          name: "Check elixir tests (codecov)"
+          name: 'Check elixir tests (codecov)'
           execute:
             - run: MIX_ENV=test mix do ecto.create, ecto.migrate
             - run:
