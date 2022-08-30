@@ -31,8 +31,11 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
 
       :new ->
         case Jobs.create_job(
-               job_params
-               |> Map.put("project_id", socket.assigns.job.project_id)
+               Map.put(
+                 insert_workflow_id(job_params),
+                 "project_id",
+                 socket.assigns.job.project_id
+               )
              ) do
           {:ok, _job} ->
             socket
@@ -42,6 +45,25 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, changeset: changeset)
         end
+    end
+  end
+
+  defp insert_workflow_id(params) do
+    trigger = Map.get(params, "trigger")
+
+    case Map.get(trigger, "type") do
+      n when n in ["webhook", "cron"] ->
+        {:ok, %Lightning.Workflows.Workflow{id: workflow_id}} =
+          Lightning.Workflows.create_workflow()
+
+        Map.put_new(params, "workflow_id", workflow_id)
+
+      n when n in ["on_job_success", "on_job_failure"] ->
+        Map.put_new(
+          params,
+          "workflow_id",
+          Lightning.Jobs.get_job(Map.get(trigger, "upstream_job_id")).workflow_id
+        )
     end
   end
 
