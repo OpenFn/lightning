@@ -11,6 +11,7 @@ and this project adheres to
 ### Changed
 
 - Use Node.js 18, soon to be in LTS.
+- Visualize success/fail triggers in workflow diagram.
 
 ## [0.1.13] - 2022-08-29
 
