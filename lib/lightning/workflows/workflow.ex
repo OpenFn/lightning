@@ -32,5 +32,6 @@ defmodule Lightning.Workflows.Workflow do
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name])
+    |> validate_required([:name])
   end
 end
