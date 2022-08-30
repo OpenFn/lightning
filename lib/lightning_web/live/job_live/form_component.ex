@@ -37,7 +37,8 @@ defmodule LightningWeb.JobLive.FormComponent do
         params["job"]["trigger"]["type"]
         |> case do
           n when n in ["webhook", "cron"] ->
-            {:ok, %Workflow{id: workflow_id}} = Workflows.create_workflow()
+            {:ok, %Workflow{id: workflow_id}} =
+              Workflows.create_workflow(%{name: "workflow"})
 
             job_attrs =
               Map.get(params, "job")
