@@ -77,8 +77,7 @@ defmodule Lightning.Jobs.Job do
       :body,
       :enabled,
       :adaptor,
-      :project_id,
-      :workflow_id
+      :project_id
     ])
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
