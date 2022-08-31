@@ -48,24 +48,31 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
     end
   end
 
-  defp insert_workflow_id(params) do
-    trigger = Map.get(params, "trigger")
+  defp add_new_workflow(params) do
+    {:ok, %Lightning.Workflows.Workflow{id: workflow_id}} =
+      Lightning.Workflows.create_workflow()
 
-    case Map.get(trigger, "type") do
-      n when n in ["webhook", "cron"] ->
-        {:ok, %Lightning.Workflows.Workflow{id: workflow_id}} =
-          Lightning.Workflows.create_workflow()
-
-        Map.put_new(params, "workflow_id", workflow_id)
-
-      n when n in ["on_job_success", "on_job_failure"] ->
-        Map.put_new(
-          params,
-          "workflow_id",
-          Lightning.Jobs.get_job(Map.get(trigger, "upstream_job_id")).workflow_id
-        )
-    end
+    Map.put_new(params, "workflow_id", workflow_id)
   end
+
+  defp set_parent_workflow(params, upstream_job_id) do
+    Map.put_new(
+      params,
+      "workflow_id",
+      Lightning.Jobs.get_job(upstream_job_id).workflow_id
+    )
+  end
+
+  defp insert_workflow_id(%{"trigger" => %{"type" => type}} = params)
+       when type in ["webhook", "cron"],
+       do: add_new_workflow(params)
+
+  defp insert_workflow_id(
+         %{"trigger" => %{"type" => type, "upstream_job_id" => upstream_job_id}} =
+           params
+       )
+       when type in ["on_job_success", "on_job_failure"],
+       do: set_parent_workflow(params, upstream_job_id)
 
   @impl true
   def render(assigns) do
