@@ -7,8 +7,6 @@ defmodule Lightning.WorkflowsTest do
   import Lightning.WorkflowsFixtures
 
   describe "workflows" do
-    @invalid_attrs %{name: nil}
-
     test "list_workflows/0 returns all workflows" do
       workflow = workflow_fixture()
       assert Workflows.list_workflows() == [workflow]
@@ -39,11 +37,6 @@ defmodule Lightning.WorkflowsTest do
       assert workflow.name == "some-name"
     end
 
-    test "create_workflow/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} =
-               Workflows.create_workflow(@invalid_attrs)
-    end
-
     test "update_workflow/2 with valid data updates the workflow" do
       workflow = workflow_fixture()
       update_attrs = %{name: "some-updated-name"}
@@ -52,15 +45,6 @@ defmodule Lightning.WorkflowsTest do
                Workflows.update_workflow(workflow, update_attrs)
 
       assert workflow.name == "some-updated-name"
-    end
-
-    test "update_workflow/2 with invalid data returns error changeset" do
-      workflow = workflow_fixture()
-
-      assert {:error, %Ecto.Changeset{}} =
-               Workflows.update_workflow(workflow, @invalid_attrs)
-
-      assert workflow == Workflows.get_workflow!(workflow.id)
     end
 
     test "delete_workflow/1 deletes the workflow" do
