@@ -35,9 +35,8 @@ defmodule Lightning.Jobs.Trigger do
     belongs_to :job, Job
     belongs_to :upstream_job, Job
 
-    field :type, Ecto.Enum,
-      values: @trigger_types,
-      default: :webhook
+    field :type, Ecto.Enum, values: @trigger_types
+    # default: :webhook
 
     timestamps()
   end
@@ -91,6 +90,9 @@ defmodule Lightning.Jobs.Trigger do
         changeset
         |> validate_cron()
         |> put_change(:upstream_job_id, nil)
+
+      nil ->
+        changeset
     end
   end
 end

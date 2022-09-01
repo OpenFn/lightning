@@ -20,7 +20,7 @@ defmodule Lightning.JobsFixtures do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{},
+        trigger: %{type: "webhook"},
         workflow_id: workflow_fixture().id
       })
       |> Lightning.Jobs.create_job()

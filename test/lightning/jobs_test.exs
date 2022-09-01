@@ -6,6 +6,7 @@ defmodule Lightning.JobsTest do
   alias Lightning.Repo
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Scheduler
+  alias Lightning.Workflows
 
   import Lightning.JobsFixtures
   import Lightning.ProjectsFixtures
@@ -72,12 +73,12 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture(trigger: %{}) |> unload_relation(:credential)
+      job = job_fixture() |> unload_relation(:credential)
 
       assert Jobs.get_job_by_webhook(job.id) == job
 
       job =
-        job_fixture(trigger: %{custom_path: "foo"})
+        job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
         |> unload_relation(:credential)
 
       assert Jobs.get_job_by_webhook(job.id) == nil
@@ -90,7 +91,7 @@ defmodule Lightning.JobsTest do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{comment: "foo"},
+        trigger: %{type: "webhook", comment: "foo"},
         project_id: project_fixture().id,
         workflow_id: workflow_fixture().id
       }
@@ -101,6 +102,146 @@ defmodule Lightning.JobsTest do
       assert job.name == "some name"
 
       assert job.trigger.comment == "foo"
+    end
+
+    test "create_job/1 with a cron or webhook trigger creates a new workflow and returns a job with THAT workflow_id" do
+      job_attrs = %{
+        body: "some body",
+        enabled: true,
+        name: "some name",
+        adaptor: "@openfn/language-common",
+        trigger: %{type: "cron"},
+        project_id: project_fixture().id
+      }
+
+      workflows_before = Workflows.list_workflows()
+      count_workflows_before = Enum.count(workflows_before)
+
+      {:ok, %Job{} = job_1} = Jobs.create_job(job_attrs)
+
+      {:ok, %Job{} = job_2} =
+        Jobs.create_job(%{job_attrs | trigger: %{type: "webhook"}})
+
+      workflows_after = Workflows.list_workflows()
+      count_workflows_after = Enum.count(workflows_after)
+
+      assert count_workflows_before + 2 ==
+               count_workflows_after
+
+      assert Enum.member?(
+               Enum.map(workflows_before, fn w -> w.id end),
+               job_1.workflow_id
+             )
+             |> Kernel.not()
+
+      assert Enum.member?(
+               Enum.map(workflows_before, fn w -> w.id end),
+               job_2.workflow_id
+             )
+             |> Kernel.not()
+
+      assert Enum.member?(
+               Enum.map(workflows_after, fn w -> w.id end),
+               job_1.workflow_id
+             )
+
+      assert Enum.member?(
+               Enum.map(workflows_after, fn w -> w.id end),
+               job_2.workflow_id
+             )
+    end
+
+    test "create_job/1 with an upstream job returns a job with the upstream job's workflow_id" do
+      project_id = project_fixture().id
+
+      {:ok, %Job{} = parent_job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "webhook"},
+          project_id: project_id
+        })
+
+      {:ok, %Job{} = job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: parent_job.id},
+          project_id: project_id
+        })
+
+      assert job.workflow_id == parent_job.workflow_id
+    end
+
+    test "update_job/2 from a cron to a webhook trigger does NOT create a new workflow" do
+      project_id = project_fixture().id
+
+      {:ok, %Job{} = job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "cron", cron_expression: "* * * *"},
+          project_id: project_id
+        })
+
+      count_workflows_before = Workflows.list_workflows() |> Enum.count()
+
+      Jobs.update_job(job, %{trigger: %{id: job.trigger.id, type: "webhook"}})
+
+      assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
+    end
+
+    test "update_job/2 from upstream_job A (in workflow 1) to upstream_job B (in workflow 2) changes the updated job's workflow_id to 2" do
+      project_id = project_fixture().id
+
+      {:ok, %Job{} = parent_job_1} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "cron"},
+          project_id: project_id
+        })
+
+      {:ok, %Job{} = parent_job_2} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "cron"},
+          project_id: project_id
+        })
+
+      {:ok, %Job{} = upstream_job_a} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: parent_job_1.id},
+          project_id: project_id
+        })
+
+      assert upstream_job_a.workflow_id == parent_job_1.workflow_id
+
+      {:ok, %Job{} = upstream_job_b} =
+        Jobs.update_job(upstream_job_a, %{
+          trigger: %{
+            id: upstream_job_a.trigger.id,
+            type: "on_job_success",
+            upstream_job_id: parent_job_2.id
+          }
+        })
+
+      assert upstream_job_b.workflow_id == parent_job_2.workflow_id
     end
 
     test "create_job/1 with a credential associated creates a Job with credential_id and a credential object" do
@@ -115,7 +256,7 @@ defmodule Lightning.JobsTest do
                  body: "some body",
                  enabled: true,
                  name: "some name",
-                 trigger: %{comment: "foo"},
+                 trigger: %{type: "webhook", comment: "foo"},
                  adaptor: "@openfn/language-common",
                  project_credential_id: project_credential.id,
                  project_id: project_fixture().id,

@@ -22,6 +22,7 @@ defmodule Lightning.Jobs.Job do
   import Ecto.Changeset
 
   alias Lightning.Jobs.Trigger
+  alias Lightning.Jobs
   alias Lightning.Credentials.Credential
   alias Lightning.Workflows.Workflow
   alias Lightning.Projects.{Project, ProjectCredential}
@@ -72,6 +73,7 @@ defmodule Lightning.Jobs.Job do
       :workflow_id
     ])
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
+    |> maybe_add_workflow()
     |> validate_required([
       :name,
       :body,
@@ -81,5 +83,36 @@ defmodule Lightning.Jobs.Job do
     ])
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
+  end
+
+  defp maybe_add_workflow(%Ecto.Changeset{valid?: false} = changeset),
+    do: changeset
+
+  defp maybe_add_workflow(%Ecto.Changeset{valid?: true} = changeset) do
+    {
+      get_field(changeset, :workflow_id),
+      get_change(
+        changeset |> IO.inspect(label: "GET CHANGE - THIS CHANGE"),
+        :trigger
+      )
+      |> get_field(:type)
+    }
+    |> case do
+      {nil, trigger_type} when trigger_type in [:cron, :webhook] ->
+        changeset
+        |> put_assoc(:workflow, Workflow.changeset(%Workflow{}, %{}))
+
+      {_workflow_id, trigger_type}
+      when trigger_type in [:on_job_success, :on_job_failure] ->
+        job =
+          get_change(changeset, :trigger)
+          |> get_field(:upstream_job_id)
+          |> Jobs.get_job()
+
+        changeset |> put_change(:workflow_id, job.workflow_id)
+
+      {_, _} ->
+        changeset
+    end
   end
 end

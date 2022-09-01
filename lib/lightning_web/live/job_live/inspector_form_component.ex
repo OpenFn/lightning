@@ -18,6 +18,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   def save(%{"job" => job_params}, socket) do
     case socket.assigns.action do
       :edit ->
+        IO.inspect(job_params, label: "JOB PARAMS")
         case Jobs.update_job(socket.assigns.job, job_params) do
           {:ok, _job} ->
             socket
@@ -32,7 +33,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
       :new ->
         case Jobs.create_job(
                Map.put(
-                 insert_workflow_id(job_params),
+                 job_params,
                  "project_id",
                  socket.assigns.job.project_id
                )
@@ -47,32 +48,6 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         end
     end
   end
-
-  defp add_new_workflow(params) do
-    {:ok, %Lightning.Workflows.Workflow{id: workflow_id}} =
-      Lightning.Workflows.create_workflow()
-
-    Map.put_new(params, "workflow_id", workflow_id)
-  end
-
-  defp set_parent_workflow(params, upstream_job_id) do
-    Map.put_new(
-      params,
-      "workflow_id",
-      Lightning.Jobs.get_job(upstream_job_id).workflow_id
-    )
-  end
-
-  defp insert_workflow_id(%{"trigger" => %{"type" => type}} = params)
-       when type in ["webhook", "cron"],
-       do: add_new_workflow(params)
-
-  defp insert_workflow_id(
-         %{"trigger" => %{"type" => type, "upstream_job_id" => upstream_job_id}} =
-           params
-       )
-       when type in ["on_job_success", "on_job_failure"],
-       do: set_parent_workflow(params, upstream_job_id)
 
   @impl true
   def render(assigns) do
