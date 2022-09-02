@@ -103,13 +103,4 @@ defmodule Lightning.Workflows do
   def change_workflow(%Workflow{} = workflow, attrs \\ %{}) do
     Workflow.changeset(workflow, attrs)
   end
-
-  def url_safe_workflow_name(nil), do: ""
-
-  def url_safe_workflow_name(name) when is_binary(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^a-z-_\.\d]+/, "-")
-    |> String.replace(~r/^\-+|\-+$/, "")
-  end
 end
