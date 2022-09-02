@@ -18,7 +18,6 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   def save(%{"job" => job_params}, socket) do
     case socket.assigns.action do
       :edit ->
-        IO.inspect(job_params, label: "JOB PARAMS")
         case Jobs.update_job(socket.assigns.job, job_params) do
           {:ok, _job} ->
             socket

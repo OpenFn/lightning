@@ -91,11 +91,13 @@ defmodule Lightning.Jobs.Job do
   defp maybe_add_workflow(%Ecto.Changeset{valid?: true} = changeset) do
     {
       get_field(changeset, :workflow_id),
-      get_change(
-        changeset |> IO.inspect(label: "GET CHANGE - THIS CHANGE"),
-        :trigger
-      )
-      |> get_field(:type)
+      with %Ecto.Changeset{} = trigger_changeset <-
+             get_change(changeset, :trigger),
+           trigger_type <- trigger_changeset |> get_field(:type) do
+        trigger_type
+      else
+        _ -> nil
+      end
     }
     |> case do
       {nil, trigger_type} when trigger_type in [:cron, :webhook] ->
@@ -104,12 +106,12 @@ defmodule Lightning.Jobs.Job do
 
       {_workflow_id, trigger_type}
       when trigger_type in [:on_job_success, :on_job_failure] ->
-        job =
+        upstream_job =
           get_change(changeset, :trigger)
           |> get_field(:upstream_job_id)
           |> Jobs.get_job()
 
-        changeset |> put_change(:workflow_id, job.workflow_id)
+        changeset |> put_change(:workflow_id, upstream_job.workflow_id)
 
       {_, _} ->
         changeset
