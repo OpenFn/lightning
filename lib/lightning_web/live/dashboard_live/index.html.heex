@@ -26,8 +26,48 @@
       module={LightningWeb.Components.WorkflowDiagram}
       id={@project.id}
       project={@project}
-      selected_id={@selected_id}
-    />
+    >
+      <%= case @live_action do %>
+        <% :edit_job -> %>
+          <div class="absolute top-0 right-0 m-2 z-10">
+            <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+              <.live_component
+                module={LightningWeb.JobLive.InspectorFormComponent}
+                id={@selected_job.id}
+                action={:edit}
+                job={@selected_job}
+                project={@project}
+                return_to={
+                  Routes.project_workflow_path(
+                    @socket,
+                    :show,
+                    @project.id
+                  )
+                }
+              />
+            </div>
+          </div>
+        <% :edit_workflow -> %>
+          <div class="absolute top-0 right-0 m-2 z-10">
+            <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+              <.live_component
+                module={LightningWeb.WorkflowLive.WorkflowInspector}
+                id={@workflow.id}
+                workflow={@workflow}
+                project={@project}
+                return_to={
+                  Routes.project_workflow_path(
+                    @socket,
+                    :show,
+                    @project.id
+                  )
+                }
+              />
+            </div>
+          </div>
+        <% _ -> %>
+      <% end %>
+    </.live_component>
   <% else %>
     <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
       No project found, please talk to your administrator.

@@ -26,7 +26,7 @@ defmodule LightningWeb.DashboardLive.Index do
     if project != nil do
       socket
       |> push_redirect(
-        to: Routes.project_dashboard_index_path(socket, :show, project.id)
+        to: Routes.project_workflow_path(socket, :show, project.id)
       )
     else
       socket
@@ -34,15 +34,5 @@ defmodule LightningWeb.DashboardLive.Index do
       |> assign(active_menu_item: :projects)
       |> assign(:projects, nil)
     end
-  end
-
-  defp apply_action(socket, :show, %{"project_id" => project_id} = params) do
-    socket
-    |> assign(
-      project: Projects.get_project(project_id),
-      active_menu_item: :overview,
-      selected_id: params["selected"]
-    )
-    |> assign(:page_title, socket.assigns.project.name)
   end
 end

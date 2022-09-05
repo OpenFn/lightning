@@ -14,9 +14,14 @@ defmodule Lightning.WorkflowsFixtures do
   def workflow_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, workflow} =
       attrs
+      |> Keyword.put_new_lazy(:project_id, fn -> project_fixture().id end)
       |> Enum.into(%{
-        name: "a-test-workflow",
-        project_id: project_fixture().id
+        name:
+          Enum.take_random(
+            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ',
+            10
+          )
+          |> to_string()
       })
       |> Lightning.Workflows.create_workflow()
 

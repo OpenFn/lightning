@@ -1,6 +1,6 @@
 import React from 'react';
-import { createRoot } from "react-dom/client";
-import Editor from './Editor';
+import { createRoot } from 'react-dom/client';
+import type Editor from './Editor';
 
 interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
@@ -15,64 +15,68 @@ interface EditorEntrypoint {
 }
 
 type AttributeMutationRecord = MutationRecord & {
-  attributeName: string,
-  oldValue: string
-}
+  attributeName: string;
+  oldValue: string;
+};
 
 let EditorComponent: typeof Editor | undefined;
 
 export default {
   mounted(this: EditorEntrypoint) {
-    console.log('> mount')
-    import('./Editor').then((module) => {
+    console.log('> mount');
+    import('./Editor').then(module => {
       EditorComponent = module.default as typeof Editor;
       this.componentRoot = createRoot(this.el);
 
       const { hiddenInput } = this.el.dataset;
       if (hiddenInput) {
-        this.field = document.getElementById(hiddenInput) as HTMLTextAreaElement || null
+        this.field =
+          (document.getElementById(hiddenInput) as HTMLTextAreaElement) || null;
       } else {
-        console.warn("Warning: no form binding found for editor. Content will not sync.")
+        console.warn(
+          'Warning: no form binding found for editor. Content will not sync.'
+        );
       }
-      this.setupObserver()
+      this.setupObserver();
       this.render();
     });
   },
   handleContentChange(content: string) {
     if (this.field) {
-      this.field.value = content
+      this.field.value = content;
     }
   },
   render() {
     const { adaptor } = this.el.dataset;
-    const source = this.field?.value ?? "";
+    const source = this.field?.value ?? '';
     if (EditorComponent) {
       this.componentRoot?.render(
         <EditorComponent
           adaptor={adaptor}
           source={source}
-          onChange={(src) => this.handleContentChange(src)}
-      />);
+          onChange={src => this.handleContentChange(src)}
+        />
+      );
     }
   },
   setupObserver() {
-    this.observer = new MutationObserver((mutations) => {
+    this.observer = new MutationObserver(mutations => {
       mutations.forEach(mutation => {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
         if (oldValue !== newValue) {
-          this.render()
+          this.render();
         }
       });
     });
 
     this.observer.observe(this.el, {
       attributeFilter: ['data-adaptor', 'data-job-id'],
-      attributeOldValue: true
+      attributeOldValue: true,
     });
   },
   destroyed() {
     this.componentRoot?.unmount();
     this.observer?.disconnect();
-  }
-} as EditorEntrypoint
+  },
+} as EditorEntrypoint;

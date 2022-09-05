@@ -15,13 +15,13 @@ defmodule Lightning.JobsFixtures do
     {:ok, job} =
       attrs
       |> Keyword.put_new_lazy(:project_id, fn -> project_fixture().id end)
+      |> Keyword.put_new_lazy(:workflow_id, fn -> workflow_fixture().id end)
       |> Enum.into(%{
         body: "fn(state => state)",
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook"},
-        workflow_id: workflow_fixture().id
+        trigger: %{type: "webhook"}
       })
       |> Lightning.Jobs.create_job()
 

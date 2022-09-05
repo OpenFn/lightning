@@ -20,10 +20,15 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
       :edit ->
         case Jobs.update_job(socket.assigns.job, job_params) do
           {:ok, _job} ->
+            LightningWeb.Endpoint.broadcast!(
+              "project_space:#{socket.assigns.project.id}",
+              "update",
+              %{}
+            )
+
             socket
             |> put_flash(:info, "Job updated successfully")
-            |> LightningWeb.Components.WorkflowDiagram.push_project_space()
-            |> push_redirect(to: socket.assigns.return_to)
+            |> redirect_or_patch(to: socket.assigns.return_to)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, :changeset, changeset)
@@ -35,13 +40,29 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                |> Map.put("project_id", socket.assigns.job.project_id)
              ) do
           {:ok, _job} ->
+            LightningWeb.Endpoint.broadcast!(
+              "project_space:#{socket.assigns.project.id}",
+              "update",
+              %{}
+            )
+
             socket
             |> put_flash(:info, "Job created successfully")
-            |> push_redirect(to: socket.assigns.return_to)
+            |> redirect_or_patch(to: socket.assigns.return_to)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, changeset: changeset)
         end
+    end
+  end
+
+  defp redirect_or_patch(socket, to: to) do
+    case socket.view do
+      LightningWeb.WorkflowLive ->
+        socket |> push_patch(to: to)
+
+      _ ->
+        socket |> push_redirect(to: to)
     end
   end
 
@@ -161,10 +182,10 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
           <div class="md:col-span-2 w-full">
             <span>
-              <%= live_redirect("Cancel",
+              <%= live_patch("Cancel",
                 class:
                   "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-                to: Routes.project_dashboard_index_path(@socket, :show, @project.id)
+                to: Routes.project_workflow_path(@socket, :show, @project.id)
               ) %>
             </span>
             <Form.submit_button

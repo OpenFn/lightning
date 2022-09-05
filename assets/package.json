@@ -11,8 +11,7 @@
   "dependencies": {
     "@monaco-editor/react": "^4.4.5",
     "@openfn/compiler": "^0.0.2",
-    "@openfn/workflow-diagram": "^0.0.7",
-    "blueimp-md5": "^2.19.0",
+    "@openfn/workflow-diagram": "0.0.8",
     "monaco-editor": "^0.34.0",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
