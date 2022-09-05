@@ -7,11 +7,7 @@ defmodule LightningWeb.JobLive.FormComponent do
   import Phoenix.LiveView,
     only: [assign: 2, assign: 3]
 
-  alias Lightning.{
-    Jobs,
-    AdaptorRegistry,
-    Projects
-  }
+  alias Lightning.{Jobs, AdaptorRegistry, Projects}
 
   defmacro __using__(_opts) do
     quote do

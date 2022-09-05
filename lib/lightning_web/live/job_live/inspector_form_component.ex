@@ -31,11 +31,8 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
 
       :new ->
         case Jobs.create_job(
-               Map.put(
-                 job_params,
-                 "project_id",
-                 socket.assigns.job.project_id
-               )
+               job_params
+               |> Map.put("project_id", socket.assigns.job.project_id)
              ) do
           {:ok, _job} ->
             socket
