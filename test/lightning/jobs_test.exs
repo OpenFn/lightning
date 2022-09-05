@@ -220,7 +220,7 @@ defmodule Lightning.JobsTest do
           project_id: project_id
         })
 
-      {:ok, %Job{} = upstream_job_a} =
+      {:ok, %Job{} = downstream_job_a} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
@@ -230,18 +230,18 @@ defmodule Lightning.JobsTest do
           project_id: project_id
         })
 
-      assert upstream_job_a.workflow_id == parent_job_1.workflow_id
+      assert downstream_job_a.workflow_id == parent_job_1.workflow_id
 
-      {:ok, %Job{} = upstream_job_b} =
-        Jobs.update_job(upstream_job_a, %{
+      {:ok, %Job{} = downstream_job_a} =
+        Jobs.update_job(downstream_job_a, %{
           trigger: %{
-            id: upstream_job_a.trigger.id,
+            id: downstream_job_a.trigger.id,
             type: "on_job_success",
             upstream_job_id: parent_job_2.id
           }
         })
 
-      assert upstream_job_b.workflow_id == parent_job_2.workflow_id
+      assert downstream_job_a.workflow_id == parent_job_2.workflow_id
     end
 
     test "create_job/1 with a credential associated creates a Job with credential_id and a credential object" do

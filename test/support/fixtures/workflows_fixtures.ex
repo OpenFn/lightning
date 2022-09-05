@@ -4,6 +4,8 @@ defmodule Lightning.WorkflowsFixtures do
   entities via the `Lightning.Workflows` context.
   """
 
+  import Lightning.ProjectsFixtures
+
   @doc """
   Generate a workflow.
   """
@@ -13,7 +15,8 @@ defmodule Lightning.WorkflowsFixtures do
     {:ok, workflow} =
       attrs
       |> Enum.into(%{
-        name: "a-test-workflow"
+        name: "a-test-workflow",
+        project_id: project_fixture().id
       })
       |> Lightning.Workflows.create_workflow()
 

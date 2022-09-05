@@ -3,8 +3,11 @@ defmodule Lightning.WorkflowsTest do
 
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
+  alias Lightning.Jobs
 
   import Lightning.WorkflowsFixtures
+  import Lightning.JobsFixtures
+  import Lightning.ProjectsFixtures
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -29,10 +32,20 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "create_workflow/1 with valid data creates a workflow" do
-      valid_attrs = %{name: "some-name"}
+      project = project_fixture()
+      valid_attrs = %{name: "some-name", project_id: project.id}
 
       assert {:ok, %Workflow{} = workflow} =
                Workflows.create_workflow(valid_attrs)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.create_workflow(valid_attrs)
+
+      assert %{
+               name: [
+                 "A workflow with this name does already exist in this project."
+               ]
+             } = errors_on(changeset)
 
       assert workflow.name == "some-name"
     end
@@ -49,10 +62,22 @@ defmodule Lightning.WorkflowsTest do
 
     test "delete_workflow/1 deletes the workflow" do
       workflow = workflow_fixture()
+
+      job_1 = job_fixture(workflow_id: workflow.id)
+      job_2 = job_fixture(workflow_id: workflow.id)
+
       assert {:ok, %Workflow{}} = Workflows.delete_workflow(workflow)
 
       assert_raise Ecto.NoResultsError, fn ->
         Workflows.get_workflow!(workflow.id)
+      end
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Jobs.get_job!(job_1.id)
+      end
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Jobs.get_job!(job_2.id)
       end
     end
 
