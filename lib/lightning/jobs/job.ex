@@ -102,7 +102,15 @@ defmodule Lightning.Jobs.Job do
     |> case do
       {nil, trigger_type} when trigger_type in [:cron, :webhook] ->
         changeset
-        |> put_assoc(:workflow, Workflow.changeset(%Workflow{}, %{}))
+        |> put_assoc(
+          :workflow,
+          Workflow.changeset(
+            %Workflow{
+              project_id: get_field(changeset, :project_id)
+            },
+            %{}
+          )
+        )
 
       {_workflow_id, trigger_type}
       when trigger_type in [:on_job_success, :on_job_failure] ->
