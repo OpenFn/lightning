@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="project" content="Lightning v0.1.13">
+
+    <title>Lightning.Workflows — Lightning v0.1.13</title>
+    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+
+    <script src="dist/sidebar_items-055e9487a1.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+
+
+  </head>
+  <body data-type="modules">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+
+<section class="sidebar">
+  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+  </button>
+
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    </button>
+    <label class="search-label">
+      <p class="sr-only">Search</p>
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://openfn.github.io/Lightning">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.1.13
+      </strong>
+    </div>
+    <ul class="sidebar-listNav">
+      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+
+    </ul>
+  </div>
+
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="settings display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L1" title="View Source" class="view-source" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+  <span translate="no">Lightning.Workflows</span> 
+  <small class="app-vsn" translate="no">(Lightning v0.1.13)</small>
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>The Workflows context.</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+      Summary
+    </h1>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#change_workflow/2" translate="no">change_workflow(workflow, attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking workflow changes.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_workflow/1" translate="no">create_workflow(attrs \\ %{})</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates a workflow.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#delete_workflow/1" translate="no">delete_workflow(workflow)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Deletes a workflow.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_workflow!/1" translate="no">get_workflow!(id)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Gets a single workflow.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_workflow/1" translate="no">get_workflow(id)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#list_workflows/0" translate="no">list_workflows()</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns the list of workflows.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#update_workflow/2" translate="no">update_workflow(workflow, attrs)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Updates a workflow.</p></div>
+
+      </div>
+
+  </div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="change_workflow/2">
+
+    <span id="change_workflow/1"></span>
+
+  <div class="detail-header">
+    <a href="#change_workflow/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">change_workflow(workflow, attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L103" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns an <code class="inline">%Ecto.Changeset{}</code> for tracking workflow changes.</p><h2 id="change_workflow/2-examples" class="section-heading">
+  <a href="#change_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="0818972107-1">(</span><span class="n">workflow</span><span class="p" data-group-id="0818972107-1">)</span><span class="w">
+</span><span class="p" data-group-id="0818972107-2">%</span><span class="nc" data-group-id="0818972107-2">Ecto.Changeset</span><span class="p" data-group-id="0818972107-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0818972107-3">%</span><span class="nc" data-group-id="0818972107-3">Workflow</span><span class="p" data-group-id="0818972107-3">{</span><span class="p" data-group-id="0818972107-3">}</span><span class="p" data-group-id="0818972107-2">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="create_workflow/1">
+
+    <span id="create_workflow/0"></span>
+
+  <div class="detail-header">
+    <a href="#create_workflow/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_workflow(attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L54" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Creates a workflow.</p><h2 id="create_workflow/1-examples" class="section-heading">
+  <a href="#create_workflow/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="1251100747-1">(</span><span class="p" data-group-id="1251100747-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1251100747-2">}</span><span class="p" data-group-id="1251100747-1">)</span><span class="w">
+</span><span class="p" data-group-id="1251100747-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1251100747-4">%</span><span class="nc" data-group-id="1251100747-4">Workflow</span><span class="p" data-group-id="1251100747-4">{</span><span class="p" data-group-id="1251100747-4">}</span><span class="p" data-group-id="1251100747-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="1251100747-5">(</span><span class="p" data-group-id="1251100747-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1251100747-6">}</span><span class="p" data-group-id="1251100747-5">)</span><span class="w">
+</span><span class="p" data-group-id="1251100747-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1251100747-8">%</span><span class="nc" data-group-id="1251100747-8">Ecto.Changeset</span><span class="p" data-group-id="1251100747-8">{</span><span class="p" data-group-id="1251100747-8">}</span><span class="p" data-group-id="1251100747-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="delete_workflow/1">
+
+  <div class="detail-header">
+    <a href="#delete_workflow/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">delete_workflow(workflow)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L90" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Deletes a workflow.</p><h2 id="delete_workflow/1-examples" class="section-heading">
+  <a href="#delete_workflow/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2426259494-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2426259494-1">)</span><span class="w">
+</span><span class="p" data-group-id="2426259494-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2426259494-3">%</span><span class="nc" data-group-id="2426259494-3">Workflow</span><span class="p" data-group-id="2426259494-3">{</span><span class="p" data-group-id="2426259494-3">}</span><span class="p" data-group-id="2426259494-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2426259494-4">(</span><span class="n">workflow</span><span class="p" data-group-id="2426259494-4">)</span><span class="w">
+</span><span class="p" data-group-id="2426259494-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2426259494-6">%</span><span class="nc" data-group-id="2426259494-6">Ecto.Changeset</span><span class="p" data-group-id="2426259494-6">{</span><span class="p" data-group-id="2426259494-6">}</span><span class="p" data-group-id="2426259494-5">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_workflow!/1">
+
+  <div class="detail-header">
+    <a href="#get_workflow!/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_workflow!(id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L38" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a single workflow.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Workflow does not exist.</p><h2 id="get_workflow!/1-examples" class="section-heading">
+  <a href="#get_workflow!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="4215936061-1">(</span><span class="mi">123</span><span class="p" data-group-id="4215936061-1">)</span><span class="w">
+</span><span class="p" data-group-id="4215936061-2">%</span><span class="nc" data-group-id="4215936061-2">Workflow</span><span class="p" data-group-id="4215936061-2">{</span><span class="p" data-group-id="4215936061-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="4215936061-3">(</span><span class="mi">456</span><span class="p" data-group-id="4215936061-3">)</span><span class="w">
+</span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_workflow/1">
+
+  <div class="detail-header">
+    <a href="#get_workflow/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_workflow(id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L40" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="list_workflows/0">
+
+  <div class="detail-header">
+    <a href="#list_workflows/0" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_workflows()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L20" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns the list of workflows.</p><h2 id="list_workflows/0-examples" class="section-heading">
+  <a href="#list_workflows/0-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="4623986253-1">(</span><span class="p" data-group-id="4623986253-1">)</span><span class="w">
+</span><span class="p" data-group-id="4623986253-2">[</span><span class="p" data-group-id="4623986253-3">%</span><span class="nc" data-group-id="4623986253-3">Workflow</span><span class="p" data-group-id="4623986253-3">{</span><span class="p" data-group-id="4623986253-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4623986253-2">]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="update_workflow/2">
+
+  <div class="detail-header">
+    <a href="#update_workflow/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">update_workflow(workflow, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L72" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Updates a workflow.</p><h2 id="update_workflow/2-examples" class="section-heading">
+  <a href="#update_workflow/2-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="1593387115-1">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1593387115-2">}</span><span class="p" data-group-id="1593387115-1">)</span><span class="w">
+</span><span class="p" data-group-id="1593387115-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-4">%</span><span class="nc" data-group-id="1593387115-4">Workflow</span><span class="p" data-group-id="1593387115-4">{</span><span class="p" data-group-id="1593387115-4">}</span><span class="p" data-group-id="1593387115-3">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="1593387115-5">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1593387115-6">}</span><span class="p" data-group-id="1593387115-5">)</span><span class="w">
+</span><span class="p" data-group-id="1593387115-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-8">%</span><span class="nc" data-group-id="1593387115-8">Ecto.Changeset</span><span class="p" data-group-id="1593387115-8">{</span><span class="p" data-group-id="1593387115-8">}</span><span class="p" data-group-id="1593387115-7">}</span></code></pre>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+
+        <p>
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
+          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>

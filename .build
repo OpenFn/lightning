@@ -50,6 +50,8 @@ Lightning.Release.html
 Lightning.Repo.html
 Lightning.Scrubber.html
 Lightning.Vault.html
+Lightning.Workflows.Workflow.html
+Lightning.Workflows.html
 Lightning.html
 LightningWeb.API.Helpers.html
 LightningWeb.API.JobController.html
@@ -126,8 +128,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-d9da2b826b.js
-dist/sidebar_items-f44bcd7300.js
+dist/search_items-495fbdb3f1.js
+dist/sidebar_items-055e9487a1.js
 index.html
 readme.html
 search.html
