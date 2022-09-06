@@ -110,7 +110,7 @@ defmodule Lightning.JobsTest do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{type: "cron"},
+        trigger: %{type: "cron", cron_expression: "* * * *"},
         project_id: project_fixture().id
       }
 
@@ -154,7 +154,7 @@ defmodule Lightning.JobsTest do
     test "create_job/1 with an upstream job returns a job with the upstream job's workflow_id" do
       project_id = project_fixture().id
 
-      {:ok, %Job{} = parent_job} =
+      {:ok, %Job{} = upstream_job} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
@@ -170,11 +170,39 @@ defmodule Lightning.JobsTest do
           enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: parent_job.id},
+          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           project_id: project_id
         })
 
-      assert job.workflow_id == parent_job.workflow_id
+      assert job.workflow_id == upstream_job.workflow_id
+    end
+
+    test "create_job/1 with an upstream job doesn't create a new workflow" do
+      project_id = project_fixture().id
+
+      {:ok, %Job{} = upstream_job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "webhook"},
+          project_id: project_id
+        })
+
+      count_workflows_before = Workflows.list_workflows() |> Enum.count()
+
+      {:ok, %Job{} = _job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
+          project_id: project_id
+        })
+
+      assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
     end
 
     test "update_job/2 from a cron to a webhook trigger does NOT create a new workflow" do
