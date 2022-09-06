@@ -10,6 +10,7 @@ defmodule LightningWeb.JobLiveTest do
     body: "some body",
     enabled: true,
     name: "some name",
+    trigger: %{type: "cron"},
     adaptor_name: "@openfn/language-common",
     adaptor: "@openfn/language-common@latest"
   }

@@ -22,7 +22,9 @@ defmodule Lightning.Jobs.Job do
   import Ecto.Changeset
 
   alias Lightning.Jobs.Trigger
+  alias Lightning.Jobs
   alias Lightning.Credentials.Credential
+  alias Lightning.Workflows.Workflow
   alias Lightning.Projects.{Project, ProjectCredential}
 
   @type t :: %__MODULE__{
@@ -34,7 +36,8 @@ defmodule Lightning.Jobs.Job do
           adaptor: String.t() | nil,
           trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
           credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
-          project: nil | Project.t() | Ecto.Association.NotLoaded.t()
+          project: nil | Project.t() | Ecto.Association.NotLoaded.t(),
+          workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -52,6 +55,7 @@ defmodule Lightning.Jobs.Job do
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
     belongs_to :project, Project
+    belongs_to :workflow, Workflow
 
     timestamps()
   end
@@ -65,11 +69,60 @@ defmodule Lightning.Jobs.Job do
       :enabled,
       :adaptor,
       :project_credential_id,
-      :project_id
+      :project_id,
+      :workflow_id
     ])
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
-    |> validate_required([:name, :body, :enabled, :adaptor, :project_id])
+    |> maybe_add_workflow()
+    |> validate_required([
+      :name,
+      :body,
+      :enabled,
+      :adaptor,
+      :project_id
+    ])
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
+  end
+
+  defp maybe_add_workflow(%Ecto.Changeset{valid?: false} = changeset),
+    do: changeset
+
+  defp maybe_add_workflow(%Ecto.Changeset{valid?: true} = changeset) do
+    {
+      get_field(changeset, :workflow_id),
+      with %Ecto.Changeset{} = trigger_changeset <-
+             get_change(changeset, :trigger),
+           trigger_type <- trigger_changeset |> get_field(:type) do
+        trigger_type
+      else
+        _ -> nil
+      end
+    }
+    |> case do
+      {nil, trigger_type} when trigger_type in [:cron, :webhook] ->
+        changeset
+        |> put_assoc(
+          :workflow,
+          Workflow.changeset(
+            %Workflow{
+              project_id: get_field(changeset, :project_id)
+            },
+            %{}
+          )
+        )
+
+      {_workflow_id, trigger_type}
+      when trigger_type in [:on_job_success, :on_job_failure] ->
+        upstream_job =
+          get_change(changeset, :trigger)
+          |> get_field(:upstream_job_id)
+          |> Jobs.get_job()
+
+        changeset |> put_change(:workflow_id, upstream_job.workflow_id)
+
+      {_, _} ->
+        changeset
+    end
   end
 end

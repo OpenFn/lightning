@@ -8,7 +8,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   test "POST /i", %{conn: conn} do
     expect(Lightning.Pipeline.Runner, :start, fn _run -> %Engine.Result{} end)
-    job = job_fixture(trigger: %{})
+    job = job_fixture()
 
     message = %{"foo" => "bar"}
     conn = post(conn, "/i/#{job.id}", message)

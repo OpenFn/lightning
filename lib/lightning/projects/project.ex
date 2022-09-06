@@ -7,6 +7,7 @@ defmodule Lightning.Projects.Project do
 
   alias Lightning.Projects.{ProjectUser, ProjectCredential}
   alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -24,6 +25,7 @@ defmodule Lightning.Projects.Project do
     has_many :credentials, through: [:project_credentials, :credential]
 
     has_many :jobs, Job
+    has_many :workflows, Workflow
 
     timestamps()
   end

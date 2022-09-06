@@ -144,7 +144,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
     job =
       job_fixture(
-        trigger: %{type: :on_job_success},
+        trigger: %{type: :on_job_success, upstream_job_id: job_fixture().id},
         project_credential_id:
           project_credential_fixture(
             body: %{"other" => "credential"},
@@ -183,7 +183,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
     job =
       job_fixture(
-        trigger: %{type: :on_job_failure},
+        trigger: %{type: :on_job_failure, upstream_job_id: job_fixture().id},
         project_credential_id:
           project_credential_fixture(
             body: %{"other" => "credential"},
@@ -215,7 +215,10 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
     job =
       job_fixture(
-        trigger: %{type: :on_job_failure},
+        trigger: %{
+          type: :on_job_failure,
+          upstream_job_id: job_fixture().id
+        },
         project_credential_id:
           project_credential_fixture(
             body: %{"other" => "credential"},
@@ -241,7 +244,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
     job =
       job_fixture(
-        trigger: %{type: :on_job_failure},
+        trigger: %{type: :on_job_failure, upstream_job_id: job_fixture().id},
         project_credential_id:
           project_credential_fixture(
             body: %{"third" => "credential"},
