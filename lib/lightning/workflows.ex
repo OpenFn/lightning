@@ -7,6 +7,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Repo
 
   alias Lightning.Workflows.Workflow
+  alias Lightning.Projects.Project
 
   @doc """
   Returns the list of workflows.
@@ -102,5 +103,42 @@ defmodule Lightning.Workflows do
   """
   def change_workflow(%Workflow{} = workflow, attrs \\ %{}) do
     Workflow.changeset(workflow, attrs)
+  end
+
+  @doc """
+  Retrieves a list of Workflows with their jobs and triggers preloaded.
+  """
+  @spec get_workflows_for(Project.t()) :: [Workflow.t()]
+  def get_workflows_for(%Project{} = project) do
+    from(w in Workflow,
+      join: j in assoc(w, :jobs),
+      preload: [jobs: {j, [:trigger, :workflow]}],
+      where: w.project_id == ^project.id
+    )
+    |> Repo.all()
+  end
+
+  @spec to_project_space([Workflow.t()]) :: %{}
+  def to_project_space(workflows) when is_list(workflows) do
+    %{
+      "jobs" =>
+        workflows
+        |> Enum.flat_map(fn w -> w.jobs end)
+        |> Enum.map(fn job ->
+          %{
+            "id" => job.id,
+            "name" => job.name,
+            "adaptor" => job.adaptor,
+            "workflowId" => job.workflow_id,
+            "trigger" => %{
+              "type" => job.trigger.type,
+              "upstreamJob" => job.trigger.upstream_job_id
+            }
+          }
+        end),
+      "workflows" =>
+        workflows
+        |> Enum.map(fn w -> %{"id" => w.id, "name" => w.name} end)
+    }
   end
 end

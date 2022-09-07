@@ -86,4 +86,88 @@ defmodule Lightning.WorkflowsTest do
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
     end
   end
+
+  describe "workflows and project spaces" do
+    setup do
+      project = project_fixture()
+      w1 = workflow_fixture(project_id: project.id)
+      w2 = workflow_fixture(project_id: project.id)
+
+      w1_job =
+        job_fixture(
+          name: "webhook job",
+          project_id: project.id,
+          workflow_id: w1.id,
+          trigger: %{type: :webhook}
+        )
+
+      job_fixture(
+        name: "on fail",
+        project_id: project.id,
+        workflow_id: w1.id,
+        trigger: %{type: :on_job_failure, upstream_job_id: w1_job.id}
+      )
+
+      job_fixture(
+        name: "on success",
+        project_id: project.id,
+        workflow_id: w1.id,
+        trigger: %{type: :on_job_success, upstream_job_id: w1_job.id}
+      )
+
+      w2_job =
+        job_fixture(
+          name: "other workflow",
+          project_id: project.id,
+          workflow_id: w2.id,
+          trigger: %{type: :webhook}
+        )
+
+      job_fixture(
+        name: "on fail",
+        project_id: project.id,
+        workflow_id: w2.id,
+        trigger: %{type: :on_job_failure, upstream_job_id: w2_job.id}
+      )
+
+      job_fixture(
+        name: "unrelated job",
+        trigger: %{type: :webhook}
+      )
+
+      %{project: project, w1: w1, w2: w2}
+    end
+
+    test "get_workflows_for/1", %{project: project, w1: w1, w2: w2} do
+      results = Workflows.get_workflows_for(project)
+
+      assert length(results) == 2
+
+      assert (w1 |> Repo.preload(jobs: [:trigger, :workflow])) in results
+      assert (w2 |> Repo.preload(jobs: [:trigger, :workflow])) in results
+
+      assert length(results) == 2
+    end
+
+    test "to_project_spec/1", %{project: project, w1: w1, w2: w2} do
+      workflows = Workflows.get_workflows_for(project)
+
+      project_space = Workflows.to_project_space(workflows)
+
+      assert %{"id" => w1.id, "name" => w1.name} in project_space["workflows"]
+      assert %{"id" => w2.id, "name" => w2.name} in project_space["workflows"]
+
+      w1_id = w1.id
+
+      assert project_space["jobs"]
+             |> Enum.filter(&match?(%{"workflowId" => ^w1_id}, &1))
+             |> length() == 3
+
+      w2_id = w2.id
+
+      assert project_space["jobs"]
+             |> Enum.filter(&match?(%{"workflowId" => ^w2_id}, &1))
+             |> length() == 2
+    end
+  end
 end

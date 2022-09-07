@@ -1,10 +1,10 @@
-import React, { ChangeEvent } from "react";
-import { createRoot } from "react-dom/client";
-import create from "zustand";
-import LoadingIcon from "./LoadingIcon";
-import ReactMarkdown from "react-markdown";
-import InfoCircle from "./InfoIcon";
-import ErrorIcon from "./ErrorIcon";
+import React, { ChangeEvent } from 'react';
+import { createRoot } from 'react-dom/client';
+import create from 'zustand';
+import LoadingIcon from './LoadingIcon';
+import ReactMarkdown from 'react-markdown';
+import InfoCircle from './InfoIcon';
+import ErrorIcon from './ErrorIcon';
 
 interface CompilerComponentState {
   specifier: string | null;
@@ -28,49 +28,53 @@ const useStore = create<CompilerComponentState>((set, get) => ({
     set({ selectedOperation: e.target.value });
   },
   async loadModule() {
-    const specifier = get().specifier!;
-    set({ loading: true, statusMessage: "Loading compiler...", error: null });
+    const specifier = get().specifier;
 
-    const { Pack, Project, describeDts } = await import("@openfn/compiler");
-    const project = new Project();
+    if (specifier) {
+      set({ loading: true, statusMessage: 'Loading compiler...', error: null });
 
-    set({ statusMessage: "Loading package..." });
-    const pack = await Pack.fromUnpkg(specifier);
+      const { Pack, Project, describeDts } = await import('@openfn/compiler');
+      const project = new Project();
 
-    const packageOrDts = /(?:package.json)|(?:\.d\.ts$)/i;
+      set({ statusMessage: 'Loading package...' });
+      const pack = await Pack.fromUnpkg(specifier);
 
-    if (!pack.types) {
-      set({ error: "no-types", loading: false });
-      // throw new Error(
-      //   `No 'types' field found for ${pack.specifier}`
-      // );
-      return;
+      const packageOrDts = /(?:package.json)|(?:\.d\.ts$)/i;
+
+      if (!pack.types) {
+        set({ error: 'no-types', loading: false });
+        // throw new Error(
+        //   `No 'types' field found for ${pack.specifier}`
+        // );
+        return;
+      }
+
+      const files = await pack.getFiles(
+        pack.fileListing.filter(path => packageOrDts.test(path))
+      );
+
+      project.addToFS(files);
+      project.createFile(files.get(pack.types)!, pack.types);
+
+      const operations = describeDts(project, pack.types);
+
+      set({
+        operations,
+        loading: false,
+        statusMessage: null,
+        error: null,
+      });
     }
-
-    const files = await pack.getFiles(
-      pack.fileListing.filter((path) => packageOrDts.test(path))
-    );
-
-    project.addToFS(files);
-    project.createFile(files.get(pack.types)!, pack.types);
-
-    const operations = describeDts(project, pack.types);
-
-    set({
-      operations,
-      loading: false,
-      statusMessage: null,
-    });
   },
 }));
 
 function ModuleSelector() {
-  const operations = useStore((state) => state.operations);
-  const selectedOperation = useStore((state) => state.selectedOperation);
-  const setOperation = useStore((state) => state.setOperation);
+  const operations = useStore(state => state.operations);
+  const selectedOperation = useStore(state => state.selectedOperation);
+  const setOperation = useStore(state => state.setOperation);
   const operationComment = useStore(
-    (state) =>
-      state.operations.find((op) => op.name == state.selectedOperation)?.comment
+    state =>
+      state.operations.find(op => op.name == state.selectedOperation)?.comment
   );
 
   return (
@@ -83,7 +87,7 @@ function ModuleSelector() {
         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
       >
         <option></option>
-        {operations.map((op) => (
+        {operations.map(op => (
           <option key={op.name} value={op.name}>
             {op.name}
           </option>
@@ -102,8 +106,19 @@ function ModuleSelector() {
   );
 }
 
+function NoSpecifier() {
+  return (
+    <div className="rounded-md p-2 border-dashed border-2 border-indigo-100 text-sm transition-all">
+      <div className="inline-block align-middle text-indigo-500 mr-2">
+        <InfoCircle />
+      </div>
+      <span className="inline-block align-middle">No module specified.</span>
+    </div>
+  );
+}
+
 const errorStrings = {
-  "no-types": function NoTypes() {
+  'no-types': function NoTypes() {
     return (
       <div className="rounded-md p-2 border-dashed border-2 border-indigo-100 text-sm transition-all">
         <div className="inline-block align-middle text-indigo-500 mr-2">
@@ -128,9 +143,14 @@ const errorStrings = {
 };
 
 function Outer() {
-  const isLoading = useStore((state) => state.loading);
-  const statusMessage = useStore((state) => state.statusMessage);
-  const error = useStore((state) => state.error);
+  const specifier = useStore(state => state.specifier);
+  const isLoading = useStore(state => state.loading);
+  const statusMessage = useStore(state => state.statusMessage);
+  const error = useStore(state => state.error);
+
+  if (!specifier) {
+    return <NoSpecifier />;
+  }
 
   if (isLoading) {
     return (
@@ -144,7 +164,7 @@ function Outer() {
   }
 
   if (error) {
-    const ErrorComponent = errorStrings[error] || errorStrings["unknown"];
+    const ErrorComponent = errorStrings[error] || errorStrings['unknown'];
 
     return <ErrorComponent />;
   }

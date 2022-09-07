@@ -26,7 +26,7 @@ defmodule LightningWeb.DashboardLive.Index do
     if project != nil do
       socket
       |> push_redirect(
-        to: Routes.project_dashboard_index_path(socket, :show, project.id)
+        to: Routes.project_workflow_path(socket, :show, project.id)
       )
     else
       socket
@@ -36,13 +36,36 @@ defmodule LightningWeb.DashboardLive.Index do
     end
   end
 
-  defp apply_action(socket, :show, %{"project_id" => project_id} = params) do
-    socket
-    |> assign(
-      project: Projects.get_project(project_id),
-      active_menu_item: :overview,
-      selected_id: params["selected"]
-    )
-    |> assign(:page_title, socket.assigns.project.name)
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layout.page_content>
+      <:header>
+        <Layout.header title={@page_title} socket={@socket}>
+          <%= if assigns[:project] do %>
+            <%= live_redirect to: Routes.project_job_index_path(@socket, :index, @project.id) do %>
+              <div class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-200 hover:bg-secondary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
+                <div class="h-full">
+                  <Heroicons.Solid.table class="h-4 w-4 inline-block" />
+                </div>
+              </div>
+            <% end %>
+            &nbsp;&nbsp;
+            <%= live_redirect to: Routes.project_job_edit_path(@socket, :new, @project.id) do %>
+              <Common.button>
+                <div class="h-full">
+                  <Heroicons.Outline.plus class="h-4 w-4 inline-block" />
+                  <span class="inline-block align-middle">New Job</span>
+                </div>
+              </Common.button>
+            <% end %>
+          <% end %>
+        </Layout.header>
+      </:header>
+      <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        No project found, please talk to your administrator.
+      </div>
+    </Layout.page_content>
+    """
   end
 end

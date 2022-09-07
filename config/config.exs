@@ -40,7 +40,10 @@ config :esbuild,
   version: "0.14.49",
   default: [
     args:
-      ~w(js/app.js js/workflow-diagram/component.jsx js/compiler/index.ts
+      ~w(js/app.js
+         js/workflow-diagram/component.tsx
+         js/compiler/index.ts
+         js/editor/Editor.tsx
          --format=esm --splitting --bundle
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),

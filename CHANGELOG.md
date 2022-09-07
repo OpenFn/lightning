@@ -12,6 +12,20 @@ and this project adheres to
 
 - Use Node.js 18, soon to be in LTS.
 - Visualize success/fail triggers in workflow diagram.
+- Add `Workflow` model, Jobs now belong to a Workflow
+  This is a BREAKING change to the schema.
+- Move WorkflowDiagram related actions from DashboardLive into WorkflowLive
+- Move WorkflowDiagram component into liveview, so that we can subscribe to
+  channels (i.e. updating of the diagram when someone changes something).
+- Integrate `@openfn/workflow-diagram@0.0.8` and use the new Store interface for
+  updating it.
+- Remove `component_mounted` event from WorkflowDiagram hook, using a
+  MutationObserver and a Base64 encoded JSON payload.
+- Fixed an issue where the compiler component would try and load a 'nothing
+  adaptor', added a condition to check an adaptor is actually selected.
+- Removed previous Workflow CTE queries, replaced by the introduction of the
+  Workflow model, see
+  (https://github.com/OpenFn/Lightning/blob/53da6883483e7d8d078783f348da327d1dd72d20/lib/lightning/workflows.ex#L111-L119).
 
 ## [0.1.13] - 2022-08-29
 

@@ -30,9 +30,7 @@ defmodule LightningWeb.Hooks do
       :ok ->
         {:cont,
          socket
-         |> assign_new(:project, fn ->
-           project
-         end)
+         |> assign_new(:project, fn -> project end)
          |> assign_new(:projects, fn -> projects end)}
     end
   end

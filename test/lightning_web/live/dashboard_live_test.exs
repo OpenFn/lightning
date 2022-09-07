@@ -56,55 +56,10 @@ defmodule LightningWeb.DashboardLiveTest do
         live(conn, Routes.dashboard_index_path(conn, :index))
         |> follow_redirect(
           conn,
-          Routes.project_dashboard_index_path(conn, :show, project.id)
+          Routes.project_workflow_path(conn, :show, project.id)
         )
 
       assert html =~ "WorkflowDiagram"
-    end
-  end
-
-  describe "Show" do
-    import Lightning.JobsFixtures
-
-    setup %{project: project} do
-      %{job: job_fixture(project_id: project.id)}
-    end
-
-    test "renders the workflow diagram", %{
-      conn: conn,
-      project: project,
-      job: job
-    } do
-      {:ok, view, html} =
-        live(conn, Routes.project_dashboard_index_path(conn, :show, project.id))
-
-      assert html =~ project.name
-
-      assert view
-             |> element("div#hook-#{project.id}[phx-update=ignore]")
-             |> render_hook("component_mounted")
-
-      expected_project_space = %{
-        "jobs" => [
-          %{
-            "adaptor" => "@openfn/language-common",
-            "id" => job.id,
-            "name" => job.name,
-            "trigger" => %{"type" => :webhook, "upstreamJob" => nil}
-          }
-        ]
-      }
-
-      assert_push_event(view, "update_project_space", ^expected_project_space)
-
-      view
-      |> render_patch(
-        Routes.project_dashboard_index_path(conn, :show, project.id, %{
-          selected: job.id
-        })
-      )
-
-      assert has_element?(view, "#job-#{job.id}")
     end
   end
 end

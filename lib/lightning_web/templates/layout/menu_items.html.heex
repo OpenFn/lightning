@@ -6,9 +6,7 @@
           <%= unless project.id == @project.id do %>
             <.dropdown_menu_item
               link_type="live_redirect"
-              to={
-                Routes.project_dashboard_index_path(@socket, :show, project.id)
-              }
+              to={Routes.project_workflow_path(@socket, :show, project.id)}
               label={project.name}
             />
           <% end %>
@@ -24,7 +22,7 @@
 
 <%= if assigns[:project] do %>
   <Settings.menu_item
-    to={Routes.project_dashboard_index_path(@socket, :show, @project.id)}
+    to={Routes.project_workflow_path(@socket, :show, @project.id)}
     active={@active_menu_item == :overview}
   >
     <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
