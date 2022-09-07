@@ -16,6 +16,7 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
 
+  @spec purge_user(id :: Ecto.UUID.t()) :: :ok
   def purge_user(id) do
     Logger.debug(fn -> "Purging user ##{id}..." end)
 

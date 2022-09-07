@@ -12,10 +12,15 @@ defmodule Lightning.JobsFixtures do
   """
   @spec job_fixture(attrs :: []) :: Lightning.Jobs.Job.t()
   def job_fixture(attrs \\ []) when is_list(attrs) do
-    {:ok, job} =
+    attrs =
       attrs
       |> Keyword.put_new_lazy(:project_id, fn -> project_fixture().id end)
-      |> Keyword.put_new_lazy(:workflow_id, fn -> workflow_fixture().id end)
+
+    {:ok, job} =
+      attrs
+      |> Keyword.put_new_lazy(:workflow_id, fn ->
+        workflow_fixture(project_id: attrs[:project_id]).id
+      end)
       |> Enum.into(%{
         body: "fn(state => state)",
         enabled: true,

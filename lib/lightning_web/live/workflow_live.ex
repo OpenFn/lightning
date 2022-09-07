@@ -59,6 +59,25 @@ defmodule LightningWeb.WorkflowLive do
     )
   end
 
+  defp apply_action(socket, :new_job, %{"upstream_id" => upstream_id}) do
+    upstream_job = Lightning.Jobs.get_job!(upstream_id)
+
+    job = %Lightning.Jobs.Job{
+      project_id: socket.assigns.project.id,
+      trigger: %Lightning.Jobs.Trigger{
+        type: :on_job_success,
+        upstream_job_id: upstream_job.id
+      }
+    }
+
+    socket
+    |> assign(
+      active_menu_item: :overview,
+      job: job,
+      page_title: socket.assigns.project.name
+    )
+  end
+
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
     job = Lightning.Jobs.get_job!(job_id)
 
@@ -103,6 +122,25 @@ defmodule LightningWeb.WorkflowLive do
       </:header>
       <div class="relative h-full">
         <%= case @live_action do %>
+          <% :new_job -> %>
+            <div class="absolute top-0 right-0 m-2 z-10">
+              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+                <.live_component
+                  module={LightningWeb.JobLive.InspectorFormComponent}
+                  id="new-job"
+                  job={@job}
+                  action={:new}
+                  project={@project}
+                  return_to={
+                    Routes.project_workflow_path(
+                      @socket,
+                      :show,
+                      @project.id
+                    )
+                  }
+                />
+              </div>
+            </div>
           <% :edit_job -> %>
             <div class="absolute top-0 right-0 m-2 z-10">
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">

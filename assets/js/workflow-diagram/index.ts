@@ -17,6 +17,7 @@ interface WorkflowDiagramEntrypoint {
   ): any;
   setupObserver(): void;
   updateProjectSpace(): void;
+  addJob(upstreamId: string): void;
   selectJob(id: string): void;
   selectWorkflow(id: string): void;
   unselectNode(): void;
@@ -47,14 +48,19 @@ export default {
       const projectSpace = this.updateProjectSpace();
 
       this.component.update({
-        projectSpace,
         onNodeClick: (_event, node) => {
-          if (node.type == 'job') {
-            this.selectJob(node.data.id);
-          }
+          switch (node.type) {
+            case 'job':
+              this.selectJob(node.data.id);
+              break;
 
-          if (node.type == 'workflow') {
-            this.selectWorkflow(node.data.id);
+            case 'workflow':
+              this.selectWorkflow(node.data.id);
+              break;
+
+            case 'add':
+              this.addJob(node.data.parentId);
+              break;
           }
         },
         onPaneClick: _event => {
@@ -64,7 +70,7 @@ export default {
     });
   },
   destroyed() {
-    console.log('unmounting wf');
+    console.debug('Unmounting WorkflowDiagram component');
     this.observer?.disconnect();
     this.component?.unmount();
   },
@@ -74,7 +80,6 @@ export default {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
         if (oldValue !== newValue) {
-          console.log({ oldValue, newValue });
           this.updateProjectSpace();
         }
       });
@@ -90,6 +95,15 @@ export default {
     this.component!.setProjectSpace(decoded);
 
     return decoded;
+  },
+  // Add `j/new?upstream_id=<id>` to the URL.
+  addJob(upstreamId: string) {
+    const addJobUrl = new URL(this.baseUrl);
+    addJobUrl.pathname += '/j/new';
+    addJobUrl.search = new URLSearchParams({
+      upstream_id: upstreamId,
+    }).toString();
+    this.liveSocket.pushHistoryPatch(addJobUrl.toString(), 'push', this.el);
   },
   // Add `j/<id>` to the URL.
   selectJob(id: string) {
