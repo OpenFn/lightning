@@ -117,9 +117,16 @@ defmodule Lightning.Jobs.Job do
         upstream_job =
           get_change(changeset, :trigger)
           |> get_field(:upstream_job_id)
-          |> Jobs.get_job()
+          |> case do
+            nil -> nil
+            job_id -> Jobs.get_job(job_id)
+          end
 
-        changeset |> put_change(:workflow_id, upstream_job.workflow_id)
+        if is_nil(upstream_job) do
+          changeset
+        else
+          changeset |> put_change(:workflow_id, upstream_job.workflow_id)
+        end
 
       {_, _} ->
         changeset
