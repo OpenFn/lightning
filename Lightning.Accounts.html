@@ -508,7 +508,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">apply_user_email(user, password, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L237" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L238" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -525,10 +525,10 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="7363917416-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7363917416-2">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7363917416-2">}</span><span class="p" data-group-id="7363917416-1">)</span><span class="w">
-</span><span class="p" data-group-id="7363917416-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7363917416-4">%</span><span class="nc" data-group-id="7363917416-4">User</span><span class="p" data-group-id="7363917416-4">{</span><span class="p" data-group-id="7363917416-4">}</span><span class="p" data-group-id="7363917416-3">}</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:superuser</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="7363917416-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7363917416-6">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7363917416-6">}</span><span class="p" data-group-id="7363917416-5">)</span><span class="w">
-</span><span class="p" data-group-id="7363917416-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7363917416-8">%</span><span class="nc" data-group-id="7363917416-8">Ecto.Changeset</span><span class="p" data-group-id="7363917416-8">{</span><span class="p" data-group-id="7363917416-8">}</span><span class="p" data-group-id="7363917416-7">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="7750481133-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7750481133-2">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7750481133-2">}</span><span class="p" data-group-id="7750481133-1">)</span><span class="w">
+</span><span class="p" data-group-id="7750481133-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7750481133-4">%</span><span class="nc" data-group-id="7750481133-4">User</span><span class="p" data-group-id="7750481133-4">{</span><span class="p" data-group-id="7750481133-4">}</span><span class="p" data-group-id="7750481133-3">}</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:superuser</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="7750481133-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7750481133-6">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7750481133-6">}</span><span class="p" data-group-id="7750481133-5">)</span><span class="w">
+</span><span class="p" data-group-id="7750481133-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7750481133-8">%</span><span class="nc" data-group-id="7750481133-8">Ecto.Changeset</span><span class="p" data-group-id="7750481133-8">{</span><span class="p" data-group-id="7750481133-8">}</span><span class="p" data-group-id="7750481133-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_scheduled_deletion/2">
@@ -542,7 +542,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">change_scheduled_deletion(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L221" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L222" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -558,8 +558,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_scheduled_deletion</span><span class="p" data-group-id="8835515921-1">(</span><span class="n">user</span><span class="p" data-group-id="8835515921-1">)</span><span class="w">
-</span><span class="p" data-group-id="8835515921-2">%</span><span class="nc" data-group-id="8835515921-2">Ecto.Changeset</span><span class="p" data-group-id="8835515921-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8835515921-3">%</span><span class="nc" data-group-id="8835515921-3">User</span><span class="p" data-group-id="8835515921-3">{</span><span class="p" data-group-id="8835515921-3">}</span><span class="p" data-group-id="8835515921-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_scheduled_deletion</span><span class="p" data-group-id="1526646345-1">(</span><span class="n">user</span><span class="p" data-group-id="1526646345-1">)</span><span class="w">
+</span><span class="p" data-group-id="1526646345-2">%</span><span class="nc" data-group-id="1526646345-2">Ecto.Changeset</span><span class="p" data-group-id="1526646345-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1526646345-3">%</span><span class="nc" data-group-id="1526646345-3">User</span><span class="p" data-group-id="1526646345-3">{</span><span class="p" data-group-id="1526646345-3">}</span><span class="p" data-group-id="1526646345-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_superuser/2">
@@ -573,7 +573,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">change_superuser(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L117" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L118" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -597,7 +597,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">change_user_details(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L188" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L189" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -621,7 +621,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">change_user_email(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L208" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L209" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -637,8 +637,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_email</span><span class="p" data-group-id="7065241248-1">(</span><span class="n">user</span><span class="p" data-group-id="7065241248-1">)</span><span class="w">
-</span><span class="p" data-group-id="7065241248-2">%</span><span class="nc" data-group-id="7065241248-2">Ecto.Changeset</span><span class="p" data-group-id="7065241248-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7065241248-3">%</span><span class="nc" data-group-id="7065241248-3">User</span><span class="p" data-group-id="7065241248-3">{</span><span class="p" data-group-id="7065241248-3">}</span><span class="p" data-group-id="7065241248-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_email</span><span class="p" data-group-id="1918954798-1">(</span><span class="n">user</span><span class="p" data-group-id="1918954798-1">)</span><span class="w">
+</span><span class="p" data-group-id="1918954798-2">%</span><span class="nc" data-group-id="1918954798-2">Ecto.Changeset</span><span class="p" data-group-id="1918954798-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1918954798-3">%</span><span class="nc" data-group-id="1918954798-3">User</span><span class="p" data-group-id="1918954798-3">{</span><span class="p" data-group-id="1918954798-3">}</span><span class="p" data-group-id="1918954798-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_password/2">
@@ -652,7 +652,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">change_user_password(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L328" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L329" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -668,8 +668,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_password</span><span class="p" data-group-id="1061486885-1">(</span><span class="n">user</span><span class="p" data-group-id="1061486885-1">)</span><span class="w">
-</span><span class="p" data-group-id="1061486885-2">%</span><span class="nc" data-group-id="1061486885-2">Ecto.Changeset</span><span class="p" data-group-id="1061486885-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1061486885-3">%</span><span class="nc" data-group-id="1061486885-3">User</span><span class="p" data-group-id="1061486885-3">{</span><span class="p" data-group-id="1061486885-3">}</span><span class="p" data-group-id="1061486885-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_password</span><span class="p" data-group-id="7848161043-1">(</span><span class="n">user</span><span class="p" data-group-id="7848161043-1">)</span><span class="w">
+</span><span class="p" data-group-id="7848161043-2">%</span><span class="nc" data-group-id="7848161043-2">Ecto.Changeset</span><span class="p" data-group-id="7848161043-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7848161043-3">%</span><span class="nc" data-group-id="7848161043-3">User</span><span class="p" data-group-id="7848161043-3">{</span><span class="p" data-group-id="7848161043-3">}</span><span class="p" data-group-id="7848161043-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_registration/2">
@@ -683,7 +683,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">change_user_registration(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L184" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L185" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -699,8 +699,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_registration</span><span class="p" data-group-id="8899240210-1">(</span><span class="n">user</span><span class="p" data-group-id="8899240210-1">)</span><span class="w">
-</span><span class="p" data-group-id="8899240210-2">%</span><span class="nc" data-group-id="8899240210-2">Ecto.Changeset</span><span class="p" data-group-id="8899240210-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8899240210-3">%</span><span class="nc" data-group-id="8899240210-3">User</span><span class="p" data-group-id="8899240210-3">{</span><span class="p" data-group-id="8899240210-3">}</span><span class="p" data-group-id="8899240210-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_registration</span><span class="p" data-group-id="9597489289-1">(</span><span class="n">user</span><span class="p" data-group-id="9597489289-1">)</span><span class="w">
+</span><span class="p" data-group-id="9597489289-2">%</span><span class="nc" data-group-id="9597489289-2">Ecto.Changeset</span><span class="p" data-group-id="9597489289-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9597489289-3">%</span><span class="nc" data-group-id="9597489289-3">User</span><span class="p" data-group-id="9597489289-3">{</span><span class="p" data-group-id="9597489289-3">}</span><span class="p" data-group-id="9597489289-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="confirm_user/1">
@@ -712,7 +712,7 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
     </a>
     <h1 class="signature" translate="no">confirm_user(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L511" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L512" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -735,7 +735,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">delete_auth_token(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L449" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L450" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -757,7 +757,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">delete_session_token(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L406" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L407" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -779,7 +779,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">delete_user(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L315" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L316" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -795,11 +795,11 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="8345996700-1">(</span><span class="n">user</span><span class="p" data-group-id="8345996700-1">)</span><span class="w">
-</span><span class="p" data-group-id="8345996700-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8345996700-3">%</span><span class="nc" data-group-id="8345996700-3">User</span><span class="p" data-group-id="8345996700-3">{</span><span class="p" data-group-id="8345996700-3">}</span><span class="p" data-group-id="8345996700-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="0018006438-1">(</span><span class="n">user</span><span class="p" data-group-id="0018006438-1">)</span><span class="w">
+</span><span class="p" data-group-id="0018006438-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0018006438-3">%</span><span class="nc" data-group-id="0018006438-3">User</span><span class="p" data-group-id="0018006438-3">{</span><span class="p" data-group-id="0018006438-3">}</span><span class="p" data-group-id="0018006438-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="8345996700-4">(</span><span class="n">user</span><span class="p" data-group-id="8345996700-4">)</span><span class="w">
-</span><span class="p" data-group-id="8345996700-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8345996700-6">%</span><span class="nc" data-group-id="8345996700-6">Ecto.Changeset</span><span class="p" data-group-id="8345996700-6">{</span><span class="p" data-group-id="8345996700-6">}</span><span class="p" data-group-id="8345996700-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="0018006438-4">(</span><span class="n">user</span><span class="p" data-group-id="0018006438-4">)</span><span class="w">
+</span><span class="p" data-group-id="0018006438-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0018006438-6">%</span><span class="nc" data-group-id="0018006438-6">Ecto.Changeset</span><span class="p" data-group-id="0018006438-6">{</span><span class="p" data-group-id="0018006438-6">}</span><span class="p" data-group-id="0018006438-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_update_email_instructions/3">
@@ -811,7 +811,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">deliver_update_email_instructions(user, current_email, update_email_url_fun)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L286" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L287" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -827,8 +827,8 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_update_email_instructions</span><span class="p" data-group-id="7781835034-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">current_email</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_update_email_url</span><span class="p" data-group-id="7781835034-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="7781835034-2">)</span><span class="p" data-group-id="7781835034-1">)</span><span class="w">
-</span><span class="p" data-group-id="7781835034-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7781835034-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7781835034-4">}</span><span class="p" data-group-id="7781835034-3">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_update_email_instructions</span><span class="p" data-group-id="8873024823-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">current_email</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_update_email_url</span><span class="p" data-group-id="8873024823-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="8873024823-2">)</span><span class="p" data-group-id="8873024823-1">)</span><span class="w">
+</span><span class="p" data-group-id="8873024823-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8873024823-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8873024823-4">}</span><span class="p" data-group-id="8873024823-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_user_confirmation_instructions/2">
@@ -840,7 +840,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">deliver_user_confirmation_instructions(user, confirmation_url_fun)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L487" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L488" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -856,11 +856,11 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="0694733586-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="0694733586-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="0694733586-2">)</span><span class="p" data-group-id="0694733586-1">)</span><span class="w">
-</span><span class="p" data-group-id="0694733586-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0694733586-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0694733586-4">}</span><span class="p" data-group-id="0694733586-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="5647965942-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="5647965942-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="5647965942-2">)</span><span class="p" data-group-id="5647965942-1">)</span><span class="w">
+</span><span class="p" data-group-id="5647965942-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5647965942-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5647965942-4">}</span><span class="p" data-group-id="5647965942-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="0694733586-5">(</span><span class="n">confirmed_user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="0694733586-6">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="0694733586-6">)</span><span class="p" data-group-id="0694733586-5">)</span><span class="w">
-</span><span class="p" data-group-id="0694733586-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:already_confirmed</span><span class="p" data-group-id="0694733586-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="5647965942-5">(</span><span class="n">confirmed_user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="5647965942-6">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="5647965942-6">)</span><span class="p" data-group-id="5647965942-5">)</span><span class="w">
+</span><span class="p" data-group-id="5647965942-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:already_confirmed</span><span class="p" data-group-id="5647965942-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_user_reset_password_instructions/2">
@@ -872,7 +872,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">deliver_user_reset_password_instructions(user, reset_password_url_fun)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L541" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L542" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -888,8 +888,8 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_reset_password_instructions</span><span class="p" data-group-id="7139966162-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_reset_password_url</span><span class="p" data-group-id="7139966162-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="7139966162-2">)</span><span class="p" data-group-id="7139966162-1">)</span><span class="w">
-</span><span class="p" data-group-id="7139966162-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7139966162-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7139966162-4">}</span><span class="p" data-group-id="7139966162-3">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_reset_password_instructions</span><span class="p" data-group-id="7104159342-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_reset_password_url</span><span class="p" data-group-id="7104159342-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="7104159342-2">)</span><span class="p" data-group-id="7104159342-1">)</span><span class="w">
+</span><span class="p" data-group-id="7104159342-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7104159342-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7104159342-4">}</span><span class="p" data-group-id="7104159342-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="exchange_auth_token/1">
@@ -901,7 +901,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">exchange_auth_token(auth_token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L427" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L428" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -923,7 +923,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">generate_api_token(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L459" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L460" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -945,7 +945,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">generate_auth_token(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L416" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L417" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -967,7 +967,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">generate_user_session_token(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L389" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L390" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -989,7 +989,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L153" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L154" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1005,10 +1005,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="2046247819-1">(</span><span class="mi">123</span><span class="p" data-group-id="2046247819-1">)</span><span class="w">
-</span><span class="p" data-group-id="2046247819-2">%</span><span class="nc" data-group-id="2046247819-2">User</span><span class="p" data-group-id="2046247819-2">{</span><span class="p" data-group-id="2046247819-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="8664430896-1">(</span><span class="mi">123</span><span class="p" data-group-id="8664430896-1">)</span><span class="w">
+</span><span class="p" data-group-id="8664430896-2">%</span><span class="nc" data-group-id="8664430896-2">User</span><span class="p" data-group-id="8664430896-2">{</span><span class="p" data-group-id="8664430896-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="2046247819-3">(</span><span class="mi">456</span><span class="p" data-group-id="2046247819-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="8664430896-3">(</span><span class="mi">456</span><span class="p" data-group-id="8664430896-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -1021,7 +1021,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user_by_api_token(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L468" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L469" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1043,7 +1043,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user_by_auth_token(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L441" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L442" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1065,7 +1065,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user_by_email(email)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L96" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L97" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1081,10 +1081,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="9786135258-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p" data-group-id="9786135258-1">)</span><span class="w">
-</span><span class="p" data-group-id="9786135258-2">%</span><span class="nc" data-group-id="9786135258-2">User</span><span class="p" data-group-id="9786135258-2">{</span><span class="p" data-group-id="9786135258-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="2818814167-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p" data-group-id="2818814167-1">)</span><span class="w">
+</span><span class="p" data-group-id="2818814167-2">%</span><span class="nc" data-group-id="2818814167-2">User</span><span class="p" data-group-id="2818814167-2">{</span><span class="p" data-group-id="2818814167-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="9786135258-3">(</span><span class="s">&quot;unknown@example.com&quot;</span><span class="p" data-group-id="9786135258-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="2818814167-3">(</span><span class="s">&quot;unknown@example.com&quot;</span><span class="p" data-group-id="2818814167-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -1097,7 +1097,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user_by_email_and_password(email, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L133" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L134" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1113,10 +1113,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="4555068643-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;correct_password&quot;</span><span class="p" data-group-id="4555068643-1">)</span><span class="w">
-</span><span class="p" data-group-id="4555068643-2">%</span><span class="nc" data-group-id="4555068643-2">User</span><span class="p" data-group-id="4555068643-2">{</span><span class="p" data-group-id="4555068643-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="0067770785-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;correct_password&quot;</span><span class="p" data-group-id="0067770785-1">)</span><span class="w">
+</span><span class="p" data-group-id="0067770785-2">%</span><span class="nc" data-group-id="0067770785-2">User</span><span class="p" data-group-id="0067770785-2">{</span><span class="p" data-group-id="0067770785-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="4555068643-3">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid_password&quot;</span><span class="p" data-group-id="4555068643-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="0067770785-3">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid_password&quot;</span><span class="p" data-group-id="0067770785-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -1129,7 +1129,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user_by_reset_password_token(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L569" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L570" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1145,10 +1145,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="7076119914-1">(</span><span class="s">&quot;validtoken&quot;</span><span class="p" data-group-id="7076119914-1">)</span><span class="w">
-</span><span class="p" data-group-id="7076119914-2">%</span><span class="nc" data-group-id="7076119914-2">User</span><span class="p" data-group-id="7076119914-2">{</span><span class="p" data-group-id="7076119914-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="9880622019-1">(</span><span class="s">&quot;validtoken&quot;</span><span class="p" data-group-id="9880622019-1">)</span><span class="w">
+</span><span class="p" data-group-id="9880622019-2">%</span><span class="nc" data-group-id="9880622019-2">User</span><span class="p" data-group-id="9880622019-2">{</span><span class="p" data-group-id="9880622019-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="7076119914-3">(</span><span class="s">&quot;invalidtoken&quot;</span><span class="p" data-group-id="7076119914-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="9880622019-3">(</span><span class="s">&quot;invalidtoken&quot;</span><span class="p" data-group-id="9880622019-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -1161,7 +1161,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">get_user_by_session_token(token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L398" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L399" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1183,7 +1183,7 @@ and the token is deleted.</p>
     </a>
     <h1 class="signature" translate="no">has_one_superuser?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L610" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L611" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1212,7 +1212,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">list_users()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L80" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L81" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1228,8 +1228,8 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_users</span><span class="p" data-group-id="5618812314-1">(</span><span class="p" data-group-id="5618812314-1">)</span><span class="w">
-</span><span class="p" data-group-id="5618812314-2">[</span><span class="p" data-group-id="5618812314-3">%</span><span class="nc" data-group-id="5618812314-3">User</span><span class="p" data-group-id="5618812314-3">{</span><span class="p" data-group-id="5618812314-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5618812314-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_users</span><span class="p" data-group-id="2959577624-1">(</span><span class="p" data-group-id="2959577624-1">)</span><span class="w">
+</span><span class="p" data-group-id="2959577624-2">[</span><span class="p" data-group-id="2959577624-3">%</span><span class="nc" data-group-id="2959577624-3">User</span><span class="p" data-group-id="2959577624-3">{</span><span class="p" data-group-id="2959577624-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2959577624-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="perform/1">
@@ -1241,7 +1241,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">perform(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L58" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L59" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1263,7 +1263,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">purge_user(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L19" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L20" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1272,6 +1272,12 @@ This triggers the setup page on fresh installs.</p>
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> purge_user(id :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: :ok</pre>
+
+      </div>
 
 
   </section>
@@ -1285,7 +1291,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">register_superuser(attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L111" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L112" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1301,11 +1307,11 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="6753240698-1">(</span><span class="p" data-group-id="6753240698-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="6753240698-2">}</span><span class="p" data-group-id="6753240698-1">)</span><span class="w">
-</span><span class="p" data-group-id="6753240698-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6753240698-4">%</span><span class="nc" data-group-id="6753240698-4">User</span><span class="p" data-group-id="6753240698-4">{</span><span class="p" data-group-id="6753240698-4">}</span><span class="p" data-group-id="6753240698-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="7850061548-1">(</span><span class="p" data-group-id="7850061548-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7850061548-2">}</span><span class="p" data-group-id="7850061548-1">)</span><span class="w">
+</span><span class="p" data-group-id="7850061548-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7850061548-4">%</span><span class="nc" data-group-id="7850061548-4">User</span><span class="p" data-group-id="7850061548-4">{</span><span class="p" data-group-id="7850061548-4">}</span><span class="p" data-group-id="7850061548-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="6753240698-5">(</span><span class="p" data-group-id="6753240698-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6753240698-6">}</span><span class="p" data-group-id="6753240698-5">)</span><span class="w">
-</span><span class="p" data-group-id="6753240698-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6753240698-8">%</span><span class="nc" data-group-id="6753240698-8">Ecto.Changeset</span><span class="p" data-group-id="6753240698-8">{</span><span class="p" data-group-id="6753240698-8">}</span><span class="p" data-group-id="6753240698-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="7850061548-5">(</span><span class="p" data-group-id="7850061548-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7850061548-6">}</span><span class="p" data-group-id="7850061548-5">)</span><span class="w">
+</span><span class="p" data-group-id="7850061548-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7850061548-8">%</span><span class="nc" data-group-id="7850061548-8">Ecto.Changeset</span><span class="p" data-group-id="7850061548-8">{</span><span class="p" data-group-id="7850061548-8">}</span><span class="p" data-group-id="7850061548-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="register_user/1">
@@ -1317,7 +1323,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">register_user(attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L169" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L170" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1333,11 +1339,11 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="4588249785-1">(</span><span class="p" data-group-id="4588249785-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4588249785-2">}</span><span class="p" data-group-id="4588249785-1">)</span><span class="w">
-</span><span class="p" data-group-id="4588249785-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4588249785-4">%</span><span class="nc" data-group-id="4588249785-4">User</span><span class="p" data-group-id="4588249785-4">{</span><span class="p" data-group-id="4588249785-4">}</span><span class="p" data-group-id="4588249785-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="7690248127-1">(</span><span class="p" data-group-id="7690248127-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7690248127-2">}</span><span class="p" data-group-id="7690248127-1">)</span><span class="w">
+</span><span class="p" data-group-id="7690248127-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7690248127-4">%</span><span class="nc" data-group-id="7690248127-4">User</span><span class="p" data-group-id="7690248127-4">{</span><span class="p" data-group-id="7690248127-4">}</span><span class="p" data-group-id="7690248127-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="4588249785-5">(</span><span class="p" data-group-id="4588249785-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4588249785-6">}</span><span class="p" data-group-id="4588249785-5">)</span><span class="w">
-</span><span class="p" data-group-id="4588249785-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4588249785-8">%</span><span class="nc" data-group-id="4588249785-8">Ecto.Changeset</span><span class="p" data-group-id="4588249785-8">{</span><span class="p" data-group-id="4588249785-8">}</span><span class="p" data-group-id="4588249785-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="7690248127-5">(</span><span class="p" data-group-id="7690248127-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7690248127-6">}</span><span class="p" data-group-id="7690248127-5">)</span><span class="w">
+</span><span class="p" data-group-id="7690248127-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7690248127-8">%</span><span class="nc" data-group-id="7690248127-8">Ecto.Changeset</span><span class="p" data-group-id="7690248127-8">{</span><span class="p" data-group-id="7690248127-8">}</span><span class="p" data-group-id="7690248127-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="reset_user_password/2">
@@ -1349,7 +1355,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">reset_user_password(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L591" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L592" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1365,11 +1371,11 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="4490092465-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4490092465-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p" data-group-id="4490092465-2">}</span><span class="p" data-group-id="4490092465-1">)</span><span class="w">
-</span><span class="p" data-group-id="4490092465-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4490092465-4">%</span><span class="nc" data-group-id="4490092465-4">User</span><span class="p" data-group-id="4490092465-4">{</span><span class="p" data-group-id="4490092465-4">}</span><span class="p" data-group-id="4490092465-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="9288183420-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9288183420-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p" data-group-id="9288183420-2">}</span><span class="p" data-group-id="9288183420-1">)</span><span class="w">
+</span><span class="p" data-group-id="9288183420-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9288183420-4">%</span><span class="nc" data-group-id="9288183420-4">User</span><span class="p" data-group-id="9288183420-4">{</span><span class="p" data-group-id="9288183420-4">}</span><span class="p" data-group-id="9288183420-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="4490092465-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4490092465-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;valid&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;not the same&quot;</span><span class="p" data-group-id="4490092465-6">}</span><span class="p" data-group-id="4490092465-5">)</span><span class="w">
-</span><span class="p" data-group-id="4490092465-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4490092465-8">%</span><span class="nc" data-group-id="4490092465-8">Ecto.Changeset</span><span class="p" data-group-id="4490092465-8">{</span><span class="p" data-group-id="4490092465-8">}</span><span class="p" data-group-id="4490092465-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="9288183420-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9288183420-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;valid&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;not the same&quot;</span><span class="p" data-group-id="9288183420-6">}</span><span class="p" data-group-id="9288183420-5">)</span><span class="w">
+</span><span class="p" data-group-id="9288183420-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9288183420-8">%</span><span class="nc" data-group-id="9288183420-8">Ecto.Changeset</span><span class="p" data-group-id="9288183420-8">{</span><span class="p" data-group-id="9288183420-8">}</span><span class="p" data-group-id="9288183420-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="schedule_user_deletion/2">
@@ -1381,7 +1387,7 @@ This triggers the setup page on fresh installs.</p>
     </a>
     <h1 class="signature" translate="no">schedule_user_deletion(user, email)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L368" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L369" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1407,7 +1413,7 @@ users pending deletion.</p>
     </a>
     <h1 class="signature" translate="no">update_user_details(user, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L192" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L193" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1429,7 +1435,7 @@ users pending deletion.</p>
     </a>
     <h1 class="signature" translate="no">update_user_email(user, token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L250" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L251" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1452,7 +1458,7 @@ The confirmed_at date is also updated to the current time.</p>
     </a>
     <h1 class="signature" translate="no">update_user_password(user, password, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L344" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts.ex#L345" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1468,11 +1474,11 @@ The confirmed_at date is also updated to the current time.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="0486590147-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0486590147-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0486590147-2">}</span><span class="p" data-group-id="0486590147-1">)</span><span class="w">
-</span><span class="p" data-group-id="0486590147-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0486590147-4">%</span><span class="nc" data-group-id="0486590147-4">User</span><span class="p" data-group-id="0486590147-4">{</span><span class="p" data-group-id="0486590147-4">}</span><span class="p" data-group-id="0486590147-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="0840229658-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0840229658-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0840229658-2">}</span><span class="p" data-group-id="0840229658-1">)</span><span class="w">
+</span><span class="p" data-group-id="0840229658-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0840229658-4">%</span><span class="nc" data-group-id="0840229658-4">User</span><span class="p" data-group-id="0840229658-4">{</span><span class="p" data-group-id="0840229658-4">}</span><span class="p" data-group-id="0840229658-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="0486590147-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0486590147-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0486590147-6">}</span><span class="p" data-group-id="0486590147-5">)</span><span class="w">
-</span><span class="p" data-group-id="0486590147-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0486590147-8">%</span><span class="nc" data-group-id="0486590147-8">Ecto.Changeset</span><span class="p" data-group-id="0486590147-8">{</span><span class="p" data-group-id="0486590147-8">}</span><span class="p" data-group-id="0486590147-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="0840229658-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0840229658-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0840229658-6">}</span><span class="p" data-group-id="0840229658-5">)</span><span class="w">
+</span><span class="p" data-group-id="0840229658-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0840229658-8">%</span><span class="nc" data-group-id="0840229658-8">Ecto.Changeset</span><span class="p" data-group-id="0840229658-8">{</span><span class="p" data-group-id="0840229658-8">}</span><span class="p" data-group-id="0840229658-7">}</span></code></pre>
   </section>
 </section>
 
