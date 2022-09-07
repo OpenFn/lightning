@@ -10,7 +10,7 @@
     <title>Lightning.Workflows — Lightning v0.1.13</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-055e9487a1.js"></script>
+    <script src="dist/sidebar_items-d218332383.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -179,11 +179,29 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#get_workflows_for/1" translate="no">get_workflows_for(project)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Retrieves a list of Workflows with their jobs and triggers preloaded.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#list_workflows/0" translate="no">list_workflows()</a>
 
         </div>
 
           <div class="summary-synopsis"><p>Returns the list of workflows.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#to_project_space/1" translate="no">to_project_space(workflows)</a>
+
+        </div>
 
       </div>
 
@@ -222,7 +240,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">change_workflow(workflow, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L103" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L104" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -238,8 +256,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="0818972107-1">(</span><span class="n">workflow</span><span class="p" data-group-id="0818972107-1">)</span><span class="w">
-</span><span class="p" data-group-id="0818972107-2">%</span><span class="nc" data-group-id="0818972107-2">Ecto.Changeset</span><span class="p" data-group-id="0818972107-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0818972107-3">%</span><span class="nc" data-group-id="0818972107-3">Workflow</span><span class="p" data-group-id="0818972107-3">{</span><span class="p" data-group-id="0818972107-3">}</span><span class="p" data-group-id="0818972107-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="0890251294-1">(</span><span class="n">workflow</span><span class="p" data-group-id="0890251294-1">)</span><span class="w">
+</span><span class="p" data-group-id="0890251294-2">%</span><span class="nc" data-group-id="0890251294-2">Ecto.Changeset</span><span class="p" data-group-id="0890251294-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0890251294-3">%</span><span class="nc" data-group-id="0890251294-3">Workflow</span><span class="p" data-group-id="0890251294-3">{</span><span class="p" data-group-id="0890251294-3">}</span><span class="p" data-group-id="0890251294-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_workflow/1">
@@ -253,7 +271,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_workflow(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L54" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L55" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -269,11 +287,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="1251100747-1">(</span><span class="p" data-group-id="1251100747-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1251100747-2">}</span><span class="p" data-group-id="1251100747-1">)</span><span class="w">
-</span><span class="p" data-group-id="1251100747-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1251100747-4">%</span><span class="nc" data-group-id="1251100747-4">Workflow</span><span class="p" data-group-id="1251100747-4">{</span><span class="p" data-group-id="1251100747-4">}</span><span class="p" data-group-id="1251100747-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="7843415032-1">(</span><span class="p" data-group-id="7843415032-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7843415032-2">}</span><span class="p" data-group-id="7843415032-1">)</span><span class="w">
+</span><span class="p" data-group-id="7843415032-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7843415032-4">%</span><span class="nc" data-group-id="7843415032-4">Workflow</span><span class="p" data-group-id="7843415032-4">{</span><span class="p" data-group-id="7843415032-4">}</span><span class="p" data-group-id="7843415032-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="1251100747-5">(</span><span class="p" data-group-id="1251100747-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1251100747-6">}</span><span class="p" data-group-id="1251100747-5">)</span><span class="w">
-</span><span class="p" data-group-id="1251100747-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1251100747-8">%</span><span class="nc" data-group-id="1251100747-8">Ecto.Changeset</span><span class="p" data-group-id="1251100747-8">{</span><span class="p" data-group-id="1251100747-8">}</span><span class="p" data-group-id="1251100747-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="7843415032-5">(</span><span class="p" data-group-id="7843415032-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7843415032-6">}</span><span class="p" data-group-id="7843415032-5">)</span><span class="w">
+</span><span class="p" data-group-id="7843415032-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7843415032-8">%</span><span class="nc" data-group-id="7843415032-8">Ecto.Changeset</span><span class="p" data-group-id="7843415032-8">{</span><span class="p" data-group-id="7843415032-8">}</span><span class="p" data-group-id="7843415032-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_workflow/1">
@@ -285,7 +303,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">delete_workflow(workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L90" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L91" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -301,11 +319,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2426259494-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2426259494-1">)</span><span class="w">
-</span><span class="p" data-group-id="2426259494-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2426259494-3">%</span><span class="nc" data-group-id="2426259494-3">Workflow</span><span class="p" data-group-id="2426259494-3">{</span><span class="p" data-group-id="2426259494-3">}</span><span class="p" data-group-id="2426259494-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2209738949-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2209738949-1">)</span><span class="w">
+</span><span class="p" data-group-id="2209738949-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2209738949-3">%</span><span class="nc" data-group-id="2209738949-3">Workflow</span><span class="p" data-group-id="2209738949-3">{</span><span class="p" data-group-id="2209738949-3">}</span><span class="p" data-group-id="2209738949-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2426259494-4">(</span><span class="n">workflow</span><span class="p" data-group-id="2426259494-4">)</span><span class="w">
-</span><span class="p" data-group-id="2426259494-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2426259494-6">%</span><span class="nc" data-group-id="2426259494-6">Ecto.Changeset</span><span class="p" data-group-id="2426259494-6">{</span><span class="p" data-group-id="2426259494-6">}</span><span class="p" data-group-id="2426259494-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2209738949-4">(</span><span class="n">workflow</span><span class="p" data-group-id="2209738949-4">)</span><span class="w">
+</span><span class="p" data-group-id="2209738949-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2209738949-6">%</span><span class="nc" data-group-id="2209738949-6">Ecto.Changeset</span><span class="p" data-group-id="2209738949-6">{</span><span class="p" data-group-id="2209738949-6">}</span><span class="p" data-group-id="2209738949-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_workflow!/1">
@@ -317,7 +335,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_workflow!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L38" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L39" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -333,10 +351,10 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="4215936061-1">(</span><span class="mi">123</span><span class="p" data-group-id="4215936061-1">)</span><span class="w">
-</span><span class="p" data-group-id="4215936061-2">%</span><span class="nc" data-group-id="4215936061-2">Workflow</span><span class="p" data-group-id="4215936061-2">{</span><span class="p" data-group-id="4215936061-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="1659523899-1">(</span><span class="mi">123</span><span class="p" data-group-id="1659523899-1">)</span><span class="w">
+</span><span class="p" data-group-id="1659523899-2">%</span><span class="nc" data-group-id="1659523899-2">Workflow</span><span class="p" data-group-id="1659523899-2">{</span><span class="p" data-group-id="1659523899-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="4215936061-3">(</span><span class="mi">456</span><span class="p" data-group-id="4215936061-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="1659523899-3">(</span><span class="mi">456</span><span class="p" data-group-id="1659523899-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -349,7 +367,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_workflow(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L40" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L41" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -362,6 +380,36 @@ Functions
 
   </section>
 </section>
+<section class="detail" id="get_workflows_for/1">
+
+  <div class="detail-header">
+    <a href="#get_workflows_for/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_workflows_for(project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L112" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_workflows_for(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: [
+  <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
+]</pre>
+
+      </div>
+
+<p>Retrieves a list of Workflows with their jobs and triggers preloaded.</p>
+  </section>
+</section>
 <section class="detail" id="list_workflows/0">
 
   <div class="detail-header">
@@ -371,7 +419,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">list_workflows()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L20" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L21" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -387,8 +435,36 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="4623986253-1">(</span><span class="p" data-group-id="4623986253-1">)</span><span class="w">
-</span><span class="p" data-group-id="4623986253-2">[</span><span class="p" data-group-id="4623986253-3">%</span><span class="nc" data-group-id="4623986253-3">Workflow</span><span class="p" data-group-id="4623986253-3">{</span><span class="p" data-group-id="4623986253-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4623986253-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="5165103459-1">(</span><span class="p" data-group-id="5165103459-1">)</span><span class="w">
+</span><span class="p" data-group-id="5165103459-2">[</span><span class="p" data-group-id="5165103459-3">%</span><span class="nc" data-group-id="5165103459-3">Workflow</span><span class="p" data-group-id="5165103459-3">{</span><span class="p" data-group-id="5165103459-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5165103459-2">]</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="to_project_space/1">
+
+  <div class="detail-header">
+    <a href="#to_project_space/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">to_project_space(workflows)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L122" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> to_project_space([<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()]) :: %{}</pre>
+
+      </div>
+
+
   </section>
 </section>
 <section class="detail" id="update_workflow/2">
@@ -400,7 +476,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">update_workflow(workflow, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L72" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows.ex#L73" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -416,11 +492,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="1593387115-1">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="1593387115-2">}</span><span class="p" data-group-id="1593387115-1">)</span><span class="w">
-</span><span class="p" data-group-id="1593387115-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-4">%</span><span class="nc" data-group-id="1593387115-4">Workflow</span><span class="p" data-group-id="1593387115-4">{</span><span class="p" data-group-id="1593387115-4">}</span><span class="p" data-group-id="1593387115-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="4112120495-1">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4112120495-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="4112120495-2">}</span><span class="p" data-group-id="4112120495-1">)</span><span class="w">
+</span><span class="p" data-group-id="4112120495-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4112120495-4">%</span><span class="nc" data-group-id="4112120495-4">Workflow</span><span class="p" data-group-id="4112120495-4">{</span><span class="p" data-group-id="4112120495-4">}</span><span class="p" data-group-id="4112120495-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="1593387115-5">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1593387115-6">}</span><span class="p" data-group-id="1593387115-5">)</span><span class="w">
-</span><span class="p" data-group-id="1593387115-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1593387115-8">%</span><span class="nc" data-group-id="1593387115-8">Ecto.Changeset</span><span class="p" data-group-id="1593387115-8">{</span><span class="p" data-group-id="1593387115-8">}</span><span class="p" data-group-id="1593387115-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="4112120495-5">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4112120495-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4112120495-6">}</span><span class="p" data-group-id="4112120495-5">)</span><span class="w">
+</span><span class="p" data-group-id="4112120495-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4112120495-8">%</span><span class="nc" data-group-id="4112120495-8">Ecto.Changeset</span><span class="p" data-group-id="4112120495-8">{</span><span class="p" data-group-id="4112120495-8">}</span><span class="p" data-group-id="4112120495-7">}</span></code></pre>
   </section>
 </section>
 

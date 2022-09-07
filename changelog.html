@@ -10,7 +10,7 @@
     <title>Changelog — Lightning v0.1.13</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-055e9487a1.js"></script>
+    <script src="dist/sidebar_items-d218332383.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -121,7 +121,14 @@ and this project adheres to
   </a>
   Changed
 </h3>
-<ul><li>Use Node.js 18, soon to be in LTS.</li><li>Visualize success/fail triggers in workflow diagram.</li></ul><h2 id="0-1-13-2022-08-29" class="section-heading">
+<ul><li>Use Node.js 18, soon to be in LTS.</li><li>Visualize success/fail triggers in workflow diagram.</li><li>Add <code class="inline">Workflow</code> model, Jobs now belong to a Workflow
+This is a BREAKING change to the schema.</li><li>Move WorkflowDiagram related actions from DashboardLive into WorkflowLive</li><li>Move WorkflowDiagram component into liveview, so that we can subscribe to
+channels (i.e. updating of the diagram when someone changes something).</li><li>Integrate <code class="inline">@openfn/workflow-diagram@0.0.8</code> and use the new Store interface for
+updating it.</li><li>Remove <code class="inline">component_mounted</code> event from WorkflowDiagram hook, using a
+MutationObserver and a Base64 encoded JSON payload.</li><li>Fixed an issue where the compiler component would try and load a 'nothing
+adaptor', added a condition to check an adaptor is actually selected.</li><li>Removed previous Workflow CTE queries, replaced by the introduction of the
+Workflow model, see
+(<a href="https://github.com/OpenFn/Lightning/blob/53da6883483e7d8d078783f348da327d1dd72d20/lib/lightning/workflows.ex#L111-L119">https://github.com/OpenFn/Lightning/blob/53da6883483e7d8d078783f348da327d1dd72d20/lib/lightning/workflows.ex#L111-L119</a>).</li></ul><h2 id="0-1-13-2022-08-29" class="section-heading">
   <a href="#0-1-13-2022-08-29" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">0-1-13-2022-08-29</p>
   </a>
