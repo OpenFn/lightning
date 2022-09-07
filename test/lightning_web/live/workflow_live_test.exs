@@ -88,6 +88,82 @@ defmodule LightningWeb.WorkflowLiveTest do
       view |> form("#workflow-form") |> render_submit()
 
       assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      assert view |> encoded_project_space_matches(project)
     end
+  end
+
+  describe "new_job" do
+    setup %{project: project} do
+      %{upstream_job: job_fixture(project_id: project.id)}
+    end
+
+    test "renders the workflow inspector", %{
+      conn: conn,
+      project: project,
+      upstream_job: upstream_job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :new_job,
+            project.id,
+            %{"upstream_id" => upstream_job.id}
+          )
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#job-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#upstreamJob option[selected=selected]}
+             )
+             |> render() =~ upstream_job.id,
+             "Should have the upstream job selected"
+
+      assert view
+             |> form("#job-form", job: %{adaptor_name: "@openfn/language-common"})
+             |> render_change()
+
+      assert view
+             |> form("#job-form",
+               job: %{
+                 body: "some body",
+                 enabled: true,
+                 name: "some name",
+                 trigger: %{type: "on_job_failure"},
+                 adaptor: "@openfn/language-common@latest"
+               }
+             )
+             |> render_submit()
+
+      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      assert view |> encoded_project_space_matches(project)
+    end
+  end
+
+  defp extract_project_space(html) do
+    [_, result] = Regex.run(~r/data-project-space="([[:alnum:]\=]+)"/, html)
+    result
+  end
+
+  # Pull out the encoded ProjectSpace data from the html, turn it back into a
+  # map and compare it to the current value.
+  defp encoded_project_space_matches(view, project) do
+    view
+    |> element("div#hook-#{project.id}[phx-update=ignore]")
+    |> render()
+    |> extract_project_space()
+    |> Base.decode64!()
+    |> Jason.decode!() ==
+      Lightning.Workflows.get_workflows_for(project)
+      |> Lightning.Workflows.to_project_space()
+      |> Jason.encode!()
+      |> Jason.decode!()
   end
 end
