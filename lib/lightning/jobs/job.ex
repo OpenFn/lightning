@@ -25,6 +25,7 @@ defmodule Lightning.Jobs.Job do
   alias Lightning.Jobs
   alias Lightning.Credentials.Credential
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows
   alias Lightning.Projects.{Project, ProjectCredential}
 
   @type t :: %__MODULE__{
@@ -111,6 +112,28 @@ defmodule Lightning.Jobs.Job do
             %{}
           )
         )
+
+      {workflow_id, trigger_type}
+      when trigger_type in [:cron, :webhook] and workflow_id != nil ->
+        case changeset.data.trigger |> Map.get(:type) do
+          x when x in [:cron, :webhook] ->
+            changeset
+
+          x when x in [:on_job_success, :on_job_failure] ->
+            {:ok, %Workflow{id: id}} =
+              Workflows.create_workflow(%{
+                project_id: get_field(changeset, :project_id)
+              })
+
+            changeset
+            |> put_change(
+              :workflow_id,
+              id
+            )
+
+          _ ->
+            changeset
+        end
 
       {_workflow_id, trigger_type}
       when trigger_type in [:on_job_success, :on_job_failure] ->

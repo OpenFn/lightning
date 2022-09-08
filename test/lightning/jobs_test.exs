@@ -300,13 +300,15 @@ defmodule Lightning.JobsTest do
       workflows_before = Workflows.list_workflows()
       count_workflows_before = Enum.count(workflows_before)
 
-      {:ok, %Job{} = webhook_job} =
+      {:ok, %Job{} = downstream_job} =
         Jobs.update_job(downstream_job, %{
           trigger: %{
             id: downstream_job.trigger.id,
             type: "webhook"
           }
         })
+
+      assert downstream_job.trigger.upstream_job_id == nil
 
       workflows_after = Workflows.list_workflows()
       count_workflows_after = Enum.count(workflows_after)
@@ -316,13 +318,13 @@ defmodule Lightning.JobsTest do
 
       assert Enum.member?(
                Enum.map(workflows_before, fn w -> w.id end),
-               webhook_job.workflow_id
+               downstream_job.workflow_id
              )
              |> Kernel.not()
 
       assert Enum.member?(
                Enum.map(workflows_after, fn w -> w.id end),
-               webhook_job.workflow_id
+               downstream_job.workflow_id
              )
     end
 
