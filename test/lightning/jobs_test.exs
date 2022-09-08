@@ -228,7 +228,7 @@ defmodule Lightning.JobsTest do
     test "update_job/2 from upstream_job A (in workflow 1) to upstream_job B (in workflow 2) changes the updated job's workflow_id to 2" do
       project_id = project_fixture().id
 
-      {:ok, %Job{} = parent_job_1} =
+      {:ok, %Job{} = upstream_job_1} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
@@ -238,7 +238,7 @@ defmodule Lightning.JobsTest do
           project_id: project_id
         })
 
-      {:ok, %Job{} = parent_job_2} =
+      {:ok, %Job{} = upstream_job_2} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
@@ -254,22 +254,22 @@ defmodule Lightning.JobsTest do
           enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: parent_job_1.id},
+          trigger: %{type: "on_job_success", upstream_job_id: upstream_job_1.id},
           project_id: project_id
         })
 
-      assert downstream_job_a.workflow_id == parent_job_1.workflow_id
+      assert downstream_job_a.workflow_id == upstream_job_1.workflow_id
 
       {:ok, %Job{} = downstream_job_a} =
         Jobs.update_job(downstream_job_a, %{
           trigger: %{
             id: downstream_job_a.trigger.id,
             type: "on_job_success",
-            upstream_job_id: parent_job_2.id
+            upstream_job_id: upstream_job_2.id
           }
         })
 
-      assert downstream_job_a.workflow_id == parent_job_2.workflow_id
+      assert downstream_job_a.workflow_id == upstream_job_2.workflow_id
     end
 
     test "update_job/2 from upstream_job A (in workflow 1) to cron or webhook creates a new workflow and changes the updated job's workflow_id to THAT new workflow" do
