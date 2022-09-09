@@ -8,12 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.2.0] - 2022-09-07
+
 ### Changed
 
+- [BREAKING CHANGE] Add `Workflow` model, Jobs now belong to a Workflow This is
+  a breaking change to the schema.
 - Use Node.js 18, soon to be in LTS.
 - Visualize success/fail triggers in workflow diagram.
-- Add `Workflow` model, Jobs now belong to a Workflow
-  This is a BREAKING change to the schema.
 - Move WorkflowDiagram related actions from DashboardLive into WorkflowLive
 - Move WorkflowDiagram component into liveview, so that we can subscribe to
   channels (i.e. updating of the diagram when someone changes something).
