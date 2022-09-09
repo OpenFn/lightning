@@ -25,6 +25,7 @@ defmodule Lightning.Jobs.Job do
   alias Lightning.Jobs
   alias Lightning.Credentials.Credential
   alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows
   alias Lightning.Projects.{Project, ProjectCredential}
 
   @type t :: %__MODULE__{
@@ -90,6 +91,7 @@ defmodule Lightning.Jobs.Job do
 
   defp maybe_add_workflow(%Ecto.Changeset{valid?: true} = changeset) do
     {
+      changeset.data.trigger |> Map.get(:type),
       get_field(changeset, :workflow_id),
       with %Ecto.Changeset{} = trigger_changeset <-
              get_change(changeset, :trigger),
@@ -100,7 +102,9 @@ defmodule Lightning.Jobs.Job do
       end
     }
     |> case do
-      {nil, trigger_type} when trigger_type in [:cron, :webhook] ->
+      # case: having a brand new cron or webhook job should always put assoc a workflow to a job
+      {nil, nil, current_trigger_type}
+      when current_trigger_type in [:cron, :webhook] ->
         changeset
         |> put_assoc(
           :workflow,
@@ -112,23 +116,32 @@ defmodule Lightning.Jobs.Job do
           )
         )
 
-      {_workflow_id, trigger_type}
-      when trigger_type in [:on_job_success, :on_job_failure] ->
+      # case: creating a brand new flow job, or changing a flow jobs type should always assign the downstream job's workflow to it's parent workflow
+      {_initial_trigger_type, _workflow_id, current_trigger_type}
+      when current_trigger_type in [:on_job_success, :on_job_failure] ->
         upstream_job =
           get_change(changeset, :trigger)
           |> get_field(:upstream_job_id)
-          |> case do
-            nil -> nil
-            job_id -> Jobs.get_job(job_id)
-          end
+          |> Jobs.get_job()
 
-        if is_nil(upstream_job) do
-          changeset
-        else
-          changeset |> put_change(:workflow_id, upstream_job.workflow_id)
-        end
+        changeset |> put_change(:workflow_id, upstream_job.workflow_id)
 
-      {_, _} ->
+      # case: converting a downstream job to a webhook or cron job, should always create a new workflow and assign that to it
+      {initial_trigger_type, _, current_trigger_type}
+      when initial_trigger_type in [:on_job_success, :on_job_failure] and
+             current_trigger_type in [:cron, :webhook] ->
+        {:ok, %Workflow{id: id}} =
+          Workflows.create_workflow(%{
+            project_id: get_field(changeset, :project_id)
+          })
+
+        changeset
+        |> put_change(
+          :workflow_id,
+          id
+        )
+
+      {_, _, _} ->
         changeset
     end
   end
