@@ -130,14 +130,12 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "export_project/2 as yaml" do
-      %{project: project} = full_project_fixture();
+      %{project: project} = full_project_fixture()
       expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
       File.write!("test/fixtures/generated_project.yaml", generated_yaml)
 
       assert generated_yaml == expected_yaml
     end
-
-
   end
 end
