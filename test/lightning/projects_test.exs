@@ -7,6 +7,7 @@ defmodule Lightning.ProjectsTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.FullProjectsFixtures
 
   describe "projects" do
     @invalid_attrs %{name: nil}
@@ -127,5 +128,16 @@ defmodule Lightning.ProjectsTest do
       assert [project_1, project_2] == Projects.get_projects_for_user(user)
       assert [project_1] == Projects.get_projects_for_user(other_user)
     end
+
+    test "export_project/2 as yaml" do
+      %{project: project} = full_project_fixture();
+      expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
+      {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
+      File.write!("test/fixtures/generated_project.yaml", generated_yaml)
+
+      assert generated_yaml == expected_yaml
+    end
+
+
   end
 end
