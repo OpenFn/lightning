@@ -1,4 +1,9 @@
 defmodule Lightning.ExportUtils do
+  @moduledoc """
+  Module that expose a function generating a complete and valid yaml string
+  from a project and its workflows.
+  """
+
   alias Lightning.{
     Projects,
     Workflows
@@ -9,8 +14,6 @@ defmodule Lightning.ExportUtils do
     parent_job = trigger.upstream_job
     job_name = job.name |> String.replace(" ", "-")
     %{body: credential_body} = job.credential || %{body: %{}}
-
-    IO.inspect(trigger.type)
 
     {parent_id, trigger} =
       case trigger.type do
@@ -67,8 +70,7 @@ defmodule Lightning.ExportUtils do
       true ->
         indented_expression =
           String.split(v, "\n")
-          |> Enum.map(fn line -> "#{i}  #{line}" end)
-          |> Enum.join("\n")
+          |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
 
         "body: >\n#{indented_expression}"
 
@@ -103,46 +105,46 @@ defmodule Lightning.ExportUtils do
           olist = ordering_map[map.node_type]
 
           olist
-          |> Enum.find_index(fn okey -> key == okey end)
+          |> Enum.find_index(&(&1 == key))
         end
       end,
       :asc
     )
   end
 
+  defp handle_input(key, value, indentation) when is_bitstring(value) do
+    "#{indentation}#{handle_bitstring(key, value, indentation)}"
+  end
+
+  defp handle_input(key, value, indentation) when is_number(value) do
+    "#{indentation}#{key}: #{value}"
+  end
+
+  defp handle_input(key, value, indentation) when is_boolean(value) do
+    "#{indentation}#{key}: #{Atom.to_string(value)}"
+  end
+
+  defp handle_input(key, value, indentation) when value in [%{}, []] do
+    "#{indentation}#{key}:"
+  end
+
+  defp handle_input(key, value, indentation) when is_map(value) do
+    "#{indentation}#{key}:\n#{to_new_yaml(value, "#{indentation}  ")}"
+  end
+
+  defp handle_input(key, value, indentation) when is_list(value) do
+    "#{indentation}#{key}:\n#{Enum.map_join(value, "\n", fn map -> cond do
+        is_of_type(map, :workflow) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
+        is_of_type(map, :job) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
+        true -> nil
+      end end)}"
+  end
+
   defp to_new_yaml(map, indentation \\ "") do
     map
     |> pick_and_sort()
     |> Enum.map(fn {key, value} ->
-      cond do
-        is_bitstring(value) ->
-          "#{indentation}#{handle_bitstring(key, value, indentation)}"
-
-        is_number(value) ->
-          "#{indentation}#{key}: #{value}"
-
-        is_boolean(value) ->
-          "#{indentation}#{key}: #{Atom.to_string(value)}"
-
-        value == %{} ->
-          "#{indentation}#{key}:"
-
-        is_map(value) ->
-          "#{indentation}#{key}:\n#{to_new_yaml(value, "#{indentation}  ")}"
-
-        value == [] ->
-          "#{indentation}#{key}:"
-
-        is_list(value) ->
-          "#{indentation}#{key}:\n#{Enum.map(value, fn map -> cond do
-              is_of_type(map, :workflow) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
-              is_of_type(map, :job) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
-              true -> nil
-            end end) |> Enum.join("\n")}"
-
-        true ->
-          nil
-      end
+      handle_input(key, value, indentation)
     end)
     |> Enum.reject(&is_nil/1)
     |> Enum.join("\n")
