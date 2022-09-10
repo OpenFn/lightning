@@ -5,12 +5,12 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.28.3">
-    <meta name="project" content="Lightning v0.1.13">
+    <meta name="project" content="Lightning v0.2.0">
 
-    <title>Lightning.Jobs.Job — Lightning v0.1.13</title>
+    <title>Lightning.Jobs.Job — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-e246b53d20.js"></script>
+    <script src="dist/sidebar_items-c35280b6f5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -70,7 +70,7 @@
 Lightning
       </a>
       <strong class="sidebar-projectVersion" translate="no">
-        v0.1.13
+        v0.2.0
       </strong>
     </div>
     <ul class="sidebar-listNav">
@@ -105,7 +105,7 @@ Lightning
     </a>
 
   <span translate="no">Lightning.Jobs.Job</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.1.13)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
@@ -143,6 +143,24 @@ See <a href="Lightning.Jobs.Trigger.html"><code class="inline">Lightning.Jobs.Tr
           <a href="#t:t/0" translate="no">t()</a>
 
         </div>
+
+      </div>
+
+  </div>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#add_to_workflow/1" translate="no">add_to_workflow(changeset)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>When a job is saved (created or updated) its workflow must be set. (All jobs
+belong to a workflow.)</p></div>
 
       </div>
 
@@ -207,6 +225,52 @@ Types
       </div>
 
 
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="add_to_workflow/1">
+
+  <div class="detail-header">
+    <a href="#add_to_workflow/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">add_to_workflow(changeset)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L101" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> add_to_workflow(<a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+
+      </div>
+
+<p>When a job is saved (created or updated) its workflow must be set. (All jobs
+belong to a workflow.)</p><p>If the job's trigger is of type <code class="inline">:on_job_success</code> or
+<code class="inline">:on_job_failure</code>, this function will set the <code class="inline">workflow_id</code> to that of its
+upstream job.</p><p>If the job's trigger is of type <code class="inline">:cron</code> or <code class="inline">:webhook</code>, it <em>is</em> the most
+upstream job in a workflow and this function will ensure that the job is in
+its <em>own</em> workflow—either creating a new one or leaving it unchanged.</p>
   </section>
 </section>
 
