@@ -148,6 +148,7 @@ defmodule Lightning.Jobs do
   def create_job(attrs \\ %{}) do
     %Job{}
     |> Job.changeset(attrs)
+    |> Job.add_to_workflow()
     |> Repo.insert()
   end
 
@@ -166,6 +167,7 @@ defmodule Lightning.Jobs do
   def update_job(%Job{} = job, attrs) do
     job
     |> Job.changeset(attrs)
+    |> Job.add_to_workflow()
     |> Repo.update()
   end
 

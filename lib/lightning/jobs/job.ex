@@ -74,7 +74,6 @@ defmodule Lightning.Jobs.Job do
       :workflow_id
     ])
     |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
-    |> maybe_add_workflow()
     |> validate_required([
       :name,
       :body,
@@ -86,10 +85,23 @@ defmodule Lightning.Jobs.Job do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end
 
-  defp maybe_add_workflow(%Ecto.Changeset{valid?: false} = changeset),
+  @spec add_to_workflow(Ecto.Changeset.t()) :: Ecto.Changeset.t()
+  @doc """
+  When a job is saved (created or updated) its workflow must be set. (All jobs
+  belong to a workflow.)
+
+  If the job's trigger is of type `:on_job_success` or
+  `:on_job_failure`, this function will set the `workflow_id` to that of its
+  upstream job.
+
+  If the job's trigger is of type `:cron` or `:webhook`, it _is_ the most
+  upstream job in a workflow and this function will ensure that the job is in
+  its _own_ workflow—either creating a new one or leaving it unchanged.
+  """
+  def add_to_workflow(%Ecto.Changeset{valid?: false} = changeset),
     do: changeset
 
-  defp maybe_add_workflow(%Ecto.Changeset{valid?: true} = changeset) do
+  def add_to_workflow(%Ecto.Changeset{valid?: true} = changeset) do
     {
       changeset.data.trigger |> Map.get(:type),
       get_field(changeset, :workflow_id),
