@@ -10,7 +10,7 @@ defmodule Lightning.JobsFixtures do
   @doc """
   Generate a job.
   """
-  @spec job_fixture(attrs :: []) :: Lightning.Jobs.Job.t()
+  @spec job_fixture(attrs :: Keyword.t()) :: Lightning.Jobs.Job.t()
   def job_fixture(attrs \\ []) when is_list(attrs) do
     attrs =
       attrs
