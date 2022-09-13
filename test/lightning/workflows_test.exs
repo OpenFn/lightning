@@ -143,8 +143,8 @@ defmodule Lightning.WorkflowsTest do
 
       assert length(results) == 2
 
-      assert (w1 |> Repo.preload(jobs: [:trigger, :workflow])) in results
-      assert (w2 |> Repo.preload(jobs: [:trigger, :workflow])) in results
+      assert (w1 |> Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])) in results
+      assert (w2 |> Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])) in results
 
       assert length(results) == 2
     end
