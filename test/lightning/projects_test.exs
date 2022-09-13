@@ -7,7 +7,6 @@ defmodule Lightning.ProjectsTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
-  import Lightning.FullProjectsFixtures
 
   describe "projects" do
     @invalid_attrs %{name: nil}
