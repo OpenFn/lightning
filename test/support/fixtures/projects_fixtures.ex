@@ -21,14 +21,24 @@ defmodule Lightning.ProjectsFixtures do
     project
   end
 
-  @spec full_project_fixture(attrs :: Keyword.t()) :: Map.t()
+  @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     project = project_fixture()
-    w1 = WorkflowsFixtures.workflow_fixture(project_id: project.id, name: "workflow 1")
-    w2 = WorkflowsFixtures.workflow_fixture(project_id: project.id, name: "workflow 2")
+
+    w1 =
+      WorkflowsFixtures.workflow_fixture(
+        project_id: project.id,
+        name: "workflow 1"
+      )
+
+    w2 =
+      WorkflowsFixtures.workflow_fixture(
+        project_id: project.id,
+        name: "workflow 2"
+      )
 
     project_credential =
-    CredentialsFixtures.project_credential_fixture(
+      CredentialsFixtures.project_credential_fixture(
         name: "new credential",
         body: %{"foo" => "manchu"}
       )
@@ -80,6 +90,4 @@ defmodule Lightning.ProjectsFixtures do
 
     %{project: project, w1: w1, w2: w2}
   end
-
-
 end
