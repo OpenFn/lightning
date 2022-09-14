@@ -389,11 +389,23 @@ defmodule Lightning.JobsTest do
       assert %Ecto.Changeset{} = Jobs.change_job(job)
     end
 
-    test "get_upstream_jobs_for/1 returns all jobs except the job passed in" do
-      job = job_fixture()
-      other_job = job_fixture()
-      assert Jobs.get_upstream_jobs_for(job) == [Jobs.get_job!(other_job.id)]
-      assert Jobs.get_upstream_jobs_for(other_job) == [Jobs.get_job!(job.id)]
+    test "get_upstream_jobs_for/1 returns all jobs in same project except the job passed in" do
+      project_1 = project_fixture()
+      project_2 = project_fixture()
+
+      project_1_job_1 = job_fixture(project_id: project_1.id)
+      project_1_job_2 = job_fixture(project_id: project_1.id)
+
+      project_2_job_1 = job_fixture(project_id: project_2.id)
+      project_2_job_2 = job_fixture(project_id: project_2.id)
+
+      assert Jobs.get_upstream_jobs_for(project_1_job_1) == [
+               Jobs.get_job!(project_1_job_2.id)
+             ]
+
+      assert Jobs.get_upstream_jobs_for(project_2_job_1) == [
+               Jobs.get_job!(project_2_job_2.id)
+             ]
     end
 
     test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do

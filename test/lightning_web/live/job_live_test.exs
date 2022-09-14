@@ -6,6 +6,8 @@ defmodule LightningWeb.JobLiveTest do
   import Lightning.CredentialsFixtures
   import SweetXml
 
+  alias Lightning.Jobs
+
   @create_attrs %{
     body: "some body",
     enabled: true,
@@ -137,6 +139,85 @@ defmodule LightningWeb.JobLiveTest do
 
       assert html =~ "Job updated successfully"
       assert html =~ "some updated body"
+    end
+
+    test "a job created in project B does not appear in the liveview dropdown list for an upstream job when editing a job in project A",
+         %{
+           conn: conn,
+           job: job
+         } do
+      job_1 = job_fixture()
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#job-#{job.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_edit_path(
+            conn,
+            :edit,
+            job.project_id,
+            job
+          )
+        )
+
+      assert form_live
+             |> form("#job-form", job: %{trigger: %{type: "on_job_success"}})
+             |> render_change()
+
+      displayed_jobs =
+        form_live
+        |> element("#upstreamJob")
+        |> render()
+        |> parse()
+        |> xpath(~x"option/text()"l)
+
+      assert Enum.member?(displayed_jobs, Jobs.get_job!(job_1.id).name)
+             |> Kernel.not()
+    end
+
+    test "a job in project A does appear in the 'upstream job' dropdown list for another job in project A",
+         %{
+           conn: conn,
+           job: job
+         } do
+      job_1 = job_fixture(project_id: job.project_id)
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_job_index_path(conn, :index, job.project_id))
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#job-#{job.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_job_edit_path(
+            conn,
+            :edit,
+            job.project_id,
+            job
+          )
+        )
+
+      assert form_live
+             |> form("#job-form", job: %{trigger: %{type: "on_job_success"}})
+             |> render_change()
+
+      displayed_jobs =
+        form_live
+        |> element("#upstreamJob")
+        |> render()
+        |> parse()
+        |> xpath(~x"option/text()"l)
+
+      assert displayed_jobs
+             |> Enum.map(fn x -> "#{x}" end)
+             |> Enum.member?(Jobs.get_job!(job_1.id).name)
     end
   end
 
