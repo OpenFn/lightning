@@ -1,0 +1,53 @@
+name: a-test-project
+globals:
+workflows:
+  workflow-1:
+    jobs:
+      webhook-job:
+        trigger: webhook
+        adaptor: @openfn/language-common
+        enabled: true
+        credential:
+          foo: manchu
+        globals:
+        body: >
+          console.log('webhook job')
+          fn(state => state)
+      on-fail:
+        trigger:
+          on-fail: webhook-job
+        adaptor: @openfn/language-common
+        enabled: true
+        credential:
+        globals:
+        body: >
+          console.log('on fail')
+          fn(state => state)
+      on-success:
+        trigger:
+          on-success: webhook-job
+        adaptor: @openfn/language-common
+        enabled: true
+        credential:
+        globals:
+        body: >
+          fn(state => state)
+  workflow-2:
+    jobs:
+      other-workflow:
+        trigger: webhook
+        adaptor: @openfn/language-common
+        enabled: true
+        credential:
+        globals:
+        body: >
+          fn(state => state)
+      on-fail:
+        trigger:
+          on-fail: other-workflow
+        adaptor: @openfn/language-common
+        enabled: true
+        credential:
+        globals:
+        body: >
+          fn(state => state)

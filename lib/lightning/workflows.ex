@@ -112,7 +112,7 @@ defmodule Lightning.Workflows do
   def get_workflows_for(%Project{} = project) do
     from(w in Workflow,
       join: j in assoc(w, :jobs),
-      preload: [jobs: {j, [:trigger, :workflow]}],
+      preload: [jobs: {j, [:credential, :workflow, trigger: [:upstream_job]]}],
       where: w.project_id == ^project.id
     )
     |> Repo.all()

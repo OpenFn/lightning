@@ -8,6 +8,7 @@ defmodule Lightning.Projects do
 
   alias Lightning.Projects.{Project, ProjectCredential}
   alias Lightning.Accounts.User
+  alias Lightning.ExportUtils
 
   @doc """
   Returns the list of projects.
@@ -175,5 +176,21 @@ defmodule Lightning.Projects do
       nil -> false
       true -> true
     end
+  end
+
+  @spec export_project(:yaml, any) :: {:ok, binary}
+  @doc """
+  Exports a project as yaml.
+
+  ## Examples
+
+      iex> export_project(:yaml, project_id)
+      {:ok, string}
+
+  """
+  def export_project(:yaml, project_id) do
+    {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
+
+    {:ok, yaml}
   end
 end

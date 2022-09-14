@@ -5,18 +5,18 @@ defmodule Lightning.WorkflowsTest do
   alias Lightning.Workflows.Workflow
   alias Lightning.Jobs
 
-  import Lightning.WorkflowsFixtures
-  import Lightning.JobsFixtures
-  import Lightning.ProjectsFixtures
+  alias Lightning.WorkflowsFixtures
+  alias Lightning.JobsFixtures
+  alias Lightning.ProjectsFixtures
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
-      workflow = workflow_fixture()
+      workflow = WorkflowsFixtures.workflow_fixture()
       assert Workflows.list_workflows() == [workflow]
     end
 
     test "get_workflow!/1 returns the workflow with given id" do
-      workflow = workflow_fixture()
+      workflow = WorkflowsFixtures.workflow_fixture()
       assert Workflows.get_workflow!(workflow.id) == workflow
 
       assert_raise Ecto.NoResultsError, fn ->
@@ -27,12 +27,12 @@ defmodule Lightning.WorkflowsTest do
     test "get_workflow/1 returns the workflow with given id" do
       assert Workflows.get_workflow(Ecto.UUID.generate()) == nil
 
-      workflow = workflow_fixture()
+      workflow = WorkflowsFixtures.workflow_fixture()
       assert Workflows.get_workflow(workflow.id) == workflow
     end
 
     test "create_workflow/1 with valid data creates a workflow" do
-      project = project_fixture()
+      project = ProjectsFixtures.project_fixture()
       valid_attrs = %{name: "some-name", project_id: project.id}
 
       assert {:ok, %Workflow{} = workflow} =
@@ -51,7 +51,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "update_workflow/2 with valid data updates the workflow" do
-      workflow = workflow_fixture()
+      workflow = WorkflowsFixtures.workflow_fixture()
       update_attrs = %{name: "some-updated-name"}
 
       assert {:ok, %Workflow{} = workflow} =
@@ -61,10 +61,10 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "delete_workflow/1 deletes the workflow" do
-      workflow = workflow_fixture()
+      workflow = WorkflowsFixtures.workflow_fixture()
 
-      job_1 = job_fixture(workflow_id: workflow.id)
-      job_2 = job_fixture(workflow_id: workflow.id)
+      job_1 = JobsFixtures.job_fixture(workflow_id: workflow.id)
+      job_2 = JobsFixtures.job_fixture(workflow_id: workflow.id)
 
       assert {:ok, %Workflow{}} = Workflows.delete_workflow(workflow)
 
@@ -82,33 +82,33 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "change_workflow/1 returns a workflow changeset" do
-      workflow = workflow_fixture()
+      workflow = WorkflowsFixtures.workflow_fixture()
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
     end
   end
 
   describe "workflows and project spaces" do
     setup do
-      project = project_fixture()
-      w1 = workflow_fixture(project_id: project.id)
-      w2 = workflow_fixture(project_id: project.id)
+      project = ProjectsFixtures.project_fixture()
+      w1 = WorkflowsFixtures.workflow_fixture(project_id: project.id)
+      w2 = WorkflowsFixtures.workflow_fixture(project_id: project.id)
 
       w1_job =
-        job_fixture(
+        JobsFixtures.job_fixture(
           name: "webhook job",
           project_id: project.id,
           workflow_id: w1.id,
           trigger: %{type: :webhook}
         )
 
-      job_fixture(
+      JobsFixtures.job_fixture(
         name: "on fail",
         project_id: project.id,
         workflow_id: w1.id,
         trigger: %{type: :on_job_failure, upstream_job_id: w1_job.id}
       )
 
-      job_fixture(
+      JobsFixtures.job_fixture(
         name: "on success",
         project_id: project.id,
         workflow_id: w1.id,
@@ -116,21 +116,21 @@ defmodule Lightning.WorkflowsTest do
       )
 
       w2_job =
-        job_fixture(
+        JobsFixtures.job_fixture(
           name: "other workflow",
           project_id: project.id,
           workflow_id: w2.id,
           trigger: %{type: :webhook}
         )
 
-      job_fixture(
+      JobsFixtures.job_fixture(
         name: "on fail",
         project_id: project.id,
         workflow_id: w2.id,
         trigger: %{type: :on_job_failure, upstream_job_id: w2_job.id}
       )
 
-      job_fixture(
+      JobsFixtures.job_fixture(
         name: "unrelated job",
         trigger: %{type: :webhook}
       )
@@ -143,8 +143,15 @@ defmodule Lightning.WorkflowsTest do
 
       assert length(results) == 2
 
-      assert (w1 |> Repo.preload(jobs: [:trigger, :workflow])) in results
-      assert (w2 |> Repo.preload(jobs: [:trigger, :workflow])) in results
+      assert (w1
+              |> Repo.preload(
+                jobs: [:credential, :workflow, trigger: [:upstream_job]]
+              )) in results
+
+      assert (w2
+              |> Repo.preload(
+                jobs: [:credential, :workflow, trigger: [:upstream_job]]
+              )) in results
 
       assert length(results) == 2
     end
