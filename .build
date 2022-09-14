@@ -23,6 +23,7 @@ Lightning.Credentials.Policy.html
 Lightning.Credentials.Schema.html
 Lightning.Credentials.SensitiveValues.html
 Lightning.Credentials.html
+Lightning.ExportUtils.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
 Lightning.Invocation.Event.html
@@ -127,8 +128,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-f8cf30b722.js
-dist/sidebar_items-c35280b6f5.js
+dist/search_items-e53d6e5467.js
+dist/sidebar_items-6b6bbd5af5.js
 index.html
 readme.html
 search.html
