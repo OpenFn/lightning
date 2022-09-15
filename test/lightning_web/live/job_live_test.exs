@@ -276,19 +276,14 @@ defmodule LightningWeb.JobLiveTest do
 
   describe "Access Jobs Page" do
     test "a user can't access the jobs page when they are not members of that project",
-         %{conn: conn, job: job} do
-      assert {:ok, _index_live, _html} =
-               live(
-                 conn,
-                 Routes.project_job_index_path(conn, :index, job.project_id)
-               )
-
+         %{conn: conn} do
       job = job_fixture(project_id: project_fixture().id)
 
-      assert {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}} =
+      assert {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}} ==
                live(
                  conn,
                  Routes.project_job_index_path(conn, :index, job.project_id)
+                 |> IO.inspect()
                )
     end
   end
