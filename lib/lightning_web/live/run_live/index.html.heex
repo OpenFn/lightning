@@ -6,6 +6,22 @@
     <%= if @live_action == :show do %>
       <.show_run {assigns} />
     <% else %>
+      <%# https://play.tailwindcss.com/bDaPmA2qEI %>
+      <.table>
+        <.tr>
+          <.th>Workflow Name</.th>
+          <.th>Input</.th>
+          <.th>Last run</.th>
+          <.th>Status</.th>
+        </.tr>
+        <.tr>
+          <.td>Workflow name</.td>
+          <.td>my test-a</.td>
+          <.td>UTC 24:20:69</.td>
+          <.td>Success</.td>
+        </.tr>
+      </.table>
+
       <.table>
         <.tr>
           <.th>Started At</.th>
