@@ -8,7 +8,7 @@ defmodule Lightning.Projects.Policy do
   alias Lightning.Projects
 
   # Project members can read a project
-  def authorize(:read, user, project) do
+  def authorize(action, user, project) when action in [:read, :index] do
     Projects.is_member_of?(project, user)
   end
 

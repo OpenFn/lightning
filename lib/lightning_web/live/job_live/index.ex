@@ -13,18 +13,31 @@ defmodule LightningWeb.JobLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(
-       active_menu_item: :overview,
-       pagination_path:
-         &Routes.project_job_index_path(
-           socket,
+    case Bodyguard.permit(
+           Lightning.Projects.Policy,
            :index,
-           socket.assigns.project,
-           &1
-         )
-     )}
+           socket.assigns.current_user,
+           socket.assigns.project
+         ) do
+      :ok ->
+        {:ok,
+         socket
+         |> assign(
+           active_menu_item: :overview,
+           pagination_path:
+             &Routes.project_job_index_path(
+               socket,
+               :index,
+               socket.assigns.project,
+               &1
+             )
+         )}
+
+      {:error, :unauthorized} ->
+        {:ok,
+         put_flash(socket, :error, "You can't access that page")
+         |> push_redirect(to: "/")}
+    end
   end
 
   @impl true
