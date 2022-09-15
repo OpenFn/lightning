@@ -11,8 +11,7 @@ defmodule LightningWeb.ProjectLive.Index do
     case Bodyguard.permit(
            Lightning.Projects.Policy,
            :index,
-           socket.assigns.current_user,
-           socket.assigns.project
+           socket.assigns.current_user
          ) do
       :ok ->
         {:ok, socket |> assign(:active_menu_item, :projects),
