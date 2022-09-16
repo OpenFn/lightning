@@ -7,6 +7,77 @@
       <.show_run {assigns} />
     <% else %>
       <%# https://play.tailwindcss.com/bDaPmA2qEI %>
+      <div class="relative max-w-screen-lg overflow-x-auto bg-gray-100 p-9 dark:bg-gray-700">
+  <table class="w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
+    <thead class="text-xs uppercase text-gray-400 dark:text-gray-400">
+      <tr>
+        <th scope="col" class="py-3 px-6 font-medium">Workflow name</th>
+        <th scope="col" class="py-3 px-6 font-medium">Input</th>
+        <th scope="col" class="py-3 px-6 font-medium">Last run</th>
+        <th scope="col" class="py-3 px-6 font-medium">Status</th>
+      </tr>
+    </thead>
+    <tbody class="bg-gray-100">
+      <tr class="relative bg-white">
+        <th scope="row" class="whitespace-nowrap rounded-tl-lg rounded-bl-lg p-6 font-medium text-gray-900 dark:text-white">workFlowName</th>
+        <td class="p-6">⭐ my-test-a</td>
+        <td class="p-6">UTC 24:20:60</td>
+        <td class="py-6 pl-6" width="100">
+          <span class="inline-block whitespace-nowrap rounded-full bg-green-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-green-800">Success</span>
+        </td>
+        <td class="rounded-tr-lg rounded-br-lg text-center" width="50">
+          <button class="inset-y-0 right-0 mr-2 w-auto rounded-full bg-gray-50 p-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="h-5 w-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+        </td>
+        <!-- <td rowspan="2" class="inset-x-0 bottom-2 top-3/4 mx-3 flex bg-red-50 p-6">Some some</td> -->
+      </tr>
+      <tr>
+        <td class="mx-3 block bg-red-50 p-6 col-span-3">
+          <div class="w-">
+            <ul class="list-none">
+              <li>Now this is a story all about how, my life got flipped-turned upside down</li>
+              <!-- ... -->
+            </ul>
+          </div>
+        </td>
+      </tr>
+      <tr class="bg-white">
+        <th scope="row" class="whitespace-nowrap rounded-tl-lg rounded-bl-lg p-6 font-medium text-gray-900 dark:text-white">workFlowName</th>
+        <td class="p-6">12i78iy</td>
+        <td class="p-6">UTC 24:20:60</td>
+        <td class="rounded-tr-lg rounded-br-lg p-6">
+          <span class="inline-block whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">Failure</span>
+        </td>
+        <td class="rounded-tr-lg rounded-br-lg text-center" width="50">
+          <button class="inset-y-0 right-0 mr-2 w-auto rounded-full bg-gray-50 p-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="h-5 w-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+        </td>
+      </tr>
+      <tr class="bg-white">
+        <th scope="row" class="whitespace-nowrap rounded-tl-lg rounded-bl-lg p-6 font-medium text-gray-900 dark:text-white">workFlowName</th>
+        <td class="p-6">1a23s3</td>
+        <td class="p-6">UTC 24:20:60</td>
+        <td class="rounded-tr-lg rounded-br-lg p-6">
+          <span class="inline-block whitespace-nowrap rounded-full bg-green-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-green-800">Success</span>
+        </td>
+        <td class="rounded-tr-lg rounded-br-lg text-center" width="50">
+          <button class="inset-y-0 right-0 mr-2 w-auto rounded-full bg-gray-50 p-3">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="h-5 w-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
       <.table>
         <.tr>
           <.th>Workflow Name</.th>
