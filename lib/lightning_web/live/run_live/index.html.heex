@@ -6,7 +6,6 @@
     <%= if @live_action == :show do %>
       <.show_run {assigns} />
     <% else %>
-      
       <div class="overflow-x-auto bg-gray-100 p-9 dark:bg-gray-700">
         <table class="w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
           <thead class="text-xs uppercase text-gray-400 dark:text-gray-400">
@@ -34,20 +33,7 @@
                   </span>
 
                   <button class="w-auto rounded-full bg-gray-50 p-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1"
-                      stroke="currentColor"
-                      class="h-5 w-5"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                      />
-                    </svg>
+                    <Heroicons.Outline.chevron_down class="h-5 w-5" />
                   </button>
                 </div>
               </td>
@@ -55,18 +41,7 @@
                 <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
                   <li>
                     <span class="flex items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        class="mr-1 h-5 w-5"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
+                      <Heroicons.Solid.clock class="mr-1 h-5 w-5" />
 
                       <span>
                         Re-run at 15 June 14:20:42
@@ -78,51 +53,16 @@
                     <ol class="mt-2 list-none space-y-4">
                       <li>
                         <span class="my-4 flex">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            class="bi bi-arrow-bar-right"
-                            viewBox="0 0 16 16"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M6 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L12.293 7.5H6.5A.5.5 0 0 0 6 8zm-2.5 7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5z"
-                            />
-                          </svg>
+                          &vdash;
                           <span class="mx-2 flex">
-                            <svg
-                              class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd"
-                              >
-                              </path>
-                            </svg> You might feel like you are being
+                            <Heroicons.Solid.check_circle class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" />
+                            You might feel like you are being
                           </span>
                         </span>
                         <ol class="space-y-4 pl-5">
                           <li>
                             <span class="mx-1 flex">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                fill="currentColor"
-                                class="bi bi-arrow-bar-right"
-                                viewBox="0 0 16 16"
-                              >
-                                <path
-                                  fill-rule="evenodd"
-                                  d="M6 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L12.293 7.5H6.5A.5.5 0 0 0 6 8zm-2.5 7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5z"
-                                />
-                              </svg>
+                              &vdash;
                               <span class="ml-1">
                                 are being really "organized" o
                               </span>
@@ -132,65 +72,19 @@
                       </li>
                       <li>
                         <span class="flex">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            class="bi bi-arrow-bar-right"
-                            viewBox="0 0 16 16"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M6 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L12.293 7.5H6.5A.5.5 0 0 0 6 8zm-2.5 7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5z"
-                            />
-                          </svg>
+                          &vdash;
                           <span class="mx-2 flex">
-                            <svg
-                              class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd"
-                              >
-                              </path>
-                            </svg> You might feel like you are being
+                            <Heroicons.Solid.check_circle class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" />
+                            You might feel like you are being
                           </span>
                         </span>
                       </li>
                       <li>
                         <span class="flex">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            class="bi bi-arrow-bar-right"
-                            viewBox="0 0 16 16"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M6 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L12.293 7.5H6.5A.5.5 0 0 0 6 8zm-2.5 7a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 1 0v13a.5.5 0 0 1-.5.5z"
-                            />
-                          </svg>
+                          &vdash;
                           <span class="mx-2 flex">
-                            <svg
-                              class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd"
-                              >
-                              </path>
-                            </svg> You might feel like you are being
+                            <Heroicons.Solid.check_circle class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" />
+                            You might feel like you are being
                           </span>
                         </span>
                       </li>
@@ -202,18 +96,7 @@
                 <ul>
                   <li>
                     <span class="flex items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        class="mr-1 h-5 w-5"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
+                      <Heroicons.Solid.clock class="mr-1 h-5 w-5" />
 
                       <span>
                         Run at 15 June 14:20:42
@@ -242,20 +125,7 @@
                   </span>
 
                   <button class="w-auto rounded-full bg-gray-50 p-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1"
-                      stroke="currentColor"
-                      class="h-5 w-5"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                      />
-                    </svg>
+                    <Heroicons.Outline.chevron_down class="h-5 w-5" />
                   </button>
                 </div>
               </td>
@@ -276,20 +146,7 @@
                   </span>
 
                   <button class="w-auto rounded-full bg-gray-50 p-3">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1"
-                      stroke="currentColor"
-                      class="h-5 w-5"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                      />
-                    </svg>
+                    <Heroicons.Outline.chevron_down class="h-5 w-5" />
                   </button>
                 </div>
               </td>
