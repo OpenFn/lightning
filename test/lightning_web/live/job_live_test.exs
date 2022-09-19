@@ -283,7 +283,6 @@ defmodule LightningWeb.JobLiveTest do
                live(
                  conn,
                  Routes.project_job_index_path(conn, :index, job.project_id)
-                 |> IO.inspect()
                )
     end
   end
