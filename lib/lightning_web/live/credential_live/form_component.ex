@@ -36,38 +36,84 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign_valid()}
   end
 
-  defp fake_body_schema(_schema) do
-    """
-    {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "username": {
-          "title": "Username",
-          "type": "string",
-          "description": "The username used to log in",
-          "minLength": 1
+  defp dhis2_schema,
+    do:
+      """
+      {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "username": {
+            "title": "Username",
+            "type": "string",
+            "description": "The username used to log in",
+            "minLength": 1
+          },
+          "password": {
+            "title": "Password",
+            "type": "string",
+            "description": "The password used to log in",
+            "writeOnly": true,
+            "minLength": 1
+          },
+          "hostUrl": {
+            "title": "Host URL",
+            "type": "string",
+            "description": "The destination server Url",
+            "format": "uri",
+            "minLength": 1
+          }
         },
-        "password": {
-          "title": "Password",
-          "type": "string",
-          "description": "The password used to log in",
-          "writeOnly": true,
-          "minLength": 1
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["hostUrl", "password", "username"]
+      }
+      """
+      |> Jason.decode!()
+
+  defp http_schema,
+    do:
+      """
+      {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "properties": {
+          "username": {
+            "title": "Username",
+            "type": "string",
+            "description": "The username used to log in",
+            "minLength": 1
+          },
+          "password": {
+            "title": "Password",
+            "type": "string",
+            "description": "The password used to log in",
+            "writeOnly": true,
+            "minLength": 1
+          },
+          "baseUrl": {
+            "title": "Host URL",
+            "type": "string",
+            "description": "The destination server Url",
+            "format": "uri",
+            "minLength": 1
+          },
+          "authType": {
+            "title": "Authentication Type",
+            "type": "string",
+            "description": "The authentication type",
+            "minLength": 1
+          }
         },
-        "hostUrl": {
-          "title": "Host URL",
-          "type": "string",
-          "description": "The destination server Url",
-          "format": "uri",
-          "minLength": 1
-        }
-      },
-      "type": "object",
-      "additionalProperties": true,
-      "required": ["hostUrl", "password", "username"]
-    }
-    """
-    |> Jason.decode!()
+        "type": "object",
+        "additionalProperties": true
+      }
+      """
+      |> Jason.decode!()
+
+  defp fake_body_schema(schema) do
+    case schema do
+      "dhis2" -> dhis2_schema()
+      "http" -> http_schema()
+    end
   end
 
   def schema_input(schema_root, changeset, field) do
