@@ -23,7 +23,14 @@
         },
         "apiVersion": {
             "title": "API Version",
-            "type": "string",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
             "placeholder": "35",
             "description": "The DHIS2 API Version to use",
             "minLength": 1
