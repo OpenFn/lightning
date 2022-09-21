@@ -36,87 +36,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign_valid()}
   end
 
-  defp dhis2_schema,
-    do:
-      """
-      {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-          "username": {
-            "title": "Username",
-            "type": "string",
-            "description": "The username used to log in",
-            "minLength": 1
-          },
-          "password": {
-            "title": "Password",
-            "type": "string",
-            "description": "The password used to log in",
-            "writeOnly": true,
-            "minLength": 1
-          },
-          "hostUrl": {
-            "title": "Host URL",
-            "type": "string",
-            "description": "The destination server Url",
-            "format": "uri",
-            "minLength": 1
-          },
-          "apiVersion": {
-            "title": "API Version",
-            "type": "string",
-            "placeholder": "35",
-            "description": "The DHIS2 API Version to use",
-            "minLength": 1
-          }
-        },
-        "type": "object",
-        "additionalProperties": true,
-        "required": ["hostUrl", "password", "username"]
-      }
-      """
-      |> Jason.decode!()
-
-  defp http_schema,
-    do:
-      """
-      {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "properties": {
-          "username": {
-            "title": "Username",
-            "type": "string",
-            "description": "The username used to log in to the destination system"
-          },
-          "password": {
-            "title": "Password",
-            "type": "string",
-            "description": "The password used to log in to the destination system",
-            "writeOnly": true
-          },
-          "baseUrl": {
-            "title": "Base URL",
-            "anyOf": [
-              {"type": "string"},
-              {"type": "null"}
-            ],
-            "description": "The base URL for the destination system",
-            "format": "uri",
-            "minLength": 1
-          }
-        },
-        "type": "object",
-        "additionalProperties": true,
-        "required": ["password", "username"]
-      }
-      """
-      |> Jason.decode!()
-
-  defp fake_body_schema(schema) do
-    case schema do
-      "dhis2" -> dhis2_schema()
-      "http" -> http_schema()
-    end
+  defp read_schema(schema) do
+    File.read!("./priv/schemas/#{schema}.json")
+    |> Jason.decode!()
   end
 
   def schema_input(schema_root, changeset, field) do
@@ -199,7 +121,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       {_schema, schema_type} when not is_nil(schema_type) ->
         schema =
           Credentials.Schema.new(
-            fake_body_schema(schema_type),
+            read_schema(schema_type),
             changeset |> fetch_field!(:body) || %{}
           )
 
