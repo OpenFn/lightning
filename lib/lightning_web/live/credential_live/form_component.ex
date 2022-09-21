@@ -61,6 +61,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             "description": "The destination server Url",
             "format": "uri",
             "minLength": 1
+          },
+          "apiVersion": {
+            "title": "API Version",
+            "type": "string",
+            "placeholder": "35",
+            "description": "The DHIS2 API Version to use",
+            "minLength": 1
           }
         },
         "type": "object",
@@ -79,32 +86,28 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           "username": {
             "title": "Username",
             "type": "string",
-            "description": "The username used to log in",
-            "minLength": 1
+            "description": "The username used to log in to the destination system"
           },
           "password": {
             "title": "Password",
             "type": "string",
-            "description": "The password used to log in",
-            "writeOnly": true,
-            "minLength": 1
+            "description": "The password used to log in to the destination system",
+            "writeOnly": true
           },
           "baseUrl": {
-            "title": "Host URL",
-            "type": "string",
-            "description": "The destination server Url",
+            "title": "Base URL",
+            "anyOf": [
+              {"type": "string"},
+              {"type": "null"}
+            ],
+            "description": "The base URL for the destination system",
             "format": "uri",
-            "minLength": 1
-          },
-          "authType": {
-            "title": "Authentication Type",
-            "type": "string",
-            "description": "The authentication type",
             "minLength": 1
           }
         },
         "type": "object",
-        "additionalProperties": true
+        "additionalProperties": true,
+        "required": ["password", "username"]
       }
       """
       |> Jason.decode!()
@@ -117,7 +120,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   def schema_input(schema_root, changeset, field) do
-    # credential[project_credentials][0][project_id]
     properties =
       schema_root.schema
       |> Map.get("properties")
@@ -194,7 +196,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         socket
         |> assign(schema: nil, schema_changeset: nil)
 
-      {nil, schema_type} when not is_nil(schema_type) ->
+      {_schema, schema_type} when not is_nil(schema_type) ->
         schema =
           Credentials.Schema.new(
             fake_body_schema(schema_type),
