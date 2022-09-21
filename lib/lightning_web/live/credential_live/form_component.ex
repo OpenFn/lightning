@@ -140,20 +140,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           schema_changeset: schema_changeset,
           changeset: changeset
         )
-
-      {schema, _schema_type} ->
-        schema_changeset =
-          create_schema_changeset(schema, params)
-          |> Map.put(:action, :validate)
-
-        changeset =
-          create_changeset(
-            socket.assigns.credential,
-            merge_schema_body(params["credential"], schema_changeset)
-          )
-
-        socket
-        |> assign(schema_changeset: schema_changeset, changeset: changeset)
     end
   end
 
