@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+- create adaptor credentials through a form
+
 ## [0.2.0] - 2022-09-12
 
 ### Changed
