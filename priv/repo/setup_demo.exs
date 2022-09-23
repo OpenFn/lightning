@@ -87,7 +87,7 @@
     project_id: dhis2_project.id,
     workflow_id: dhis2_workflow.id
   })
-{:ok, upload_to_google_sheet} =
+{:ok, _upload_to_google_sheet} =
   Lightning.Jobs.create_job(%{
     name: "Upload to google sheet",
     body: "fn(state => state)",

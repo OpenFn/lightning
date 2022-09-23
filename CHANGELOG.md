@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Add seed data for demo site
+
 ## [0.2.0] - 2022-09-12
 
 ### Changed
