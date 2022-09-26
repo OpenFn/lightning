@@ -1,4 +1,4 @@
-defmodule Lightning.WorkflowsTest do
+defmodule Lightning.SetupDemoTest do
   use Lightning.DataCase, async: true
 
   import Lightning.SetupDemo
