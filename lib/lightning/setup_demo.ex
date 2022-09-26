@@ -1,7 +1,7 @@
 defmodule Lightning.SetupDemo do
-  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo}
+  alias Lightning.{Projects, Accounts, Jobs, Workflows}
 
-  def setup do
+  def create_data do
     {:ok, openhie_admin} =
       Accounts.register_user(%{
         first_name: "openhie_admin",
@@ -36,7 +36,8 @@ defmodule Lightning.SetupDemo do
         ]
       })
 
-    {:ok, dhis2_project} = Projects.create_project(%{name: "dhis2-demo-project"})
+    {:ok, dhis2_project} =
+      Projects.create_project(%{name: "dhis2-demo-project", project_users: []})
 
     {:ok, openhie_workflow} =
       Workflows.create_workflow(%{
@@ -122,13 +123,5 @@ defmodule Lightning.SetupDemo do
         upload_to_google_sheet
       ]
     }
-  end
-
-  def clear(%{users: users, projects: projects, workflows: workflows, jobs: jobs}) do
-    Accounts.delete_user(Accounts.get_user_by_email("openhie_admin@gmail.com"))
-    Accounts.delete_user(Accounts.get_user_by_email("openhie_editor@gmail.com"))
-    Accounts.delete_user(Accounts.get_user_by_email("openhie_viewer@gmail.com"))
-
-    Repo.delete_all()
   end
 end
