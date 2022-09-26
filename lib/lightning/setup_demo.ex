@@ -1,6 +1,13 @@
 defmodule Lightning.SetupDemo do
+  @moduledoc """
+  SetupDemo encapsulates logic for setting up initial data for the demo site
+  """
+
   alias Lightning.{Projects, Accounts, Jobs, Workflows}
 
+  @doc """
+  Creates initial data and returns the created records.
+  """
   def create_data do
     {:ok, openhie_admin} =
       Accounts.register_user(%{
