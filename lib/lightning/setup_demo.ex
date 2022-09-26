@@ -44,7 +44,10 @@ defmodule Lightning.SetupDemo do
       })
 
     {:ok, dhis2_project} =
-      Projects.create_project(%{name: "dhis2-demo-project", project_users: []})
+      Projects.create_project(%{
+        name: "dhis2-demo-project",
+        project_users: [%{user_id: openhie_admin.id}]
+      })
 
     {:ok, openhie_workflow} =
       Workflows.create_workflow(%{

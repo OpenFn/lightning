@@ -55,7 +55,12 @@ defmodule Lightning.SetupDemoTest do
                end
              ) == Enum.map(users, fn user -> user.id end)
 
-      assert dhis2_project.project_users |> Enum.empty?()
+      assert Enum.map(
+               dhis2_project.project_users,
+               fn project_user ->
+                 project_user.user_id
+               end
+             ) == [openhie_admin.id]
 
       assert fhir_standard_data.workflow_id == openhie_workflow.id
       assert send_to_openhim.workflow_id == openhie_workflow.id
