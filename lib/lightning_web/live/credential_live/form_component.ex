@@ -109,21 +109,18 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           )
       )
 
-    %{changeset: changeset, schema: schema} = socket.assigns
-
-    case {schema, changeset |> fetch_field!(:schema)} do
-      {_schema, nil} ->
+    case fetch_field!(socket.assigns.changeset, :schema) do
+      nil ->
         socket
 
-      {_schema, "raw"} ->
-        socket
-        |> assign(schema: nil, schema_changeset: nil)
+      "raw" ->
+        socket |> assign(schema: nil, schema_changeset: nil)
 
-      {_schema, schema_type} when not is_nil(schema_type) ->
+      schema_type ->
         schema =
           Credentials.Schema.new(
             read_schema(schema_type),
-            changeset |> fetch_field!(:body) || %{}
+            socket.assigns.changeset |> fetch_field!(:body) || %{}
           )
 
         schema_changeset = create_schema_changeset(schema, params)
