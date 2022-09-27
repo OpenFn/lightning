@@ -178,7 +178,7 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec export_project(:yaml, any) :: {:ok, binary}
+  @spec export_project(:yaml, project_id :: binary()) :: {:ok, binary}
   @doc """
   Exports a project as yaml.
 

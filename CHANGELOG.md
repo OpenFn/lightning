@@ -9,6 +9,8 @@ and this project adheres to
 ## [Unreleased]
 
 - Add seed data for demo site
+- create adaptor credentials through a form
+- Redirect users to projects list page when they click on Admin Settings menu
 
 ## [0.2.0] - 2022-09-12
 

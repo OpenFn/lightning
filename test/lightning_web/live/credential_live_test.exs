@@ -226,6 +226,75 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(new_live)
       assert flash == %{"info" => "Credential created successfully"}
     end
+
+    test "allows the user to define and save a new http credential", %{
+      conn: conn
+    } do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      new_live
+      |> form("#credential-form", credential: %{schema: "http"})
+      |> render_change()
+
+      refute new_live |> has_element?("#credential-form_body")
+
+      assert new_live
+             |> form("#credential-form", body: %{username: ""})
+             |> render_change() =~ "can&#39;t be blank"
+
+      assert new_live |> submit_disabled()
+
+      assert new_live
+             |> form("#credential-form")
+             |> render_submit() =~ "can&#39;t be blank"
+
+      refute_redirected(new_live, Routes.credential_index_path(conn, :index))
+
+      assert new_live
+             |> form("#credential-form",
+               credential: %{name: "My Credential"},
+               body: %{username: "foo", password: "bar", baseUrl: "baz"}
+             )
+             |> render_change() =~ "expected to be a URI"
+
+      assert new_live
+             |> form("#credential-form",
+               body: %{baseUrl: "http://localhost"}
+             )
+             |> render_change()
+
+      refute new_live |> submit_disabled()
+
+      assert new_live
+             |> form("#credential-form",
+               body: %{baseUrl: ""}
+             )
+             |> render_change()
+
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        new_live
+        |> form("#credential-form")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      {_path, flash} = assert_redirect(new_live)
+      assert flash == %{"info" => "Credential created successfully"}
+    end
   end
 
   describe "Edit" do

@@ -24,7 +24,7 @@
           <%= render("menu_items.html", assigns) %>
           <div class="grow"></div>
           <%= if @current_user.role == :superuser do %>
-            <Settings.menu_item to={Routes.settings_index_path(@socket, :index)}>
+            <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
               <Heroicons.Outline.cog class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Admin Settings</span>
             </Settings.menu_item>
