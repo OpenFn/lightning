@@ -145,6 +145,8 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
 
           <div class="md:col-span-1">
             <Components.Jobs.credential_select form={f} credentials={@credentials} />
+            <%= live_redirect("New credential", to: Routes.project_workflow_path(@socket, :new_credential, @project.id, @job.id)) %>
+
           </div>
 
           <div class="md:col-span-1">

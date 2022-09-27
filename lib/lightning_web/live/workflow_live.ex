@@ -51,6 +51,17 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
+  defp apply_action(socket, :new_credential,  %{"job_id" => job_id}) do
+    job = Lightning.Jobs.get_job!(job_id)
+    socket
+    |> assign(
+      job: job,
+      active_menu_item: :overview,
+      page_title: socket.assigns.project.name
+    )
+  end
+
+
   defp apply_action(socket, :show, _params) do
     socket
     |> assign(
@@ -122,6 +133,14 @@ defmodule LightningWeb.WorkflowLive do
       </:header>
       <div class="relative h-full">
         <%= case @live_action do %>
+          <% :new_credential -> %>
+            <.live_component
+              module={LightningWeb.Components.CredentialEditModal}
+              id="new-credential"
+              job={@job}
+              project={@project}
+              return_to={Routes.profile_edit_path(@socket, :edit)}
+            />
           <% :new_job -> %>
             <div class="absolute top-0 right-0 m-2 z-10">
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
