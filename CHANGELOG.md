@@ -9,6 +9,7 @@ and this project adheres to
 ## [Unreleased]
 
 - create adaptor credentials through a form
+- Redirect users to projects list page when they click on Admin Settings menu
 
 ## [0.2.0] - 2022-09-12
 
