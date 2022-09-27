@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>LightningWeb.AuthProvidersLive.FormComponent — Lightning v0.2.0</title>
+    <title>Lightning.Demo — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-567eb067bb.js"></script>
@@ -99,24 +99,98 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/auth_providers/form_component.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/demo.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.AuthProvidersLive.FormComponent</span> 
+  <span translate="no">Lightning.Demo</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Form Component for working with a single Job</p><p>A Job's <code class="inline">adaptor</code> field is a combination of the module name and the version.
-It's formatted as an NPM style string.</p><p>The form allows the user to select a module by name and then it's version,
-while the version dropdown itself references <code class="inline">adaptor</code> directly.</p><p>Meaning the <code class="inline">adaptor_name</code> dropdown and assigns value is not persisted.</p>
+<p>Demo encapsulates logic for setting up initial data for the demo site</p>
   </section>
 
 
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+      Summary
+    </h1>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#setup/1" translate="no">setup(opts \\ [create_super: false])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates initial data and returns the created records.</p></div>
+
+      </div>
+
+  </div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="setup/1">
+
+    <span id="setup/0"></span>
+
+  <div class="detail-header">
+    <a href="#setup/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">setup(opts \\ [create_super: false])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/demo.ex#L17" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> setup(nil | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">maybe_improper_list</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: %{
+  jobs: [...],
+  projects: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
+  users: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
+  workflows: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...]
+}</pre>
+
+      </div>
+
+<p>Creates initial data and returns the created records.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
 
       <footer class="footer">
 
