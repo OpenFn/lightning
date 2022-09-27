@@ -36,42 +36,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign_valid()}
   end
 
-  defp fake_body_schema(_schema) do
-    """
-    {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "properties": {
-        "username": {
-          "title": "Username",
-          "type": "string",
-          "description": "The username used to log in",
-          "minLength": 1
-        },
-        "password": {
-          "title": "Password",
-          "type": "string",
-          "description": "The password used to log in",
-          "writeOnly": true,
-          "minLength": 1
-        },
-        "hostUrl": {
-          "title": "Host URL",
-          "type": "string",
-          "description": "The destination server Url",
-          "format": "uri",
-          "minLength": 1
-        }
-      },
-      "type": "object",
-      "additionalProperties": true,
-      "required": ["hostUrl", "password", "username"]
-    }
-    """
+  defp read_schema(schema) do
+    File.read!("./priv/schemas/#{schema}.json")
     |> Jason.decode!()
   end
 
   def schema_input(schema_root, changeset, field) do
-    # credential[project_credentials][0][project_id]
     properties =
       schema_root.schema
       |> Map.get("properties")
@@ -84,6 +54,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         %{"format" => "uri"} -> :url_input
         %{"type" => "string", "writeOnly" => true} -> :password_input
         %{"type" => "string"} -> :text_input
+        %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> :text_input
       end
 
     value = changeset |> get_field(field, nil)
@@ -138,21 +109,18 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           )
       )
 
-    %{changeset: changeset, schema: schema} = socket.assigns
-
-    case {schema, changeset |> fetch_field!(:schema)} do
-      {_schema, nil} ->
+    case fetch_field!(socket.assigns.changeset, :schema) do
+      nil ->
         socket
 
-      {_schema, "raw"} ->
-        socket
-        |> assign(schema: nil, schema_changeset: nil)
+      "raw" ->
+        socket |> assign(schema: nil, schema_changeset: nil)
 
-      {nil, schema_type} when not is_nil(schema_type) ->
+      schema_type ->
         schema =
           Credentials.Schema.new(
-            fake_body_schema(schema_type),
-            changeset |> fetch_field!(:body) || %{}
+            read_schema(schema_type),
+            socket.assigns.changeset |> fetch_field!(:body) || %{}
           )
 
         schema_changeset = create_schema_changeset(schema, params)
@@ -169,20 +137,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           schema_changeset: schema_changeset,
           changeset: changeset
         )
-
-      {schema, _schema_type} ->
-        schema_changeset =
-          create_schema_changeset(schema, params)
-          |> Map.put(:action, :validate)
-
-        changeset =
-          create_changeset(
-            socket.assigns.credential,
-            merge_schema_body(params["credential"], schema_changeset)
-          )
-
-        socket
-        |> assign(schema_changeset: schema_changeset, changeset: changeset)
     end
   end
 

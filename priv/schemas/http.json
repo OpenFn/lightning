@@ -1,0 +1,36 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+        "username": {
+            "title": "Username",
+            "type": "string",
+            "description": "The username used to log in to the destination system"
+        },
+        "password": {
+            "title": "Password",
+            "type": "string",
+            "description": "The password used to log in to the destination system",
+            "writeOnly": true
+        },
+        "baseUrl": {
+            "title": "Base URL",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "description": "The base URL for the destination system",
+            "format": "uri",
+            "minLength": 1
+        }
+    },
+    "type": "object",
+    "additionalProperties": true,
+    "required": [
+        "password",
+        "username"
+    ]
+}
