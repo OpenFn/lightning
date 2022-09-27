@@ -1,7 +1,5 @@
-defmodule Lightning.SetupDemoTest do
+defmodule Lightning.DemoTest do
   use Lightning.DataCase, async: true
-
-  import Lightning.SetupDemo
 
   alias Lightning.Accounts
   alias Lightning.Projects
@@ -11,11 +9,11 @@ defmodule Lightning.SetupDemoTest do
 
   describe "Setup demo site seed data" do
     setup do
-      create_data()
+      Lightning.Demo.setup(create_super: true)
     end
 
     test "all initial data is present in database", %{
-      users: [openhie_admin, openhie_editor, openhie_viewer] = users,
+      users: [super_user, admin, editor, viewer] = users,
       projects: [openhie_project, dhis2_project] = projects,
       workflows: [openhie_workflow, dhis2_workflow] = workflows,
       jobs:
@@ -28,39 +26,32 @@ defmodule Lightning.SetupDemoTest do
           upload_to_google_sheet
         ] = jobs
     } do
-      assert users |> Enum.count() == 3
+      assert users |> Enum.count() == 4
       assert projects |> Enum.count() == 2
       assert workflows |> Enum.count() == 2
       assert jobs |> Enum.count() == 6
 
-      assert openhie_admin.first_name == "openhie_admin"
-      assert openhie_admin.last_name == "admin"
-      assert openhie_admin.email == "openhie_admin@gmail.com"
-      User.valid_password?(openhie_admin, "openhie_admin123")
+      assert super_user.email == "super@openfn.org"
+      User.valid_password?(super_user, "welcome123")
 
-      assert openhie_editor.first_name == "openhie_editor"
-      assert openhie_editor.last_name == "editor"
-      assert openhie_editor.email == "openhie_editor@gmail.com"
-      User.valid_password?(openhie_editor, "openhie_editor123")
+      assert admin.email == "demo@openfn.org"
+      User.valid_password?(admin, "welcome123")
 
-      assert openhie_viewer.first_name == "openhie_viewer"
-      assert openhie_viewer.last_name == "viewer"
-      assert openhie_viewer.email == "openhie_viewer@gmail.com"
-      User.valid_password?(openhie_viewer, "openhie_viewer123")
+      assert editor.email == "editor@openfn.org"
+      User.valid_password?(editor, "welcome123")
+
+      assert viewer.email == "viewer@openfn.org"
+      User.valid_password?(viewer, "welcome123")
 
       assert Enum.map(
                openhie_project.project_users,
-               fn project_user ->
-                 project_user.user_id
-               end
-             ) == Enum.map(users, fn user -> user.id end)
+               fn project_user -> project_user.user_id end
+             ) == [admin.id, editor.id, viewer.id]
 
       assert Enum.map(
                dhis2_project.project_users,
-               fn project_user ->
-                 project_user.user_id
-               end
-             ) == [openhie_admin.id]
+               fn project_user -> project_user.user_id end
+             ) == [admin.id]
 
       assert fhir_standard_data.workflow_id == openhie_workflow.id
       assert send_to_openhim.workflow_id == openhie_workflow.id

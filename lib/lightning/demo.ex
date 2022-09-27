@@ -1,64 +1,84 @@
-defmodule Lightning.SetupDemo do
+defmodule Lightning.Demo do
   @moduledoc """
-  SetupDemo encapsulates logic for setting up initial data for the demo site
+  Demo encapsulates logic for setting up initial data for the demo site
   """
 
   alias Lightning.{Projects, Accounts, Jobs, Workflows}
 
+  @spec setup(nil | maybe_improper_list | map) :: %{
+          jobs: [...],
+          projects: [atom | %{:id => any, optional(any) => any}, ...],
+          users: [atom | %{:id => any, optional(any) => any}, ...],
+          workflows: [atom | %{:id => any, optional(any) => any}, ...]
+        }
   @doc """
   Creates initial data and returns the created records.
   """
-  def create_data do
-    {:ok, openhie_admin} =
+  def setup(opts \\ [create_super: false]) do
+    {:ok, super_user} =
+      if opts[:create_super] do
+        Accounts.register_superuser(%{
+          first_name: "Sizwe",
+          last_name: "Super",
+          email: "super@openfn.org",
+          password: "welcome123"
+        })
+      else
+        {:ok, nil}
+      end
+
+    {:ok, admin} =
       Accounts.register_user(%{
-        first_name: "openhie_admin",
-        last_name: "admin",
-        email: "openhie_admin@gmail.com",
-        password: "openhie_admin123"
+        first_name: "Amy",
+        last_name: "Admin",
+        email: "demo@openfn.org",
+        password: "welcome123"
       })
 
-    {:ok, openhie_editor} =
+    {:ok, editor} =
       Accounts.register_user(%{
-        first_name: "openhie_editor",
-        last_name: "editor",
-        email: "openhie_editor@gmail.com",
-        password: "openhie_editor123"
+        first_name: "Esther",
+        last_name: "Editor",
+        email: "editor@openfn.org",
+        password: "welcome123"
       })
 
-    {:ok, openhie_viewer} =
+    {:ok, viewer} =
       Accounts.register_user(%{
-        first_name: "openhie_viewer",
-        last_name: "viewer",
-        email: "openhie_viewer@gmail.com",
-        password: "openhie_viewer123"
+        first_name: "Vikram",
+        last_name: "Viewer",
+        email: "viewer@openfn.org",
+        password: "welcome123"
       })
 
     {:ok, openhie_project} =
       Projects.create_project(%{
-        name: "openhie-demo-project",
+        name: "openhie-project",
         project_users: [
-          %{user_id: openhie_admin.id},
-          %{user_id: openhie_editor.id},
-          %{user_id: openhie_viewer.id}
+          %{user_id: admin.id, role: :admin},
+          %{user_id: editor.id, role: :editor},
+          %{user_id: viewer.id, role: :viewer}
         ]
       })
 
     {:ok, dhis2_project} =
       Projects.create_project(%{
-        name: "dhis2-demo-project",
-        project_users: [%{user_id: openhie_admin.id}]
+        name: "dhis2-project",
+        project_users: [
+          %{user_id: admin.id, role: :admin}
+        ]
       })
 
     {:ok, openhie_workflow} =
       Workflows.create_workflow(%{
-        name: "OpenHIE demo workflow",
+        name: "OpenHIE Workflow",
         project_id: openhie_project.id
       })
 
     {:ok, fhir_standard_data} =
       Jobs.create_job(%{
         name: "Transform data to FHIR standard",
-        body: "fn(state => state)",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "webhook"},
         project_id: openhie_project.id,
@@ -68,7 +88,7 @@ defmodule Lightning.SetupDemo do
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
-        body: "fn(state => state)",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{
           type: "on_job_success",
@@ -80,7 +100,7 @@ defmodule Lightning.SetupDemo do
     {:ok, notify_upload_successful} =
       Jobs.create_job(%{
         name: "Notify CHW upload successful",
-        body: "fn(state => state)",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "on_job_success", upstream_job_id: send_to_openhim.id},
         project_id: openhie_project.id
@@ -89,7 +109,7 @@ defmodule Lightning.SetupDemo do
     {:ok, notify_upload_failed} =
       Jobs.create_job(%{
         name: "Notify CHW upload failed",
-        body: "fn(state => state)",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "on_job_failure", upstream_job_id: send_to_openhim.id},
         project_id: openhie_project.id
@@ -97,14 +117,14 @@ defmodule Lightning.SetupDemo do
 
     {:ok, dhis2_workflow} =
       Workflows.create_workflow(%{
-        name: "Load DHIS2 data to sheets",
+        name: "DHIS2 to Sheets",
         project_id: dhis2_project.id
       })
 
     {:ok, get_dhis2_data} =
       Jobs.create_job(%{
         name: "Get DHIS2 data",
-        body: "fn(state => state)",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-dhis2",
         trigger: %{type: "cron", cron_expression: "0 * * * *"},
         project_id: dhis2_project.id,
@@ -113,15 +133,15 @@ defmodule Lightning.SetupDemo do
 
     {:ok, upload_to_google_sheet} =
       Jobs.create_job(%{
-        name: "Upload to google sheet",
-        body: "fn(state => state)",
+        name: "Upload to Google Sheet",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "on_job_success", upstream_job_id: get_dhis2_data.id},
         project_id: dhis2_project.id
       })
 
     %{
-      users: [openhie_admin, openhie_editor, openhie_viewer],
+      users: [super_user, admin, editor, viewer],
       projects: [openhie_project, dhis2_project],
       workflows: [openhie_workflow, dhis2_workflow],
       jobs: [

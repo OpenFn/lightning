@@ -14,7 +14,9 @@ defmodule LightningWeb.DashboardLiveTest do
     } do
       {:ok, _view, html} = live(conn, Routes.dashboard_index_path(conn, :index))
 
-      assert html =~ "No project found, please talk to your administrator."
+      assert html =~
+               "No projects found. If this seems odd, contact your instance administrator."
+
       assert html =~ "User Profile"
       assert html =~ "Credentials"
     end
