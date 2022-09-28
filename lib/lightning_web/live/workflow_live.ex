@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
+  alias Lightning.Projects
 
   defp encode_project_space(project) do
     Workflows.get_workflows_for(project)
@@ -22,7 +23,8 @@ defmodule LightningWeb.WorkflowLive do
      socket
      |> assign(
        active_menu_item: :projects,
-       encoded_project_space: encode_project_space(project)
+       encoded_project_space: encode_project_space(project),
+       new_credential: false
      )}
   end
 
@@ -40,6 +42,12 @@ defmodule LightningWeb.WorkflowLive do
        encoded_project_space: encode_project_space(socket.assigns.project)
      )}
   end
+  @impl true
+  def handle_event("new-credential", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:new_credential, true)}
+  end
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -50,17 +58,6 @@ defmodule LightningWeb.WorkflowLive do
        params
      )}
   end
-
-  defp apply_action(socket, :new_credential,  %{"job_id" => job_id}) do
-    job = Lightning.Jobs.get_job!(job_id)
-    socket
-    |> assign(
-      job: job,
-      active_menu_item: :overview,
-      page_title: socket.assigns.project.name
-    )
-  end
-
 
   defp apply_action(socket, :show, _params) do
     socket
@@ -132,15 +129,16 @@ defmodule LightningWeb.WorkflowLive do
         </Layout.header>
       </:header>
       <div class="relative h-full">
+        <%= if @new_credential do %>
+          <.live_component
+            module={LightningWeb.CredentialLive.CredentialEditModal}
+            id="new-credential"
+            job={@job}
+            project={@project}
+            current_user={@current_user}
+          />
+        <% end %>
         <%= case @live_action do %>
-          <% :new_credential -> %>
-            <.live_component
-              module={LightningWeb.Components.CredentialEditModal}
-              id="new-credential"
-              job={@job}
-              project={@project}
-              return_to={Routes.profile_edit_path(@socket, :edit)}
-            />
           <% :new_job -> %>
             <div class="absolute top-0 right-0 m-2 z-10">
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
