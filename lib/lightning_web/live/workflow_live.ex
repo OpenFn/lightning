@@ -51,16 +51,15 @@ defmodule LightningWeb.WorkflowLive do
       Projects.get_project_credential(project.id, credential.id)
 
     {:noreply,
-      socket
-      |> put_flash(:info, "Credential created successfully")
-      |> assign(
+     socket
+     |> put_flash(:info, "Credential created successfully")
+     |> assign(
        initial_job_params: %{
-        "project_credential_id" => project_credential.id,
-        "project_credential" => project_credential
+         "project_credential_id" => project_credential.id,
+         "project_credential" => project_credential
        }
-      )
-      |> assign(:new_credential, false)
-    }
+     )
+     |> assign(:new_credential, false)}
   end
 
   @impl true
@@ -73,7 +72,6 @@ defmodule LightningWeb.WorkflowLive do
   def handle_event("close_modal", _, socket) do
     {:noreply, socket |> assign(:new_credential, false)}
   end
-
 
   @impl true
   def handle_params(params, _url, socket) do

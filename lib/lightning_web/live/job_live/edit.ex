@@ -24,8 +24,7 @@ defmodule LightningWeb.JobLive.Edit do
            &1
          )
      )
-     |> assign(:initial_job_params, %{})
-     }
+     |> assign(:initial_job_params, %{})}
   end
 
   @impl true

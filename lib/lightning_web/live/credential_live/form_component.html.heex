@@ -146,16 +146,22 @@
 
     <div>
       <span>
-      <%= unless @has_project_owner do %>
-        <%= live_redirect("Cancel",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-          to: Routes.credential_index_path(@socket, :index)
-        ) %>
-      <% else %>
-      <button type="button" label="close" phx-click={PetalComponents.Modal.hide_modal()} class=
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">Cancel</button>
-      <% end %>
+        <%= unless @has_project_owner do %>
+          <%= live_redirect("Cancel",
+            class:
+              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+            to: Routes.credential_index_path(@socket, :index)
+          ) %>
+        <% else %>
+          <button
+            type="button"
+            label="close"
+            phx-click={PetalComponents.Modal.hide_modal()}
+            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+          >
+            Cancel
+          </button>
+        <% end %>
       </span>
       <span>
         <LightningWeb.Components.Form.submit_button
