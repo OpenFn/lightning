@@ -105,7 +105,6 @@ defmodule LightningWeb.Router do
         live "/dataclips/:id/edit", DataclipLive.Edit, :edit
 
         live "/j/new", WorkflowLive, :new_job
-        live "/j/credential", WorkflowLive, :new_credential
         live "/j/:job_id", WorkflowLive, :edit_job
         live "/w/:workflow_id", WorkflowLive, :edit_workflow
         live "/", WorkflowLive, :show
