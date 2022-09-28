@@ -43,8 +43,8 @@ defmodule LightningWeb.JobLive.FormComponent do
     end
   end
 
-  def update(%{job: job, project: project, initial_params: initial_params} = assigns, socket) do
-    changeset = Jobs.change_job(job, initial_params)
+  def update(%{job: job, project: project, initial_job_params: initial_job_params} = assigns, socket) do
+    changeset = Jobs.change_job(job, initial_job_params)
 
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(

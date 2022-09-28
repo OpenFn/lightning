@@ -25,7 +25,7 @@ defmodule LightningWeb.WorkflowLive do
        active_menu_item: :projects,
        encoded_project_space: encode_project_space(project),
        new_credential: false,
-       initial_params: %{}
+       initial_job_params: %{}
      )}
   end
 
@@ -54,7 +54,7 @@ defmodule LightningWeb.WorkflowLive do
       socket
       |> put_flash(:info, "Credential created successfully")
       |> assign(
-       initial_params: %{
+       initial_job_params: %{
         "project_credential_id" => project_credential.id,
         "project_credential" => project_credential
        }
@@ -108,7 +108,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
-      initial_params: %{
+      initial_job_params: %{
         "project_id" => socket.assigns.project.id
       },
       page_title: socket.assigns.project.name
@@ -122,7 +122,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
-      initial_params: %{},
+      initial_job_params: %{},
       page_title: socket.assigns.project.name
     )
   end
@@ -178,7 +178,7 @@ defmodule LightningWeb.WorkflowLive do
                   job={@job}
                   action={:new}
                   project={@project}
-                  initial_params={@initial_params}
+                  initial_job_params={@initial_job_params}
                   return_to={
                     Routes.project_workflow_path(
                       @socket,
@@ -198,7 +198,7 @@ defmodule LightningWeb.WorkflowLive do
                   job={@job}
                   action={:edit}
                   project={@project}
-                  initial_params={@initial_params}
+                  initial_job_params={@initial_job_params}
                   return_to={
                     Routes.project_workflow_path(
                       @socket,

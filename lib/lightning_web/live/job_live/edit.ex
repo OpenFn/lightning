@@ -24,7 +24,7 @@ defmodule LightningWeb.JobLive.Edit do
            &1
          )
      )
-     |> assign(:initial_params, %{})
+     |> assign(:initial_job_params, %{})
      }
   end
 
@@ -51,7 +51,7 @@ defmodule LightningWeb.JobLive.Edit do
       Lightning.Credentials.list_credentials()
     )
     |> assign(:job, %Job{project_id: socket.assigns.project.id})
-    |> assign(:initial_params, %{
+    |> assign(:initial_job_params, %{
       "project_id" => socket.assigns.project.id
     })
   end
