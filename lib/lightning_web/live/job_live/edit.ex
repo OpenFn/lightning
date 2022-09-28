@@ -23,7 +23,9 @@ defmodule LightningWeb.JobLive.Edit do
            socket.assigns.project,
            &1
          )
-     )}
+     )
+     |> assign(:initial_params, %{})
+     }
   end
 
   @impl true
