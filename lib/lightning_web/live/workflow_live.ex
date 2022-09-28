@@ -42,6 +42,16 @@ defmodule LightningWeb.WorkflowLive do
        encoded_project_space: encode_project_space(socket.assigns.project)
      )}
   end
+
+  def handle_info({:added_credential, credential}, socket) do
+    project = socket.assigns.project
+
+    project_credential =
+      Projects.get_project_credential(project.id, credential.id)
+
+    {:noreply, socket |> put_flash(:info, "Credential created successfully")}
+  end
+
   @impl true
   def handle_event("new-credential", _params, socket) do
     {:noreply,
