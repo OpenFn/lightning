@@ -8,17 +8,13 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
   alias Lightning.Projects
 
   @impl true
-  def update(%{project: project} = assigns, socket) do
+  def update(%{project: _project} = assigns, socket) do
     {:ok,
      socket
      # |> assign(:scheduled_deletion_changeset, Accounts.change_scheduled_deletion(user))
      |> assign(assigns)}
   end
 
-  @impl true
-  def handle_event("close_modal", _, socket) do
-    {:noreply, socket}
-  end
 
   @impl true
   def render(assigns) do
@@ -27,7 +23,6 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
       <PetalComponents.Modal.modal
         max_width="lg"
         title="Create credential"
-        close_modal_target={@myself}
       >
         <.live_component
           module={LightningWeb.CredentialLive.FormComponent}
