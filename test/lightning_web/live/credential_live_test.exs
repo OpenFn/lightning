@@ -4,6 +4,8 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.CredentialsFixtures
 
+  import Lightning.JobsFixtures
+
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -443,6 +445,61 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "some name"
       refute html =~ "the one for giving away"
     end
+  end
+
+  describe "New credential from project context " do
+
+    setup %{project: project} do
+      %{job: job_fixture(project_id: project.id)}
+    end
+
+    test "open credential modal from the job inspector (edit_job)", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert has_element?(view, "#job-#{job.id}")
+
+      assert view
+      |> element("#new-credential-launcher", "New credential")
+      |> render_click()
+
+      assert has_element?(view, "#credential-form")
+      refute has_element?(view, "#project_list")
+
+    end
+
+
+    test "open credential modal from the new job form", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_job_edit_path(conn, :new, project.id)
+        )
+
+      assert view
+
+      |> element("#new-credential-launcher", "New credential")
+      |> render_click()
+
+      assert has_element?(view, "#credential-form")
+      refute has_element?(view, "#project_list")
+
+    end
+
+
+
+
   end
 
   defp submit_disabled(live) do

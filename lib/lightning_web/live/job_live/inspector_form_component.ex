@@ -145,7 +145,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
 
           <div class="md:col-span-1">
             <Components.Jobs.credential_select form={f} credentials={@credentials} />
-            <button type="button" phx-click="new-credential" phx-value-test="hello">
+            <button id="new-credential-launcher" type="button" phx-click="new-credential" phx-value-test="hello">
               New credential
             </button>
           </div>
