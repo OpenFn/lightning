@@ -497,7 +497,41 @@ defmodule LightningWeb.CredentialLiveTest do
 
     end
 
+    test "create new credential from job inspector and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      #project_credential = project_credential_fixture(user_id: user.id, project_id: project.id)
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
 
+      assert view
+      |> element("#new-credential-launcher", "New credential")
+      |> render_click()
+
+
+      view
+      |> form("#credential-form", credential: %{schema: "raw"})
+      |> render_change()
+
+      view
+      |> form("#credential-form", credential: @create_attrs)
+      |> render_submit()
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             #|> render() =~ project_credential.id,
+             "Should have the project credential selected"
+
+    end
 
 
   end
