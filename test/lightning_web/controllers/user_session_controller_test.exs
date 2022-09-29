@@ -1,5 +1,5 @@
 defmodule LightningWeb.UserSessionControllerTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Lightning.AccountsFixtures
   alias Lightning.AuthProviders
