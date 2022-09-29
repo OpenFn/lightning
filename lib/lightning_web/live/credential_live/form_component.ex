@@ -19,7 +19,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign(
-       has_project_owner: socket.view == LightningWeb.WorkflowLive || socket.view == LightningWeb.JobLive.Edit,
+       has_project_owner: socket.view != LightningWeb.CredentialLive.Edit,
        all_projects: all_projects,
        changeset: nil,
        available_projects: filter_available_projects(changeset, all_projects),
@@ -298,8 +298,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
-        if socket.view == LightningWeb.WorkflowLive || socket.view == LightningWeb.JobLive.Edit do
-          # if view == WorkflowLive we're in a modal -> we send the credential back to the view (will be hadled by handle_info callback)
+        if socket.view != LightningWeb.CredentialLive.Edit do
+          # if view == WorkflowLive or  JobLive.Edit we're in a modal -> we send the credential back to the view (will be hadled by handle_info callback)
           send(self(), {:added_credential, credential})
           {:noreply, socket}
         else
