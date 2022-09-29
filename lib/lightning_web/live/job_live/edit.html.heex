@@ -3,6 +3,15 @@
     <Layout.header title={@job.name} socket={@socket} />
   </:header>
   <Layout.centered>
+    <%= if @new_credential do %>
+      <.live_component
+        module={LightningWeb.CredentialLive.CredentialEditModal}
+        id="new-credential"
+        job={@job}
+        project={@project}
+        current_user={@current_user}
+      />
+    <% end %>
     <.live_component
       module={LightningWeb.JobLive.InspectorFormComponent}
       id={@job.id || :new}
