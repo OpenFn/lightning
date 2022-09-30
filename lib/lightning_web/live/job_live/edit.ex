@@ -26,28 +26,20 @@ defmodule LightningWeb.JobLive.Edit do
          )
      )
      |> assign(:initial_job_params, %{})
-     |> assign(:new_credential, false)
-
-    }
-
+     |> assign(:new_credential, false)}
   end
 
   @impl true
-  @spec handle_params(any, any, %{
-          :assigns =>
-            atom | %{:live_action => :edit | :new, optional(any) => any},
-          optional(any) => any
-        }) :: {:noreply, map}
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   @impl true
-  @spec handle_event(<<_::88, _::_*24>>, any, map) :: {:noreply, map}
-  def handle_event("new-credential", _params, socket) do
+  def handle_event("new-credential", params, socket) do
     {:noreply,
      socket
-     |> assign(:new_credential, true)}
+     |> assign(:new_credential, true)
+     |> assign(:initial_job_params, params)}
   end
 
   def handle_event("close_modal", _, socket) do
@@ -65,10 +57,11 @@ defmodule LightningWeb.JobLive.Edit do
      socket
      |> put_flash(:info, "Credential created successfully")
      |> assign(
-       initial_job_params: %{
-         "project_credential_id" => project_credential.id,
-         "project_credential" => project_credential
-       }
+       initial_job_params:
+         Map.merge(socket.assigns.initial_job_params, %{
+           "project_credential_id" => project_credential.id,
+           "project_credential" => project_credential
+         })
      )
      |> assign(:new_credential, false)}
   end

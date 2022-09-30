@@ -72,7 +72,8 @@ defmodule LightningWeb.JobLive.FormComponent do
      |> assign(:credentials, credentials)
      |> assign(:upstream_jobs, upstream_jobs)
      |> assign(:versions, versions)
-     |> assign(:changeset, changeset)}
+     |> assign(:changeset, changeset)
+     |> assign(:job_params, %{})}
   end
 
   def validate(%{"job" => job_params}, socket) do
@@ -93,6 +94,7 @@ defmodule LightningWeb.JobLive.FormComponent do
     |> assign(:adaptor_name, adaptor_name)
     |> assign(:adaptors, adaptors)
     |> assign(:versions, versions)
+    |> assign(:job_params, job_params)
   end
 
   def save(_params, _socket) do

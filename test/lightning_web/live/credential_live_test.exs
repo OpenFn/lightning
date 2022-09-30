@@ -448,7 +448,6 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   describe "New credential from project context " do
-
     setup %{project: project} do
       %{job: job_fixture(project_id: project.id)}
     end
@@ -458,7 +457,6 @@ defmodule LightningWeb.CredentialLiveTest do
       project: project,
       job: job
     } do
-
       {:ok, view, _html} =
         live(
           conn,
@@ -468,14 +466,12 @@ defmodule LightningWeb.CredentialLiveTest do
       assert has_element?(view, "#job-#{job.id}")
 
       assert view
-      |> element("#new-credential-launcher", "New credential")
-      |> render_click()
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
 
       assert has_element?(view, "#credential-form")
       refute has_element?(view, "#project_list")
-
     end
-
 
     test "open credential modal from the new job form", %{
       conn: conn,
@@ -488,13 +484,11 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       assert view
-
-      |> element("#new-credential-launcher", "New credential")
-      |> render_click()
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
 
       assert has_element?(view, "#credential-form")
       refute has_element?(view, "#project_list")
-
     end
 
     test "create new credential from job inspector and update the job form", %{
@@ -502,7 +496,7 @@ defmodule LightningWeb.CredentialLiveTest do
       project: project,
       job: job
     } do
-      #project_credential = project_credential_fixture(user_id: user.id, project_id: project.id)
+      # project_credential = project_credential_fixture(user_id: user.id, project_id: project.id)
       {:ok, view, _html} =
         live(
           conn,
@@ -510,9 +504,8 @@ defmodule LightningWeb.CredentialLiveTest do
         )
 
       assert view
-      |> element("#new-credential-launcher", "New credential")
-      |> render_click()
-
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
 
       view
       |> form("#credential-form", credential: %{schema: "raw"})
@@ -528,12 +521,10 @@ defmodule LightningWeb.CredentialLiveTest do
              |> element(
                ~S{#job-form select#credentialField option[selected=selected]}
              )
-             #|> render() =~ project_credential.id,
-             "Should have the project credential selected"
 
+      # |> render() =~ project_credential.id,
+      "Should have the project credential selected"
     end
-
-
   end
 
   defp submit_disabled(live) do
