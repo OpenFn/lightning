@@ -465,9 +465,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert has_element?(view, "#job-#{job.id}")
 
+      # open the new credential modal
+
       assert view
              |> element("#new-credential-launcher", "New credential")
              |> render_click()
+
+      # assertions
 
       assert has_element?(view, "#credential-form")
       refute has_element?(view, "#project_list")
@@ -483,9 +487,13 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.project_job_edit_path(conn, :new, project.id)
         )
 
+      # open the new credential modal
+
       assert view
              |> element("#new-credential-launcher", "New credential")
              |> render_click()
+
+      # assertions
 
       assert has_element?(view, "#credential-form")
       refute has_element?(view, "#project_list")
@@ -496,24 +504,39 @@ defmodule LightningWeb.CredentialLiveTest do
       project: project,
       job: job
     } do
-      # project_credential = project_credential_fixture(user_id: user.id, project_id: project.id)
       {:ok, view, _html} =
         live(
           conn,
           Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
         )
 
+      # open the new credential modal
+
       assert view
              |> element("#new-credential-launcher", "New credential")
              |> render_click()
 
+      # fill the modal and save
+
       view
-      |> form("#credential-form", credential: %{schema: "raw"})
+      |> form("#credential-form",
+        credential: %{
+          schema: "raw"
+        }
+      )
       |> render_change()
 
       view
-      |> form("#credential-form", credential: @create_attrs)
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          schema: "raw",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
       |> render_submit()
+
+      # assertions
 
       refute has_element?(view, "#credential-form")
 
@@ -521,9 +544,118 @@ defmodule LightningWeb.CredentialLiveTest do
              |> element(
                ~S{#job-form select#credentialField option[selected=selected]}
              )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+    end
 
-      # |> render() =~ project_credential.id,
-      "Should have the project credential selected"
+    test "create new credential from new job form and update the job form", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_job_edit_path(conn, :new, project.id)
+        )
+
+      # open the new credential modal
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          schema: "raw"
+        }
+      )
+      |> render_change()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          schema: "raw",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+    end
+
+    test "create new credential from edit job form and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_job_edit_path(conn, :edit, project.id, job.id)
+        )
+
+      # change the job name so we can assert that the form state had been kept after saving the new credential
+
+      view
+      |> form("#job-form",
+        job: %{
+          name: "last typed name"
+        }
+      )
+      |> render_change()
+
+      # open the new credential modal
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          schema: "raw"
+        }
+      )
+      |> render_change()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          schema: "raw",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+
+      assert view
+             |> element(~S{#job-form input#job-form_name})
+             |> render() =~ "last typed name",
+             "Should have kept the job form state after saving the new credential"
     end
   end
 
