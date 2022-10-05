@@ -299,7 +299,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     |> case do
       {:ok, credential} ->
         if socket.view != LightningWeb.CredentialLive.Edit do
-          # if view == WorkflowLive or  JobLive.Edit we're in a modal -> we send the credential back to the view (will be hadled by handle_info callback)
+          # if view == WorkflowLive or  JobLive.Edit we're in a modal -> we send the credential back to the view (will be handled by handle_info callback)
           send(self(), {:added_credential, credential})
           {:noreply, socket}
         else
