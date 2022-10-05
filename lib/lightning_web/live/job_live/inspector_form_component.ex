@@ -138,7 +138,24 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                 <% end %>
               <% end %>
               <%= if requires_cron_job?(ft.source) do %>
-                <Form.text_field form={ft} id={:cron_expression} />
+                <br />
+                <PetalComponents.Form.form_field
+                  type="radio_group"
+                  form={ft}
+                  name={:cron_type}
+                  field={:radio_group}
+                  label="Select periodicity"
+                  phx-click="inc_temperature"
+                  options={
+                    [
+                      "Every hour": "hourly",
+                      "Every day": "daily",
+                      "Every week": "weekly",
+                      "Every month": "monthly",
+                      Custom: "custom"
+                    ]
+                  }
+                />
               <% end %>
             <% end %>
           </div>

@@ -161,6 +161,10 @@ defmodule LightningWeb.JobLive.FormComponent do
     get_field(changeset, :type) in [:on_job_failure, :on_job_success]
   end
 
+  def handle_event("inc_temperature", value, _socket) do
+    IO.inspect(value, label: "INC")
+  end
+
   def requires_cron_job?(changeset) do
     get_field(changeset, :type) == :cron
   end
