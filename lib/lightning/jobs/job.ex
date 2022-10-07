@@ -49,7 +49,8 @@ defmodule Lightning.Jobs.Job do
     field :name, :string
     field :adaptor, :string
 
-    has_one :trigger, Trigger
+    #has_one :trigger, Trigger
+    belongs_to :trigger, Trigger
     has_many :events, Lightning.Invocation.Event
 
     # belongs_to :credential, Credential

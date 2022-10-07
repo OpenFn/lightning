@@ -15,6 +15,7 @@ defmodule Lightning.Jobs.Trigger do
   import Ecto.Changeset
 
   alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -32,7 +33,9 @@ defmodule Lightning.Jobs.Trigger do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    belongs_to :job, Job
+    #belongs_to :job, Job
+    has_many :jobs, Job
+    belongs_to :workflow, Workflow
     belongs_to :upstream_job, Job
 
     field :type, Ecto.Enum, values: @trigger_types, default: :webhook

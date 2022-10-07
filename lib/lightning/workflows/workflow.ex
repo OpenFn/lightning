@@ -10,7 +10,7 @@ defmodule Lightning.Workflows.Workflow do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Jobs.Job
+  alias Lightning.Jobs.{Job, Trigger}
   alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
@@ -26,6 +26,7 @@ defmodule Lightning.Workflows.Workflow do
     field(:name, :string)
 
     has_many(:jobs, Job)
+    has_many(:triggers, Trigger)
     belongs_to :project, Project
 
     timestamps()
