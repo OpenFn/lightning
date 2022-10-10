@@ -66,20 +66,6 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
     end
   end
 
-  defp display_input(assigns) do
-    case @picked_cron_type |> IO.inspect() do
-      %{"value" => "custom"} ->
-        ~H"""
-        <Form.text_field form={@form} id={:cron_expression} />
-        """
-
-      nil ->
-        ~H"""
-
-        """
-    end
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -157,6 +143,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                   type="radio_group"
                   form={ft}
                   name={:cron_type}
+                  layout={:row}
                   field={:radio_group}
                   label="Select periodicity"
                   phx-click="on_cron_type_change"
@@ -171,7 +158,74 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                   }
                 />
               <% end %>
-              <.display_input form={ft} picked_cron_type={@picked_cron_type} />
+              <%= if @picked_cron_type == %{"value" => "hourly"} do %>
+                <span class="block text-sm font-medium text-secondary-700">
+                  Select minute
+                </span>
+                <Form.select_field
+                  form={ft}
+                  name={:minutes}
+                  prompt=""
+                  id="minute"
+                  values={0..59}
+                />
+              <% end %>
+              <%= if @picked_cron_type == %{"value" => "daily"} do %>
+                <PetalComponents.Form.form_field
+                  type="time_select"
+                  form={ft}
+                  field={:time_of_day}
+                />
+              <% end %>
+              <%= if @picked_cron_type == %{"value" => "weekly"} do %>
+                <span class="block text-sm font-medium text-secondary-700">
+                  Select day of week
+                </span>
+                <Form.select_field
+                  form={ft}
+                  name={:day_of_week}
+                  prompt=""
+                  id="day_of_week"
+                  values={
+                    [
+                      Monday: 1,
+                      Tuesday: 2,
+                      Wednesday: 3,
+                      Thursday: 4,
+                      Friday: 5,
+                      Saturday: 6,
+                      Sunday: 7
+                    ]
+                  }
+                />
+                <br />
+                <PetalComponents.Form.form_field
+                  type="time_select"
+                  form={ft}
+                  field={:time_of_day}
+                />
+              <% end %>
+              <%= if @picked_cron_type == %{"value" => "monthly"} do %>
+                <span class="block text-sm font-medium text-secondary-700">
+                  Select day of month
+                </span>
+                <Form.select_field
+                  form={ft}
+                  name={:day_of_month}
+                  prompt=""
+                  id="day_of_month"
+                  values={1..31}
+                />
+                <br />
+                <PetalComponents.Form.form_field
+                  type="time_select"
+                  form={ft}
+                  field={:time_of_day}
+                />
+              <% end %>
+              <%= if @picked_cron_type == %{"value" => "custom"} do %>
+                <Form.text_field form={ft} id={:cron_expression} />
+              <% end %>
             <% end %>
           </div>
 
