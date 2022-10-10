@@ -54,7 +54,7 @@ defmodule Lightning.Jobs.Trigger do
       :cron_expression
     ])
     |> validate_required([:type])
-    |> assoc_constraint(:job)
+    #|> assoc_constraint(:job)
     |> validate_by_type()
   end
 
