@@ -109,10 +109,10 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                 />
               <% end %>
 
-              <%= if ft.data.id && ft.data.job_id do %>
+              <%= if ft.data.id && @id do %>
                 <a
                   id="copyWebhookUrl"
-                  href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
+                  href={Routes.webhooks_url(@socket, :create, [@id])}
                   onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
                   target="_blank"
                 >
