@@ -111,8 +111,7 @@ defmodule LightningWeb.JobLive.FormComponent do
 
     {module_name, version, versions} =
       if adaptor do
-        {module_name, version} =
-          Lightning.AdaptorRegistry.resolve_package_name(adaptor)
+        {module_name, version} = Lightning.AdaptorRegistry.resolve_package_name(adaptor)
 
         versions =
           Lightning.AdaptorRegistry.versions_for(module_name)
@@ -123,8 +122,7 @@ defmodule LightningWeb.JobLive.FormComponent do
             [key: version, value: "#{module_name}@#{version}"]
           end)
 
-        {module_name, version,
-         [[key: "latest", value: "#{module_name}@latest"] | versions]}
+        {module_name, version, [[key: "latest", value: "#{module_name}@latest"] | versions]}
       else
         {nil, nil, []}
       end
@@ -139,11 +137,9 @@ defmodule LightningWeb.JobLive.FormComponent do
   @spec coerce_params_for_adaptor_list(%{String.t() => String.t()}) ::
           %{}
   def coerce_params_for_adaptor_list(job_params) do
-    {package, _version} =
-      AdaptorRegistry.resolve_package_name(job_params["adaptor"])
+    {package, _version} = AdaptorRegistry.resolve_package_name(job_params["adaptor"])
 
-    {package_group, _} =
-      AdaptorRegistry.resolve_package_name(job_params["adaptor_name"])
+    {package_group, _} = AdaptorRegistry.resolve_package_name(job_params["adaptor_name"])
 
     cond do
       is_nil(package_group) ->
@@ -159,10 +155,6 @@ defmodule LightningWeb.JobLive.FormComponent do
 
   def requires_upstream_job?(changeset) do
     get_field(changeset, :type) in [:on_job_failure, :on_job_success]
-  end
-
-  def handle_event("inc_temperature", value, _socket) do
-    IO.inspect(value, label: "INC")
   end
 
   def requires_cron_job?(changeset) do

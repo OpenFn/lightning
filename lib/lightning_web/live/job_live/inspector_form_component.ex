@@ -66,6 +66,20 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
     end
   end
 
+  defp display_input(assigns) do
+    case @picked_cron_type |> IO.inspect() do
+      %{"value" => "custom"} ->
+        ~H"""
+        <Form.text_field form={@form} id={:cron_expression} />
+        """
+
+      nil ->
+        ~H"""
+
+        """
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -145,7 +159,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                   name={:cron_type}
                   field={:radio_group}
                   label="Select periodicity"
-                  phx-click="inc_temperature"
+                  phx-click="on_cron_type_change"
                   options={
                     [
                       "Every hour": "hourly",
@@ -157,6 +171,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                   }
                 />
               <% end %>
+              <.display_input form={ft} picked_cron_type={@picked_cron_type} />
             <% end %>
           </div>
 

@@ -26,7 +26,8 @@ defmodule LightningWeb.JobLive.Edit do
          )
      )
      |> assign(:initial_job_params, %{})
-     |> assign(:new_credential, false)}
+     |> assign(:new_credential, false)
+     |> assign(:picked_cron_type, nil)}
   end
 
   @impl true
@@ -87,5 +88,10 @@ defmodule LightningWeb.JobLive.Edit do
     |> assign(:initial_job_params, %{
       "project_id" => socket.assigns.project.id
     })
+  end
+
+  @impl true
+  def handle_event("on_cron_type_change", value, socket) do
+    {:noreply, assign(socket, :picked_cron_type, value)}
   end
 end
