@@ -28,14 +28,20 @@ defmodule Lightning.PipelineTest do
         )
 
       event = event_fixture(job_id: job.id)
-      run_fixture(event_id: event.id)
+
+      run_fixture(
+        event_id: event.id,
+        project_id: event.project_id,
+        job_id: job.id,
+        input_dataclip_id: event.dataclip_id
+      )
 
       Pipeline.process(event)
 
-      expected_event =
-        from(e in Lightning.Invocation.Event,
-          where: e.job_id == ^downstream_job_id,
-          preload: [:result_dataclip]
+      expected_run =
+        from(r in Lightning.Invocation.Run,
+          where: r.job_id == ^downstream_job_id,
+          preload: [:output_dataclip]
         )
         |> Repo.one!()
 
@@ -43,7 +49,7 @@ defmodule Lightning.PipelineTest do
                "configuration" => %{"credential" => "body"},
                "data" => %{},
                "error" => error
-             } = expected_event.result_dataclip.body
+             } = expected_run.output_dataclip.body
 
       error = Enum.slice(error, 0..4)
 
@@ -94,7 +100,13 @@ defmodule Lightning.PipelineTest do
         )
 
       event = event_fixture(job_id: job.id)
-      run_fixture(event_id: event.id)
+
+      run_fixture(
+        event_id: event.id,
+        project_id: event.project_id,
+        job_id: job.id,
+        input_dataclip_id: event.dataclip_id
+      )
 
       Pipeline.process(event)
 

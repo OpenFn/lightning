@@ -441,7 +441,7 @@ defmodule Lightning.JobsTest do
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:result_dataclip)
+        |> Repo.preload(:output_dataclip)
 
       assert run.input_dataclip.type == :global
       assert run.input_dataclip.body == %{}
@@ -464,7 +464,7 @@ defmodule Lightning.JobsTest do
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:result_dataclip)
+        |> Repo.preload(:output_dataclip)
 
       _result = Scheduler.enqueue_cronjobs()
 
@@ -473,14 +473,14 @@ defmodule Lightning.JobsTest do
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:input_dataclip)
-        |> Repo.preload(:result_dataclip)
+        |> Repo.preload(:output_dataclip)
 
       assert old.input_dataclip.type == :http_request
       assert old.input_dataclip.body == %{}
 
       assert new.input_dataclip.type == :run_result
-      assert new.input_dataclip.body == old.result_dataclip.body
-      assert new.result_dataclip.body == %{"changed" => true}
+      assert new.input_dataclip.body == old.output_dataclip.body
+      assert new.output_dataclip.body == %{"changed" => true}
     end
   end
 end

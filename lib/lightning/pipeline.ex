@@ -14,7 +14,7 @@ defmodule Lightning.Pipeline do
   alias Lightning.{Jobs, Invocation}
   alias Lightning.Invocation.Event
   alias Lightning.Repo
-  import Ecto.Query, only: [select: 3]
+  import Ecto.Query
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"event_id" => id}}) do
@@ -75,8 +75,11 @@ defmodule Lightning.Pipeline do
         |> Repo.one()
 
       :ok ->
-        Invocation.get_result_dataclip_query(run)
-        |> select([d], d.id)
+        from(d in Invocation.Dataclip,
+          join: r in assoc(d, :source_run),
+          where: r.id == ^run.id,
+          select: d.id
+        )
         |> Repo.one()
     end
   end

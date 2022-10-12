@@ -18,7 +18,7 @@ defmodule Lightning.Invocation.Dataclip do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Invocation.Event
+  alias Lightning.Invocation.{Event, Run}
   alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
@@ -41,6 +41,8 @@ defmodule Lightning.Invocation.Dataclip do
     belongs_to :project, Project
     belongs_to :source_event, Event
     has_many :events, Event
+
+    has_one :source_run, Run, foreign_key: :output_dataclip_id
 
     timestamps(usec: true)
   end

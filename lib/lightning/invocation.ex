@@ -137,23 +137,15 @@ defmodule Lightning.Invocation do
   @doc """
   Query for retrieving the dataclip that was the result of a successful run.
   """
-  def get_result_dataclip_query(%Run{id: run_id}) do
-    from(d in Dataclip,
-      join: e in assoc(d, :source_event),
-      join: r in assoc(e, :run),
-      where: r.id == ^run_id and d.type == :run_result
-    )
+  def get_result_dataclip_query(%Run{} = run) do
+    Ecto.assoc(run, :output_dataclip)
   end
 
   @doc """
   Query for retrieving the dataclip that a runs starting dataclip.
   """
-  def get_dataclip_query(%Run{id: run_id}) do
-    from(d in Dataclip,
-      join: e in assoc(d, :events),
-      join: r in assoc(e, :run),
-      where: r.id == ^run_id
-    )
+  def get_dataclip_query(%Run{} = run) do
+    Ecto.assoc(run, :input_dataclip)
   end
 
   @doc """

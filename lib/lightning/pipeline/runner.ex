@@ -4,7 +4,6 @@ defmodule Lightning.Pipeline.Runner do
   """
   require Logger
   alias Lightning.Invocation
-  import Lightning.Jobs, only: [get_job!: 1]
 
   import Engine.Adaptor.Service,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
@@ -64,14 +63,13 @@ defmodule Lightning.Pipeline.Runner do
   """
   @spec start(run :: Invocation.Run.t(), opts :: []) :: Engine.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
-    run = Lightning.Repo.preload(run, event: [job: :credential])
+    run = Lightning.Repo.preload(run, [:output_dataclip, job: :credential])
 
-    %{body: expression, adaptor: adaptor} = get_job!(run.event.job_id)
+    %{body: expression, adaptor: adaptor} = run.job
 
     {:ok, scrubber} =
       Lightning.Scrubber.start_link(
-        samples:
-          Lightning.Credentials.sensitive_values_for(run.event.job.credential)
+        samples: Lightning.Credentials.sensitive_values_for(run.job.credential)
       )
 
     state = Lightning.Pipeline.StateAssembler.assemble(run)
@@ -129,11 +127,13 @@ defmodule Lightning.Pipeline.Runner do
   def create_dataclip_from_result(%Engine.Result{} = result, run) do
     with {:ok, data} <- File.read(result.final_state_path),
          {:ok, body} <- Jason.decode(data) do
-      Invocation.create_dataclip(%{
-        project_id: run.event.project_id,
-        source_event_id: run.event_id,
-        type: :run_result,
-        body: body
+      Invocation.update_run(run, %{
+        output_dataclip: %{
+          project_id: run.project_id,
+          source_event_id: run.event_id,
+          type: :run_result,
+          body: body
+        }
       })
     else
       res = {:error, %Jason.DecodeError{position: pos}} ->

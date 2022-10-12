@@ -32,9 +32,10 @@ defmodule Lightning.Invocation.Run do
     belongs_to :job, Job
 
     belongs_to :input_dataclip, Dataclip
+    belongs_to :output_dataclip, Dataclip
 
     # has_one :source_dataclip, through: [:event, :dataclip]
-    has_one :result_dataclip, through: [:event, :result_dataclip]
+    # has_one :result_dataclip, through: [:event, :result_dataclip]
 
     timestamps(usec: true)
   end
@@ -50,9 +51,14 @@ defmodule Lightning.Invocation.Run do
       :event_id,
       :project_id,
       :job_id,
-      :input_dataclip_id
+      :input_dataclip_id,
+      :output_dataclip_id
     ])
+    |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
     |> foreign_key_constraint(:event_id)
+    |> foreign_key_constraint(:input_dataclip_id)
+    |> foreign_key_constraint(:output_dataclip_id)
+    |> foreign_key_constraint(:job_id)
     |> validate_required([:event_id, :project_id, :job_id, :input_dataclip_id])
   end
 end

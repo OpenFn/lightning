@@ -50,9 +50,9 @@ defmodule Lightning.Pipeline.RunnerTest do
 
     run =
       Repo.reload!(run)
-      |> Repo.preload(:result_dataclip)
+      |> Repo.preload(:output_dataclip)
 
-    assert run.result_dataclip.body == expected_state
+    assert run.output_dataclip.body == expected_state
 
     refute is_nil(run.started_at)
     refute is_nil(run.finished_at)

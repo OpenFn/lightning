@@ -73,7 +73,7 @@ defmodule Lightning.InvocationTest do
       assert Invocation.get_dataclip(dataclip.id) == dataclip
       assert Invocation.get_dataclip(Ecto.UUID.generate()) == nil
 
-      run = run_fixture(event_id: event.id)
+      run = run_fixture(event_id: event.id, input_dataclip_id: dataclip.id)
 
       assert Invocation.get_dataclip(run) == dataclip
     end
