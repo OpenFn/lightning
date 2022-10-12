@@ -77,10 +77,7 @@ defmodule LightningWeb.JobLive.FormComponent do
   end
 
   def validate(%{"job" => job_params}, socket) do
-    trigger = parse_cron_expression(job_params["trigger"])
-
-    job_params =
-      coerce_params_for_adaptor_list(job_params |> Map.put("trigger", trigger))
+    job_params = coerce_params_for_adaptor_list(job_params)
 
     changeset =
       socket.assigns.job
@@ -93,12 +90,31 @@ defmodule LightningWeb.JobLive.FormComponent do
         |> Ecto.Changeset.fetch_field!(:adaptor)
       )
 
+    cron_options =
+      get_cron_options(
+        changeset
+        |> Ecto.Changeset.fetch_field!(:trigger)
+      )
+
     assign(socket, :changeset, changeset)
     |> assign(:adaptor_name, adaptor_name)
     |> assign(:adaptors, adaptors)
     |> assign(:versions, versions)
     |> assign(:job_params, job_params)
+    |> assign(:cron_options, cron_options)
   end
+
+  def get_cron_options(%{type: type}) when type in [:cron] do
+    [
+      "Every hour": "hourly",
+      "Every day": "daily",
+      "Every week": "weekly",
+      "Every month": "monthly",
+      Custom: "custom"
+    ]
+  end
+
+  def get_cron_options(%{type: type}) when type not in [:cron], do: nil
 
   def save(_params, _socket) do
     raise "save/2 not implemented"
@@ -158,49 +174,6 @@ defmodule LightningWeb.JobLive.FormComponent do
       true ->
         job_params
     end
-  end
-
-  def parse_cron_expression(
-        %{
-          "day_of_week" => day_of_week,
-          "time_of_day" => %{"hour" => hour, "minute" => minute},
-          "type" => type
-        } = _trigger_params
-      ) do
-    %{
-      "cron_expression" => "#{minute} #{hour} * * #{day_of_week}",
-      "type" => type
-    }
-  end
-
-  def parse_cron_expression(
-        %{
-          "day_of_month" => monthday,
-          "time_of_day" => %{"hour" => hour, "minute" => minute},
-          "type" => type
-        } = _trigger_params
-      ) do
-    %{
-      "cron_expression" => "#{minute} #{hour} #{monthday} * *",
-      "type" => type
-    }
-  end
-
-  def parse_cron_expression(
-        %{"time_of_day" => %{"hour" => hour, "minute" => minute}, "type" => type} =
-          _trigger_params
-      ) do
-    %{"cron_expression" => "#{minute} #{hour} * * *", "type" => type}
-  end
-
-  def parse_cron_expression(
-        %{"minutes" => minutes, "type" => type} = _trigger_params
-      ) do
-    %{"cron_expression" => "#{minutes} * * * *", "type" => type}
-  end
-
-  def parse_cron_expression(%{"type" => _type} = trigger_params) do
-    trigger_params
   end
 
   def requires_upstream_job?(changeset) do
