@@ -8,10 +8,9 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
   alias Lightning.Projects
 
   @impl true
-  def update(%{project: _project} = assigns, socket) do
+ def update(%{project: _project} = assigns, socket) do
     {:ok,
      socket
-     # |> assign(:scheduled_deletion_changeset, Accounts.change_scheduled_deletion(user))
      |> assign(assigns)}
   end
 
