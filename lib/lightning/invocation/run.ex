@@ -8,6 +8,7 @@ defmodule Lightning.Invocation.Run do
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Invocation.Event
+  alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -23,10 +24,11 @@ defmodule Lightning.Invocation.Run do
     field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
     belongs_to :event, Event
-    has_one :job, through: [:event, :job]
-    has_one :project, through: [:event, :project]
-    has_one :source_dataclip, through: [:event, :dataclip]
 
+    belongs_to :project, Project
+
+    has_one :job, through: [:event, :job]
+    has_one :source_dataclip, through: [:event, :dataclip]
     has_one :result_dataclip, through: [:event, :result_dataclip]
 
     timestamps(usec: true)
@@ -35,8 +37,15 @@ defmodule Lightning.Invocation.Run do
   @doc false
   def changeset(run, attrs) do
     run
-    |> cast(attrs, [:log, :exit_code, :started_at, :finished_at, :event_id])
+    |> cast(attrs, [
+      :log,
+      :exit_code,
+      :started_at,
+      :finished_at,
+      :event_id,
+      :project_id
+    ])
     |> foreign_key_constraint(:event_id)
-    |> validate_required([:event_id])
+    |> validate_required([:event_id, :project_id])
   end
 end

@@ -187,6 +187,7 @@ defmodule Lightning.InvocationTest do
     alias Lightning.Invocation.Run
 
     import Lightning.InvocationFixtures
+    import Lightning.ProjectsFixtures
 
     @invalid_attrs %{event_id: nil}
     @valid_attrs %{
@@ -206,11 +207,13 @@ defmodule Lightning.InvocationTest do
       event = event_fixture(project_id: project.id)
 
       first_run =
-        run_fixture(event_id: event.id)
+        run_fixture(event_id: event.id, project_id: project.id)
         |> shift_inserted_at!(days: -1)
         |> Repo.preload(:job)
 
-      second_run = run_fixture(event_id: event.id) |> Repo.preload(:job)
+      second_run =
+        run_fixture(event_id: event.id, project_id: project.id)
+        |> Repo.preload(:job)
 
       assert Invocation.list_runs_for_project(project).entries == [
                second_run,
@@ -234,7 +237,10 @@ defmodule Lightning.InvocationTest do
 
       assert {:ok, %Run{} = run} =
                Invocation.create_run(
-                 Map.merge(@valid_attrs, %{event_id: event.id})
+                 Map.merge(@valid_attrs, %{
+                   event_id: event.id,
+                   project_id: project_fixture().id
+                 })
                )
 
       assert run.exit_code == 42

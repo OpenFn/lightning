@@ -54,6 +54,12 @@ defmodule Lightning.InvocationFixtures do
   def run_fixture(attrs \\ []) when is_list(attrs) do
     {event_attrs, attrs} = Keyword.pop(attrs, :event_attrs, [])
 
+    attrs =
+      attrs
+      |> Keyword.put_new_lazy(:project_id, fn ->
+        Lightning.ProjectsFixtures.project_fixture().id
+      end)
+
     {:ok, run} =
       attrs
       |> Keyword.put_new_lazy(:event_id, fn -> event_fixture(event_attrs).id end)
