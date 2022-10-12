@@ -7,10 +7,13 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
   alias Lightning.Credentials.Credential
 
   @impl true
- def update(%{project: _project} = assigns, socket) do
+  def update(%{project: _project} = assigns, socket) do
     {:ok,
      socket
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign(:on_save, fn credential ->
+       send(self(), {:added_credential, credential})
+     end)}
   end
 
   @impl true
@@ -25,10 +28,10 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
           credential={%Credential{user_id: assigns.current_user.id}}
           projects={[]}
           project={@project}
+          on_save={@on_save}
         />
       </PetalComponents.Modal.modal>
     </div>
     """
   end
-
 end
