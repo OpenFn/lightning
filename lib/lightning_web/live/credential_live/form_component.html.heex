@@ -7,14 +7,8 @@
     phx-change="validate"
     phx-submit="save"
   >
-    <div class="grid grid-cols-6 gap-6">
-      <div class={
-        if @show_project_credentials do
-          "col-span-6"
-        else
-          "col-span-3"
-        end
-      }>
+    <div class="grid #{@cols_class} gap-6">
+      <div class="col-span-3">
         <%= label(f, :name, class: "block text-sm font-medium text-secondary-700") %>
         <%= error_tag(f, :name, class: "block w-full rounded-md") %>
         <%= text_input(f, :name,
