@@ -32,16 +32,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          end),
        schema: nil
      )
-     |> assign_params_changes()
-     |> assign_valid()
-     |> assign_new(:show_project_credentials, fn -> true end)
      |> assign(
        :cols_class,
        if(assigns[:show_project_credentials],
          do: "grid-cols-6",
          else: "grid-cols-3"
        )
-     )}
+     )
+     |> assign_params_changes()
+     |> assign_valid()
+     |> assign_new(:show_project_credentials, fn -> true end)}
   end
 
   defp read_schema(schema) do

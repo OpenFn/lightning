@@ -20,7 +20,11 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
   def render(assigns) do
     ~H"""
     <div id={"project-#{@project.id}"}>
-      <PetalComponents.Modal.modal max_width="lg" title="Create credential">
+      <PetalComponents.Modal.modal
+        max_width="lg"
+        title="Create credential"
+        close_modal_target={@myself}
+      >
         <.live_component
           module={LightningWeb.CredentialLive.FormComponent}
           id={:new}

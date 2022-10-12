@@ -7,7 +7,7 @@
     phx-change="validate"
     phx-submit="save"
   >
-    <div class="grid #{@cols_class} gap-6">
+    <div class={"grid #{@cols_class} gap-6"}>
       <div class="col-span-3">
         <%= label(f, :name, class: "block text-sm font-medium text-secondary-700") %>
         <%= error_tag(f, :name, class: "block w-full rounded-md") %>
@@ -140,7 +140,7 @@
 
     <div>
       <span>
-        <%= unless @show_project_credentials do %>
+        <%= if @show_project_credentials do %>
           <%= live_redirect("Cancel",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
