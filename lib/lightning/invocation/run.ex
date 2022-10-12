@@ -9,6 +9,7 @@ defmodule Lightning.Invocation.Run do
   import Ecto.Changeset
   alias Lightning.Invocation.Event
   alias Lightning.Projects.Project
+  alias Lightning.Jobs.Job
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -26,8 +27,8 @@ defmodule Lightning.Invocation.Run do
     belongs_to :event, Event
 
     belongs_to :project, Project
+    belongs_to :job, Job
 
-    has_one :job, through: [:event, :job]
     has_one :source_dataclip, through: [:event, :dataclip]
     has_one :result_dataclip, through: [:event, :result_dataclip]
 
@@ -43,9 +44,10 @@ defmodule Lightning.Invocation.Run do
       :started_at,
       :finished_at,
       :event_id,
-      :project_id
+      :project_id,
+      :job_id
     ])
     |> foreign_key_constraint(:event_id)
-    |> validate_required([:event_id, :project_id])
+    |> validate_required([:event_id, :project_id, :job_id])
   end
 end

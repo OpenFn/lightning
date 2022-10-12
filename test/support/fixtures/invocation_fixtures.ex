@@ -62,6 +62,9 @@ defmodule Lightning.InvocationFixtures do
 
     {:ok, run} =
       attrs
+      |> Keyword.put_new_lazy(:job_id, fn ->
+        Lightning.JobsFixtures.job_fixture(project_id: attrs[:project_id]).id
+      end)
       |> Keyword.put_new_lazy(:event_id, fn -> event_fixture(event_attrs).id end)
       |> Enum.into(%{
         exit_code: nil,

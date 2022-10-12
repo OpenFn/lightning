@@ -5,6 +5,7 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
+  import Lightning.JobsFixtures
 
   describe "invocation" do
     import Lightning.JobsFixtures
@@ -233,13 +234,17 @@ defmodule Lightning.InvocationTest do
     end
 
     test "create_run/1 with valid data creates a run" do
-      event = event_fixture()
+      project = project_fixture()
+      job = job_fixture(project_id: project.id)
+
+      event = event_fixture(project_id: project.id)
 
       assert {:ok, %Run{} = run} =
                Invocation.create_run(
                  Map.merge(@valid_attrs, %{
                    event_id: event.id,
-                   project_id: project_fixture().id
+                   project_id: project.id,
+                   job_id: job.id
                  })
                )
 
