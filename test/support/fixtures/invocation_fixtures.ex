@@ -66,6 +66,9 @@ defmodule Lightning.InvocationFixtures do
         Lightning.JobsFixtures.job_fixture(project_id: attrs[:project_id]).id
       end)
       |> Keyword.put_new_lazy(:event_id, fn -> event_fixture(event_attrs).id end)
+      |> Keyword.put_new_lazy(:input_dataclip_id, fn ->
+        dataclip_fixture(project_id: attrs[:project_id]).id
+      end)
       |> Enum.into(%{
         exit_code: nil,
         finished_at: nil,

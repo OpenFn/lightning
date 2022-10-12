@@ -14,9 +14,9 @@ defmodule LightningWeb.WebhooksControllerTest do
     conn = post(conn, "/i/#{job.id}", message)
     assert %{"event_id" => _, "run_id" => run_id} = json_response(conn, 200)
 
-    %{source_dataclip: %{body: body}} =
+    %{input_dataclip: %{body: body}} =
       Invocation.get_run!(run_id)
-      |> Repo.preload(:source_dataclip)
+      |> Repo.preload(:input_dataclip)
 
     assert body == message
 

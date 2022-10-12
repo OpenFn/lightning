@@ -235,16 +235,18 @@ defmodule Lightning.InvocationTest do
 
     test "create_run/1 with valid data creates a run" do
       project = project_fixture()
+      dataclip = dataclip_fixture(project_id: project.id)
       job = job_fixture(project_id: project.id)
 
-      event = event_fixture(project_id: project.id)
+      event = event_fixture(project_id: project.id, dataclip_id: dataclip.id)
 
       assert {:ok, %Run{} = run} =
                Invocation.create_run(
                  Map.merge(@valid_attrs, %{
                    event_id: event.id,
                    project_id: project.id,
-                   job_id: job.id
+                   job_id: job.id,
+                   input_dataclip_id: dataclip.id
                  })
                )
 

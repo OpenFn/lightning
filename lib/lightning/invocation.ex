@@ -26,11 +26,15 @@ defmodule Lightning.Invocation do
       Event.changeset(%Event{}, event_attrs)
       |> Event.changeset(%{dataclip_id: dataclip_id})
     end)
-    |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
+    |> Multi.insert(:run, fn %{
+                               event: %Event{id: event_id},
+                               dataclip: %Dataclip{id: dataclip_id}
+                             } ->
       Run.changeset(%Run{}, %{
         event_id: event_id,
         project_id: event_attrs[:project_id],
-        job_id: event_attrs[:job_id]
+        job_id: event_attrs[:job_id],
+        input_dataclip_id: dataclip_id
       })
     end)
     |> Repo.transaction()
@@ -51,7 +55,8 @@ defmodule Lightning.Invocation do
       Run.changeset(%Run{}, %{
         event_id: event_id,
         project_id: event_attrs[:project_id],
-        job_id: event_attrs[:job_id]
+        job_id: event_attrs[:job_id],
+        input_dataclip_id: event_attrs[:dataclip_id]
       })
     end)
     |> Repo.transaction()

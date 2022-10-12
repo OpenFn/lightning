@@ -440,11 +440,11 @@ defmodule Lightning.JobsTest do
         %Jobs.Job{id: job.id}
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
-        |> Repo.preload(:source_dataclip)
+        |> Repo.preload(:input_dataclip)
         |> Repo.preload(:result_dataclip)
 
-      assert run.source_dataclip.type == :global
-      assert run.source_dataclip.body == %{}
+      assert run.input_dataclip.type == :global
+      assert run.input_dataclip.body == %{}
     end
 
     test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
@@ -463,7 +463,7 @@ defmodule Lightning.JobsTest do
         %Jobs.Job{id: job.id}
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
-        |> Repo.preload(:source_dataclip)
+        |> Repo.preload(:input_dataclip)
         |> Repo.preload(:result_dataclip)
 
       _result = Scheduler.enqueue_cronjobs()
@@ -472,14 +472,14 @@ defmodule Lightning.JobsTest do
         %Jobs.Job{id: job.id}
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
-        |> Repo.preload(:source_dataclip)
+        |> Repo.preload(:input_dataclip)
         |> Repo.preload(:result_dataclip)
 
-      assert old.source_dataclip.type == :http_request
-      assert old.source_dataclip.body == %{}
+      assert old.input_dataclip.type == :http_request
+      assert old.input_dataclip.body == %{}
 
-      assert new.source_dataclip.type == :run_result
-      assert new.source_dataclip.body == old.result_dataclip.body
+      assert new.input_dataclip.type == :run_result
+      assert new.input_dataclip.body == old.result_dataclip.body
       assert new.result_dataclip.body == %{"changed" => true}
     end
   end
