@@ -3,12 +3,22 @@
     <Layout.header title={@job.name} socket={@socket} />
   </:header>
   <Layout.centered>
+    <%= if @new_credential do %>
+      <.live_component
+        module={LightningWeb.CredentialLive.CredentialEditModal}
+        id="new-credential"
+        job={@job}
+        project={@project}
+        current_user={@current_user}
+      />
+    <% end %>
     <.live_component
       module={LightningWeb.JobLive.InspectorFormComponent}
       id={@job.id || :new}
       action={@live_action}
       job={@job}
       project={@project}
+      initial_job_params={@initial_job_params}
       return_to={Routes.project_job_index_path(@socket, :index, @project.id)}
     />
   </Layout.centered>

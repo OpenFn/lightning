@@ -7,7 +7,7 @@
     phx-change="validate"
     phx-submit="save"
   >
-    <div class="grid grid-cols-6 gap-6">
+    <div class={"grid #{@cols_class} gap-6"}>
       <div class="col-span-3">
         <%= label(f, :name, class: "block text-sm font-medium text-secondary-700") %>
         <%= error_tag(f, :name, class: "block w-full rounded-md") %>
@@ -70,59 +70,67 @@
           <LightningWeb.Components.Form.check_box form={f} id={:production} />
         </div>
       </div>
+      <%= if @show_project_credentials do %>
+        <div class="col-span-3">
+          <%= label(f, :project_credentials, "Project Access",
+            class: "block text-sm font-medium text-secondary-700"
+          ) %>
 
-      <div class="col-span-3">
-        <%= label(f, :project_credentials, "Project Access",
-          class: "block text-sm font-medium text-secondary-700"
-        ) %>
-
-        <div class="flex w-full items-center gap-2 pb-3 mt-1">
-          <div class="grow">
-            <.select
-              phx-hook="AssocListChange"
-              phx-target={@myself}
-              id="project_list"
-            >
-              <option>Select a project</option>
-              <%= options_for_select(@available_projects, @selected_project) %>
-            </.select>
-          </div>
-          <div class="grow-0 items-right">
-            <.button
-              text="Add"
-              disabled={@selected_project == ""}
-              phx-target={@myself}
-              phx-value-projectid={@selected_project}
-              phx-click="add_new_project"
-            />
-          </div>
-        </div>
-
-        <%= for project_form <- inputs_for(f, :project_credentials) do %>
-          <%= if input_value(project_form, :delete) != true do %>
-            <div class="flex w-full gap-2 items-center pb-2">
-              <div class="grow">
-                <%= @all_projects
-                |> Enum.find_value(fn {name, id} ->
-                  if id == input_value(project_form, :project_id), do: name
-                end) %>
-                <%= error_tag(project_form, :project_id, class: "block text-xs") %>
-              </div>
-              <div class="grow-0 items-right">
-                <.button
-                  text="Remove"
-                  phx-target={@myself}
-                  phx-value-index={project_form.index}
-                  phx-click="delete_project"
-                />
-              </div>
+          <div class="flex w-full items-center gap-2 pb-3 mt-1">
+            <div class="grow">
+              <.select
+                phx-hook="AssocListChange"
+                phx-target={@myself}
+                id="project_list"
+              >
+                <option>Select a project</option>
+                <%= options_for_select(@available_projects, @selected_project) %>
+              </.select>
             </div>
+            <div class="grow-0 items-right">
+              <.button
+                text="Add"
+                disabled={@selected_project == ""}
+                phx-target={@myself}
+                phx-value-projectid={@selected_project}
+                phx-click="add_new_project"
+              />
+            </div>
+          </div>
+
+          <%= for project_form <- inputs_for(f, :project_credentials) do %>
+            <%= if input_value(project_form, :delete) != true do %>
+              <div class="flex w-full gap-2 items-center pb-2">
+                <div class="grow">
+                  <%= @all_projects
+                  |> Enum.find_value(fn {name, id} ->
+                    if id == input_value(project_form, :project_id), do: name
+                  end) %>
+                  <%= error_tag(project_form, :project_id, class: "block text-xs") %>
+                </div>
+                <div class="grow-0 items-right">
+                  <.button
+                    text="Remove"
+                    phx-target={@myself}
+                    phx-value-index={project_form.index}
+                    phx-click="delete_project"
+                  />
+                </div>
+              </div>
+            <% end %>
+            <%= hidden_inputs_for(project_form) %>
+            <%= hidden_input(project_form, :project_id) %>
+            <%= hidden_input(project_form, :delete) %>
           <% end %>
-          <%= hidden_inputs_for(project_form) %>
-          <%= hidden_input(project_form, :project_id) %>
-          <%= hidden_input(project_form, :delete) %>
-        <% end %>
-      </div>
+        </div>
+      <% else %>
+        <input
+          id="credential-form_project_credentials_0_project_id"
+          name="credential[project_credentials][0][project_id]"
+          type="hidden"
+          value={@project.id}
+        />
+      <% end %>
     </div>
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5">
@@ -132,11 +140,22 @@
 
     <div>
       <span>
-        <%= live_redirect("Cancel",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-          to: Routes.credential_index_path(@socket, :index)
-        ) %>
+        <%= if @show_project_credentials do %>
+          <%= live_redirect("Cancel",
+            class:
+              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+            to: Routes.credential_index_path(@socket, :index)
+          ) %>
+        <% else %>
+          <button
+            type="button"
+            label="close"
+            phx-click={PetalComponents.Modal.hide_modal()}
+            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+          >
+            Cancel
+          </button>
+        <% end %>
       </span>
       <span>
         <LightningWeb.Components.Form.submit_button

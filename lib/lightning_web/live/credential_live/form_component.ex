@@ -32,8 +32,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          end),
        schema: nil
      )
+     |> assign(
+       :cols_class,
+       if(assigns[:show_project_credentials],
+         do: "grid-cols-6",
+         else: "grid-cols-3"
+       )
+     )
      |> assign_params_changes()
-     |> assign_valid()}
+     |> assign_valid()
+     |> assign_new(:show_project_credentials, fn -> true end)}
   end
 
   defp read_schema(schema) do
@@ -296,11 +304,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     |> Map.put("user_id", user_id)
     |> Credentials.create_credential()
     |> case do
-      {:ok, _credential} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Credential created successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+      {:ok, credential} ->
+        if socket.assigns[:on_save] do
+          socket.assigns[:on_save].(credential)
+          {:noreply, socket}
+        else
+          {:noreply,
+           socket
+           |> put_flash(:info, "Credential created successfully")
+           |> push_redirect(to: Routes.credential_index_path(socket, :index))}
+        end
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}

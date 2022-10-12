@@ -4,6 +4,8 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.CredentialsFixtures
 
+  import Lightning.JobsFixtures
+
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -442,6 +444,218 @@ defmodule LightningWeb.CredentialLiveTest do
       # Once the transfer is made, the credential should not show up in the list
       assert html =~ "some name"
       refute html =~ "the one for giving away"
+    end
+  end
+
+  describe "New credential from project context " do
+    setup %{project: project} do
+      %{job: job_fixture(project_id: project.id)}
+    end
+
+    test "open credential modal from the job inspector (edit_job)", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert has_element?(view, "#job-#{job.id}")
+
+      # open the new credential modal
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # assertions
+
+      assert has_element?(view, "#credential-form")
+      refute has_element?(view, "#project_list")
+    end
+
+    test "open credential modal from the new job form", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_job_edit_path(conn, :new, project.id)
+        )
+
+      # open the new credential modal
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # assertions
+
+      assert has_element?(view, "#credential-form")
+      refute has_element?(view, "#project_list")
+    end
+
+    test "create new credential from job inspector and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      # open the new credential modal
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          schema: "raw"
+        }
+      )
+      |> render_change()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          schema: "raw",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+    end
+
+    test "create new credential from new job form and update the job form", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_job_edit_path(conn, :new, project.id)
+        )
+
+      # open the new credential modal
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          schema: "raw"
+        }
+      )
+      |> render_change()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          schema: "raw",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+    end
+
+    test "create new credential from edit job form and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_job_edit_path(conn, :edit, project.id, job.id)
+        )
+
+      # change the job name so we can assert that the form state had been kept after saving the new credential
+
+      view
+      |> form("#job-form",
+        job: %{
+          name: "last typed name"
+        }
+      )
+      |> render_change()
+
+      # open the new credential modal
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          schema: "raw"
+        }
+      )
+      |> render_change()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          schema: "raw",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+
+      assert view
+             |> element(~S{#job-form input#job-form_name})
+             |> render() =~ "last typed name",
+             "Should have kept the job form state after saving the new credential"
     end
   end
 

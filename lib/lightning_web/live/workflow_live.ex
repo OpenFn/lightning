@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
+  alias Lightning.Projects
 
   defp encode_project_space(project) do
     Workflows.get_workflows_for(project)
@@ -22,7 +23,9 @@ defmodule LightningWeb.WorkflowLive do
      socket
      |> assign(
        active_menu_item: :projects,
-       encoded_project_space: encode_project_space(project)
+       encoded_project_space: encode_project_space(project),
+       new_credential: false,
+       initial_job_params: %{}
      )}
   end
 
@@ -39,6 +42,37 @@ defmodule LightningWeb.WorkflowLive do
      |> assign(
        encoded_project_space: encode_project_space(socket.assigns.project)
      )}
+  end
+
+  def handle_info({:added_credential, credential}, socket) do
+    project = socket.assigns.project
+
+    project_credential =
+      Projects.get_project_credential(project.id, credential.id)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Credential created successfully")
+     |> assign(
+       initial_job_params:
+         Map.merge(socket.assigns.initial_job_params, %{
+           "project_credential_id" => project_credential.id,
+           "project_credential" => project_credential
+         })
+     )
+     |> assign(:new_credential, false)}
+  end
+
+  @impl true
+  def handle_event("new-credential", params, socket) do
+    {:noreply,
+     socket
+     |> assign(:new_credential, true)
+     |> assign(:initial_job_params, params)}
+  end
+
+  def handle_event("close_modal", _args, socket) do
+    {:noreply, socket |> assign(:new_credential, false)}
   end
 
   @impl true
@@ -74,6 +108,9 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
+      initial_job_params: %{
+        "project_id" => socket.assigns.project.id
+      },
       page_title: socket.assigns.project.name
     )
   end
@@ -85,6 +122,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
+      initial_job_params: %{},
       page_title: socket.assigns.project.name
     )
   end
@@ -121,6 +159,15 @@ defmodule LightningWeb.WorkflowLive do
         </Layout.header>
       </:header>
       <div class="relative h-full">
+        <%= if @new_credential do %>
+          <.live_component
+            module={LightningWeb.CredentialLive.CredentialEditModal}
+            id="new-credential"
+            job={@job}
+            project={@project}
+            current_user={@current_user}
+          />
+        <% end %>
         <%= case @live_action do %>
           <% :new_job -> %>
             <div class="absolute top-0 right-0 m-2 z-10">
@@ -131,6 +178,7 @@ defmodule LightningWeb.WorkflowLive do
                   job={@job}
                   action={:new}
                   project={@project}
+                  initial_job_params={@initial_job_params}
                   return_to={
                     Routes.project_workflow_path(
                       @socket,
@@ -150,6 +198,7 @@ defmodule LightningWeb.WorkflowLive do
                   job={@job}
                   action={:edit}
                   project={@project}
+                  initial_job_params={@initial_job_params}
                   return_to={
                     Routes.project_workflow_path(
                       @socket,

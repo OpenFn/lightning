@@ -178,7 +178,16 @@ defmodule Lightning.Projects do
     end
   end
 
-  @spec export_project(:yaml, project_id :: binary()) :: {:ok, binary}
+  def get_project_credential(project_id, credential_id) do
+    from(pc in ProjectCredential,
+      where:
+        pc.credential_id == ^credential_id and
+          pc.project_id == ^project_id
+    )
+    |> Repo.one()
+  end
+
+  @spec export_project(:yaml, any) :: {:ok, binary}
   @doc """
   Exports a project as yaml.
 
