@@ -22,7 +22,6 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
         <.live_component
           module={LightningWeb.CredentialLive.FormComponent}
           id={:new}
-          title="TITRE"
           action={:new}
           credential={%Credential{user_id: assigns.current_user.id}}
           projects={list_projects(assigns)}
