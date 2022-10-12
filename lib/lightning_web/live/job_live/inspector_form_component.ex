@@ -138,18 +138,30 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                 <% end %>
               <% end %>
               <%= if requires_cron_job?(ft.source) do %>
-                <PetalComponents.Form.form_field
-                  type="radio_group"
-                  form={f}
-                  id="cronOptions"
-                  name={:cron_option}
-                  layout={:row}
-                  field={:radio_group}
-                  phx-click="on_cron_type_change"
-                  label="Select cron option"
-                  options={@cron_options}
-                />
-                <%= if @cron_option == %{"value" => "hourly"} do %>
+                <br />
+                <div class="flex flex-row gap-5">
+                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
+                    <%= radio_button(ft, :cron_option, "hourly") %>
+                    <div>Every hour</div>
+                  </label>
+                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
+                    <%= radio_button(ft, :cron_option, "daily") %>
+                    <div>Every day</div>
+                  </label>
+                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
+                    <%= radio_button(ft, :cron_option, "weekly") %>
+                    <div>Every week</div>
+                  </label>
+                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
+                    <%= radio_button(ft, :cron_option, "monthly") %>
+                    <div>Every month</div>
+                  </label>
+                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
+                    <%= radio_button(ft, :cron_option, "custom") %>
+                    <div>Custom</div>
+                  </label>
+                </div>
+                <%= if @selected_cron_option == "hourly" do %>
                   <span class="block text-sm font-medium text-secondary-700">
                     Select minute
                   </span>
@@ -161,14 +173,14 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                     values={0..59}
                   />
                 <% end %>
-                <%= if @cron_option == %{"value" => "daily"} do %>
+                <%= if @selected_cron_option == "daily" do %>
                   <PetalComponents.Form.form_field
                     type="time_select"
                     form={ft}
                     field={:time_of_day}
                   />
                 <% end %>
-                <%= if @cron_option == %{"value" => "weekly"} do %>
+                <%= if @selected_cron_option == "weekly" do %>
                   <span class="block text-sm font-medium text-secondary-700">
                     Select day of week
                   </span>
@@ -196,7 +208,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                     field={:time_of_day}
                   />
                 <% end %>
-                <%= if @cron_option == %{"value" => "monthly"} do %>
+                <%= if @selected_cron_option == "monthly" do %>
                   <span class="block text-sm font-medium text-secondary-700">
                     Select day of month
                   </span>
@@ -214,7 +226,9 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                     field={:time_of_day}
                   />
                 <% end %>
-                <Form.text_field form={ft} id={:cron_expression} />
+                <%= if @selected_cron_option == "custom" do %>
+                  <Form.text_field form={ft} id={:cron_expression} />
+                <% end %>
               <% end %>
             <% end %>
           </div>

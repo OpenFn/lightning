@@ -79,6 +79,11 @@ defmodule LightningWeb.JobLive.FormComponent do
   def validate(%{"job" => job_params}, socket) do
     job_params = coerce_params_for_adaptor_list(job_params)
 
+    trigger = job_params |> Map.get("trigger")
+    selected_cron_option = trigger |> Map.get("cron_option", nil)
+
+    job_params = Map.put(job_params, "trigger", parse_cron_expression(trigger))
+
     changeset =
       socket.assigns.job
       |> Jobs.change_job(job_params)
@@ -90,31 +95,62 @@ defmodule LightningWeb.JobLive.FormComponent do
         |> Ecto.Changeset.fetch_field!(:adaptor)
       )
 
-    cron_options =
-      get_cron_options(
-        changeset
-        |> Ecto.Changeset.fetch_field!(:trigger)
-      )
-
     assign(socket, :changeset, changeset)
     |> assign(:adaptor_name, adaptor_name)
     |> assign(:adaptors, adaptors)
     |> assign(:versions, versions)
     |> assign(:job_params, job_params)
-    |> assign(:cron_options, cron_options)
+    |> assign(:selected_cron_option, selected_cron_option)
   end
 
-  def get_cron_options(%{type: type}) when type in [:cron] do
-    [
-      "Every hour": "hourly",
-      "Every day": "daily",
-      "Every week": "weekly",
-      "Every month": "monthly",
-      Custom: "custom"
-    ]
+  def parse_cron_expression(
+        %{
+          "day_of_week" => day_of_week,
+          "time_of_day" => %{"hour" => hour, "minute" => minute}
+        } = trigger_params
+      ) do
+    Map.put(
+      trigger_params,
+      "cron_expression",
+      "#{minute} #{hour} * * #{day_of_week}"
+    )
   end
 
-  def get_cron_options(%{type: type}) when type not in [:cron], do: nil
+  def parse_cron_expression(
+        %{
+          "day_of_month" => monthday,
+          "time_of_day" => %{"hour" => hour, "minute" => minute}
+        } = trigger_params
+      ) do
+    Map.put(
+      trigger_params,
+      "cron_expression",
+      "#{minute} #{hour} #{monthday} * *"
+    )
+  end
+
+  def parse_cron_expression(
+        %{"time_of_day" => %{"hour" => hour, "minute" => minute}} =
+          trigger_params
+      ) do
+    Map.put(
+      trigger_params,
+      "cron_expression",
+      "#{minute} #{hour} * * *"
+    )
+  end
+
+  def parse_cron_expression(%{"minutes" => minutes} = trigger_params) do
+    Map.put(
+      trigger_params,
+      "cron_expression",
+      "#{minutes} * * * *"
+    )
+  end
+
+  def parse_cron_expression(%{"type" => _type} = trigger_params) do
+    trigger_params
+  end
 
   def save(_params, _socket) do
     raise "save/2 not implemented"

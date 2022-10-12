@@ -99,8 +99,6 @@ defmodule LightningWeb.JobLiveTest do
       assert content =~ "Every month"
       assert content =~ "Custom"
 
-
-
       {:ok, _, html} =
         edit_live
         |> form("#job-form", job: @create_attrs)
