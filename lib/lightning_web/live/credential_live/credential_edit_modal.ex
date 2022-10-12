@@ -5,7 +5,6 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
   use Phoenix.LiveComponent
 
   alias Lightning.Credentials.Credential
-  alias Lightning.Projects
 
   @impl true
  def update(%{project: _project} = assigns, socket) do
@@ -24,7 +23,7 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
           id={:new}
           action={:new}
           credential={%Credential{user_id: assigns.current_user.id}}
-          projects={list_projects(assigns)}
+          projects={[]}
           project={@project}
         />
       </PetalComponents.Modal.modal>
@@ -32,7 +31,4 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
     """
   end
 
-  defp list_projects(assigns) do
-    Projects.get_projects_for_user(assigns.current_user)
-  end
 end
