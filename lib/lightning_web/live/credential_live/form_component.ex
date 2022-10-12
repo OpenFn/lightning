@@ -19,7 +19,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      socket
      |> assign(assigns)
      |> assign(
-       has_project_owner: socket.view != LightningWeb.CredentialLive.Edit,
        all_projects: all_projects,
        changeset: nil,
        available_projects: filter_available_projects(changeset, all_projects),
@@ -34,7 +33,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
        schema: nil
      )
      |> assign_params_changes()
-     |> assign_valid()}
+     |> assign_valid()
+     |> assign_new(:show_project_credentials, fn -> true end)}
   end
 
   defp read_schema(schema) do

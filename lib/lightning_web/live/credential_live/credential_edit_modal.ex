@@ -29,6 +29,7 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
           projects={[]}
           project={@project}
           on_save={@on_save}
+          show_project_credentials={false}
         />
       </PetalComponents.Modal.modal>
     </div>
