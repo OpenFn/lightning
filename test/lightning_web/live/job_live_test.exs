@@ -274,6 +274,20 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
+  describe "New" do
+    test "can create a new cron triggered job", %{project: project, conn: conn} do
+      {:ok, view, _html} =
+        live(conn, Routes.project_job_edit_path(conn, :new, project.id))
+
+      # TODO add tests to check the behaviour of the cron form component.
+      # Crontab.CronExpression.Parser.parse("* * * * *") |> IO.inspect()
+
+      # assert view
+      #        |> form("#job-form", job: @create_attrs)
+      #        |> render_change() =~ "can&#39;t be blank"
+    end
+  end
+
   describe "Access Jobs Page" do
     test "a user can't access the jobs page when they are not members of that project",
          %{conn: conn} do
