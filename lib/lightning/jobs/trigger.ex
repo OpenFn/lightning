@@ -44,18 +44,30 @@ defmodule Lightning.Jobs.Trigger do
 
   @doc false
   def changeset(trigger, attrs) do
-    trigger
-    |> cast(attrs, [
-      :comment,
-      :custom_path,
-      :type,
-      :workflow_id,
-      :upstream_job_id,
-      :cron_expression
-    ])
+    changeset =
+      trigger
+      |> cast(attrs, [
+        :comment,
+        :custom_path,
+        :type,
+        :workflow_id,
+        :upstream_job_id,
+        :cron_expression
+      ])
+
+    changeset
+    |> cast_assoc(:jobs,
+      with: {Job, :changeset, [changeset |> get_field(:workflow_id)]}
+    )
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
     |> validate_by_type()
+  end
+
+  def changeset(job, attrs, workflow_id) do
+    changeset(job, attrs)
+    |> put_change(:workflow_id, workflow_id)
+    |> validate_required(:workflow_id)
   end
 
   def set_workflow_id(trigger_changeset, workflow_id) when workflow_id != nil do

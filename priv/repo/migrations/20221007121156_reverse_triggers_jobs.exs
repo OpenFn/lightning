@@ -48,7 +48,7 @@ defmodule Lightning.Repo.Migrations.ReverseTriggersJobs do
 
     alter table(:triggers) do
       remove :job_id, references(:jobs, on_delete: :delete_all, type: :binary_id), null: false
-      add :workflow_id, references(:workflows, on_delete: :nothing, type: :uuid), null: true
+      add :workflow_id, references(:workflows, on_delete: :delete_all, type: :uuid), null: true
     end
 
     execute(
@@ -77,5 +77,11 @@ defmodule Lightning.Repo.Migrations.ReverseTriggersJobs do
     alter table(:jobs) do
       modify :trigger_id, :uuid, null: false, from: {:uuid, null: true}
     end
+
+    alter table(:triggers) do
+      modify :workflow_id, :uuid, null: false, from: {:uuid, null: true}
+    end
+
+    create index(:triggers, [:workflow_id])
   end
 end

@@ -11,12 +11,6 @@ defmodule Lightning.Jobs.JobTest do
   end
 
   describe "changeset/2" do
-    test "must have a trigger" do
-      errors = Job.changeset(%Job{}, %{}) |> errors_on()
-
-      assert errors[:trigger] == ["can't be blank"]
-    end
-
     test "name can't be longer than 100 chars" do
       name = random_job_name(101)
       errors = Job.changeset(%Job{}, %{name: name}) |> errors_on()

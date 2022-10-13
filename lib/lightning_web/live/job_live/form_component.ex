@@ -8,6 +8,7 @@ defmodule LightningWeb.JobLive.FormComponent do
     only: [assign: 2, assign: 3]
 
   alias Lightning.{Jobs, AdaptorRegistry, Projects}
+  alias Jobs.JobForm
 
   defmacro __using__(_opts) do
     quote do
@@ -44,11 +45,14 @@ defmodule LightningWeb.JobLive.FormComponent do
   end
 
   def update(
-        %{job: job, project: project, initial_job_params: initial_job_params} =
-          assigns,
+        %{
+          job_form: job_form,
+          project: project,
+          initial_job_params: initial_job_params
+        } = assigns,
         socket
       ) do
-    changeset = Jobs.change_job(job, initial_job_params)
+    changeset = JobForm.changeset(job_form, initial_job_params)
 
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(
@@ -62,7 +66,7 @@ defmodule LightningWeb.JobLive.FormComponent do
         {pu.credential.name, pu.id}
       end)
 
-    upstream_jobs = Jobs.get_upstream_jobs_for(job)
+    upstream_jobs = Jobs.get_upstream_jobs_for(job_form)
 
     {:ok,
      socket
@@ -72,16 +76,16 @@ defmodule LightningWeb.JobLive.FormComponent do
      |> assign(:credentials, credentials)
      |> assign(:upstream_jobs, upstream_jobs)
      |> assign(:versions, versions)
+     |> assign(:job_form, job_form)
      |> assign(:changeset, changeset)
      |> assign(:job_params, %{})}
   end
 
-  def validate(%{"job" => job_params}, socket) do
+  def validate(%{"job_form" => job_params}, socket) do
     job_params = coerce_params_for_adaptor_list(job_params)
 
     changeset =
-      socket.assigns.job
-      |> Jobs.change_job(job_params)
+      JobForm.changeset(socket.assigns.job_form, job_params)
       |> Map.put(:action, :validate)
 
     {adaptor_name, _, adaptors, versions} =
@@ -158,11 +162,11 @@ defmodule LightningWeb.JobLive.FormComponent do
   end
 
   def requires_upstream_job?(changeset) do
-    get_field(changeset, :type) in [:on_job_failure, :on_job_success]
+    get_field(changeset, :trigger_type) in [:on_job_failure, :on_job_success]
   end
 
   def requires_cron_job?(changeset) do
-    get_field(changeset, :type) == :cron
+    get_field(changeset, :trigger_type) == :cron
   end
 
   @callback save(

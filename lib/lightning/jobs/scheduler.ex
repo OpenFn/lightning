@@ -40,7 +40,7 @@ defmodule Lightning.Jobs.Scheduler do
     :ok
   end
 
-  @spec invoke_cronjob(Job.t()) :: {:ok, map()}
+  @spec invoke_cronjob(Lightning.Jobs.Job.t()) :: {:ok | :error, map()}
   defp invoke_cronjob(job) do
     case last_state_for_job(job.id) do
       nil ->

@@ -6,7 +6,7 @@ defmodule LightningWeb.JobLive.Edit do
   use LightningWeb, :live_view
 
   alias Lightning.Jobs
-  alias Lightning.Jobs.Job
+  alias Lightning.Jobs.JobForm
   alias Lightning.Projects
 
   on_mount {LightningWeb.Hooks, :project_scope}
@@ -67,9 +67,12 @@ defmodule LightningWeb.JobLive.Edit do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
+    job = Jobs.get_job!(id)
+
     socket
     |> assign(:page_title, "Edit Job")
-    |> assign(:job, Jobs.get_job!(id))
+    |> assign(:job, job)
+    |> assign(:job_form, job |> JobForm.from_job())
   end
 
   defp apply_action(socket, :new, _params) do
@@ -83,7 +86,7 @@ defmodule LightningWeb.JobLive.Edit do
       :credentials,
       Lightning.Credentials.list_credentials()
     )
-    |> assign(:job, %Job{})
+    |> assign(:job_form, %JobForm{project_id: socket.assigns.project.id})
     |> assign(:initial_job_params, %{
       "project_id" => socket.assigns.project.id
     })

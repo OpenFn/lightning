@@ -11,7 +11,12 @@ defmodule LightningWeb.API.JobControllerTest do
     setup [:assign_bearer_for_api, :create_project_for_current_user, :create_job]
 
     test "lists all jobs for project", %{conn: conn, job: job} do
-      conn = get(conn, Routes.api_project_job_path(conn, :index, job.project_id))
+      conn =
+        get(
+          conn,
+          Routes.api_project_job_path(conn, :index, job.workflow.project_id)
+        )
+
       response = json_response(conn, 200)
 
       assert response["data"] == [
@@ -65,6 +70,6 @@ defmodule LightningWeb.API.JobControllerTest do
   end
 
   defp create_job(%{project: project}) do
-    %{job: job_fixture(project_id: project.id)}
+    %{job: workflow_job_fixture(project_id: project.id)}
   end
 end

@@ -126,16 +126,18 @@ defmodule LightningWeb.WorkflowLiveTest do
              "Should have the upstream job selected"
 
       assert view
-             |> form("#job-form", job: %{adaptor_name: "@openfn/language-common"})
+             |> form("#job-form",
+               job_form: %{adaptor_name: "@openfn/language-common"}
+             )
              |> render_change()
 
       assert view
              |> form("#job-form",
-               job: %{
+               job_form: %{
                  body: "some body",
                  enabled: true,
                  name: "some name",
-                 trigger: %{type: "on_job_failure"},
+                 trigger_type: "on_job_failure",
                  adaptor: "@openfn/language-common@latest"
                }
              )

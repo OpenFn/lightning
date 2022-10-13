@@ -1,106 +1,134 @@
-defmodule Lightning.Jobs.JobFormSchema do
+defmodule Lightning.Jobs.JobForm do
+  @moduledoc """
+  Schemaless changeset for wrapping the creation of a Workflow, Job and a Trigger
+  in one place.
+
+  This is used to faciliate the UI components when making a new Job
+  where the form displays the Trigger in the same form.
+
+  However if a Job is new (and doesn't have a Workflow), the associated
+  Trigger will not have the requisite `workflow_id`.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Lightning.Jobs.{Trigger, Job}
+  alias Lightning.Workflows.Workflow
+  alias Ecto.Multi
+
+  @flow_types [:on_job_success, :on_job_failure]
+  @trigger_types [:webhook, :cron] ++ @flow_types
+
   embedded_schema do
+    field :project_id, Ecto.UUID
+    field :workflow_id, Ecto.UUID
+    field :trigger_id, Ecto.UUID
+
+    field :trigger_type, Ecto.Enum, values: @trigger_types, default: :webhook
+    field :trigger_cron_expression, :string
+    field :trigger_upstream_job_id, Ecto.UUID
+
     field :adaptor, :string
     field :body, :string
     field :enabled, :boolean, default: false
     field :name, :string
   end
 
-  @required_fields [:name, :body, :enabled, :adaptor]
+  @required_fields [:project_id, :name, :body, :enabled, :adaptor, :trigger_type]
+  @optional_fields [
+    :workflow_id,
+    :trigger_id,
+    :trigger_cron_expression,
+    :trigger_upstream_job_id
+  ]
 
-  def changeset(trigger, attrs \\ %{}) do
-    trigger
-    |> cast(attrs, @required_fields)
+  def changeset(struct, params \\ %{}) do
+    struct
+    |> cast(params, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end
-end
 
-defmodule Lightning.Jobs.TriggerFormSchema do
-  use Ecto.Schema
-  import Ecto.Changeset
+  def from_job(job) do
+    job = Lightning.Repo.preload(job, [:workflow, :trigger])
 
-  @flow_types [:on_job_success, :on_job_failure]
-  @trigger_types [:webhook, :cron] ++ @flow_types
+    trigger_attrs =
+      Map.take(job.trigger || %{}, [
+        :id,
+        :type,
+        :upstream_job_id,
+        :cron_expression
+      ])
+      |> Enum.into(%{}, fn {k, v} ->
+        {"trigger_#{k}" |> String.to_existing_atom(), v}
+      end)
 
-  embedded_schema do
-    field :type, Ecto.Enum, values: @trigger_types, default: :webhook
+    project_id =
+      case job.workflow do
+        nil -> nil
+        %{project_id: project_id} -> project_id
+      end
 
-    field :cron_expression, :string
-    field :upstream_job_id, Ecto.UUID
-  end
-
-  def changeset(trigger, attrs \\ %{}) do
-    trigger
-    |> cast(attrs, [:type, :upstream_job_id, :cron_expression])
-    |> validate_required([:type])
-  end
-end
-
-defmodule Lightning.Jobs.JobForm do
-  use Ecto.Schema
-  import Ecto.Changeset
-
-  alias Lightning.Jobs.{Trigger, Job, TriggerFormSchema, JobFormSchema}
-  alias Lightning.Workflows.Workflow
-
-  embedded_schema do
-    field :project_id, Ecto.UUID
-
-    embeds_one :workflow, Workflow
-    embeds_one :trigger, TriggerFormSchema
-    embeds_one :job, JobFormSchema
-  end
-
-  def changeset(struct, params \\ %{}) do
-    struct
-    |> cast(params, [:project_id])
-    |> validate_required([:project_id])
-    |> cast_embed(:workflow, with: &Workflow.changeset/2)
-    |> cast_embed(:trigger, with: &TriggerFormSchema.changeset/2)
-    |> cast_embed(:job, with: &JobFormSchema.changeset/2)
+    struct(
+      __MODULE__,
+      Map.from_struct(job)
+      |> Map.merge(%{project_id: project_id})
+      |> Map.merge(trigger_attrs)
+    )
   end
 
   def to_multi(form, attrs) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert_or_update(:workflow, workflow_changeset(form, attrs))
-    |> Ecto.Multi.insert_or_update(:trigger, fn %{workflow: workflow} ->
-      trigger_changeset(form, attrs, workflow)
+    # TODO: Might not actually need attrs
+    Multi.new()
+    |> Multi.run(:workflow, fn repo, _ ->
+      form
+      |> get_field(:workflow_id)
+      |> case do
+        nil -> %Workflow{}
+        workflow_id -> repo.get(Workflow, workflow_id)
+      end
+      |> Workflow.changeset(%{"project_id" => form |> get_field(:project_id)})
+      |> repo.insert_or_update()
     end)
-    |> Ecto.Multi.insert_or_update(:job, fn %{
-                                              workflow: workflow,
-                                              trigger: trigger
-                                            } ->
-      job_changeset(form, attrs, workflow, trigger)
+    |> Multi.run(:trigger, fn repo, %{workflow: workflow} ->
+      attrs =
+        Map.take(attrs, [
+          "trigger_type",
+          "trigger_cron_expression",
+          "trigger_upstream_job_id"
+        ])
+        |> Enum.into(%{}, fn {k, v} ->
+          {k |> String.replace("trigger_", ""), v}
+        end)
+        |> Map.put("workflow_id", workflow.id)
+
+      form
+      |> get_field(:trigger_id)
+      |> case do
+        nil -> %Trigger{}
+        trigger_id -> repo.get(Trigger, trigger_id)
+      end
+      |> Trigger.changeset(attrs)
+      |> repo.insert_or_update()
     end)
-  end
+    |> Multi.run(:job, fn repo, %{workflow: workflow, trigger: trigger} ->
+      attrs =
+        attrs
+        |> Map.take(["adaptor", "enabled", "body", "name"])
+        |> Map.merge(%{
+          "workflow_id" => workflow.id,
+          "trigger_id" => trigger.id
+        })
 
-  defp workflow_changeset(form, attrs) do
-    workflow_attrs =
-      Map.get(attrs, "workflow", %{})
-      |> Map.put("project_id", form |> get_field(:project_id))
-
-    Workflow.changeset(form.data.workflow || %Workflow{}, workflow_attrs)
-  end
-
-  defp trigger_changeset(form, attrs, workflow) do
-    trigger_attrs =
-      Map.get(attrs, "trigger", %{})
-      |> Map.put("workflow_id", workflow.id)
-
-    Trigger.changeset(form.data.trigger || %Trigger{}, trigger_attrs)
-  end
-
-  defp job_changeset(form, attrs, workflow, trigger) do
-    job_attrs =
-      Map.get(attrs, "job", %{})
-      |> Map.put("workflow_id", workflow.id)
-      |> Map.put("trigger_id", trigger.id)
-
-    Job.changeset(form.data.job || %Job{}, job_attrs)
+      form
+      |> get_field(:id)
+      |> case do
+        nil -> %Job{}
+        id -> repo.get(Job, id)
+      end
+      |> Job.changeset(attrs)
+      |> repo.insert_or_update()
+    end)
   end
 end

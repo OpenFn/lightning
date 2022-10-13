@@ -9,7 +9,6 @@ defmodule Lightning.JobsTest do
   alias Lightning.Workflows
 
   import Lightning.JobsFixtures
-  import Lightning.ProjectsFixtures
   import Lightning.CredentialsFixtures
   import Lightning.InvocationFixtures
   import Lightning.WorkflowsFixtures
@@ -56,157 +55,78 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job!/1 returns the job with given id" do
-      job = job_fixture() |> unload_relation(:credential)
+      job = job_fixture()
 
-      assert Jobs.get_job!(job.id) == job
+      assert Jobs.get_job!(job.id) |> unload_relation(:workflow) == job
 
       assert_raise Ecto.NoResultsError, fn ->
         Jobs.get_job!(Ecto.UUID.generate())
       end
-    end
 
-    test "get_job/1 returns the job with given id" do
-      job = job_fixture() |> unload_relation(:credential)
-
-      assert Jobs.get_job(job.id) == job
+      assert Jobs.get_job(job.id) |> unload_relation(:workflow) == job
       assert Jobs.get_job(Ecto.UUID.generate()) == nil
     end
 
     test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture() |> unload_relation(:credential)
+      job = job_fixture()
 
-      assert Jobs.get_job_by_webhook(job.id) == job
+      assert Jobs.get_job_by_webhook(job.id) |> unload_relation(:workflow) == job
 
-      job =
-        job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
-        |> unload_relation(:credential)
+      job = job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
 
       assert Jobs.get_job_by_webhook(job.id) == nil
-      assert Jobs.get_job_by_webhook("foo") == job
+      assert Jobs.get_job_by_webhook("foo") |> unload_relation(:workflow) == job
     end
 
-    test "create_job/1 with valid data creates a job" do
-      valid_attrs = %{
-        body: "some body",
-        enabled: true,
-        name: "some name",
-        adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook", comment: "foo"},
-        project_id: project_fixture().id,
-        workflow_id: workflow_fixture().id
-      }
-
-      assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
-      assert job.body == "some body"
-      assert job.enabled == true
-      assert job.name == "some name"
-
-      assert job.trigger.comment == "foo"
+    test "change_job/1 returns a job changeset" do
+      job = job_fixture()
+      assert %Ecto.Changeset{} = Jobs.change_job(job)
     end
 
-    test "create_job/1 with a cron or webhook trigger creates a new workflow and returns a job with THAT workflow_id" do
-      job_attrs = %{
-        body: "some body",
-        enabled: true,
-        name: "some name",
-        adaptor: "@openfn/language-common",
-        trigger: %{type: "cron", cron_expression: "* * * *"},
-        project_id: project_fixture().id
-      }
+    test "get_upstream_jobs_for/1 returns all jobs in same project except the job passed in" do
+      workflow_1 = workflow_fixture()
+      workflow_2 = workflow_fixture()
 
-      workflows_before = Workflows.list_workflows()
-      count_workflows_before = Enum.count(workflows_before)
+      workflow_1_job_1 = job_fixture(workflow_id: workflow_1.id)
+      workflow_1_job_2 = job_fixture(workflow_id: workflow_1.id)
 
-      {:ok, %Job{} = job_1} = Jobs.create_job(job_attrs)
+      workflow_2_job_1 = job_fixture(workflow_id: workflow_2.id)
+      workflow_2_job_2 = job_fixture(workflow_id: workflow_2.id)
 
-      {:ok, %Job{} = job_2} =
-        Jobs.create_job(%{job_attrs | trigger: %{type: "webhook"}})
+      assert Jobs.get_upstream_jobs_for(workflow_1_job_1) == [
+               Jobs.get_job!(workflow_1_job_2.id)
+             ]
 
-      workflows_after = Workflows.list_workflows()
-      count_workflows_after = Enum.count(workflows_after)
-
-      assert count_workflows_before + 2 ==
-               count_workflows_after
-
-      assert Enum.member?(
-               Enum.map(workflows_before, fn w -> w.id end),
-               job_1.workflow_id
-             )
-             |> Kernel.not()
-
-      assert Enum.member?(
-               Enum.map(workflows_before, fn w -> w.id end),
-               job_2.workflow_id
-             )
-             |> Kernel.not()
-
-      assert Enum.member?(
-               Enum.map(workflows_after, fn w -> w.id end),
-               job_1.workflow_id
-             )
-
-      assert Enum.member?(
-               Enum.map(workflows_after, fn w -> w.id end),
-               job_2.workflow_id
-             )
+      assert Jobs.get_upstream_jobs_for(workflow_2_job_1) == [
+               Jobs.get_job!(workflow_2_job_2.id)
+             ]
     end
 
-    test "create_job/1 with an upstream job returns a job with the upstream job's workflow_id" do
-      project_id = project_fixture().id
+    test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
+      job = job_fixture()
 
-      {:ok, %Job{} = upstream_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "webhook"},
-          project_id: project_id
-        })
+      other_job =
+        job_fixture(
+          trigger: %{type: :on_job_failure, upstream_job_id: job.id},
+          workflow_id: job.workflow_id
+        )
 
-      {:ok, %Job{} = job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
-          project_id: project_id
-        })
+      assert Jobs.get_downstream_jobs_for(job) == [
+               Jobs.get_job!(other_job.id)
+             ]
 
-      assert job.workflow_id == upstream_job.workflow_id
+      assert Jobs.get_downstream_jobs_for(job, :on_job_failure) == [
+               Jobs.get_job!(other_job.id)
+             ]
+
+      assert Jobs.get_downstream_jobs_for(job, :on_job_success) == []
+      assert Jobs.get_downstream_jobs_for(other_job) == []
     end
+  end
 
-    test "create_job/1 with an upstream job doesn't create a new workflow" do
-      project_id = project_fixture().id
-
-      {:ok, %Job{} = upstream_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "webhook"},
-          project_id: project_id
-        })
-
-      count_workflows_before = Workflows.list_workflows() |> Enum.count()
-
-      {:ok, %Job{} = _job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
-          project_id: project_id
-        })
-
-      assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
-    end
-
-    test "update_job/2 from a cron to a webhook trigger does NOT create a new workflow" do
-      project_id = project_fixture().id
+  describe "update_job/2" do
+    test "changing a cron to a webhook trigger does NOT create a new workflow" do
+      workflow_id = workflow_fixture().id
 
       {:ok, %Job{} = job} =
         Jobs.create_job(%{
@@ -215,18 +135,21 @@ defmodule Lightning.JobsTest do
           name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "cron", cron_expression: "* * * *"},
-          project_id: project_id
+          workflow_id: workflow_id
         })
 
-      count_workflows_before = Workflows.list_workflows() |> Enum.count()
-
-      Jobs.update_job(job, %{trigger: %{id: job.trigger.id, type: "webhook"}})
-
-      assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
+      {:ok,
+       %Job{
+         workflow_id: ^workflow_id,
+         trigger: %{workflow_id: ^workflow_id}
+       }} =
+        Jobs.update_job(job, %{
+          trigger: %{id: job.trigger.id, type: "webhook"}
+        })
     end
 
     test "update_job/2 from upstream_job A (in workflow 1) to upstream_job B (in workflow 2) changes the updated job's workflow_id to 2" do
-      project_id = project_fixture().id
+      workflow = workflow_fixture()
 
       {:ok, %Job{} = upstream_job_1} =
         Jobs.create_job(%{
@@ -235,7 +158,7 @@ defmodule Lightning.JobsTest do
           name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "cron"},
-          project_id: project_id
+          workflow_id: workflow.id
         })
 
       {:ok, %Job{} = upstream_job_2} =
@@ -245,7 +168,7 @@ defmodule Lightning.JobsTest do
           name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "cron"},
-          project_id: project_id
+          workflow_id: workflow.id
         })
 
       {:ok, %Job{} = downstream_job_a} =
@@ -255,7 +178,7 @@ defmodule Lightning.JobsTest do
           name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job_1.id},
-          project_id: project_id
+          workflow_id: workflow.id
         })
 
       assert downstream_job_a.workflow_id == upstream_job_1.workflow_id
@@ -272,8 +195,17 @@ defmodule Lightning.JobsTest do
       assert downstream_job_a.workflow_id == upstream_job_2.workflow_id
     end
 
-    test "update_job/2 from upstream_job A (in workflow 1) to cron or webhook creates a new workflow and changes the updated job's workflow_id to THAT new workflow" do
-      project_id = project_fixture().id
+    # With some of the refactoring, we have lost the ability to automatically
+    # determine (easily) if a new Workflow must be made.
+    # We must determine how important this feature is, and deal with it via
+    # a dedicated function - and not automagically.
+    @tag :skip
+    test """
+    update_job/2 from upstream_job A (in workflow 1) to cron or webhook
+    creates a new workflow and changes the updated job's workflow_id
+    to THAT new workflow
+    """ do
+      workflow = workflow_fixture()
 
       {:ok, %Job{} = cron_job} =
         Jobs.create_job(%{
@@ -282,7 +214,7 @@ defmodule Lightning.JobsTest do
           name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "cron", cron_expression: "* * * *"},
-          project_id: project_id
+          workflow_id: workflow.id
         })
 
       {:ok, %Job{} = downstream_job} =
@@ -292,7 +224,7 @@ defmodule Lightning.JobsTest do
           name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: cron_job.id},
-          project_id: project_id
+          workflow_id: workflow.id
         })
 
       assert downstream_job.workflow_id == cron_job.workflow_id
@@ -313,7 +245,7 @@ defmodule Lightning.JobsTest do
       workflows_after = Workflows.list_workflows()
       count_workflows_after = Enum.count(workflows_after)
 
-      assert downstream_job.workflow_id != cron_job.workflow_id
+      refute downstream_job.workflow_id == cron_job.workflow_id
       assert count_workflows_after == count_workflows_before + 1
 
       assert Enum.member?(
@@ -326,36 +258,6 @@ defmodule Lightning.JobsTest do
                Enum.map(workflows_after, fn w -> w.id end),
                downstream_job.workflow_id
              )
-    end
-
-    test "create_job/1 with a credential associated creates a Job with a credential" do
-      project_credential =
-        project_credential_fixture(
-          name: "new credential",
-          body: %{"foo" => "manchu"}
-        )
-
-      assert {:ok, %Job{} = job} =
-               Jobs.create_job(%{
-                 body: "some body",
-                 enabled: true,
-                 name: "some name",
-                 trigger: %{type: "webhook", comment: "foo"},
-                 adaptor: "@openfn/language-common",
-                 project_credential_id: project_credential.id,
-                 project_id: project_fixture().id,
-                 workflow_id: workflow_fixture().id
-               })
-
-      job = Repo.preload(job, :credential)
-
-      assert job.project_credential_id == project_credential.id
-      assert job.credential.name == "new credential"
-      assert job.credential.body == %{"foo" => "manchu"}
-    end
-
-    test "create_job/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Jobs.create_job(@invalid_attrs)
     end
 
     test "update_job/2 with valid data updates the job" do
@@ -383,54 +285,31 @@ defmodule Lightning.JobsTest do
       assert {:ok, %Job{}} = Jobs.delete_job(job)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
     end
-
-    test "change_job/1 returns a job changeset" do
-      job = job_fixture()
-      assert %Ecto.Changeset{} = Jobs.change_job(job)
-    end
-
-    test "get_upstream_jobs_for/1 returns all jobs in same project except the job passed in" do
-      project_1 = project_fixture()
-      project_2 = project_fixture()
-
-      project_1_job_1 = job_fixture(project_id: project_1.id)
-      project_1_job_2 = job_fixture(project_id: project_1.id)
-
-      project_2_job_1 = job_fixture(project_id: project_2.id)
-      project_2_job_2 = job_fixture(project_id: project_2.id)
-
-      assert Jobs.get_upstream_jobs_for(project_1_job_1) == [
-               Jobs.get_job!(project_1_job_2.id)
-             ]
-
-      assert Jobs.get_upstream_jobs_for(project_2_job_1) == [
-               Jobs.get_job!(project_2_job_2.id)
-             ]
-    end
-
-    test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
-      job = job_fixture()
-
-      other_job =
-        job_fixture(trigger: %{type: :on_job_failure, upstream_job_id: job.id})
-
-      assert Jobs.get_downstream_jobs_for(job) == [Jobs.get_job!(other_job.id)]
-
-      assert Jobs.get_downstream_jobs_for(job, :on_job_failure) == [
-               Jobs.get_job!(other_job.id)
-             ]
-
-      assert Jobs.get_downstream_jobs_for(job, :on_job_success) == []
-      assert Jobs.get_downstream_jobs_for(other_job) == []
-    end
   end
 
   describe "create_job/1" do
-    setup do
-      %{project: project_fixture()}
+    test "new job without a workflow" do
+      assert {:error, changeset} =
+               Jobs.create_job(%{
+                 body: "some body",
+                 enabled: true,
+                 name: "some name",
+                 trigger: %{type: "webhook", comment: "foo"},
+                 adaptor: "@openfn/language-common"
+               })
+
+      refute changeset.valid?
+
+      assert {:workflow_id, {"can't be blank", [validation: :required]}} in changeset.errors
     end
 
-    test "new job without a workflow", %{project: project} do
+    test "with a credential associated creates a Job with a credential" do
+      project_credential =
+        project_credential_fixture(
+          name: "new credential",
+          body: %{"foo" => "manchu"}
+        )
+
       assert {:ok, %Job{} = job} =
                Jobs.create_job(%{
                  body: "some body",
@@ -438,14 +317,91 @@ defmodule Lightning.JobsTest do
                  name: "some name",
                  trigger: %{type: "webhook", comment: "foo"},
                  adaptor: "@openfn/language-common",
-                 project_id: project.id
+                 project_credential_id: project_credential.id,
+                 workflow_id: workflow_fixture().id
                })
 
-      assert Ecto.assoc(job, :project) |> Repo.one!() ==
-               project |> unload_relation(:project_users)
+      job = Repo.preload(job, :credential)
 
-      assert job.workflow
-      assert job.workflow.project_id == project.id
+      assert job.project_credential_id == project_credential.id
+      assert job.credential.name == "new credential"
+      assert job.credential.body == %{"foo" => "manchu"}
+    end
+
+    test "with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = Jobs.create_job(@invalid_attrs)
+    end
+
+    test "with valid data creates a job" do
+      valid_attrs = %{
+        body: "some body",
+        enabled: true,
+        name: "some name",
+        adaptor: "@openfn/language-common",
+        trigger: %{type: "webhook", comment: "foo"},
+        workflow_id: workflow_fixture().id
+      }
+
+      assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
+      assert job.body == "some body"
+      assert job.enabled == true
+      assert job.name == "some name"
+
+      assert job.trigger.comment == "foo"
+    end
+
+    test "with an upstream job returns a job with the upstream job's workflow_id" do
+      workflow = workflow_fixture()
+
+      {:ok, %Job{} = upstream_job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "webhook"},
+          workflow_id: workflow.id
+        })
+
+      {:ok, %Job{} = job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
+          workflow_id: workflow.id
+        })
+
+      assert job.workflow_id == upstream_job.workflow_id
+    end
+
+    test "with an upstream job doesn't create a new workflow" do
+      workflow = workflow_fixture()
+
+      {:ok, %Job{} = upstream_job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "webhook"},
+          workflow_id: workflow.id
+        })
+
+      count_workflows_before = Workflows.list_workflows() |> Enum.count()
+
+      {:ok, %Job{} = _job} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
+          workflow_id: workflow.id
+        })
+
+      assert count_workflows_before == Workflows.list_workflows() |> Enum.count()
     end
   end
 

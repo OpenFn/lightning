@@ -23,10 +23,10 @@ defmodule Lightning.Workflows.Workflow do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflows" do
-    field(:name, :string)
+    field :name, :string
 
-    has_many(:jobs, Job)
-    has_many(:triggers, Trigger)
+    has_many :jobs, Job
+    has_many :triggers, Trigger
     belongs_to :project, Project
 
     timestamps()
@@ -36,6 +36,8 @@ defmodule Lightning.Workflows.Workflow do
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name, :project_id])
+    |> cast_assoc(:jobs, with: &Job.changeset/2)
+    |> cast_assoc(:triggers, with: &Job.changeset/2)
     |> assoc_constraint(:project)
     |> unique_constraint([:name, :project_id],
       message: "A workflow with this name does already exist in this project."

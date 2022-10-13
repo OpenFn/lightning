@@ -29,10 +29,38 @@ defmodule Lightning.JobsFixtures do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook", workflow_id: attrs[:workflow_id]}
+        trigger: %{type: "webhook"}
       })
       |> Lightning.Jobs.create_job()
 
     job
+  end
+
+  def workflow_job_fixture(attrs \\ []) do
+    workflow =
+      Ecto.Changeset.cast(
+        %Lightning.Workflows.Workflow{},
+        %{
+          "project_id" => attrs[:project_id] || project_fixture().id,
+          "id" => Ecto.UUID.generate()
+        },
+        [:project_id, :id]
+      )
+
+    attrs =
+      attrs
+      |> Enum.into(%{
+        body: "fn(state => state)",
+        enabled: true,
+        name: "some name",
+        adaptor: "@openfn/language-common",
+        trigger: %{type: "webhook"}
+      })
+
+    %Lightning.Jobs.Job{}
+    |> Ecto.Changeset.change()
+    |> Lightning.Jobs.Job.put_workflow(workflow)
+    |> Lightning.Jobs.Job.changeset(attrs)
+    |> Lightning.Repo.insert!()
   end
 end

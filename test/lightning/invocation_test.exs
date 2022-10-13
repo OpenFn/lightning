@@ -12,7 +12,7 @@ defmodule Lightning.InvocationTest do
     alias Lightning.Invocation.{Run, Dataclip, Event}
 
     test "create/2 returns an Event with a run and a message" do
-      job = job_fixture()
+      job = workflow_job_fixture()
 
       assert {:ok,
               %{
@@ -21,10 +21,14 @@ defmodule Lightning.InvocationTest do
                 run: %Run{}
               }} =
                Invocation.create(
-                 %{job_id: job.id, project_id: job.project_id, type: :webhook},
+                 %{
+                   job_id: job.id,
+                   project_id: job.workflow.project_id,
+                   type: :webhook
+                 },
                  %{
                    body: %{"foo" => "bar"},
-                   project_id: job.project_id,
+                   project_id: job.workflow.project_id,
                    type: :http_request
                  }
                )
@@ -162,11 +166,11 @@ defmodule Lightning.InvocationTest do
 
     test "create_event/1 with valid data creates an event" do
       dataclip = dataclip_fixture()
-      job = job_fixture()
+      job = workflow_job_fixture()
 
       valid_attrs = %{
         type: :webhook,
-        project_id: job.project_id,
+        project_id: job.workflow.project_id,
         dataclip_id: dataclip.id,
         job_id: job.id
       }

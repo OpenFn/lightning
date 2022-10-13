@@ -13,7 +13,7 @@ defmodule LightningWeb.JobLiveTest do
     body: "some body",
     enabled: true,
     name: "some name",
-    trigger: %{type: "cron"},
+    trigger_type: "cron",
     adaptor_name: "@openfn/language-common",
     adaptor: "@openfn/language-common@latest"
   }
@@ -63,12 +63,14 @@ defmodule LightningWeb.JobLiveTest do
         )
 
       assert edit_live
-             |> form("#job-form", job: @invalid_attrs)
+             |> form("#job-form", job_form: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       # Set the adaptor name to populate the version dropdown
       assert edit_live
-             |> form("#job-form", job: %{adaptor_name: "@openfn/language-common"})
+             |> form("#job-form",
+               job_form: %{adaptor_name: "@openfn/language-common"}
+             )
              |> render_change()
 
       assert edit_live
@@ -88,7 +90,7 @@ defmodule LightningWeb.JobLiveTest do
 
       {:ok, _, html} =
         edit_live
-        |> form("#job-form", job: @create_attrs)
+        |> form("#job-form", job_form: @create_attrs)
         |> render_submit()
         |> follow_redirect(
           conn,
@@ -126,12 +128,12 @@ defmodule LightningWeb.JobLiveTest do
         )
 
       assert form_live
-             |> form("#job-form", job: @invalid_attrs)
+             |> form("#job-form", job_form: @invalid_attrs)
              |> render_change() =~ "can&#39;t be blank"
 
       {:ok, _, html} =
         form_live
-        |> form("#job-form", job: @update_attrs)
+        |> form("#job-form", job_form: @update_attrs)
         |> render_submit()
         |> follow_redirect(
           conn,
@@ -168,7 +170,7 @@ defmodule LightningWeb.JobLiveTest do
         )
 
       assert form_live
-             |> form("#job-form", job: %{trigger: %{type: "on_job_success"}})
+             |> form("#job-form", job_form: %{trigger_type: "on_job_success"})
              |> render_change()
 
       displayed_jobs =
@@ -188,7 +190,7 @@ defmodule LightningWeb.JobLiveTest do
            job: job,
            project: project
          } do
-      job_1 = job_fixture(project_id: project.id)
+      job_1 = job_fixture(project_id: project.id, workflow_id: job.workflow_id)
 
       {:ok, index_live, _html} =
         live(conn, Routes.project_job_index_path(conn, :index, project.id))
@@ -208,7 +210,7 @@ defmodule LightningWeb.JobLiveTest do
         )
 
       assert form_live
-             |> form("#job-form", job: %{trigger: %{type: "on_job_success"}})
+             |> form("#job-form", job_form: %{trigger_type: "on_job_success"})
              |> render_change()
 
       displayed_jobs =
@@ -220,7 +222,7 @@ defmodule LightningWeb.JobLiveTest do
 
       assert displayed_jobs
              |> Enum.map(fn x -> "#{x}" end)
-             |> Enum.member?(Jobs.get_job!(job_1.id).name)
+             |> Enum.member?(job_1.name)
     end
 
     test "if project A has 6 jobs, the dropdown list displays 5 jobs (all existing jobs minus the one that the user is currently on)",
@@ -234,7 +236,8 @@ defmodule LightningWeb.JobLiveTest do
 
       new_jobs =
         for _ <- 1..n_jobs,
-            do: job_fixture(name: "some other name", project_id: project.id)
+            do:
+              job_fixture(name: "some other name", workflow_id: job.workflow_id)
 
       assert Jobs.jobs_for_project(project)
              |> Enum.count() == n_jobs + 1
@@ -257,7 +260,7 @@ defmodule LightningWeb.JobLiveTest do
         )
 
       assert form_live
-             |> form("#job-form", job: %{trigger: %{type: "on_job_success"}})
+             |> form("#job-form", job_form: %{trigger_type: "on_job_success"})
              |> render_change()
 
       displayed_jobs =
@@ -272,7 +275,7 @@ defmodule LightningWeb.JobLiveTest do
 
       assert displayed_jobs |> Enum.count() == n_jobs
       assert displayed_jobs == Enum.map(new_jobs, fn job -> job.name end)
-      assert Enum.member?(displayed_jobs, job.name) |> Kernel.not()
+      refute Enum.member?(displayed_jobs, job.name)
     end
   end
 

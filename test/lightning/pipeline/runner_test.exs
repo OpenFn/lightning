@@ -13,7 +13,7 @@ defmodule Lightning.Pipeline.RunnerTest do
       project_credential_fixture(name: "test credential", body: credential_body)
 
     job =
-      job_fixture(
+      workflow_job_fixture(
         adaptor: "@openfn/language-common",
         body: """
         alterState(state => {
@@ -34,8 +34,12 @@ defmodule Lightning.Pipeline.RunnerTest do
 
     {:ok, %{run: run}} =
       Invocation.create(
-        %{job_id: job.id, project_id: job.project_id, type: :webhook},
-        %{body: dataclip_body, project_id: job.project_id, type: :http_request}
+        %{job_id: job.id, project_id: job.workflow.project_id, type: :webhook},
+        %{
+          body: dataclip_body,
+          project_id: job.workflow.project_id,
+          type: :http_request
+        }
       )
 
     result = %Engine.Result{} = Pipeline.Runner.start(run)
