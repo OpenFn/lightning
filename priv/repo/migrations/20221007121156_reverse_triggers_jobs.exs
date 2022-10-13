@@ -77,9 +77,5 @@ defmodule Lightning.Repo.Migrations.ReverseTriggersJobs do
     alter table(:jobs) do
       modify :trigger_id, :uuid, null: false, from: {:uuid, null: true}
     end
-
-    alter table(:triggers) do
-      modify :workflow_id, :uuid, null: false, from: {:uuid, null: true}
-    end
   end
 end
