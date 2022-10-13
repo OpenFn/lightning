@@ -14,8 +14,19 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   """
   use LightningWeb.JobLive.FormComponent
 
+  import Lightning.Helpers, only: [cron_values_to_expression: 1]
+
   @impl true
   def save(%{"job" => job_params}, socket) do
+    trigger_params = job_params |> Map.get("trigger")
+
+    job_params =
+      Map.put(
+        job_params,
+        "trigger",
+        cron_values_to_expression(trigger_params)
+      )
+
     case socket.assigns.action do
       :edit ->
         case Jobs.update_job(socket.assigns.job, job_params) do
@@ -139,94 +150,122 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               <% end %>
               <%= if requires_cron_job?(ft.source) do %>
                 <br />
-                <div class="flex flex-row gap-5">
-                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
-                    <%= radio_button(ft, :cron_option, "hourly") %>
-                    <div>Every hour</div>
-                  </label>
-                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
-                    <%= radio_button(ft, :cron_option, "daily") %>
-                    <div>Every day</div>
-                  </label>
-                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
-                    <%= radio_button(ft, :cron_option, "weekly") %>
-                    <div>Every week</div>
-                  </label>
-                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
-                    <%= radio_button(ft, :cron_option, "monthly") %>
-                    <div>Every month</div>
-                  </label>
-                  <label class="inline-flex items-center gap-3 text-sm text-gray-900 dark:text-gray-200">
-                    <%= radio_button(ft, :cron_option, "custom") %>
-                    <div>Custom</div>
-                  </label>
-                </div>
-                <%= if @selected_cron_option == "hourly" do %>
-                  <span class="block text-sm font-medium text-secondary-700">
-                    Select minute
-                  </span>
-                  <Form.select_field
-                    form={ft}
-                    name={:minutes}
-                    prompt=""
-                    id="minute"
-                    values={0..59}
-                  />
+                <Form.select_field
+                  form={ft}
+                  name={:periodicity}
+                  selected={@cron_form[:periodicity]}
+                  prompt="Periodicity"
+                  id="periodicity"
+                  values={
+                    [
+                      "Every hour": "hourly",
+                      "Every day": "daily",
+                      "Every week": "weekly",
+                      "Every month": "monthly",
+                      Custom: "custom"
+                    ]
+                  }
+                />
+                <br />
+                <%= if @cron_form[:periodicity] == "hourly" do %>
+                  <div class="grid grid-flow-col auto-cols-max gap-4">
+                    <Form.select_field
+                      form={ft}
+                      name={:minutes}
+                      selected={@cron_form[:minutes]}
+                      prompt="Minutes"
+                      id="minutes"
+                      values={0..59}
+                    />
+                  </div>
                 <% end %>
-                <%= if @selected_cron_option == "daily" do %>
-                  <PetalComponents.Form.form_field
-                    type="time_select"
-                    form={ft}
-                    field={:time_of_day}
-                  />
+                <%= if @cron_form[:periodicity] == "daily" do %>
+                  <div class="grid grid-flow-col auto-cols-max gap-4">
+                    <Form.select_field
+                      form={ft}
+                      name={:hours}
+                      selected={@cron_form[:hours]}
+                      prompt="Hour"
+                      id="hours"
+                      values={0..23}
+                    />
+                    <Form.select_field
+                      form={ft}
+                      name={:minutes}
+                      selected={@cron_form[:minutes]}
+                      prompt="Minutes"
+                      id="minutes"
+                      values={0..59}
+                    />
+                  </div>
                 <% end %>
-                <%= if @selected_cron_option == "weekly" do %>
-                  <span class="block text-sm font-medium text-secondary-700">
-                    Select day of week
-                  </span>
-                  <Form.select_field
-                    form={ft}
-                    name={:day_of_week}
-                    prompt=""
-                    id="day_of_week"
-                    values={
-                      [
-                        Monday: 1,
-                        Tuesday: 2,
-                        Wednesday: 3,
-                        Thursday: 4,
-                        Friday: 5,
-                        Saturday: 6,
-                        Sunday: 7
-                      ]
-                    }
-                  />
-                  <br />
-                  <PetalComponents.Form.form_field
-                    type="time_select"
-                    form={ft}
-                    field={:time_of_day}
-                  />
+                <%= if @cron_form[:periodicity] == "weekly" do %>
+                  <div class="grid grid-flow-col auto-cols-max gap-4">
+                    <Form.select_field
+                      form={ft}
+                      name={:weekday}
+                      selected={@cron_form[:weekday]}
+                      prompt="Day of week"
+                      id="weekday"
+                      values={
+                        [
+                          Monday: 1,
+                          Tuesday: 2,
+                          Wednesday: 3,
+                          Thursday: 4,
+                          Friday: 5,
+                          Saturday: 6,
+                          Sunday: 7
+                        ]
+                      }
+                    />
+                    <Form.select_field
+                      form={ft}
+                      name={:hours}
+                      selected={@cron_form[:hours]}
+                      prompt="Hour"
+                      id="hours"
+                      values={0..23}
+                    />
+                    <Form.select_field
+                      form={ft}
+                      name={:minutes}
+                      selected={@cron_form[:minutes]}
+                      prompt="Minutes"
+                      id="minutes"
+                      values={0..59}
+                    />
+                  </div>
                 <% end %>
-                <%= if @selected_cron_option == "monthly" do %>
-                  <span class="block text-sm font-medium text-secondary-700">
-                    Select day of month
-                  </span>
-                  <Form.select_field
-                    form={ft}
-                    name={:day_of_month}
-                    prompt=""
-                    id="day_of_month"
-                    values={1..31}
-                  />
-                  <br />
-                  <PetalComponents.Form.form_field
-                    type="time_select"
-                    form={ft}
-                    field={:time_of_day}
-                  />
+                <%= if @cron_form[:periodicity] == "monthly" do %>
+                  <div class="grid grid-flow-col auto-cols-max gap-4">
+                    <Form.select_field
+                      form={ft}
+                      name={:monthday}
+                      selected={@cron_form[:monthday]}
+                      prompt="Day of month"
+                      id="monthday"
+                      values={1..31}
+                    />
+                    <Form.select_field
+                      form={ft}
+                      name={:hours}
+                      selected={@cron_form[:hours]}
+                      prompt="Hour"
+                      id="hours"
+                      values={0..23}
+                    />
+                    <Form.select_field
+                      form={ft}
+                      name={:minutes}
+                      selected={@cron_form[:minutes]}
+                      prompt="Minutes"
+                      id="minutes"
+                      values={0..59}
+                    />
+                  </div>
                 <% end %>
-                <%= if @selected_cron_option == "custom" do %>
+                <%= if @cron_form[:periodicity] == "custom" do %>
                   <Form.text_field form={ft} id={:cron_expression} />
                 <% end %>
               <% end %>

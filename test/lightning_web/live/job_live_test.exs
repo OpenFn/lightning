@@ -86,19 +86,6 @@ defmodule LightningWeb.JobLiveTest do
                '1.1.0'
              ]
 
-      content =
-        edit_live
-        |> form("#job-form", job: %{trigger: %{type: "cron"}})
-        |> render_change()
-
-      assert edit_live |> element("#cronOptions") |> has_element?()
-
-      assert content =~ "Every hour"
-      assert content =~ "Every day"
-      assert content =~ "Every week"
-      assert content =~ "Every month"
-      assert content =~ "Custom"
-
       {:ok, _, html} =
         edit_live
         |> form("#job-form", job: @create_attrs)

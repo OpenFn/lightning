@@ -9,7 +9,7 @@ defmodule LightningWeb.JobLive.Edit do
   alias Lightning.Jobs.Job
   alias Lightning.Projects
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(_params, _session, socket) do
@@ -25,6 +25,7 @@ defmodule LightningWeb.JobLive.Edit do
            &1
          )
      )
+     |> assign(:cron_form, %{})
      |> assign(:initial_job_params, %{})
      |> assign(:new_credential, false)
      |> assign(:picked_cron_type, nil)
@@ -46,6 +47,11 @@ defmodule LightningWeb.JobLive.Edit do
 
   def handle_event("close_modal", _, socket) do
     {:noreply, socket |> assign(:new_credential, false)}
+  end
+
+  @impl true
+  def handle_event("on_cron_type_change", value, socket) do
+    {:noreply, assign(socket, :cron_form, %{:periodicity => value})}
   end
 
   @impl true
@@ -89,10 +95,5 @@ defmodule LightningWeb.JobLive.Edit do
     |> assign(:initial_job_params, %{
       "project_id" => socket.assigns.project.id
     })
-  end
-
-  @impl true
-  def handle_event("on_cron_type_change", value, socket) do
-    {:noreply, assign(socket, :cron_option, value)}
   end
 end

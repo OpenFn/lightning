@@ -7,6 +7,9 @@ defmodule LightningWeb.JobLive.FormComponent do
   import Phoenix.LiveView,
     only: [assign: 2, assign: 3]
 
+  import Lightning.Helpers,
+    only: [cron_values_to_expression: 1, cron_expression_to_values: 1]
+
   alias Lightning.{Jobs, AdaptorRegistry, Projects}
 
   defmacro __using__(_opts) do
@@ -50,6 +53,10 @@ defmodule LightningWeb.JobLive.FormComponent do
       ) do
     changeset = Jobs.change_job(job, initial_job_params)
 
+    parsed_expression =
+      Ecto.Changeset.fetch_field!(changeset, :trigger)
+      |> cron_expression_to_values()
+
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(
         changeset
@@ -73,16 +80,28 @@ defmodule LightningWeb.JobLive.FormComponent do
      |> assign(:upstream_jobs, upstream_jobs)
      |> assign(:versions, versions)
      |> assign(:changeset, changeset)
-     |> assign(:job_params, %{})}
+     |> assign(:job_params, %{})
+     |> assign(:cron_form, %{
+       :periodicity => Map.get(parsed_expression, "periodicity", nil),
+       :monthday => Map.get(parsed_expression, "monthday", nil),
+       :weekday => Map.get(parsed_expression, "weekday", nil),
+       :hours => Map.get(parsed_expression, "hours", nil),
+       :minutes => Map.get(parsed_expression, "minutes", nil)
+     })}
   end
 
   def validate(%{"job" => job_params}, socket) do
     job_params = coerce_params_for_adaptor_list(job_params)
 
     trigger = job_params |> Map.get("trigger")
-    selected_cron_option = trigger |> Map.get("cron_option", nil)
+    periodicity = trigger |> Map.get("periodicity", nil)
 
-    job_params = Map.put(job_params, "trigger", parse_cron_expression(trigger))
+    job_params =
+      Map.put(
+        job_params,
+        "trigger",
+        cron_values_to_expression(trigger)
+      )
 
     changeset =
       socket.assigns.job
@@ -101,6 +120,7 @@ defmodule LightningWeb.JobLive.FormComponent do
     |> assign(:versions, versions)
     |> assign(:job_params, job_params)
     |> assign(:selected_cron_option, selected_cron_option)
+    |> assign(:cron_form, %{:periodicity => periodicity})
   end
 
   def parse_cron_expression(
