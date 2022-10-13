@@ -26,7 +26,7 @@ defmodule Lightning.Jobs.Job do
   alias Lightning.Credentials.Credential
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows
-  alias Lightning.Projects.{Project, ProjectCredential}
+  alias Lightning.Projects.{ProjectCredential}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -37,7 +37,6 @@ defmodule Lightning.Jobs.Job do
           adaptor: String.t() | nil,
           trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
           credential: nil | Credential.t() | Ecto.Association.NotLoaded.t(),
-          project: nil | Project.t() | Ecto.Association.NotLoaded.t(),
           workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t()
         }
 
@@ -48,16 +47,14 @@ defmodule Lightning.Jobs.Job do
     field :enabled, :boolean, default: false
     field :name, :string
     field :adaptor, :string
-
-    #has_one :trigger, Trigger
     belongs_to :trigger, Trigger
     has_many :events, Lightning.Invocation.Event
 
-    # belongs_to :credential, Credential
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
-    belongs_to :project, Project
+    # belongs_to :project, Project
     belongs_to :workflow, Workflow
+    has_one :project, through: [:workflow, :project]
 
     timestamps()
   end
@@ -71,17 +68,16 @@ defmodule Lightning.Jobs.Job do
       :enabled,
       :adaptor,
       :project_credential_id,
-      :project_id,
-      :workflow_id
+      :workflow_id,
+      :trigger_id
     ])
-    |> cast_assoc(:trigger, with: &Trigger.changeset/2, required: true)
     |> validate_required([
       :name,
       :body,
       :enabled,
-      :adaptor,
-      :project_id
+      :adaptor
     ])
+    |> assoc_constraint(:trigger)
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end

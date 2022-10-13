@@ -97,7 +97,6 @@ defmodule LightningWeb.WorkflowLive do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
     job = %Lightning.Jobs.Job{
-      project_id: socket.assigns.project.id,
       trigger: %Lightning.Jobs.Trigger{
         type: :on_job_success,
         upstream_job_id: upstream_job.id

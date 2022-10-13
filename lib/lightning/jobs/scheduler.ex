@@ -30,8 +30,8 @@ defmodule Lightning.Jobs.Scheduler do
     date_time
     |> DateTime.to_unix()
     |> Jobs.get_jobs_for_cron_execution()
-    |> Enum.each(fn %Jobs.Job{id: id, project_id: project_id} ->
-      {:ok, %{event: event, run: _run}} = invoke_cronjob(id, project_id)
+    |> Enum.each(fn job ->
+      {:ok, %{event: event, run: _run}} = invoke_cronjob(job)
 
       Pipeline.new(%{event_id: event.id})
       |> Oban.insert()
@@ -40,34 +40,34 @@ defmodule Lightning.Jobs.Scheduler do
     :ok
   end
 
-  @spec invoke_cronjob(binary(), binary()) :: {:ok, map()}
-  defp invoke_cronjob(id, project_id) do
-    case last_state_for_job(id) do
+  @spec invoke_cronjob(Job.t()) :: {:ok, map()}
+  defp invoke_cronjob(job) do
+    case last_state_for_job(job.id) do
       nil ->
         Logger.debug(fn ->
-          "Starting cronjob #{id} for the first time. (No previous final state.)"
+          "Starting cronjob #{job.id} for the first time. (No previous final state.)"
         end)
 
         Invocation.create(
-          %{job_id: id, project_id: project_id, type: :cron},
+          %{job_id: job.id, project_id: job.workflow.project_id, type: :cron},
           # Add a facility to specify _which_ global state should be use as
           # the first initial state for a cron-triggered job.
           # The implementation would look like:
           # default_state_for_job(id)
           # %{id: uuid, type: :global, body: %{arbitrary: true}}
-          %{body: %{}, project_id: project_id, type: :global}
+          %{body: %{}, project_id: job.workflow.project_id, type: :global}
         )
 
       state ->
         Logger.debug(fn ->
-          "Starting cronjob #{id} using the final state of its last successful run."
+          "Starting cronjob #{job.id} using the final state of its last successful run."
         end)
 
         Invocation.create(
-          %{job_id: id, project_id: project_id, type: :cron},
+          %{job_id: job.id, project_id: job.workflow.project_id, type: :cron},
           %{
             body: Map.get(state, :body),
-            project_id: project_id,
+            project_id: job.workflow.project_id,
             type: :run_result
           }
         )

@@ -328,7 +328,7 @@ defmodule Lightning.JobsTest do
              )
     end
 
-    test "create_job/1 with a credential associated creates a Job with credential_id and a credential object" do
+    test "create_job/1 with a credential associated creates a Job with a credential" do
       project_credential =
         project_credential_fixture(
           name: "new credential",
@@ -422,6 +422,30 @@ defmodule Lightning.JobsTest do
 
       assert Jobs.get_downstream_jobs_for(job, :on_job_success) == []
       assert Jobs.get_downstream_jobs_for(other_job) == []
+    end
+  end
+
+  describe "create_job/1" do
+    setup do
+      %{project: project_fixture()}
+    end
+
+    test "new job without a workflow", %{project: project} do
+      assert {:ok, %Job{} = job} =
+               Jobs.create_job(%{
+                 body: "some body",
+                 enabled: true,
+                 name: "some name",
+                 trigger: %{type: "webhook", comment: "foo"},
+                 adaptor: "@openfn/language-common",
+                 project_id: project.id
+               })
+
+      assert Ecto.assoc(job, :project) |> Repo.one!() ==
+               project |> unload_relation(:project_users)
+
+      assert job.workflow
+      assert job.workflow.project_id == project.id
     end
   end
 

@@ -36,7 +36,7 @@ defmodule Lightning.Workflows.Workflow do
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name, :project_id])
-    |> validate_required([:project_id])
+    |> assoc_constraint(:project)
     |> unique_constraint([:name, :project_id],
       message: "A workflow with this name does already exist in this project."
     )

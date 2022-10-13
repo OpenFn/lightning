@@ -33,7 +33,6 @@ defmodule Lightning.Jobs.Trigger do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    #belongs_to :job, Job
     has_many :jobs, Job
     belongs_to :workflow, Workflow
     belongs_to :upstream_job, Job
@@ -50,13 +49,32 @@ defmodule Lightning.Jobs.Trigger do
       :comment,
       :custom_path,
       :type,
+      :workflow_id,
       :upstream_job_id,
       :cron_expression
     ])
     |> validate_required([:type])
-    # validate required on workflow
-    # assoc constraint on workflow
+    |> assoc_constraint(:workflow)
     |> validate_by_type()
+  end
+
+  def set_workflow_id(trigger_changeset, workflow_id) when workflow_id != nil do
+    put_change(trigger_changeset, :workflow_id, workflow_id)
+    |> validate_required([:workflow_id])
+  end
+
+  def set_workflow_id(trigger_changeset, _workflow_id) do
+    trigger_changeset
+  end
+
+  def set_trigger_workflow(job_changeset) do
+    update_change(job_changeset, :trigger, fn trigger_changeset ->
+      set_workflow_id(
+        trigger_changeset,
+        job_changeset
+        |> get_field(:workflow_id)
+      )
+    end)
   end
 
   defp validate_cron(changeset, _options \\ []) do

@@ -21,7 +21,8 @@ defmodule Lightning.Jobs do
       from j in Job,
         join: t in assoc(j, :trigger),
         where: t.type == :cron and j.enabled == true,
-        preload: [trigger: t]
+        preload: [trigger: t],
+        preload: :workflow
     )
   end
 
@@ -39,8 +40,9 @@ defmodule Lightning.Jobs do
   Returns the list of jobs excluding the one given.
   """
   @spec get_upstream_jobs_for(Job.t()) :: [Job.t()]
-  def get_upstream_jobs_for(%Job{id: id, project_id: project_id}) do
-    query = from(j in Job, where: j.project_id == ^project_id, preload: :trigger)
+  def get_upstream_jobs_for(%Job{workflow_id: workflow_id, id: id}) do
+    query =
+      from(j in Job, where: j.workflow_id == ^workflow_id, preload: :trigger)
 
     if is_nil(id) do
       Repo.all(query)
@@ -114,10 +116,10 @@ defmodule Lightning.Jobs do
       ** (Ecto.NoResultsError)
 
   """
-  def get_job!(id), do: Repo.get!(Job |> preload(:trigger), id)
+  def get_job!(id), do: Repo.get!(Job |> preload([:trigger, :workflow]), id)
 
   def get_job(id) do
-    from(j in Job, preload: :trigger) |> Repo.get(id)
+    from(j in Job, preload: [:trigger, :workflow]) |> Repo.get(id)
   end
 
   @doc """
@@ -128,7 +130,7 @@ defmodule Lightning.Jobs do
       join: t in assoc(j, :trigger),
       where:
         fragment("coalesce(?, ?)", t.custom_path, type(j.id, :string)) == ^path,
-      preload: [:trigger]
+      preload: [:trigger, :workflow]
     )
     |> Repo.one()
   end
@@ -146,10 +148,51 @@ defmodule Lightning.Jobs do
 
   """
   def create_job(attrs \\ %{}) do
-    %Job{}
-    |> Job.changeset(attrs)
-    |> Job.add_to_workflow()
-    |> Repo.insert()
+    alias Ecto.Multi
+    alias Lightning.Workflows.Workflow
+
+    # attrs needs
+    # :project_id
+
+    # project_id
+    # job
+    # trigger
+    # workflow
+
+    Multi.new()
+    |> Multi.run(
+      :workflow,
+      fn repo, _ ->
+        case attrs[:workflow_id] do
+          id when not is_nil(id) ->
+            {:ok, repo.get(Workflow, id)}
+
+          _ ->
+            Workflow.changeset(%Workflow{}, %{project_id: attrs[:project_id]})
+            |> repo.insert()
+        end
+      end
+    )
+    |> Multi.insert(:trigger, fn %{workflow: workflow} ->
+      Ecto.build_assoc(workflow, :triggers)
+      |> Trigger.changeset(attrs[:trigger])
+    end)
+    |> Multi.insert(:job, fn %{workflow: workflow, trigger: trigger} ->
+      Job.changeset(%Job{}, attrs)
+      |> Ecto.Changeset.put_assoc(:workflow, workflow)
+      |> Ecto.Changeset.put_assoc(:trigger, trigger)
+      |> Job.changeset(%{})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{job: job}} -> {:ok, job}
+    end
+
+    # %Job{}
+    # |> Job.changeset(attrs)
+    # |> Job.add_to_workflow()
+    # |> Trigger.set_trigger_workflow()
+    # |> Repo.insert()
   end
 
   @doc """
