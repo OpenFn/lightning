@@ -119,7 +119,6 @@ defmodule LightningWeb.JobLive.FormComponent do
     |> assign(:adaptors, adaptors)
     |> assign(:versions, versions)
     |> assign(:job_params, job_params)
-    |> assign(:selected_cron_option, selected_cron_option)
     |> assign(:cron_form, %{:periodicity => periodicity})
   end
 
