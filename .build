@@ -32,6 +32,8 @@ Lightning.Invocation.Policy.html
 Lightning.Invocation.Query.html
 Lightning.Invocation.Run.html
 Lightning.Invocation.html
+Lightning.InvocationReason.html
+Lightning.InvocationReasons.html
 Lightning.Jobs.Job.html
 Lightning.Jobs.Policy.html
 Lightning.Jobs.Query.html
@@ -129,8 +131,8 @@ dist/html/fonts/remixicon.svg
 dist/html/fonts/remixicon.ttf
 dist/html/fonts/remixicon.woff
 dist/html/fonts/remixicon.woff2
-dist/search_items-cb29ad975d.js
-dist/sidebar_items-f9e6adcfb1.js
+dist/search_items-db3162d860.js
+dist/sidebar_items-a82875b3f4.js
 index.html
 readme.html
 search.html

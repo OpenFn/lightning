@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>LightningWeb.RunLive.Index — Lightning v0.2.0</title>
+    <title>Lightning.InvocationReasons — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-a82875b3f4.js"></script>
@@ -99,19 +99,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.RunLive.Index</span> 
+  <span translate="no">Lightning.InvocationReasons</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Index Liveview for Runs</p>
+<p>The InvocationReasons context.</p>
   </section>
 
 
@@ -131,27 +131,11 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#render/1" translate="no">render(arg)</a>
+          <a href="#create_reason/1" translate="no">create_reason(attrs \\ %{})</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.11/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#run_time/1" translate="no">run_time(assigns)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#show_run/1" translate="no">show_run(assigns)</a>
-
-        </div>
+          <div class="summary-synopsis"><p>Creates a reason.</p></div>
 
       </div>
 
@@ -169,16 +153,18 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="render/1">
+<section class="detail" id="create_reason/1">
+
+    <span id="create_reason/0"></span>
 
   <div class="detail-header">
-    <a href="#render/1" class="detail-link" title="Link to this function">
+    <a href="#create_reason/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">render(arg)</h1>
+    <h1 class="signature" translate="no">create_reason(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L1" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L22" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -188,51 +174,17 @@ Functions
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.17.11/Phoenix.LiveView.html#c:render/1"><code class="inline">Phoenix.LiveView.render/1</code></a>.</p>
-  </section>
-</section>
-<section class="detail" id="run_time/1">
+<p>Creates a reason.</p><h2 id="create_reason/1-examples" class="section-heading">
+  <a href="#create_reason/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="4127012796-1">(</span><span class="p" data-group-id="4127012796-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4127012796-2">}</span><span class="p" data-group-id="4127012796-1">)</span><span class="w">
+</span><span class="p" data-group-id="4127012796-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4127012796-4">%</span><span class="nc" data-group-id="4127012796-4">InvocationReason</span><span class="p" data-group-id="4127012796-4">{</span><span class="p" data-group-id="4127012796-4">}</span><span class="p" data-group-id="4127012796-3">}</span><span class="w">
 
-  <div class="detail-header">
-    <a href="#run_time/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">run_time(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L113" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="show_run/1">
-
-  <div class="detail-header">
-    <a href="#show_run/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">show_run(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/index.ex#L60" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="4127012796-5">(</span><span class="p" data-group-id="4127012796-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4127012796-6">}</span><span class="p" data-group-id="4127012796-5">)</span><span class="w">
+</span><span class="p" data-group-id="4127012796-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4127012796-8">%</span><span class="nc" data-group-id="4127012796-8">Ecto.Changeset</span><span class="p" data-group-id="4127012796-8">{</span><span class="p" data-group-id="4127012796-8">}</span><span class="p" data-group-id="4127012796-7">}</span></code></pre>
   </section>
 </section>
 
