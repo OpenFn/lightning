@@ -24,17 +24,4 @@ defmodule Lightning.InvocationReasons do
     |> InvocationReason.changeset(attrs)
     |> Repo.insert()
   end
-
-  @doc """
-  Returns an `%Ecto.Changeset{}` for tracking reason changes.
-
-  ## Examples
-
-      iex> change_reason(reason)
-      %Ecto.Changeset{data: %InvocationReason{}}
-
-  """
-  def change_reason(%InvocationReason{} = reason, attrs \\ %{}) do
-    InvocationReason.changeset(reason, attrs)
-  end
 end
