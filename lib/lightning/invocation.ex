@@ -26,8 +26,16 @@ defmodule Lightning.Invocation do
       Event.changeset(%Event{}, event_attrs)
       |> Event.changeset(%{dataclip_id: dataclip_id})
     end)
-    |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
-      Run.changeset(%Run{}, %{event_id: event_id})
+    |> Multi.insert(:run, fn %{
+                               event: %Event{id: event_id},
+                               dataclip: %Dataclip{id: dataclip_id}
+                             } ->
+      Run.changeset(%Run{}, %{
+        event_id: event_id,
+        project_id: event_attrs[:project_id],
+        job_id: event_attrs[:job_id],
+        input_dataclip_id: dataclip_id
+      })
     end)
     |> Repo.transaction()
   end
@@ -44,7 +52,12 @@ defmodule Lightning.Invocation do
       Event.changeset(%Event{}, event_attrs)
     end)
     |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
-      Run.changeset(%Run{}, %{event_id: event_id})
+      Run.changeset(%Run{}, %{
+        event_id: event_id,
+        project_id: event_attrs[:project_id],
+        job_id: event_attrs[:job_id],
+        input_dataclip_id: event_attrs[:dataclip_id]
+      })
     end)
     |> Repo.transaction()
   end
@@ -124,23 +137,15 @@ defmodule Lightning.Invocation do
   @doc """
   Query for retrieving the dataclip that was the result of a successful run.
   """
-  def get_result_dataclip_query(%Run{id: run_id}) do
-    from(d in Dataclip,
-      join: e in assoc(d, :source_event),
-      join: r in assoc(e, :run),
-      where: r.id == ^run_id and d.type == :run_result
-    )
+  def get_result_dataclip_query(%Run{} = run) do
+    Ecto.assoc(run, :output_dataclip)
   end
 
   @doc """
   Query for retrieving the dataclip that a runs starting dataclip.
   """
-  def get_dataclip_query(%Run{id: run_id}) do
-    from(d in Dataclip,
-      join: e in assoc(d, :events),
-      join: r in assoc(e, :run),
-      where: r.id == ^run_id
-    )
+  def get_dataclip_query(%Run{} = run) do
+    Ecto.assoc(run, :input_dataclip)
   end
 
   @doc """

@@ -128,19 +128,21 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   def run_with_successful_source_event() do
     %{event: event} = webhook_event()
 
-    dataclip_fixture(
-      type: :run_result,
-      source_event_id: event.id,
-      body: %{"data" => "I succeeded", "extra" => ["data"]}
-    )
+    dataclip =
+      dataclip_fixture(
+        type: :run_result,
+        source_event_id: event.id,
+        body: %{"data" => "I succeeded", "extra" => ["data"]}
+      )
 
     run =
       run_fixture(
         event_id: event.id,
         exit_code: 0,
-        log: ["1", "2"]
+        log: ["1", "2"],
+        output_dataclip_id: dataclip.id
       )
-      |> Repo.preload(:result_dataclip)
+      |> Repo.preload(:output_dataclip)
 
     job =
       job_fixture(
@@ -155,13 +157,15 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     event =
       event_fixture(
         type: :flow,
-        dataclip_id: run.result_dataclip.id,
+        dataclip_id: run.output_dataclip.id,
         job_id: job.id,
         source_id: event.id
       )
       |> Repo.preload(:dataclip)
 
-    run = run_fixture(event_id: event.id) |> Repo.preload(:result_dataclip)
+    run =
+      run_fixture(event_id: event.id, output_dataclip_id: dataclip.id)
+      |> Repo.preload(:output_dataclip)
 
     %{
       run: run,
@@ -178,7 +182,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
       event_id: event.id,
       exit_code: 1,
       log: ["I've failed, log log"],
-      result_dataclip: nil
+      output_dataclip: nil
     )
 
     job =
@@ -239,7 +243,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
       event_id: event.id,
       exit_code: 1,
       log: ["I've failed, log log"],
-      result_dataclip: nil
+      output_dataclip: nil
     )
 
     job =

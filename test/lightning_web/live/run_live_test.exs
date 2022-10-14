@@ -7,12 +7,14 @@ defmodule LightningWeb.RunLiveTest do
   defp create_run(%{project: project}) do
     run =
       run_fixture(
+        project_id: project.id,
         event_id: event_fixture(project_id: project.id).id,
         log: ["First Run"]
       )
 
     finished_run =
       run_fixture(
+        project_id: project.id,
         event_id: event_fixture(project_id: project.id).id,
         log: ["Finished Run"],
         started_at: DateTime.add(DateTime.utc_now(), -1, :second),
@@ -22,6 +24,7 @@ defmodule LightningWeb.RunLiveTest do
     # Add a bunch of other runs to invoke pagination with more than one page.
     Enum.each(0..10, fn _ ->
       run_fixture(
+        project_id: project.id,
         event_id: event_fixture(project_id: project.id).id,
         log: ["Finished Run"],
         started_at: DateTime.add(DateTime.utc_now(), -1, :second),

@@ -11,6 +11,7 @@ and this project adheres to
 - Add seed data for demo site
 - create adaptor credentials through a form
 - Redirect users to projects list page when they click on Admin Settings menu
+- Move job, project, input and output Dataclips to Run table
 
 ## [0.2.0] - 2022-09-12
 
