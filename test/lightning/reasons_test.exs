@@ -25,7 +25,7 @@ defmodule Lightning.InvocationReasonsTest do
       }
 
       assert {:ok, %InvocationReason{}} =
-               InvocationReasons.create_reason(valid_attrs) |> IO.inspect()
+               InvocationReasons.create_reason(valid_attrs)
     end
   end
 end
