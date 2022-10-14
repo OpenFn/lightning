@@ -12,13 +12,11 @@ defmodule Lightning.Repo.Migrations.AddInvocationReasonsTable do
       add :dataclip_id, references(:dataclips, on_delete: :nothing, type: :binary_id)
 
       timestamps()
-
     end
 
     create index(:invocation_reasons, [:trigger_id])
     create index(:invocation_reasons, [:user_id])
     create index(:invocation_reasons, [:run_id])
     create index(:invocation_reasons, [:dataclip_id])
-
   end
 end

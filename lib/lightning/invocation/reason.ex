@@ -12,21 +12,21 @@ defmodule Lightning.InvocationReason do
   alias Lightning.Accounts.User
 
   @type t :: %__MODULE__{
-    __meta__: Ecto.Schema.Metadata.t(),
-    id: Ecto.UUID.t() | nil,
-    type: atom(),
-    dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t() | nil,
-    run: Run.t() | Ecto.Association.NotLoaded.t() | nil,
-    trigger: Trigger.t() | Ecto.Association.NotLoaded.t() | nil,
-    user: User.t() | Ecto.Association.NotLoaded.t() | nil
-  }
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          type: atom(),
+          dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t() | nil,
+          run: Run.t() | Ecto.Association.NotLoaded.t() | nil,
+          trigger: Trigger.t() | Ecto.Association.NotLoaded.t() | nil,
+          user: User.t() | Ecto.Association.NotLoaded.t() | nil
+        }
 
   @source_types [:webhook, :cron, :flow, :retry]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "invocation_reasons" do
-    field :type,  Ecto.Enum, values: @source_types
+    field :type, Ecto.Enum, values: @source_types
     belongs_to :run, Run
     belongs_to :user, User
     belongs_to :trigger, Trigger
@@ -54,13 +54,13 @@ defmodule Lightning.InvocationReason do
     changeset
     |> fetch_field!(:type)
     |> case do
-      type when type in [:webhook, :cron]  ->
+      type when type in [:webhook, :cron] ->
         changeset
         |> validate_required([:trigger_id])
         |> assoc_constraint(:trigger)
+
       _ ->
         changeset
-      end
-
+    end
   end
 end
