@@ -2,8 +2,7 @@ defmodule Lightning.InvocationReason do
   @moduledoc """
   Ecto model for InvocationReasons.
 
-  A run represents the results of an Invocation.Event, where the Event
-  stores what triggered the Run, the Run itself represents the execution.
+
   """
   use Ecto.Schema
   import Ecto.Changeset
