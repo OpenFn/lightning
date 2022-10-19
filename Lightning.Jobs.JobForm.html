@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.28.3">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>Lightning.Jobs.Query — Lightning v0.2.0</title>
+    <title>Lightning.Jobs.JobForm — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
     <script src="dist/sidebar_items-e56eccca3d.js"></script>
@@ -99,19 +99,22 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/query.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Jobs.Query</span> 
+  <span translate="no">Lightning.Jobs.JobForm</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Query module for finding Jobs.</p>
+<p>Schemaless changeset for wrapping the creation of a Workflow, Job and a Trigger
+in one place.</p><p>This is used to faciliate the UI components when making a new Job
+where the form displays the Trigger in the same form.</p><p>However if a Job is new (and doesn't have a Workflow), the associated
+Trigger will not have the requisite <code class="inline">workflow_id</code>.</p>
   </section>
 
 
@@ -131,23 +134,25 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#enabled_cron_jobs/0" translate="no">enabled_cron_jobs()</a>
+          <a href="#changeset/2" translate="no">changeset(struct, params \\ %{})</a>
 
         </div>
-
-          <div class="summary-synopsis"><p>Returns active jobs with their cron triggers for use in the cron scheduling
-service.</p></div>
 
       </div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#jobs_for/1" translate="no">jobs_for(user)</a>
+          <a href="#from_job/1" translate="no">from_job(job)</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Returns all jobs accessible to a user, via their projects
-or all jobs in a given project.</p></div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#to_multi/2" translate="no">to_multi(form, attrs)</a>
+
+        </div>
 
       </div>
 
@@ -165,16 +170,18 @@ or all jobs in a given project.</p></div>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="enabled_cron_jobs/0">
+<section class="detail" id="changeset/2">
+
+    <span id="changeset/1"></span>
 
   <div class="detail-header">
-    <a href="#enabled_cron_jobs/0" class="detail-link" title="Link to this function">
+    <a href="#changeset/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enabled_cron_jobs()</h1>
+    <h1 class="signature" translate="no">changeset(struct, params \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/query.ex#L34" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L45" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -184,26 +191,19 @@ Functions
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> enabled_cron_jobs() :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
-
-      </div>
-
-<p>Returns active jobs with their cron triggers for use in the cron scheduling
-service.</p>
   </section>
 </section>
-<section class="detail" id="jobs_for/1">
+<section class="detail" id="from_job/1">
 
   <div class="detail-header">
-    <a href="#jobs_for/1" class="detail-link" title="Link to this function">
+    <a href="#from_job/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">jobs_for(user)</h1>
+    <h1 class="signature" translate="no">from_job(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/query.ex#L15" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L53" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -213,16 +213,29 @@ service.</p>
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> jobs_for(<a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+  </section>
+</section>
+<section class="detail" id="to_multi/2">
 
-          <pre translate="no"><span class="attribute">@spec</span> jobs_for(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+  <div class="detail-header">
+    <a href="#to_multi/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">to_multi(form, attrs)</h1>
 
-      </div>
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L77" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
 
-<p>Returns all jobs accessible to a user, via their projects
-or all jobs in a given project.</p>
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

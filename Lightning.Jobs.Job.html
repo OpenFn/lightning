@@ -10,7 +10,7 @@
     <title>Lightning.Jobs.Job — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
 
-    <script src="dist/sidebar_items-a82875b3f4.js"></script>
+    <script src="dist/sidebar_items-e56eccca3d.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,12 +155,20 @@ See <a href="Lightning.Jobs.Trigger.html"><code class="inline">Lightning.Jobs.Tr
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#add_to_workflow/1" translate="no">add_to_workflow(changeset)</a>
+          <a href="#changeset/3" translate="no">changeset(job, attrs, workflow_id)</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>When a job is saved (created or updated) its workflow must be set. (All jobs
-belong to a workflow.)</p></div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#put_workflow/2" translate="no">put_workflow(changeset, workflow)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Attaches a workflow to a job, this is useful when you have an unpersisted
+Workflow changeset - and want it to be created at the same time as a Job.</p></div>
 
       </div>
 
@@ -187,7 +195,7 @@ Types
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L31" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L29" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -210,12 +218,11 @@ Types
   id: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  project:
-    nil | <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credential_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   trigger: nil | <a href="Lightning.Jobs.Trigger.html#t:t/0">Lightning.Jobs.Trigger.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  trigger_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflow:
     nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
@@ -240,16 +247,38 @@ Types
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="add_to_workflow/1">
+<section class="detail" id="changeset/3">
 
   <div class="detail-header">
-    <a href="#add_to_workflow/1" class="detail-link" title="Link to this function">
+    <a href="#changeset/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">add_to_workflow(changeset)</h1>
+    <h1 class="signature" translate="no">changeset(job, attrs, workflow_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L101" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L90" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="put_workflow/2">
+
+  <div class="detail-header">
+    <a href="#put_workflow/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">put_workflow(changeset, workflow)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L124" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -261,16 +290,27 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> add_to_workflow(<a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> put_workflow(
+  <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>()),
+  <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())
+) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
 
       </div>
 
-<p>When a job is saved (created or updated) its workflow must be set. (All jobs
-belong to a workflow.)</p><p>If the job's trigger is of type <code class="inline">:on_job_success</code> or
-<code class="inline">:on_job_failure</code>, this function will set the <code class="inline">workflow_id</code> to that of its
-upstream job.</p><p>If the job's trigger is of type <code class="inline">:cron</code> or <code class="inline">:webhook</code>, it <em>is</em> the most
-upstream job in a workflow and this function will ensure that the job is in
-its <em>own</em> workflow—either creating a new one or leaving it unchanged.</p>
+<p>Attaches a workflow to a job, this is useful when you have an unpersisted
+Workflow changeset - and want it to be created at the same time as a Job.</p><p>Be sure to pass the return of this function into <code class="inline">changeset/2</code> in order to
+have this jobs trigger get the workflows id.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="2810569433-1">(</span><span class="w">
+    </span><span class="p" data-group-id="2810569433-2">%</span><span class="nc" data-group-id="2810569433-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="2810569433-2">{</span><span class="p" data-group-id="2810569433-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="2810569433-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="2810569433-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="2810569433-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="2810569433-5">(</span><span class="p" data-group-id="2810569433-5">)</span><span class="w"> </span><span class="p" data-group-id="2810569433-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="2810569433-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="2810569433-6">]</span><span class="w">
+  </span><span class="p" data-group-id="2810569433-1">)</span><span class="w">
+
+</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
+  </span><span class="p" data-group-id="2810569433-7">%</span><span class="nc" data-group-id="2810569433-7">Job</span><span class="p" data-group-id="2810569433-7">{</span><span class="p" data-group-id="2810569433-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="2810569433-8">(</span><span class="p" data-group-id="2810569433-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="2810569433-9">(</span><span class="n">workflow</span><span class="p" data-group-id="2810569433-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="2810569433-10">(</span><span class="n">attrs</span><span class="p" data-group-id="2810569433-10">)</span></code></pre>
   </section>
 </section>
 
