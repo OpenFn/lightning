@@ -13,12 +13,19 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   It uses the `LightningWeb.JobLive.FormComponent` macro for shared functionality.
   """
   use LightningWeb.JobLive.FormComponent
+  alias Lightning.Jobs.JobForm
 
   @impl true
-  def save(%{"job" => job_params}, socket) do
-    case socket.assigns.action do
+  def save(%{"job_form" => job_params}, socket) do
+    %{action: action, job_form: job_form} = socket.assigns
+
+    case action do
       :edit ->
-        case Jobs.update_job(socket.assigns.job, job_params) do
+        job_form
+        |> JobForm.changeset(job_params)
+        |> JobForm.to_multi(job_params)
+        |> Lightning.Repo.transaction()
+        |> case do
           {:ok, _job} ->
             LightningWeb.Endpoint.broadcast!(
               "project_space:#{socket.assigns.project.id}",
@@ -35,10 +42,11 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         end
 
       :new ->
-        case Jobs.create_job(
-               job_params
-               |> Map.put("project_id", socket.assigns.job.project_id)
-             ) do
+        job_form
+        |> JobForm.changeset(job_params)
+        |> JobForm.to_multi(job_params)
+        |> Lightning.Repo.transaction()
+        |> case do
           {:ok, _job} ->
             LightningWeb.Endpoint.broadcast!(
               "project_space:#{socket.assigns.project.id}",
@@ -87,59 +95,57 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
 
           <div class="md:col-span-1">
-            <%= inputs_for f, :trigger, fn ft -> %>
-              <%= label ft, :type, class: "block" do %>
+            <%= label f, :trigger_type, class: "block" do %>
+              <span class="block text-sm font-medium text-secondary-700">
+                Trigger
+              </span>
+              <%= error_tag(f, :trigger_type, class: "block w-full rounded-md") %>
+              <Form.select_field
+                form={f}
+                name={:trigger_type}
+                prompt=""
+                id="triggerType"
+                values={
+                  [
+                    Cron: "cron",
+                    Webhook: "webhook",
+                    "On Job Success": "on_job_success",
+                    "On Job Failure": "on_job_failure"
+                  ]
+                }
+              />
+            <% end %>
+
+            <%= if f.data.id && @id do %>
+              <a
+                id="copyWebhookUrl"
+                href={Routes.webhooks_url(@socket, :create, [@id])}
+                onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                target="_blank"
+              >
+                Copy webhook url
+              </a>
+            <% end %>
+
+            <%= if requires_upstream_job?(f.source) do %>
+              <%= label f, :trigger_upstream_job_id, class: "block" do %>
                 <span class="block text-sm font-medium text-secondary-700">
-                  Trigger
+                  Upstream Job
                 </span>
-                <%= error_tag(ft, :type, class: "block w-full rounded-md") %>
+                <%= error_tag(f, :trigger_upstream_job_id,
+                  class: "block w-full rounded-md"
+                ) %>
                 <Form.select_field
-                  form={ft}
-                  name={:type}
+                  form={f}
+                  name={:trigger_upstream_job_id}
                   prompt=""
-                  id="triggerType"
-                  values={
-                    [
-                      Cron: "cron",
-                      Webhook: "webhook",
-                      "On Job Success": "on_job_success",
-                      "On Job Failure": "on_job_failure"
-                    ]
-                  }
+                  id="upstreamJob"
+                  values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
                 />
               <% end %>
-
-              <%= if ft.data.id && ft.data.job_id do %>
-                <a
-                  id="copyWebhookUrl"
-                  href={Routes.webhooks_url(@socket, :create, [ft.data.job_id])}
-                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-                  target="_blank"
-                >
-                  Copy webhook url
-                </a>
-              <% end %>
-
-              <%= if requires_upstream_job?(ft.source) do %>
-                <%= label ft, :upstream_job_id, class: "block" do %>
-                  <span class="block text-sm font-medium text-secondary-700">
-                    Upstream Job
-                  </span>
-                  <%= error_tag(ft, :upstream_job_id,
-                    class: "block w-full rounded-md"
-                  ) %>
-                  <Form.select_field
-                    form={ft}
-                    name={:upstream_job_id}
-                    prompt=""
-                    id="upstreamJob"
-                    values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
-                  />
-                <% end %>
-              <% end %>
-              <%= if requires_cron_job?(ft.source) do %>
-                <Form.text_field form={ft} id={:cron_expression} />
-              <% end %>
+            <% end %>
+            <%= if requires_cron_job?(f.source) do %>
+              <Form.text_field form={f} id={:trigger_cron_expression} />
             <% end %>
           </div>
 

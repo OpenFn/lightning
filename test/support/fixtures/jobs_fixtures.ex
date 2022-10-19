@@ -16,11 +16,14 @@ defmodule Lightning.JobsFixtures do
       attrs
       |> Keyword.put_new_lazy(:project_id, fn -> project_fixture().id end)
 
-    {:ok, job} =
+    attrs =
       attrs
       |> Keyword.put_new_lazy(:workflow_id, fn ->
         workflow_fixture(project_id: attrs[:project_id]).id
       end)
+
+    {:ok, job} =
+      attrs
       |> Enum.into(%{
         body: "fn(state => state)",
         enabled: true,
@@ -31,5 +34,33 @@ defmodule Lightning.JobsFixtures do
       |> Lightning.Jobs.create_job()
 
     job
+  end
+
+  def workflow_job_fixture(attrs \\ []) do
+    workflow =
+      Ecto.Changeset.cast(
+        %Lightning.Workflows.Workflow{},
+        %{
+          "project_id" => attrs[:project_id] || project_fixture().id,
+          "id" => Ecto.UUID.generate()
+        },
+        [:project_id, :id]
+      )
+
+    attrs =
+      attrs
+      |> Enum.into(%{
+        body: "fn(state => state)",
+        enabled: true,
+        name: "some name",
+        adaptor: "@openfn/language-common",
+        trigger: %{type: "webhook"}
+      })
+
+    %Lightning.Jobs.Job{}
+    |> Ecto.Changeset.change()
+    |> Lightning.Jobs.Job.put_workflow(workflow)
+    |> Lightning.Jobs.Job.changeset(attrs)
+    |> Lightning.Repo.insert!()
   end
 end

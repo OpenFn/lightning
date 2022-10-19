@@ -606,14 +606,10 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.project_job_edit_path(conn, :edit, project.id, job.id)
         )
 
-      # change the job name so we can assert that the form state had been kept after saving the new credential
-
+      # change the job name so we can assert that the form state had been
+      # kept after saving the new credential
       view
-      |> form("#job-form",
-        job: %{
-          name: "last typed name"
-        }
-      )
+      |> form("#job-form", job_form: %{name: "last typed name"})
       |> render_change()
 
       # open the new credential modal

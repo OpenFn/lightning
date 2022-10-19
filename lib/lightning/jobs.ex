@@ -6,14 +6,14 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Jobs.{Job, Trigger, Query}
   alias Lightning.Projects.Project
 
   @doc """
   Returns the list of jobs.
   """
   def list_jobs do
-    Repo.all(Job |> preload(:trigger))
+    Repo.all(Job |> preload([:trigger, :workflow]))
   end
 
   def list_active_cron_jobs do
@@ -21,13 +21,14 @@ defmodule Lightning.Jobs do
       from j in Job,
         join: t in assoc(j, :trigger),
         where: t.type == :cron and j.enabled == true,
-        preload: [trigger: t]
+        preload: [trigger: t],
+        preload: :workflow
     )
   end
 
   @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
   def jobs_for_project_query(%Project{} = project) do
-    Ecto.assoc(project, :jobs) |> preload(:trigger)
+    Query.jobs_for(project) |> preload(:trigger)
   end
 
   @spec jobs_for_project(Project.t()) :: [Job.t()]
@@ -39,13 +40,25 @@ defmodule Lightning.Jobs do
   Returns the list of jobs excluding the one given.
   """
   @spec get_upstream_jobs_for(Job.t()) :: [Job.t()]
-  def get_upstream_jobs_for(%Job{id: id, project_id: project_id}) do
-    query = from(j in Job, where: j.project_id == ^project_id, preload: :trigger)
+  def get_upstream_jobs_for(%{workflow_id: workflow_id, id: id}) do
+    case [workflow_id, id] do
+      [nil, nil] ->
+        []
 
-    if is_nil(id) do
-      Repo.all(query)
-    else
-      from(j in query, where: j.id != ^id) |> Repo.all()
+      [workflow_id, nil] ->
+        from(j in Job,
+          where: j.workflow_id == ^workflow_id,
+          preload: [:trigger, :workflow]
+        )
+        |> Repo.all()
+
+      [workflow_id, id] ->
+        from(j in Job,
+          where: j.workflow_id == ^workflow_id,
+          where: j.id != ^id,
+          preload: [:trigger, :workflow]
+        )
+        |> Repo.all()
     end
   end
 
@@ -96,7 +109,7 @@ defmodule Lightning.Jobs do
     from(j in Job,
       join: t in assoc(j, :trigger),
       where: t.upstream_job_id == ^job_id,
-      preload: [trigger: t]
+      preload: [:workflow, trigger: t]
     )
   end
 
@@ -114,10 +127,10 @@ defmodule Lightning.Jobs do
       ** (Ecto.NoResultsError)
 
   """
-  def get_job!(id), do: Repo.get!(Job |> preload(:trigger), id)
+  def get_job!(id), do: Repo.get!(Job |> preload([:trigger, :workflow]), id)
 
   def get_job(id) do
-    from(j in Job, preload: :trigger) |> Repo.get(id)
+    from(j in Job, preload: [:trigger, :workflow]) |> Repo.get(id)
   end
 
   @doc """
@@ -128,7 +141,7 @@ defmodule Lightning.Jobs do
       join: t in assoc(j, :trigger),
       where:
         fragment("coalesce(?, ?)", t.custom_path, type(j.id, :string)) == ^path,
-      preload: [:trigger]
+      preload: [:trigger, :workflow]
     )
     |> Repo.one()
   end
@@ -148,7 +161,6 @@ defmodule Lightning.Jobs do
   def create_job(attrs \\ %{}) do
     %Job{}
     |> Job.changeset(attrs)
-    |> Job.add_to_workflow()
     |> Repo.insert()
   end
 
@@ -167,7 +179,6 @@ defmodule Lightning.Jobs do
   def update_job(%Job{} = job, attrs) do
     job
     |> Job.changeset(attrs)
-    |> Job.add_to_workflow()
     |> Repo.update()
   end
 

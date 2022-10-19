@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive do
 
   alias Lightning.Workflows
   alias Lightning.Projects
+  alias Lightning.Jobs.JobForm
 
   defp encode_project_space(project) do
     Workflows.get_workflows_for(project)
@@ -97,7 +98,6 @@ defmodule LightningWeb.WorkflowLive do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
     job = %Lightning.Jobs.Job{
-      project_id: socket.assigns.project.id,
       trigger: %Lightning.Jobs.Trigger{
         type: :on_job_success,
         upstream_job_id: upstream_job.id
@@ -108,6 +108,12 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
+      job_form: %JobForm{
+        project_id: socket.assigns.project.id,
+        workflow_id: upstream_job.workflow_id,
+        trigger_type: :on_job_success,
+        trigger_upstream_job_id: upstream_job.id
+      },
       initial_job_params: %{
         "project_id" => socket.assigns.project.id
       },
@@ -122,6 +128,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
+      job_form: JobForm.from_job(job),
       initial_job_params: %{},
       page_title: socket.assigns.project.name
     )
@@ -175,7 +182,7 @@ defmodule LightningWeb.WorkflowLive do
                 <.live_component
                   module={LightningWeb.JobLive.InspectorFormComponent}
                   id="new-job"
-                  job={@job}
+                  job_form={@job_form}
                   action={:new}
                   project={@project}
                   initial_job_params={@initial_job_params}
@@ -194,8 +201,8 @@ defmodule LightningWeb.WorkflowLive do
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
                   module={LightningWeb.JobLive.InspectorFormComponent}
-                  id={@job.id}
-                  job={@job}
+                  id={@job_form.id}
+                  job_form={@job_form}
                   action={:edit}
                   project={@project}
                   initial_job_params={@initial_job_params}

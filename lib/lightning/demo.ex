@@ -81,7 +81,6 @@ defmodule Lightning.Demo do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "webhook"},
-        project_id: openhie_project.id,
         workflow_id: openhie_workflow.id
       })
 
@@ -94,7 +93,7 @@ defmodule Lightning.Demo do
           type: "on_job_success",
           upstream_job_id: fhir_standard_data.id
         },
-        project_id: openhie_project.id
+        workflow_id: openhie_workflow.id
       })
 
     {:ok, notify_upload_successful} =
@@ -103,7 +102,7 @@ defmodule Lightning.Demo do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "on_job_success", upstream_job_id: send_to_openhim.id},
-        project_id: openhie_project.id
+        workflow_id: openhie_workflow.id
       })
 
     {:ok, notify_upload_failed} =
@@ -112,7 +111,7 @@ defmodule Lightning.Demo do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "on_job_failure", upstream_job_id: send_to_openhim.id},
-        project_id: openhie_project.id
+        workflow_id: openhie_workflow.id
       })
 
     {:ok, dhis2_workflow} =
@@ -127,7 +126,6 @@ defmodule Lightning.Demo do
         body: "fn(state => state);",
         adaptor: "@openfn/language-dhis2",
         trigger: %{type: "cron", cron_expression: "0 * * * *"},
-        project_id: dhis2_project.id,
         workflow_id: dhis2_workflow.id
       })
 
@@ -137,7 +135,7 @@ defmodule Lightning.Demo do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http",
         trigger: %{type: "on_job_success", upstream_job_id: get_dhis2_data.id},
-        project_id: dhis2_project.id
+        workflow_id: dhis2_workflow.id
       })
 
     %{

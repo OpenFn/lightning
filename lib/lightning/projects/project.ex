@@ -6,7 +6,6 @@ defmodule Lightning.Projects.Project do
   import Ecto.Changeset
 
   alias Lightning.Projects.{ProjectUser, ProjectCredential}
-  alias Lightning.Jobs.Job
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -24,8 +23,8 @@ defmodule Lightning.Projects.Project do
     has_many :project_credentials, ProjectCredential
     has_many :credentials, through: [:project_credentials, :credential]
 
-    has_many :jobs, Job
     has_many :workflows, Workflow
+    has_many :jobs, through: [:workflows, :jobs]
 
     timestamps()
   end

@@ -15,6 +15,7 @@ defmodule Lightning.Jobs.Trigger do
   import Ecto.Changeset
 
   alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -32,7 +33,8 @@ defmodule Lightning.Jobs.Trigger do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    belongs_to :job, Job
+    has_many :jobs, Job
+    belongs_to :workflow, Workflow
     belongs_to :upstream_job, Job
 
     field :type, Ecto.Enum, values: @trigger_types, default: :webhook
@@ -42,17 +44,30 @@ defmodule Lightning.Jobs.Trigger do
 
   @doc false
   def changeset(trigger, attrs) do
-    trigger
-    |> cast(attrs, [
-      :comment,
-      :custom_path,
-      :type,
-      :upstream_job_id,
-      :cron_expression
-    ])
+    changeset =
+      trigger
+      |> cast(attrs, [
+        :comment,
+        :custom_path,
+        :type,
+        :workflow_id,
+        :upstream_job_id,
+        :cron_expression
+      ])
+
+    changeset
+    |> cast_assoc(:jobs,
+      with: {Job, :changeset, [changeset |> get_field(:workflow_id)]}
+    )
     |> validate_required([:type])
-    |> assoc_constraint(:job)
+    |> assoc_constraint(:workflow)
     |> validate_by_type()
+  end
+
+  def changeset(job, attrs, workflow_id) do
+    changeset(job, attrs)
+    |> put_change(:workflow_id, workflow_id)
+    |> validate_required(:workflow_id)
   end
 
   defp validate_cron(changeset, _options \\ []) do
