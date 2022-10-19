@@ -64,11 +64,7 @@ defmodule Lightning.Jobs.JobForm do
         {"trigger_#{k}" |> String.to_existing_atom(), v}
       end)
 
-    project_id =
-      case job.workflow do
-        nil -> nil
-        %{project_id: project_id} -> project_id
-      end
+    project_id = job.workflow.project_id
 
     struct(
       __MODULE__,

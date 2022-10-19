@@ -70,25 +70,6 @@ defmodule Lightning.Jobs.Trigger do
     |> validate_required(:workflow_id)
   end
 
-  def set_workflow_id(trigger_changeset, workflow_id) when workflow_id != nil do
-    put_change(trigger_changeset, :workflow_id, workflow_id)
-    |> validate_required([:workflow_id])
-  end
-
-  def set_workflow_id(trigger_changeset, _workflow_id) do
-    trigger_changeset
-  end
-
-  def set_trigger_workflow(job_changeset) do
-    update_change(job_changeset, :trigger, fn trigger_changeset ->
-      set_workflow_id(
-        trigger_changeset,
-        job_changeset
-        |> get_field(:workflow_id)
-      )
-    end)
-  end
-
   defp validate_cron(changeset, _options \\ []) do
     validate_change(changeset, :cron_expression, fn _, cron_expression ->
       Crontab.CronExpression.Parser.parse(cron_expression)

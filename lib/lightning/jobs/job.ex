@@ -50,7 +50,6 @@ defmodule Lightning.Jobs.Job do
 
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
-    # belongs_to :project, Project
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
 
