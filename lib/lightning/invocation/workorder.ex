@@ -1,27 +1,27 @@
-defmodule Lightning.Attempt do
+defmodule Lightning.WorkOrder do
   @moduledoc """
-  Ecto model for Attempts.
+  Ecto model for Workorders.
 
 
   """
   use Ecto.Schema
   import Ecto.Changeset
+  alias Lightning.Workflows.Workflow
   alias Lightning.InvocationReason
-  alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
+          workflow: Workflow.t() | Ecto.Association.NotLoaded.t(),
           reason: InvocationReason.t() | Ecto.Association.NotLoaded.t()
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "attempts" do
-    belongs_to :workorder, WorkOrder
+  schema "workorders" do
+    belongs_to :workflow, Workflow
     belongs_to :reason, InvocationReason
-    many_to_many :runs, Run, join_through: "attempt_runs"
 
     timestamps()
   end
@@ -29,10 +29,9 @@ defmodule Lightning.Attempt do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:reason_id, :workorder_id])
-    |> cast_assoc(:runs, required: false)
-    |> validate_required([:reason_id, :workorder_id])
-    |> assoc_constraint(:workorder)
+    |> cast(attrs, [:reason_id, :workflow_id])
+    |> validate_required([:reason_id, :workflow_id])
+    |> assoc_constraint(:workflow)
     |> assoc_constraint(:reason)
   end
 end

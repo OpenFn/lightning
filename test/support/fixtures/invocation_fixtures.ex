@@ -51,6 +51,32 @@ defmodule Lightning.InvocationFixtures do
   end
 
   @doc """
+  Generate an workorder.
+  """
+  def workorder_fixture(attrs \\ []) when is_list(attrs) do
+    attrs =
+      attrs
+      |> Keyword.put_new_lazy(:project_id, fn ->
+        Lightning.ProjectsFixtures.project_fixture().id
+      end)
+
+    {:ok, workorder} =
+      attrs
+      |> Keyword.put_new_lazy(:workflow_id, fn ->
+        Lightning.WorkflowsFixtures.workflow_fixture(
+          project_id: Keyword.get(attrs, :project_id)
+        ).id
+      end)
+      |> Keyword.put_new_lazy(:reason_id, fn ->
+        reason_fixture(project_id: Keyword.get(attrs, :project_id)).id
+      end)
+      |> Enum.into(%{})
+      |> Lightning.WorkOrderService.create_workorder()
+
+    workorder
+  end
+
+  @doc """
   Generate an reason.
   """
   def reason_fixture(attrs \\ []) when is_list(attrs) do
@@ -60,7 +86,7 @@ defmodule Lightning.InvocationFixtures do
         Lightning.ProjectsFixtures.project_fixture().id
       end)
 
-    {:ok, event} =
+    {:ok, reason} =
       attrs
       |> Keyword.put_new_lazy(:dataclip_id, fn ->
         dataclip_fixture(project_id: Keyword.get(attrs, :project_id)).id
@@ -73,7 +99,7 @@ defmodule Lightning.InvocationFixtures do
       })
       |> Lightning.InvocationReasons.create_reason()
 
-    event
+    reason
   end
 
   @doc """
