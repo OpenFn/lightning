@@ -75,6 +75,7 @@ defmodule LightningWeb.RunLive.Components do
   #    <Components.work_order status={:success} />
   #  </Components.table>
 
+  # coveralls-ignore-start
   def table(assigns) do
     ~H"""
     <div class="overflow-x-auto bg-gray-100 dark:bg-gray-700">
@@ -153,4 +154,5 @@ defmodule LightningWeb.RunLive.Components do
     </span>
     """
   end
+  # coveralls-ignore-stop
 end
