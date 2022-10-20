@@ -15,6 +15,7 @@ and this project adheres to
 - Reverse the relationship between Jobs and Triggers,
   Triggers now can exist on their own; setting the stage for branching and merging
   workflows
+- Updated Elixir and frontend dependencies
 
 ## [0.2.0] - 2022-09-12
 

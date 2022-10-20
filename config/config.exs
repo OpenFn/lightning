@@ -37,7 +37,7 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.14.49",
+  version: "0.15.12",
   default: [
     args:
       ~w(js/app.js
