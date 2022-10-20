@@ -27,9 +27,10 @@ defmodule Lightning.Attempt do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:reason_id])
+    |> cast(attrs, [:reason_id, :workorder_id])
     |> cast_assoc(:runs, required: false)
-    |> validate_required([:reason_id])
+    |> validate_required([:reason_id, :workorder_id])
+    |> assoc_constraint(:workflow)
     |> assoc_constraint(:reason)
   end
 end
