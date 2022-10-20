@@ -96,12 +96,6 @@ defmodule LightningWeb.RunLive.Index do
     """
   end
 
-  # people: page.entries,
-  # page_number: page.page_number,
-  # page_size: page.page_size,
-  # total_pages: page.total_pages,
-  # total_entries: page.total_entries
-
   defp format_time(time) when is_nil(time) do
     ""
   end
@@ -110,7 +104,9 @@ defmodule LightningWeb.RunLive.Index do
     time |> Timex.from_now(Timex.now(), "en")
   end
 
-  def run_time(%{run: run} = assigns) do
+  def run_time(assigns) do
+    run = assigns[:run]
+
     if run.finished_at do
       time_taken = Timex.diff(run.finished_at, run.started_at, :milliseconds)
 
