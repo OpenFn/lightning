@@ -57,6 +57,8 @@ Lightning.Release.html
 Lightning.Repo.html
 Lightning.Scrubber.html
 Lightning.Vault.html
+Lightning.WorkOrder.html
+Lightning.WorkOrderService.html
 Lightning.Workflows.Workflow.html
 Lightning.Workflows.html
 Lightning.html
@@ -152,8 +154,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-E5F632F0.js
-dist/sidebar_items-1FE19C4B.js
+dist/search_items-1EFCC7E0.js
+dist/sidebar_items-3719F733.js
 index.html
 readme.html
 search.html

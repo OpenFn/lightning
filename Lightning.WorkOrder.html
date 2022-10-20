@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>Lightning.Jobs.Scheduler — Lightning v0.2.0</title>
+    <title>Lightning.WorkOrder — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,20 +101,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/workorder.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Jobs.Scheduler</span> 
+  <span translate="no">Lightning.WorkOrder</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>The Scheduler is responsible for finding jobs that are ready to run based on
-their cron schedule, and then running them.</p>
+<p>Ecto model for Workorders.</p>
   </section>
 
 
@@ -127,27 +126,16 @@ their cron schedule, and then running them.</p>
       Summary
     </h1>
 
-  <div class="summary-functions summary">
+  <div class="summary-types summary">
     <h2>
-      <a href="#functions">Functions</a>
+      <a href="#types">Types</a>
     </h2>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#active_jobs_with_cron_triggers/0" translate="no">active_jobs_with_cron_triggers()</a>
+          <a href="#t:t/0" translate="no">t()</a>
 
         </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#enqueue_cronjobs/1" translate="no">enqueue_cronjobs(date_time \\ DateTime.utc_now())</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Find and start any cronjobs that are scheduled to run for a given time
-(defaults to the current time).</p></div>
 
       </div>
 
@@ -156,25 +144,25 @@ their cron schedule, and then running them.</p>
   </section>
 
 
-  <section id="functions" class="details-list">
+  <section id="types" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
+      <a class="hover-link" href="#types">
         <i class="ri-link-m" aria-hidden="true"></i>
         <span class="sr-only">Link to this section</span>
       </a>
-Functions
+Types
     </h1>
-    <div class="functions-list">
-<section class="detail" id="active_jobs_with_cron_triggers/0">
+    <div class="types-list">
+<section class="detail" id="t:t/0">
 
   <div class="detail-header">
-    <a href="#active_jobs_with_cron_triggers/0" class="detail-link" title="Link to this function">
+    <a href="#t:t/0" class="detail-link" title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
+      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">active_jobs_with_cron_triggers()</h1>
+    <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L90" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/workorder.ex#L13" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -186,36 +174,20 @@ Functions
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> active_jobs_with_cron_triggers() :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.WorkOrder{
+  __meta__: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  id: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  reason: <a href="Lightning.InvocationReason.html#t:t/0">Lightning.InvocationReason.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  reason_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  workflow: <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  workflow_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
+}</pre>
 
       </div>
 
 
-  </section>
-</section>
-<section class="detail" id="enqueue_cronjobs/1">
-
-    <span id="enqueue_cronjobs/0"></span>
-
-  <div class="detail-header">
-    <a href="#enqueue_cronjobs/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">enqueue_cronjobs(date_time \\ DateTime.utc_now())</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L29" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Find and start any cronjobs that are scheduled to run for a given time
-(defaults to the current time).</p>
   </section>
 </section>
 
