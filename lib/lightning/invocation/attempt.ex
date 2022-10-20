@@ -7,6 +7,7 @@ defmodule Lightning.Attempt do
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.InvocationReason
+  alias Lightning.Invocation.Run
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -18,6 +19,7 @@ defmodule Lightning.Attempt do
   @foreign_key_type :binary_id
   schema "attempts" do
     belongs_to :reason, InvocationReason
+    many_to_many :runs, Run, join_through: "attempt_runs"
 
     timestamps()
   end
@@ -26,6 +28,7 @@ defmodule Lightning.Attempt do
   def changeset(attempt, attrs) do
     attempt
     |> cast(attrs, [:reason_id])
+    |> cast_assoc(:runs, required: false)
     |> validate_required([:reason_id])
     |> assoc_constraint(:reason)
   end
