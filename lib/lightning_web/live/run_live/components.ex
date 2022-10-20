@@ -154,5 +154,6 @@ defmodule LightningWeb.RunLive.Components do
     </span>
     """
   end
+
   # coveralls-ignore-stop
 end
