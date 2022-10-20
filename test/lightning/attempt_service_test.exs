@@ -15,12 +15,14 @@ defmodule Lightning.AttemptServiceTest do
       reason = reason_fixture(trigger_id: job.trigger.id)
 
       job_id = job.id
+      workorder_id = workorder.id
       reason_id = reason.id
       data_clip_id = reason.dataclip_id
 
       assert {:ok,
               %{
                 attempt: %Attempt{
+                  workorder_id: ^workorder_id,
                   reason_id: ^reason_id,
                   runs: [%Run{job_id: ^job_id, input_dataclip_id: ^data_clip_id}]
                 },
