@@ -16,7 +16,7 @@
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-markdown": "^8.0.3",
-    "zustand": "^4.0.0-rc.2"
+    "zustand": "^4.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.15",
