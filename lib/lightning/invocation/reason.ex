@@ -38,7 +38,7 @@ defmodule Lightning.InvocationReason do
   def changeset(reason, attrs) do
     reason
     |> cast(attrs, [:type, :run_id, :dataclip_id, :user_id, :trigger_id])
-    |> validate_required([:type, :dataclip_id, :user_id])
+    |> validate_required([:type, :dataclip_id])
     |> validate_inclusion(:type, @source_types)
     |> assoc_constraint(:run)
     |> assoc_constraint(:user)
