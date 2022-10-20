@@ -10,6 +10,7 @@ defmodule Lightning.Invocation.Run do
   alias Lightning.Invocation.{Event, Dataclip}
   alias Lightning.Projects.Project
   alias Lightning.Jobs.Job
+  alias Lightning.Attempt
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -36,6 +37,8 @@ defmodule Lightning.Invocation.Run do
 
     # has_one :source_dataclip, through: [:event, :dataclip]
     # has_one :result_dataclip, through: [:event, :result_dataclip]
+
+    many_to_many :attempts, Attempt, join_through: "attempt_runs"
 
     timestamps(usec: true)
   end

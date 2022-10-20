@@ -2,8 +2,7 @@ defmodule Lightning.InvocationReason do
   @moduledoc """
   Ecto model for InvocationReasons.
 
-  A run represents the results of an Invocation.Event, where the Event
-  stores what triggered the Run, the Run itself represents the execution.
+
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -39,7 +38,7 @@ defmodule Lightning.InvocationReason do
   def changeset(reason, attrs) do
     reason
     |> cast(attrs, [:type, :run_id, :dataclip_id, :user_id, :trigger_id])
-    |> validate_required([:type, :run_id, :dataclip_id, :user_id])
+    |> validate_required([:type, :dataclip_id])
     |> validate_inclusion(:type, @source_types)
     |> assoc_constraint(:run)
     |> assoc_constraint(:user)
