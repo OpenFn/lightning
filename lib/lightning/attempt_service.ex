@@ -22,7 +22,7 @@ defmodule Lightning.AttemptService do
   """
 
   def create_attempt(_workorder, job, reason) do
-    project_id = job.project_id
+    project_id = job.workflow.project_id
     dataclip_id = reason.dataclip_id
 
     Ecto.Multi.new()
@@ -41,6 +41,7 @@ defmodule Lightning.AttemptService do
         project_id: project_id,
         job_id: job.id,
         input_dataclip_id: dataclip_id,
+        # not sure why we need this !
         output_dataclip: nil
       })
     end)
@@ -48,7 +49,6 @@ defmodule Lightning.AttemptService do
       Attempt.changeset(%Attempt{}, %{
         reason_id: reason.id,
         runs: [Map.from_struct(run)]
-        # why we set manually timestamps  https://github.com/elixir-ecto/ecto/issues/1260
       })
     end)
     |> Repo.transaction()

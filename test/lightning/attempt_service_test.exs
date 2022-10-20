@@ -10,20 +10,12 @@ defmodule Lightning.AttemptServiceTest do
     alias Lightning.Attempt
 
     test "create/3 returns an Event, a Run and an Attempt" do
-      job = job_fixture()
+      job = workflow_job_fixture()
       reason = reason_fixture(trigger_id: job.trigger.id)
 
       job_id = job.id
       reason_id = reason.id
       data_clip_id = reason.dataclip_id
-
-      IO.inspect(
-        AttemptService.create_attempt(
-          nil,
-          job,
-          reason
-        )
-      )
 
       assert {:ok,
               %{
