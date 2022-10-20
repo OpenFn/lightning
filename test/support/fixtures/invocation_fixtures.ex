@@ -1,4 +1,6 @@
 defmodule Lightning.InvocationFixtures do
+  import Lightning.JobsFixtures
+
   @moduledoc """
   This module defines test helpers for creating
   entities via the `Lightning.Invocation` context.
@@ -44,6 +46,32 @@ defmodule Lightning.InvocationFixtures do
         type: :webhook
       })
       |> Lightning.Invocation.create_event()
+
+    event
+  end
+
+  @doc """
+  Generate an reason.
+  """
+  def reason_fixture(attrs \\ []) when is_list(attrs) do
+    attrs =
+      attrs
+      |> Keyword.put_new_lazy(:project_id, fn ->
+        Lightning.ProjectsFixtures.project_fixture().id
+      end)
+
+    {:ok, event} =
+      attrs
+      |> Keyword.put_new_lazy(:dataclip_id, fn ->
+        dataclip_fixture(project_id: Keyword.get(attrs, :project_id)).id
+      end)
+      |> Keyword.put_new_lazy(:trigger_id, fn ->
+        job_fixture(project_id: Keyword.get(attrs, :project_id)).trigger.id
+      end)
+      |> Enum.into(%{
+        type: :webhook
+      })
+      |> Lightning.InvocationReasons.create_reason()
 
     event
   end
