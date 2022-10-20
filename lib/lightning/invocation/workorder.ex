@@ -6,6 +6,7 @@ defmodule Lightning.WorkOrder do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  alias Lightning.Workflows.Workflow
   alias Lightning.InvocationReason
   alias Lightning.Invocation.Run
 

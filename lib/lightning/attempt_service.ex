@@ -21,7 +21,7 @@ defmodule Lightning.AttemptService do
 
   """
 
-  def create_attempt(_workorder, job, reason) do
+  def create_attempt(workorder, job, reason) do
     project_id = job.workflow.project_id
     dataclip_id = reason.dataclip_id
 
@@ -47,6 +47,7 @@ defmodule Lightning.AttemptService do
     end)
     |> Ecto.Multi.insert(:attempt, fn %{run: run} ->
       Attempt.changeset(%Attempt{}, %{
+        workorder_id: workorder.id,
         reason_id: reason.id,
         runs: [Map.from_struct(run)]
       })

@@ -7,6 +7,7 @@ defmodule Lightning.Attempt do
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.InvocationReason
+  alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
 
   @type t :: %__MODULE__{
@@ -18,6 +19,7 @@ defmodule Lightning.Attempt do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "attempts" do
+    belongs_to :workorder, WorkOrder
     belongs_to :reason, InvocationReason
     many_to_many :runs, Run, join_through: "attempt_runs"
 
@@ -30,7 +32,7 @@ defmodule Lightning.Attempt do
     |> cast(attrs, [:reason_id, :workorder_id])
     |> cast_assoc(:runs, required: false)
     |> validate_required([:reason_id, :workorder_id])
-    |> assoc_constraint(:workflow)
+    |> assoc_constraint(:workorder)
     |> assoc_constraint(:reason)
   end
 end
