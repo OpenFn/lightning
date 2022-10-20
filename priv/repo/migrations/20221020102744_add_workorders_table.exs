@@ -13,5 +13,8 @@ defmodule Lightning.Repo.Migrations.AddWorkordersTable do
 
       timestamps()
     end
+
+    create index(:workorders, [:workflow_id])
+    create index(:workorders, [:reason_id])
   end
 end
