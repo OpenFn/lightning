@@ -4,21 +4,23 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
     <title>Lightning.Jobs — Lightning v0.2.0</title>
-    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+    <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
-    <script src="dist/sidebar_items-e56eccca3d.js"></script>
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
+    <script src="dist/sidebar_items-FDEAA300.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+    <script async src="dist/html-XN2TSG4M.js"></script>
 
 
   </head>
-  <body data-type="modules">
+  <body data-type="modules" class="page-module">
     <script>
 
       try {
@@ -35,12 +37,11 @@
 
 <div class="main">
 
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
 
 <section class="sidebar">
-  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
-    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
-  </button>
-
   <form class="sidebar-search" action="search.html">
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
@@ -89,6 +90,7 @@ Lightning
 </section>
 
 <section class="content">
+  <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
 
@@ -172,19 +174,19 @@ specific trigger type.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#get_job!/1" translate="no">get_job!(id)</a>
+          <a href="#get_job/1" translate="no">get_job(id)</a>
 
         </div>
-
-          <div class="summary-synopsis"><p>Gets a single job.</p></div>
 
       </div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#get_job/1" translate="no">get_job(id)</a>
+          <a href="#get_job!/1" translate="no">get_job!(id)</a>
 
         </div>
+
+          <div class="summary-synopsis"><p>Gets a single job.</p></div>
 
       </div>
 
@@ -304,8 +306,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="4085045256-1">(</span><span class="n">job</span><span class="p" data-group-id="4085045256-1">)</span><span class="w">
-</span><span class="p" data-group-id="4085045256-2">%</span><span class="nc" data-group-id="4085045256-2">Ecto.Changeset</span><span class="p" data-group-id="4085045256-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4085045256-3">%</span><span class="nc" data-group-id="4085045256-3">Job</span><span class="p" data-group-id="4085045256-3">{</span><span class="p" data-group-id="4085045256-3">}</span><span class="p" data-group-id="4085045256-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="7485601775-1">(</span><span class="n">job</span><span class="p" data-group-id="7485601775-1">)</span><span class="w">
+</span><span class="p" data-group-id="7485601775-2">%</span><span class="nc" data-group-id="7485601775-2">Ecto.Changeset</span><span class="p" data-group-id="7485601775-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7485601775-3">%</span><span class="nc" data-group-id="7485601775-3">Job</span><span class="p" data-group-id="7485601775-3">{</span><span class="p" data-group-id="7485601775-3">}</span><span class="p" data-group-id="7485601775-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_job/1">
@@ -335,11 +337,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="9996105821-1">(</span><span class="p" data-group-id="9996105821-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9996105821-2">}</span><span class="p" data-group-id="9996105821-1">)</span><span class="w">
-</span><span class="p" data-group-id="9996105821-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9996105821-4">%</span><span class="nc" data-group-id="9996105821-4">Job</span><span class="p" data-group-id="9996105821-4">{</span><span class="p" data-group-id="9996105821-4">}</span><span class="p" data-group-id="9996105821-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="2756344009-1">(</span><span class="p" data-group-id="2756344009-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="2756344009-2">}</span><span class="p" data-group-id="2756344009-1">)</span><span class="w">
+</span><span class="p" data-group-id="2756344009-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2756344009-4">%</span><span class="nc" data-group-id="2756344009-4">Job</span><span class="p" data-group-id="2756344009-4">{</span><span class="p" data-group-id="2756344009-4">}</span><span class="p" data-group-id="2756344009-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="9996105821-5">(</span><span class="p" data-group-id="9996105821-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9996105821-6">}</span><span class="p" data-group-id="9996105821-5">)</span><span class="w">
-</span><span class="p" data-group-id="9996105821-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9996105821-8">%</span><span class="nc" data-group-id="9996105821-8">Ecto.Changeset</span><span class="p" data-group-id="9996105821-8">{</span><span class="p" data-group-id="9996105821-8">}</span><span class="p" data-group-id="9996105821-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="2756344009-5">(</span><span class="p" data-group-id="2756344009-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2756344009-6">}</span><span class="p" data-group-id="2756344009-5">)</span><span class="w">
+</span><span class="p" data-group-id="2756344009-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2756344009-8">%</span><span class="nc" data-group-id="2756344009-8">Ecto.Changeset</span><span class="p" data-group-id="2756344009-8">{</span><span class="p" data-group-id="2756344009-8">}</span><span class="p" data-group-id="2756344009-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_job/1">
@@ -367,11 +369,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="8864438925-1">(</span><span class="n">job</span><span class="p" data-group-id="8864438925-1">)</span><span class="w">
-</span><span class="p" data-group-id="8864438925-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8864438925-3">%</span><span class="nc" data-group-id="8864438925-3">Job</span><span class="p" data-group-id="8864438925-3">{</span><span class="p" data-group-id="8864438925-3">}</span><span class="p" data-group-id="8864438925-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="8515157959-1">(</span><span class="n">job</span><span class="p" data-group-id="8515157959-1">)</span><span class="w">
+</span><span class="p" data-group-id="8515157959-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8515157959-3">%</span><span class="nc" data-group-id="8515157959-3">Job</span><span class="p" data-group-id="8515157959-3">{</span><span class="p" data-group-id="8515157959-3">}</span><span class="p" data-group-id="8515157959-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="8864438925-4">(</span><span class="n">job</span><span class="p" data-group-id="8864438925-4">)</span><span class="w">
-</span><span class="p" data-group-id="8864438925-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8864438925-6">%</span><span class="nc" data-group-id="8864438925-6">Ecto.Changeset</span><span class="p" data-group-id="8864438925-6">{</span><span class="p" data-group-id="8864438925-6">}</span><span class="p" data-group-id="8864438925-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="8515157959-4">(</span><span class="n">job</span><span class="p" data-group-id="8515157959-4">)</span><span class="w">
+</span><span class="p" data-group-id="8515157959-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8515157959-6">%</span><span class="nc" data-group-id="8515157959-6">Ecto.Changeset</span><span class="p" data-group-id="8515157959-6">{</span><span class="p" data-group-id="8515157959-6">}</span><span class="p" data-group-id="8515157959-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_downstream_jobs_for/2">
@@ -398,7 +400,7 @@ Functions
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get_downstream_jobs_for(
-  <a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
+  <a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
   <a href="Lightning.Jobs.Trigger.html#t:trigger_type/0">Lightning.Jobs.Trigger.trigger_type</a>() | nil
 ) :: [<a href="Lightning.Jobs.Job.html#t:t/0">Lightning.Jobs.Job.t</a>()]</pre>
 
@@ -406,38 +408,6 @@ Functions
 
 <p>Returns the list of downstream jobs for a given job, optionally matching a
 specific trigger type.</p>
-  </section>
-</section>
-<section class="detail" id="get_job!/1">
-
-  <div class="detail-header">
-    <a href="#get_job!/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_job!(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L130" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Gets a single job.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Job does not exist.</p><h2 id="get_job!/1-examples" class="section-heading">
-  <a href="#get_job!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
-  </a>
-  Examples
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="0429758624-1">(</span><span class="mi">123</span><span class="p" data-group-id="0429758624-1">)</span><span class="w">
-</span><span class="p" data-group-id="0429758624-2">%</span><span class="nc" data-group-id="0429758624-2">Job</span><span class="p" data-group-id="0429758624-2">{</span><span class="p" data-group-id="0429758624-2">}</span><span class="w">
-
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="0429758624-3">(</span><span class="mi">456</span><span class="p" data-group-id="0429758624-3">)</span><span class="w">
-</span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_job/1">
@@ -460,6 +430,38 @@ specific trigger type.</p>
   <section class="docstring">
 
 
+  </section>
+</section>
+<section class="detail" id="get_job!/1">
+
+  <div class="detail-header">
+    <a href="#get_job!/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_job!(id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L130" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Gets a single job.</p><p>Raises <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.NoResultsError.html"><code class="inline">Ecto.NoResultsError</code></a> if the Job does not exist.</p><h2 id="get_job!/1-examples" class="section-heading">
+  <a href="#get_job!/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="5133287035-1">(</span><span class="mi">123</span><span class="p" data-group-id="5133287035-1">)</span><span class="w">
+</span><span class="p" data-group-id="5133287035-2">%</span><span class="nc" data-group-id="5133287035-2">Job</span><span class="p" data-group-id="5133287035-2">{</span><span class="p" data-group-id="5133287035-2">}</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="5133287035-3">(</span><span class="mi">456</span><span class="p" data-group-id="5133287035-3">)</span><span class="w">
+</span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_job_by_webhook/1">
@@ -590,7 +592,7 @@ used by the scheduler, which calls this function once every minute.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> jobs_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> jobs_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()</pre>
 
       </div>
 
@@ -666,11 +668,11 @@ used by the scheduler, which calls this function once every minute.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="5894703771-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5894703771-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="5894703771-2">}</span><span class="p" data-group-id="5894703771-1">)</span><span class="w">
-</span><span class="p" data-group-id="5894703771-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5894703771-4">%</span><span class="nc" data-group-id="5894703771-4">Job</span><span class="p" data-group-id="5894703771-4">{</span><span class="p" data-group-id="5894703771-4">}</span><span class="p" data-group-id="5894703771-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="6622566574-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6622566574-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="6622566574-2">}</span><span class="p" data-group-id="6622566574-1">)</span><span class="w">
+</span><span class="p" data-group-id="6622566574-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6622566574-4">%</span><span class="nc" data-group-id="6622566574-4">Job</span><span class="p" data-group-id="6622566574-4">{</span><span class="p" data-group-id="6622566574-4">}</span><span class="p" data-group-id="6622566574-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="5894703771-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5894703771-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5894703771-6">}</span><span class="p" data-group-id="5894703771-5">)</span><span class="w">
-</span><span class="p" data-group-id="5894703771-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5894703771-8">%</span><span class="nc" data-group-id="5894703771-8">Ecto.Changeset</span><span class="p" data-group-id="5894703771-8">{</span><span class="p" data-group-id="5894703771-8">}</span><span class="p" data-group-id="5894703771-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="6622566574-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6622566574-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6622566574-6">}</span><span class="p" data-group-id="6622566574-5">)</span><span class="w">
+</span><span class="p" data-group-id="6622566574-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6622566574-8">%</span><span class="nc" data-group-id="6622566574-8">Ecto.Changeset</span><span class="p" data-group-id="6622566574-8">{</span><span class="p" data-group-id="6622566574-8">}</span><span class="p" data-group-id="6622566574-7">}</span></code></pre>
   </section>
 </section>
 
@@ -681,8 +683,10 @@ used by the scheduler, which calls this function once every minute.</p>
 
         <p>
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.0) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
         </p>
       </footer>
     </div>

@@ -4,21 +4,23 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
     <title>Lightning.Jobs.Job — Lightning v0.2.0</title>
-    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+    <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
-    <script src="dist/sidebar_items-e56eccca3d.js"></script>
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
+    <script src="dist/sidebar_items-FDEAA300.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+    <script async src="dist/html-XN2TSG4M.js"></script>
 
 
   </head>
-  <body data-type="modules">
+  <body data-type="modules" class="page-module">
     <script>
 
       try {
@@ -35,12 +37,11 @@
 
 <div class="main">
 
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
 
 <section class="sidebar">
-  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
-    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
-  </button>
-
   <form class="sidebar-search" action="search.html">
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
@@ -89,6 +90,7 @@ Lightning
 </section>
 
 <section class="content">
+  <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
 
@@ -208,24 +210,24 @@ Types
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Jobs.Job{
-  __meta__: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  __meta__: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   adaptor: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   body: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   credential:
-    nil | <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+    nil | <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   events: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  id: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  id: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   name: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credential: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_credential_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  trigger: nil | <a href="Lightning.Jobs.Trigger.html#t:t/0">Lightning.Jobs.Trigger.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  trigger: nil | <a href="Lightning.Jobs.Trigger.html#t:t/0">Lightning.Jobs.Trigger.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   trigger_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflow:
-    nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+    nil | <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   workflow_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
@@ -291,26 +293,26 @@ Functions
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> put_workflow(
-  <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>()),
-  <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())
-) :: <a href="https://hexdocs.pm/ecto/3.8.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
+  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>()),
+  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())
+) :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="#t:t/0">t</a>())</pre>
 
       </div>
 
 <p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p><p>Be sure to pass the return of this function into <code class="inline">changeset/2</code> in order to
 have this jobs trigger get the workflows id.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="7864738396-1">(</span><span class="w">
-    </span><span class="p" data-group-id="7864738396-2">%</span><span class="nc" data-group-id="7864738396-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="7864738396-2">{</span><span class="p" data-group-id="7864738396-2">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="7864738396-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="7864738396-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="7864738396-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="7864738396-5">(</span><span class="p" data-group-id="7864738396-5">)</span><span class="w"> </span><span class="p" data-group-id="7864738396-3">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="7864738396-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="7864738396-6">]</span><span class="w">
-  </span><span class="p" data-group-id="7864738396-1">)</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="7021590238-1">(</span><span class="w">
+    </span><span class="p" data-group-id="7021590238-2">%</span><span class="nc" data-group-id="7021590238-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="7021590238-2">{</span><span class="p" data-group-id="7021590238-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="7021590238-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="7021590238-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="7021590238-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="7021590238-5">(</span><span class="p" data-group-id="7021590238-5">)</span><span class="w"> </span><span class="p" data-group-id="7021590238-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="7021590238-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="7021590238-6">]</span><span class="w">
+  </span><span class="p" data-group-id="7021590238-1">)</span><span class="w">
 
 </span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="p" data-group-id="7864738396-7">%</span><span class="nc" data-group-id="7864738396-7">Job</span><span class="p" data-group-id="7864738396-7">{</span><span class="p" data-group-id="7864738396-7">}</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="7864738396-8">(</span><span class="p" data-group-id="7864738396-8">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="7864738396-9">(</span><span class="n">workflow</span><span class="p" data-group-id="7864738396-9">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="7864738396-10">(</span><span class="n">attrs</span><span class="p" data-group-id="7864738396-10">)</span></code></pre>
+  </span><span class="p" data-group-id="7021590238-7">%</span><span class="nc" data-group-id="7021590238-7">Job</span><span class="p" data-group-id="7021590238-7">{</span><span class="p" data-group-id="7021590238-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="7021590238-8">(</span><span class="p" data-group-id="7021590238-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="7021590238-9">(</span><span class="n">workflow</span><span class="p" data-group-id="7021590238-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="7021590238-10">(</span><span class="n">attrs</span><span class="p" data-group-id="7021590238-10">)</span></code></pre>
   </section>
 </section>
 
@@ -321,8 +323,10 @@ have this jobs trigger get the workflows id.</p><p>Example:</p><pre><code class=
 
         <p>
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.0) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
         </p>
       </footer>
     </div>

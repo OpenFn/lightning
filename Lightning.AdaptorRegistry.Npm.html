@@ -4,21 +4,23 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.28.3">
+    <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
     <title>Lightning.AdaptorRegistry.Npm — Lightning v0.2.0</title>
-    <link rel="stylesheet" href="dist/elixir-d5ff82e6b0f5651c0ac0.css" />
+    <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
-    <script src="dist/sidebar_items-e56eccca3d.js"></script>
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
+    <script src="dist/sidebar_items-FDEAA300.js"></script>
 
       <script src="docs_config.js"></script>
 
-    <script async src="dist/app-a088a6cc33ae3464193e.js"></script>
+    <script async src="dist/html-XN2TSG4M.js"></script>
 
 
   </head>
-  <body data-type="modules">
+  <body data-type="modules" class="page-module">
     <script>
 
       try {
@@ -35,12 +37,11 @@
 
 <div class="main">
 
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
 
 <section class="sidebar">
-  <button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
-    <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
-  </button>
-
   <form class="sidebar-search" action="search.html">
     <button type="submit" class="search-button" aria-label="Submit Search">
       <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
@@ -89,6 +90,7 @@ Lightning
 </section>
 
 <section class="content">
+  <output role="status" id="toast"></output>
   <div class="content-outer">
     <div id="content" class="content-inner">
 
@@ -194,17 +196,6 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#delete!/3" translate="no">delete!(url, headers \\ [], options \\ [])</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Issues a DELETE request to the given url, raising an exception in case of
-failure.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#delete/3" translate="no">delete(url, headers \\ [], options \\ [])</a>
 
         </div>
@@ -215,11 +206,11 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#get!/3" translate="no">get!(url, headers \\ [], options \\ [])</a>
+          <a href="#delete!/3" translate="no">delete!(url, headers \\ [], options \\ [])</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Issues a GET request to the given url, raising an exception in case of
+          <div class="summary-synopsis"><p>Issues a DELETE request to the given url, raising an exception in case of
 failure.</p></div>
 
       </div>
@@ -236,11 +227,11 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#head!/3" translate="no">head!(url, headers \\ [], options \\ [])</a>
+          <a href="#get!/3" translate="no">get!(url, headers \\ [], options \\ [])</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Issues a HEAD request to the given url, raising an exception in case of
+          <div class="summary-synopsis"><p>Issues a GET request to the given url, raising an exception in case of
 failure.</p></div>
 
       </div>
@@ -257,11 +248,11 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#options!/3" translate="no">options!(url, headers \\ [], options \\ [])</a>
+          <a href="#head!/3" translate="no">head!(url, headers \\ [], options \\ [])</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Issues a OPTIONS request to the given url, raising an exception in case of
+          <div class="summary-synopsis"><p>Issues a HEAD request to the given url, raising an exception in case of
 failure.</p></div>
 
       </div>
@@ -278,11 +269,32 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#options!/3" translate="no">options!(url, headers \\ [], options \\ [])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Issues a OPTIONS request to the given url, raising an exception in case of
+failure.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#package_detail/1" translate="no">package_detail(package_name)</a>
 
         </div>
 
           <div class="summary-synopsis"><p>Retrieve all details for an NPM package</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#patch/4" translate="no">patch(url, body, headers \\ [], options \\ [])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Issues a PATCH request to the given url.</p></div>
 
       </div>
 
@@ -299,11 +311,11 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#patch/4" translate="no">patch(url, body, headers \\ [], options \\ [])</a>
+          <a href="#post/4" translate="no">post(url, body, headers \\ [], options \\ [])</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Issues a PATCH request to the given url.</p></div>
+          <div class="summary-synopsis"><p>Issues a POST request to the given url.</p></div>
 
       </div>
 
@@ -320,23 +332,13 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#post/4" translate="no">post(url, body, headers \\ [], options \\ [])</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Issues a POST request to the given url.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#process_headers/1" translate="no">process_headers(headers)</a>
 
             <span class="deprecated" title="Use process_response_headers/1 instead">deprecated</span>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_headers/1"><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_headers/1"><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p></div>
 
       </div>
 
@@ -346,7 +348,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_body/1"><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_body/1"><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p></div>
 
       </div>
 
@@ -356,7 +358,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_headers/1"><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_headers/1"><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p></div>
 
       </div>
 
@@ -366,7 +368,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_options/1"><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_options/1"><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p></div>
 
       </div>
 
@@ -376,7 +378,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_params/1"><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_params/1"><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p></div>
 
       </div>
 
@@ -386,7 +388,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response/1"><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response/1"><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p></div>
 
       </div>
 
@@ -396,7 +398,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response_chunk/1"><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response_chunk/1"><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p></div>
 
       </div>
 
@@ -406,7 +408,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response_headers/1"><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response_headers/1"><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p></div>
 
       </div>
 
@@ -416,7 +418,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response_status_code/1"><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response_status_code/1"><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p></div>
 
       </div>
 
@@ -428,7 +430,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_status_code/1"><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_status_code/1"><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p></div>
 
       </div>
 
@@ -440,18 +442,7 @@ failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_url/1"><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#put!/4" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Issues a PUT request to the given url, raising an exception in case of
-failure.</p></div>
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_url/1"><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p></div>
 
       </div>
 
@@ -467,12 +458,12 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#request!/5" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+          <a href="#put!/4" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Issues an HTTP request with the given method to the given url, raising an
-exception in case of failure.</p></div>
+          <div class="summary-synopsis"><p>Issues a PUT request to the given url, raising an exception in case of
+failure.</p></div>
 
       </div>
 
@@ -498,6 +489,17 @@ exception in case of failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#request!/5" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Issues an HTTP request with the given method to the given url, raising an
+exception in case of failure.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#start/0" translate="no">start()</a>
 
         </div>
@@ -512,7 +514,7 @@ exception in case of failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
+          <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
 
       </div>
 
@@ -561,7 +563,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> body() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:body/0">HTTPoison.Base.body</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> body() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:body/0">HTTPoison.Base.body</a>()</pre>
 
       </div>
 
@@ -589,7 +591,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> headers() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:headers/0">HTTPoison.Base.headers</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> headers() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:headers/0">HTTPoison.Base.headers</a>()</pre>
 
       </div>
 
@@ -617,7 +619,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> method() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:method/0">HTTPoison.Base.method</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> method() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:method/0">HTTPoison.Base.method</a>()</pre>
 
       </div>
 
@@ -645,7 +647,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> options() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:options/0">HTTPoison.Base.options</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> options() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:options/0">HTTPoison.Base.options</a>()</pre>
 
       </div>
 
@@ -673,7 +675,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> params() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:params/0">HTTPoison.Base.params</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> params() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:params/0">HTTPoison.Base.params</a>()</pre>
 
       </div>
 
@@ -701,7 +703,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> request() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:request/0">HTTPoison.Base.request</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> request() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:request/0">HTTPoison.Base.request</a>()</pre>
 
       </div>
 
@@ -729,7 +731,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> url() :: <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:url/0">HTTPoison.Base.url</a>()</pre>
+          <pre translate="no"><span class="attribute">@type</span> url() :: <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:url/0">HTTPoison.Base.url</a>()</pre>
 
       </div>
 
@@ -749,42 +751,6 @@ Types
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="delete!/3">
-
-    <span id="delete!/1"></span>
-
-    <span id="delete!/2"></span>
-
-  <div class="detail-header">
-    <a href="#delete!/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">delete!(url, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> delete!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
-
-      </div>
-
-<p>Issues a DELETE request to the given url, raising an exception in case of
-failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
-  </section>
-</section>
 <section class="detail" id="delete/3">
 
     <span id="delete/1"></span>
@@ -812,10 +778,10 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 
           <pre translate="no"><span class="attribute">@spec</span> delete(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
@@ -823,18 +789,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="get!/3">
+<section class="detail" id="delete!/3">
 
-    <span id="get!/1"></span>
+    <span id="delete!/1"></span>
 
-    <span id="get!/2"></span>
+    <span id="delete!/2"></span>
 
   <div class="detail-header">
-    <a href="#get!/3" class="detail-link" title="Link to this function">
+    <a href="#delete!/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get!(url, headers \\ [], options \\ [])</h1>
+    <h1 class="signature" translate="no">delete!(url, headers \\ [], options \\ [])</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -848,12 +814,14 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> delete!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
 
       </div>
 
-<p>Issues a GET request to the given url, raising an exception in case of
+<p>Issues a DELETE request to the given url, raising an exception in case of
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
@@ -883,8 +851,8 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> get(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  {:ok, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+  {:ok, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
@@ -892,18 +860,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="head!/3">
+<section class="detail" id="get!/3">
 
-    <span id="head!/1"></span>
+    <span id="get!/1"></span>
 
-    <span id="head!/2"></span>
+    <span id="get!/2"></span>
 
   <div class="detail-header">
-    <a href="#head!/3" class="detail-link" title="Link to this function">
+    <a href="#get!/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">head!(url, headers \\ [], options \\ [])</h1>
+    <h1 class="signature" translate="no">get!(url, headers \\ [], options \\ [])</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -917,12 +885,12 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> head!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()</pre>
 
       </div>
 
-<p>Issues a HEAD request to the given url, raising an exception in case of
+<p>Issues a GET request to the given url, raising an exception in case of
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
@@ -952,8 +920,8 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> head(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  {:ok, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+  {:ok, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
@@ -961,18 +929,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="options!/3">
+<section class="detail" id="head!/3">
 
-    <span id="options!/1"></span>
+    <span id="head!/1"></span>
 
-    <span id="options!/2"></span>
+    <span id="head!/2"></span>
 
   <div class="detail-header">
-    <a href="#options!/3" class="detail-link" title="Link to this function">
+    <a href="#head!/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">options!(url, headers \\ [], options \\ [])</h1>
+    <h1 class="signature" translate="no">head!(url, headers \\ [], options \\ [])</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -986,14 +954,12 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> options!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> head!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>() | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()</pre>
 
       </div>
 
-<p>Issues a OPTIONS request to the given url, raising an exception in case of
+<p>Issues a HEAD request to the given url, raising an exception in case of
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
@@ -1024,15 +990,51 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 
           <pre translate="no"><span class="attribute">@spec</span> options(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
 <p>Issues an OPTIONS request to the given url.</p><p>Returns <code class="inline">{:ok, response}</code> if the request is successful, <code class="inline">{:error, reason}</code>
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
+  </section>
+</section>
+<section class="detail" id="options!/3">
+
+    <span id="options!/1"></span>
+
+    <span id="options!/2"></span>
+
+  <div class="detail-header">
+    <a href="#options!/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">options!(url, headers \\ [], options \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> options!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
+
+      </div>
+
+<p>Issues a OPTIONS request to the given url, raising an exception in case of
+failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
 <section class="detail" id="package_detail/1">
@@ -1063,42 +1065,6 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 <p>Retrieve all details for an NPM package</p>
   </section>
 </section>
-<section class="detail" id="patch!/4">
-
-    <span id="patch!/2"></span>
-
-    <span id="patch!/3"></span>
-
-  <div class="detail-header">
-    <a href="#patch!/4" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">patch!(url, body, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> patch!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
-
-      </div>
-
-<p>Issues a PATCH request to the given url, raising an exception in case of
-failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
-  </section>
-</section>
 <section class="detail" id="patch/4">
 
     <span id="patch/2"></span>
@@ -1126,10 +1092,10 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 
           <pre translate="no"><span class="attribute">@spec</span> patch(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
@@ -1137,18 +1103,18 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="post!/4">
+<section class="detail" id="patch!/4">
 
-    <span id="post!/2"></span>
+    <span id="patch!/2"></span>
 
-    <span id="post!/3"></span>
+    <span id="patch!/3"></span>
 
   <div class="detail-header">
-    <a href="#post!/4" class="detail-link" title="Link to this function">
+    <a href="#patch!/4" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">post!(url, body, headers \\ [], options \\ [])</h1>
+    <h1 class="signature" translate="no">patch!(url, body, headers \\ [], options \\ [])</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -1162,14 +1128,14 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> post!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> patch!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
 
       </div>
 
-<p>Issues a POST request to the given url, raising an exception in case of
+<p>Issues a PATCH request to the given url, raising an exception in case of
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
@@ -1200,15 +1166,51 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 
           <pre translate="no"><span class="attribute">@spec</span> post(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
 <p>Issues a POST request to the given url.</p><p>Returns <code class="inline">{:ok, response}</code> if the request is successful, <code class="inline">{:error, reason}</code>
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
+  </section>
+</section>
+<section class="detail" id="post!/4">
+
+    <span id="post!/2"></span>
+
+    <span id="post!/3"></span>
+
+  <div class="detail-header">
+    <a href="#post!/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">post!(url, body, headers \\ [], options \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> post!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
+
+      </div>
+
+<p>Issues a POST request to the given url, raising an exception in case of
+failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
 <section class="detail" id="process_headers/1">
@@ -1240,7 +1242,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_headers/1"><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_headers/1"><code class="inline">HTTPoison.Base.process_headers/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_request_body/1">
@@ -1268,7 +1270,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_body/1"><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_body/1"><code class="inline">HTTPoison.Base.process_request_body/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_request_headers/1">
@@ -1296,7 +1298,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_headers/1"><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_headers/1"><code class="inline">HTTPoison.Base.process_request_headers/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_request_options/1">
@@ -1324,7 +1326,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_options/1"><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_options/1"><code class="inline">HTTPoison.Base.process_request_options/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_request_params/1">
@@ -1352,7 +1354,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_request_params/1"><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_request_params/1"><code class="inline">HTTPoison.Base.process_request_params/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_response/1">
@@ -1376,11 +1378,11 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> process_response(<a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#t:response/0">HTTPoison.Base.response</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> process_response(<a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#t:response/0">HTTPoison.Base.response</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response/1"><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response/1"><code class="inline">HTTPoison.Base.process_response/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_response_chunk/1">
@@ -1408,7 +1410,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response_chunk/1"><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response_chunk/1"><code class="inline">HTTPoison.Base.process_response_chunk/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_response_headers/1">
@@ -1436,7 +1438,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response_headers/1"><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response_headers/1"><code class="inline">HTTPoison.Base.process_response_headers/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_response_status_code/1">
@@ -1464,7 +1466,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_response_status_code/1"><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_response_status_code/1"><code class="inline">HTTPoison.Base.process_response_status_code/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_status_code/1">
@@ -1496,7 +1498,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_status_code/1"><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_status_code/1"><code class="inline">HTTPoison.Base.process_status_code/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="process_url/1">
@@ -1528,45 +1530,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       </div>
 
-<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Base.html#c:process_url/1"><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p>
-  </section>
-</section>
-<section class="detail" id="put!/4">
-
-    <span id="put!/1"></span>
-
-    <span id="put!/2"></span>
-
-    <span id="put!/3"></span>
-
-  <div class="detail-header">
-    <a href="#put!/4" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> put!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
-
-      </div>
-
-<p>Issues a PUT request to the given url, raising an exception in case of
-failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Base.html#c:process_url/1"><code class="inline">HTTPoison.Base.process_url/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="put/4">
@@ -1598,10 +1562,10 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 
           <pre translate="no"><span class="attribute">@spec</span> put(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
@@ -1609,20 +1573,20 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
 otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="request!/5">
+<section class="detail" id="put!/4">
 
-    <span id="request!/2"></span>
+    <span id="put!/1"></span>
 
-    <span id="request!/3"></span>
+    <span id="put!/2"></span>
 
-    <span id="request!/4"></span>
+    <span id="put!/3"></span>
 
   <div class="detail-header">
-    <a href="#request!/5" class="detail-link" title="Link to this function">
+    <a href="#put!/4" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
+    <h1 class="signature" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
       <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
@@ -1636,17 +1600,15 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> request!(<a href="#t:method/0">method</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
-  <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-  | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> put!(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
 
       </div>
 
-<p>Issues an HTTP request with the given method to the given url, raising an
-exception in case of failure.</p><p><a href="#request!/5"><code class="inline">request!/5</code></a> works exactly like <a href="#request/5"><code class="inline">request/5</code></a> but it returns just the
-response in case of a successful request, raising an exception in case the
-request fails.</p>
+<p>Issues a PUT request to the given url, raising an exception in case of
+failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
 <section class="detail" id="request/1">
@@ -1670,12 +1632,12 @@ request fails.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> request(<a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Request.html#t:t/0">HTTPoison.Request.t</a>()) ::
+          <pre translate="no"><span class="attribute">@spec</span> request(<a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Request.html#t:t/0">HTTPoison.Request.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
@@ -1697,14 +1659,14 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="5386085587-1">%</span><span class="nc" data-group-id="5386085587-1">HTTPoison.Request</span><span class="p" data-group-id="5386085587-1">{</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2375820151-1">%</span><span class="nc" data-group-id="2375820151-1">HTTPoison.Request</span><span class="p" data-group-id="2375820151-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5386085587-2">[</span><span class="p" data-group-id="5386085587-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="5386085587-3">}</span><span class="p" data-group-id="5386085587-2">]</span><span class="w">
-</span><span class="p" data-group-id="5386085587-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2375820151-2">[</span><span class="p" data-group-id="2375820151-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2375820151-3">}</span><span class="p" data-group-id="2375820151-2">]</span><span class="w">
+</span><span class="p" data-group-id="2375820151-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="5386085587-4">(</span><span class="n">request</span><span class="p" data-group-id="5386085587-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="2375820151-4">(</span><span class="n">request</span><span class="p" data-group-id="2375820151-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1736,15 +1698,15 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
 
           <pre translate="no"><span class="attribute">@spec</span> request(<a href="#t:method/0">method</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
   {:ok,
-   <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
-   | <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
-  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+   <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+   | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
 <p>Issues an HTTP request with the given method to the given url.</p><p>This function is usually used indirectly by <a href="#get/3"><code class="inline">get/3</code></a>, <a href="#post/4"><code class="inline">post/4</code></a>, <a href="#put/4"><code class="inline">put/4</code></a>, etc</p><p>Args:</p><ul><li><code class="inline">method</code> - HTTP method as an atom (<code class="inline">:get</code>, <code class="inline">:head</code>, <code class="inline">:post</code>, <code class="inline">:put</code>,
-<code class="inline">:delete</code>, etc.)</li><li><code class="inline">url</code> - target url as a binary string or char list</li><li><code class="inline">body</code> - request body. See more below</li><li><code class="inline">headers</code> - HTTP headers as an orddict (e.g., <code class="inline">[{&quot;Accept&quot;, &quot;application/json&quot;}]</code>)</li><li><code class="inline">options</code> - Keyword list of options</li></ul><p>Body: see type <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>Options: see type <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>This function returns <code class="inline">{:ok, response}</code>, <code class="inline">{:ok, async_response}</code>, or <code class="inline">{:ok, maybe_redirect}</code>
+<code class="inline">:delete</code>, etc.)</li><li><code class="inline">url</code> - target url as a binary string or char list</li><li><code class="inline">body</code> - request body. See more below</li><li><code class="inline">headers</code> - HTTP headers as an orddict (e.g., <code class="inline">[{&quot;Accept&quot;, &quot;application/json&quot;}]</code>)</li><li><code class="inline">options</code> - Keyword list of options</li></ul><p>Body: see type <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>Options: see type <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Request.html"><code class="inline">HTTPoison.Request</code></a></p><p>This function returns <code class="inline">{:ok, response}</code>, <code class="inline">{:ok, async_response}</code>, or <code class="inline">{:ok, maybe_redirect}</code>
 if the request is successful, <code class="inline">{:error, reason}</code> otherwise.</p><h2 id="request/5-redirect-handling" class="section-heading">
   <a href="#request/5-redirect-handling" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">redirect-handling</p>
@@ -1762,7 +1724,47 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="4146749173-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4146749173-2">[</span><span class="p" data-group-id="4146749173-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="4146749173-3">}</span><span class="p" data-group-id="4146749173-2">]</span><span class="p" data-group-id="4146749173-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="2789427209-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2789427209-2">[</span><span class="p" data-group-id="2789427209-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2789427209-3">}</span><span class="p" data-group-id="2789427209-2">]</span><span class="p" data-group-id="2789427209-1">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="request!/5">
+
+    <span id="request!/2"></span>
+
+    <span id="request!/3"></span>
+
+    <span id="request!/4"></span>
+
+  <div class="detail-header">
+    <a href="#request!/5" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L46" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> request!(<a href="#t:method/0">method</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), <a href="#t:headers/0">headers</a>(), <a href="https://hexdocs.pm/elixir/Keyword.html#t:t/0">Keyword.t</a>()) ::
+  <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Response.html#t:t/0">HTTPoison.Response.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()
+  | <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.MaybeRedirect.html#t:t/0">HTTPoison.MaybeRedirect.t</a>()</pre>
+
+      </div>
+
+<p>Issues an HTTP request with the given method to the given url, raising an
+exception in case of failure.</p><p><a href="#request!/5"><code class="inline">request!/5</code></a> works exactly like <a href="#request/5"><code class="inline">request/5</code></a> but it returns just the
+response in case of a successful request, raising an exception in case the
+request fails.</p>
   </section>
 </section>
 <section class="detail" id="start/0">
@@ -1808,12 +1810,12 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> stream_next(<a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()) ::
-  {:ok, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()} | {:error, <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
+          <pre translate="no"><span class="attribute">@spec</span> stream_next(<a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()) ::
+  {:ok, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html#t:t/0">HTTPoison.AsyncResponse.t</a>()} | {:error, <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.Error.html#t:t/0">HTTPoison.Error.t</a>()}</pre>
 
       </div>
 
-<p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/1.8.1/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
+<p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
 <section class="detail" id="user_packages/1">
@@ -1852,8 +1854,10 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
 
         <p>
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.28.3) for the
-          <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.0) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
         </p>
       </footer>
     </div>
