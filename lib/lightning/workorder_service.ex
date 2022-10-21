@@ -6,7 +6,6 @@ defmodule Lightning.WorkOrderService do
   import Ecto.Query, warn: false
   alias Lightning.Repo
   alias Lightning.WorkOrder
-  alias Lightning.Invocation.{Event, Run}
 
   @doc """
   Creates a workorder.

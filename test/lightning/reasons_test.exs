@@ -27,5 +27,30 @@ defmodule Lightning.InvocationReasonsTest do
       assert {:ok, %InvocationReason{}} =
                InvocationReasons.create_reason(valid_attrs)
     end
+
+    test "build/2 with trigger of type :webhook or :cron returns a valid reason" do
+      dataclip = dataclip_fixture()
+
+      assert %Ecto.Changeset{valid?: true} =
+               InvocationReasons.build(
+                 job_fixture(trigger: %{type: :webhook}).trigger,
+                 dataclip
+               )
+
+      assert %Ecto.Changeset{valid?: true} =
+               InvocationReasons.build(
+                 job_fixture(trigger: %{type: :cron}).trigger,
+                 dataclip
+               )
+
+      assert %Ecto.Changeset{
+               valid?: false,
+               errors: [type: {"Type must be either :webhook or :cron", []}]
+             } =
+               InvocationReasons.build(
+                 job_fixture(trigger: %{type: :on_job_success}).trigger,
+                 dataclip
+               )
+    end
   end
 end
