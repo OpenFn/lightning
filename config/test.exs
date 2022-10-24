@@ -14,7 +14,7 @@ config :lightning, Lightning.Repo,
   hostname: "localhost",
   database: "lightning_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 20
+  pool_size: 15
 
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
