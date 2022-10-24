@@ -32,7 +32,6 @@ defmodule Lightning.Invocation do
                              } ->
       Run.changeset(%Run{}, %{
         event_id: event_id,
-        project_id: event_attrs[:project_id],
         job_id: event_attrs[:job_id],
         input_dataclip_id: dataclip_id
       })
@@ -54,7 +53,6 @@ defmodule Lightning.Invocation do
     |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
       Run.changeset(%Run{}, %{
         event_id: event_id,
-        project_id: event_attrs[:project_id],
         job_id: event_attrs[:job_id],
         input_dataclip_id: event_attrs[:dataclip_id]
       })
@@ -250,13 +248,22 @@ defmodule Lightning.Invocation do
     Repo.all(Run)
   end
 
-  def list_runs_for_project(%Project{id: project_id}, params \\ %{}) do
+  @spec list_runs_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Query.t()
+  def list_runs_for_project_query(%Project{id: project_id}) do
     from(r in Run,
-      join: p in assoc(r, :project),
-      where: p.id == ^project_id,
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project_id,
       order_by: [desc: r.inserted_at, desc: r.started_at],
-      preload: :job
+      preload: [job: j]
     )
+  end
+
+  @spec list_runs_for_project(Lightning.Projects.Project.t(), keyword | map) ::
+          Scrivener.Page.t()
+  def list_runs_for_project(%Project{id: project_id}, params \\ %{}) do
+    list_runs_for_project_query(%Project{id: project_id})
     |> Repo.paginate(params)
   end
 

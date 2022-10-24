@@ -94,13 +94,14 @@ defmodule Lightning.InvocationTest do
     end
 
     test "create_dataclip/1 with run_result type creates a dataclip" do
-      run = run_fixture() |> Repo.preload(:project)
+      run = run_fixture()
+      project = project_fixture()
 
       attrs = %{
         body: %{},
         type: :run_result,
         source_event_id: nil,
-        project_id: run.project.id
+        project_id: project.id
       }
 
       # Commenting this out for now, in order to have truly versatile `cast_assoc`
