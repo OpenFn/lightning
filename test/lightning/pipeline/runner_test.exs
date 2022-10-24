@@ -69,7 +69,7 @@ defmodule Lightning.Pipeline.RunnerTest do
     assert length(run.log) > 0
   end
 
-  test "create_dataclip_from_result/2" do
+  test "create_dataclip_from_result/3" do
     assert Pipeline.Runner.create_dataclip_from_result(
              %Engine.Result{final_state_path: "no_such_path"},
              run_fixture()
