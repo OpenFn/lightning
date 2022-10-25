@@ -18,7 +18,11 @@ defmodule LightningWeb.WebhooksController do
           WorkOrderService.multi_for(:webhook, job, conn.body_params)
           |> Repo.transaction()
 
-        resp = %{work_order_id: work_order.id, run_id: attempt_run.run_id}
+        resp = %{
+          work_order_id: work_order.id,
+          run_id: attempt_run.run_id,
+          attempt_id: attempt_run.attempt_id
+        }
 
         Pipeline.new(%{attempt_run_id: attempt_run.id})
         |> Oban.insert()

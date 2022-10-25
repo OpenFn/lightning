@@ -38,6 +38,11 @@ defmodule Lightning.Workflows.Workflow do
     |> cast(attrs, [:name, :project_id])
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Job.changeset/2)
+    |> validate()
+  end
+
+  defp validate(changeset) do
+    changeset
     |> assoc_constraint(:project)
     |> unique_constraint([:name, :project_id],
       message: "A workflow with this name does already exist in this project."

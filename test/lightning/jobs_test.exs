@@ -411,10 +411,9 @@ defmodule Lightning.JobsTest do
 
       Scheduler.enqueue_cronjobs()
 
-      %{event_id: event_id} = Repo.one(Lightning.Invocation.Run)
-      %{job_id: job_id} = Repo.get(Lightning.Invocation.Event, event_id)
+      run = Repo.one(Lightning.Invocation.Run)
 
-      assert job_id == job.id
+      assert run.job_id == job.id
 
       run =
         %Jobs.Job{id: job.id}
@@ -434,10 +433,11 @@ defmodule Lightning.JobsTest do
           trigger: %{type: :cron, cron_expression: "* * * * *"}
         )
 
-      event = event_fixture(job_id: job.id)
-      _run = run_fixture(event_id: event.id)
+      {:ok, %{attempt_run: attempt_run}} =
+        Lightning.WorkOrderService.multi_for(:cron, job, dataclip_fixture())
+        |> Repo.transaction()
 
-      Lightning.Pipeline.process(event)
+      Lightning.Pipeline.process(attempt_run)
 
       old =
         %Jobs.Job{id: job.id}

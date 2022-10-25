@@ -25,32 +25,6 @@ defmodule Lightning.InvocationFixtures do
   end
 
   @doc """
-  Generate an event.
-  """
-  def event_fixture(attrs \\ []) when is_list(attrs) do
-    attrs =
-      attrs
-      |> Keyword.put_new_lazy(:project_id, fn ->
-        Lightning.ProjectsFixtures.project_fixture().id
-      end)
-
-    {:ok, event} =
-      attrs
-      |> Keyword.put_new_lazy(:dataclip_id, fn ->
-        dataclip_fixture(project_id: Keyword.get(attrs, :project_id)).id
-      end)
-      |> Keyword.put_new_lazy(:job_id, fn ->
-        Lightning.JobsFixtures.job_fixture().id
-      end)
-      |> Enum.into(%{
-        type: :webhook
-      })
-      |> Lightning.Invocation.create_event()
-
-    event
-  end
-
-  @doc """
   Generate an work_order.
   """
   def work_order_fixture(attrs \\ []) when is_list(attrs) do
@@ -106,8 +80,6 @@ defmodule Lightning.InvocationFixtures do
   Generate a run.
   """
   def run_fixture(attrs \\ []) when is_list(attrs) do
-    {event_attrs, attrs} = Keyword.pop(attrs, :event_attrs, [])
-
     attrs =
       attrs
       |> Keyword.put_new_lazy(:project_id, fn ->
@@ -119,7 +91,6 @@ defmodule Lightning.InvocationFixtures do
       |> Keyword.put_new_lazy(:job_id, fn ->
         Lightning.JobsFixtures.job_fixture(project_id: attrs[:project_id]).id
       end)
-      |> Keyword.put_new_lazy(:event_id, fn -> event_fixture(event_attrs).id end)
       |> Keyword.put_new_lazy(:input_dataclip_id, fn ->
         dataclip_fixture(project_id: attrs[:project_id]).id
       end)

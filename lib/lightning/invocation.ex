@@ -218,24 +218,6 @@ defmodule Lightning.Invocation do
   end
 
   @doc """
-  Creates an event.
-
-  ## Examples
-
-      iex> create_event(%{type: :webhook, dataclip_id: dataclip.id})
-      {:ok, %Dataclip{}}
-
-      iex> create_dataclip(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-
-  """
-  def create_event(attrs \\ %{}) do
-    %Event{}
-    |> Event.changeset(attrs)
-    |> Repo.insert()
-  end
-
-  @doc """
   Returns the list of runs.
 
   ## Examples
@@ -262,8 +244,8 @@ defmodule Lightning.Invocation do
 
   @spec list_runs_for_project(Lightning.Projects.Project.t(), keyword | map) ::
           Scrivener.Page.t()
-  def list_runs_for_project(%Project{id: project_id}, params \\ %{}) do
-    list_runs_for_project_query(%Project{id: project_id})
+  def list_runs_for_project(%Project{} = project, params \\ %{}) do
+    list_runs_for_project_query(project)
     |> Repo.paginate(params)
   end
 

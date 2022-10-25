@@ -24,7 +24,7 @@ defmodule Lightning.Attempt do
     belongs_to :reason, InvocationReason
     many_to_many :runs, Run, join_through: AttemptRun
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def new(attrs \\ %{}) do

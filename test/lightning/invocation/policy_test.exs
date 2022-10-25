@@ -5,6 +5,8 @@ defmodule Lightning.Invocation.PolicyTest do
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
+  import Lightning.WorkflowsFixtures
+  import Lightning.JobsFixtures
 
   test "users can't list runs for project they aren't members of" do
     user = user_fixture()
@@ -31,7 +33,8 @@ defmodule Lightning.Invocation.PolicyTest do
   test "users can't read a runs for project they aren't members of" do
     user = user_fixture()
     project = project_fixture(project_users: [%{user_id: user.id}])
-    run = run_fixture(event_attrs: [project_id: project.id])
+    job = job_fixture(workflow_id: workflow_fixture(project_id: project.id).id)
+    run = run_fixture(job_id: job.id)
 
     assert :ok =
              Bodyguard.permit(

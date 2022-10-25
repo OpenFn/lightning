@@ -13,13 +13,12 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
   describe "assemble/2" do
     test "run with no previous run" do
-      %{job: job, workflow: workflow} = webhook_workflow()
+      %{job: job} = webhook_workflow()
 
       dataclip = dataclip_fixture(type: :http_request, body: %{"foo" => "bar"})
 
       run =
         Run.new(%{
-          project_id: workflow.project_id,
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 0,
@@ -42,13 +41,12 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
     end
 
     test "run whose previous run failed" do
-      %{job: job, workflow: workflow} = webhook_workflow()
+      %{job: job} = webhook_workflow()
 
       dataclip = dataclip_fixture(type: :http_request, body: %{"foo" => "bar"})
 
       failed_run =
         Run.new(%{
-          project_id: workflow.project_id,
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 1,
@@ -68,7 +66,6 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
       run =
         Run.new(%{
-          project_id: workflow.project_id,
           job_id: on_fail_job.id,
           input_dataclip_id: dataclip.id,
           previous_id: failed_run.id
@@ -89,7 +86,6 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
       previous_run =
         Run.new(%{
-          project_id: workflow.project_id,
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 0,
@@ -117,7 +113,6 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
       run =
         Run.new(%{
-          project_id: workflow.project_id,
           job_id: on_success_job.id,
           input_dataclip_id: previous_run.output_dataclip.id,
           previous_id: previous_run.id

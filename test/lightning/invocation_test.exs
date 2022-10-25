@@ -47,19 +47,18 @@ defmodule Lightning.InvocationTest do
 
     test "list_dataclips/1 returns dataclips for project, desc by inserted_at" do
       project = project_fixture()
-      event = event_fixture(project_id: project.id)
 
       old_dataclip =
-        dataclip_fixture(source_event_id: event.id, project_id: project.id)
+        dataclip_fixture(project_id: project.id)
         |> shift_inserted_at!(days: -2)
 
       new_dataclip =
-        dataclip_fixture(source_event_id: event.id, project_id: project.id)
+        dataclip_fixture(project_id: project.id)
         |> shift_inserted_at!(days: -1)
 
       assert Invocation.list_dataclips(project)
              |> Enum.map(fn x -> x.id end) ==
-               [event.dataclip_id, new_dataclip.id, old_dataclip.id]
+               [new_dataclip.id, old_dataclip.id]
     end
 
     test "get_dataclip!/1 returns the dataclip with given id" do
@@ -72,12 +71,11 @@ defmodule Lightning.InvocationTest do
     end
 
     test "get_dataclip/1 returns the dataclip with given id" do
-      event = event_fixture() |> Repo.preload(:dataclip)
-      dataclip = event.dataclip
+      dataclip = dataclip_fixture()
       assert Invocation.get_dataclip(dataclip.id) == dataclip
       assert Invocation.get_dataclip(Ecto.UUID.generate()) == nil
 
-      run = run_fixture(event_id: event.id, input_dataclip_id: dataclip.id)
+      run = run_fixture(input_dataclip_id: dataclip.id)
 
       assert Invocation.get_dataclip(run) == dataclip
     end
@@ -91,34 +89,6 @@ defmodule Lightning.InvocationTest do
 
       assert dataclip.body == %{}
       assert dataclip.type == :http_request
-    end
-
-    test "create_dataclip/1 with run_result type creates a dataclip" do
-      run = run_fixture()
-      project = project_fixture()
-
-      attrs = %{
-        body: %{},
-        type: :run_result,
-        source_event_id: nil,
-        project_id: project.id
-      }
-
-      # Commenting this out for now, in order to have truly versatile `cast_assoc`
-      # we can't validate_required on `source_event_id`.
-      # assert {:error, changeset} = Invocation.create_dataclip(attrs)
-      # assert {:run_id, {"can't be blank", [validation: :required]}} in changeset.errors
-
-      assert {:ok, %Dataclip{} = dataclip} =
-               Invocation.create_dataclip(%{
-                 attrs
-                 | source_event_id: run.event_id
-               })
-
-      assert dataclip.body == %{}
-      assert dataclip.type == :run_result
-
-      assert dataclip.source_event_id == run.event_id
     end
 
     test "create_dataclip/1 with invalid data returns error changeset" do
@@ -159,43 +129,14 @@ defmodule Lightning.InvocationTest do
     end
   end
 
-  describe "events" do
-    alias Lightning.Invocation.Event
-    import Lightning.JobsFixtures
-
-    @invalid_attrs %{type: nil, dataclip: nil}
-
-    test "create_event/1 with valid data creates an event" do
-      dataclip = dataclip_fixture()
-      job = workflow_job_fixture()
-
-      valid_attrs = %{
-        type: :webhook,
-        project_id: job.workflow.project_id,
-        dataclip_id: dataclip.id,
-        job_id: job.id
-      }
-
-      assert {:ok, %Event{} = event} = Invocation.create_event(valid_attrs)
-      event = Repo.preload(event, [:dataclip, :job])
-      assert event.dataclip == dataclip
-      assert event.job.id == job.id
-      assert event.type == :webhook
-    end
-
-    test "create_event/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} =
-               Invocation.create_event(@invalid_attrs)
-    end
-  end
-
   describe "runs" do
     alias Lightning.Invocation.Run
 
     import Lightning.InvocationFixtures
     import Lightning.ProjectsFixtures
+    import Lightning.WorkflowsFixtures
 
-    @invalid_attrs %{event_id: nil}
+    @invalid_attrs %{job_id: nil}
     @valid_attrs %{
       exit_code: 42,
       finished_at: ~U[2022-02-02 11:49:00.000000Z],
@@ -209,19 +150,25 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_runs_for_project/2 returns runs ordered by inserted at desc" do
-      project = project_fixture([])
-      event = event_fixture(project_id: project.id)
+      workflow = workflow_fixture() |> Repo.preload(:project)
+      job_one = job_fixture(workflow_id: workflow.id)
+      job_two = job_fixture(workflow_id: workflow.id)
 
       first_run =
-        run_fixture(event_id: event.id, project_id: project.id)
+        run_fixture(job_id: job_one.id)
         |> shift_inserted_at!(days: -1)
         |> Repo.preload(:job)
 
       second_run =
-        run_fixture(event_id: event.id, project_id: project.id)
+        run_fixture(job_id: job_two.id)
         |> Repo.preload(:job)
 
-      assert Invocation.list_runs_for_project(project).entries == [
+      third_run =
+        run_fixture(job_id: job_one.id)
+        |> Repo.preload(:job)
+
+      assert Invocation.list_runs_for_project(workflow.project).entries == [
+               third_run,
                second_run,
                first_run
              ]
@@ -232,24 +179,14 @@ defmodule Lightning.InvocationTest do
       assert Invocation.get_run!(run.id) == run
     end
 
-    test "get_run!/1 returns the run for a given event" do
-      event = event_fixture()
-      run = run_fixture(event_id: event.id)
-      assert Invocation.get_run!(event) == run
-    end
-
     test "create_run/1 with valid data creates a run" do
       project = project_fixture()
       dataclip = dataclip_fixture(project_id: project.id)
-      job = job_fixture(project_id: project.id)
-
-      event = event_fixture(project_id: project.id, dataclip_id: dataclip.id)
+      job = job_fixture(workflow_id: workflow_fixture(project_id: project.id).id)
 
       assert {:ok, %Run{} = run} =
                Invocation.create_run(
                  Map.merge(@valid_attrs, %{
-                   event_id: event.id,
-                   project_id: project.id,
                    job_id: job.id,
                    input_dataclip_id: dataclip.id
                  })

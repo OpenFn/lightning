@@ -8,14 +8,12 @@ defmodule LightningWeb.RunLiveTest do
     run =
       run_fixture(
         project_id: project.id,
-        event_id: event_fixture(project_id: project.id).id,
         log: ["First Run"]
       )
 
     finished_run =
       run_fixture(
         project_id: project.id,
-        event_id: event_fixture(project_id: project.id).id,
         log: ["Finished Run"],
         started_at: DateTime.add(DateTime.utc_now(), -1, :second),
         finished_at: DateTime.add(DateTime.utc_now(), -500, :millisecond)
@@ -25,7 +23,6 @@ defmodule LightningWeb.RunLiveTest do
     Enum.each(0..10, fn _ ->
       run_fixture(
         project_id: project.id,
-        event_id: event_fixture(project_id: project.id).id,
         log: ["Finished Run"],
         started_at: DateTime.add(DateTime.utc_now(), -1, :second),
         finished_at: DateTime.add(DateTime.utc_now(), -500, :millisecond)

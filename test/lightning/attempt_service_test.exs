@@ -58,9 +58,9 @@ defmodule Lightning.AttemptServiceTest do
           input_dataclip_id: dataclip.id
         })
 
-      {:ok, run} = AttemptService.append(attempt, new_run)
+      {:ok, attempt_run} = AttemptService.append(attempt, new_run)
 
-      assert Ecto.assoc(run, :attempts) |> Repo.all() == [attempt]
+      assert Ecto.assoc(attempt_run.run, :attempts) |> Repo.all() == [attempt]
     end
   end
 end

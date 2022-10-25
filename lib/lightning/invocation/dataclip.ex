@@ -41,7 +41,7 @@ defmodule Lightning.Invocation.Dataclip do
 
     has_one :source_run, Run, foreign_key: :output_dataclip_id
 
-    timestamps(usec: true)
+    timestamps(type: :naive_datetime_usec)
   end
 
   def new(attrs \\ %{}) do
