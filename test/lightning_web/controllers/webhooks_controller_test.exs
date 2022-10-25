@@ -12,7 +12,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     message = %{"foo" => "bar"}
     conn = post(conn, "/i/#{job.id}", message)
-    assert %{"event_id" => _, "run_id" => run_id} = json_response(conn, 200)
+    assert %{"work_order_id" => _, "run_id" => run_id} = json_response(conn, 200)
 
     %{input_dataclip: %{body: body}} =
       Invocation.get_run!(run_id)

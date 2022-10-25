@@ -10,23 +10,11 @@ defmodule Lightning.InvocationReasons do
   alias Lightning.Jobs.Trigger
 
   def build(%Trigger{type: type, id: trigger_id}, %Dataclip{id: dataclip_id}) do
-    case type do
-      type when type in [:webhook, :cron] ->
-        %InvocationReason{}
-        |> InvocationReason.changeset(%{
-          type: type,
-          trigger_id: trigger_id,
-          dataclip_id: dataclip_id
-        })
-
-      _ ->
-        %InvocationReason{}
-        |> Ecto.Changeset.change()
-        |> Ecto.Changeset.add_error(
-          :type,
-          "Type must be either :webhook or :cron"
-        )
-    end
+    InvocationReason.new(%{
+      type: type,
+      trigger_id: trigger_id,
+      dataclip_id: dataclip_id
+    })
   end
 
   @doc """

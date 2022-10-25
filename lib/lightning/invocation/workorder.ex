@@ -7,8 +7,7 @@ defmodule Lightning.WorkOrder do
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Workflows.Workflow
-  alias Lightning.InvocationReason
-  alias Lightning.Invocation.Run
+  alias Lightning.{InvocationReason, Attempt}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -19,11 +18,17 @@ defmodule Lightning.WorkOrder do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "workorders" do
+  schema "work_orders" do
     belongs_to :workflow, Workflow
     belongs_to :reason, InvocationReason
+    has_many :attempts, Attempt
 
     timestamps()
+  end
+
+  def new() do
+    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    |> validate()
   end
 
   @doc false
@@ -31,6 +36,11 @@ defmodule Lightning.WorkOrder do
     attempt
     |> cast(attrs, [:reason_id, :workflow_id])
     |> validate_required([:reason_id, :workflow_id])
+    |> validate()
+  end
+
+  defp validate(changeset) do
+    changeset
     |> assoc_constraint(:workflow)
     |> assoc_constraint(:reason)
   end

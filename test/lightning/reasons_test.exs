@@ -43,14 +43,14 @@ defmodule Lightning.InvocationReasonsTest do
                  dataclip
                )
 
-      assert %Ecto.Changeset{
-               valid?: false,
-               errors: [type: {"Type must be either :webhook or :cron", []}]
-             } =
-               InvocationReasons.build(
-                 job_fixture(trigger: %{type: :on_job_success}).trigger,
-                 dataclip
-               )
+      errors =
+        InvocationReasons.build(
+          job_fixture(trigger: %{type: :on_job_success}).trigger,
+          dataclip
+        )
+        |> errors_on()
+
+      assert {:type, ["is invalid"]} in errors
     end
   end
 end

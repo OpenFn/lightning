@@ -18,8 +18,7 @@ defmodule Lightning.Invocation.Event do
           id: Ecto.UUID.t() | nil,
           type: atom(),
           dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t() | nil,
-          job: Job.t() | Ecto.Association.NotLoaded.t() | nil,
-          run: Run.t() | Ecto.Association.NotLoaded.t() | nil
+          job: Job.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
   @source_types [:webhook, :cron, :retry, :flow]
@@ -37,7 +36,6 @@ defmodule Lightning.Invocation.Event do
 
     belongs_to :job, Job
     belongs_to :project, Project
-    has_one :run, Run
 
     timestamps(usec: true)
   end

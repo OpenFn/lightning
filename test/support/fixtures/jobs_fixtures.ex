@@ -63,4 +63,15 @@ defmodule Lightning.JobsFixtures do
     |> Lightning.Jobs.Job.changeset(attrs)
     |> Lightning.Repo.insert!()
   end
+
+  def build_job(attrs \\ []) do
+    %Lightning.Jobs.Job{}
+    |> Ecto.Changeset.change(%{
+      body: "fn(state => state)",
+      enabled: true,
+      name: "some name",
+      adaptor: "@openfn/language-common",
+      trigger: %{type: "webhook"}
+    })
+  end
 end

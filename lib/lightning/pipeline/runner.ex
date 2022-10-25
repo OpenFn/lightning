@@ -135,7 +135,6 @@ defmodule Lightning.Pipeline.Runner do
       Invocation.update_run(run, %{
         output_dataclip: %{
           project_id: job.workflow.project_id,
-          source_event_id: run.event_id,
           type: :run_result,
           body: body
         }

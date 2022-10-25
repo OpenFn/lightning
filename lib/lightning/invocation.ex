@@ -281,12 +281,7 @@ defmodule Lightning.Invocation do
       ** (Ecto.NoResultsError)
 
   """
-  @spec get_run!(Ecto.UUID.t() | Event.t()) :: Run.t()
-  def get_run!(%Event{id: event_id}) do
-    from(r in Run, where: r.event_id == ^event_id)
-    |> Repo.one!()
-  end
-
+  @spec get_run!(Ecto.UUID.t()) :: Run.t()
   def get_run!(id), do: Repo.get!(Run, id)
 
   @doc """

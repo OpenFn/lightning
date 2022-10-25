@@ -18,7 +18,7 @@ defmodule Lightning.Invocation.Dataclip do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Invocation.{Event, Run}
+  alias Lightning.Invocation.Run
   alias Lightning.Projects.Project
 
   @type t :: %__MODULE__{
@@ -26,8 +26,7 @@ defmodule Lightning.Invocation.Dataclip do
           id: Ecto.UUID.t() | nil,
           project_id: Ecto.UUID.t() | nil,
           body: %{} | nil,
-          source_event: Event.t() | Ecto.Association.NotLoaded.t() | nil,
-          events: [Event.t()] | Ecto.Association.NotLoaded.t()
+          source_run: Run.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
   @type source_type :: :http_request | :global | :run_result
@@ -39,18 +38,22 @@ defmodule Lightning.Invocation.Dataclip do
     field :body, :map
     field :type, Ecto.Enum, values: @source_types
     belongs_to :project, Project
-    belongs_to :source_event, Event
-    has_many :events, Event
 
     has_one :source_run, Run, foreign_key: :output_dataclip_id
 
     timestamps(usec: true)
   end
 
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    |> change(attrs)
+    |> validate()
+  end
+
   @doc false
   def changeset(dataclip, attrs) do
     dataclip
-    |> cast(attrs, [:body, :type, :source_event_id, :project_id])
+    |> cast(attrs, [:body, :type, :project_id])
     |> case do
       %{action: :delete} = c ->
         c |> validate_required([:type]) |> Map.put(:action, :update)
@@ -58,13 +61,13 @@ defmodule Lightning.Invocation.Dataclip do
       c ->
         c |> validate_required([:type, :body])
     end
-    |> validate_by_type()
+    |> validate()
   end
 
   @doc """
   Append validations based on the type of the Dataclip.
 
-  - `:run_result` must have an associated Event model.
+  - `:run_result` must have an associated Run model.
   """
   def validate_by_type(changeset) do
     changeset
@@ -72,11 +75,16 @@ defmodule Lightning.Invocation.Dataclip do
     |> case do
       :run_result ->
         changeset
-        |> assoc_constraint(:source_event)
+        |> foreign_key_constraint(:source_run)
 
       _ ->
         changeset
     end
+  end
+
+  defp validate(changeset) do
+    changeset
+    |> validate_by_type()
   end
 
   def get_types do

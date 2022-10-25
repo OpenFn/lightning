@@ -7,14 +7,14 @@ defmodule Lightning.Invocation.Run do
   """
   use Ecto.Schema
   import Ecto.Changeset
-  alias Lightning.Invocation.{Event, Dataclip}
+
+  alias Lightning.Invocation.Dataclip
   alias Lightning.Jobs.Job
-  alias Lightning.Attempt
+  alias Lightning.{AttemptRun, Attempt}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          event: Event.t() | Ecto.Association.NotLoaded.t() | nil,
           job: Job.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
@@ -25,18 +25,22 @@ defmodule Lightning.Invocation.Run do
     field :finished_at, :utc_datetime_usec
     field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
-    belongs_to :event, Event
     belongs_to :job, Job
 
     belongs_to :input_dataclip, Dataclip
     belongs_to :output_dataclip, Dataclip
 
-    # has_one :source_dataclip, through: [:event, :dataclip]
-    # has_one :result_dataclip, through: [:event, :result_dataclip]
+    belongs_to :previous, __MODULE__
 
-    many_to_many :attempts, Attempt, join_through: "attempt_runs"
+    many_to_many :attempts, Attempt, join_through: AttemptRun
 
     timestamps(usec: true)
+  end
+
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    |> change(attrs)
+    |> validate()
   end
 
   @doc false
@@ -47,16 +51,19 @@ defmodule Lightning.Invocation.Run do
       :exit_code,
       :started_at,
       :finished_at,
-      :event_id,
       :job_id,
       :input_dataclip_id,
       :output_dataclip_id
     ])
     |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
-    |> foreign_key_constraint(:event_id)
-    |> foreign_key_constraint(:input_dataclip_id)
-    |> foreign_key_constraint(:output_dataclip_id)
-    |> foreign_key_constraint(:job_id)
-    |> validate_required([:event_id, :job_id, :input_dataclip_id])
+    |> validate_required([:job_id, :input_dataclip_id])
+    |> validate()
+  end
+
+  defp validate(changeset) do
+    changeset
+    |> assoc_constraint(:input_dataclip)
+    |> assoc_constraint(:output_dataclip)
+    |> assoc_constraint(:job)
   end
 end

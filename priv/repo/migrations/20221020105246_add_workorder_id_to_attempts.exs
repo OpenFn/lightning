@@ -3,10 +3,10 @@ defmodule Lightning.Repo.Migrations.AddWorkorderIdToAttempts do
 
   def change do
     alter table(:attempts) do
-      add :workorder_id, references(:workorders, on_delete: :delete_all, type: :binary_id),
+      add :work_order_id, references(:work_orders, on_delete: :delete_all, type: :binary_id),
         null: false
     end
 
-    create index(:attempts, [:workorder_id])
+    create index(:attempts, [:work_order_id])
   end
 end

@@ -1,39 +1,66 @@
 defmodule Lightning.AttemptServiceTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.JobsFixtures
+  import Lightning.InvocationFixtures
+  alias Lightning.Attempt
+  alias Lightning.AttemptService
+  alias Lightning.Invocation.{Run}
+
   describe "attempts" do
-    import Lightning.JobsFixtures
-    import Lightning.InvocationFixtures
-    alias Lightning.AttemptService
-
-    alias Lightning.Invocation.{Event, Run}
-    alias Lightning.Attempt
-
     test "create/3 returns an Event, a Run and an Attempt" do
       job = workflow_job_fixture()
-      workorder = workorder_fixture(workflow_id: job.workflow_id)
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
       reason = reason_fixture(trigger_id: job.trigger.id)
 
       job_id = job.id
-      workorder_id = workorder.id
+      work_order_id = work_order.id
       reason_id = reason.id
       data_clip_id = reason.dataclip_id
 
       assert {:ok,
-              %{
-                attempt: %Attempt{
-                  workorder_id: ^workorder_id,
-                  reason_id: ^reason_id,
-                  runs: [%Run{job_id: ^job_id, input_dataclip_id: ^data_clip_id}]
-                },
-                event: %Event{},
-                run: %Run{}
+              %Attempt{
+                work_order_id: ^work_order_id,
+                reason_id: ^reason_id,
+                runs: [%Run{job_id: ^job_id, input_dataclip_id: ^data_clip_id}]
               }} =
                AttemptService.create_attempt(
-                 workorder,
+                 work_order,
                  job,
                  reason
                )
+    end
+  end
+
+  describe "append/2" do
+    test "adds a run to an existing attempt" do
+      job = workflow_job_fixture()
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      attempt =
+        %Attempt{
+          work_order_id: work_order.id,
+          reason_id: reason.id
+        }
+        |> Repo.insert!()
+
+      new_run =
+        Run.changeset(%Run{}, %{
+          project_id: job.workflow.project_id,
+          job_id: job.id,
+          input_dataclip_id: dataclip.id
+        })
+
+      {:ok, run} = AttemptService.append(attempt, new_run)
+
+      assert Ecto.assoc(run, :attempts) |> Repo.all() == [attempt]
     end
   end
 end

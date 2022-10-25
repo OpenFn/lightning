@@ -1,6 +1,6 @@
 defmodule Lightning.Invocation.Query do
   @moduledoc """
-  Query functions for working with Events, Runs and Dataclips
+  Query functions for working with Runs and Dataclips
   """
   import Ecto.Query
 
@@ -16,9 +16,10 @@ defmodule Lightning.Invocation.Query do
     projects = Ecto.assoc(user, :projects) |> select([:id])
 
     from(r in Run,
-      join: e in assoc(r, :event),
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
       join: p in subquery(projects),
-      on: e.project_id == p.id
+      on: w.project_id == p.id
     )
   end
 
@@ -28,8 +29,7 @@ defmodule Lightning.Invocation.Query do
   @spec last_run_for_job(Job.t()) :: Ecto.Queryable.t()
   def last_run_for_job(%Job{id: id}) do
     from(r in Run,
-      join: e in assoc(r, :event),
-      where: e.job_id == ^id,
+      where: r.job_id == ^id,
       order_by: [desc: r.finished_at],
       limit: 1
     )

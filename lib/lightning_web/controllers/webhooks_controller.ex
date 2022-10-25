@@ -1,7 +1,7 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.{Jobs, Invocation, Pipeline}
+  alias Lightning.{Jobs, Pipeline, WorkOrderService, Repo}
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
@@ -14,23 +14,13 @@ defmodule LightningWeb.WebhooksController do
         |> json(%{})
 
       job ->
-        {:ok, %{event: event, run: run, dataclip: _dataclip}} =
-          Invocation.create(
-            %{
-              job_id: job.id,
-              project_id: job.workflow.project_id,
-              type: :webhook
-            },
-            %{
-              type: :http_request,
-              body: conn.body_params,
-              project_id: job.workflow.project_id
-            }
-          )
+        {:ok, %{work_order: work_order, attempt_run: attempt_run}} =
+          WorkOrderService.multi_for(:webhook, job, conn.body_params)
+          |> Repo.transaction()
 
-        resp = %{event_id: event.id, run_id: run.id}
+        resp = %{work_order_id: work_order.id, run_id: attempt_run.run_id}
 
-        Pipeline.new(%{event_id: event.id})
+        Pipeline.new(%{attempt_run_id: attempt_run.id})
         |> Oban.insert()
 
         conn
