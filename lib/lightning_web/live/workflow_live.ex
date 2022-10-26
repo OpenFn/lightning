@@ -177,8 +177,8 @@ defmodule LightningWeb.WorkflowLive do
         <% end %>
         <%= case @live_action do %>
           <% :new_job -> %>
-            <div class="absolute top-0 right-0 m-2 z-10">
-              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+            <div class="absolute w-1/3 inset-y-0 top-0 overflow-y-scroll right-0 z-10 bg-red-800">
+              <div class="w-auto bg-white shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
                   module={LightningWeb.JobLive.InspectorFormComponent}
                   id="new-job"
@@ -238,7 +238,7 @@ defmodule LightningWeb.WorkflowLive do
         <% end %>
         <div
           phx-hook="WorkflowDiagram"
-          class="h-full w-full"
+          class="h-full w-full fixed"
           id={"hook-#{@project.id}"}
           phx-update="ignore"
           base-path={Routes.project_workflow_path(@socket, :show, @project.id)}
