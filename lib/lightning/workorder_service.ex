@@ -1,28 +1,25 @@
 defmodule Lightning.WorkOrderService do
   @moduledoc """
-  The WorkOrders context.
+  The WorkOrderService.
   """
 
   import Ecto.Query, warn: false
+
   alias Lightning.Repo
   alias Lightning.{WorkOrder, InvocationReasons, AttemptRun, AttemptService}
   alias Lightning.Invocation.{Dataclip, Run}
+  alias Lightning.Accounts.User
+  alias Lightning.Jobs.Job
 
   alias Ecto.Multi
 
-  @spec multi_for(
-          :webhook | :cron,
-          Lightning.Jobs.Job.t(),
-          Ecto.Changeset.t(Dataclip.t())
-          | Dataclip.t()
-          | %{optional(String.t()) => any}
-        ) :: Ecto.Multi.t()
-  def multi_for(:webhook, job, dataclip_body) do
+  @spec multi_for_manual(Job.t(), Dataclip.t(), User.t()) :: Ecto.Multi.t()
+  def multi_for_manual(job, dataclip, user) do
     Multi.new()
     |> put_job(job)
-    |> put_dataclip(dataclip_body)
-    |> Multi.insert(:reason, fn %{dataclip: dataclip, job: job} ->
-      InvocationReasons.build(job.trigger, dataclip)
+    |> put_dataclip(dataclip)
+    |> Multi.insert(:reason, fn %{dataclip: dataclip} ->
+      InvocationReasons.build(:manual, %{user: user, dataclip: dataclip})
     end)
     |> Multi.insert(:work_order, fn %{reason: reason, job: job} ->
       build(job.workflow, reason)
@@ -47,10 +44,17 @@ defmodule Lightning.WorkOrderService do
     end)
   end
 
-  def multi_for(:cron, job, dataclip) do
+  @spec multi_for(
+          :webhook | :cron,
+          Lightning.Jobs.Job.t(),
+          Ecto.Changeset.t(Dataclip.t())
+          | Dataclip.t()
+          | %{optional(String.t()) => any}
+        ) :: Ecto.Multi.t()
+  def multi_for(type, job, dataclip_body) when type in [:webhook, :cron] do
     Multi.new()
     |> put_job(job)
-    |> put_dataclip(dataclip)
+    |> put_dataclip(dataclip_body)
     |> Multi.insert(:reason, fn %{dataclip: dataclip, job: job} ->
       InvocationReasons.build(job.trigger, dataclip)
     end)
