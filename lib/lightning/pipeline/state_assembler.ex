@@ -5,9 +5,9 @@ defmodule Lightning.Pipeline.StateAssembler do
   ## How state is assembled
 
   For the most common jobs, an inbound webhook will store an `:http_request` type
-  dataclip. The event that is created is associated with the dataclip.
+  dataclip. The reason that is created is associated with the dataclip.
 
-  At runtime, the initial state for a Run will in the shape of:
+  At runtime, the initial state for a Run will be in the shape of:
 
   ```
   { "data": <the dataclip>, "configuration": <the job's credential> }
@@ -16,16 +16,16 @@ defmodule Lightning.Pipeline.StateAssembler do
   ### Flow Jobs
 
   When a Job is triggered by a previous Jobs success or failure these are the
-  rules for constructing that Jobs state.
+  rules for constructing that Jobs state:
 
   For jobs that trigger on it's upstream jobs failure, the event will have
-  the source events original dataclip as its dataclip.
+  the previous runs input dataclip as its input dataclip.
 
-  The state will also have the log of the source events run attached on the
+  The state will also have the log of the previous run attached on the
   `error` key.
 
-  For Jobs triggered by a previous success, the event will have the source
-  event runs resulting dataclip as its dataclip.
+  For Jobs triggered by a previous success, the run will have the previous
+  runs output dataclip as its input dataclip.
 
   `:run_result` dataclips are expected to already have a `data` key, and are
   merged into the root.
@@ -34,143 +34,59 @@ defmodule Lightning.Pipeline.StateAssembler do
   import Ecto.Query, warn: false
 
   require Jason.Helpers
-  alias Lightning.Invocation.{Event}
+  alias Lightning.Invocation.Run
 
   @doc """
   Assemble state for use in a Run.
   """
   @spec assemble(run :: Lightning.Invocation.Run.t()) :: String.t()
-  def assemble(run) do
-    %{id: run_id} = run
-
+  def assemble(%Run{} = run) do
     query =
-      from(e in Event,
-        join: r in assoc(e, :run),
-        join: d in assoc(e, :dataclip),
+      from(r in Run,
+        join: d in assoc(r, :input_dataclip),
         as: :dataclip,
-        join: j in assoc(e, :job),
+        left_join: p in assoc(r, :previous),
+        on: p.exit_code > 0,
+        as: :previous,
+        join: j in assoc(r, :job),
         left_join: c in assoc(j, :credential),
         as: :credential,
-        left_join: se in assoc(e, :source),
-        left_join: ser in assoc(se, :run),
-        as: :source_event_run,
-        where: r.id == ^run_id
+        where: r.id == ^run.id
       )
 
-    context_query(run)
-    |> build_state(query)
-  end
-
-  def context_query(%{id: run_id}) do
-    from(e in Event,
-      join: d in assoc(e, :dataclip),
-      join: r in assoc(e, :run),
-      join: j in assoc(e, :job),
-      join: t in assoc(j, :trigger),
-      left_join: c in assoc(j, :credential),
-      left_join: se in assoc(e, :source),
-      left_join: ser in assoc(se, :run),
-      where: r.id == ^run_id,
-      select: {
-        d.type,
-        t.type
-      }
-    )
-    |> Lightning.Repo.one!()
-  end
-
-  @spec build_state(
-          context ::
-            {Lightning.Invocation.Dataclip.source_type(),
-             Lightning.Jobs.Trigger.trigger_type()},
-          query :: Ecto.Queryable.t()
-        ) :: binary()
-  # Source event failed, so we reconstruct the `data` key, and attach
-  # the error log.
-  def build_state({:http_request, :on_job_failure}, query) do
-    {dataclip, credential, log} =
+    {dataclip_type, dataclip_body, credential, error} =
       query
       |> select(
-        [dataclip: d, credential: c, source_event_run: ser],
-        {d.body, c.body, ser.log}
+        [dataclip: d, credential: c, previous: p],
+        {d.type, d.body, c.body, p.log}
       )
       |> Lightning.Repo.one!()
 
-    Jason.Helpers.json_map(data: dataclip, configuration: credential, error: log)
-    |> Jason.encode_to_iodata!()
-  end
+    case {dataclip_type, error} do
+      {:run_result, error} when not is_nil(error) ->
+        Jason.encode_to_iodata!(
+          dataclip_body
+          |> Map.put("configuration", credential)
+          |> Map.put("error", error)
+        )
 
-  # Is the first event, attach the `http_request` dataclip onto `data`.
-  def build_state({:http_request, _}, query) do
-    {dataclip, credential} =
-      query
-      |> select(
-        [dataclip: d, credential: c],
-        {d.body, c.body}
-      )
-      |> Lightning.Repo.one!()
+      {_, error} when not is_nil(error) ->
+        Jason.Helpers.json_map(
+          data: dataclip_body,
+          configuration: credential,
+          error: error
+        )
+        |> Jason.encode_to_iodata!()
 
-    Jason.Helpers.json_map(data: dataclip, configuration: credential)
-    |> Jason.encode_to_iodata!()
-  end
+      {:run_result, nil} ->
+        Jason.encode_to_iodata!(
+          dataclip_body
+          |> Map.put("configuration", credential)
+        )
 
-  # A cron job started without any default initial dataclip gets a new
-  # "global" dataclip with an empty body.
-  def build_state({:global, :cron}, query) do
-    dataclip_with_credential(query)
-  end
-
-  # A cron job started with the result of a previous run; merge the
-  # `run_result` dataclip onto the root and then use this job's configuration.
-  def build_state({:run_result, :cron}, query) do
-    dataclip_with_credential(query)
-  end
-
-  # Source event succeeded, merge the `run_result` dataclip onto the root
-  # and then use this job's configuration.
-  def build_state({:run_result, :on_job_success}, query) do
-    dataclip_with_credential(query)
-  end
-
-  # Source event failed and had a `run_result` as it's dataclip,
-  # merge it into the root, with this Jobs configuration and the source
-  # events error log.
-  def build_state({:run_result, :on_job_failure}, query) do
-    dataclip_with_credential_and_log(query)
-  end
-
-  @doc """
-  Merge the credential key into the dataclip.
-
-  Returns `iodata`.
-  """
-  def dataclip_with_credential(query) do
-    {dataclip, credential} =
-      query
-      |> select([dataclip: d, credential: c], {d.body, c.body})
-      |> Lightning.Repo.one!()
-
-    Jason.encode_to_iodata!(dataclip |> Map.put("configuration", credential))
-  end
-
-  @doc """
-  Merge the credential, and the previous runs log into the dataclip.
-
-  Returns `iodata`.
-  """
-  def dataclip_with_credential_and_log(query) do
-    {dataclip, credential, error} =
-      query
-      |> select(
-        [dataclip: d, credential: c, source_event_run: ser],
-        {d.body, c.body, ser.log}
-      )
-      |> Lightning.Repo.one!()
-
-    Jason.encode_to_iodata!(
-      dataclip
-      |> Map.put("configuration", credential)
-      |> Map.put("error", error)
-    )
+      {_, nil} ->
+        Jason.Helpers.json_map(data: dataclip_body, configuration: credential)
+        |> Jason.encode_to_iodata!()
+    end
   end
 end

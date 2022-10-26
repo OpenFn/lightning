@@ -3,16 +3,17 @@ defmodule Lightning.PipelineTest do
   use Mimic
 
   alias Lightning.Pipeline
+  alias Lightning.{Attempt, AttemptRun}
+  alias Lightning.Invocation.{Run}
 
   import Lightning.InvocationFixtures
   import Lightning.JobsFixtures
   import Lightning.CredentialsFixtures
-  import Lightning.ProjectsFixtures
 
   describe "process/1" do
-    test "starts a run for a given event and executes its on_job_failure downstream job" do
+    test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
       job =
-        job_fixture(
+        workflow_job_fixture(
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
 
@@ -20,6 +21,7 @@ defmodule Lightning.PipelineTest do
         job_fixture(
           trigger: %{type: :on_job_failure, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
+          workflow_id: job.workflow_id,
           project_credential_id:
             project_credential_fixture(
               name: "my credential",
@@ -27,23 +29,48 @@ defmodule Lightning.PipelineTest do
             ).id
         )
 
-      event = event_fixture(job_id: job.id)
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+      dataclip = dataclip_fixture()
 
-      run_fixture(
-        event_id: event.id,
-        project_id: event.project_id,
-        job_id: job.id,
-        input_dataclip_id: event.dataclip_id
-      )
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
 
-      Pipeline.process(event)
+      {:ok, attempt_run} =
+        AttemptRun.new()
+        |> Ecto.Changeset.put_assoc(
+          :attempt,
+          Attempt.changeset(%Attempt{}, %{
+            work_order_id: work_order.id,
+            reason_id: reason.id
+          })
+        )
+        |> Ecto.Changeset.put_assoc(
+          :run,
+          Run.changeset(%Run{}, %{
+            project_id: job.workflow.project_id,
+            job_id: job.id,
+            input_dataclip_id: dataclip.id
+          })
+        )
+        |> Repo.insert()
+
+      Pipeline.process(attempt_run)
+
+      previous_id = attempt_run.run.id
 
       expected_run =
         from(r in Lightning.Invocation.Run,
-          where: r.job_id == ^downstream_job_id,
+          where:
+            r.job_id == ^downstream_job_id and
+              r.previous_id == ^previous_id,
           preload: [:output_dataclip]
         )
         |> Repo.one!()
+
+      assert expected_run.input_dataclip_id == dataclip.id
 
       assert %{
                "configuration" => %{"credential" => "body"},
@@ -66,62 +93,80 @@ defmodule Lightning.PipelineTest do
       end)
     end
 
-    test "starts a run for a given event and executes its on_job_success downstream job" do
-      project = project_fixture()
-
-      project_credential =
-        credential_fixture(project_credentials: [%{project_id: project.id}])
-        |> Map.get(:project_credentials)
-        |> List.first()
-
-      other_project_credential =
-        credential_fixture(
-          name: "my credential",
-          body: %{"credential" => "body"},
-          project_credentials: [%{project_id: project.id}]
-        )
-        |> Map.get(:project_credentials)
-        |> List.first()
-
+    test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
       job =
-        job_fixture(
-          body: ~s[fn(state => { return {...state, extra: "data"} })],
-          project_credential_id: project_credential.id,
-          project_id: project.id
+        workflow_job_fixture(
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
       %{id: downstream_job_id} =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
-          name: "on previous job success",
           body: ~s[fn(state => state)],
-          project_id: project.id,
-          project_credential_id: other_project_credential.id
+          workflow_id: job.workflow_id,
+          project_credential_id:
+            project_credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
         )
 
-      event = event_fixture(job_id: job.id)
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+      dataclip = dataclip_fixture()
 
-      run_fixture(
-        event_id: event.id,
-        project_id: event.project_id,
-        job_id: job.id,
-        input_dataclip_id: event.dataclip_id
-      )
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
 
-      Pipeline.process(event)
+      {:ok, attempt_run} =
+        AttemptRun.new()
+        |> Ecto.Changeset.put_assoc(
+          :attempt,
+          Attempt.changeset(%Attempt{}, %{
+            work_order_id: work_order.id,
+            reason_id: reason.id
+          })
+        )
+        |> Ecto.Changeset.put_assoc(
+          :run,
+          Run.changeset(%Run{}, %{
+            project_id: job.workflow.project_id,
+            job_id: job.id,
+            input_dataclip_id: dataclip.id
+          })
+        )
+        |> Repo.insert()
 
-      expected_event =
-        from(e in Lightning.Invocation.Event,
-          where: e.job_id == ^downstream_job_id,
-          preload: [:result_dataclip]
+      Pipeline.process(attempt_run)
+
+      previous_id = attempt_run.run.id
+
+      output_dataclip_id =
+        attempt_run.run |> Repo.reload!() |> Map.get(:output_dataclip_id)
+
+      expected_run =
+        from(r in Lightning.Invocation.Run,
+          where:
+            r.job_id == ^downstream_job_id and
+              r.previous_id == ^previous_id,
+          preload: [:output_dataclip]
         )
         |> Repo.one!()
+
+      assert expected_run.input_dataclip_id == output_dataclip_id
+
+      assert %{
+               "configuration" => %{"credential" => "body"},
+               "data" => %{}
+             } = expected_run.output_dataclip.body
 
       assert %{
                "configuration" => %{"credential" => "body"},
                "data" => %{},
                "extra" => "data"
-             } == expected_event.result_dataclip.body
+             } = expected_run.output_dataclip.body
     end
   end
 end

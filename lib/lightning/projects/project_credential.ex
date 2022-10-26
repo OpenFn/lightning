@@ -29,8 +29,8 @@ defmodule Lightning.Projects.ProjectCredential do
   end
 
   @doc false
-  def changeset(project_user, attrs) do
-    project_user
+  def changeset(project_credential, attrs) do
+    project_credential
     |> cast(attrs, [:credential_id, :project_id])
     |> validate_required([:project_id])
     |> unique_constraint([:project_id, :credential_id],

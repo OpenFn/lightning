@@ -2,6 +2,8 @@ defmodule LightningWeb.API.RunControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Lightning.InvocationFixtures
+  import Lightning.WorkflowsFixtures
+  import Lightning.JobsFixtures
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -90,7 +92,7 @@ defmodule LightningWeb.API.RunControllerTest do
   end
 
   defp create_run(%{project: project}) do
-    event = event_fixture(project_id: project.id)
-    %{run: run_fixture(event_id: event.id)}
+    job = job_fixture(workflow_id: workflow_fixture(project_id: project.id).id)
+    %{run: run_fixture(job_id: job.id)}
   end
 end

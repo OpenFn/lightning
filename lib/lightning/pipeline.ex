@@ -12,42 +12,47 @@ defmodule Lightning.Pipeline do
   alias Lightning.Pipeline.Runner
 
   alias Lightning.{Jobs, Invocation}
-  alias Lightning.Invocation.Event
+  alias Lightning.Invocation.Run
   alias Lightning.Repo
+  alias Lightning.{AttemptService, AttemptRun}
   import Ecto.Query
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"event_id" => id}}) do
-    Invocation.Event
-    |> Repo.get(id)
+  def perform(%Oban.Job{args: %{"attempt_id" => attempt_id, "run_id" => run_id}}) do
+    Repo.get_by!(AttemptRun, attempt_id: attempt_id, run_id: run_id)
     |> process()
-
-    :ok
   end
 
-  @spec process(Event.t()) :: :ok
-  def process(%Event{} = event) do
-    run = Invocation.get_run!(event)
+  def perform(%Oban.Job{args: %{"attempt_run_id" => attempt_run_id}}) do
+    Repo.get!(AttemptRun, attempt_run_id)
+    |> process()
+  end
+
+  @spec process(AttemptRun.t()) :: :ok
+  def process(%AttemptRun{} = attempt_run) do
+    run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
+    # run = Invocation.get_run!(event)
     result = Runner.start(run)
 
-    jobs = get_jobs_for_result(event.job_id, result)
+    jobs = get_jobs_for_result(run.job_id, result)
 
     if length(jobs) > 0 do
       next_dataclip_id = get_next_dataclip_id(result, run)
 
       jobs
       |> Enum.map(fn %{id: job_id, workflow: %{project_id: project_id}} ->
-        %{
-          job_id: job_id,
-          type: :flow,
-          dataclip_id: next_dataclip_id,
-          source_id: event.id,
-          project_id: project_id
-        }
-      end)
-      |> Enum.map(fn attrs ->
-        {:ok, %{event: event}} = Invocation.create(attrs)
-        new(%{event_id: event.id})
+        # create a new run for the same attempt
+        {:ok, attempt_run} =
+          AttemptService.append(
+            attempt_run,
+            Run.changeset(%Run{}, %{
+              job_id: job_id,
+              input_dataclip_id: next_dataclip_id,
+              project_id: project_id
+            })
+          )
+
+        new(%{"attempt_run_id" => attempt_run.id})
       end)
       |> Enum.each(&Oban.insert/1)
     end
@@ -70,9 +75,7 @@ defmodule Lightning.Pipeline do
   defp get_next_dataclip_id(result, run) do
     case result.exit_reason do
       :error ->
-        Invocation.get_dataclip_query(run)
-        |> select([d], d.id)
-        |> Repo.one()
+        run.input_dataclip_id
 
       :ok ->
         from(d in Invocation.Dataclip,

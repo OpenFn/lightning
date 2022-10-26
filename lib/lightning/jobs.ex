@@ -17,13 +17,9 @@ defmodule Lightning.Jobs do
   end
 
   def list_active_cron_jobs do
-    Repo.all(
-      from j in Job,
-        join: t in assoc(j, :trigger),
-        where: t.type == :cron and j.enabled == true,
-        preload: [trigger: t],
-        preload: :workflow
-    )
+    Query.enabled_cron_jobs()
+    |> preload(:workflow)
+    |> Repo.all()
   end
 
   @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()

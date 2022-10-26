@@ -34,16 +34,18 @@ defmodule Lightning.InvocationReason do
     timestamps()
   end
 
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    |> change(attrs)
+    |> validate()
+  end
+
   @doc false
   def changeset(reason, attrs) do
     reason
     |> cast(attrs, [:type, :run_id, :dataclip_id, :user_id, :trigger_id])
     |> validate_required([:type, :dataclip_id])
-    |> validate_inclusion(:type, @source_types)
-    |> assoc_constraint(:run)
-    |> assoc_constraint(:user)
-    |> assoc_constraint(:dataclip)
-    |> validate_by_trigger_type()
+    |> validate()
   end
 
   # - `:cron` must have an associated trigger.
@@ -61,5 +63,14 @@ defmodule Lightning.InvocationReason do
       _ ->
         changeset
     end
+  end
+
+  defp validate(changeset) do
+    changeset
+    |> validate_inclusion(:type, @source_types)
+    |> assoc_constraint(:run)
+    |> assoc_constraint(:user)
+    |> assoc_constraint(:dataclip)
+    |> validate_by_trigger_type()
   end
 end

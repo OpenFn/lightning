@@ -6,6 +6,16 @@ defmodule Lightning.InvocationReasons do
   import Ecto.Query, warn: false
   alias Lightning.Repo
   alias Lightning.InvocationReason
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Jobs.Trigger
+
+  def build(%Trigger{type: type, id: trigger_id}, %Dataclip{id: dataclip_id}) do
+    InvocationReason.new(%{
+      type: type,
+      trigger_id: trigger_id,
+      dataclip_id: dataclip_id
+    })
+  end
 
   @doc """
   Creates a reason.

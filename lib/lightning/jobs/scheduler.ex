@@ -16,8 +16,11 @@ defmodule Lightning.Jobs.Scheduler do
     Invocation,
     Jobs,
     Pipeline,
-    Repo
+    Repo,
+    WorkOrderService
   }
+
+  alias Lightning.Invocation.Dataclip
 
   @impl Oban.Worker
   def perform(%Oban.Job{}), do: enqueue_cronjobs()
@@ -31,9 +34,9 @@ defmodule Lightning.Jobs.Scheduler do
     |> DateTime.to_unix()
     |> Jobs.get_jobs_for_cron_execution()
     |> Enum.each(fn job ->
-      {:ok, %{event: event, run: _run}} = invoke_cronjob(job)
+      {:ok, %{attempt_run: attempt_run}} = invoke_cronjob(job)
 
-      Pipeline.new(%{event_id: event.id})
+      Pipeline.new(%{attempt_run_id: attempt_run.id})
       |> Oban.insert()
     end)
 
@@ -48,29 +51,29 @@ defmodule Lightning.Jobs.Scheduler do
           "Starting cronjob #{job.id} for the first time. (No previous final state.)"
         end)
 
-        Invocation.create(
-          %{job_id: job.id, project_id: job.workflow.project_id, type: :cron},
-          # Add a facility to specify _which_ global state should be use as
-          # the first initial state for a cron-triggered job.
-          # The implementation would look like:
-          # default_state_for_job(id)
-          # %{id: uuid, type: :global, body: %{arbitrary: true}}
-          %{body: %{}, project_id: job.workflow.project_id, type: :global}
+        # Add a facility to specify _which_ global state should be use as
+        # the first initial state for a cron-triggered job.
+        # The implementation would look like:
+        # default_state_for_job(id)
+        # %{id: uuid, type: :global, body: %{arbitrary: true}}
+        WorkOrderService.multi_for(
+          :cron,
+          job,
+          Dataclip.new(%{
+            type: :global,
+            body: %{},
+            project_id: job.workflow.project_id
+          })
         )
+        |> Repo.transaction()
 
-      state ->
+      dataclip ->
         Logger.debug(fn ->
           "Starting cronjob #{job.id} using the final state of its last successful run."
         end)
 
-        Invocation.create(
-          %{job_id: job.id, project_id: job.workflow.project_id, type: :cron},
-          %{
-            body: Map.get(state, :body),
-            project_id: job.workflow.project_id,
-            type: :run_result
-          }
-        )
+        WorkOrderService.multi_for(:cron, job, dataclip)
+        |> Repo.transaction()
     end
   end
 
@@ -84,11 +87,5 @@ defmodule Lightning.Jobs.Scheduler do
       nil -> nil
       run -> Invocation.get_result_dataclip_query(run) |> Repo.one()
     end
-  end
-
-  @spec active_jobs_with_cron_triggers :: any
-  def active_jobs_with_cron_triggers do
-    Jobs.Query.enabled_cron_jobs()
-    |> Repo.all()
   end
 end

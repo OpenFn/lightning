@@ -10,10 +10,10 @@ defmodule Lightning.Invocation.AttemptTest do
       assert errors[:reason_id] == ["can't be blank"]
     end
 
-    test "must have a workorder" do
+    test "must have a work_order" do
       errors = Attempt.changeset(%Attempt{}, %{}) |> errors_on()
 
-      assert errors[:workorder_id] == ["can't be blank"]
+      assert errors[:work_order_id] == ["can't be blank"]
     end
   end
 end

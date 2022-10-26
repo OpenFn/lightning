@@ -46,7 +46,6 @@ defmodule Lightning.Jobs.Job do
     field :name, :string
     field :adaptor, :string
     belongs_to :trigger, Trigger
-    has_many :events, Lightning.Invocation.Event
 
     belongs_to :project_credential, ProjectCredential
     has_one :credential, through: [:project_credential, :credential]
@@ -54,6 +53,10 @@ defmodule Lightning.Jobs.Job do
     has_one :project, through: [:workflow, :project]
 
     timestamps()
+  end
+
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{}, attrs)
   end
 
   @doc false
@@ -128,5 +131,10 @@ defmodule Lightning.Jobs.Job do
       workflow |> Ecto.Changeset.get_field(:id)
     )
     |> Ecto.Changeset.put_assoc(:workflow, workflow)
+  end
+
+  def put_project_credential(job, project_credential) do
+    job
+    |> Ecto.Changeset.put_assoc(:project_credential, project_credential)
   end
 end

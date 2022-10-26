@@ -19,7 +19,6 @@ defmodule Lightning.ModelHelpers do
       Map.get(struct, :inserted_at)
       |> Timex.shift(shift_attrs)
       |> Timex.to_naive_datetime()
-      |> NaiveDateTime.truncate(:second)
 
     Ecto.Changeset.change(struct, %{inserted_at: inserted_at})
     |> Lightning.Repo.update!()

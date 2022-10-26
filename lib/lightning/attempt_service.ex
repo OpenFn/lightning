@@ -5,8 +5,8 @@ defmodule Lightning.AttemptService do
 
   import Ecto.Query, warn: false
   alias Lightning.Repo
-  alias Lightning.Attempt
-  alias Lightning.Invocation.{Event, Run}
+  alias Lightning.{Attempt, AttemptRun}
+  alias Lightning.Invocation.{Run}
 
   @doc """
   Creates a reason.
@@ -20,38 +20,48 @@ defmodule Lightning.AttemptService do
       {:error, %Ecto.Changeset{}}
 
   """
-
-  def create_attempt(workorder, job, reason) do
+  def create_attempt(work_order, job, reason) do
     project_id = job.workflow.project_id
     dataclip_id = reason.dataclip_id
 
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert(
-      :event,
-      Event.changeset(%Event{}, %{
-        type: :webhook,
-        job_id: job.id,
-        project_id: project_id,
-        dataclip_id: dataclip_id
-      })
-    )
-    |> Ecto.Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
+    build_attempt(work_order, reason)
+    |> Ecto.Changeset.put_assoc(:runs, [
       Run.changeset(%Run{}, %{
-        event_id: event_id,
         project_id: project_id,
         job_id: job.id,
-        input_dataclip_id: dataclip_id,
-        # not sure why we need this !
-        output_dataclip: nil
+        input_dataclip_id: dataclip_id
       })
-    end)
-    |> Ecto.Multi.insert(:attempt, fn %{run: run} ->
-      Attempt.changeset(%Attempt{}, %{
-        workorder_id: workorder.id,
-        reason_id: reason.id,
-        runs: [Map.from_struct(run)]
-      })
-    end)
-    |> Repo.transaction()
+    ])
+    |> Repo.insert()
+  end
+
+  def build_attempt(work_order, reason) do
+    Ecto.build_assoc(work_order, :attempts)
+    |> Ecto.Changeset.change(%{reason: reason})
+  end
+
+  @doc """
+  Adds an Attempt to an unsaved Run
+
+  When given an Attempt, it simply adds the Run to a new AttemptRun.
+  However when given an AttemptRun, the Run (from the AttemptRun) is
+  set as the previous Run for the new unsaved Run.
+  """
+  @spec append(Attempt.t() | AttemptRun.t(), Ecto.Changeset.t(Run.t())) ::
+          {:ok, AttemptRun.t()} | {:error, Ecto.Changeset.t(AttemptRun.t())}
+  def append(%Attempt{} = attempt, %Ecto.Changeset{} = run) do
+    AttemptRun.new()
+    |> Ecto.Changeset.put_assoc(:attempt, attempt)
+    |> Ecto.Changeset.put_assoc(:run, run)
+    |> Repo.insert()
+  end
+
+  def append(%AttemptRun{} = attempt_run, %Ecto.Changeset{} = run) do
+    AttemptRun.new(%{attempt_id: attempt_run.attempt_id})
+    |> Ecto.Changeset.put_assoc(
+      :run,
+      run |> Ecto.Changeset.put_change(:previous_id, attempt_run.run_id)
+    )
+    |> Repo.insert()
   end
 end

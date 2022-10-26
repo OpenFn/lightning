@@ -1,16 +1,22 @@
 defmodule Lightning.Pipeline.RunnerTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.{Invocation, Pipeline}
+  alias Lightning.Pipeline
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.ProjectsFixtures
 
   test "start/2 takes a run and executes it" do
+    project = project_fixture()
     credential_body = %{"username" => "quux", "password" => "immasecret"}
 
     project_credential =
-      project_credential_fixture(name: "test credential", body: credential_body)
+      project_credential_fixture(
+        name: "test credential",
+        body: credential_body,
+        project_id: project.id
+      )
 
     job =
       workflow_job_fixture(
@@ -27,21 +33,20 @@ defmodule Lightning.Pipeline.RunnerTest do
           });
         });
         """,
+        project_id: project.id,
         project_credential_id: project_credential.id
       )
 
     dataclip_body = %{"foo" => "bar"}
 
-    {:ok, %{run: run}} =
-      Invocation.create(
-        %{job_id: job.id, project_id: job.workflow.project_id, type: :webhook},
-        %{
-          body: dataclip_body,
-          project_id: job.workflow.project_id,
-          type: :http_request
-        }
+    dataclip =
+      dataclip_fixture(
+        body: dataclip_body,
+        project_id: job.workflow.project_id,
+        type: :http_request
       )
 
+    run = run_fixture(job_id: job.id, input_dataclip_id: dataclip.id)
     result = %Engine.Result{} = Pipeline.Runner.start(run)
 
     expected_state = %{
@@ -69,7 +74,7 @@ defmodule Lightning.Pipeline.RunnerTest do
     assert length(run.log) > 0
   end
 
-  test "create_dataclip_from_result/2" do
+  test "create_dataclip_from_result/3" do
     assert Pipeline.Runner.create_dataclip_from_result(
              %Engine.Result{final_state_path: "no_such_path"},
              run_fixture()

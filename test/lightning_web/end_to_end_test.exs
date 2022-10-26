@@ -13,7 +13,7 @@ defmodule LightningWeb.EndToEndTest do
   setup :register_and_log_in_superuser
 
   defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.8 (Node.js v18.8.0"
-  defp expected_adaptor, do: "@openfn/language-http@4.2.0"
+  defp expected_adaptor, do: "@openfn/language-http@4.2.1"
 
   test "the whole thing", %{conn: conn} do
     project = project_fixture()
@@ -56,13 +56,18 @@ defmodule LightningWeb.EndToEndTest do
 
       conn = post(conn, "/i/#{webhook_job.id}", message)
 
-      event_id = Jason.decode!(conn.resp_body) |> Map.get("event_id")
+      assert %{"run_id" => run_id, "attempt_id" => attempt_id} =
+               json_response(conn, 200)
 
-      assert %{"event_id" => _, "run_id" => _} = json_response(conn, 200)
+      attempt_run =
+        Lightning.Repo.get_by(Lightning.AttemptRun,
+          run_id: run_id,
+          attempt_id: attempt_id
+        )
 
       assert_enqueued(
         worker: Lightning.Pipeline,
-        args: %{event_id: event_id}
+        args: %{attempt_run_id: attempt_run.id}
       )
 
       # All runs should use Oban
@@ -74,7 +79,6 @@ defmodule LightningWeb.EndToEndTest do
       # Run 1 should succeed and use the appropriate packages
       assert run_1.finished_at != nil
       assert run_1.exit_code == 0
-      assert run_1.event_id == event_id
       assert run_1.log |> Enum.at(1) =~ expected_core()
       assert run_1.log |> Enum.at(2) =~ expected_adaptor()
       assert run_1.log |> Enum.at(4) == "2"

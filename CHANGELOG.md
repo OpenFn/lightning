@@ -16,6 +16,8 @@ and this project adheres to
   Triggers now can exist on their own; setting the stage for branching and merging
   workflows
 - Updated Elixir and frontend dependencies
+- [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not compatible.
+- Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.
 
 ## [0.2.0] - 2022-09-12
 

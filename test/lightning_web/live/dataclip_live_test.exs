@@ -10,7 +10,6 @@ defmodule LightningWeb.DataclipLiveTest do
 
   defp create_dataclip(%{project: project}) do
     dataclip = dataclip_fixture(project_id: project.id)
-    event_fixture(project_id: project.id, dataclip_id: dataclip.id)
     %{dataclip: dataclip}
   end
 

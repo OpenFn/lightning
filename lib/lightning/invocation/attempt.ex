@@ -9,6 +9,7 @@ defmodule Lightning.Attempt do
   alias Lightning.InvocationReason
   alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
+  alias Lightning.AttemptRun
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -19,20 +20,31 @@ defmodule Lightning.Attempt do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "attempts" do
-    belongs_to :workorder, WorkOrder
+    belongs_to :work_order, WorkOrder
     belongs_to :reason, InvocationReason
-    many_to_many :runs, Run, join_through: "attempt_runs"
+    many_to_many :runs, Run, join_through: AttemptRun
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
+  end
+
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    |> change(attrs)
+    |> validate()
   end
 
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:reason_id, :workorder_id])
+    |> cast(attrs, [:reason_id, :work_order_id])
     |> cast_assoc(:runs, required: false)
-    |> validate_required([:reason_id, :workorder_id])
-    |> assoc_constraint(:workorder)
+    |> validate_required([:reason_id, :work_order_id])
+    |> validate()
+  end
+
+  defp validate(changeset) do
+    changeset
+    |> assoc_constraint(:work_order)
     |> assoc_constraint(:reason)
   end
 end
