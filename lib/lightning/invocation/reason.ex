@@ -10,17 +10,18 @@ defmodule Lightning.InvocationReason do
   alias Lightning.Jobs.Trigger
   alias Lightning.Accounts.User
 
+  @source_types [:manual, :webhook, :cron]
+  @type source_type :: unquote(Enum.reduce(@source_types, &{:|, [], [&1, &2]}))
+
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          type: atom(),
+          type: source_type(),
           dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t() | nil,
           run: Run.t() | Ecto.Association.NotLoaded.t() | nil,
           trigger: Trigger.t() | Ecto.Association.NotLoaded.t() | nil,
           user: User.t() | Ecto.Association.NotLoaded.t() | nil
         }
-
-  @source_types [:webhook, :cron, :flow, :retry]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -59,6 +60,10 @@ defmodule Lightning.InvocationReason do
         changeset
         |> validate_required([:trigger_id])
         |> assoc_constraint(:trigger)
+
+      type when type in [:manual] ->
+        changeset
+        |> validate_required([:user_id])
 
       _ ->
         changeset

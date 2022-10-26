@@ -9,6 +9,17 @@ defmodule Lightning.InvocationReasons do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Jobs.Trigger
 
+  def build(:manual = type, %{
+        user: %{id: user_id},
+        dataclip: %Dataclip{id: dataclip_id}
+      }) do
+    InvocationReason.new(%{
+      type: type,
+      dataclip_id: dataclip_id,
+      user_id: user_id
+    })
+  end
+
   def build(%Trigger{type: type, id: trigger_id}, %Dataclip{id: dataclip_id}) do
     InvocationReason.new(%{
       type: type,

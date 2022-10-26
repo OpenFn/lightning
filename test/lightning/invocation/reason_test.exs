@@ -56,5 +56,13 @@ defmodule Lightning.Invocation.InvocationReasonTest do
 
       assert errors[:trigger_id] == nil
     end
+
+    test ":manual must have an associated user" do
+      errors =
+        InvocationReason.changeset(%InvocationReason{}, %{type: :manual})
+        |> errors_on()
+
+      assert errors[:user_id] == ["can't be blank"]
+    end
   end
 end
