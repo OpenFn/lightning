@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-64F53551.js"></script>
+    <script src="dist/sidebar_items-456AC8DC.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,6 +133,14 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#t:source_type/0" translate="no">source_type()</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#t:t/0" translate="no">t()</a>
 
         </div>
@@ -176,6 +184,34 @@ Lightning
 Types
     </h1>
     <div class="types-list">
+<section class="detail" id="t:source_type/0">
+
+  <div class="detail-header">
+    <a href="#t:source_type/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">source_type()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L14" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> source_type() :: :cron | :webhook | :manual</pre>
+
+      </div>
+
+
+  </section>
+</section>
 <section class="detail" id="t:t/0">
 
   <div class="detail-header">
@@ -185,7 +221,7 @@ Types
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L13" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L16" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -208,7 +244,7 @@ Types
   run_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   trigger: <a href="Lightning.Jobs.Trigger.html#t:t/0">Lightning.Jobs.Trigger.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
   trigger_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  type: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>(),
+  type: <a href="#t:source_type/0">source_type</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   user: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
   user_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
@@ -243,7 +279,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L37" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L38" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -265,7 +301,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">validate_by_trigger_type(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L54" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/reason.ex#L55" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
