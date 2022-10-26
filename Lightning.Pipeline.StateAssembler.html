@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -120,17 +120,17 @@ Lightning
   How state is assembled
 </h2>
 <p>For the most common jobs, an inbound webhook will store an <code class="inline">:http_request</code> type
-dataclip. The event that is created is associated with the dataclip.</p><p>At runtime, the initial state for a Run will in the shape of:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="7852673101-1">{</span><span class="w"> </span><span class="ss">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">the</span><span class="w"> </span><span class="n">dataclip</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;configuration&quot;</span><span class="p">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">the</span><span class="w"> </span><span class="n">job</span><span class="err">&#39;</span><span class="n">s</span><span class="w"> </span><span class="n">credential</span><span class="o">&gt;</span><span class="w"> </span><span class="p" data-group-id="7852673101-1">}</span></code></pre><h3 id="module-flow-jobs" class="section-heading">
+dataclip. The reason that is created is associated with the dataclip.</p><p>At runtime, the initial state for a Run will be in the shape of:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="2920116247-1">{</span><span class="w"> </span><span class="ss">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">the</span><span class="w"> </span><span class="n">dataclip</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;configuration&quot;</span><span class="p">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">the</span><span class="w"> </span><span class="n">job</span><span class="err">&#39;</span><span class="n">s</span><span class="w"> </span><span class="n">credential</span><span class="o">&gt;</span><span class="w"> </span><span class="p" data-group-id="2920116247-1">}</span></code></pre><h3 id="module-flow-jobs" class="section-heading">
   <a href="#module-flow-jobs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">flow-jobs</p>
   </a>
   Flow Jobs
 </h3>
 <p>When a Job is triggered by a previous Jobs success or failure these are the
-rules for constructing that Jobs state.</p><p>For jobs that trigger on it's upstream jobs failure, the event will have
-the source events original dataclip as its dataclip.</p><p>The state will also have the log of the source events run attached on the
-<code class="inline">error</code> key.</p><p>For Jobs triggered by a previous success, the event will have the source
-event runs resulting dataclip as its dataclip.</p><p><code class="inline">:run_result</code> dataclips are expected to already have a <code class="inline">data</code> key, and are
+rules for constructing that Jobs state:</p><p>For jobs that trigger on it's upstream jobs failure, the event will have
+the previous runs input dataclip as its input dataclip.</p><p>The state will also have the log of the previous run attached on the
+<code class="inline">error</code> key.</p><p>For Jobs triggered by a previous success, the run will have the previous
+runs output dataclip as its input dataclip.</p><p><code class="inline">:run_result</code> dataclips are expected to already have a <code class="inline">data</code> key, and are
 merged into the root.</p>
   </section>
 
@@ -156,42 +156,6 @@ merged into the root.</p>
         </div>
 
           <div class="summary-synopsis"><p>Assemble state for use in a Run.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#build_state/2" translate="no">build_state(arg, query)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#context_query/1" translate="no">context_query(map)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#dataclip_with_credential/1" translate="no">dataclip_with_credential(query)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Merge the credential key into the dataclip.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#dataclip_with_credential_and_log/1" translate="no">dataclip_with_credential_and_log(query)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Merge the credential, and the previous runs log into the dataclip.</p></div>
 
       </div>
 
@@ -235,105 +199,6 @@ Functions
       </div>
 
 <p>Assemble state for use in a Run.</p>
-  </section>
-</section>
-<section class="detail" id="build_state/2">
-
-  <div class="detail-header">
-    <a href="#build_state/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">build_state(arg, query)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/state_assembler.ex#L90" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> build_state(
-  context ::
-    {<a href="Lightning.Invocation.Dataclip.html#t:source_type/0">Lightning.Invocation.Dataclip.source_type</a>(),
-     <a href="Lightning.Jobs.Trigger.html#t:trigger_type/0">Lightning.Jobs.Trigger.trigger_type</a>()},
-  query :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Queryable.html#t:t/0">Ecto.Queryable.t</a>()
-) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="context_query/1">
-
-  <div class="detail-header">
-    <a href="#context_query/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">context_query(map)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/state_assembler.ex#L64" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="dataclip_with_credential/1">
-
-  <div class="detail-header">
-    <a href="#dataclip_with_credential/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">dataclip_with_credential(query)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/state_assembler.ex#L147" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Merge the credential key into the dataclip.</p><p>Returns <code class="inline">iodata</code>.</p>
-  </section>
-</section>
-<section class="detail" id="dataclip_with_credential_and_log/1">
-
-  <div class="detail-header">
-    <a href="#dataclip_with_credential_and_log/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">dataclip_with_credential_and_log(query)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/state_assembler.ex#L161" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Merge the credential, and the previous runs log into the dataclip.</p><p>Returns <code class="inline">iodata</code>.</p>
   </section>
 </section>
 

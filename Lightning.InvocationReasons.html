@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,6 +133,14 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#build/2" translate="no">build(trigger, dataclip)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#create_reason/1" translate="no">create_reason(attrs \\ %{})</a>
 
         </div>
@@ -155,6 +163,28 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="build/2">
+
+  <div class="detail-header">
+    <a href="#build/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build(trigger, dataclip)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L12" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="create_reason/1">
 
     <span id="create_reason/0"></span>
@@ -166,7 +196,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_reason(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L22" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L32" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -182,11 +212,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="8714212923-1">(</span><span class="p" data-group-id="8714212923-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8714212923-2">}</span><span class="p" data-group-id="8714212923-1">)</span><span class="w">
-</span><span class="p" data-group-id="8714212923-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8714212923-4">%</span><span class="nc" data-group-id="8714212923-4">InvocationReason</span><span class="p" data-group-id="8714212923-4">{</span><span class="p" data-group-id="8714212923-4">}</span><span class="p" data-group-id="8714212923-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="3005912971-1">(</span><span class="p" data-group-id="3005912971-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3005912971-2">}</span><span class="p" data-group-id="3005912971-1">)</span><span class="w">
+</span><span class="p" data-group-id="3005912971-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3005912971-4">%</span><span class="nc" data-group-id="3005912971-4">InvocationReason</span><span class="p" data-group-id="3005912971-4">{</span><span class="p" data-group-id="3005912971-4">}</span><span class="p" data-group-id="3005912971-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="8714212923-5">(</span><span class="p" data-group-id="8714212923-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8714212923-6">}</span><span class="p" data-group-id="8714212923-5">)</span><span class="w">
-</span><span class="p" data-group-id="8714212923-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8714212923-8">%</span><span class="nc" data-group-id="8714212923-8">Ecto.Changeset</span><span class="p" data-group-id="8714212923-8">{</span><span class="p" data-group-id="8714212923-8">}</span><span class="p" data-group-id="8714212923-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="3005912971-5">(</span><span class="p" data-group-id="3005912971-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3005912971-6">}</span><span class="p" data-group-id="3005912971-5">)</span><span class="w">
+</span><span class="p" data-group-id="3005912971-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3005912971-8">%</span><span class="nc" data-group-id="3005912971-8">Ecto.Changeset</span><span class="p" data-group-id="3005912971-8">{</span><span class="p" data-group-id="3005912971-8">}</span><span class="p" data-group-id="3005912971-7">}</span></code></pre>
   </section>
 </section>
 

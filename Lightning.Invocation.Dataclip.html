@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -176,6 +176,14 @@ and access it inside the Job.</li></ul>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#new/1" translate="no">new(attrs \\ %{})</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#validate_by_type/1" translate="no">validate_by_type(changeset)</a>
 
         </div>
@@ -207,7 +215,7 @@ Types
     </a>
     <h1 class="signature" translate="no">source_type()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L33" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L32" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -250,15 +258,12 @@ Types
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Invocation.Dataclip{
   __meta__: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   body: %{} | nil,
-  events: [<a href="Lightning.Invocation.Event.html#t:t/0">Lightning.Invocation.Event.t</a>()] | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_id: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
-  source_event:
-    <a href="Lightning.Invocation.Event.html#t:t/0">Lightning.Invocation.Event.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
-  source_event_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  source_run: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  source_run:
+    <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
   type: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
@@ -290,7 +295,31 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_types()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L82" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L90" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="new/1">
+
+    <span id="new/0"></span>
+
+  <div class="detail-header">
+    <a href="#new/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L47" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -312,7 +341,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">validate_by_type(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L69" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L72" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -322,7 +351,7 @@ Functions
 
   <section class="docstring">
 
-<p>Append validations based on the type of the Dataclip.</p><ul><li><code class="inline">:run_result</code> must have an associated Event model.</li></ul>
+<p>Append validations based on the type of the Dataclip.</p><ul><li><code class="inline">:run_result</code> must have an associated Run model.</li></ul>
   </section>
 </section>
 

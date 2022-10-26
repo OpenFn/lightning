@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -153,40 +153,11 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#create/1" translate="no">create(event_attrs)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#create/2" translate="no">create(event_attrs, dataclip_attrs)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Create a new invocation based on a job and a body of data, which gets saved
-as a Dataclip; resulting in a Run associated with the Event.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#create_dataclip/1" translate="no">create_dataclip(attrs \\ %{})</a>
 
         </div>
 
           <div class="summary-synopsis"><p>Creates a dataclip.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#create_event/1" translate="no">create_event(attrs \\ %{})</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Creates an event.</p></div>
 
       </div>
 
@@ -326,6 +297,14 @@ as a Dataclip; resulting in a Run associated with the Event.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#list_runs_for_project_query/1" translate="no">list_runs_for_project_query(project)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#update_dataclip/2" translate="no">update_dataclip(dataclip, attrs)</a>
 
         </div>
@@ -369,7 +348,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">change_dataclip(dataclip, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L218" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L166" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -385,8 +364,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="0194826093-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="0194826093-1">)</span><span class="w">
-</span><span class="p" data-group-id="0194826093-2">%</span><span class="nc" data-group-id="0194826093-2">Ecto.Changeset</span><span class="p" data-group-id="0194826093-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0194826093-3">%</span><span class="nc" data-group-id="0194826093-3">Dataclip</span><span class="p" data-group-id="0194826093-3">{</span><span class="p" data-group-id="0194826093-3">}</span><span class="p" data-group-id="0194826093-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="8846546823-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="8846546823-1">)</span><span class="w">
+</span><span class="p" data-group-id="8846546823-2">%</span><span class="nc" data-group-id="8846546823-2">Ecto.Changeset</span><span class="p" data-group-id="8846546823-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8846546823-3">%</span><span class="nc" data-group-id="8846546823-3">Dataclip</span><span class="p" data-group-id="8846546823-3">{</span><span class="p" data-group-id="8846546823-3">}</span><span class="p" data-group-id="8846546823-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_run/2">
@@ -400,7 +379,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">change_run(run, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L352" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L286" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -416,72 +395,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="0482262802-1">(</span><span class="n">run</span><span class="p" data-group-id="0482262802-1">)</span><span class="w">
-</span><span class="p" data-group-id="0482262802-2">%</span><span class="nc" data-group-id="0482262802-2">Ecto.Changeset</span><span class="p" data-group-id="0482262802-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0482262802-3">%</span><span class="nc" data-group-id="0482262802-3">Run</span><span class="p" data-group-id="0482262802-3">{</span><span class="p" data-group-id="0482262802-3">}</span><span class="p" data-group-id="0482262802-2">}</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="create/1">
-
-  <div class="detail-header">
-    <a href="#create/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">create(event_attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L49" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="create/2">
-
-  <div class="detail-header">
-    <a href="#create/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">create(event_attrs, dataclip_attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L22" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> create(
-  %{job_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), type: :webhook | :cron},
-  %{
-    body: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(),
-    project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(),
-    type: <a href="Lightning.Invocation.Dataclip.html#t:source_type/0">Lightning.Invocation.Dataclip.source_type</a>()
-  }
-) ::
-  {:ok | :error,
-   %{
-     event: Lightning.Invocation.Event,
-     run: Lightning.Invocation.Run,
-     dataclip: Lightning.Invocation.Dataclip
-   }}</pre>
-
-      </div>
-
-<p>Create a new invocation based on a job and a body of data, which gets saved
-as a Dataclip; resulting in a Run associated with the Event.</p>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="7064318874-1">(</span><span class="n">run</span><span class="p" data-group-id="7064318874-1">)</span><span class="w">
+</span><span class="p" data-group-id="7064318874-2">%</span><span class="nc" data-group-id="7064318874-2">Ecto.Changeset</span><span class="p" data-group-id="7064318874-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7064318874-3">%</span><span class="nc" data-group-id="7064318874-3">Run</span><span class="p" data-group-id="7064318874-3">{</span><span class="p" data-group-id="7064318874-3">}</span><span class="p" data-group-id="7064318874-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_dataclip/1">
@@ -495,7 +410,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">create_dataclip(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L165" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L113" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -519,45 +434,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="2093627538-1">(</span><span class="p" data-group-id="2093627538-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="2093627538-2">}</span><span class="p" data-group-id="2093627538-1">)</span><span class="w">
-</span><span class="p" data-group-id="2093627538-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2093627538-4">%</span><span class="nc" data-group-id="2093627538-4">Dataclip</span><span class="p" data-group-id="2093627538-4">{</span><span class="p" data-group-id="2093627538-4">}</span><span class="p" data-group-id="2093627538-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4582135575-1">(</span><span class="p" data-group-id="4582135575-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4582135575-2">}</span><span class="p" data-group-id="4582135575-1">)</span><span class="w">
+</span><span class="p" data-group-id="4582135575-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4582135575-4">%</span><span class="nc" data-group-id="4582135575-4">Dataclip</span><span class="p" data-group-id="4582135575-4">{</span><span class="p" data-group-id="4582135575-4">}</span><span class="p" data-group-id="4582135575-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="2093627538-5">(</span><span class="p" data-group-id="2093627538-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2093627538-6">}</span><span class="p" data-group-id="2093627538-5">)</span><span class="w">
-</span><span class="p" data-group-id="2093627538-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2093627538-8">%</span><span class="nc" data-group-id="2093627538-8">Ecto.Changeset</span><span class="p" data-group-id="2093627538-8">{</span><span class="p" data-group-id="2093627538-8">}</span><span class="p" data-group-id="2093627538-7">}</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="create_event/1">
-
-    <span id="create_event/0"></span>
-
-  <div class="detail-header">
-    <a href="#create_event/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">create_event(attrs \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L234" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Creates an event.</p><h2 id="create_event/1-examples" class="section-heading">
-  <a href="#create_event/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">examples</p>
-  </a>
-  Examples
-</h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_event</span><span class="p" data-group-id="0570547845-1">(</span><span class="p" data-group-id="0570547845-2">%{</span><span class="ss">type</span><span class="p">:</span><span class="w"> </span><span class="ss">:webhook</span><span class="p">,</span><span class="w"> </span><span class="ss">dataclip_id</span><span class="p">:</span><span class="w"> </span><span class="n">dataclip</span><span class="o">.</span><span class="n">id</span><span class="p" data-group-id="0570547845-2">}</span><span class="p" data-group-id="0570547845-1">)</span><span class="w">
-</span><span class="p" data-group-id="0570547845-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0570547845-4">%</span><span class="nc" data-group-id="0570547845-4">Dataclip</span><span class="p" data-group-id="0570547845-4">{</span><span class="p" data-group-id="0570547845-4">}</span><span class="p" data-group-id="0570547845-3">}</span><span class="w">
-
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="0570547845-5">(</span><span class="p" data-group-id="0570547845-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0570547845-6">}</span><span class="p" data-group-id="0570547845-5">)</span><span class="w">
-</span><span class="p" data-group-id="0570547845-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0570547845-8">%</span><span class="nc" data-group-id="0570547845-8">Ecto.Changeset</span><span class="p" data-group-id="0570547845-8">{</span><span class="p" data-group-id="0570547845-8">}</span><span class="p" data-group-id="0570547845-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="4582135575-5">(</span><span class="p" data-group-id="4582135575-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4582135575-6">}</span><span class="p" data-group-id="4582135575-5">)</span><span class="w">
+</span><span class="p" data-group-id="4582135575-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4582135575-8">%</span><span class="nc" data-group-id="4582135575-8">Ecto.Changeset</span><span class="p" data-group-id="4582135575-8">{</span><span class="p" data-group-id="4582135575-8">}</span><span class="p" data-group-id="4582135575-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_run/1">
@@ -571,7 +452,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">create_run(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L303" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L237" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -587,11 +468,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="6642016262-1">(</span><span class="p" data-group-id="6642016262-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="6642016262-2">}</span><span class="p" data-group-id="6642016262-1">)</span><span class="w">
-</span><span class="p" data-group-id="6642016262-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6642016262-4">%</span><span class="nc" data-group-id="6642016262-4">Run</span><span class="p" data-group-id="6642016262-4">{</span><span class="p" data-group-id="6642016262-4">}</span><span class="p" data-group-id="6642016262-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="3399240682-1">(</span><span class="p" data-group-id="3399240682-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3399240682-2">}</span><span class="p" data-group-id="3399240682-1">)</span><span class="w">
+</span><span class="p" data-group-id="3399240682-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3399240682-4">%</span><span class="nc" data-group-id="3399240682-4">Run</span><span class="p" data-group-id="3399240682-4">{</span><span class="p" data-group-id="3399240682-4">}</span><span class="p" data-group-id="3399240682-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="6642016262-5">(</span><span class="p" data-group-id="6642016262-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6642016262-6">}</span><span class="p" data-group-id="6642016262-5">)</span><span class="w">
-</span><span class="p" data-group-id="6642016262-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6642016262-8">%</span><span class="nc" data-group-id="6642016262-8">Ecto.Changeset</span><span class="p" data-group-id="6642016262-8">{</span><span class="p" data-group-id="6642016262-8">}</span><span class="p" data-group-id="6642016262-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="3399240682-5">(</span><span class="p" data-group-id="3399240682-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3399240682-6">}</span><span class="p" data-group-id="3399240682-5">)</span><span class="w">
+</span><span class="p" data-group-id="3399240682-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3399240682-8">%</span><span class="nc" data-group-id="3399240682-8">Ecto.Changeset</span><span class="p" data-group-id="3399240682-8">{</span><span class="p" data-group-id="3399240682-8">}</span><span class="p" data-group-id="3399240682-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_dataclip/1">
@@ -603,7 +484,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">delete_dataclip(dataclip)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L201" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L149" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -619,11 +500,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="9181887393-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="9181887393-1">)</span><span class="w">
-</span><span class="p" data-group-id="9181887393-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9181887393-3">%</span><span class="nc" data-group-id="9181887393-3">Dataclip</span><span class="p" data-group-id="9181887393-3">{</span><span class="p" data-group-id="9181887393-3">}</span><span class="p" data-group-id="9181887393-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="4569876594-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="4569876594-1">)</span><span class="w">
+</span><span class="p" data-group-id="4569876594-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4569876594-3">%</span><span class="nc" data-group-id="4569876594-3">Dataclip</span><span class="p" data-group-id="4569876594-3">{</span><span class="p" data-group-id="4569876594-3">}</span><span class="p" data-group-id="4569876594-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="9181887393-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="9181887393-4">)</span><span class="w">
-</span><span class="p" data-group-id="9181887393-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9181887393-6">%</span><span class="nc" data-group-id="9181887393-6">Ecto.Changeset</span><span class="p" data-group-id="9181887393-6">{</span><span class="p" data-group-id="9181887393-6">}</span><span class="p" data-group-id="9181887393-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="4569876594-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="4569876594-4">)</span><span class="w">
+</span><span class="p" data-group-id="4569876594-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4569876594-6">%</span><span class="nc" data-group-id="4569876594-6">Ecto.Changeset</span><span class="p" data-group-id="4569876594-6">{</span><span class="p" data-group-id="4569876594-6">}</span><span class="p" data-group-id="4569876594-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_run/1">
@@ -635,7 +516,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">delete_run(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L339" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L273" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -651,11 +532,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="1461571779-1">(</span><span class="n">run</span><span class="p" data-group-id="1461571779-1">)</span><span class="w">
-</span><span class="p" data-group-id="1461571779-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1461571779-3">%</span><span class="nc" data-group-id="1461571779-3">Run</span><span class="p" data-group-id="1461571779-3">{</span><span class="p" data-group-id="1461571779-3">}</span><span class="p" data-group-id="1461571779-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="0936291227-1">(</span><span class="n">run</span><span class="p" data-group-id="0936291227-1">)</span><span class="w">
+</span><span class="p" data-group-id="0936291227-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0936291227-3">%</span><span class="nc" data-group-id="0936291227-3">Run</span><span class="p" data-group-id="0936291227-3">{</span><span class="p" data-group-id="0936291227-3">}</span><span class="p" data-group-id="0936291227-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="1461571779-4">(</span><span class="n">run</span><span class="p" data-group-id="1461571779-4">)</span><span class="w">
-</span><span class="p" data-group-id="1461571779-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1461571779-6">%</span><span class="nc" data-group-id="1461571779-6">Ecto.Changeset</span><span class="p" data-group-id="1461571779-6">{</span><span class="p" data-group-id="1461571779-6">}</span><span class="p" data-group-id="1461571779-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="0936291227-4">(</span><span class="n">run</span><span class="p" data-group-id="0936291227-4">)</span><span class="w">
+</span><span class="p" data-group-id="0936291227-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0936291227-6">%</span><span class="nc" data-group-id="0936291227-6">Ecto.Changeset</span><span class="p" data-group-id="0936291227-6">{</span><span class="p" data-group-id="0936291227-6">}</span><span class="p" data-group-id="0936291227-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip/1">
@@ -667,7 +548,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">get_dataclip(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L131" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L79" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -684,20 +565,20 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
 
       </div>
 
-<p>Gets a single dataclip given one of:</p><ul><li>a Dataclip uuid</li><li>a Run model, that has an associated dataclip via it's event</li></ul><p>Returns <code class="inline">nil</code> if the Dataclip does not exist.</p><h2 id="get_dataclip/1-examples" class="section-heading">
+<p>Gets a single dataclip given one of:</p><ul><li>a Dataclip uuid</li><li>a Run model</li></ul><p>Returns <code class="inline">nil</code> if the Dataclip does not exist.</p><h2 id="get_dataclip/1-examples" class="section-heading">
   <a href="#get_dataclip/1-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">examples</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="3456853440-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="3456853440-1">)</span><span class="w">
-</span><span class="p" data-group-id="3456853440-2">%</span><span class="nc" data-group-id="3456853440-2">Dataclip</span><span class="p" data-group-id="3456853440-2">{</span><span class="p" data-group-id="3456853440-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="0982617751-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="0982617751-1">)</span><span class="w">
+</span><span class="p" data-group-id="0982617751-2">%</span><span class="nc" data-group-id="0982617751-2">Dataclip</span><span class="p" data-group-id="0982617751-2">{</span><span class="p" data-group-id="0982617751-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="3456853440-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="3456853440-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="0982617751-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="0982617751-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="3456853440-4">(</span><span class="p" data-group-id="3456853440-5">%</span><span class="nc" data-group-id="3456853440-5">Run</span><span class="p" data-group-id="3456853440-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="3456853440-5">}</span><span class="p" data-group-id="3456853440-4">)</span><span class="w">
-</span><span class="p" data-group-id="3456853440-6">%</span><span class="nc" data-group-id="3456853440-6">Dataclip</span><span class="p" data-group-id="3456853440-6">{</span><span class="p" data-group-id="3456853440-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="0982617751-4">(</span><span class="p" data-group-id="0982617751-5">%</span><span class="nc" data-group-id="0982617751-5">Run</span><span class="p" data-group-id="0982617751-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="0982617751-5">}</span><span class="p" data-group-id="0982617751-4">)</span><span class="w">
+</span><span class="p" data-group-id="0982617751-6">%</span><span class="nc" data-group-id="0982617751-6">Dataclip</span><span class="p" data-group-id="0982617751-6">{</span><span class="p" data-group-id="0982617751-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip!/1">
@@ -709,7 +590,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">get_dataclip!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L107" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L55" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -731,10 +612,10 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="2611573263-1">(</span><span class="mi">123</span><span class="p" data-group-id="2611573263-1">)</span><span class="w">
-</span><span class="p" data-group-id="2611573263-2">%</span><span class="nc" data-group-id="2611573263-2">Dataclip</span><span class="p" data-group-id="2611573263-2">{</span><span class="p" data-group-id="2611573263-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="6745923582-1">(</span><span class="mi">123</span><span class="p" data-group-id="6745923582-1">)</span><span class="w">
+</span><span class="p" data-group-id="6745923582-2">%</span><span class="nc" data-group-id="6745923582-2">Dataclip</span><span class="p" data-group-id="6745923582-2">{</span><span class="p" data-group-id="6745923582-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="2611573263-3">(</span><span class="mi">456</span><span class="p" data-group-id="2611573263-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="6745923582-3">(</span><span class="mi">456</span><span class="p" data-group-id="6745923582-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -747,7 +628,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">get_dataclip_query(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L147" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L95" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -769,7 +650,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">get_result_dataclip_query(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L140" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L88" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -791,7 +672,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">get_run!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L278" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L217" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -803,8 +684,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> get_run!(<a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | <a href="Lightning.Invocation.Event.html#t:t/0">Lightning.Invocation.Event.t</a>()) ::
-  <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> get_run!(<a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()</pre>
 
       </div>
 
@@ -814,10 +694,10 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="4065271926-1">(</span><span class="mi">123</span><span class="p" data-group-id="4065271926-1">)</span><span class="w">
-</span><span class="p" data-group-id="4065271926-2">%</span><span class="nc" data-group-id="4065271926-2">Run</span><span class="p" data-group-id="4065271926-2">{</span><span class="p" data-group-id="4065271926-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="0416029403-1">(</span><span class="mi">123</span><span class="p" data-group-id="0416029403-1">)</span><span class="w">
+</span><span class="p" data-group-id="0416029403-2">%</span><span class="nc" data-group-id="0416029403-2">Run</span><span class="p" data-group-id="0416029403-2">{</span><span class="p" data-group-id="0416029403-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="4065271926-3">(</span><span class="mi">456</span><span class="p" data-group-id="4065271926-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="0416029403-3">(</span><span class="mi">456</span><span class="p" data-group-id="0416029403-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -830,7 +710,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">get_run_with_job!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L288" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L222" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -852,7 +732,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">list_dataclips()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L75" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L23" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -874,8 +754,8 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="0379600229-1">(</span><span class="p" data-group-id="0379600229-1">)</span><span class="w">
-</span><span class="p" data-group-id="0379600229-2">[</span><span class="p" data-group-id="0379600229-3">%</span><span class="nc" data-group-id="0379600229-3">Dataclip</span><span class="p" data-group-id="0379600229-3">{</span><span class="p" data-group-id="0379600229-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0379600229-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="1880003422-1">(</span><span class="p" data-group-id="1880003422-1">)</span><span class="w">
+</span><span class="p" data-group-id="1880003422-2">[</span><span class="p" data-group-id="1880003422-3">%</span><span class="nc" data-group-id="1880003422-3">Dataclip</span><span class="p" data-group-id="1880003422-3">{</span><span class="p" data-group-id="1880003422-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1880003422-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_dataclips/1">
@@ -887,7 +767,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">list_dataclips(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L88" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L36" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -917,7 +797,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">list_dataclips_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L80" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L28" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -946,7 +826,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">list_runs()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L249" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L179" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -962,8 +842,8 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="4055820192-1">(</span><span class="p" data-group-id="4055820192-1">)</span><span class="w">
-</span><span class="p" data-group-id="4055820192-2">[</span><span class="p" data-group-id="4055820192-3">%</span><span class="nc" data-group-id="4055820192-3">Run</span><span class="p" data-group-id="4055820192-3">{</span><span class="p" data-group-id="4055820192-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="4055820192-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="5568958366-1">(</span><span class="p" data-group-id="5568958366-1">)</span><span class="w">
+</span><span class="p" data-group-id="5568958366-2">[</span><span class="p" data-group-id="5568958366-3">%</span><span class="nc" data-group-id="5568958366-3">Run</span><span class="p" data-group-id="5568958366-3">{</span><span class="p" data-group-id="5568958366-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5568958366-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_runs_for_project/2">
@@ -977,7 +857,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">list_runs_for_project(project, params \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L253" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L197" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -986,6 +866,41 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_runs_for_project(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  <a href="https://hexdocs.pm/scrivener/2.7.2/Scrivener.Page.html#t:t/0">Scrivener.Page.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="list_runs_for_project_query/1">
+
+  <div class="detail-header">
+    <a href="#list_runs_for_project_query/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_runs_for_project_query(project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L185" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_runs_for_project_query(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()) :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Query.html#t:t/0">Ecto.Query.t</a>()</pre>
+
+      </div>
 
 
   </section>
@@ -999,7 +914,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">update_dataclip(dataclip, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L183" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L131" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1015,11 +930,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3425522500-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3425522500-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3425522500-2">}</span><span class="p" data-group-id="3425522500-1">)</span><span class="w">
-</span><span class="p" data-group-id="3425522500-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3425522500-4">%</span><span class="nc" data-group-id="3425522500-4">Dataclip</span><span class="p" data-group-id="3425522500-4">{</span><span class="p" data-group-id="3425522500-4">}</span><span class="p" data-group-id="3425522500-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3036877431-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3036877431-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3036877431-2">}</span><span class="p" data-group-id="3036877431-1">)</span><span class="w">
+</span><span class="p" data-group-id="3036877431-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3036877431-4">%</span><span class="nc" data-group-id="3036877431-4">Dataclip</span><span class="p" data-group-id="3036877431-4">{</span><span class="p" data-group-id="3036877431-4">}</span><span class="p" data-group-id="3036877431-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3425522500-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3425522500-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3425522500-6">}</span><span class="p" data-group-id="3425522500-5">)</span><span class="w">
-</span><span class="p" data-group-id="3425522500-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3425522500-8">%</span><span class="nc" data-group-id="3425522500-8">Ecto.Changeset</span><span class="p" data-group-id="3425522500-8">{</span><span class="p" data-group-id="3425522500-8">}</span><span class="p" data-group-id="3425522500-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3036877431-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3036877431-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3036877431-6">}</span><span class="p" data-group-id="3036877431-5">)</span><span class="w">
+</span><span class="p" data-group-id="3036877431-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3036877431-8">%</span><span class="nc" data-group-id="3036877431-8">Ecto.Changeset</span><span class="p" data-group-id="3036877431-8">{</span><span class="p" data-group-id="3036877431-8">}</span><span class="p" data-group-id="3036877431-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_run/2">
@@ -1031,7 +946,7 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
     </a>
     <h1 class="signature" translate="no">update_run(run, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L321" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L255" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1047,11 +962,11 @@ as a Dataclip; resulting in a Run associated with the Event.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="0170660862-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0170660862-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="0170660862-2">}</span><span class="p" data-group-id="0170660862-1">)</span><span class="w">
-</span><span class="p" data-group-id="0170660862-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0170660862-4">%</span><span class="nc" data-group-id="0170660862-4">Run</span><span class="p" data-group-id="0170660862-4">{</span><span class="p" data-group-id="0170660862-4">}</span><span class="p" data-group-id="0170660862-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="3111832555-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3111832555-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3111832555-2">}</span><span class="p" data-group-id="3111832555-1">)</span><span class="w">
+</span><span class="p" data-group-id="3111832555-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3111832555-4">%</span><span class="nc" data-group-id="3111832555-4">Run</span><span class="p" data-group-id="3111832555-4">{</span><span class="p" data-group-id="3111832555-4">}</span><span class="p" data-group-id="3111832555-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="0170660862-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0170660862-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0170660862-6">}</span><span class="p" data-group-id="0170660862-5">)</span><span class="w">
-</span><span class="p" data-group-id="0170660862-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0170660862-8">%</span><span class="nc" data-group-id="0170660862-8">Ecto.Changeset</span><span class="p" data-group-id="0170660862-8">{</span><span class="p" data-group-id="0170660862-8">}</span><span class="p" data-group-id="0170660862-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="3111832555-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3111832555-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3111832555-6">}</span><span class="p" data-group-id="3111832555-5">)</span><span class="w">
+</span><span class="p" data-group-id="3111832555-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3111832555-8">%</span><span class="nc" data-group-id="3111832555-8">Ecto.Changeset</span><span class="p" data-group-id="3111832555-8">{</span><span class="p" data-group-id="3111832555-8">}</span><span class="p" data-group-id="3111832555-7">}</span></code></pre>
   </section>
 </section>
 

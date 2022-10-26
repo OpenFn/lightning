@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -113,8 +113,9 @@ Lightning
 
 
   <section id="moduledoc">
-<p>Ecto model for Runs.</p><p>A run represents the results of an Invocation.Event, where the Event
-stores what triggered the Run, the Run itself represents the execution.</p>
+<p>Ecto model for Runs.</p><p>A run represents the work initiated for a Job with an input dataclip.
+Once completed (successfully) it will have an <code class="inline">output_dataclip</code> associated
+with it as well.</p>
   </section>
 
 
@@ -135,6 +136,21 @@ stores what triggered the Run, the Run itself represents the execution.</p>
       <div class="summary-row">
         <div class="summary-signature">
           <a href="#t:t/0" translate="no">t()</a>
+
+        </div>
+
+      </div>
+
+  </div>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#new/1" translate="no">new(attrs \\ %{})</a>
 
         </div>
 
@@ -163,7 +179,7 @@ Types
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L15" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L16" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -178,8 +194,6 @@ Types
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Invocation.Run{
   __meta__: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   attempts: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  event: <a href="Lightning.Invocation.Event.html#t:t/0">Lightning.Invocation.Event.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
-  event_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   exit_code: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   finished_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
@@ -191,14 +205,50 @@ Types
   log: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   output_dataclip: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   output_dataclip_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  project:
-    <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
-  project_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  previous: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  previous_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   started_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
       </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="new/1">
+
+    <span id="new/0"></span>
+
+  <div class="detail-header">
+    <a href="#new/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/run.ex#L41" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
 
 
   </section>

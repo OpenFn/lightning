@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,7 +133,25 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#create_attempt/3" translate="no">create_attempt(workorder, job, reason)</a>
+          <a href="#append/2" translate="no">append(attempt, run)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Adds an Attempt to an unsaved Run</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#build_attempt/2" translate="no">build_attempt(work_order, reason)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_attempt/3" translate="no">create_attempt(work_order, job, reason)</a>
 
         </div>
 
@@ -155,6 +173,63 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="append/2">
+
+  <div class="detail-header">
+    <a href="#append/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">append(attempt, run)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L52" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> append(
+  <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>() | <a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>())
+) ::
+  {:ok, <a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>())}</pre>
+
+      </div>
+
+<p>Adds an Attempt to an unsaved Run</p><p>When given an Attempt, it simply adds the Run to a new AttemptRun.
+However when given an AttemptRun, the Run (from the AttemptRun) is
+set as the previous Run for the new unsaved Run.</p>
+  </section>
+</section>
+<section class="detail" id="build_attempt/2">
+
+  <div class="detail-header">
+    <a href="#build_attempt/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_attempt(work_order, reason)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L38" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="create_attempt/3">
 
   <div class="detail-header">
@@ -162,9 +237,9 @@ Functions
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create_attempt(workorder, job, reason)</h1>
+    <h1 class="signature" translate="no">create_attempt(work_order, job, reason)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L24" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L23" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -180,11 +255,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="3885694575-1">(</span><span class="p" data-group-id="3885694575-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3885694575-2">}</span><span class="p" data-group-id="3885694575-1">)</span><span class="w">
-</span><span class="p" data-group-id="3885694575-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3885694575-4">%</span><span class="nc" data-group-id="3885694575-4">Attempt</span><span class="p" data-group-id="3885694575-4">{</span><span class="p" data-group-id="3885694575-4">}</span><span class="p" data-group-id="3885694575-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="5229631816-1">(</span><span class="p" data-group-id="5229631816-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5229631816-2">}</span><span class="p" data-group-id="5229631816-1">)</span><span class="w">
+</span><span class="p" data-group-id="5229631816-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5229631816-4">%</span><span class="nc" data-group-id="5229631816-4">Attempt</span><span class="p" data-group-id="5229631816-4">{</span><span class="p" data-group-id="5229631816-4">}</span><span class="p" data-group-id="5229631816-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="3885694575-5">(</span><span class="p" data-group-id="3885694575-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3885694575-6">}</span><span class="p" data-group-id="3885694575-5">)</span><span class="w">
-</span><span class="p" data-group-id="3885694575-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3885694575-8">%</span><span class="nc" data-group-id="3885694575-8">Ecto.Changeset</span><span class="p" data-group-id="3885694575-8">{</span><span class="p" data-group-id="3885694575-8">}</span><span class="p" data-group-id="3885694575-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="5229631816-5">(</span><span class="p" data-group-id="5229631816-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5229631816-6">}</span><span class="p" data-group-id="5229631816-5">)</span><span class="w">
+</span><span class="p" data-group-id="5229631816-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5229631816-8">%</span><span class="nc" data-group-id="5229631816-8">Ecto.Changeset</span><span class="p" data-group-id="5229631816-8">{</span><span class="p" data-group-id="5229631816-8">}</span><span class="p" data-group-id="5229631816-7">}</span></code></pre>
   </section>
 </section>
 

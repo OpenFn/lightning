@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3719F733.js"></script>
+    <script src="dist/sidebar_items-64F53551.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -290,7 +290,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">change_job(job, attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L210" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L206" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -306,8 +306,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="8164570985-1">(</span><span class="n">job</span><span class="p" data-group-id="8164570985-1">)</span><span class="w">
-</span><span class="p" data-group-id="8164570985-2">%</span><span class="nc" data-group-id="8164570985-2">Ecto.Changeset</span><span class="p" data-group-id="8164570985-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8164570985-3">%</span><span class="nc" data-group-id="8164570985-3">Job</span><span class="p" data-group-id="8164570985-3">{</span><span class="p" data-group-id="8164570985-3">}</span><span class="p" data-group-id="8164570985-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="1739801126-1">(</span><span class="n">job</span><span class="p" data-group-id="1739801126-1">)</span><span class="w">
+</span><span class="p" data-group-id="1739801126-2">%</span><span class="nc" data-group-id="1739801126-2">Ecto.Changeset</span><span class="p" data-group-id="1739801126-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="1739801126-3">%</span><span class="nc" data-group-id="1739801126-3">Job</span><span class="p" data-group-id="1739801126-3">{</span><span class="p" data-group-id="1739801126-3">}</span><span class="p" data-group-id="1739801126-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_job/1">
@@ -321,7 +321,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_job(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L161" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L157" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -337,11 +337,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="5619080970-1">(</span><span class="p" data-group-id="5619080970-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5619080970-2">}</span><span class="p" data-group-id="5619080970-1">)</span><span class="w">
-</span><span class="p" data-group-id="5619080970-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5619080970-4">%</span><span class="nc" data-group-id="5619080970-4">Job</span><span class="p" data-group-id="5619080970-4">{</span><span class="p" data-group-id="5619080970-4">}</span><span class="p" data-group-id="5619080970-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="7425642263-1">(</span><span class="p" data-group-id="7425642263-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7425642263-2">}</span><span class="p" data-group-id="7425642263-1">)</span><span class="w">
+</span><span class="p" data-group-id="7425642263-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7425642263-4">%</span><span class="nc" data-group-id="7425642263-4">Job</span><span class="p" data-group-id="7425642263-4">{</span><span class="p" data-group-id="7425642263-4">}</span><span class="p" data-group-id="7425642263-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="5619080970-5">(</span><span class="p" data-group-id="5619080970-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5619080970-6">}</span><span class="p" data-group-id="5619080970-5">)</span><span class="w">
-</span><span class="p" data-group-id="5619080970-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5619080970-8">%</span><span class="nc" data-group-id="5619080970-8">Ecto.Changeset</span><span class="p" data-group-id="5619080970-8">{</span><span class="p" data-group-id="5619080970-8">}</span><span class="p" data-group-id="5619080970-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="7425642263-5">(</span><span class="p" data-group-id="7425642263-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7425642263-6">}</span><span class="p" data-group-id="7425642263-5">)</span><span class="w">
+</span><span class="p" data-group-id="7425642263-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7425642263-8">%</span><span class="nc" data-group-id="7425642263-8">Ecto.Changeset</span><span class="p" data-group-id="7425642263-8">{</span><span class="p" data-group-id="7425642263-8">}</span><span class="p" data-group-id="7425642263-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_job/1">
@@ -353,7 +353,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">delete_job(job)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L197" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L193" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -369,11 +369,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="3896128679-1">(</span><span class="n">job</span><span class="p" data-group-id="3896128679-1">)</span><span class="w">
-</span><span class="p" data-group-id="3896128679-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3896128679-3">%</span><span class="nc" data-group-id="3896128679-3">Job</span><span class="p" data-group-id="3896128679-3">{</span><span class="p" data-group-id="3896128679-3">}</span><span class="p" data-group-id="3896128679-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="6022150132-1">(</span><span class="n">job</span><span class="p" data-group-id="6022150132-1">)</span><span class="w">
+</span><span class="p" data-group-id="6022150132-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6022150132-3">%</span><span class="nc" data-group-id="6022150132-3">Job</span><span class="p" data-group-id="6022150132-3">{</span><span class="p" data-group-id="6022150132-3">}</span><span class="p" data-group-id="6022150132-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="3896128679-4">(</span><span class="n">job</span><span class="p" data-group-id="3896128679-4">)</span><span class="w">
-</span><span class="p" data-group-id="3896128679-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3896128679-6">%</span><span class="nc" data-group-id="3896128679-6">Ecto.Changeset</span><span class="p" data-group-id="3896128679-6">{</span><span class="p" data-group-id="3896128679-6">}</span><span class="p" data-group-id="3896128679-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="6022150132-4">(</span><span class="n">job</span><span class="p" data-group-id="6022150132-4">)</span><span class="w">
+</span><span class="p" data-group-id="6022150132-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6022150132-6">%</span><span class="nc" data-group-id="6022150132-6">Ecto.Changeset</span><span class="p" data-group-id="6022150132-6">{</span><span class="p" data-group-id="6022150132-6">}</span><span class="p" data-group-id="6022150132-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_downstream_jobs_for/2">
@@ -387,7 +387,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_downstream_jobs_for(job, trigger_type \\ nil)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L91" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L87" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -419,7 +419,7 @@ specific trigger type.</p>
     </a>
     <h1 class="signature" translate="no">get_job(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L132" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L128" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -441,7 +441,7 @@ specific trigger type.</p>
     </a>
     <h1 class="signature" translate="no">get_job!(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L130" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L126" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -457,10 +457,10 @@ specific trigger type.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="0610015403-1">(</span><span class="mi">123</span><span class="p" data-group-id="0610015403-1">)</span><span class="w">
-</span><span class="p" data-group-id="0610015403-2">%</span><span class="nc" data-group-id="0610015403-2">Job</span><span class="p" data-group-id="0610015403-2">{</span><span class="p" data-group-id="0610015403-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="8331426094-1">(</span><span class="mi">123</span><span class="p" data-group-id="8331426094-1">)</span><span class="w">
+</span><span class="p" data-group-id="8331426094-2">%</span><span class="nc" data-group-id="8331426094-2">Job</span><span class="p" data-group-id="8331426094-2">{</span><span class="p" data-group-id="8331426094-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="0610015403-3">(</span><span class="mi">456</span><span class="p" data-group-id="0610015403-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="8331426094-3">(</span><span class="mi">456</span><span class="p" data-group-id="8331426094-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -473,7 +473,7 @@ specific trigger type.</p>
     </a>
     <h1 class="signature" translate="no">get_job_by_webhook(path)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L139" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L135" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -495,7 +495,7 @@ specific trigger type.</p>
     </a>
     <h1 class="signature" translate="no">get_jobs_for_cron_execution(timestamp)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L70" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L66" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -524,7 +524,7 @@ used by the scheduler, which calls this function once every minute.</p>
     </a>
     <h1 class="signature" translate="no">get_upstream_jobs_for(map)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L43" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L39" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -552,7 +552,7 @@ used by the scheduler, which calls this function once every minute.</p>
     </a>
     <h1 class="signature" translate="no">jobs_for_project(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L35" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L31" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -580,7 +580,7 @@ used by the scheduler, which calls this function once every minute.</p>
     </a>
     <h1 class="signature" translate="no">jobs_for_project_query(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L30" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L26" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -652,7 +652,7 @@ used by the scheduler, which calls this function once every minute.</p>
     </a>
     <h1 class="signature" translate="no">update_job(job, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L179" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs.ex#L175" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -668,11 +668,11 @@ used by the scheduler, which calls this function once every minute.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="5787183262-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5787183262-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="5787183262-2">}</span><span class="p" data-group-id="5787183262-1">)</span><span class="w">
-</span><span class="p" data-group-id="5787183262-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5787183262-4">%</span><span class="nc" data-group-id="5787183262-4">Job</span><span class="p" data-group-id="5787183262-4">{</span><span class="p" data-group-id="5787183262-4">}</span><span class="p" data-group-id="5787183262-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="5181327888-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5181327888-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="5181327888-2">}</span><span class="p" data-group-id="5181327888-1">)</span><span class="w">
+</span><span class="p" data-group-id="5181327888-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5181327888-4">%</span><span class="nc" data-group-id="5181327888-4">Job</span><span class="p" data-group-id="5181327888-4">{</span><span class="p" data-group-id="5181327888-4">}</span><span class="p" data-group-id="5181327888-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="5787183262-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5787183262-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5787183262-6">}</span><span class="p" data-group-id="5787183262-5">)</span><span class="w">
-</span><span class="p" data-group-id="5787183262-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5787183262-8">%</span><span class="nc" data-group-id="5787183262-8">Ecto.Changeset</span><span class="p" data-group-id="5787183262-8">{</span><span class="p" data-group-id="5787183262-8">}</span><span class="p" data-group-id="5787183262-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="5181327888-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5181327888-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5181327888-6">}</span><span class="p" data-group-id="5181327888-5">)</span><span class="w">
+</span><span class="p" data-group-id="5181327888-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5181327888-8">%</span><span class="nc" data-group-id="5181327888-8">Ecto.Changeset</span><span class="p" data-group-id="5181327888-8">{</span><span class="p" data-group-id="5181327888-8">}</span><span class="p" data-group-id="5181327888-7">}</span></code></pre>
   </section>
 </section>
 
