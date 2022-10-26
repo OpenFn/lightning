@@ -179,11 +179,11 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
         </div>
         <Form.divider />
-        <div class="md:grid md:grid-cols-2 md:gap-4">
-          <div class="md:col-span-2">
+        <div class="md:grid md:grid-cols-4 md:gap-4 @container">
+          <div class="col-span-4 @md:col-span-2">
             <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
           </div>
-          <div class="md:col-span-2">
+          <div class="md:col-span-4">
             <div
               phx-hook="Editor"
               phx-update="ignore"
@@ -195,7 +195,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
             />
             <Form.hidden_input form={f} id={:body} />
           </div>
-          <div class="md:col-span-2 w-full">
+          <div class="md:col-span-4 w-full">
             <span>
               <%= live_patch("Cancel",
                 class:
