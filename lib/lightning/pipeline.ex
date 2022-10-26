@@ -75,11 +75,7 @@ defmodule Lightning.Pipeline do
   defp get_next_dataclip_id(result, run) do
     case result.exit_reason do
       :error ->
-        # run.input_dataclip_id
-        # TODO dont do this.
-        Invocation.get_dataclip_query(run)
-        |> select([d], d.id)
-        |> Repo.one()
+        run.input_dataclip_id
 
       :ok ->
         from(d in Invocation.Dataclip,

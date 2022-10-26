@@ -88,10 +88,4 @@ defmodule Lightning.Jobs.Scheduler do
       run -> Invocation.get_result_dataclip_query(run) |> Repo.one()
     end
   end
-
-  @spec active_jobs_with_cron_triggers :: any
-  def active_jobs_with_cron_triggers do
-    Jobs.Query.enabled_cron_jobs()
-    |> Repo.all()
-  end
 end

@@ -7,34 +7,6 @@ defmodule Lightning.InvocationTest do
   import Lightning.ProjectsFixtures
   import Lightning.JobsFixtures
 
-  describe "invocation" do
-    import Lightning.JobsFixtures
-    alias Lightning.Invocation.{Run, Dataclip, Event}
-
-    test "create/2 returns an Event with a run and a message" do
-      job = workflow_job_fixture()
-
-      assert {:ok,
-              %{
-                dataclip: %Dataclip{},
-                event: %Event{},
-                run: %Run{}
-              }} =
-               Invocation.create(
-                 %{
-                   job_id: job.id,
-                   project_id: job.workflow.project_id,
-                   type: :webhook
-                 },
-                 %{
-                   body: %{"foo" => "bar"},
-                   project_id: job.workflow.project_id,
-                   type: :http_request
-                 }
-               )
-    end
-  end
-
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip
 

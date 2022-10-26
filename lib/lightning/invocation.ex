@@ -7,58 +7,8 @@ defmodule Lightning.Invocation do
   import Lightning.Helpers, only: [coerce_json_field: 2]
   alias Lightning.Repo
 
-  alias Lightning.Invocation.{Dataclip, Event, Run}
+  alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Projects.Project
-  alias Ecto.Multi
-
-  @doc """
-  Create a new invocation based on a job and a body of data, which gets saved
-  as a Dataclip; resulting in a Run associated with the Event.
-  """
-  @spec create(
-          %{job_id: binary(), project_id: binary(), type: :webhook | :cron},
-          %{body: map(), project_id: binary(), type: Dataclip.source_type()}
-        ) :: {:ok | :error, %{event: Event, run: Run, dataclip: Dataclip}}
-  def create(event_attrs, dataclip_attrs) do
-    Multi.new()
-    |> Multi.insert(:dataclip, Dataclip.changeset(%Dataclip{}, dataclip_attrs))
-    |> Multi.insert(:event, fn %{dataclip: %Dataclip{id: dataclip_id}} ->
-      Event.changeset(%Event{}, event_attrs)
-      |> Event.changeset(%{dataclip_id: dataclip_id})
-    end)
-    |> Multi.insert(:run, fn %{
-                               event: %Event{id: event_id},
-                               dataclip: %Dataclip{id: dataclip_id}
-                             } ->
-      Run.changeset(%Run{}, %{
-        event_id: event_id,
-        job_id: event_attrs[:job_id],
-        input_dataclip_id: dataclip_id
-      })
-    end)
-    |> Repo.transaction()
-  end
-
-  # This second create is called by flow, and doesn't return a new dataclip.
-  # We should update the spec or separate it out; It requires a next_dataclip_id
-  # @spec create(
-  #         %{job_id: binary(), project_id: binary(), type: :webhook | :cron},
-  #         %{type: Dataclip.source_type(), body: map()}
-  #       ) :: {:ok | :error, %{event: Event, run: Run}}
-  def create(event_attrs) do
-    Multi.new()
-    |> Multi.insert(:event, fn _ ->
-      Event.changeset(%Event{}, event_attrs)
-    end)
-    |> Multi.insert(:run, fn %{event: %Event{id: event_id}} ->
-      Run.changeset(%Run{}, %{
-        event_id: event_id,
-        job_id: event_attrs[:job_id],
-        input_dataclip_id: event_attrs[:dataclip_id]
-      })
-    end)
-    |> Repo.transaction()
-  end
 
   @doc """
   Returns the list of dataclips.
@@ -108,7 +58,7 @@ defmodule Lightning.Invocation do
   Gets a single dataclip given one of:
 
   - a Dataclip uuid
-  - a Run model, that has an associated dataclip via it's event
+  - a Run model
 
   Returns `nil` if the Dataclip does not exist.
 

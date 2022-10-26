@@ -8,7 +8,7 @@ defmodule Lightning.AttemptServiceTest do
   alias Lightning.Invocation.{Run}
 
   describe "attempts" do
-    test "create/3 returns an Event, a Run and an Attempt" do
+    test "create_attempt/3 returns a new Attempt, with a new Run" do
       job = workflow_job_fixture()
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       reason = reason_fixture(trigger_id: job.trigger.id)
