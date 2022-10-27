@@ -183,6 +183,14 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           <div class="col-span-4 @md:col-span-2">
             <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
           </div>
+          <div class="col-span-4 @md:col-span-2">
+            <.live_component
+              module={LightningWeb.JobLive.ManualRunComponent}
+              current_user={@current_user}
+              id={"job-#{@id}"}
+              job_id={input_value(f, :id)}
+            />
+          </div>
           <div class="md:col-span-4">
             <div
               phx-hook="Editor"

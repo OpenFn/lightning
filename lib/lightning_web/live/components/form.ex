@@ -223,6 +223,8 @@ defmodule LightningWeb.Components.Form do
       rounded-md
     ]
 
+    opts = assigns_to_attributes(assigns, [:form, :name, :values])
+
     assigns =
       assigns
       |> assign(
@@ -243,10 +245,10 @@ defmodule LightningWeb.Components.Form do
     <% end %>
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
     <%= error_tag(@form, @id, class: error_classes) %>
-    <%= text_input(@form, @id,
-      class: input_classes,
-      required: @required,
-      disabled: @disabled
+    <%= text_input(
+      @form,
+      @id,
+      opts ++ [class: @input_classes, required: @required, disabled: @disabled]
     ) %>
     """
   end
