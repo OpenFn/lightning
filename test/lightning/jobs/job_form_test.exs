@@ -5,6 +5,7 @@ defmodule Lightning.Jobs.JobFormTest do
   import Lightning.ProjectsFixtures
   import Lightning.JobsFixtures
   import Lightning.WorkflowsFixtures
+  import Lightning.CredentialsFixtures
 
   test "from_job/1" do
     job = workflow_job_fixture()
@@ -24,12 +25,19 @@ defmodule Lightning.Jobs.JobFormTest do
   test "new everything" do
     project = project_fixture()
 
+    project_credential =
+      project_credential_fixture(
+        name: "new credential",
+        body: %{"foo" => "manchu"}
+      )
+
     attrs = %{
       "trigger_type" => "webhook",
       "name" => "my job",
       "adaptor" => "adaptor name",
       "body" => "{}",
-      "project_id" => project.id
+      "project_id" => project.id,
+      "project_credential_id" => project_credential.id
     }
 
     job_form = JobForm.changeset(%JobForm{}, attrs)
