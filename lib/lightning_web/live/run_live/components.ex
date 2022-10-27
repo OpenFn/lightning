@@ -81,8 +81,9 @@ defmodule LightningWeb.RunLive.Components do
     <div class="overflow-x-auto bg-gray-100 dark:bg-gray-700">
       <table class="w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
         <thead class="text-xs uppercase text-gray-400 dark:text-gray-400">
-          <tr class="grid grid-cols-4 gap-4">
+          <tr class="grid grid-cols-5 gap-4">
             <th scope="col" class="py-3 px-6 font-medium">Workflow name</th>
+            <th scope="col" class="py-3 px-6 font-medium">Reason</th>
             <th scope="col" class="py-3 px-6 font-medium">Input</th>
             <th scope="col" class="py-3 px-6 font-medium">Last run</th>
             <th scope="col" class="py-3 px-6 font-medium">Status</th>
@@ -100,21 +101,24 @@ defmodule LightningWeb.RunLive.Components do
     assigns = assigns |> assign_new(:status, fn -> nil end)
 
     ~H"""
-    <tr class="my-4 grid grid-cols-4 gap-4 rounded-lg bg-white">
+    <tr class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white">
       <th
         scope="row"
         class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white"
       >
-        workFlowName
+        <%= @workflow.name %>
       </th>
+      <td class="my-auto p-6"><%= @reason.dataclip_id %></td>
       <td class="my-auto p-6">12i78iy</td>
-      <td class="my-auto p-6">UTC 24:20:60</td>
+      <td class="my-auto p-6">
+        <%= @last_attempt.last_run.finished_at |> Calendar.strftime("%c") %>
+      </td>
       <td class="my-auto p-6">
         <div class="flex content-center justify-between">
-          <%= case @status do %>
-            <% :failure -> %>
+          <%= case @last_attempt.last_run.exit_code do %>
+            <% val when val > 0-> %>
               <.failure_pill />
-            <% :success -> %>
+            <% val when val == 0 -> %>
               <.success_pill />
             <% _ -> %>
           <% end %>
@@ -131,7 +135,7 @@ defmodule LightningWeb.RunLive.Components do
 
   def attempt(assigns) do
     ~H"""
-    <td class="col-span-4 mx-3 mb-3 rounded-lg bg-gray-100 p-6">
+    <td class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6">
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
         <%= render_slot(@inner_block) %>
       </ul>

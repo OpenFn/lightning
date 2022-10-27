@@ -15,6 +15,7 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(
        active_menu_item: :runs,
+       work_orders: [],
        pagination_path:
          &Routes.project_run_index_path(
            socket,
@@ -30,12 +31,43 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
+  # add a last_item key to
+  defp lastify_map(%{} = obj, list_key) when is_atom(list_key) do
+    Map.merge(obj, %{
+      last_item: Enum.at(obj[list_key], 0)
+    })
+  end
+
+  defp format_wo_list(wo_list) do
+    Enum.map(wo_list, fn wo ->
+      attempts = Map.get(wo, :attempts)
+
+      formatted_attempts =
+        Enum.map(attempts, fn att ->
+          runs = Map.get(att, :runs)
+
+          Map.merge(att, %{
+            last_run: Enum.at(runs, 0)
+          })
+        end)
+
+      Map.merge(wo, %{
+        attempts: formatted_attempts,
+        last_attempt: Enum.at(formatted_attempts, 0)
+      })
+    end)
+  end
+
   defp apply_action(socket, :index, params) do
     socket
     |> assign(
       page_title: "Runs",
       run: %Run{},
-      page: Invocation.list_runs_for_project(socket.assigns.project, params)
+      # page: Invocation.list_runs_for_project(socket.assigns.project, params)
+      work_orders:
+        Invocation.list_work_orders_for_project(socket.assigns.project, params)
+        |> format_wo_list()
+        |> IO.inspect()
     )
   end
 
@@ -53,7 +85,7 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> assign(
-       page: Invocation.list_runs_for_project(socket.assigns.project, %{})
+       work_orders: Invocation.list_runs_for_project(socket.assigns.project, %{})
      )}
   end
 

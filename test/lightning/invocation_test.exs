@@ -220,5 +220,86 @@ defmodule Lightning.InvocationTest do
       run = run_fixture()
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
+
+    test "list_work_orders_for_project/2 returns runs ordered by inserted at desc" do
+      job_one = workflow_job_fixture(name: "chw-help")
+      # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)
+
+      workflow = job_one.workflow
+      work_order = work_order_fixture(workflow_id: workflow.id)
+      reason = reason_fixture(trigger_id: job_one.trigger.id)
+
+      dataclip = dataclip_fixture()
+
+      {:ok, attempt} =
+        Lightning.AttemptService.create_attempt(
+          work_order,
+          job_one,
+          reason
+        )
+
+      run = Enum.at(attempt.runs, 0)
+
+      Invocation.update_run(run, %{
+        exit_code: 0,
+        started_at: ~U[2022-10-27 00:00:00.000000Z],
+        finished_at: ~U[2022-10-27 01:00:00.000000Z]
+      })
+
+      Lightning.AttemptService.append(
+        attempt,
+        Run.changeset(%Run{}, %{
+          project_id: workflow.project_id,
+          job_id: job_one.id,
+          input_dataclip_id: dataclip.id,
+          exit_code: 0,
+          started_at: ~U[2022-10-27 01:10:00.000000Z],
+          finished_at: ~U[2022-10-27 02:00:00.000000Z]
+        })
+      )
+
+      # ---------------------------------------------------------
+
+      {:ok, attempt} =
+        Lightning.AttemptService.create_attempt(
+          work_order,
+          job_one,
+          reason
+        )
+
+      run = Enum.at(attempt.runs, 0)
+
+      Invocation.update_run(run, %{
+        exit_code: 0,
+        started_at: ~U[2022-10-27 03:00:00.000000Z],
+        finished_at: ~U[2022-10-27 04:00:00.000000Z]
+      })
+
+      Lightning.AttemptService.append(
+        attempt,
+        Run.changeset(%Run{}, %{
+          project_id: workflow.project_id,
+          job_id: job_one.id,
+          input_dataclip_id: dataclip.id,
+          exit_code: 0,
+          started_at: ~U[2022-10-27 05:10:00.000000Z],
+          finished_at: ~U[2022-10-27 06:00:00.000000Z]
+        })
+      )
+
+      IO.inspect(
+        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
+          id: workflow.project_id
+        })
+      )
+
+      assert false
+    end
   end
+
+  # defp shift_date(date, shift_attrs) do
+  #   date
+  #   |> Timex.shift(shift_attrs)
+  #   |> Timex.to_naive_datetime()
+  # end
 end

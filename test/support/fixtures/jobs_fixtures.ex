@@ -41,10 +41,11 @@ defmodule Lightning.JobsFixtures do
       Ecto.Changeset.cast(
         %Lightning.Workflows.Workflow{},
         %{
+          "name" => attrs[:name],
           "project_id" => attrs[:project_id] || project_fixture().id,
           "id" => Ecto.UUID.generate()
         },
-        [:project_id, :id]
+        [:project_id, :id, :name]
       )
 
     attrs =

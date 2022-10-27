@@ -23,16 +23,15 @@
             <.td class="col-span-1"><%= run.exit_code %></.td>
             <.td class="col-span-2">
               <span>
-                <.link navigate={
-                  Routes.project_run_index_path(
-                    @socket,
-                    :show,
-                    @project.id,
-                    run
-                  )
-                }>
-                  Show
-                </.link>
+                <%= live_redirect("Show",
+                  to:
+                    Routes.project_run_index_path(
+                      @socket,
+                      :show,
+                      @project.id,
+                      run
+                    )
+                ) %>
               </span>
               |
               <span>

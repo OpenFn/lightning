@@ -286,4 +286,59 @@ defmodule Lightning.Invocation do
   def change_run(%Run{} = run, attrs \\ %{}) do
     Run.changeset(run, attrs)
   end
+
+  @spec list_work_orders_for_project_query(Lightning.Projects.Project.t()) ::
+          Ecto.Query.t()
+  def list_work_orders_for_project_query(%Project{id: project_id}) do
+    # we can use a ^custom_query to control (order_by ...) the way preloading is done
+
+    runs_query =
+      from(r in Lightning.Invocation.Run,
+        join: j in assoc(r, :job),
+        order_by: [desc: r.finished_at],
+        preload: [
+          job:
+            ^from(job in Lightning.Jobs.Job,
+              select: %{id: job.id, name: job.name}
+            )
+        ]
+      )
+
+    attempts_query =
+      from(a in Lightning.Attempt,
+        join: r in assoc(a, :reason),
+        order_by: [desc: a.inserted_at],
+        preload: [reason: r, runs: ^runs_query]
+      )
+
+    from(wo in Lightning.WorkOrder,
+      join: re in assoc(wo, :reason),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project_id,
+      order_by: [desc: wo.inserted_at],
+      preload: [
+        reason:
+          ^from(r in Lightning.InvocationReason,
+            join: d in assoc(r, :dataclip),
+            # select: %{id: r.id, type: r.type, user_id: r.user_id, dataclip_id: r.dataclip_id},
+            preload: [dataclip: d]
+          ),
+        workflow:
+          ^from(wf in Lightning.Workflows.Workflow,
+            select: %{id: wf.id, name: wf.name}
+          ),
+        attempts: ^attempts_query
+      ]
+    )
+  end
+
+  @spec list_work_orders_for_project(
+          Lightning.Projects.Project.t(),
+          keyword | map
+        ) ::
+          Scrivener.Page.t()
+  def list_work_orders_for_project(%Project{} = project, params \\ %{}) do
+    list_work_orders_for_project_query(project)
+    |> Repo.all()
+  end
 end

@@ -24,6 +24,8 @@ defmodule LightningWeb.WebhooksController do
           attempt_id: attempt_run.attempt_id
         }
 
+        IO.inspect(resp)
+
         Pipeline.new(%{attempt_run_id: attempt_run.id})
         |> Oban.insert()
 
