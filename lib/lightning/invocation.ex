@@ -325,7 +325,7 @@ defmodule Lightning.Invocation do
           ),
         workflow:
           ^from(wf in Lightning.Workflows.Workflow,
-            select: %{id: wf.id, name: wf.name}
+            select: %{id: wf.id, name: wf.name, project_id: wf.project_id}
           ),
         attempts: ^attempts_query
       ]
