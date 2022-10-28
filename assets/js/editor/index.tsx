@@ -6,8 +6,10 @@ interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
   destroyed(): void;
   el: HTMLElement;
+  changeEvent: string;
   field?: HTMLTextAreaElement | null;
   handleContentChange(content: string): void;
+  pushEventTo(target: HTMLElement, event: string, payload: {}): void;
   mounted(): void;
   observer: MutationObserver | null;
   render(): void;
@@ -28,27 +30,21 @@ export default {
       EditorComponent = module.default as typeof Editor;
       this.componentRoot = createRoot(this.el);
 
-      const { hiddenInput } = this.el.dataset;
-      if (hiddenInput) {
-        this.field =
-          (document.getElementById(hiddenInput) as HTMLTextAreaElement) || null;
+      const { changeEvent } = this.el.dataset;
+      if (changeEvent) {
+        this.changeEvent = changeEvent;
       } else {
-        console.warn(
-          'Warning: no form binding found for editor. Content will not sync.'
-        );
+        console.warn('Warning: No changeEvent set. Content will not sync.');
       }
       this.setupObserver();
       this.render();
     });
   },
   handleContentChange(content: string) {
-    if (this.field) {
-      this.field.value = content;
-    }
+    this.pushEventTo(this.el, this.changeEvent, { source: content });
   },
   render() {
-    const { adaptor } = this.el.dataset;
-    const source = this.field?.value ?? '';
+    const { adaptor, source } = this.el.dataset;
     if (EditorComponent) {
       this.componentRoot?.render(
         <EditorComponent
@@ -71,7 +67,7 @@ export default {
     });
 
     this.observer.observe(this.el, {
-      attributeFilter: ['data-adaptor', 'data-job-id'],
+      attributeFilter: ['data-adaptor', 'data-change-event'],
       attributeOldValue: true,
     });
   },

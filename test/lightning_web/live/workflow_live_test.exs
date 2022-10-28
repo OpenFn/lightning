@@ -131,10 +131,13 @@ defmodule LightningWeb.WorkflowLiveTest do
              )
              |> render_change()
 
+      view
+      |> element("#editor-component")
+      |> render_hook(:job_body_changed, %{source: "some body"})
+
       assert view
              |> form("#job-form",
                job_form: %{
-                 body: "some body",
                  enabled: true,
                  name: "some name",
                  trigger_type: "on_job_failure",

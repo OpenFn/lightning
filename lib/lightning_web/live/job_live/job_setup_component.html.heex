@@ -111,10 +111,10 @@
           id="editor-component"
           class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
           data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
-          data-hidden-input={Phoenix.HTML.Form.input_id(f, :body)}
-          data-job-id={@id}
+          data-source={@job_body}
+          data-change-event={"job_body_changed"}
+          phx-target={@myself}
         />
-        <Form.hidden_input form={f} id={:body} />
       </div>
       <div class="md:col-span-2 w-full">
         <span>

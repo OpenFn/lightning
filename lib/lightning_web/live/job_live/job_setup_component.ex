@@ -45,6 +45,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
      |> assign(:upstream_jobs, upstream_jobs)
      |> assign(:versions, versions)
      |> assign(:job_form, job_form)
+     |> assign(:job_body, job_form.body)
      |> assign(:changeset, changeset)
      |> assign(:job_params, %{})}
   end
@@ -100,6 +101,10 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     {module_name, version, adaptor_names, versions}
   end
 
+  def handle_event("job_body_changed", %{"source" => source}, socket) do
+    {:noreply, socket |> assign(job_body: source)}
+  end
+
   @impl true
   def handle_event(event, params, socket) do
     case event do
@@ -145,12 +150,13 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
   end
 
   def save(%{"job_form" => job_params}, socket) do
-    %{action: action, job_form: job_form} = socket.assigns
+    %{action: action, job_form: job_form, job_body: job_body} = socket.assigns
 
     case action do
       :edit ->
         job_form
         |> JobForm.changeset(job_params)
+        |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
         |> Lightning.Repo.transaction()
         |> case do
@@ -172,6 +178,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
       :new ->
         job_form
         |> JobForm.changeset(job_params)
+        |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
         |> Lightning.Repo.transaction()
         |> case do
