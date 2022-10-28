@@ -1,14 +1,11 @@
 defmodule LightningWeb.JobLive.JobSetupComponent do
   @moduledoc """
-  SetupFormComponent
+  JobSetupComponent
   """
 
   use LightningWeb, :live_component
 
   import Ecto.Changeset, only: [get_field: 2]
-
-  import Phoenix.LiveView,
-    only: [assign: 2, assign: 3]
 
   alias Lightning.{Jobs, AdaptorRegistry, Projects}
   alias LightningWeb.Components.Form
