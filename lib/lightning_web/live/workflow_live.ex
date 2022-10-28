@@ -185,7 +185,11 @@ defmodule LightningWeb.WorkflowLive do
                 id="job-pane"
               >
                 <.live_component
+<<<<<<< HEAD
                   module={LightningWeb.JobLive.JobSetupComponent}
+=======
+                  module={LightningWeb.JobLive.SetupFormComponent}
+>>>>>>> 473b5b6b (Merge JobLive.FormComponent and JobLive.InspectorFormComponent to JobLive.SetupFormComponent)
                   id="new-job"
                   job_form={@job_form}
                   action={:new}
