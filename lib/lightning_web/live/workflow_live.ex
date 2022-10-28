@@ -185,7 +185,7 @@ defmodule LightningWeb.WorkflowLive do
                 id="job-pane"
               >
                 <.live_component
-                  module={LightningWeb.JobLive.SetupFormComponent}
+                  module={LightningWeb.JobLive.JobSetupComponent}
                   id="new-job"
                   job_form={@job_form}
                   action={:new}
@@ -208,7 +208,7 @@ defmodule LightningWeb.WorkflowLive do
                 id="job-pane"
               >
                 <.live_component
-                  module={LightningWeb.JobLive.SetupFormComponent}
+                  module={LightningWeb.JobLive.JobSetupComponent}
                   id={@job_form.id}
                   job_form={@job_form}
                   action={:edit}
