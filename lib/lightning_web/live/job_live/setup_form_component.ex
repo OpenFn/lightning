@@ -1,17 +1,18 @@
 defmodule LightningWeb.JobLive.SetupFormComponent do
   @moduledoc """
-  Macro for Form Components that edit and show Jobs.
+  SetupFormComponent
   """
+
+  use LightningWeb, :live_component
+
   import Ecto.Changeset, only: [get_field: 2]
 
   import Phoenix.LiveView,
     only: [assign: 2, assign: 3]
 
   alias Lightning.{Jobs, AdaptorRegistry, Projects}
-  alias Jobs.JobForm
   alias LightningWeb.Components.Form
-
-  use LightningWeb, :live_component
+  alias Jobs.JobForm
 
   def update(
         %{
