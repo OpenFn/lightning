@@ -1,14 +1,14 @@
 <Layout.page_content>
   <:header>
     <Layout.header socket={@socket} title={@page_title}>
-      <%= live_redirect to: Routes.credential_edit_path(@socket, :new) do %>
+      <.link navigate={Routes.credential_edit_path(@socket, :new)}>
         <Common.button>
           <div class="h-full">
             <Icon.plus class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">New Credential</span>
           </div>
         </Common.button>
-      <% end %>
+      </.link>
     </Layout.header>
   </:header>
   <Layout.centered>
@@ -29,16 +29,18 @@
           <.td>
             <%= if credential.production do %>
               <div class="flex">
-                <Heroicons.Outline.exclamation class="w-5 h-5 text-secondary-500" />
+                <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
                 &nbsp;Production
               </div>
             <% end %>
           </.td>
           <.td>
             <span>
-              <%= live_redirect("Edit",
-                to: Routes.credential_edit_path(@socket, :edit, credential)
-              ) %>
+              <.link navigate={
+                Routes.credential_edit_path(@socket, :edit, credential)
+              }>
+                Edit
+              </.link>
             </span>
           </.td>
         </.tr>

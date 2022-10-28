@@ -1,14 +1,16 @@
 <Layout.page_content>
   <:header>
     <Layout.header socket={@socket} title={@page_title}>
-      <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :new, @project.id) do %>
+      <.link navigate={
+        Routes.project_dataclip_edit_path(@socket, :new, @project.id)
+      }>
         <Common.button>
           <div class="h-full">
-            <Heroicons.Solid.plus class="h-4 w-4 inline-block" />
+            <Heroicons.plus solid class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">New Dataclip</span>
           </div>
         </Common.button>
-      <% end %>
+      </.link>
     </Layout.header>
   </:header>
   <Layout.centered>
@@ -30,24 +32,27 @@
 
           <.td>
             <span>
-              <%= live_redirect("Edit",
-                to:
-                  Routes.project_dataclip_edit_path(
-                    @socket,
-                    :edit,
-                    @project.id,
-                    dataclip
-                  )
-              ) %>
+              <.link navigate={
+                Routes.project_dataclip_edit_path(
+                  @socket,
+                  :edit,
+                  @project.id,
+                  dataclip
+                )
+              }>
+                Edit
+              </.link>
             </span>
             |
             <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: dataclip.id,
-                data: [confirm: "Are you sure?"]
-              ) %>
+              <a
+                href="#"
+                phx-click="delete"
+                phx-value-id={dataclip.id}
+                data={[confirm: "Are you sure?"]}
+              >
+                Delete
+              </a>
             </span>
           </.td>
         </.tr>

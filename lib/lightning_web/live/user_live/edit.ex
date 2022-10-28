@@ -19,7 +19,7 @@ defmodule LightningWeb.UserLive.Edit do
         {:ok,
          socket
          |> assign(active_menu_item: :users),
-         layout: {LightningWeb.LayoutView, "settings.html"}}
+         layout: {LightningWeb.LayoutView, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

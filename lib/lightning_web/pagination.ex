@@ -102,7 +102,8 @@ defmodule LightningWeb.Pagination do
           <span class="font-medium">
             <%= @page.page_number * @page.page_size %>
           </span>
-          of <span class="font-medium"><%= @page.total_entries %></span> results
+          of <span class="font-medium"><%= @page.total_entries %></span>
+          results
         </p>
       </div>
       <nav

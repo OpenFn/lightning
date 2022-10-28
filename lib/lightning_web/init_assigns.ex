@@ -2,7 +2,7 @@ defmodule LightningWeb.InitAssigns do
   @moduledoc """
   Ensures common `assigns` are applied to all LiveViews attaching this hook.
   """
-  import Phoenix.LiveView
+  import Phoenix.Component
   alias Lightning.Accounts
 
   def on_mount(:default, _params, session, socket) do

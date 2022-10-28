@@ -1,6 +1,6 @@
 <div id={"user-#{@id}"}>
   <.form
-    let={f}
+    :let={f}
     for={@changeset}
     id="user-form"
     phx-target={@myself}
@@ -131,11 +131,12 @@
 
     <div>
       <span>
-        <%= live_redirect("Cancel",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-          to: Routes.user_index_path(@socket, :index)
-        ) %>
+        <.link
+          navigate={Routes.user_index_path(@socket, :index)}
+          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+        >
+          Cancel
+        </.link>
       </span>
       <span>
         <%= submit("Save",

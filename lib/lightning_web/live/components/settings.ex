@@ -22,13 +22,13 @@ defmodule LightningWeb.Components.Settings do
 
     ~H"""
     <div class="h-12 mx-4">
-      <%= live_redirect(to: @to, class: @class) do %>
+      <.link navigate={@to} class={@class}>
         <%= if assigns[:inner_block] do %>
           <%= render_slot(@inner_block) %>
         <% else %>
           <%= @text %>
         <% end %>
-      <% end %>
+      </.link>
     </div>
     """
   end
