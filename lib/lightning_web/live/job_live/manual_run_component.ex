@@ -4,10 +4,34 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   alias LightningWeb.Components.Form
   alias Lightning.Repo
 
+  def render(assigns) do
+    ~H"""
+    <div id={@id}>
+      <Form.text_field
+        form={@form}
+        id={:dataclip_id}
+        phx_change="changed"
+        phx_target={@myself}
+      />
+      <Common.button
+        text="Run"
+        disabled={!@changeset.valid?}
+        phx-click="confirm"
+        phx_target={@myself}
+      />
+      <.live_info_block myself={@myself} flash={@flash} />
+    </div>
+    """
+  end
+
   def update(assigns, socket) do
     {:ok,
      socket
-     |> assign(job_id: assigns.job_id, current_user: assigns.current_user)
+     |> assign(
+       job_id: assigns.job_id,
+       current_user: assigns.current_user,
+       id: assigns.id
+     )
      |> update_form(%{})}
   end
 
@@ -95,25 +119,5 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       j ->
         {:ok, j}
     end
-  end
-
-  def render(assigns) do
-    ~H"""
-    <div>
-      <Form.text_field
-        form={@form}
-        id={:dataclip_id}
-        phx_change="changed"
-        phx_target={@myself}
-      />
-      <Common.button
-        text="Run"
-        disabled={!@changeset.valid?}
-        phx-click="confirm"
-        phx_target={@myself}
-      />
-      <.live_info_block myself={@myself} flash={@flash} />
-    </div>
-    """
   end
 end

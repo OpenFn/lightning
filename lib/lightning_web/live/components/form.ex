@@ -223,7 +223,7 @@ defmodule LightningWeb.Components.Form do
       rounded-md
     ]
 
-    opts = assigns_to_attributes(assigns, [:form, :name, :values])
+    opts = assigns_to_attributes(assigns, [:id, :form, :name, :values])
 
     assigns =
       assigns

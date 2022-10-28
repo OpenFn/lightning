@@ -27,6 +27,7 @@ defmodule LightningWeb.ConnCase do
       alias LightningWeb.Router.Helpers, as: Routes
 
       import Lightning.ModelHelpers
+      import Plug.HTML
 
       # The default endpoint for testing
       @endpoint LightningWeb.Endpoint
