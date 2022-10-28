@@ -6,6 +6,7 @@ defmodule LightningWeb.RunLive.Index do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
+  import LightningWeb.RunLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
