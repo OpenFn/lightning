@@ -204,6 +204,7 @@ defmodule LightningWeb.WorkflowLive do
                   id={@job_form.id}
                   job_form={@job_form}
                   action={:edit}
+                  current_user={@current_user}
                   project={@project}
                   initial_job_params={@initial_job_params}
                   return_to={
