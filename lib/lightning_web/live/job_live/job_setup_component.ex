@@ -11,6 +11,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
   alias LightningWeb.Components.Form
   alias Jobs.JobForm
 
+  @impl true
   def update(
         %{
           job_form: job_form,
@@ -143,7 +144,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     get_field(changeset, :trigger_type) == :cron
   end
 
-  @impl true
   def save(%{"job_form" => job_params}, socket) do
     %{action: action, job_form: job_form} = socket.assigns
 
