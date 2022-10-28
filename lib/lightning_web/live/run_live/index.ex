@@ -68,7 +68,6 @@ defmodule LightningWeb.RunLive.Index do
       work_orders:
         Invocation.list_work_orders_for_project(socket.assigns.project, params)
         |> format_wo_list()
-        |> IO.inspect()
     )
   end
 
