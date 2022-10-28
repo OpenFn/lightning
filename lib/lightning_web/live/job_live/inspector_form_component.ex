@@ -74,12 +74,6 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
     end
   end
 
-  def editor_height(form, id) do
-    height = if form.data.id && id, do: 33.7, else: 38
-
-    "rounded-md border border-secondary-300 shadow-sm overscroll-y-auto h-[calc(100vh_-_#{height}rem)] bg-vs-dark"
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -194,14 +188,14 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
               phx-hook="Editor"
               phx-update="ignore"
               id="editor-component"
-              class={editor_height(f, @id)}
+              class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
               data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
               data-hidden-input={Phoenix.HTML.Form.input_id(f, :body)}
               data-job-id={@id}
             />
             <Form.hidden_input form={f} id={:body} />
           </div>
-          <div class="md:col-span-2 w-full">
+          <div class="sticky bottom-0 bg-white py-2 md:col-span-2 w-full">
             <span>
               <%= live_patch("Cancel",
                 class:

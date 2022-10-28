@@ -178,14 +178,6 @@ defmodule LightningWeb.WorkflowLive do
         <%= case @live_action do %>
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 z-10">
-              <div class="absolute inset-y-0 left-0 ml- pointer-events-none">
-                <div
-                  class="pointer-events-auto absolute top-1/2 right-0 -mt-6 p-2 hidden md:block cursor-ew-resize"
-                  draggable="false"
-                >
-                  <div class="w-1.5 h-10 bg-slate-500/60 rounded-full z-10"></div>
-                </div>
-              </div>
               <div class="w-auto bg-white shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
                   module={LightningWeb.JobLive.InspectorFormComponent}
