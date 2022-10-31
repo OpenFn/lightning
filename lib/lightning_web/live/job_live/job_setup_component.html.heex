@@ -82,22 +82,11 @@
           New credential
         </button>
       </div>
-
-      <div class="md:col-span-1">
-        <Components.Jobs.adaptor_name_select
-          form={f}
-          adaptor_name={@adaptor_name}
-          adaptors={@adaptors}
-        />
-      </div>
-
-      <div class="md:col-span-1">
-        <Components.Jobs.adaptor_version_select
-          form={f}
-          adaptor_name={@adaptor_name}
-          versions={@versions}
-        />
-      </div>
+      <.live_component
+        id="adaptors-setup"
+        module={LightningWeb.JobLive.AdaptorsSetupComponent}
+        form={f}
+      />
     </div>
     <Form.divider />
     <div class="md:grid md:grid-cols-2 md:gap-4">

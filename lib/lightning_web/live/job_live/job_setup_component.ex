@@ -70,37 +70,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     |> assign(:job_params, job_params)
   end
 
-  def get_adaptor_version_options(adaptor) do
-    # Gets @openfn/language-foo@1.2.3 or @openfn/language-foo
-
-    adaptor_names =
-      Lightning.AdaptorRegistry.all()
-      |> Enum.map(&Map.get(&1, :name))
-      |> Enum.sort()
-
-    {module_name, version, versions} =
-      if adaptor do
-        {module_name, version} =
-          Lightning.AdaptorRegistry.resolve_package_name(adaptor)
-
-        versions =
-          Lightning.AdaptorRegistry.versions_for(module_name)
-          |> List.wrap()
-          |> Enum.map(&Map.get(&1, :version))
-          |> Enum.sort_by(&Version.parse(&1), :desc)
-          |> Enum.map(fn version ->
-            [key: version, value: "#{module_name}@#{version}"]
-          end)
-
-        {module_name, version,
-         [[key: "latest", value: "#{module_name}@latest"] | versions]}
-      else
-        {nil, nil, []}
-      end
-
-    {module_name, version, adaptor_names, versions}
-  end
-
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     {:noreply, socket |> assign(job_body: source)}
   end
