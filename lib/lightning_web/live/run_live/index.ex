@@ -31,36 +31,13 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-
-  defp format_wo_list(wo_list) do
-    Enum.map(wo_list, fn wo ->
-      attempts = Map.get(wo, :attempts)
-
-      formatted_attempts =
-        Enum.map(attempts, fn att ->
-          runs = Map.get(att, :runs)
-
-          Map.merge(att, %{
-            last_run: Enum.at(runs, 0)
-          })
-        end)
-
-      Map.merge(wo, %{
-        attempts: formatted_attempts,
-        last_attempt: Enum.at(formatted_attempts, 0)
-      })
-    end)
-  end
-
   defp apply_action(socket, :index, params) do
     socket
     |> assign(
       page_title: "Runs",
       run: %Run{},
-      # page: Invocation.list_runs_for_project(socket.assigns.project, params)
-      work_orders:
+      page:
         Invocation.list_work_orders_for_project(socket.assigns.project, params)
-        |> format_wo_list()
     )
   end
 
@@ -68,18 +45,6 @@ defmodule LightningWeb.RunLive.Index do
     socket
     |> assign(:page_title, "Run")
     |> assign(:run, Invocation.get_run_with_job!(id))
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    run = Invocation.get_run!(id)
-    {:ok, _} = Invocation.delete_run(run)
-
-    {:noreply,
-     socket
-     |> assign(
-       work_orders: Invocation.list_runs_for_project(socket.assigns.project, %{})
-     )}
   end
 
   def show_run(assigns) do

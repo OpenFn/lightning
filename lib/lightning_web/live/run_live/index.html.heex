@@ -1,13 +1,13 @@
 <Layout.page_content>
   <:header>
-    <Layout.header socket={@socket} title="Runs" />
+    <Layout.header socket={@socket} title={@page_title} />
   </:header>
   <Layout.centered>
     <%= if @live_action == :show do %>
       <.show_run {assigns} />
     <% else %>
       <LightningWeb.RunLive.Components.table>
-        <%= for wo <- @work_orders do %>
+        <%= for wo <- @page.entries do %>
           <.live_component
             module={LightningWeb.RunLive.Components.WorkOrder}
             id={wo.id}
@@ -15,6 +15,7 @@
           />
         <% end %>
       </LightningWeb.RunLive.Components.table>
+      <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
     <% end %>
   </Layout.centered>
 </Layout.page_content>

@@ -19,6 +19,8 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
   @impl true
   def render(assigns) do
     assigns = assigns |> assign_new(:show_details, fn -> false end)
+    last_attempt = Enum.at(assigns.work_order.attempts, 0)
+    last_run= Enum.at(last_attempt.runs, 0)
 
     ~H"""
     <tr class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white">
@@ -35,11 +37,11 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
         <% end %>
       </td>
       <td class="my-auto p-6">
-        <%= @work_order.last_attempt.last_run.finished_at |> Calendar.strftime("%c") %>
+        <%= last_run.finished_at |> Calendar.strftime("%c") %>
       </td>
       <td class="my-auto p-6">
         <div class="flex content-center justify-between">
-          <%= case @work_order.last_attempt.last_run.exit_code do %>
+          <%= case last_run.exit_code do %>
             <% val when val == 0 -> %>
               <.success_pill />
             <% val when val == 1-> %>

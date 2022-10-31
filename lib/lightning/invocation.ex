@@ -339,6 +339,6 @@ defmodule Lightning.Invocation do
           Scrivener.Page.t()
   def list_work_orders_for_project(%Project{} = project, params \\ %{}) do
     list_work_orders_for_project_query(project)
-    |> Repo.all()
+    |> Repo.paginate(params)
   end
 end
