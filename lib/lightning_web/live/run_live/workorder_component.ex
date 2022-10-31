@@ -31,7 +31,7 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
       <td class="my-auto p-6"><%= @work_order.reason.dataclip_id %></td>
       <td class="my-auto p-6">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
-        <div><%= @work_order.reason.dataclip_id %></div>
+          <div><%= @work_order.reason.id %></div>
         <% end %>
       </td>
       <td class="my-auto p-6">
@@ -40,10 +40,14 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
       <td class="my-auto p-6">
         <div class="flex content-center justify-between">
           <%= case @work_order.last_attempt.last_run.exit_code do %>
-            <% val when val > 0-> %>
-              <.failure_pill />
             <% val when val == 0 -> %>
               <.success_pill />
+            <% val when val == 1-> %>
+              <.failure_pill>Failure</.failure_pill>
+            <% val when val == 2-> %>
+              <.failure_pill>Timeout</.failure_pill>
+            <% val when val > 2-> %>
+              <.failure_pill>Crashed</.failure_pill>
             <% _ -> %>
           <% end %>
 
