@@ -136,7 +136,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
     <div id={"project-#{@id}"}>
       <.form
         :let={f}
-        as="auth_provider"
+        as={:auth_provider}
         for={@changeset}
         id="auth-provider-form"
         phx-target={@myself}
