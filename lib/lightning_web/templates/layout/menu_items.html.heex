@@ -46,9 +46,9 @@
   </Settings.menu_item>
 <% else %>
   <Settings.menu_item to={Routes.profile_edit_path(@socket, :edit)}>
-    <Heroicons.Outline.cog class="h-5 w-5 inline-block mr-2" /> User Profile
+    <Heroicons.cog class="h-5 w-5 inline-block mr-2" /> User Profile
   </Settings.menu_item>
   <Settings.menu_item to={Routes.credential_index_path(@socket, :index)}>
-    <Heroicons.Outline.key class="h-5 w-5 inline-block mr-2" /> Credentials
+    <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
   </Settings.menu_item>
 <% end %>

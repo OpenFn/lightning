@@ -14,7 +14,7 @@ defmodule LightningWeb.AuthProvidersLive.Index do
          ) do
       :ok ->
         {:ok, socket |> assign(:active_menu_item, :authentication),
-         layout: {LightningWeb.LayoutView, "settings.html"}}
+         layout: {LightningWeb.LayoutView, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

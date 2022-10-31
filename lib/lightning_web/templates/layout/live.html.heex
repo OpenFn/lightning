@@ -7,7 +7,7 @@
     >
       <div class="flex flex-col h-full">
         <div class="w-full h-20 bg-primary-900 flex items-center justify-center">
-          <%= live_redirect(to: Routes.dashboard_index_path(@socket, :index)) do %>
+          <.link navigate={Routes.dashboard_index_path(@socket, :index)}>
             <img
               class="h-10 w-10"
               src={
@@ -18,25 +18,25 @@
                 "Lightning v#{elem(:application.get_key(:lightning, :vsn), 1)}"
               }
             />
-          <% end %>
+          </.link>
         </div>
         <%= unless assigns[:is_first_setup] do %>
           <%= render("menu_items.html", assigns) %>
           <div class="grow"></div>
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
-              <Heroicons.Outline.cog class="h-5 w-5 inline-block mr-2" />
+              <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Admin Settings</span>
             </Settings.menu_item>
             <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
               <Settings.menu_item to={Routes.live_dashboard_path(@socket, :home)}>
-                <Heroicons.Outline.exclamation class="h-5 w-5 inline-block mr-2" />
+                <Heroicons.exclamation_triangle class="h-5 w-5 inline-block mr-2" />
                 <span class="inline-block align-middle">Sys Info</span>
               </Settings.menu_item>
             <% end %>
           <% end %>
           <Settings.menu_item to={Routes.user_session_path(@socket, :delete)}>
-            <Heroicons.Outline.logout class="h-5 w-5 inline-block mr-2" />
+            <Heroicons.arrow_right_on_rectangle class="h-5 w-5 inline-block mr-2" />
             <span class="inline-block align-middle">Log out</span>
           </Settings.menu_item>
         <% end %>

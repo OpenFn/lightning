@@ -79,7 +79,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
     ~H"""
     <div id={"job-#{@id}"}>
       <.form
-        let={f}
+        :let={f}
         for={@changeset}
         id="job-form"
         phx-target={@myself}
@@ -105,14 +105,12 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                 name={:trigger_type}
                 prompt=""
                 id="triggerType"
-                values={
-                  [
-                    Cron: "cron",
-                    Webhook: "webhook",
-                    "On Job Success": "on_job_success",
-                    "On Job Failure": "on_job_failure"
-                  ]
-                }
+                values={[
+                  Cron: "cron",
+                  Webhook: "webhook",
+                  "On Job Success": "on_job_success",
+                  "On Job Failure": "on_job_failure"
+                ]}
               />
             <% end %>
 

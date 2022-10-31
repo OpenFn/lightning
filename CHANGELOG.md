@@ -19,6 +19,8 @@ and this project adheres to
 - [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not compatible.
 - Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.
 - Added the ability to Run an existing Job with any dataclip uuid from the Job form
+- Upgraded LiveView to 0.18.0
+- Upgraded Elixir to 1.14.1 and OTP 25
 
 ## [0.2.0] - 2022-09-12
 

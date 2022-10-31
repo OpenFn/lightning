@@ -56,7 +56,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowInspector do
     ~H"""
     <div id={"workflow-#{@workflow.id}"}>
       <.form
-        let={f}
+        :let={f}
         for={@changeset}
         id="workflow-form"
         phx-target={@myself}

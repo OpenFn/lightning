@@ -46,7 +46,7 @@ defmodule LightningWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {LightningWeb.LayoutView, "live.html"}
+        layout: {LightningWeb.LayoutView, :live}
 
       unquote(view_helpers())
     end
@@ -91,7 +91,7 @@ defmodule LightningWeb do
       use Phoenix.HTML
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
-      import Phoenix.LiveView.Helpers
+      import Phoenix.Component
       import LightningWeb.LiveHelpers
 
       # Import basic rendering functionality (render, render_layout, etc)
@@ -108,7 +108,6 @@ defmodule LightningWeb do
       import PetalComponents.Table
       import PetalComponents.Typography
       import PetalComponents.Badge
-      alias PetalComponents.Heroicons
 
       alias LightningWeb.Components
       alias Components.Layout

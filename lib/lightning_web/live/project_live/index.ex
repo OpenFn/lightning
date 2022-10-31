@@ -15,7 +15,7 @@ defmodule LightningWeb.ProjectLive.Index do
          ) do
       :ok ->
         {:ok, socket |> assign(:active_menu_item, :projects),
-         layout: {LightningWeb.LayoutView, "settings.html"}}
+         layout: {LightningWeb.LayoutView, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

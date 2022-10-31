@@ -70,19 +70,17 @@ defmodule LightningWeb.Components.Form do
       min-h-full
     ]
 
+    assigns = assign(assigns, classes: classes)
+
     ~H"""
     <%= error_tag(@form, @id) %>
-    <%= textarea(@form, @id, class: classes) %>
+    <%= textarea(@form, @id, class: @classes) %>
     """
   end
 
   def hidden_input(assigns) do
-    classes = ~w[
-      hidden
-    ]
-
     ~H"""
-    <%= textarea(@form, @id, class: classes) %>
+    <%= textarea(@form, @id, class: "hidden") %>
     """
   end
 
@@ -166,12 +164,20 @@ defmodule LightningWeb.Components.Form do
       rounded-md
     ]
 
+    assigns =
+      assign(assigns,
+        label_classes: label_classes,
+        error_classes: error_classes,
+        input_classes: input_classes
+      )
+      |> assign_new(:required, fn -> false end)
+
     ~H"""
-    <%= label(@form, @id, class: label_classes) %>
-    <%= error_tag(@form, @id, class: error_classes) %>
+    <%= label(@form, @id, class: @label_classes) %>
+    <%= error_tag(@form, @id, class: @error_classes) %>
     <%= email_input(@form, @id,
-      class: input_classes,
-      required: if(Map.has_key?(assigns, "required"), do: @required, else: false)
+      class: @input_classes,
+      required: @required
     ) %>
     """
   end
@@ -230,7 +236,8 @@ defmodule LightningWeb.Components.Form do
       |> assign(
         label_classes: label_classes,
         error_classes: error_classes,
-        input_classes: input_classes
+        input_classes: input_classes,
+        opts: opts
       )
       |> assign_new(:label, fn -> nil end)
       |> assign_new(:hint, fn -> nil end)
@@ -239,16 +246,16 @@ defmodule LightningWeb.Components.Form do
 
     ~H"""
     <%= if @label do %>
-      <%= label(@form, @id, @label, class: label_classes) %>
+      <%= label(@form, @id, @label, class: @label_classes) %>
     <% else %>
-      <%= label(@form, @id, class: label_classes) %>
+      <%= label(@form, @id, class: @label_classes) %>
     <% end %>
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
-    <%= error_tag(@form, @id, class: error_classes) %>
+    <%= error_tag(@form, @id, class: @error_classes) %>
     <%= text_input(
       @form,
       @id,
-      opts ++ [class: @input_classes, required: @required, disabled: @disabled]
+      @opts ++ [class: @input_classes, required: @required, disabled: @disabled]
     ) %>
     """
   end
@@ -280,14 +287,21 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
+    assigns =
+      assign(assigns,
+        checkbox_classes: checkbox_classes,
+        error_tag_classes: error_tag_classes,
+        label_classes: label_classes
+      )
+
     ~H"""
     <div class="flex items-start">
       <div class="flex items-center h-5">
-        <%= checkbox(@form, @id, class: checkbox_classes) %>
+        <%= checkbox(@form, @id, class: @checkbox_classes) %>
       </div>
       <div class="ml-3 text-sm">
-        <%= error_tag(@form, @id, class: error_tag_classes) %>
-        <%= label(@form, @id, class: label_classes) %>
+        <%= error_tag(@form, @id, class: @error_tag_classes) %>
+        <%= label(@form, @id, class: @label_classes) %>
         <%= if assigns[:inner_block] do %>
           <%= render_slot(@inner_block) %>
         <% end %>
@@ -304,10 +318,12 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
+    assigns = assign(assigns, label_classes: label_classes)
+
     ~H"""
     <%= label(@form, @id, @title,
       for: @for,
-      class: label_classes
+      class: @label_classes
     ) %>
     """
   end
@@ -329,8 +345,10 @@ defmodule LightningWeb.Components.Form do
       assigns_to_attributes(assigns, [:form, :name, :values]) ++
         [class: select_classes]
 
+    assigns = assign(assigns, opts: opts)
+
     ~H"""
-    <%= select(@form, @name, @values, opts) %>
+    <%= select(@form, @name, @values, @opts) %>
     """
   end
 
