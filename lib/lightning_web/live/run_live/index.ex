@@ -6,7 +6,6 @@ defmodule LightningWeb.RunLive.Index do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
-  import LightningWeb.RunLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -32,12 +31,6 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  # add a last_item key to
-  defp lastify_map(%{} = obj, list_key) when is_atom(list_key) do
-    Map.merge(obj, %{
-      last_item: Enum.at(obj[list_key], 0)
-    })
-  end
 
   defp format_wo_list(wo_list) do
     Enum.map(wo_list, fn wo ->
