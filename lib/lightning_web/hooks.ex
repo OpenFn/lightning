@@ -3,6 +3,7 @@ defmodule LightningWeb.Hooks do
   LiveView Hooks
   """
   import Phoenix.LiveView
+  import Phoenix.Component
 
   @doc """
   Finds and assigns a project to the socket, if a user doesn't have access

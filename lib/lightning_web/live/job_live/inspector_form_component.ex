@@ -79,7 +79,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
     ~H"""
     <div id={"job-#{@id}"}>
       <.form
-        let={f}
+        :let={f}
         for={@changeset}
         id="job-form"
         phx-target={@myself}
@@ -105,14 +105,12 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                 name={:trigger_type}
                 prompt=""
                 id="triggerType"
-                values={
-                  [
-                    Cron: "cron",
-                    Webhook: "webhook",
-                    "On Job Success": "on_job_success",
-                    "On Job Failure": "on_job_failure"
-                  ]
-                }
+                values={[
+                  Cron: "cron",
+                  Webhook: "webhook",
+                  "On Job Success": "on_job_success",
+                  "On Job Failure": "on_job_failure"
+                ]}
               />
             <% end %>
 
@@ -179,11 +177,21 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
           </div>
         </div>
         <Form.divider />
-        <div class="md:grid md:grid-cols-2 md:gap-4">
-          <div class="md:col-span-2">
+        <div class="md:grid md:grid-cols-4 md:gap-4 @container">
+          <div class="col-span-4 @md:col-span-2">
             <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
           </div>
-          <div class="md:col-span-2">
+          <%= if @action == :edit do %>
+            <div class="col-span-4 @md:col-span-2">
+              <.live_component
+                module={LightningWeb.JobLive.ManualRunComponent}
+                current_user={@current_user}
+                id={"manual-job-#{@id}"}
+                job_id={input_value(f, :id)}
+              />
+            </div>
+          <% end %>
+          <div class="md:col-span-4">
             <div
               phx-hook="Editor"
               phx-update="ignore"
@@ -195,7 +203,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
             />
             <Form.hidden_input form={f} id={:body} />
           </div>
-          <div class="sticky bottom-0 bg-white py-2 md:col-span-2 w-full">
+          <div class="sticky bottom-0 bg-white py-2 md:col-span-4 w-full">
             <span>
               <%= live_patch("Cancel",
                 class:

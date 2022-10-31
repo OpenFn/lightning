@@ -21,7 +21,7 @@
   <Layout.centered>
     <div id="login">
       <.form
-        let={f}
+        :let={f}
         for={@conn}
         action={Routes.user_session_path(@conn, :create)}
         as={:user}
@@ -60,7 +60,7 @@
                 <Common.button_white>
                   <a href={@auth_handler_url} class="w-full">
                     <div class="h-full -ml-1">
-                      <Heroicons.Outline.identification class="h-4 w-4 inline-block" />
+                      <Heroicons.identification class="h-4 w-4 inline-block" />
                       <span class="inline-block align-middle">
                         via external provider
                       </span>

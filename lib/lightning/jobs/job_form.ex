@@ -22,6 +22,7 @@ defmodule Lightning.Jobs.JobForm do
   embedded_schema do
     field :project_id, Ecto.UUID
     field :workflow_id, Ecto.UUID
+    field :project_credential_id, Ecto.UUID
     field :trigger_id, Ecto.UUID
 
     field :trigger_type, Ecto.Enum, values: @trigger_types, default: :webhook
@@ -39,7 +40,8 @@ defmodule Lightning.Jobs.JobForm do
     :workflow_id,
     :trigger_id,
     :trigger_cron_expression,
-    :trigger_upstream_job_id
+    :trigger_upstream_job_id,
+    :project_credential_id
   ]
 
   def changeset(struct, params \\ %{}) do
@@ -76,6 +78,7 @@ defmodule Lightning.Jobs.JobForm do
 
   def to_multi(form, attrs) do
     # TODO: Might not actually need attrs
+
     Multi.new()
     |> Multi.run(:workflow, fn repo, _ ->
       form
@@ -111,7 +114,13 @@ defmodule Lightning.Jobs.JobForm do
     |> Multi.run(:job, fn repo, %{workflow: workflow, trigger: trigger} ->
       attrs =
         attrs
-        |> Map.take(["adaptor", "enabled", "body", "name"])
+        |> Map.take([
+          "adaptor",
+          "enabled",
+          "body",
+          "name",
+          "project_credential_id"
+        ])
         |> Map.merge(%{
           "workflow_id" => workflow.id,
           "trigger_id" => trigger.id

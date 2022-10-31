@@ -59,7 +59,7 @@ defmodule LightningWeb.DataclipLiveTest do
           Routes.project_dataclip_edit_path(conn, :new, project.id)
         )
 
-      assert page_title(edit_live) == "New Dataclip · OpenFn Lightning"
+      assert page_title(edit_live) =~ "New Dataclip"
       assert render(edit_live) =~ "Save"
 
       assert edit_live

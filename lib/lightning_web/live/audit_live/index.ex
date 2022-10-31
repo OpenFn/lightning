@@ -23,7 +23,7 @@ defmodule LightningWeb.AuditLive.Index do
                :index,
                &1
              )
-         ), layout: {LightningWeb.LayoutView, "settings.html"}}
+         ), layout: {LightningWeb.LayoutView, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,
@@ -47,15 +47,16 @@ defmodule LightningWeb.AuditLive.Index do
     lhs = assigns.metadata.before
     rhs = assigns.metadata.after
 
-    changes =
-      Enum.zip([lhs |> Map.keys(), lhs |> Map.values(), rhs |> Map.values()])
-
-    assigns = assign(assigns, changes: changes)
+    assigns =
+      assign(assigns,
+        changes:
+          Enum.zip([lhs |> Map.keys(), lhs |> Map.values(), rhs |> Map.values()])
+      )
 
     ~H"""
-    <%= for {field, old, new} <- changes do %>
+    <%= for {field, old, new} <- @changes do %>
       <li><%= field %>&nbsp; <%= old %>
-        <Heroicons.Outline.arrow_right class="h-5 w-5 inline-block mr-2" />
+        <Heroicons.arrow_right class="h-5 w-5 inline-block mr-2" />
         <%= new %></li>
     <% end %>
     """

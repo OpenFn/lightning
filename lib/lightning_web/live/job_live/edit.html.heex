@@ -15,6 +15,7 @@
     <.live_component
       module={LightningWeb.JobLive.InspectorFormComponent}
       id={@job_form.id || :new}
+      current_user={@current_user}
       action={@live_action}
       job_form={@job_form}
       project={@project}

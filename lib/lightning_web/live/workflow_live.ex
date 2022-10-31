@@ -147,22 +147,24 @@ defmodule LightningWeb.WorkflowLive do
     <Layout.page_content>
       <:header>
         <Layout.header title={@page_title} socket={@socket}>
-          <%= live_redirect to: Routes.project_job_index_path(@socket, :index, @project.id) do %>
+          <.link navigate={
+            Routes.project_job_index_path(@socket, :index, @project.id)
+          }>
             <div class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-200 hover:bg-secondary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
               <div class="h-full">
-                <Heroicons.Solid.table class="h-4 w-4 inline-block" />
+                <Heroicons.table_cells solid class="h-4 w-4 inline-block" />
               </div>
             </div>
-          <% end %>
+          </.link>
           &nbsp;&nbsp;
-          <%= live_redirect to: Routes.project_job_edit_path(@socket, :new, @project.id) do %>
+          <.link navigate={Routes.project_job_edit_path(@socket, :new, @project.id)}>
             <Common.button>
               <div class="h-full">
-                <Heroicons.Outline.plus class="h-4 w-4 inline-block" />
+                <Heroicons.plus class="h-4 w-4 inline-block" />
                 <span class="inline-block align-middle">New Job</span>
               </div>
             </Common.button>
-          <% end %>
+          </.link>
         </Layout.header>
       </:header>
       <div class="relative h-full">
@@ -204,6 +206,7 @@ defmodule LightningWeb.WorkflowLive do
                   id={@job_form.id}
                   job_form={@job_form}
                   action={:edit}
+                  current_user={@current_user}
                   project={@project}
                   initial_job_params={@initial_job_params}
                   return_to={

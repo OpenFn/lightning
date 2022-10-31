@@ -9,11 +9,11 @@ defmodule LightningWeb.Components.Icon do
 
   use LightningWeb, :component
 
-  def workflows(assigns), do: Heroicons.Outline.sparkles(assigns)
+  def workflows(assigns), do: Heroicons.sparkles(assigns)
 
-  def runs(assigns), do: Heroicons.Outline.collection(assigns)
+  def runs(assigns), do: Heroicons.rectangle_stack(assigns)
 
-  def dataclips(assigns), do: Heroicons.Outline.cube(assigns)
+  def dataclips(assigns), do: Heroicons.cube(assigns)
 
   def left(assigns) do
     ~H"""
@@ -114,7 +114,7 @@ defmodule LightningWeb.Components.Icon do
 
   defp outer_svg(assigns) do
     default_classes = ~w[h-5 w-5 inline-block]
-    attrs = build_attrs(assigns, default_classes)
+    assigns = assign(assigns, attrs: build_attrs(assigns, default_classes))
 
     ~H"""
     <svg
@@ -123,7 +123,7 @@ defmodule LightningWeb.Components.Icon do
       viewBox="0 0 24 24"
       stroke="currentColor"
       stroke-width="2"
-      {attrs}
+      {@attrs}
     >
       <%= render_slot(@inner_block) %>
     </svg>

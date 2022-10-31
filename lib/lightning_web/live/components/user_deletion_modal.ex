@@ -75,7 +75,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
         close_modal_target={@myself}
       >
         <.form
-          let={f}
+          :let={f}
           for={@scheduled_deletion_changeset}
           phx-change="validate_scheduled_deletion"
           phx-submit="save_scheduled_deletion"

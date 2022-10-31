@@ -135,8 +135,8 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
     ~H"""
     <div id={"project-#{@id}"}>
       <.form
-        let={f}
-        as="auth_provider"
+        :let={f}
+        as={:auth_provider}
         for={@changeset}
         id="auth-provider-form"
         phx-target={@myself}
@@ -268,7 +268,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
 
                   <Common.button color="red" phx-click="disable" phx_target={@myself}>
                     <div class="h-full">
-                      <Heroicons.Outline.trash class="h-4 w-4 inline-block" />
+                      <Heroicons.trash class="h-4 w-4 inline-block" />
                       <span class="inline-block align-middle">Remove</span>
                     </div>
                   </Common.button>
@@ -290,21 +290,21 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
       <% :failed -> %>
         <Common.button color="red" id="test-button">
           <div class="h-full -ml-1">
-            <Heroicons.Solid.x class="h-4 w-4 inline-block" />
+            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Failed</span>
           </div>
         </Common.button>
       <% :success -> %>
         <Common.button color="green" id="test-button">
           <div class="h-full -ml-1">
-            <Heroicons.Solid.check class="h-4 w-4 inline-block" />
+            <Heroicons.check solid class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Success</span>
           </div>
         </Common.button>
       <% :unknown -> %>
         <Common.button_white phx-click="test" phx_target={@myself} id="test-button">
           <div class="h-full -ml-1">
-            <Heroicons.Solid.beaker class="h-4 w-4 inline-block" />
+            <Heroicons.beaker solid class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Test</span>
           </div>
         </Common.button_white>

@@ -120,7 +120,7 @@ defmodule LightningWeb.RunLive.Components do
           <% end %>
 
           <button class="w-auto rounded-full bg-gray-50 p-3">
-            <Heroicons.Outline.chevron_down class="h-5 w-5" />
+            <Heroicons.chevron_down class="h-5 w-5" />
           </button>
         </div>
       </td>

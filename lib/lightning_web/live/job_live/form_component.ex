@@ -4,7 +4,7 @@ defmodule LightningWeb.JobLive.FormComponent do
   """
   import Ecto.Changeset, only: [get_field: 2]
 
-  import Phoenix.LiveView,
+  import Phoenix.Component,
     only: [assign: 2, assign: 3]
 
   alias Lightning.{Jobs, AdaptorRegistry, Projects}
