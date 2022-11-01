@@ -40,35 +40,4 @@ defmodule LightningWeb.RunLive.Index do
         Invocation.list_work_orders_for_project(socket.assigns.project, params)
     )
   end
-
-  defp format_time(time) when is_nil(time) do
-    ""
-  end
-
-  defp format_time(time) do
-    time |> Timex.from_now(Timex.now(), "en")
-  end
-
-  def run_time(assigns) do
-    run = assigns[:run]
-
-    if run.finished_at do
-      time_taken = Timex.diff(run.finished_at, run.started_at, :milliseconds)
-
-      assigns =
-        assigns
-        |> assign(
-          time_since: run.started_at |> format_time(),
-          time_taken: time_taken
-        )
-
-      ~H"""
-      <%= @time_since %> (<%= @time_taken %> ms)
-      """
-    else
-      ~H"""
-
-      """
-    end
-  end
 end
