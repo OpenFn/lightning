@@ -38,6 +38,21 @@ Hooks.AssocListChange = {
   },
 };
 
+Hooks.AutoResize = {
+  mounted() {
+    this.parent = this.el.parentElement;
+    this.el.style.height = `${this.parent.clientHeight - 1}px`;
+
+    this.listener = addEventListener('resize', _event => {
+      this.el.style.height = `${this.parent.clientHeight - 1}px`;
+      console.log(this.parent.clientHeight);
+    });
+  },
+  destroyed() {
+    removeEventListener('resize', this.listener);
+  },
+};
+
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")

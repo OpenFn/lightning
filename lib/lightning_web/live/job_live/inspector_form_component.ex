@@ -77,7 +77,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={"job-#{@id}"}>
+    <div class="h-full" id={"job-#{@id}"}>
       <.form
         :let={f}
         for={@changeset}
@@ -85,125 +85,137 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"
+        class="h-full"
       >
-        <div class="md:grid md:grid-cols-2 md:gap-4">
-          <div class="md:col-span-1">
-            <Form.text_field form={f} id={:name} />
-          </div>
-          <div class="md:col-span-1">
-            <Form.check_box form={f} id={:enabled} />
-          </div>
+        <div class="flex flex-col h-full">
+          <div class="grow overflow-y-auto p-3">
+            <!-- FORM -->
+            <div class="md:grid md:grid-cols-4 md:gap-4  @container">
+              <div class="md:col-span-2">
+                <Form.text_field form={f} id={:name} />
+              </div>
+              <div class="md:col-span-2">
+                <Form.check_box form={f} id={:enabled} />
+              </div>
 
-          <div class="md:col-span-1">
-            <%= label f, :trigger_type, class: "block" do %>
-              <span class="block text-sm font-medium text-secondary-700">
-                Trigger
-              </span>
-              <%= error_tag(f, :trigger_type, class: "block w-full rounded-md") %>
-              <Form.select_field
-                form={f}
-                name={:trigger_type}
-                prompt=""
-                id="triggerType"
-                values={[
-                  Cron: "cron",
-                  Webhook: "webhook",
-                  "On Job Success": "on_job_success",
-                  "On Job Failure": "on_job_failure"
-                ]}
-              />
-            <% end %>
+              <div class="md:col-span-2">
+                <%= label f, :trigger_type, class: "block" do %>
+                  <span class="block text-sm font-medium text-secondary-700">
+                    Trigger
+                  </span>
+                  <%= error_tag(f, :trigger_type, class: "block w-full rounded-md") %>
+                  <Form.select_field
+                    form={f}
+                    name={:trigger_type}
+                    prompt=""
+                    id="triggerType"
+                    values={[
+                      Cron: "cron",
+                      Webhook: "webhook",
+                      "On Job Success": "on_job_success",
+                      "On Job Failure": "on_job_failure"
+                    ]}
+                  />
+                <% end %>
 
-            <%= if f.data.id && @id do %>
-              <a
-                id="copyWebhookUrl"
-                href={Routes.webhooks_url(@socket, :create, [@id])}
-                onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-                target="_blank"
-              >
-                Copy webhook url
-              </a>
-            <% end %>
+                <%= if f.data.id && @id do %>
+                  <a
+                    id="copyWebhookUrl"
+                    href={Routes.webhooks_url(@socket, :create, [@id])}
+                    onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                    target="_blank"
+                  >
+                    Copy webhook url
+                  </a>
+                <% end %>
 
-            <%= if requires_upstream_job?(f.source) do %>
-              <%= label f, :trigger_upstream_job_id, class: "block" do %>
-                <span class="block text-sm font-medium text-secondary-700">
-                  Upstream Job
-                </span>
-                <%= error_tag(f, :trigger_upstream_job_id,
-                  class: "block w-full rounded-md"
-                ) %>
-                <Form.select_field
+                <%= if requires_upstream_job?(f.source) do %>
+                  <%= label f, :trigger_upstream_job_id, class: "block" do %>
+                    <span class="block text-sm font-medium text-secondary-700">
+                      Upstream Job
+                    </span>
+                    <%= error_tag(f, :trigger_upstream_job_id,
+                      class: "block w-full rounded-md"
+                    ) %>
+                    <Form.select_field
+                      form={f}
+                      name={:trigger_upstream_job_id}
+                      prompt=""
+                      id="upstreamJob"
+                      values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+                    />
+                  <% end %>
+                <% end %>
+                <%= if requires_cron_job?(f.source) do %>
+                  <Form.text_field form={f} id={:trigger_cron_expression} />
+                <% end %>
+              </div>
+
+              <div class="md:col-span-2">
+                <Components.Jobs.credential_select
                   form={f}
-                  name={:trigger_upstream_job_id}
-                  prompt=""
-                  id="upstreamJob"
-                  values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+                  credentials={@credentials}
                 />
+                <button
+                  id="new-credential-launcher"
+                  type="button"
+                  phx-click={
+                    Phoenix.LiveView.JS.push("new-credential", value: @job_params)
+                  }
+                >
+                  New credential
+                </button>
+              </div>
+
+              <div class="md:col-span-2">
+                <Components.Jobs.adaptor_name_select
+                  form={f}
+                  adaptor_name={@adaptor_name}
+                  adaptors={@adaptors}
+                />
+              </div>
+
+              <div class="md:col-span-2">
+                <Components.Jobs.adaptor_version_select
+                  form={f}
+                  adaptor_name={@adaptor_name}
+                  versions={@versions}
+                />
+              </div>
+              <div class="col-span-4">
+                <Form.divider />
+              </div>
+              <div class="col-span-4 @md:col-span-2">
+                <.compiler_component adaptor={
+                  Phoenix.HTML.Form.input_value(f, :adaptor)
+                } />
+              </div>
+              <%= if @action == :edit do %>
+                <div class="col-span-4 @md:col-span-2">
+                  <.live_component
+                    module={LightningWeb.JobLive.ManualRunComponent}
+                    current_user={@current_user}
+                    id={"manual-job-#{@id}"}
+                    job_id={input_value(f, :id)}
+                  />
+                </div>
               <% end %>
-            <% end %>
-            <%= if requires_cron_job?(f.source) do %>
-              <Form.text_field form={f} id={:trigger_cron_expression} />
-            <% end %>
-          </div>
-
-          <div class="md:col-span-1">
-            <Components.Jobs.credential_select form={f} credentials={@credentials} />
-            <button
-              id="new-credential-launcher"
-              type="button"
-              phx-click={
-                Phoenix.LiveView.JS.push("new-credential", value: @job_params)
-              }
-            >
-              New credential
-            </button>
-          </div>
-
-          <div class="md:col-span-1">
-            <Components.Jobs.adaptor_name_select
-              form={f}
-              adaptor_name={@adaptor_name}
-              adaptors={@adaptors}
-            />
-          </div>
-
-          <div class="md:col-span-1">
-            <Components.Jobs.adaptor_version_select
-              form={f}
-              adaptor_name={@adaptor_name}
-              versions={@versions}
-            />
-          </div>
-        </div>
-        <Form.divider />
-        <div class="md:grid md:grid-cols-4 md:gap-4 @container">
-          <div class="col-span-4 @md:col-span-2">
-            <.compiler_component adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)} />
-          </div>
-          <%= if @action == :edit do %>
-            <div class="col-span-4 @md:col-span-2">
-              <.live_component
-                module={LightningWeb.JobLive.ManualRunComponent}
-                current_user={@current_user}
-                id={"manual-job-#{@id}"}
-                job_id={input_value(f, :id)}
-              />
+              <div class="md:col-span-4">
+                <div
+                  phx-hook="Editor"
+                  phx-update="ignore"
+                  id="editor-component"
+                  class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
+                  data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
+                  data-hidden-input={Phoenix.HTML.Form.input_id(f, :body)}
+                  data-job-id={@id}
+                />
+                <Form.hidden_input form={f} id={:body} />
+              </div>
             </div>
-          <% end %>
-          <div class="md:col-span-4">
-            <div
-              phx-hook="Editor"
-              phx-update="ignore"
-              id="editor-component"
-              class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
-              data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
-              data-hidden-input={Phoenix.HTML.Form.input_id(f, :body)}
-              data-job-id={@id}
-            />
-            <Form.hidden_input form={f} id={:body} />
           </div>
-          <div class="sticky bottom-0 bg-white py-2 md:col-span-4 w-full">
+          <div class="flex-none sticky p-3">
+            <!-- BUTTONS -->
             <span>
               <%= live_patch("Cancel",
                 class:
