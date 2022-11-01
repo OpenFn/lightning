@@ -3,22 +3,15 @@
     <Layout.header socket={@socket} title={@page_title} />
   </:header>
   <Layout.centered>
-    <%= if @live_action == :show do %>
-      <.show_run {assigns} />
-    <% else %>
-      <LightningWeb.RunLive.Components.table>
-        <%= for wo <- @page.entries do %>
-          <.live_component
-            module={LightningWeb.RunLive.Components.WorkOrder}
-            id={wo.id}
-            work_order={wo}
-          />
-        <% end %>
-      </LightningWeb.RunLive.Components.table>
-      <LightningWeb.Pagination.pagination_bar
-        page={@page}
-        url={@pagination_path}
-      />
-    <% end %>
+    <LightningWeb.RunLive.Components.table>
+      <%= for wo <- @page.entries do %>
+        <.live_component
+          module={LightningWeb.RunLive.Components.WorkOrder}
+          id={wo.id}
+          work_order={wo}
+        />
+      <% end %>
+    </LightningWeb.RunLive.Components.table>
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   </Layout.centered>
 </Layout.page_content>
