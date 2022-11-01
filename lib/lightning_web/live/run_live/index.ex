@@ -41,52 +41,6 @@ defmodule LightningWeb.RunLive.Index do
     )
   end
 
-  defp apply_action(socket, :show, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Run")
-    |> assign(:run, Invocation.get_run_with_job!(id))
-  end
-
-  def show_run(assigns) do
-    ~H"""
-    <.card>
-      <.card_content
-        heading={"Run #{@run.id}"}
-        category={"Run exited with code #{@run.exit_code}"}
-      >
-        <.p>
-          <b>Started:</b> <%= @run.started_at %>
-        </.p>
-        <.p>
-          <b>Finished:</b> <%= @run.finished_at %>
-        </.p>
-        <.p>
-          <b>Job:</b> <%= @run.job.name %>
-        </.p>
-        <br />
-        <.p>
-          <b>Logs</b>
-        </.p>
-        <div class="font-mono text-sm">
-          <%= for line <- @run.log || [] do %>
-            <li class="list-none">
-              <%= raw(line |> String.replace(" ", "&nbsp;")) %>
-            </li>
-          <% end %>
-        </div>
-      </.card_content>
-      <.card_footer>
-        <.link
-          navigate={Routes.project_run_index_path(@socket, :index, @project.id)}
-          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
-        >
-          Back
-        </.link>
-      </.card_footer>
-    </.card>
-    """
-  end
-
   defp format_time(time) when is_nil(time) do
     ""
   end
