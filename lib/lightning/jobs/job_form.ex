@@ -52,6 +52,10 @@ defmodule Lightning.Jobs.JobForm do
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end
 
+  def put_body(struct, body) do
+    struct |> put_change(:body, body)
+  end
+
   def from_job(job) do
     job = Lightning.Repo.preload(job, [:workflow, :trigger])
 
@@ -113,18 +117,9 @@ defmodule Lightning.Jobs.JobForm do
     end)
     |> Multi.run(:job, fn repo, %{workflow: workflow, trigger: trigger} ->
       attrs =
-        attrs
-        |> Map.take([
-          "adaptor",
-          "enabled",
-          "body",
-          "name",
-          "project_credential_id"
-        ])
-        |> Map.merge(%{
-          "workflow_id" => workflow.id,
-          "trigger_id" => trigger.id
-        })
+        Ecto.Changeset.apply_changes(form)
+        |> Map.take([:adaptor, :enabled, :body, :name, :project_credential_id])
+        |> Map.merge(%{workflow_id: workflow.id, trigger_id: trigger.id})
 
       form
       |> get_field(:id)

@@ -52,7 +52,11 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ project.name
 
-      assert has_element?(view, "#job-#{job.id}")
+      assert has_element?(view, "##{job.id}")
+
+      assert view
+             |> form("#job-form", job_form: %{enabled: false, name: nil})
+             |> render_change() =~ "can&#39;t be blank"
     end
   end
 
@@ -125,20 +129,20 @@ defmodule LightningWeb.WorkflowLiveTest do
              |> render() =~ upstream_job.id,
              "Should have the upstream job selected"
 
-      assert view
-             |> form("#job-form",
-               job_form: %{adaptor_name: "@openfn/language-common"}
-             )
-             |> render_change()
+      view
+      |> element("#adaptorField")
+      |> render_change(%{adaptor_name: "@openfn/language-common"})
+
+      view
+      |> element("#editor-component")
+      |> render_hook(:job_body_changed, %{source: "some body"})
 
       assert view
              |> form("#job-form",
                job_form: %{
-                 body: "some body",
                  enabled: true,
                  name: "some name",
-                 trigger_type: "on_job_failure",
-                 adaptor: "@openfn/language-common@latest"
+                 trigger_type: "on_job_failure"
                }
              )
              |> render_submit()
