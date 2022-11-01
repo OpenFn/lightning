@@ -53,6 +53,10 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ project.name
 
       assert has_element?(view, "#job-#{job.id}")
+
+      assert view
+             |> form("#job-form", job_form: %{enabled: false, name: nil})
+             |> render_change() =~ "can&#39;t be blank"
     end
   end
 
