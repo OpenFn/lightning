@@ -17,6 +17,7 @@ defmodule LightningWeb.RunLive.Components.Attempt do
   @impl true
   def render(assigns) do
     last_run = Enum.at(assigns.attempt.runs, 0)
+
     ~H"""
     <td class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6">
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">

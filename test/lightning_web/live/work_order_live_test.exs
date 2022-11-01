@@ -15,8 +15,8 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :create_project_for_current_user
 
   describe "Index" do
-
-    test "When run A,B and C are successful, workflow run status is 'Success'", %{conn: conn, project: project} do
+    test "When run A,B and C are successful, workflow run status is 'Success'",
+         %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
           project_id: project.id,
@@ -36,15 +36,15 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       job_fixture(
-          trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
-          body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
-        )
+        trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
+        body: ~s[fn(state => state)],
+        workflow_id: job_a.workflow_id,
+        project_credential_id:
+          project_credential_fixture(
+            name: "my credential",
+            body: %{"credential" => "body"}
+          ).id
+      )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
 
@@ -78,13 +78,19 @@ defmodule LightningWeb.RunWorkOrderTest do
       Pipeline.process(attempt_run)
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, job_a.workflow.project_id))
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
 
-      td = view |> element("section#inner_content tr > td:last-child") |> render()
+      td =
+        view |> element("section#inner_content tr > td:last-child") |> render()
+
       assert td =~ "Success"
     end
 
-    test "When run A and B are successful but C fails, workflow run status is 'Failure'", %{conn: conn, project: project} do
+    test "When run A and B are successful but C fails, workflow run status is 'Failure'",
+         %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
           project_id: project.id,
@@ -104,15 +110,15 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       job_fixture(
-          trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
-          body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
-        )
+        trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
+        body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
+        workflow_id: job_a.workflow_id,
+        project_credential_id:
+          project_credential_fixture(
+            name: "my credential",
+            body: %{"credential" => "body"}
+          ).id
+      )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
 
@@ -146,11 +152,15 @@ defmodule LightningWeb.RunWorkOrderTest do
       Pipeline.process(attempt_run)
 
       {:ok, view, _html} =
-        live(conn, Routes.project_run_index_path(conn, :index, job_a.workflow.project_id))
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
 
-      td = view |> element("section#inner_content tr > td:last-child") |> render()
+      td =
+        view |> element("section#inner_content tr > td:last-child") |> render()
+
       assert td =~ "Failure"
     end
-
   end
 end
