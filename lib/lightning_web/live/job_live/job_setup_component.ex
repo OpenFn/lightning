@@ -7,7 +7,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
 
   import Ecto.Changeset, only: [get_field: 2]
 
-  alias Lightning.{Jobs, AdaptorRegistry, Projects}
+  alias Lightning.{Jobs, Projects}
   alias LightningWeb.Components.Form
   alias Jobs.JobForm
 
@@ -20,12 +20,10 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
         } = assigns,
         socket
       ) do
-    changeset = JobForm.changeset(job_form, initial_job_params)
-
-    {adaptor_name, _, adaptors, versions} =
-      get_adaptor_version_options(
-        changeset
-        |> Ecto.Changeset.fetch_field!(:adaptor)
+    changeset =
+      JobForm.changeset(
+        job_form,
+        initial_job_params
       )
 
     credentials =
@@ -39,11 +37,8 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptors, adaptors)
      |> assign(:credentials, credentials)
      |> assign(:upstream_jobs, upstream_jobs)
-     |> assign(:versions, versions)
      |> assign(:job_form, job_form)
      |> assign(:job_body, job_form.body)
      |> assign(:changeset, changeset)
@@ -51,27 +46,30 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
   end
 
   def validate(%{"job_form" => job_params}, socket) do
-    job_params = coerce_params_for_adaptor_list(job_params)
-
     changeset =
-      JobForm.changeset(socket.assigns.job_form, job_params)
+      JobForm.changeset(socket.assigns.changeset, job_params)
       |> Map.put(:action, :validate)
 
-    {adaptor_name, _, adaptors, versions} =
-      get_adaptor_version_options(
-        changeset
-        |> Ecto.Changeset.fetch_field!(:adaptor)
-      )
-
-    assign(socket, :changeset, changeset)
-    |> assign(:adaptor_name, adaptor_name)
-    |> assign(:adaptors, adaptors)
-    |> assign(:versions, versions)
-    |> assign(:job_params, job_params)
+    assign(socket, changeset: changeset, job_params: job_params)
   end
 
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     {:noreply, socket |> assign(job_body: source)}
+  end
+
+  @impl true
+  def handle_event(
+        "adaptor_name_change",
+        %{"adaptor_component" => %{"adaptor_name" => adaptor_name}},
+        socket
+      ) do
+    changeset =
+      JobForm.changeset(socket.assigns.changeset, %{
+        "adaptor" => "#{adaptor_name}@latest"
+      })
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, changeset: changeset)}
   end
 
   @impl true
@@ -82,31 +80,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
 
       "save" ->
         {:noreply, save(params, socket)}
-    end
-  end
-
-  @doc """
-  Coerce any changes to the "Adaptor" dropdown into a new selection on the
-  Version dropdown.
-  """
-  @spec coerce_params_for_adaptor_list(%{String.t() => String.t()}) ::
-          %{}
-  def coerce_params_for_adaptor_list(job_params) do
-    {package, _version} =
-      AdaptorRegistry.resolve_package_name(job_params["adaptor"])
-
-    {package_group, _} =
-      AdaptorRegistry.resolve_package_name(job_params["adaptor_name"])
-
-    cond do
-      is_nil(package_group) ->
-        Map.merge(job_params, %{"adaptor" => ""})
-
-      package_group !== package ->
-        Map.merge(job_params, %{"adaptor" => "#{package_group}@latest"})
-
-      true ->
-        job_params
     end
   end
 

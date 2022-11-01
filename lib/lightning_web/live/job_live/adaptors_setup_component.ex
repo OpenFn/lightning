@@ -5,28 +5,22 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
 
   use LightningWeb, :live_component
 
+  alias Lightning.AdaptorRegistry
   alias Lightning.Jobs.JobForm
+  alias LightningWeb.Components.Form
 
-  def update(
-        %{
-          form: form
-        } = assigns,
-        socket
-      ) do
-    changeset = JobForm.changeset(form)
-
+  @impl true
+  def update(%{form: form, parent: parent} = assigns, socket) do
     {adaptor_name, _, adaptors, versions} =
-      get_adaptor_version_options(
-        changeset
-        |> Ecto.Changeset.fetch_field!(:adaptor)
-      )
+      get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
     {:ok,
      socket
-     |> assign(assigns)
      |> assign(:adaptor_name, adaptor_name)
      |> assign(:adaptors, adaptors)
-     |> assign(:changeset, changeset)}
+     |> assign(:versions, versions)
+     |> assign(:parent, parent)
+     |> assign(:form, form)}
   end
 
   def get_adaptor_version_options(adaptor) do
@@ -60,35 +54,26 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
     {module_name, version, adaptor_names, versions}
   end
 
-  def validate(%{"job_form" => job_params}, socket) do
-    job_params = coerce_params_for_adaptor_list(job_params)
-
-    changeset =
-      JobForm.changeset(socket.assigns.job_form, job_params)
-      |> Map.put(:action, :validate)
-
-    {adaptor_name, _, adaptors, versions} =
-      get_adaptor_version_options(
-        changeset
-        |> Ecto.Changeset.fetch_field!(:adaptor)
-      )
-
-    assign(socket, :changeset, changeset)
-    |> assign(:adaptor_name, adaptor_name)
-    |> assign(:adaptors, adaptors)
-    |> assign(:versions, versions)
-    |> assign(:job_params, job_params)
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={@id}>
+    <div>
       <div class="md:col-span-1">
-        <Components.Jobs.adaptor_name_select
-          form={@form}
-          adaptor_name={@adaptor_name}
-          adaptors={@adaptors}
+        <Form.label_field
+          form={:adaptor_component}
+          id={:adaptor_name}
+          title="Adaptor"
+          for="adaptorField"
+        />
+        <Form.select_field
+          form={:adaptor_component}
+          name={:adaptor_name}
+          prompt=""
+          selected={@adaptor_name}
+          id="adaptorField"
+          values={@adaptors}
+          phx-change="adaptor_name_change"
+          phx-target={@parent}
         />
       </div>
 
