@@ -45,7 +45,6 @@ Hooks.AutoResize = {
 
     this.listener = addEventListener('resize', _event => {
       this.el.style.height = `${this.parent.clientHeight - 1}px`;
-      console.log(this.parent.clientHeight);
     });
   },
   destroyed() {
