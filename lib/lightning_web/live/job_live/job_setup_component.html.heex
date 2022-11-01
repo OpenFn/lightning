@@ -1,6 +1,6 @@
 <div id={"job-#{@id}"}>
   <.form
-    let={f}
+    :let={f}
     for={@changeset}
     id="job-form"
     phx-target={@myself}
@@ -26,14 +26,12 @@
             name={:trigger_type}
             prompt=""
             id="triggerType"
-            values={
-              [
-                Cron: "cron",
-                Webhook: "webhook",
-                "On Job Success": "on_job_success",
-                "On Job Failure": "on_job_failure"
-              ]
-            }
+            values={[
+              Cron: "cron",
+              Webhook: "webhook",
+              "On Job Success": "on_job_success",
+              "On Job Failure": "on_job_failure"
+            ]}
           />
         <% end %>
 
@@ -102,7 +100,7 @@
           class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
           data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
           data-source={@job_body}
-          data-change-event={"job_body_changed"}
+          data-change-event="job_body_changed"
           phx-target={@myself}
         />
       </div>
