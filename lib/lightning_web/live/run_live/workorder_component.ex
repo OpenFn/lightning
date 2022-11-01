@@ -59,9 +59,9 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
             phx-target={@myself}
           >
             <%= if @show_details do %>
-              <Heroicons.Outline.chevron_up class="h-5 w-5" />
+              <Heroicons.chevron_up outline class="h-5 w-5" />
             <% else %>
-              <Heroicons.Outline.chevron_down class="h-5 w-5" />
+              <Heroicons.chevron_down outline class="h-5 w-5" />
             <% end %>
           </button>
         </div>

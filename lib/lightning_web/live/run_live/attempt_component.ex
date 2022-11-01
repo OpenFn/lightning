@@ -22,7 +22,7 @@ defmodule LightningWeb.RunLive.Components.Attempt do
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
         <li>
           <span class="flex items-center">
-            <Heroicons.Solid.clock class="mr-1 h-5 w-5" />
+            <Heroicons.clock solid class="mr-1 h-5 w-5" />
             <span>
               Re-run at <%= last_run.finished_at
               |> Calendar.strftime("%c") %>
