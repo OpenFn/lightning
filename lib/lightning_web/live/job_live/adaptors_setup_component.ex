@@ -5,12 +5,10 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
 
   use LightningWeb, :live_component
 
-  alias Lightning.AdaptorRegistry
-  alias Lightning.Jobs.JobForm
   alias LightningWeb.Components.Form
 
   @impl true
-  def update(%{form: form, parent: parent} = assigns, socket) do
+  def update(%{form: form, parent: parent}, socket) do
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
@@ -55,10 +53,22 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
   end
 
   @impl true
+  def handle_event(
+        "adaptor_name_change",
+        %{"adaptor_component" => %{"adaptor_name" => adaptor_name}},
+        socket
+      ) do
+    {mod, id} = socket.assigns.parent
+    send_update(mod, id: id, adaptor: "#{adaptor_name}@latest")
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div>
-      <div class="md:col-span-1">
+      <div class="md:col-span-2">
         <Form.label_field
           form={:adaptor_component}
           id={:adaptor_name}
@@ -73,11 +83,11 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
           id="adaptorField"
           values={@adaptors}
           phx-change="adaptor_name_change"
-          phx-target={@parent}
+          phx-target={@myself}
         />
       </div>
 
-      <div class="md:col-span-1">
+      <div class="md:col-span-2">
         <Components.Jobs.adaptor_version_select
           form={@form}
           adaptor_name={@adaptor_name}

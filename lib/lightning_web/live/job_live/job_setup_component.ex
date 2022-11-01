@@ -13,6 +13,20 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
 
   @impl true
   def update(
+        %{adaptor: adaptor},
+        socket
+      ) do
+    changeset =
+      JobForm.changeset(socket.assigns.changeset, %{
+        "adaptor" => adaptor
+      })
+      |> Map.put(:action, :validate)
+
+    {:ok, assign(socket, changeset: changeset)}
+  end
+
+  @impl true
+  def update(
         %{
           job_form: job_form,
           project: project,
@@ -55,21 +69,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
 
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     {:noreply, socket |> assign(job_body: source)}
-  end
-
-  @impl true
-  def handle_event(
-        "adaptor_name_change",
-        %{"adaptor_component" => %{"adaptor_name" => adaptor_name}},
-        socket
-      ) do
-    changeset =
-      JobForm.changeset(socket.assigns.changeset, %{
-        "adaptor" => "#{adaptor_name}@latest"
-      })
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, changeset: changeset)}
   end
 
   @impl true

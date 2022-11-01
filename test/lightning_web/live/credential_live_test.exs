@@ -463,7 +463,7 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
         )
 
-      assert has_element?(view, "#job-#{job.id}")
+      assert has_element?(view, "##{job.id}")
 
       # open the new credential modal
 
