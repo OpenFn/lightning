@@ -313,7 +313,7 @@ defmodule Lightning.InvocationTest do
       [actual_wo] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
-        })
+        }).entries()
 
       # last created attempt should be first in work_order.attempts list
 
@@ -337,7 +337,7 @@ defmodule Lightning.InvocationTest do
       [actual_wo] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
-        })
+        }).entries()
 
       actual_last_attempt = Enum.at(actual_wo.attempts, 0)
 
