@@ -182,7 +182,6 @@ defmodule LightningWeb.WorkflowLive do
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
               <div
                 class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-                phx-hook="AutoResize"
                 id="job-pane"
               >
                 <.live_component
@@ -206,7 +205,6 @@ defmodule LightningWeb.WorkflowLive do
             <div class="absolute w-1/3 inset-y-0 right-0 z-10">
               <div
                 class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-                phx-hook="AutoResize"
                 id="job-pane"
               >
                 <.live_component
@@ -249,7 +247,7 @@ defmodule LightningWeb.WorkflowLive do
         <% end %>
         <div
           phx-hook="WorkflowDiagram"
-          class="h-full w-full fixed"
+          class="h-full w-full"
           id={"hook-#{@project.id}"}
           phx-update="ignore"
           base-path={Routes.project_workflow_path(@socket, :show, @project.id)}
