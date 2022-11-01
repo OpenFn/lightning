@@ -179,8 +179,11 @@ defmodule LightningWeb.WorkflowLive do
         <% end %>
         <%= case @live_action do %>
           <% :new_job -> %>
-            <div class="absolute top-0 right-0 m-2 z-10">
-              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+            <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
+              <div
+                class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
+                id="job-pane"
+              >
                 <.live_component
                   module={LightningWeb.JobLive.InspectorFormComponent}
                   id="new-job"
@@ -199,8 +202,11 @@ defmodule LightningWeb.WorkflowLive do
               </div>
             </div>
           <% :edit_job -> %>
-            <div class="absolute top-0 right-0 m-2 z-10">
-              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+            <div class="absolute w-1/3 inset-y-0 right-0 z-10">
+              <div
+                class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
+                id="job-pane"
+              >
                 <.live_component
                   module={LightningWeb.JobLive.InspectorFormComponent}
                   id={@job_form.id}
