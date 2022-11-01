@@ -12,16 +12,18 @@ and this project adheres to
 - create adaptor credentials through a form
 - Redirect users to projects list page when they click on Admin Settings menu
 - Move job, project, input and output Dataclips to Run table
-- Reverse the relationship between Jobs and Triggers,
-  Triggers now can exist on their own; setting the stage for branching and merging
-  workflows
+- Reverse the relationship between Jobs and Triggers, Triggers now can exist on
+  their own; setting the stage for branching and merging workflows
 - Updated Elixir and frontend dependencies
-- [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not compatible.
+- [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not
+  compatible.
 - Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.
-- Added the ability to Run an existing Job with any dataclip uuid from the Job form
+- Added the ability to Run an existing Job with any dataclip uuid from the Job
+  form
 - Upgraded LiveView to 0.18.0
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel
+- Split JobLive.InspectorFormComponent into different plug-able subcomponents
 
 ## [0.2.0] - 2022-09-12
 
