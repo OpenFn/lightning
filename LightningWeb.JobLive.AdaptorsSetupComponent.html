@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>LightningWeb.UserSettingsView — Lightning v0.2.0</title>
+    <title>LightningWeb.JobLive.AdaptorsSetupComponent — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,16 +101,20 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/user_settings_view.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/adaptors_setup_component.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.UserSettingsView</span> 
+  <span translate="no">LightningWeb.JobLive.AdaptorsSetupComponent</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>AdaptorsSetupComponent</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -129,41 +133,9 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#__resource__/0" translate="no">__resource__()</a>
+          <a href="#get_adaptor_version_options/1" translate="no">get_adaptor_version_options(adaptor)</a>
 
         </div>
-
-          <div class="summary-synopsis"><p>The resource name, as an atom, for this view</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#edit.html/1" translate="no">edit.html(arg)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#render/2" translate="no">render(template, assigns \\ %{})</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Renders the given template locally.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#template_not_found/2" translate="no">template_not_found(template, assigns)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Callback invoked when no template is found.
-By default it raises but can be customized
-to render a particular template.</p></div>
 
       </div>
 
@@ -181,38 +153,16 @@ to render a particular template.</p></div>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="__resource__/0">
+<section class="detail" id="get_adaptor_version_options/1">
 
   <div class="detail-header">
-    <a href="#__resource__/0" class="detail-link" title="Link to this function">
+    <a href="#get_adaptor_version_options/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">__resource__()</h1>
+    <h1 class="signature" translate="no">get_adaptor_version_options(adaptor)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/user_settings_view.ex#L2" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>The resource name, as an atom, for this view</p>
-  </section>
-</section>
-<section class="detail" id="edit.html/1">
-
-  <div class="detail-header">
-    <a href="#edit.html/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">edit.html(arg)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/user_settings_view.ex#L1" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/adaptors_setup_component.ex#L24" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -223,60 +173,6 @@ Functions
   <section class="docstring">
 
 
-  </section>
-</section>
-<section class="detail" id="render/2">
-
-    <span id="render/1"></span>
-
-  <div class="detail-header">
-    <a href="#render/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">render(template, assigns \\ %{})</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/user_settings_view.ex#L2" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Renders the given template locally.</p>
-  </section>
-</section>
-<section class="detail" id="template_not_found/2">
-
-  <div class="detail-header">
-    <a href="#template_not_found/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">template_not_found(template, assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/user_settings_view.ex#L2" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> template_not_found(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">no_return</a>()</pre>
-
-      </div>
-
-<p>Callback invoked when no template is found.
-By default it raises but can be customized
-to render a particular template.</p>
   </section>
 </section>
 
