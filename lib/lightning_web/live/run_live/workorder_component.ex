@@ -8,7 +8,16 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
 
   @impl true
   def update(assigns, socket) do
-    {:ok, socket |> assign(assigns)}
+    last_attempt = Enum.at(assigns.work_order.attempts, 0)
+    last_run = Enum.at(last_attempt.runs, 0)
+
+    socket =
+      socket
+      |> assign(assigns)
+      |> assign(:last_attempt, last_attempt)
+      |> assign(:last_run, last_run)
+
+    {:ok, socket}
   end
 
   @impl true
@@ -19,8 +28,6 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
   @impl true
   def render(assigns) do
     assigns = assigns |> assign_new(:show_details, fn -> false end)
-    last_attempt = Enum.at(assigns.work_order.attempts, 0)
-    last_run = Enum.at(last_attempt.runs, 0)
 
     ~H"""
     <tr class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white">
@@ -37,20 +44,15 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
         <% end %>
       </td>
       <td class="my-auto p-6">
-        <%= last_run.finished_at |> Calendar.strftime("%c") %>
+        <%= @last_run.finished_at |> Calendar.strftime("%c") %>
       </td>
       <td class="my-auto p-6">
         <div class="flex content-center justify-between">
-          <%= case last_run.exit_code do %>
+          <%= case @last_run.exit_code do %>
             <% val when val == 0 -> %>
               <.success_pill />
-            <% val when val == 1-> %>
-              <.failure_pill>Failure</.failure_pill>
-            <% val when val == 2-> %>
-              <.failure_pill>Timeout</.failure_pill>
-            <% val when val > 2-> %>
-              <.failure_pill>Crashed</.failure_pill>
             <% _ -> %>
+              <.failure_pill>Failure</.failure_pill>
           <% end %>
 
           <button
