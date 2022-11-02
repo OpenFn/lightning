@@ -15,6 +15,77 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :create_project_for_current_user
 
   describe "Index" do
+    test "lists all workorders", %{
+      conn: conn,
+      project: project
+    } do
+      job =
+        workflow_job_fixture(
+          name: "my workflow",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      {:ok, attempt_run} =
+        AttemptRun.new()
+        |> Ecto.Changeset.put_assoc(
+          :attempt,
+          Attempt.changeset(%Attempt{}, %{
+            work_order_id: work_order.id,
+            reason_id: reason.id
+          })
+        )
+        |> Ecto.Changeset.put_assoc(
+          :run,
+          Run.changeset(%Run{}, %{
+            project_id: job.workflow.project_id,
+            job_id: job.id,
+            input_dataclip_id: dataclip.id
+          })
+        )
+        |> Lightning.Repo.insert()
+
+      Pipeline.process(attempt_run)
+      %{work_order: work_order, reason: reason}
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Runs"
+
+      table = view |> element("section#inner_content table") |> render()
+      assert table =~ "my workflow"
+      assert table =~ "#{work_order.reason_id}"
+
+      # toggle work_order details
+      # TODO move to test work_order_component
+
+      assert view
+             |> element(
+               "section#inner_content table > tbody > tr:first-child button[phx-click='toggle-details']"
+             )
+             |> render_click() =~ "attempt-#{attempt_run.attempt_id}"
+
+      refute view
+             |> element(
+               "section#inner_content table > tbody > tr:first-child button[phx-click='toggle-details']"
+             )
+             |> render_click() =~ "attempt-#{attempt_run.attempt_id}"
+    end
+
     test "When run A,B and C are successful, workflow run status is 'Success'",
          %{conn: conn, project: project} do
       job_a =
@@ -84,7 +155,11 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       td =
-        view |> element("section#inner_content tr > td:last-child") |> render()
+        view
+        |> element(
+          "section#inner_content table > tbody > tr:first-child > td:last-child"
+        )
+        |> render()
 
       assert td =~ "Success"
     end
@@ -158,9 +233,19 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       td =
-        view |> element("section#inner_content tr > td:last-child") |> render()
+        view
+        |> element(
+          "section#inner_content table > tbody > tr:first-child > td:last-child"
+        )
+        |> render()
 
       assert td =~ "Failure"
+
+      assert view
+             |> element(
+               "section#inner_content table > tbody > tr:first-child button[phx-click='toggle-details']"
+             )
+             |> render_click() =~ "Failure"
     end
   end
 end

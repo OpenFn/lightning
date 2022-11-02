@@ -19,7 +19,10 @@ defmodule LightningWeb.RunLive.Components.Attempt do
   @impl true
   def render(assigns) do
     ~H"""
-    <td class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6">
+    <td
+      id={"attempt-#{@attempt.id}"}
+      class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
+    >
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
         <li>
           <span class="flex items-center">
