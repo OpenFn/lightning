@@ -123,7 +123,9 @@
               data-source={@job_body}
               data-change-event="job_body_changed"
               phx-target={@myself}
+              data-job-id={@id}
             />
+            <input id="job_form_body" name="job_form[body]" type="hidden" value={@job_body}>
           </div>
         </div>
       </div>

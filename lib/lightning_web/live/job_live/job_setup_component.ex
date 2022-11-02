@@ -61,7 +61,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
 
   def validate(%{"job_form" => job_params}, socket) do
     changeset =
-      JobForm.changeset(socket.assigns.changeset, job_params)
+      JobForm.changeset(socket.assigns.job_form, job_params)
       |> Map.put(:action, :validate)
 
     assign(socket, changeset: changeset, job_params: job_params)

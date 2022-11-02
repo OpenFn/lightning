@@ -28,6 +28,10 @@ defmodule LightningWeb.JobLive.FormComponent do
       defdelegate validate(params, socket),
         to: LightningWeb.JobLive.FormComponent
 
+      def handle_event("job_body_changed", %{"source" => source}, socket) do
+        {:noreply, socket |> assign(job_body: source)}
+      end
+
       @impl true
       def handle_event(event, params, socket) do
         case event do
@@ -68,6 +72,7 @@ defmodule LightningWeb.JobLive.FormComponent do
 
     upstream_jobs = Jobs.get_upstream_jobs_for(job_form)
 
+
     {:ok,
      socket
      |> assign(assigns)
@@ -77,6 +82,7 @@ defmodule LightningWeb.JobLive.FormComponent do
      |> assign(:upstream_jobs, upstream_jobs)
      |> assign(:versions, versions)
      |> assign(:job_form, job_form)
+     |> assign(:job_body, job_form.body)
      |> assign(:changeset, changeset)
      |> assign(:job_params, %{})}
   end

@@ -15,14 +15,17 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   use LightningWeb.JobLive.FormComponent
   alias Lightning.Jobs.JobForm
 
+
+
   @impl true
   def save(%{"job_form" => job_params}, socket) do
-    %{action: action, job_form: job_form} = socket.assigns
+    %{action: action, job_form: job_form, job_body: job_body} = socket.assigns
 
     case action do
       :edit ->
         job_form
         |> JobForm.changeset(job_params)
+        |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
         |> Lightning.Repo.transaction()
         |> case do
@@ -44,6 +47,7 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
       :new ->
         job_form
         |> JobForm.changeset(job_params)
+        |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
         |> Lightning.Repo.transaction()
         |> case do
@@ -207,10 +211,13 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                   id="editor-component"
                   class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
                   data-adaptor={Phoenix.HTML.Form.input_value(f, :adaptor)}
-                  data-hidden-input={Phoenix.HTML.Form.input_id(f, :body)}
+                  data-source={@job_body}
+                  data-change-event="job_body_changed"
+                  phx-target={@myself}
                   data-job-id={@id}
                 />
-                <Form.hidden_input form={f} id={:body} />
+                <input id="job_form_body" name="job_form[body]" type="hidden" value={@job_body}>
+
               </div>
             </div>
           </div>
