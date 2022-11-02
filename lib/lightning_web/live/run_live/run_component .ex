@@ -10,11 +10,6 @@ defmodule LightningWeb.RunLive.Components.Run do
   end
 
   @impl true
-  def handle_event("todo", %{}, socket) do
-    {:noreply, socket}
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <li>
