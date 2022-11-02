@@ -6,12 +6,14 @@ defmodule LightningWeb.RunLive.Components.Attempt do
 
   @impl true
   def update(assigns, socket) do
-    last_run = Enum.at(assigns.attempt.runs, 0)
+    runs = assigns.attempt.runs
+    last_run = Enum.at(runs, 0)
 
     socket =
       socket
       |> assign(assigns)
       |> assign(:last_run, last_run)
+      |> assign(:run_list, runs |> Enum.reverse())
 
     {:ok, socket |> assign(assigns)}
   end
@@ -45,7 +47,7 @@ defmodule LightningWeb.RunLive.Components.Attempt do
             </span>
           </span>
           <ol class="mt-2 list-none space-y-4">
-            <%= for run <- @attempt.runs do %>
+            <%= for run <- @run_list do %>
               <.live_component
                 module={LightningWeb.RunLive.Components.Run}
                 id={run.id}

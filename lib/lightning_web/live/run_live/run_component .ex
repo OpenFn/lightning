@@ -20,7 +20,7 @@ defmodule LightningWeb.RunLive.Components.Run do
             <% val when val > 0-> %>
               <Heroicons.check_circle
                 solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-red-400"
+                class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400"
               />
             <% val when val == 0 -> %>
               <Heroicons.check_circle
@@ -32,16 +32,6 @@ defmodule LightningWeb.RunLive.Components.Run do
           <%= @run.job.name %>
         </span>
       </span>
-      <ol class="space-y-4 pl-5">
-        <li>
-          <span class="mx-1 flex">
-            &vdash;
-            <span class="ml-1">
-              are being really "organized" o
-            </span>
-          </span>
-        </li>
-      </ol>
     </li>
     """
   end
