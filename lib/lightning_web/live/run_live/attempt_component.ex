@@ -17,11 +17,6 @@ defmodule LightningWeb.RunLive.Components.Attempt do
   end
 
   @impl true
-  def handle_event("todo", %{}, socket) do
-    {:noreply, socket}
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <td class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6">
