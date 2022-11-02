@@ -12,10 +12,20 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
   alias Jobs.JobForm
 
   @impl true
-  def update(
-        %{adaptor: adaptor},
-        socket
-      ) do
+  def update(%{cron_expression: cron_expression}, socket) do
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.apply_changes()
+      |> JobForm.changeset(%{
+        "trigger_cron_expression" => cron_expression
+      })
+      |> Map.put(:action, :validate)
+
+    {:ok, assign(socket, changeset: changeset)}
+  end
+
+  @impl true
+  def update(%{adaptor: adaptor}, socket) do
     changeset =
       JobForm.changeset(socket.assigns.changeset, %{
         "adaptor" => adaptor
@@ -82,6 +92,10 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     end
   end
 
+  def webhook?(changeset) do
+    get_field(changeset, :trigger_type) in [:webhook]
+  end
+
   def requires_upstream_job?(changeset) do
     get_field(changeset, :trigger_type) in [:on_job_failure, :on_job_success]
   end
@@ -90,12 +104,26 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     get_field(changeset, :trigger_type) == :cron
   end
 
+  defp insert_cron_expression(changeset, job_params) do
+    if Map.has_key?(changeset.changes, :trigger_cron_expression) do
+      Map.put_new(
+        job_params,
+        "trigger_cron_expression",
+        changeset.changes.trigger_cron_expression
+      )
+    else
+      job_params
+    end
+  end
+
   def save(%{"job_form" => job_params}, socket) do
-    %{action: action, job_form: job_form, job_body: job_body} = socket.assigns
+    %{action: action, changeset: changeset, job_body: job_body} = socket.assigns
+
+    job_params = insert_cron_expression(changeset, job_params)
 
     case action do
       :edit ->
-        job_form
+        changeset
         |> JobForm.changeset(job_params)
         |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
@@ -117,7 +145,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
         end
 
       :new ->
-        job_form
+        changeset
         |> JobForm.changeset(job_params)
         |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
