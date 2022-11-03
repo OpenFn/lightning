@@ -16,6 +16,7 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
       |> assign(assigns)
       |> assign(:last_attempt, last_attempt)
       |> assign(:last_run, last_run)
+      |> assign(:workflow_name, assigns.work_order.workflow.name || "Untitled")
 
     {:ok, socket}
   end
@@ -35,7 +36,7 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
         scope="row"
         class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white"
       >
-        <%= @work_order.workflow.name %>
+        <%= @workflow_name %>
       </th>
       <td class="my-auto p-6"><%= @work_order.reason.dataclip_id %></td>
       <td class="my-auto p-6">
