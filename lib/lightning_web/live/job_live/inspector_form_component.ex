@@ -15,8 +15,6 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
   use LightningWeb.JobLive.FormComponent
   alias Lightning.Jobs.JobForm
 
-
-
   @impl true
   def save(%{"job_form" => job_params}, socket) do
     %{action: action, job_form: job_form, job_body: job_body} = socket.assigns
@@ -216,8 +214,12 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                   phx-target={@myself}
                   data-job-id={@id}
                 />
-                <input id="job_form_body" name="job_form[body]" type="hidden" value={@job_body}>
-
+                <input
+                  id="job_form_body"
+                  name="job_form[body]"
+                  type="hidden"
+                  value={@job_body}
+                />
               </div>
             </div>
           </div>

@@ -72,7 +72,6 @@ defmodule LightningWeb.JobLive.FormComponent do
 
     upstream_jobs = Jobs.get_upstream_jobs_for(job_form)
 
-
     {:ok,
      socket
      |> assign(assigns)
