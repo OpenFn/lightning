@@ -5,6 +5,12 @@ defmodule LightningWeb.Components.Jobs do
   import LightningWeb.Components.Form
 
   def credential_select(assigns) do
+    assigns =
+      assign(assigns,
+        credentials:
+          assigns.credentials |> Enum.map(&{&1.credential.name, &1.id})
+      )
+
     ~H"""
     <.label_field
       form={@form}
@@ -40,18 +46,13 @@ defmodule LightningWeb.Components.Jobs do
 
   def adaptor_version_select(assigns) do
     ~H"""
-    <.label_field
-      form={@form}
-      id={:adaptor}
-      title="Version"
-      for="adaptorVersionField"
-    />
+    <.label_field form={@form} id={:adaptor} title="Version" for="adaptor-version" />
     <%= error_tag(@form, :adaptor, class: "block w-full rounded-md") %>
     <.select_field
       form={@form}
       disabled={!@adaptor_name}
       name={:adaptor}
-      id="adaptorVersionField"
+      id="adaptor-version"
       values={@versions}
     />
     """

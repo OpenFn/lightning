@@ -9,7 +9,16 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
 
   alias Lightning.{Jobs, Projects}
   alias LightningWeb.Components.Form
+  alias LightningWeb.JobLive.JobBuilder
   alias Jobs.JobForm
+
+  defp id(job) do
+    "job-form-#{job.id}"
+  end
+
+  def send_body(job, body) do
+    send_update(__MODULE__, id: id(job), body: body)
+  end
 
   @impl true
   def update(%{cron_expression: cron_expression}, socket) do
@@ -24,18 +33,31 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
     {:ok, assign(socket, changeset: changeset)}
   end
 
-  @impl true
   def update(%{adaptor: adaptor}, socket) do
     changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.apply_changes()
+
+    JobForm.changeset(%{
+      "adaptor" => adaptor
+    })
+    |> Map.put(:action, :validate)
+
+    JobBuilder.send_adaptor(socket.assigns.changeset.data.id, adaptor)
+
+    {:ok, assign(socket, changeset: changeset)}
+  end
+
+  def update(%{body: body}, socket) do
+    changeset =
       JobForm.changeset(socket.assigns.changeset, %{
-        "adaptor" => adaptor
+        "body" => body
       })
       |> Map.put(:action, :validate)
 
     {:ok, assign(socket, changeset: changeset)}
   end
 
-  @impl true
   def update(
         %{
           job_form: job_form,
@@ -50,23 +72,21 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
         initial_job_params
       )
 
-    credentials =
-      Projects.list_project_credentials(project)
-      |> Enum.map(fn pu ->
-        {pu.credential.name, pu.id}
-      end)
+    credentials = Projects.list_project_credentials(project)
 
     upstream_jobs = Jobs.get_upstream_jobs_for(job_form)
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:credentials, credentials)
-     |> assign(:upstream_jobs, upstream_jobs)
-     |> assign(:job_form, job_form)
-     |> assign(:job_body, job_form.body)
-     |> assign(:changeset, changeset)
-     |> assign(:job_params, %{})}
+     |> assign(
+       credentials: credentials,
+       upstream_jobs: upstream_jobs,
+       job_form: job_form,
+       changeset: changeset,
+       job_params: %{},
+       id: id(job_form)
+     )}
   end
 
   def validate(%{"job_form" => job_params}, socket) do
@@ -75,10 +95,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
       |> Map.put(:action, :validate)
 
     assign(socket, changeset: changeset, job_params: job_params)
-  end
-
-  def handle_event("job_body_changed", %{"source" => source}, socket) do
-    {:noreply, socket |> assign(job_body: source)}
   end
 
   @impl true
@@ -117,7 +133,7 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
   end
 
   def save(%{"job_form" => job_params}, socket) do
-    %{action: action, changeset: changeset, job_body: job_body} = socket.assigns
+    %{action: action, changeset: changeset} = socket.assigns
 
     job_params = insert_cron_expression(changeset, job_params)
 
@@ -125,7 +141,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
       :edit ->
         changeset
         |> JobForm.changeset(job_params)
-        |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
         |> Lightning.Repo.transaction()
         |> case do
@@ -147,7 +162,6 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
       :new ->
         changeset
         |> JobForm.changeset(job_params)
-        |> JobForm.put_body(job_body)
         |> JobForm.to_multi(job_params)
         |> Lightning.Repo.transaction()
         |> case do
@@ -176,45 +190,5 @@ defmodule LightningWeb.JobLive.JobSetupComponent do
       _ ->
         socket |> push_redirect(to: to)
     end
-  end
-
-  defp compiler_component(assigns) do
-    ~H"""
-    <div
-      data-adaptor={@adaptor}
-      phx-hook="Compiler"
-      phx-update="ignore"
-      id="compiler-component"
-    >
-      <!-- Placeholder while the component loads -->
-      <div>
-        <div class="inline-block align-middle ml-2 mr-3 text-indigo-500">
-          <svg
-            class="animate-spin h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            >
-            </circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            >
-            </path>
-          </svg>
-        </div>
-        <span class="inline-block align-middle">Loading...</span>
-      </div>
-    </div>
-    """
   end
 end

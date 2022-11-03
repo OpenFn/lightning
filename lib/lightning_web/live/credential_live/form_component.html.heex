@@ -159,12 +159,9 @@
         <% end %>
       </span>
       <span>
-        <LightningWeb.Components.Form.submit_button
-          value="Save"
-          disable_with="Saving..."
-          disabled={!@valid}
-          changeset={@changeset}
-        />
+        <.submit_button phx-disable-with="Saving..." disabled={!@valid}>
+          Save
+        </.submit_button>
       </span>
     </div>
   </.form>

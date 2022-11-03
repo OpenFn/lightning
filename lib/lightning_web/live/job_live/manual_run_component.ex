@@ -4,34 +4,41 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   alias LightningWeb.Components.Form
   alias Lightning.Repo
 
+  attr :job_id, :string, required: true
+  attr :current_user, Lightning.Accounts.User, required: true
+
   def render(assigns) do
     ~H"""
     <div id={@id}>
-      <Form.text_field
-        form={@form}
-        id={:dataclip_id}
-        phx_change="changed"
-        phx_target={@myself}
-      />
-      <Common.button
-        text="Run"
-        disabled={!@changeset.valid?}
-        phx-click="confirm"
-        phx_target={@myself}
-      />
-      <.live_info_block myself={@myself} flash={@flash} />
+      <.form
+        :let={f}
+        for={@changeset}
+        as={:manual_run}
+        phx-target={@myself}
+        class="h-full"
+      >
+        <Form.text_field
+          form={f}
+          id={:dataclip_id}
+          phx-change="changed"
+          phx-target={@myself}
+        />
+        <Common.button
+          text="Run"
+          disabled={!@changeset.valid?}
+          phx-click="confirm"
+          phx-target={@myself}
+        />
+        <.live_info_block myself={@myself} flash={@flash} />
+      </.form>
     </div>
     """
   end
 
-  def update(assigns, socket) do
+  def update(%{job_id: job_id, current_user: current_user, id: id}, socket) do
     {:ok,
      socket
-     |> assign(
-       job_id: assigns.job_id,
-       current_user: assigns.current_user,
-       id: assigns.id
-     )
+     |> assign(job_id: job_id, current_user: current_user, id: id)
      |> update_form(%{})}
   end
 

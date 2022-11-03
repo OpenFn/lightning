@@ -1,14 +1,51 @@
-defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
+defmodule LightningWeb.JobLive.AdaptorPicker do
   @moduledoc """
-  AdaptorsSetupComponent
+  Component allowing selecting an adaptor and it's version
   """
 
   use LightningWeb, :live_component
 
   alias LightningWeb.Components.Form
 
+  attr :form, :map, required: true
+  attr :on_change, :any, required: true
+
   @impl true
-  def update(%{form: form, parent: parent}, socket) do
+  def render(assigns) do
+    ~H"""
+    <div>
+      <div class="md:col-span-2">
+        <Form.label_field
+          form={:adaptor_picker}
+          id={:adaptor_name}
+          title="Adaptor"
+          for="adaptor-name"
+        />
+        <Form.select_field
+          form={:adaptor_picker}
+          name={:adaptor_name}
+          prompt=""
+          selected={@adaptor_name}
+          id="adaptor-name"
+          values={@adaptors}
+          phx-change="adaptor_name_change"
+          phx-target={@myself}
+        />
+      </div>
+
+      <div class="md:col-span-2">
+        <Components.Jobs.adaptor_version_select
+          form={@form}
+          adaptor_name={@adaptor_name}
+          versions={@versions}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  @impl true
+  def update(%{form: form, on_change: on_change}, socket) do
     {adaptor_name, _, adaptors, versions} =
       get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
@@ -17,7 +54,7 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
      |> assign(:adaptor_name, adaptor_name)
      |> assign(:adaptors, adaptors)
      |> assign(:versions, versions)
-     |> assign(:parent, parent)
+     |> assign(:on_change, on_change)
      |> assign(:form, form)}
   end
 
@@ -55,46 +92,11 @@ defmodule LightningWeb.JobLive.AdaptorsSetupComponent do
   @impl true
   def handle_event(
         "adaptor_name_change",
-        %{"adaptor_component" => %{"adaptor_name" => adaptor_name}},
+        %{"adaptor_picker" => %{"adaptor_name" => adaptor_name}},
         socket
       ) do
-    {mod, id} = socket.assigns.parent
-    send_update(mod, id: id, adaptor: "#{adaptor_name}@latest")
+    socket.assigns.on_change.("#{adaptor_name}@latest")
 
     {:noreply, socket}
-  end
-
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <div>
-      <div class="md:col-span-2">
-        <Form.label_field
-          form={:adaptor_component}
-          id={:adaptor_name}
-          title="Adaptor"
-          for="adaptorField"
-        />
-        <Form.select_field
-          form={:adaptor_component}
-          name={:adaptor_name}
-          prompt=""
-          selected={@adaptor_name}
-          id="adaptorField"
-          values={@adaptors}
-          phx-change="adaptor_name_change"
-          phx-target={@myself}
-        />
-      </div>
-
-      <div class="md:col-span-2">
-        <Components.Jobs.adaptor_version_select
-          form={@form}
-          adaptor_name={@adaptor_name}
-          versions={@versions}
-        />
-      </div>
-    </div>
-    """
   end
 end

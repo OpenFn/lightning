@@ -78,11 +78,9 @@ defmodule LightningWeb.WorkflowLive.WorkflowInspector do
                 to: @return_to
               ) %>
             </span>
-            <Form.submit_button
-              value="Save"
-              disable_with="Saving"
-              changeset={@changeset}
-            />
+            <Form.submit_button phx-disable-with="Saving" changeset={@changeset}>
+              Save
+            </Form.submit_button>
           </div>
         </div>
       </.form>

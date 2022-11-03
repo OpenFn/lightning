@@ -97,22 +97,16 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :new_job, %{"upstream_id" => upstream_id}) do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
-    job = %Lightning.Jobs.Job{
-      trigger: %Lightning.Jobs.Trigger{
-        type: :on_job_success,
-        upstream_job_id: upstream_job.id
-      }
-    }
-
     socket
     |> assign(
       active_menu_item: :overview,
-      job: job,
-      job_form: %JobForm{
-        project_id: socket.assigns.project.id,
-        workflow_id: upstream_job.workflow_id,
-        trigger_type: :on_job_success,
-        trigger_upstream_job_id: upstream_job.id
+      job: %Lightning.Jobs.Job{},
+      job_params: %{
+        "workflow_id" => upstream_job.workflow_id,
+        "trigger" => %{
+          "type" => :on_job_success,
+          "upstream_job_id" => upstream_job.id
+        }
       },
       initial_job_params: %{
         "project_id" => socket.assigns.project.id
@@ -185,42 +179,29 @@ defmodule LightningWeb.WorkflowLive do
                 id="job-pane"
               >
                 <.live_component
-                  module={LightningWeb.JobLive.JobSetupComponent}
-                  id="new-job"
-                  job_form={@job_form}
-                  action={:new}
+                  module={LightningWeb.JobLive.JobBuilder}
+                  id="builder-new"
+                  job={@job}
+                  params={@job_params}
                   project={@project}
-                  initial_job_params={@initial_job_params}
+                  current_user={@current_user}
                   return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id
-                    )
+                    Routes.project_workflow_path(@socket, :show, @project.id)
                   }
                 />
               </div>
             </div>
           <% :edit_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 z-10">
-              <div
-                class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-                id="job-pane"
-              >
+              <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
                 <.live_component
-                  module={LightningWeb.JobLive.JobSetupComponent}
-                  id={@job_form.id}
-                  job_form={@job_form}
-                  action={:edit}
-                  current_user={@current_user}
+                  module={LightningWeb.JobLive.JobBuilder}
+                  id={"builder-#{@job.id}"}
+                  job={@job}
                   project={@project}
-                  initial_job_params={@initial_job_params}
+                  current_user={@current_user}
                   return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id
-                    )
+                    Routes.project_workflow_path(@socket, :show, @project.id)
                   }
                 />
               </div>

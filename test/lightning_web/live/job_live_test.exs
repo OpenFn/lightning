@@ -74,7 +74,7 @@ defmodule LightningWeb.JobLiveTest do
              |> render_change()
 
       assert edit_live
-             |> element("#adaptorVersionField")
+             |> element("#adaptor-version")
              |> render()
              |> parse()
              |> xpath(~x"option/text()"l) == [

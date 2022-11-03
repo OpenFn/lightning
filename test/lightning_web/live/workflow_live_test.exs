@@ -53,11 +53,102 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ project.name
 
-      assert has_element?(view, "##{job.id}")
+      assert has_element?(view, "#builder-#{job.id}")
 
       assert view
-             |> form("#job-form", job_form: %{enabled: false, name: nil})
+             |> form("#job-form", job_form: %{enabled: false, name: ""})
              |> render_change() =~ "can&#39;t be blank"
+
+      view
+      |> element("#job-form")
+      |> render_change(job_form: %{enabled: true, name: "My Job"})
+
+      refute view |> element("#job-form") |> render() =~ "can&#39;t be blank"
+
+      view |> pick_adaptor_name("@openfn/language-http")
+
+      # TODO: test that the compiler and editor get the new adaptor
+
+      # view
+      # |> form("#job-form", job_form: %{trigger: %{type: "on_job_failure"}})
+      # |> render_change()
+
+      # view |> element("#job-form") |> render() |> IO.inspect()
+
+      view |> element("#job-form") |> render_submit()
+
+      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      assert render(view) =~ "Job updated successfully"
+
+      view
+      |> render_patch(
+        Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+      )
+
+      assert has_element?(view, "#builder-#{job.id}")
+
+      assert view |> has_expected_adaptor?("@openfn/language-http@latest")
+    end
+  end
+
+  describe "new_job" do
+    setup %{project: project} do
+      %{upstream_job: job_fixture(project_id: project.id)}
+    end
+
+    test "renders the workflow inspector", %{
+      conn: conn,
+      project: project,
+      upstream_job: upstream_job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :new_job,
+            project.id,
+            %{"upstream_id" => upstream_job.id}
+          )
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#job-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#upstream-job option[selected=selected]}
+             )
+             |> render() =~ upstream_job.id,
+             "Should have the upstream job selected"
+
+      view |> pick_adaptor_name("@openfn/language-common")
+
+      assert view |> has_warning_on_editor_tab?()
+
+      view
+      |> element("#job-editor-new")
+      |> render_hook(:job_body_changed, %{source: "some body"})
+
+      refute view |> has_warning_on_editor_tab?()
+
+      view |> submit_form()
+
+      assert view |> has_error_for("name", "can't be blank")
+
+      view
+      |> form("#job-form", job_form: %{enabled: true, name: "My Job"})
+      |> render_change()
+
+      refute view |> has_error_for("name")
+
+      view |> submit_form()
+
+      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      assert view |> encoded_project_space_matches(project)
     end
   end
 
@@ -98,60 +189,33 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
-  describe "new_job" do
-    setup %{project: project} do
-      %{upstream_job: job_fixture(project_id: project.id)}
-    end
+  defp has_expected_adaptor?(view, expected_adaptor) do
+    view
+    |> has_element?(
+      ~s{#job-form select#adaptor-version option[selected=selected][value="#{expected_adaptor}"]}
+    )
+  end
 
-    test "renders the workflow inspector", %{
-      conn: conn,
-      project: project,
-      upstream_job: upstream_job
-    } do
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_workflow_path(
-            conn,
-            :new_job,
-            project.id,
-            %{"upstream_id" => upstream_job.id}
-          )
-        )
+  defp pick_adaptor_name(view, name) do
+    view
+    |> element("#adaptor-name")
+    |> render_change(%{adaptor_picker: %{"adaptor_name" => name}})
+  end
 
-      assert html =~ project.name
+  defp has_warning_on_editor_tab?(view) do
+    view |> has_element?("#tab-item-editor > svg")
+  end
 
-      assert has_element?(view, "#job-form")
+  defp has_error_for(view, field, text_filter \\ nil) do
+    view
+    |> has_element?(
+      ~s(#job-form [phx-feedback-for="job_form[#{field}]"]),
+      text_filter
+    )
+  end
 
-      assert view
-             |> element(
-               ~S{#job-form select#upstreamJob option[selected=selected]}
-             )
-             |> render() =~ upstream_job.id,
-             "Should have the upstream job selected"
-
-      view
-      |> element("#adaptorField")
-      |> render_change(%{adaptor_name: "@openfn/language-common"})
-
-      view
-      |> element("#editor-component")
-      |> render_hook(:job_body_changed, %{source: "some body"})
-
-      assert view
-             |> form("#job-form",
-               job_form: %{
-                 enabled: true,
-                 name: "some name",
-                 trigger_type: "on_job_failure"
-               }
-             )
-             |> render_submit()
-
-      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
-
-      assert view |> encoded_project_space_matches(project)
-    end
+  defp submit_form(view) do
+    view |> element("#job-form") |> render_submit()
   end
 
   describe "cron_setup_component" do

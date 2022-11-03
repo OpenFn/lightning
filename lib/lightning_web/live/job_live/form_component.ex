@@ -60,11 +60,7 @@ defmodule LightningWeb.JobLive.FormComponent do
         |> Ecto.Changeset.fetch_field!(:adaptor)
       )
 
-    credentials =
-      Projects.list_project_credentials(project)
-      |> Enum.map(fn pu ->
-        {pu.credential.name, pu.id}
-      end)
+    credentials = Projects.list_project_credentials(project)
 
     upstream_jobs = Jobs.get_upstream_jobs_for(job_form)
 

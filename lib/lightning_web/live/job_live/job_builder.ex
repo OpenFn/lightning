@@ -1,0 +1,243 @@
+defmodule LightningWeb.JobLive.JobBuilder do
+  @moduledoc """
+  Job Builder Panel
+  """
+
+  use LightningWeb, :live_component
+  alias LightningWeb.Components.Form
+  alias Lightning.Jobs.Job
+
+  import LightningWeb.JobLive.JobBuilderComponents
+
+  defp id(id) do
+    "builder-#{id}"
+  end
+
+  def send_adaptor(job_id, adaptor) do
+    send_update(__MODULE__,
+      id: id(job_id),
+      job_adaptor: adaptor,
+      event: :job_adaptor_changed
+    )
+  end
+
+  attr :return_to, :string, required: true
+  attr :params, :map, default: %{}
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      x-data="{ tab: window.location.hash ? window.location.hash.substring(1) : 'setup' }"
+      class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
+      x-cloak
+    >
+      <div class="flex flex-col h-full">
+        <div class="flex-none">
+          <div class="flex gap-x-8 gap-y-2 border-b border-gray-200 dark:border-gray-600">
+            <!-- The tabs navigation -->
+            <.tab_item hash="setup">Setup</.tab_item>
+            <.tab_item hash="input">Input</.tab_item>
+            <.tab_item hash="editor">
+              Editor
+              <.when_invalid changeset={@changeset} field={:body}>
+                <Heroicons.exclamation_circle mini class="ml-1 w-4 h-4 text-red-500" />
+              </.when_invalid>
+            </.tab_item>
+            <.tab_item hash="output">Output</.tab_item>
+          </div>
+        </div>
+        <div class="grow overflow-y-auto p-3">
+          <!-- The tabs content -->
+          <.panel_content for_hash="setup">
+            <.form
+              :let={f}
+              for={@changeset}
+              as={:job_form}
+              id="job-form"
+              phx-target={@myself}
+              phx-change="validate"
+              phx-submit="save"
+              class="h-full"
+            >
+              <div class="md:grid md:grid-cols-4 md:gap-4 @container">
+                <div class="md:col-span-2">
+                  <Form.text_field form={f} id={:name} />
+                </div>
+                <div class="md:col-span-2">
+                  <Form.check_box form={f} id={:enabled} />
+                </div>
+                <div class="md:col-span-2">
+                  <%= for t <- inputs_for(f, :trigger) do %>
+                    <.trigger_picker form={t} upstream_jobs={@upstream_jobs} />
+                  <% end %>
+                </div>
+                <div class="md:col-span-2">
+                  <Components.Jobs.credential_select
+                    form={f}
+                    credentials={@credentials}
+                  />
+                  <button
+                    id="new-credential-launcher"
+                    type="button"
+                    phx-click={
+                      Phoenix.LiveView.JS.push("new-credential",
+                        value: %{"FIXME" => "SOON"}
+                      )
+                    }
+                  >
+                    New credential
+                  </button>
+                </div>
+                <div class="col-span-4">
+                  <.live_component
+                    id="adaptor-picker"
+                    module={LightningWeb.JobLive.AdaptorPicker}
+                    on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
+                    form={f}
+                  />
+                </div>
+              </div>
+            </.form>
+          </.panel_content>
+          <.panel_content for_hash="input">
+            <.live_component
+              module={LightningWeb.JobLive.ManualRunComponent}
+              current_user={@current_user}
+              id={"manual-job-#{@job_id}"}
+              job_id={@job_id}
+            />
+          </.panel_content>
+          <.panel_content for_hash="editor">
+            <.compiler_component adaptor={@job_adaptor} />
+            <div
+              phx-hook="Editor"
+              phx-update="ignore"
+              id={"job-editor-#{@job_id}"}
+              class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
+              data-adaptor={@job_adaptor}
+              data-source={@job_body}
+              data-change-event="job_body_changed"
+              phx-target={@myself}
+            />
+          </.panel_content>
+          <.panel_content for_hash="output">
+            Output block
+          </.panel_content>
+        </div>
+        <div class="flex-none sticky p-3 border-t">
+          <!-- BUTTONS -->
+          <%= live_patch("Cancel",
+            class:
+              "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
+            to: Routes.project_workflow_path(@socket, :show, @project.id)
+          ) %>
+          <Form.submit_button
+            changeset={@changeset}
+            phx-disable-with="Saving"
+            form="job-form"
+          >
+            Save
+          </Form.submit_button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @impl true
+  def handle_event("validate", %{"job_form" => params}, socket) do
+    {:noreply, socket |> assign_changeset_and_params(params)}
+  end
+
+  def handle_event("job_body_changed", %{"source" => source}, socket) do
+    {:noreply, socket |> assign_changeset_and_params(%{"body" => source})}
+  end
+
+  def handle_event("save", %{"job_form" => params}, socket) do
+    params = Map.merge(socket.assigns.params, params)
+    changeset = Job.changeset(socket.assigns.job, params)
+
+    socket =
+      changeset
+      |> Lightning.Repo.insert_or_update()
+      |> case do
+        {:ok, _job} ->
+          on_save_success(socket)
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          assign(socket, changeset: changeset, params: params)
+      end
+
+    {:noreply, socket}
+  end
+
+  defp on_save_success(socket) do
+    LightningWeb.Endpoint.broadcast!(
+      "project_space:#{socket.assigns.project.id}",
+      "update",
+      %{}
+    )
+
+    socket
+    |> put_flash(:info, "Job updated successfully")
+    |> push_patch(to: socket.assigns.return_to)
+  end
+
+  defp assign_changeset_and_params(socket, params) do
+    socket
+    |> update(:params, fn prev -> Map.merge(prev, params) end)
+    |> update(:changeset, fn _changeset, %{params: params, job: job} ->
+      Job.changeset(job, params)
+      |> Map.put(:action, :validate)
+    end)
+  end
+
+  # NOTE: consider multiple update functions to handle new, new from (job) and
+  # inspecting attempt runs.
+  @impl true
+  def update(
+        %{
+          id: id,
+          job: job,
+          project: project,
+          current_user: current_user,
+          return_to: return_to
+        } = assigns,
+        socket
+      ) do
+    job = job |> Lightning.Repo.preload([:trigger, :workflow])
+    credentials = Lightning.Projects.list_project_credentials(project)
+    params = assigns[:params] || %{}
+    changeset = Job.changeset(job, params)
+
+    {:ok,
+     socket
+     |> assign(
+       id: id,
+       job: job,
+       project: project,
+       current_user: current_user,
+       job_body: job.body,
+       job_adaptor: job.adaptor,
+       return_to: return_to,
+       changeset: changeset,
+       credentials: credentials,
+       upstream_jobs:
+         Lightning.Jobs.get_upstream_jobs_for(
+           changeset
+           |> Ecto.Changeset.apply_changes()
+         )
+     )
+     |> assign_new(:params, fn -> params end)
+     |> assign_new(:job_id, fn -> job.id || "new" end)}
+  end
+
+  def update(%{event: :job_adaptor_changed, job_adaptor: job_adaptor}, socket) do
+    {:ok,
+     socket
+     |> assign(job_adaptor: job_adaptor)
+     |> assign_changeset_and_params(%{"adaptor" => job_adaptor})}
+  end
+end

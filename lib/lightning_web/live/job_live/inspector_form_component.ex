@@ -223,11 +223,9 @@ defmodule LightningWeb.JobLive.InspectorFormComponent do
                 to: Routes.project_workflow_path(@socket, :show, @project.id)
               ) %>
             </span>
-            <Form.submit_button
-              value="Save"
-              disable_with="Saving"
-              changeset={@changeset}
-            />
+            <Form.submit_button phx-disable-with="Saving" changeset={@changeset}>
+              Save
+            </Form.submit_button>
           </div>
         </div>
       </.form>
