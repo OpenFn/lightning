@@ -31,23 +31,23 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
     assigns = assigns |> assign_new(:show_details, fn -> false end)
 
     ~H"""
-    <tr class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white">
-      <th
+    <div class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white">
+      <div
         scope="row"
         class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white"
       >
         <%= @workflow_name %>
-      </th>
-      <td class="my-auto p-6"><%= @work_order.reason.dataclip_id %></td>
-      <td class="my-auto p-6">
+      </div>
+      <div class="my-auto p-6"><%= @work_order.reason.dataclip_id %></div>
+      <div class="my-auto p-6">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
           <div><%= @work_order.reason.id %></div>
         <% end %>
-      </td>
-      <td class="my-auto p-6">
+      </div>
+      <div class="my-auto p-6">
         <%= @last_run.finished_at |> Calendar.strftime("%c") %>
-      </td>
-      <td class="my-auto p-6">
+      </div>
+      <div class="my-auto p-6">
         <div class="flex content-center justify-between">
           <%= case @last_run.exit_code do %>
             <% val when val == 0 -> %>
@@ -68,7 +68,7 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
             <% end %>
           </button>
         </div>
-      </td>
+      </div>
       <%= if @show_details do %>
         <%= for attempt <- @work_order.attempts do %>
           <.live_component
@@ -78,7 +78,7 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
           />
         <% end %>
       <% end %>
-    </tr>
+    </div>
     """
   end
 end

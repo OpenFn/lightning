@@ -78,21 +78,21 @@ defmodule LightningWeb.RunLive.Components do
   # coveralls-ignore-start
   def table(assigns) do
     ~H"""
-    <div class="overflow-x-auto bg-gray-100 dark:bg-gray-700">
-      <table class="w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
-        <thead class="text-xs uppercase text-gray-400 dark:text-gray-400">
-          <tr class="grid grid-cols-5 gap-4">
-            <th scope="col" class="py-3 px-6 font-medium">Workflow name</th>
-            <th scope="col" class="py-3 px-6 font-medium">Reason</th>
-            <th scope="col" class="py-3 px-6 font-medium">Input</th>
-            <th scope="col" class="py-3 px-6 font-medium">Last run</th>
-            <th scope="col" class="py-3 px-6 font-medium">Status</th>
-          </tr>
-        </thead>
-        <tbody class="bg-gray-100">
+    <div class="bg-gray-100 dark:bg-gray-700 relative">
+      <div class="flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
+        <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
+          <div class="grid grid-cols-5 gap-4">
+            <div scope="col" class="py-3 px-6 font-medium">Workflow name</div>
+            <div scope="col" class="py-3 px-6 font-medium">Reason</div>
+            <div scope="col" class="py-3 px-6 font-medium">Input</div>
+            <div scope="col" class="py-3 px-6 font-medium">Last run</div>
+            <div scope="col" class="py-3 px-6 font-medium">Status</div>
+          </div>
+        </div>
+        <div class="bg-gray-100">
           <%= render_slot(@inner_block) %>
-        </tbody>
-      </table>
+        </div>
+      </div>
     </div>
     """
   end
