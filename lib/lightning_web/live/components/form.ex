@@ -37,24 +37,18 @@ defmodule LightningWeb.Components.Form do
 
     assigns =
       assigns
-      |> assign_new(:disabled, fn ->
-        if assigns[:changeset] do
-          !assigns.changeset.valid?
-        else
-          false
-        end
-      end)
-      |> assign_new(:class, fn %{disabled: disabled} ->
-        if disabled do
+      |> assign_new(:class, fn -> "" end)
+      |> update(:class, fn class, %{rest: rest} ->
+        if rest[:disabled] do
           inactive_classes
         else
           active_classes
         end
-        |> Enum.concat(List.wrap(assigns[:class]))
+        |> Enum.concat(List.wrap(class))
       end)
 
     ~H"""
-    <button type="submit" class={@class} disabled={@disabled} {@rest}>
+    <button type="submit" class={@class} {@rest}>
       <%= render_slot(@inner_block) %>
     </button>
     """

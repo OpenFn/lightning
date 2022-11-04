@@ -21,6 +21,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
+  def send_credential(job_id, credential) do
+    send_update(__MODULE__,
+      id: id(job_id),
+      credential: credential,
+      event: :credential_changed
+    )
+  end
+
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
 
@@ -81,11 +89,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
                   <button
                     id="new-credential-launcher"
                     type="button"
-                    phx-click={
-                      Phoenix.LiveView.JS.push("new-credential",
-                        value: %{"FIXME" => "SOON"}
-                      )
-                    }
+                    phx-click="open_new_credential"
+                    phx-target={@myself}
                   >
                     New credential
                   </button>
@@ -153,6 +158,31 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     {:noreply, socket |> assign_changeset_and_params(%{"body" => source})}
+  end
+
+  def handle_event("open_new_credential", _params, socket) do
+    LightningWeb.ModalPortal.show_modal(
+      LightningWeb.CredentialLive.CredentialEditModal,
+      %{
+        action: :new,
+        confirm: {"Save", type: "submit", form: "song-form"},
+        credential: %Lightning.Credentials.Credential{
+          user_id: socket.assigns.current_user.id
+        },
+        current_user: socket.assigns.current_user,
+        id: :new,
+        on_save: fn credential ->
+          send_credential(socket.assigns.job_id, credential)
+          LightningWeb.ModalPortal.close_modal()
+        end,
+        project: socket.assigns.project,
+        projects: [],
+        show_project_credentials: false,
+        title: "Create Credential"
+      }
+    )
+
+    {:noreply, socket}
   end
 
   def handle_event("save", %{"job_form" => params}, socket) do
@@ -239,5 +269,19 @@ defmodule LightningWeb.JobLive.JobBuilder do
      socket
      |> assign(job_adaptor: job_adaptor)
      |> assign_changeset_and_params(%{"adaptor" => job_adaptor})}
+  end
+
+  def update(%{event: :credential_changed, credential: credential}, socket) do
+    %{id: project_credential_id} = credential.project_credentials |> List.first()
+
+    {:ok,
+     socket
+     |> assign(
+       credentials:
+         Lightning.Projects.list_project_credentials(socket.assigns.project)
+     )
+     |> assign_changeset_and_params(%{
+       "project_credential_id" => project_credential_id
+     })}
   end
 end

@@ -45,37 +45,6 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
-  def handle_info({:added_credential, credential}, socket) do
-    project = socket.assigns.project
-
-    project_credential =
-      Projects.get_project_credential(project.id, credential.id)
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Credential created successfully")
-     |> assign(
-       initial_job_params:
-         Map.merge(socket.assigns.initial_job_params, %{
-           "project_credential_id" => project_credential.id,
-           "project_credential" => project_credential
-         })
-     )
-     |> assign(:new_credential, false)}
-  end
-
-  @impl true
-  def handle_event("new-credential", params, socket) do
-    {:noreply,
-     socket
-     |> assign(:new_credential, true)
-     |> assign(:initial_job_params, params)}
-  end
-
-  def handle_event("close_modal", _args, socket) do
-    {:noreply, socket |> assign(:new_credential, false)}
-  end
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,
@@ -162,15 +131,6 @@ defmodule LightningWeb.WorkflowLive do
         </Layout.header>
       </:header>
       <div class="relative h-full">
-        <%= if @new_credential do %>
-          <.live_component
-            module={LightningWeb.CredentialLive.CredentialEditModal}
-            id="new-credential"
-            job={@job}
-            project={@project}
-            current_user={@current_user}
-          />
-        <% end %>
         <%= case @live_action do %>
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">

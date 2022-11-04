@@ -52,7 +52,9 @@
                   Keep me logged in for 60 days
                 </span>
               </.check_box>
-              <.submit_button value="Log in" />
+              <.submit_button>
+                Log in
+              </.submit_button>
               <%= if @auth_handler_url do %>
                 <div class="text-xs text-secondary-700 border-b text-center leading-[0]">
                   <span class="px-2 bg-white">or</span>
