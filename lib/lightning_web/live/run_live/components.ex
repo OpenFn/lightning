@@ -79,17 +79,20 @@ defmodule LightningWeb.RunLive.Components do
   def table(assigns) do
     ~H"""
     <div class="bg-gray-100 dark:bg-gray-700 relative">
-      <div class="flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
+      <div
+        data-entity="work_order_index"
+        class="flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
+      >
         <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
           <div class="grid grid-cols-5 gap-4">
-            <div scope="col" class="py-3 px-6 font-medium">Workflow name</div>
-            <div scope="col" class="py-3 px-6 font-medium">Reason</div>
-            <div scope="col" class="py-3 px-6 font-medium">Input</div>
-            <div scope="col" class="py-3 px-6 font-medium">Last run</div>
-            <div scope="col" class="py-3 px-6 font-medium">Status</div>
+            <div class="py-3 px-6 font-medium">Workflow name</div>
+            <div class="py-3 px-6 font-medium">Reason</div>
+            <div class="py-3 px-6 font-medium">Input</div>
+            <div class="py-3 px-6 font-medium">Last run</div>
+            <div class="py-3 px-6 font-medium">Status</div>
           </div>
         </div>
-        <div class="bg-gray-100">
+        <div data-entity="work_order_list" class="bg-gray-100">
           <%= render_slot(@inner_block) %>
         </div>
       </div>

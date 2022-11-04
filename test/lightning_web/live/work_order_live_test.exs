@@ -66,7 +66,11 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html =~ "Runs"
 
-      table = view |> element("section#inner_content table") |> render()
+      table =
+        view
+        |> element("section#inner_content div[data-entity='work_order_index']")
+        |> render()
+
       assert table =~ "my workflow"
       assert table =~ "#{work_order.reason_id}"
 
@@ -75,13 +79,13 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content table > tbody > tr:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
              |> render_click() =~ "attempt-#{attempt_run.attempt_id}"
 
       refute view
              |> element(
-               "section#inner_content table > tbody > tr:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
              |> render_click() =~ "attempt-#{attempt_run.attempt_id}"
     end
@@ -154,14 +158,14 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
 
-      td =
+      div =
         view
         |> element(
-          "section#inner_content table > tbody > tr:first-child > td:last-child"
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
         )
         |> render()
 
-      assert td =~ "Success"
+      assert div =~ "Success"
     end
 
     test "When run A and B are successful but C fails, workflow run status is 'Failure'",
@@ -232,18 +236,18 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
 
-      td =
+      div =
         view
         |> element(
-          "section#inner_content table > tbody > tr:first-child > td:last-child"
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
         )
         |> render()
 
-      assert td =~ "Failure"
+      assert div =~ "Failure"
 
       assert view
              |> element(
-               "section#inner_content table > tbody > tr:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
              |> render_click() =~ "Failure"
     end

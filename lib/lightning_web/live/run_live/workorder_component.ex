@@ -31,11 +31,11 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
     assigns = assigns |> assign_new(:show_details, fn -> false end)
 
     ~H"""
-    <div class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white">
-      <div
-        scope="row"
-        class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white"
-      >
+    <div
+      data-entity="work_order"
+      class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white"
+    >
+      <div class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white">
         <%= @workflow_name %>
       </div>
       <div class="my-auto p-6"><%= @work_order.reason.dataclip_id %></div>

@@ -23,6 +23,7 @@ defmodule LightningWeb.RunLive.Components.Attempt do
     ~H"""
     <div
       id={"attempt-#{@attempt.id}"}
+      data-entity="attempt"
       class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
     >
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
