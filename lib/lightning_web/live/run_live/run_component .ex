@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunLive.Components.Run do
+defmodule LightningWeb.RunLive.RunComponent  do
   @moduledoc """
   Run component for WorkOrder list module
   """

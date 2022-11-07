@@ -3,15 +3,31 @@
     <Layout.header socket={@socket} title={@page_title} />
   </:header>
   <Layout.centered>
-    <LightningWeb.RunLive.Components.table>
-      <%= for wo <- @page.entries do %>
-        <.live_component
-          module={LightningWeb.RunLive.Components.WorkOrder}
-          id={wo.id}
-          work_order={wo}
-        />
-      <% end %>
-    </LightningWeb.RunLive.Components.table>
+    <div class="bg-gray-100 dark:bg-gray-700 relative">
+      <div
+        data-entity="work_order_index"
+        class="flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
+      >
+        <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
+          <div class="grid grid-cols-5 gap-4">
+            <div class="py-3 px-6 font-medium">Workflow name</div>
+            <div class="py-3 px-6 font-medium">Reason</div>
+            <div class="py-3 px-6 font-medium">Input</div>
+            <div class="py-3 px-6 font-medium">Last run</div>
+            <div class="py-3 px-6 font-medium">Status</div>
+          </div>
+        </div>
+        <div data-entity="work_order_list" class="bg-gray-100">
+          <%= for wo <- @page.entries do %>
+            <.live_component
+              module={LightningWeb.RunLive.WorkOrderComponent}
+              id={wo.id}
+              work_order={wo}
+            />
+          <% end %>
+        </div>
+      </div>
+    </div>
     <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   </Layout.centered>
 </Layout.page_content>

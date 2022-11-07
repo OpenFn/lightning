@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunLive.Components.WorkOrder do
+defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
@@ -83,7 +83,7 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
       <%= if @show_details do %>
         <%= for attempt <- @work_order.attempts do %>
           <.live_component
-            module={LightningWeb.RunLive.Components.Attempt}
+            module={LightningWeb.RunLive.AttemptComponent}
             id={attempt.id}
             attempt={attempt}
           />

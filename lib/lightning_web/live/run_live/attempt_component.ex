@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunLive.Components.Attempt do
+defmodule LightningWeb.RunLive.AttemptComponent do
   @moduledoc """
   Attempt component for WorkOrder list module
   """
@@ -50,7 +50,7 @@ defmodule LightningWeb.RunLive.Components.Attempt do
           <ol class="mt-2 list-none space-y-4">
             <%= for run <- @run_list do %>
               <.live_component
-                module={LightningWeb.RunLive.Components.Run}
+                module={LightningWeb.RunLive.RunComponent}
                 id={run.id}
                 run={run}
               />
