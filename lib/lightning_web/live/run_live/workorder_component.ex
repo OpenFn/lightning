@@ -7,16 +7,25 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
   import LightningWeb.RunLive.Components
 
   @impl true
-  def update(assigns, socket) do
-    last_attempt = Enum.at(assigns.work_order.attempts, 0)
+  def update(%{work_order: work_order}, socket) do
+    last_attempt = Enum.at(work_order.attempts, 0)
     last_run = Enum.at(last_attempt.runs, 0)
+
+    last_run_finished_at =
+      case last_run.finished_at do
+        nil -> nil
+        finished_at -> finished_at |> Calendar.strftime("%c")
+      end
 
     socket =
       socket
-      |> assign(assigns)
-      |> assign(:last_attempt, last_attempt)
-      |> assign(:last_run, last_run)
-      |> assign(:workflow_name, assigns.work_order.workflow.name || "Untitled")
+      |> assign(
+        work_order: work_order,
+        last_attempt: last_attempt,
+        last_run: last_run,
+        last_run_finished_at: last_run_finished_at,
+        workflow_name: work_order.workflow.name || "Untitled"
+      )
 
     {:ok, socket}
   end
@@ -45,14 +54,16 @@ defmodule LightningWeb.RunLive.Components.WorkOrder do
         <% end %>
       </div>
       <div class="my-auto p-6">
-        <%= @last_run.finished_at |> Calendar.strftime("%c") %>
+        <%= @last_run_finished_at %>
       </div>
       <div class="my-auto p-6">
         <div class="flex content-center justify-between">
           <%= case @last_run.exit_code do %>
+            <% nil -> %>
+              <.pending_pill>Pending</.pending_pill>
             <% val when val == 0 -> %>
               <.success_pill />
-            <% _ -> %>
+            <% val when val > 0 -> %>
               <.failure_pill>Failure</.failure_pill>
           <% end %>
 

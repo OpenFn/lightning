@@ -3,9 +3,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   import Phoenix.LiveViewTest
 
-  alias Lightning.Pipeline
-  alias Lightning.{Attempt, AttemptRun}
-  alias Lightning.Invocation.{Run}
+  alias Lightning.Attempt
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
@@ -36,27 +34,23 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      {:ok, attempt_run} =
-        AttemptRun.new()
-        |> Ecto.Changeset.put_assoc(
-          :attempt,
-          Attempt.changeset(%Attempt{}, %{
-            work_order_id: work_order.id,
-            reason_id: reason.id
-          })
-        )
-        |> Ecto.Changeset.put_assoc(
-          :run,
-          Run.changeset(%Run{}, %{
-            project_id: job.workflow.project_id,
-            job_id: job.id,
-            input_dataclip_id: dataclip.id
-          })
-        )
-        |> Lightning.Repo.insert()
+      now = Timex.now()
 
-      Pipeline.process(attempt_run)
-      %{work_order: work_order, reason: reason}
+      %{id: attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -1),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
 
       {:ok, view, html} =
         live(
@@ -81,13 +75,64 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> element(
                "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
-             |> render_click() =~ "attempt-#{attempt_run.attempt_id}"
+             |> render_click() =~ "attempt-#{attempt_id}"
 
       refute view
              |> element(
                "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
-             |> render_click() =~ "attempt-#{attempt_run.attempt_id}"
+             |> render_click() =~ "attempt-#{attempt_id}"
+    end
+
+    test "When the most recent run is not complete, workflow run status is 'Pending'",
+         %{conn: conn, project: project} do
+      job_a =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_a.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_a.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_a.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: nil,
+            exit_code: nil,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Pending"
     end
 
     test "When run A,B and C are successful, workflow run status is 'Success'",
@@ -110,16 +155,17 @@ defmodule LightningWeb.RunWorkOrderTest do
             ).id
         )
 
-      job_fixture(
-        trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
-        body: ~s[fn(state => state)],
-        workflow_id: job_a.workflow_id,
-        project_credential_id:
-          project_credential_fixture(
-            name: "my credential",
-            body: %{"credential" => "body"}
-          ).id
-      )
+      job_c =
+        job_fixture(
+          trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
+          body: ~s[fn(state => state)],
+          workflow_id: job_a.workflow_id,
+          project_credential_id:
+            project_credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
+        )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
 
@@ -131,26 +177,36 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      {:ok, attempt_run} =
-        AttemptRun.new()
-        |> Ecto.Changeset.put_assoc(
-          :attempt,
-          Attempt.changeset(%Attempt{}, %{
-            work_order_id: work_order.id,
-            reason_id: reason.id
-          })
-        )
-        |> Ecto.Changeset.put_assoc(
-          :run,
-          Run.changeset(%Run{}, %{
-            project_id: job_a.workflow.project_id,
-            job_id: job_a.id,
-            input_dataclip_id: dataclip.id
-          })
-        )
-        |> Lightning.Repo.insert()
+      now = Timex.now()
 
-      Pipeline.process(attempt_run)
+      Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_a.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          },
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -10),
+            finished_at: now |> Timex.shift(seconds: -5),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          },
+          %{
+            job_id: job_c.id,
+            started_at: now |> Timex.shift(seconds: -5),
+            finished_at: now |> Timex.shift(seconds: -1),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
         live(
@@ -188,16 +244,17 @@ defmodule LightningWeb.RunWorkOrderTest do
             ).id
         )
 
-      job_fixture(
-        trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
-        body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
-        workflow_id: job_a.workflow_id,
-        project_credential_id:
-          project_credential_fixture(
-            name: "my credential",
-            body: %{"credential" => "body"}
-          ).id
-      )
+      job_c =
+        job_fixture(
+          trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
+          body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
+          workflow_id: job_a.workflow_id,
+          project_credential_id:
+            project_credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
+        )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
 
@@ -209,26 +266,36 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      {:ok, attempt_run} =
-        AttemptRun.new()
-        |> Ecto.Changeset.put_assoc(
-          :attempt,
-          Attempt.changeset(%Attempt{}, %{
-            work_order_id: work_order.id,
-            reason_id: reason.id
-          })
-        )
-        |> Ecto.Changeset.put_assoc(
-          :run,
-          Run.changeset(%Run{}, %{
-            project_id: job_a.workflow.project_id,
-            job_id: job_a.id,
-            input_dataclip_id: dataclip.id
-          })
-        )
-        |> Lightning.Repo.insert()
+      now = Timex.now()
 
-      Pipeline.process(attempt_run)
+      Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_a.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          },
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -10),
+            finished_at: now |> Timex.shift(seconds: -5),
+            exit_code: 1,
+            input_dataclip_id: dataclip.id
+          },
+          %{
+            job_id: job_c.id,
+            started_at: now |> Timex.shift(seconds: -5),
+            finished_at: now |> Timex.shift(seconds: -1),
+            exit_code: 1,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
         live(

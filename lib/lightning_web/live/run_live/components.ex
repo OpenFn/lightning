@@ -2,80 +2,6 @@ defmodule LightningWeb.RunLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
-  # Example Usage
-  #  <Components.table>
-  #    <Components.work_order status={:success}>
-  #      <Components.attempt>
-  #        <li>
-  #          <span class="flex items-center">
-  #            <Heroicons.Solid.clock class="mr-1 h-5 w-5" />
-  #            <span>
-  #              Re-run at 15 June 14:20:42
-  #              <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-green-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-green-800">
-  #                Success
-  #              </span>
-  #            </span>
-  #          </span>
-  #          <ol class="mt-2 list-none space-y-4">
-  #            <li>
-  #              <span class="my-4 flex">
-  #                &vdash;
-  #                <span class="mx-2 flex">
-  #                  <Heroicons.Solid.check_circle class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" />
-  #                  You might feel like you are being
-  #                </span>
-  #              </span>
-  #              <ol class="space-y-4 pl-5">
-  #                <li>
-  #                  <span class="mx-1 flex">
-  #                    &vdash;
-  #                    <span class="ml-1">
-  #                      are being really "organized" o
-  #                    </span>
-  #                  </span>
-  #                </li>
-  #              </ol>
-  #            </li>
-  #            <li>
-  #              <span class="flex">
-  #                &vdash;
-  #                <span class="mx-2 flex">
-  #                  <Heroicons.Solid.check_circle class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" />
-  #                  You might feel like you are being
-  #                </span>
-  #              </span>
-  #            </li>
-  #            <li>
-  #              <span class="flex">
-  #                &vdash;
-  #                <span class="mx-2 flex">
-  #                  <Heroicons.Solid.check_circle class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" />
-  #                  You might feel like you are being
-  #                </span>
-  #              </span>
-  #            </li>
-  #          </ol>
-  #        </li>
-  #      </Components.attempt>
-  #      <Components.attempt>
-  #        <li>
-  #          <span class="flex items-center">
-  #            <Heroicons.Solid.clock class="mr-1 h-5 w-5" />
-  #            <span>
-  #              Run at 15 June 14:20:42
-  #              <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
-  #                Failure
-  #              </span>
-  #            </span>
-  #          </span>
-  #        </li>
-  #      </Components.attempt>
-  #    </Components.work_order>
-  #    <Components.work_order status={:failure} />
-  #    <Components.work_order status={:success} />
-  #  </Components.table>
-
-  # coveralls-ignore-start
   def table(assigns) do
     ~H"""
     <div class="bg-gray-100 dark:bg-gray-700 relative">
@@ -162,5 +88,11 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  # coveralls-ignore-stop
+  def pending_pill(assigns) do
+    ~H"""
+    <span class="my-auto whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
+      Pending
+    </span>
+    """
+  end
 end
