@@ -35,6 +35,10 @@ defmodule LightningWeb.RunLive.AttemptComponent do
               |> Calendar.strftime("%c") %>
 
               <%= case @last_run.exit_code do %>
+                <% nil -> %>
+                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
+                    Pending
+                  </span>
                 <% val when val > 0-> %>
                   <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
                     Failure
