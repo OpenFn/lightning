@@ -318,5 +318,100 @@ defmodule LightningWeb.RunWorkOrderTest do
              )
              |> render_click() =~ "Failure"
     end
+
+    test "When run A and B are successful but C is pending, workflow run status is 'Pending'",
+         %{conn: conn, project: project} do
+      job_a =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      job_b =
+        job_fixture(
+          trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
+          body: ~s[fn(state => state)],
+          workflow_id: job_a.workflow_id,
+          project_credential_id:
+            project_credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
+        )
+
+      job_c =
+        job_fixture(
+          trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
+          body: ~s[fn(state => state)],
+          workflow_id: job_a.workflow_id,
+          project_credential_id:
+            project_credential_fixture(
+              name: "my credential",
+              body: %{"credential" => "body"}
+            ).id
+        )
+
+      work_order = work_order_fixture(workflow_id: job_a.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_a.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_a.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          },
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -10),
+            finished_at: now |> Timex.shift(seconds: -5),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          },
+          %{
+            job_id: job_c.id,
+            started_at: now |> Timex.shift(seconds: -5),
+            finished_at: now |> Timex.shift(seconds: -1),
+            exit_code: nil,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Pending"
+
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+             )
+             |> render_click() =~ "Pending"
+    end
   end
 end
