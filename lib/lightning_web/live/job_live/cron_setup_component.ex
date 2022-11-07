@@ -110,7 +110,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         monthday: _monthday,
         weekday: _weekday
       } ->
-        "#{String.to_integer(minute)} * * * *"
+        "#{minute} * * * *"
 
       %{
         frequency: :daily,
@@ -119,7 +119,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         monthday: _monthday,
         weekday: _weekday
       } ->
-        "#{String.to_integer(minute)} #{String.to_integer(hour)} * * *"
+        "#{minute} #{hour} * * *"
 
       %{
         frequency: :weekly,
@@ -128,7 +128,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         monthday: _monthday,
         weekday: weekday
       } ->
-        "#{String.to_integer(minute)} #{String.to_integer(hour)} * * #{String.to_integer(weekday)}"
+        "#{minute} #{hour} * * #{weekday}"
 
       %{
         frequency: :monthly,
@@ -137,7 +137,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         monthday: monthday,
         weekday: _weekday
       } ->
-        "#{String.to_integer(minute)} #{String.to_integer(hour)} #{String.to_integer(monthday)} * *"
+        "#{minute} #{hour} #{monthday} * *"
 
       _ ->
         prev_cron_expression
@@ -155,7 +155,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         socket.assigns.cron_data,
         params
         |> Map.new(fn {k, v} ->
-          {String.to_existing_atom(k), String.to_existing_atom(v)}
+          {String.to_existing_atom(k), String.to_atom(v)}
         end)
       )
 

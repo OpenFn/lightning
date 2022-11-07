@@ -216,7 +216,7 @@ defmodule LightningWeb.WorkflowLiveTest do
                  weekday: "01"
                },
                "50 * * * *"
-             ) == "34 0 * * *"
+             ) == "34 00 * * *"
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
@@ -227,7 +227,7 @@ defmodule LightningWeb.WorkflowLiveTest do
                  weekday: "01"
                },
                "50 * * * *"
-             ) == "34 0 * * 1"
+             ) == "34 00 * * 01"
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
@@ -238,7 +238,7 @@ defmodule LightningWeb.WorkflowLiveTest do
                  weekday: "01"
                },
                "50 * * * *"
-             ) == "34 0 1 * *"
+             ) == "34 00 01 * *"
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
@@ -274,7 +274,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> form("#job-form",
-               job_form: %{trigger_type: "Cron"}
+               job_form: %{trigger_type: "cron"}
              )
              |> render_change()
 
@@ -291,16 +291,12 @@ defmodule LightningWeb.WorkflowLiveTest do
              ]
 
       assert view
-             |> form("#cron-setup-component",
-               cron_component: %{frequency: "Every hour"}
-             )
-             |> render_change()
+             |> element("#frequency")
+             |> render_change(%{cron_component: %{frequency: "hourly"}})
 
       assert view
-             |> form("#cron-setup-component",
-               cron_component: %{minute: "05"}
-             )
-             |> render_change()
+             |> element("#minute")
+             |> render_change(%{cron_component: %{minute: "05"}})
 
       view |> form("#job-form") |> render_submit()
     end
