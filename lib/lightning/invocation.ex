@@ -311,6 +311,11 @@ defmodule Lightning.Invocation do
         preload: [reason: r, runs: ^runs_query]
       )
 
+    dataclips_query =
+      from(d in Lightning.Invocation.Dataclip,
+        select: %{id: d.id, type: d.type}
+      )
+
     from(wo in Lightning.WorkOrder,
       join: re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
@@ -320,8 +325,7 @@ defmodule Lightning.Invocation do
         reason:
           ^from(r in Lightning.InvocationReason,
             join: d in assoc(r, :dataclip),
-            # select: %{id: r.id, type: r.type, user_id: r.user_id, dataclip_id: r.dataclip_id},
-            preload: [dataclip: d]
+            preload: [dataclip: ^dataclips_query]
           ),
         workflow:
           ^from(wf in Lightning.Workflows.Workflow,
