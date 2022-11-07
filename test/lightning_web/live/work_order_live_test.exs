@@ -19,7 +19,7 @@ defmodule LightningWeb.RunWorkOrderTest do
     } do
       job =
         workflow_job_fixture(
-          name: "my workflow",
+          workflow_name: "my workflow",
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )

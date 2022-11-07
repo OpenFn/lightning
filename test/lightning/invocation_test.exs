@@ -222,7 +222,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_work_orders_for_project/2 returns runs ordered by desc finished_at" do
-      job_one = workflow_job_fixture(name: "chw-help")
+      job_one = workflow_job_fixture(workflow_name: "chw-help")
       # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)
 
       workflow = job_one.workflow
