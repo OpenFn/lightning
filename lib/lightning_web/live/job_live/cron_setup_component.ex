@@ -155,7 +155,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         socket.assigns.cron_data,
         params
         |> Map.new(fn {k, v} ->
-          {String.to_existing_atom(k), String.to_atom(v)}
+          {String.to_existing_atom(k), v}
         end)
       )
 
