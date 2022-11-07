@@ -9,12 +9,9 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   @impl true
   def update(%{form: form, parent: parent}, socket) do
-    cron_expression =
+    cron_data =
       Phoenix.HTML.Form.input_value(form, :trigger_cron_expression)
-
-    parsed_cron_expression =
-      parse_cron_expression(cron_expression)
-      |> IO.inspect(label: "parsed_cron_expression")
+      |> get_cron_data()
       |> Map.merge(
         %{
           frequency: :daily,
@@ -25,14 +22,12 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         },
         fn _k, v1, _v2 -> v1 end
       )
-      |> IO.inspect(label: "parsed_cron_expression")
 
     {:ok,
      socket
      |> assign(:parent, parent)
      |> assign(:form, form)
-     |> assign(:cron_expression, cron_expression)
-     |> assign(:cron_data, parsed_cron_expression)
+     |> assign(:cron_data, cron_data)
      |> assign(:initial_values, %{
        :frequencies => [
          "Every hour": :hourly,
@@ -68,9 +63,9 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
      })}
   end
 
-  def parse_cron_expression(nil), do: %{}
+  defp get_cron_data(nil), do: %{}
 
-  def parse_cron_expression(cron_expression) do
+  defp get_cron_data(cron_expression) do
     rules = %{
       :hourly => ~r/^(?<minute>[\d]{1,2}) \* \* \* \*$/,
       :daily => ~r/^(?<minute>[\d]{1,2}) (?<hour>[\d]{1,2}) \* \* \*$/,
@@ -98,25 +93,57 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     end
   end
 
-  defp pad_value(value, pad \\ 2),
-    do:
-      if(is_binary(value), do: String.pad_leading(value, pad, "0"), else: value)
-
   defp process_regex(cron_expression, rule, key),
     do:
       Regex.named_captures(rule, cron_expression)
       |> Map.new(fn {k, v} ->
-        {String.to_atom(k), String.pad_leading(v, 2, "0")}
+        {String.to_existing_atom(k), String.pad_leading(v, 2, "0")}
       end)
       |> Map.merge(%{:frequency => key})
 
-  defp update_cron(cron, new_value, index) do
-    Enum.reduce(
-      [index],
-      String.split(cron),
-      &List.replace_at(&2, &1, String.to_integer(new_value))
-    )
-    |> Enum.join(" ")
+  defp get_cron_expression(cron_data, socket) do
+    case cron_data do
+      %{
+        frequency: :hourly,
+        hour: _hour,
+        minute: minute,
+        monthday: _monthday,
+        weekday: _weekday
+      } ->
+        "#{minute} * * * *"
+
+      %{
+        frequency: :daily,
+        hour: hour,
+        minute: minute,
+        monthday: _monthday,
+        weekday: _weekday
+      } ->
+        "#{minute} #{hour} * * *"
+
+      %{
+        frequency: :weekly,
+        hour: hour,
+        minute: minute,
+        monthday: _monthday,
+        weekday: weekday
+      } ->
+        "#{minute} #{hour} * * #{weekday}"
+
+      %{
+        frequency: :monthly,
+        hour: hour,
+        minute: minute,
+        monthday: monthday,
+        weekday: _weekday
+      } ->
+        "#{minute} #{hour} #{monthday} * *"
+
+      _ ->
+        socket.assigns.form
+        |> Map.get(:data)
+        |> Map.get(:trigger_cron_expression)
+    end
   end
 
   @impl true
@@ -125,123 +152,23 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         %{"cron_component" => params},
         socket
       ) do
-    current_cron_expression =
-      socket.assigns.form
-      |> Map.get(:data)
-      |> Map.get(:trigger_cron_expression)
-
     cron_data =
       Map.merge(
         socket.assigns.cron_data,
         params
-        |> Map.new(fn {k, v} -> {String.to_atom(k), String.to_atom(v)} end)
+        |> Map.new(fn {k, v} ->
+          {String.to_existing_atom(k), String.to_existing_atom(v)}
+        end)
       )
-      |> IO.inspect(label: "cron_data")
 
-    next_cron_expression =
-      case cron_data do
-        %{
-          frequency: :hourly,
-          hour: _hour,
-          minute: minute,
-          monthday: _monthday,
-          weekday: _weekday
-        } ->
-          "#{minute} * * * *"
-
-        %{
-          frequency: :daily,
-          hour: hour,
-          minute: minute,
-          monthday: _monthday,
-          weekday: _weekday
-        } ->
-          "#{minute} #{hour} * * *"
-
-        %{
-          frequency: :weekly,
-          hour: hour,
-          minute: minute,
-          monthday: _monthday,
-          weekday: weekday
-        } ->
-          "#{minute} #{hour} * * #{weekday}"
-
-        %{
-          frequency: :monthly,
-          hour: hour,
-          minute: minute,
-          monthday: monthday,
-          weekday: _weekday
-        } ->
-          "#{minute} #{hour} #{monthday} * *"
-
-        _ ->
-          current_cron_expression |> IO.inspect(label: "custom")
-      end
-
-    # IO.inspect(params, label: "params")
-
-    # current_cron_expression =
-    #   socket.assigns.form
-    #   |> Map.get(:data)
-    #   |> Map.get(:trigger_cron_expression)
-    #   |> IO.inspect(label: "current_cron_expression")
-
-    # next_cron_expression =
-    #   case params do
-    #     %{"minute" => minute} ->
-    #       update_cron(current_cron_expression, minute, 0)
-
-    #     %{"hour" => hour} ->
-    #       update_cron(current_cron_expression, hour, 1)
-
-    #     %{"weekday" => weekday} ->
-    #       update_cron(current_cron_expression, weekday, 4)
-
-    #     %{"monthday" => monthday} ->
-    #       update_cron(current_cron_expression, monthday, 2)
-
-    #     _ ->
-    #       current_cron_expression
-    #   end
-    #   |> IO.inspect(label: "next_cron_expression")
-
-    # next_cron_expression =
-    #   to_cron_string(
-    #     cron_data,
-    #     current_cron_expression
-    #   )
-    #   |> IO.inspect(label: "next_cron_expression")
+    cron_expression = get_cron_expression(cron_data, socket)
 
     if Map.get(cron_data, :frequency) != :custom do
-      IO.inspect(next_cron_expression, label: "sending next_cron_expression")
       {mod, id} = socket.assigns.parent
-      send_update(mod, id: id, cron_expression: next_cron_expression)
+      send_update(mod, id: id, cron_expression: cron_expression)
     end
 
     {:noreply, socket |> assign(:cron_data, cron_data)}
-  end
-
-  defp to_cron_string(cron_changeset, curr_cron_expression) do
-    IO.inspect(cron_changeset, label: "cron_changeset")
-
-    case cron_changeset.changes |> IO.inspect(label: "cron changes") do
-      %{frequency: :hourly, minute: minute} ->
-        "#{minute} * * * *"
-
-      %{frequency: :daily, hour: hour, minute: minute} ->
-        "#{minute} #{hour} * * *"
-
-      %{frequency: :weekly, weekday: weekday, hour: hour, minute: minute} ->
-        "#{minute} #{hour} * * #{weekday}"
-
-      %{frequency: :monthly, monthday: monthday, hour: hour, minute: minute} ->
-        "#{minute} #{hour} #{monthday} * *"
-
-      _ ->
-        curr_cron_expression
-    end
   end
 
   def frequency_field(assigns) do
@@ -364,9 +291,8 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         values={@initial_values[:frequencies]}
         selected={Map.get(@cron_data, :frequency, :hourly)}
       />
-      <br />
       <%= if Map.get(@cron_data, :frequency) == :hourly do %>
-        <div class="grid grid-flow-col auto-cols-max ggap-1">
+        <div class="grid grid-flow-col auto-cols-max gap-1">
           <.minute_field
             target={@myself}
             values={@initial_values[:minutes]}
@@ -418,13 +344,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         </div>
       <% end %>
       <%= if Map.get(@cron_data, :frequency) == :custom do %>
-        <%= text_input(:cron_component, :cron_expression,
-          phx_change: "cron_expression_change",
-          phx_target: @myself,
-          value: @cron_expression,
-          class:
-            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-        ) %>
+        <Form.text_field id={:trigger_cron_expression} form={@form} />
       <% end %>
     </div>
     """
