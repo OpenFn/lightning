@@ -9,7 +9,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @impl true
   def update(%{work_order: work_order}, socket) do
     last_attempt = Enum.at(work_order.attempts, 0)
-    last_run = Enum.at(last_attempt.runs, 0)
+    last_run = List.last(last_attempt.runs)
 
     last_run_finished_at =
       case last_run.finished_at do

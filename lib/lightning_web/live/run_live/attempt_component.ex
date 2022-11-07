@@ -7,13 +7,13 @@ defmodule LightningWeb.RunLive.AttemptComponent do
   @impl true
   def update(assigns, socket) do
     runs = assigns.attempt.runs
-    last_run = Enum.at(runs, 0)
+    last_run = List.last(runs)
 
     socket =
       socket
       |> assign(assigns)
       |> assign(:last_run, last_run)
-      |> assign(:run_list, runs |> Enum.reverse())
+      |> assign(:run_list, runs)
 
     {:ok, socket |> assign(assigns)}
   end

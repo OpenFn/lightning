@@ -295,7 +295,7 @@ defmodule Lightning.Invocation do
     runs_query =
       from(r in Lightning.Invocation.Run,
         join: j in assoc(r, :job),
-        order_by: [desc: r.finished_at],
+        order_by: [asc: r.finished_at],
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,

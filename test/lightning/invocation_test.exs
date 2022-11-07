@@ -323,7 +323,7 @@ defmodule Lightning.InvocationTest do
 
       # last created run should be first in attempt.runs list
 
-      actual_last_run = Enum.at(actual_last_attempt.runs, 0)
+      actual_last_run = List.last(actual_last_attempt.runs)
 
       assert actual_last_run.id == run_four.id
 
@@ -343,7 +343,7 @@ defmodule Lightning.InvocationTest do
 
       assert actual_last_attempt.id == attempt_two.id
 
-      actual_last_run = Enum.at(actual_last_attempt.runs, 0)
+      actual_last_run = List.last(actual_last_attempt.runs)
 
       assert actual_last_run.id == run_three.id
     end
