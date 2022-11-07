@@ -9,27 +9,63 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   @impl true
   def update(%{form: form, parent: parent}, socket) do
-    parsed_cron_expression =
+    cron_expression =
       Phoenix.HTML.Form.input_value(form, :trigger_cron_expression)
-      |> parse_cron_expression()
 
-    cron_types = %{
-      frequency: :string,
-      monthday: :integer,
-      weekday: :integer,
-      hour: :integer,
-      minute: :integer
-    }
-
-    cron_data =
-      {parsed_cron_expression, cron_types}
-      |> Ecto.Changeset.cast(%{}, Map.keys(cron_types))
+    parsed_cron_expression =
+      parse_cron_expression(cron_expression)
+      |> IO.inspect(label: "parsed_cron_expression")
+      |> Map.merge(
+        %{
+          frequency: :daily,
+          hour: "00",
+          minute: "00",
+          weekday: "01",
+          monthday: "01"
+        },
+        fn _k, v1, _v2 -> v1 end
+      )
+      |> IO.inspect(label: "parsed_cron_expression")
 
     {:ok,
      socket
      |> assign(:parent, parent)
      |> assign(:form, form)
-     |> assign(:cron_data, cron_data)}
+     |> assign(:cron_expression, cron_expression)
+     |> assign(:cron_data, parsed_cron_expression)
+     |> assign(:initial_values, %{
+       :frequencies => [
+         "Every hour": :hourly,
+         "Every day": :daily,
+         "Every week": :weekly,
+         "Every month": :monthly,
+         Custom: :custom
+       ],
+       :minutes =>
+         0..59
+         |> Enum.map(fn x ->
+           String.pad_leading(Integer.to_string(x), 2, "0")
+         end),
+       :hours =>
+         0..23
+         |> Enum.map(fn x ->
+           String.pad_leading(Integer.to_string(x), 2, "0")
+         end),
+       :weekdays => [
+         Monday: "01",
+         Tuesday: "02",
+         Wednesday: "03",
+         Thursday: "04",
+         Friday: "05",
+         Saturday: "06",
+         Sunday: "07"
+       ],
+       :monthdays =>
+         1..31
+         |> Enum.map(fn x ->
+           String.pad_leading(Integer.to_string(x), 2, "0")
+         end)
+     })}
   end
 
   def parse_cron_expression(nil), do: %{}
@@ -62,11 +98,26 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     end
   end
 
+  defp pad_value(value, pad \\ 2),
+    do:
+      if(is_binary(value), do: String.pad_leading(value, pad, "0"), else: value)
+
   defp process_regex(cron_expression, rule, key),
     do:
       Regex.named_captures(rule, cron_expression)
-      |> Map.new(fn {k, v} -> {String.to_atom(k), String.to_integer(v)} end)
+      |> Map.new(fn {k, v} ->
+        {String.to_atom(k), String.pad_leading(v, 2, "0")}
+      end)
       |> Map.merge(%{:frequency => key})
+
+  defp update_cron(cron, new_value, index) do
+    Enum.reduce(
+      [index],
+      String.split(cron),
+      &List.replace_at(&2, &1, String.to_integer(new_value))
+    )
+    |> Enum.join(" ")
+  end
 
   @impl true
   def handle_event(
@@ -74,23 +125,97 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         %{"cron_component" => params},
         socket
       ) do
+    current_cron_expression =
+      socket.assigns.form
+      |> Map.get(:data)
+      |> Map.get(:trigger_cron_expression)
+
     cron_data =
-      Ecto.Changeset.change(
+      Map.merge(
         socket.assigns.cron_data,
         params
         |> Map.new(fn {k, v} -> {String.to_atom(k), String.to_atom(v)} end)
       )
-
-    current_cron_expression =
-      socket.assigns.form |> Map.get(:data) |> Map.get(:trigger_cron_expression)
+      |> IO.inspect(label: "cron_data")
 
     next_cron_expression =
-      to_cron_string(
-        cron_data,
-        current_cron_expression
-      )
+      case cron_data do
+        %{
+          frequency: :hourly,
+          hour: _hour,
+          minute: minute,
+          monthday: _monthday,
+          weekday: _weekday
+        } ->
+          "#{minute} * * * *"
 
-    if next_cron_expression != current_cron_expression do
+        %{
+          frequency: :daily,
+          hour: hour,
+          minute: minute,
+          monthday: _monthday,
+          weekday: _weekday
+        } ->
+          "#{minute} #{hour} * * *"
+
+        %{
+          frequency: :weekly,
+          hour: hour,
+          minute: minute,
+          monthday: _monthday,
+          weekday: weekday
+        } ->
+          "#{minute} #{hour} * * #{weekday}"
+
+        %{
+          frequency: :monthly,
+          hour: hour,
+          minute: minute,
+          monthday: monthday,
+          weekday: _weekday
+        } ->
+          "#{minute} #{hour} #{monthday} * *"
+
+        _ ->
+          current_cron_expression |> IO.inspect(label: "custom")
+      end
+
+    # IO.inspect(params, label: "params")
+
+    # current_cron_expression =
+    #   socket.assigns.form
+    #   |> Map.get(:data)
+    #   |> Map.get(:trigger_cron_expression)
+    #   |> IO.inspect(label: "current_cron_expression")
+
+    # next_cron_expression =
+    #   case params do
+    #     %{"minute" => minute} ->
+    #       update_cron(current_cron_expression, minute, 0)
+
+    #     %{"hour" => hour} ->
+    #       update_cron(current_cron_expression, hour, 1)
+
+    #     %{"weekday" => weekday} ->
+    #       update_cron(current_cron_expression, weekday, 4)
+
+    #     %{"monthday" => monthday} ->
+    #       update_cron(current_cron_expression, monthday, 2)
+
+    #     _ ->
+    #       current_cron_expression
+    #   end
+    #   |> IO.inspect(label: "next_cron_expression")
+
+    # next_cron_expression =
+    #   to_cron_string(
+    #     cron_data,
+    #     current_cron_expression
+    #   )
+    #   |> IO.inspect(label: "next_cron_expression")
+
+    if Map.get(cron_data, :frequency) != :custom do
+      IO.inspect(next_cron_expression, label: "sending next_cron_expression")
       {mod, id} = socket.assigns.parent
       send_update(mod, id: id, cron_expression: next_cron_expression)
     end
@@ -99,8 +224,9 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   end
 
   defp to_cron_string(cron_changeset, curr_cron_expression) do
-    cron_changeset |> IO.inspect(label: "Changeset")
-    case cron_changeset.changes |> IO.inspect(label: "Changes") do
+    IO.inspect(cron_changeset, label: "cron_changeset")
+
+    case cron_changeset.changes |> IO.inspect(label: "cron changes") do
       %{frequency: :hourly, minute: minute} ->
         "#{minute} * * * *"
 
@@ -116,224 +242,189 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       _ ->
         curr_cron_expression
     end
+  end
 
-    # curr_expression =
-    # Enum.reduce(
-    #   [index],
-    #   prev_expression,
-    #   &List.replace_at(&2, &1, String.to_integer(cron_value))
-    # )
-    # |> Enum.join(" ")
+  def frequency_field(assigns) do
+    ~H"""
+    <Form.label_field
+      form={:cron_component}
+      id={:frequency}
+      title="Frequency"
+      for="frequency"
+    />
+    <Form.select_field
+      form={:cron_component}
+      name={:frequency}
+      selected={@selected}
+      prompt=""
+      id="frequency"
+      phx-change="cron_expression_change"
+      phx-target={@target}
+      values={@values}
+    />
+    """
+  end
 
-    # data =
-    # socket.assigns.form
-    # |> Map.get(:data)
-    # |> Map.put(:trigger_cron_expression, curr_expression)
+  def minute_field(assigns) do
+    ~H"""
+    <Form.label_field
+      form={:cron_component}
+      id={:minute}
+      title="Minute"
+      for="minute"
+    />
+    <Form.select_field
+      form={:cron_component}
+      name={:minute}
+      selected={@selected}
+      prompt=""
+      id="minute"
+      phx-change="cron_expression_change"
+      phx-target={@target}
+      values={@values}
+    />
+    """
+  end
 
-    # Map.put(socket.assigns.form, :data, data)
+  def hour_field(assigns) do
+    ~H"""
+    <Form.label_field form={:cron_component} id={:hour} title="Hour" for="hour" />
+    <Form.select_field
+      form={:cron_component}
+      name={:hour}
+      selected={@selected}
+      prompt=""
+      id="hour"
+      phx-change="cron_expression_change"
+      phx-target={@target}
+      values={@values}
+    />
+    """
+  end
+
+  def weekday_field(assigns) do
+    ~H"""
+    <Form.label_field
+      form={:cron_component}
+      id={:weekday}
+      title="Weekday"
+      for="weekday"
+    />
+    <Form.select_field
+      form={:cron_component}
+      name={:weekday}
+      selected={@selected}
+      prompt=""
+      id="weekday"
+      phx-change="cron_expression_change"
+      phx-target={@target}
+      values={@values}
+    />
+    """
+  end
+
+  def monthday_field(assigns) do
+    ~H"""
+    <Form.label_field
+      form={:cron_component}
+      id={:monthday}
+      title="Monthday"
+      for="monthday"
+    />
+    <Form.select_field
+      form={:cron_component}
+      name={:monthday}
+      selected={@selected}
+      prompt=""
+      id="monthday"
+      phx-change="cron_expression_change"
+      phx-target={@target}
+      values={@values}
+    />
+    """
+  end
+
+  def time_field(assigns) do
+    ~H"""
+    <.hour_field target={@target} values={@hour_values} selected={@selected_hour} />
+    <.minute_field
+      target={@target}
+      values={@minute_values}
+      selected={@selected_minute}
+    />
+    """
   end
 
   @impl true
   def render(assigns) do
     ~H"""
     <div class="grid grid-flow-col auto-cols-max gap-1">
-      <Form.label_field
-        form={:cron_component}
-        id={:frequency}
-        title="Frequency"
-        for="frequency"
-      />
-      <Form.select_field
-        form={:cron_component}
-        name={:frequency}
-        selected={@cron_data |> Ecto.Changeset.get_field(:frequency, :hourly)}
-        prompt=""
-        id="frequency"
-        phx-change="cron_expression_change"
-        phx-target={@myself}
-        values={
-          [
-            "Every hour": :hourly,
-            "Every day": :daily,
-            "Every week": :weekly,
-            "Every month": :monthly,
-            Custom: :custom
-          ]
-        }
+      <.frequency_field
+        target={@myself}
+        values={@initial_values[:frequencies]}
+        selected={Map.get(@cron_data, :frequency, :hourly)}
       />
       <br />
-      <%= if @cron_data |> Ecto.Changeset.get_field(:frequency, :hourly) == :hourly do %>
+      <%= if Map.get(@cron_data, :frequency) == :hourly do %>
+        <div class="grid grid-flow-col auto-cols-max ggap-1">
+          <.minute_field
+            target={@myself}
+            values={@initial_values[:minutes]}
+            selected={Map.get(@cron_data, :minute, "00")}
+          />
+        </div>
+      <% end %>
+      <%= if Map.get(@cron_data, :frequency) == :daily do %>
         <div class="grid grid-flow-col auto-cols-max gap-1">
-          <Form.label_field
-            form={:cron_component}
-            id={:minute}
-            title="Minute"
-            for="minute"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:minute}
-            selected={@cron_data |> Ecto.Changeset.get_field(:minute, 0)}
-            prompt=""
-            id="minute"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..59}
+          <.time_field
+            target={@myself}
+            minute_values={@initial_values[:minutes]}
+            hour_values={@initial_values[:hours]}
+            selected_minute={Map.get(@cron_data, :minute, "00")}
+            selected_hour={Map.get(@cron_data, :hour, "00")}
           />
         </div>
       <% end %>
-      <%= if @cron_data |> Ecto.Changeset.get_field(:frequency, :daily) == :daily do %>
-        <div class="grid grid-flow-col auto-cols-max gap-4">
-          <Form.label_field
-            form={:cron_component}
-            id={:hour}
-            title="Hour"
-            for="hour"
+      <%= if Map.get(@cron_data, :frequency) == :weekly do %>
+        <div class="grid grid-flow-col auto-cols-max gap-1">
+          <.weekday_field
+            target={@myself}
+            values={@initial_values[:weekdays]}
+            selected={Map.get(@cron_data, :weekday, 1)}
           />
-          <Form.select_field
-            form={:cron_component}
-            name={:hour}
-            selected={@cron_data |> Ecto.Changeset.get_field(:hour, 0)}
-            prompt=""
-            id="hour"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..23}
-          />
-          <Form.label_field
-            form={:cron_component}
-            id={:minute}
-            title="Minute"
-            for="minute"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:minute}
-            selected={@cron_data |> Ecto.Changeset.get_field(:minute, 0)}
-            prompt=""
-            id="minute"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..59}
+          <.time_field
+            target={@myself}
+            minute_values={@initial_values[:minutes]}
+            hour_values={@initial_values[:hours]}
+            selected_minute={Map.get(@cron_data, :minute, "00")}
+            selected_hour={Map.get(@cron_data, :hour, "00")}
           />
         </div>
       <% end %>
-      <%= if @cron_data |> Ecto.Changeset.get_field(:frequency, :weekly) == :weekly do %>
-        <div class="grid grid-flow-col auto-cols-max gap-4">
-          <Form.label_field
-            form={:cron_component}
-            id={:weekday}
-            title="Wekkday"
-            for="weekday"
+      <%= if Map.get(@cron_data, :frequency) == :monthly do %>
+        <div class="grid grid-flow-col auto-cols-max gap-1">
+          <.monthday_field
+            target={@myself}
+            values={@initial_values[:minutes]}
+            selected={Map.get(@cron_data, :monthday, "01")}
           />
-          <Form.select_field
-            form={:cron_component}
-            name={:weekday}
-            selected={@cron_data |> Ecto.Changeset.get_field(:weekday, 1)}
-            prompt=""
-            id="weekday"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={
-              [
-                Monday: 1,
-                Tuesday: 2,
-                Wednesday: 3,
-                Thursday: 4,
-                Friday: 5,
-                Saturday: 6,
-                Sunday: 7
-              ]
-            }
-          />
-          <Form.label_field
-            form={:cron_component}
-            id={:hour}
-            title="Hour"
-            for="hour"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:hour}
-            selected={@cron_data |> Ecto.Changeset.get_field(:hour, 0)}
-            prompt=""
-            id="hour"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..23}
-          />
-          <Form.label_field
-            form={:cron_component}
-            id={:minute}
-            title="Minute"
-            for="minute"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:minute}
-            selected={@cron_data |> Ecto.Changeset.get_field(:minute, 0)}
-            prompt=""
-            id="minute"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..59}
+          <.time_field
+            target={@myself}
+            minute_values={@initial_values[:minutes]}
+            hour_values={@initial_values[:hours]}
+            selected_minute={Map.get(@cron_data, :minute, "00")}
+            selected_hour={Map.get(@cron_data, :hour, "00")}
           />
         </div>
       <% end %>
-      <%= if @cron_data |> Ecto.Changeset.get_field(:frequency, :monthly) == :monthly do %>
-        <div class="grid grid-flow-col auto-cols-max gap-4">
-          <Form.label_field
-            form={:cron_component}
-            id={:monthday}
-            title="Monthday"
-            for="monthday"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:monthday}
-            selected={@cron_data |> Ecto.Changeset.get_field(:monthday, 1)}
-            prompt=""
-            id="monthday"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={1..31}
-          />
-          <Form.label_field
-            form={:cron_component}
-            id={:hour}
-            title="Hour"
-            for="hour"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:hour}
-            selected={@cron_data |> Ecto.Changeset.get_field(:hour, 0)}
-            prompt=""
-            id="hour"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..23}
-          />
-          <Form.label_field
-            form={:cron_component}
-            id={:minute}
-            title="Minute"
-            for="minute"
-          />
-          <Form.select_field
-            form={:cron_component}
-            name={:minute}
-            selected={@cron_data |> Ecto.Changeset.get_field(:minute, 0)}
-            prompt=""
-            id="minute"
-            phx-change="cron_expression_change"
-            phx-target={@myself}
-            values={0..59}
-          />
-        </div>
-      <% end %>
-      <%= if @cron_data |> Ecto.Changeset.get_field(:frequency, :custom) == :custom do %>
-        <Form.text_field id={:trigger_cron_expression} form={@form} />
+      <%= if Map.get(@cron_data, :frequency) == :custom do %>
+        <%= text_input(:cron_component, :cron_expression,
+          phx_change: "cron_expression_change",
+          phx_target: @myself,
+          value: @cron_expression,
+          class:
+            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+        ) %>
       <% end %>
     </div>
     """
