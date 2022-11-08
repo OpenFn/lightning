@@ -37,9 +37,10 @@
                   "On Job Failure": "on_job_failure"
                 ]}
               />
+              <br />
             <% end %>
 
-            <%= if f.data.id && @id do %>
+            <%= if webhook?(f.source) do %>
               <a
                 id="copyWebhookUrl"
                 href={Routes.webhooks_url(@socket, :create, [@id])}
@@ -68,7 +69,12 @@
               <% end %>
             <% end %>
             <%= if requires_cron_job?(f.source) do %>
-              <Form.text_field form={f} id={:trigger_cron_expression} />
+              <.live_component
+                id="cron-setup"
+                module={LightningWeb.JobLive.CronSetupComponent}
+                parent={{__MODULE__, @id}}
+                form={f}
+              />
             <% end %>
           </div>
 
