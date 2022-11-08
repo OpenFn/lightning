@@ -13,8 +13,8 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def render(assigns) do
     ~H"""
-    <div>
-      <div class="md:col-span-2">
+    <div class="grid grid-cols-4 gap-1">
+      <div class="md:col-span-3">
         <Form.label_field
           form={:adaptor_picker}
           id={:adaptor_name}
@@ -33,7 +33,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         />
       </div>
 
-      <div class="md:col-span-2">
+      <div class="md:col-span-1">
         <Form.label_field
           form={@form}
           id={:adaptor}

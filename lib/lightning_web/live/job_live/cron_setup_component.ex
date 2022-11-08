@@ -13,64 +13,68 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="cron-setup-component" class="grid grid-flow-col auto-cols-max gap-1">
-      <.frequency_field
-        target={@myself}
-        values={@initial_values["frequencies"]}
-        selected={Map.get(@cron_data, :frequency, "hourly")}
-      />
-      <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.minute_field
-            target={@myself}
-            values={@initial_values["minutes"]}
-            selected={Map.get(@cron_data, :minute, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "daily" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.time_field
-            target={@myself}
-            minute_values={@initial_values["minutes"]}
-            hour_values={@initial_values["hours"]}
-            selected_minute={Map.get(@cron_data, :minute, "00")}
-            selected_hour={Map.get(@cron_data, :hour, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.weekday_field
-            target={@myself}
-            values={@initial_values["weekdays"]}
-            selected={Map.get(@cron_data, :weekday, 1)}
-          />
-          <.time_field
-            target={@myself}
-            minute_values={@initial_values["minutes"]}
-            hour_values={@initial_values["hours"]}
-            selected_minute={Map.get(@cron_data, :minute, "00")}
-            selected_hour={Map.get(@cron_data, :hour, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.monthday_field
-            target={@myself}
-            values={@initial_values["minutes"]}
-            selected={Map.get(@cron_data, :monthday, "01")}
-          />
-          <.time_field
-            target={@myself}
-            minute_values={@initial_values["minutes"]}
-            hour_values={@initial_values["hours"]}
-            selected_minute={Map.get(@cron_data, :minute, "00")}
-            selected_hour={Map.get(@cron_data, :hour, "00")}
-          />
-        </div>
-      <% end %>
+    <div id="cron-setup-component" class="grid grid-cols-4 gap-1">
+      <div class="col-span-4">
+        <.frequency_field
+          target={@myself}
+          values={@initial_values["frequencies"]}
+          selected={Map.get(@cron_data, :frequency, "hourly")}
+        />
+      </div>
+      <div class="col-span-4">
+        <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
+          <div class="grid grid-cols-2 gap-1">
+            <.minute_field
+              target={@myself}
+              values={@initial_values["minutes"]}
+              selected={Map.get(@cron_data, :minute, "00")}
+            />
+          </div>
+        <% end %>
+        <%= if Map.get(@cron_data, :frequency) == "daily" do %>
+          <div class="grid grid-cols-2 gap-1">
+            <.time_field
+              target={@myself}
+              minute_values={@initial_values["minutes"]}
+              hour_values={@initial_values["hours"]}
+              selected_minute={Map.get(@cron_data, :minute, "00")}
+              selected_hour={Map.get(@cron_data, :hour, "00")}
+            />
+          </div>
+        <% end %>
+        <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
+          <div class="grid grid-cols-2 gap-1">
+            <.weekday_field
+              target={@myself}
+              values={@initial_values["weekdays"]}
+              selected={Map.get(@cron_data, :weekday, 1)}
+            />
+            <.time_field
+              target={@myself}
+              minute_values={@initial_values["minutes"]}
+              hour_values={@initial_values["hours"]}
+              selected_minute={Map.get(@cron_data, :minute, "00")}
+              selected_hour={Map.get(@cron_data, :hour, "00")}
+            />
+          </div>
+        <% end %>
+        <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
+          <div class="grid grid-cols-3 gap-1">
+            <.monthday_field
+              target={@myself}
+              values={@initial_values["minutes"]}
+              selected={Map.get(@cron_data, :monthday, "01")}
+            />
+            <.time_field
+              target={@myself}
+              minute_values={@initial_values["minutes"]}
+              hour_values={@initial_values["hours"]}
+              selected_minute={Map.get(@cron_data, :minute, "00")}
+              selected_hour={Map.get(@cron_data, :hour, "00")}
+            />
+          </div>
+        <% end %>
+      </div>
       <%= if Map.get(@cron_data, :frequency) == "custom" do %>
         <Form.text_field id={:cron_expression} form={@form} />
       <% end %>
@@ -268,80 +272,88 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   def minute_field(assigns) do
     ~H"""
-    <Form.label_field
-      form={:cron_component}
-      id={:minute}
-      title="Minute"
-      for="minute"
-    />
-    <Form.select_field
-      form={:cron_component}
-      name={:minute}
-      selected={@selected}
-      prompt=""
-      id="minute"
-      phx-change="cron_expression_change"
-      phx-target={@target}
-      values={@values}
-    />
+    <div class="col-span-1">
+      <Form.label_field
+        form={:cron_component}
+        id={:minute}
+        title="Minute"
+        for="minute"
+      />
+      <Form.select_field
+        form={:cron_component}
+        name={:minute}
+        selected={@selected}
+        prompt=""
+        id="minute"
+        phx-change="cron_expression_change"
+        phx-target={@target}
+        values={@values}
+      />
+    </div>
     """
   end
 
   def hour_field(assigns) do
     ~H"""
-    <Form.label_field form={:cron_component} id={:hour} title="Hour" for="hour" />
-    <Form.select_field
-      form={:cron_component}
-      name={:hour}
-      selected={@selected}
-      prompt=""
-      id="hour"
-      phx-change="cron_expression_change"
-      phx-target={@target}
-      values={@values}
-    />
+    <div class="col-span-1">
+      <Form.label_field form={:cron_component} id={:hour} title="Hour" for="hour" />
+      <Form.select_field
+        form={:cron_component}
+        name={:hour}
+        selected={@selected}
+        prompt=""
+        id="hour"
+        phx-change="cron_expression_change"
+        phx-target={@target}
+        values={@values}
+      />
+    </div>
     """
   end
 
   def weekday_field(assigns) do
     ~H"""
-    <Form.label_field
-      form={:cron_component}
-      id={:weekday}
-      title="Weekday"
-      for="weekday"
-    />
-    <Form.select_field
-      form={:cron_component}
-      name={:weekday}
-      selected={@selected}
-      prompt=""
-      id="weekday"
-      phx-change="cron_expression_change"
-      phx-target={@target}
-      values={@values}
-    />
+    <div class="col-span-2">
+      <Form.label_field
+        form={:cron_component}
+        id={:weekday}
+        title="Day"
+        for="weekday"
+      />
+      <Form.select_field
+        form={:cron_component}
+        name={:weekday}
+        selected={@selected}
+        prompt=""
+        id="weekday"
+        phx-change="cron_expression_change"
+        phx-target={@target}
+        values={@values}
+      />
+    </div>
     """
   end
 
   def monthday_field(assigns) do
     ~H"""
-    <Form.label_field
-      form={:cron_component}
-      id={:monthday}
-      title="Monthday"
-      for="monthday"
-    />
-    <Form.select_field
-      form={:cron_component}
-      name={:monthday}
-      selected={@selected}
-      prompt=""
-      id="monthday"
-      phx-change="cron_expression_change"
-      phx-target={@target}
-      values={@values}
-    />
+    <div class="col-span-1">
+      <Form.label_field
+        form={:cron_component}
+        id={:monthday}
+        title="Day"
+        for="monthday"
+      />
+      <Form.select_field
+        form={:cron_component}
+        name={:monthday}
+        selected={@selected}
+        prompt=""
+        id="monthday"
+        phx-change="cron_expression_change"
+        phx-target={@target}
+        values={@values}
+      />
+    </div>
     """
   end
 

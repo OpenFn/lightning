@@ -30,55 +30,57 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       )
 
     ~H"""
-    <%= hidden_inputs_for(@form) %>
-    <%= label @form, :type, class: "block" do %>
-      <span class="block text-sm font-medium text-secondary-700">
-        Trigger
-      </span>
-      <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
-      <Form.select_field
-        form={@form}
-        name={:type}
-        prompt=""
-        id="triggerType"
-        values={@trigger_type_options}
-      />
-    <% end %>
-    <%= if @webhook_url do %>
-      <a
-        id="copyWebhookUrl"
-        href={@webhook_url}
-        onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-        target="_blank"
-      >
-        Copy webhook url
-      </a>
-    <% end %>
-
-    <%= if @requires_upstream_job do %>
-      <%= label @form, :upstream_job_id, class: "block" do %>
+    <div class="md:grid md:grid-cols-2 md:gap-4">
+      <%= hidden_inputs_for(@form) %>
+      <%= label @form, :type, class: "block" do %>
         <span class="block text-sm font-medium text-secondary-700">
-          Upstream Job
+          Trigger
         </span>
-        <%= error_tag(@form, :upstream_job_id, class: "block w-full rounded-md") %>
+        <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
         <Form.select_field
           form={@form}
-          name={:upstream_job_id}
+          name={:type}
           prompt=""
-          id="upstream-job"
-          values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+          id="triggerType"
+          values={@trigger_type_options}
         />
       <% end %>
-    <% end %>
+      <%= if @webhook_url do %>
+        <a
+          id="copyWebhookUrl"
+          href={@webhook_url}
+          onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+          target="_blank"
+        >
+          Copy webhook url
+        </a>
+      <% end %>
 
-    <%= if @requires_cron_job do %>
-      <.live_component
-        id="cron-setup"
-        module={LightningWeb.JobLive.CronSetupComponent}
-        on_change={@on_cron_change}
-        form={@form}
-      />
-    <% end %>
+      <%= if @requires_upstream_job do %>
+        <%= label @form, :upstream_job_id, class: "block" do %>
+          <span class="block text-sm font-medium text-secondary-700">
+            Upstream Job
+          </span>
+          <%= error_tag(@form, :upstream_job_id, class: "block w-full rounded-md") %>
+          <Form.select_field
+            form={@form}
+            name={:upstream_job_id}
+            prompt=""
+            id="upstream-job"
+            values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+          />
+        <% end %>
+      <% end %>
+
+      <%= if @requires_cron_job do %>
+        <.live_component
+          id="cron-setup"
+          module={LightningWeb.JobLive.CronSetupComponent}
+          on_change={@on_cron_change}
+          form={@form}
+        />
+      <% end %>
+    </div>
     """
   end
 

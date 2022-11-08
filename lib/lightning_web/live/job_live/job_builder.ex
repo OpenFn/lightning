@@ -84,7 +84,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 <div class="md:col-span-2">
                   <Form.check_box form={f} id={:enabled} />
                 </div>
-                <div class="md:col-span-2">
+                <div class="md:col-span-4">
                   <%= for t <- inputs_for(f, :trigger) do %>
                     <.trigger_picker
                       form={t}

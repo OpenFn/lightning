@@ -28,33 +28,4 @@ defmodule LightningWeb.Components.Jobs do
     />
     """
   end
-
-  def adaptor_name_select(assigns) do
-    ~H"""
-    <.label_field form={@form} id={:adaptor_name} title="Adaptor" for="adaptorField" />
-    <%= error_tag(@form, :adaptor_name, class: "block w-full rounded-md") %>
-    <.select_field
-      form={@form}
-      name={:adaptor_name}
-      prompt=""
-      selected={@adaptor_name}
-      id="adaptorField"
-      values={@adaptors}
-    />
-    """
-  end
-
-  def adaptor_version_select(assigns) do
-    ~H"""
-    <.label_field form={@form} id={:adaptor} title="Version" for="adaptor-version" />
-    <%= error_tag(@form, :adaptor, class: "block w-full rounded-md") %>
-    <.select_field
-      form={@form}
-      disabled={!@adaptor_name}
-      name={:adaptor}
-      id="adaptor-version"
-      values={@versions}
-    />
-    """
-  end
 end

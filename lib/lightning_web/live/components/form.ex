@@ -325,6 +325,7 @@ defmodule LightningWeb.Components.Form do
 
   def select_field(assigns) do
     select_classes = ~w[
+      mt-1
       block
       w-full
       rounded-md
