@@ -24,6 +24,7 @@ and this project adheres to
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel
 - Split JobLive.InspectorFormComponent into different plug-able subcomponents
+- Configure cron expressions thru a form
 
 ## [0.2.0] - 2022-09-12
 
