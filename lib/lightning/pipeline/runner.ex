@@ -74,7 +74,7 @@ defmodule Lightning.Pipeline.Runner do
 
     state = Lightning.Pipeline.StateAssembler.assemble(run)
 
-    %{local_name: local_name} = find_or_install_adaptor(adaptor)
+    %{path: adaptor_path} = find_or_install_adaptor(adaptor)
 
     # turn run into RunSpec
     {:ok, state_path} = write_temp(state, "state")
@@ -86,7 +86,7 @@ defmodule Lightning.Pipeline.Runner do
       |> Keyword.get(:adaptors_path)
 
     runspec = %Engine.RunSpec{
-      adaptor: local_name,
+      adaptor: adaptor_path,
       state_path: state_path,
       adaptors_path: "#{adaptors_path}/lib",
       final_state_path: final_state_path,

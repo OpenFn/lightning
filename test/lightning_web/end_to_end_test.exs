@@ -13,7 +13,7 @@ defmodule LightningWeb.EndToEndTest do
   setup :register_and_log_in_superuser
 
   defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.8 (Node.js v18.12.0"
-  defp expected_adaptor, do: "@openfn/language-http@4.2.1"
+  defp expected_adaptor, do: "@openfn/language-http@4.2.2"
 
   test "the whole thing", %{conn: conn} do
     project = project_fixture()
