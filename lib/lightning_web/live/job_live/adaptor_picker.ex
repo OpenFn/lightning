@@ -34,10 +34,21 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
       </div>
 
       <div class="md:col-span-2">
-        <Components.Jobs.adaptor_version_select
+        <Form.label_field
           form={@form}
-          adaptor_name={@adaptor_name}
-          versions={@versions}
+          id={:adaptor}
+          title="Version"
+          for="adaptor-version"
+        />
+        <%= error_tag(@form, :adaptor,
+          class: "block w-full rounded-md text-sm text-secondary-700 "
+        ) %>
+        <Form.select_field
+          form={@form}
+          disabled={!@adaptor_name}
+          name={:adaptor}
+          id="adaptor-version"
+          values={@versions}
         />
       </div>
     </div>

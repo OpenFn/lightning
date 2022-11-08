@@ -139,7 +139,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             to: Routes.project_workflow_path(@socket, :show, @project.id)
           ) %>
           <Form.submit_button
-            changeset={@changeset}
+            disabled={!@changeset.valid?}
             phx-disable-with="Saving"
             form="job-form"
           >
