@@ -15,6 +15,7 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(
        active_menu_item: :runs,
+       work_orders: [],
        pagination_path:
          &Routes.project_run_index_path(
            socket,
@@ -35,96 +36,8 @@ defmodule LightningWeb.RunLive.Index do
     |> assign(
       page_title: "Runs",
       run: %Run{},
-      page: Invocation.list_runs_for_project(socket.assigns.project, params)
+      page:
+        Invocation.list_work_orders_for_project(socket.assigns.project, params)
     )
-  end
-
-  defp apply_action(socket, :show, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Run")
-    |> assign(:run, Invocation.get_run_with_job!(id))
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    run = Invocation.get_run!(id)
-    {:ok, _} = Invocation.delete_run(run)
-
-    {:noreply,
-     socket
-     |> assign(
-       page: Invocation.list_runs_for_project(socket.assigns.project, %{})
-     )}
-  end
-
-  def show_run(assigns) do
-    ~H"""
-    <.card>
-      <.card_content
-        heading={"Run #{@run.id}"}
-        category={"Run exited with code #{@run.exit_code}"}
-      >
-        <.p>
-          <b>Started:</b> <%= @run.started_at %>
-        </.p>
-        <.p>
-          <b>Finished:</b> <%= @run.finished_at %>
-        </.p>
-        <.p>
-          <b>Job:</b> <%= @run.job.name %>
-        </.p>
-        <br />
-        <.p>
-          <b>Logs</b>
-        </.p>
-        <div class="font-mono text-sm">
-          <%= for line <- @run.log || [] do %>
-            <li class="list-none">
-              <%= raw(line |> String.replace(" ", "&nbsp;")) %>
-            </li>
-          <% end %>
-        </div>
-      </.card_content>
-      <.card_footer>
-        <.link
-          navigate={Routes.project_run_index_path(@socket, :index, @project.id)}
-          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
-        >
-          Back
-        </.link>
-      </.card_footer>
-    </.card>
-    """
-  end
-
-  defp format_time(time) when is_nil(time) do
-    ""
-  end
-
-  defp format_time(time) do
-    time |> Timex.from_now(Timex.now(), "en")
-  end
-
-  def run_time(assigns) do
-    run = assigns[:run]
-
-    if run.finished_at do
-      time_taken = Timex.diff(run.finished_at, run.started_at, :milliseconds)
-
-      assigns =
-        assigns
-        |> assign(
-          time_since: run.started_at |> format_time(),
-          time_taken: time_taken
-        )
-
-      ~H"""
-      <%= @time_since %> (<%= @time_taken %> ms)
-      """
-    else
-      ~H"""
-
-      """
-    end
   end
 end

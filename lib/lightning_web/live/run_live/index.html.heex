@@ -1,57 +1,33 @@
 <Layout.page_content>
   <:header>
-    <Layout.header socket={@socket} title="Runs" />
+    <Layout.header socket={@socket} title={@page_title} />
   </:header>
   <Layout.centered>
-    <%= if @live_action == :show do %>
-      <.show_run {assigns} />
-    <% else %>
-      <.table>
-        <.tr>
-          <.th>Started At</.th>
-          <.th>Finished At</.th>
-          <.th>Job</.th>
-          <.th>Exit Code</.th>
-          <.th>Actions</.th>
-        </.tr>
-
-        <%= for run <- @page.entries do %>
-          <.tr id={"run-#{run.id}"}>
-            <.td class="col-span-2"><%= run.started_at |> format_time %></.td>
-            <.td class="col-span-2"><.run_time run={run} /></.td>
-            <.td class="col-span-1"><%= run.job.name %></.td>
-            <.td class="col-span-1"><%= run.exit_code %></.td>
-            <.td class="col-span-2">
-              <span>
-                <.link navigate={
-                  Routes.project_run_index_path(
-                    @socket,
-                    :show,
-                    @project.id,
-                    run
-                  )
-                }>
-                  Show
-                </.link>
-              </span>
-              |
-              <span>
-                <%= link("Delete",
-                  to: "#",
-                  phx_click: "delete",
-                  phx_value_id: run.id,
-                  data: [confirm: "Are you sure?"]
-                ) %>
-              </span>
-            </.td>
-          </.tr>
-        <% end %>
-      </.table>
-
-      <LightningWeb.Pagination.pagination_bar
-        page={@page}
-        url={@pagination_path}
-      />
-    <% end %>
+    <div class="bg-gray-100 dark:bg-gray-700 relative">
+      <div
+        data-entity="work_order_index"
+        class="flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
+      >
+        <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
+          <div class="grid grid-cols-5 gap-4">
+            <div class="py-3 px-6 font-medium">Workflow name</div>
+            <div class="py-3 px-6 font-medium">Reason</div>
+            <div class="py-3 px-6 font-medium">Input</div>
+            <div class="py-3 px-6 font-medium">Last run</div>
+            <div class="py-3 px-6 font-medium">Status</div>
+          </div>
+        </div>
+        <div data-entity="work_order_list" class="bg-gray-100">
+          <%= for wo <- @page.entries do %>
+            <.live_component
+              module={LightningWeb.RunLive.WorkOrderComponent}
+              id={wo.id}
+              work_order={wo}
+            />
+          <% end %>
+        </div>
+      </div>
+    </div>
+    <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
   </Layout.centered>
 </Layout.page_content>

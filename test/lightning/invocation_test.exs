@@ -220,5 +220,138 @@ defmodule Lightning.InvocationTest do
       run = run_fixture()
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
+
+    test "list_work_orders_for_project/2 returns runs ordered by desc finished_at" do
+      job_one = workflow_job_fixture(workflow_name: "chw-help")
+      # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)
+
+      workflow = job_one.workflow
+      work_order = work_order_fixture(workflow_id: workflow.id)
+      reason = reason_fixture(trigger_id: job_one.trigger.id)
+
+      dataclip = dataclip_fixture()
+
+      ### when inserting in this order
+
+      # work_oder
+      #   -- attempt_one
+      #       -- run_one
+      #       -- run_two
+      #   -- attempt_two
+      #       -- run_three
+      #       -- run_four
+
+      ### we expect
+
+      # work_oder
+      #   -- attempt_two
+      #       -- run_four
+      #       -- run_three
+      #   -- attempt_one
+      #       -- run_two
+      #       -- run_one
+
+      {:ok, attempt_one} =
+        Lightning.AttemptService.create_attempt(
+          work_order,
+          job_one,
+          reason
+        )
+
+      run_one = Enum.at(attempt_one.runs, 0)
+
+      Invocation.update_run(run_one, %{
+        exit_code: 0,
+        started_at: ~U[2022-10-27 00:00:00.000000Z],
+        finished_at: ~U[2022-10-27 01:00:00.000000Z]
+      })
+
+      Lightning.AttemptService.append(
+        attempt_one,
+        # run_two
+        Run.changeset(%Run{}, %{
+          project_id: workflow.project_id,
+          job_id: job_one.id,
+          input_dataclip_id: dataclip.id,
+          exit_code: 0,
+          started_at: ~U[2022-10-27 01:10:00.000000Z],
+          finished_at: ~U[2022-10-27 02:00:00.000000Z]
+        })
+      )
+
+      # ---------------------------------------------------------
+
+      {:ok, attempt_two} =
+        Lightning.AttemptService.create_attempt(
+          work_order,
+          job_one,
+          reason
+        )
+
+      run_three = Enum.at(attempt_two.runs, 0)
+
+      Invocation.update_run(run_three, %{
+        exit_code: 0,
+        started_at: ~U[2022-10-27 03:00:00.000000Z],
+        finished_at: ~U[2022-10-27 04:00:00.000000Z]
+      })
+
+      {:ok, %{run: run_four} = _attempt_run} =
+        Lightning.AttemptService.append(
+          attempt_two,
+          # run_four
+          Run.changeset(%Run{}, %{
+            project_id: workflow.project_id,
+            job_id: job_one.id,
+            input_dataclip_id: dataclip.id,
+            exit_code: 0,
+            started_at: ~U[2022-10-27 05:10:00.000000Z],
+            finished_at: ~U[2022-10-27 06:00:00.000000Z]
+          })
+        )
+
+      [actual_wo] =
+        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
+          id: workflow.project_id
+        }).entries()
+
+      # last created attempt should be first in work_order.attempts list
+
+      actual_last_attempt = Enum.at(actual_wo.attempts, 0)
+
+      assert actual_last_attempt.id == attempt_two.id
+
+      # last created run should be first in attempt.runs list
+
+      actual_last_run = List.last(actual_last_attempt.runs)
+
+      assert actual_last_run.id == run_four.id
+
+      # make run_three finish later
+
+      {:ok, run_three} =
+        Invocation.update_run(run_three, %{
+          finished_at: ~U[2022-10-27 15:00:00.000000Z]
+        })
+
+      [actual_wo] =
+        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
+          id: workflow.project_id
+        }).entries()
+
+      actual_last_attempt = Enum.at(actual_wo.attempts, 0)
+
+      assert actual_last_attempt.id == attempt_two.id
+
+      actual_last_run = List.last(actual_last_attempt.runs)
+
+      assert actual_last_run.id == run_three.id
+    end
   end
+
+  # defp shift_date(date, shift_attrs) do
+  #   date
+  #   |> Timex.shift(shift_attrs)
+  #   |> Timex.to_naive_datetime()
+  # end
 end
