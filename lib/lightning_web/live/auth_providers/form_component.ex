@@ -182,7 +182,10 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
             <div class="mt-4">
               <div class="flex">
                 <div class="flex-none">
-                  <.submit_button phx-disable-with="Saving" changeset={@changeset}>
+                  <.submit_button
+                    phx-disable-with="Saving"
+                    disabled={!@changeset.valid?}
+                  >
                     Save
                   </.submit_button>
                 </div>

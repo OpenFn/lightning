@@ -1,4 +1,7 @@
 defmodule LightningWeb.RouteHelpers do
+  @moduledoc """
+  Convenience functions for generating paths.
+  """
   alias LightningWeb.Router.Helpers, as: Routes
 
   def workflow_new_job_path(project_id) do

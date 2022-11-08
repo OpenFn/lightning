@@ -105,7 +105,7 @@
         </.link>
       </span>
       <div class="inline-block">
-        <.submit_button phx-disable-with="Saving" changeset={@changeset}>
+        <.submit_button phx-disable-with="Saving" disabled={!@changeset.valid?}>
           Save
         </.submit_button>
       </div>
