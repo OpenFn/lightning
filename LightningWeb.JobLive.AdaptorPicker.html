@@ -7,12 +7,12 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>Lightning.Jobs.JobForm — Lightning v0.2.0</title>
+    <title>LightningWeb.JobLive.AdaptorPicker — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-0A737B02.js"></script>
+    <script src="dist/sidebar_items-64CD8013.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -101,22 +101,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/adaptor_picker.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Jobs.JobForm</span> 
+  <span translate="no">LightningWeb.JobLive.AdaptorPicker</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Schemaless changeset for wrapping the creation of a Workflow, Job and a Trigger
-in one place.</p><p>This is used to faciliate the UI components when making a new Job
-where the form displays the Trigger in the same form.</p><p>However if a Job is new (and doesn't have a Workflow), the associated
-Trigger will not have the requisite <code class="inline">workflow_id</code>.</p>
+<p>Component allowing selecting an adaptor and it's version</p>
   </section>
 
 
@@ -136,7 +133,7 @@ Trigger will not have the requisite <code class="inline">workflow_id</code>.</p>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#changeset/2" translate="no">changeset(struct, params \\ %{})</a>
+          <a href="#get_adaptor_version_options/1" translate="no">get_adaptor_version_options(adaptor)</a>
 
         </div>
 
@@ -144,25 +141,11 @@ Trigger will not have the requisite <code class="inline">workflow_id</code>.</p>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#from_job/1" translate="no">from_job(job)</a>
+          <a href="#render/1" translate="no">render(assigns)</a>
 
         </div>
 
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#put_body/2" translate="no">put_body(struct, body)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#to_multi/2" translate="no">to_multi(form, attrs)</a>
-
-        </div>
+          <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">on_change</code> (<code class="inline">:any</code>) (required)</li></ul></div>
 
       </div>
 
@@ -180,18 +163,16 @@ Trigger will not have the requisite <code class="inline">workflow_id</code>.</p>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="changeset/2">
-
-    <span id="changeset/1"></span>
+<section class="detail" id="get_adaptor_version_options/1">
 
   <div class="detail-header">
-    <a href="#changeset/2" class="detail-link" title="Link to this function">
+    <a href="#get_adaptor_version_options/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">changeset(struct, params \\ %{})</h1>
+    <h1 class="signature" translate="no">get_adaptor_version_options(adaptor)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L47" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/adaptor_picker.ex#L72" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -204,16 +185,16 @@ Functions
 
   </section>
 </section>
-<section class="detail" id="from_job/1">
+<section class="detail" id="render/1">
 
   <div class="detail-header">
-    <a href="#from_job/1" class="detail-link" title="Link to this function">
+    <a href="#render/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">from_job(job)</h1>
+    <h1 class="signature" translate="no">render(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L59" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/adaptor_picker.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -223,51 +204,13 @@ Functions
 
   <section class="docstring">
 
-
-  </section>
-</section>
-<section class="detail" id="put_body/2">
-
-  <div class="detail-header">
-    <a href="#put_body/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">put_body(struct, body)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L55" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="to_multi/2">
-
-  <div class="detail-header">
-    <a href="#to_multi/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">to_multi(form, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job_form.ex#L83" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+<h2 id="render/1-attributes" class="section-heading">
+  <a href="#render/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">attributes</p>
+  </a>
+  Attributes
+</h2>
+<ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">on_change</code> (<code class="inline">:any</code>) (required)</li></ul>
   </section>
 </section>
 

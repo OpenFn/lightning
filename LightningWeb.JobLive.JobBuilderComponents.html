@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>LightningWeb.UserSessionController — Lightning v0.2.0</title>
+    <title>LightningWeb.JobLive.JobBuilderComponents — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,12 +101,12 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.UserSessionController</span> 
+  <span translate="no">LightningWeb.JobLive.JobBuilderComponents</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
@@ -129,41 +129,51 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#auth_handler_url/0" translate="no">auth_handler_url()</a>
+          <a href="#compiler_component/1" translate="no">compiler_component(assigns)</a>
 
         </div>
+
+          <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">adaptor</code> (<code class="inline">:string</code>) (required)</li></ul></div>
 
       </div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#create/2" translate="no">create(conn, map)</a>
+          <a href="#panel_content/1" translate="no">panel_content(assigns)</a>
 
         </div>
+
+          <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">for_hash</code> (<code class="inline">:string</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li></ul></div>
 
       </div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#delete/2" translate="no">delete(conn, params)</a>
+          <a href="#tab_item/1" translate="no">tab_item(assigns)</a>
 
         </div>
+
+          <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">hash</code> (<code class="inline">:string</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li></ul></div>
 
       </div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#exchange_token/2" translate="no">exchange_token(conn, map)</a>
+          <a href="#trigger_picker/1" translate="no">trigger_picker(assigns)</a>
 
         </div>
+
+          <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">upstream_jobs</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">on_cron_change</code> (<code class="inline">:any</code>) (required)</li></ul></div>
 
       </div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#new/2" translate="no">new(conn, params)</a>
+          <a href="#when_invalid/1" translate="no">when_invalid(assigns)</a>
 
         </div>
+
+          <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">changeset</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">field</code> (<code class="inline">:atom</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code> (required)</li></ul></div>
 
       </div>
 
@@ -181,16 +191,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="auth_handler_url/0">
+<section class="detail" id="compiler_component/1">
 
   <div class="detail-header">
-    <a href="#auth_handler_url/0" class="detail-link" title="Link to this function">
+    <a href="#compiler_component/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">auth_handler_url()</h1>
+    <h1 class="signature" translate="no">compiler_component(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L62" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -200,19 +210,25 @@ Functions
 
   <section class="docstring">
 
-
+<h2 id="compiler_component/1-attributes" class="section-heading">
+  <a href="#compiler_component/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">attributes</p>
+  </a>
+  Attributes
+</h2>
+<ul><li><code class="inline">adaptor</code> (<code class="inline">:string</code>) (required)</li></ul>
   </section>
 </section>
-<section class="detail" id="create/2">
+<section class="detail" id="panel_content/1">
 
   <div class="detail-header">
-    <a href="#create/2" class="detail-link" title="Link to this function">
+    <a href="#panel_content/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">create(conn, map)</h1>
+    <h1 class="signature" translate="no">panel_content(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L15" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -222,19 +238,31 @@ Functions
 
   <section class="docstring">
 
-
+<h2 id="panel_content/1-attributes" class="section-heading">
+  <a href="#panel_content/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">attributes</p>
+  </a>
+  Attributes
+</h2>
+<ul><li><code class="inline">for_hash</code> (<code class="inline">:string</code>) (required)</li></ul><h2 id="panel_content/1-slots" class="section-heading">
+  <a href="#panel_content/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">slots</p>
+  </a>
+  Slots
+</h2>
+<ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
-<section class="detail" id="delete/2">
+<section class="detail" id="tab_item/1">
 
   <div class="detail-header">
-    <a href="#delete/2" class="detail-link" title="Link to this function">
+    <a href="#tab_item/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete(conn, params)</h1>
+    <h1 class="signature" translate="no">tab_item(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L56" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -244,19 +272,31 @@ Functions
 
   <section class="docstring">
 
-
+<h2 id="tab_item/1-attributes" class="section-heading">
+  <a href="#tab_item/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">attributes</p>
+  </a>
+  Attributes
+</h2>
+<ul><li><code class="inline">hash</code> (<code class="inline">:string</code>) (required)</li></ul><h2 id="tab_item/1-slots" class="section-heading">
+  <a href="#tab_item/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">slots</p>
+  </a>
+  Slots
+</h2>
+<ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
-<section class="detail" id="exchange_token/2">
+<section class="detail" id="trigger_picker/1">
 
   <div class="detail-header">
-    <a href="#exchange_token/2" class="detail-link" title="Link to this function">
+    <a href="#trigger_picker/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">exchange_token(conn, map)</h1>
+    <h1 class="signature" translate="no">trigger_picker(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L43" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -266,19 +306,25 @@ Functions
 
   <section class="docstring">
 
-
+<h2 id="trigger_picker/1-attributes" class="section-heading">
+  <a href="#trigger_picker/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">attributes</p>
+  </a>
+  Attributes
+</h2>
+<ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">upstream_jobs</code> (<code class="inline">:list</code>) (required)</li><li><code class="inline">on_cron_change</code> (<code class="inline">:any</code>) (required)</li></ul>
   </section>
 </section>
-<section class="detail" id="new/2">
+<section class="detail" id="when_invalid/1">
 
   <div class="detail-header">
-    <a href="#new/2" class="detail-link" title="Link to this function">
+    <a href="#when_invalid/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new(conn, params)</h1>
+    <h1 class="signature" translate="no">when_invalid(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L8" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder_components.ex#L1" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -288,7 +334,19 @@ Functions
 
   <section class="docstring">
 
-
+<h2 id="when_invalid/1-attributes" class="section-heading">
+  <a href="#when_invalid/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">attributes</p>
+  </a>
+  Attributes
+</h2>
+<ul><li><code class="inline">changeset</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">field</code> (<code class="inline">:atom</code>) (required)</li></ul><h2 id="when_invalid/1-slots" class="section-heading">
+  <a href="#when_invalid/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">slots</p>
+  </a>
+  Slots
+</h2>
+<ul><li><code class="inline">inner_block</code> (required)</li></ul>
   </section>
 </section>
 
