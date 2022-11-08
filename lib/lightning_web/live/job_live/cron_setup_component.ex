@@ -7,10 +7,81 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   alias LightningWeb.Components.Form
 
+  attr :form, :map, required: true
+  attr :on_change, :any, required: true
+
   @impl true
-  def update(%{form: form, parent: parent}, socket) do
+  def render(assigns) do
+    ~H"""
+    <div id="cron-setup-component" class="grid grid-flow-col auto-cols-max gap-1">
+      <.frequency_field
+        target={@myself}
+        values={@initial_values["frequencies"]}
+        selected={Map.get(@cron_data, :frequency, "hourly")}
+      />
+      <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
+        <div class="grid grid-flow-col auto-cols-max gap-1">
+          <.minute_field
+            target={@myself}
+            values={@initial_values["minutes"]}
+            selected={Map.get(@cron_data, :minute, "00")}
+          />
+        </div>
+      <% end %>
+      <%= if Map.get(@cron_data, :frequency) == "daily" do %>
+        <div class="grid grid-flow-col auto-cols-max gap-1">
+          <.time_field
+            target={@myself}
+            minute_values={@initial_values["minutes"]}
+            hour_values={@initial_values["hours"]}
+            selected_minute={Map.get(@cron_data, :minute, "00")}
+            selected_hour={Map.get(@cron_data, :hour, "00")}
+          />
+        </div>
+      <% end %>
+      <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
+        <div class="grid grid-flow-col auto-cols-max gap-1">
+          <.weekday_field
+            target={@myself}
+            values={@initial_values["weekdays"]}
+            selected={Map.get(@cron_data, :weekday, 1)}
+          />
+          <.time_field
+            target={@myself}
+            minute_values={@initial_values["minutes"]}
+            hour_values={@initial_values["hours"]}
+            selected_minute={Map.get(@cron_data, :minute, "00")}
+            selected_hour={Map.get(@cron_data, :hour, "00")}
+          />
+        </div>
+      <% end %>
+      <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
+        <div class="grid grid-flow-col auto-cols-max gap-1">
+          <.monthday_field
+            target={@myself}
+            values={@initial_values["minutes"]}
+            selected={Map.get(@cron_data, :monthday, "01")}
+          />
+          <.time_field
+            target={@myself}
+            minute_values={@initial_values["minutes"]}
+            hour_values={@initial_values["hours"]}
+            selected_minute={Map.get(@cron_data, :minute, "00")}
+            selected_hour={Map.get(@cron_data, :hour, "00")}
+          />
+        </div>
+      <% end %>
+      <%= if Map.get(@cron_data, :frequency) == "custom" do %>
+        <Form.text_field id={:cron_expression} form={@form} />
+      <% end %>
+    </div>
+    """
+  end
+
+  @impl true
+  def update(%{form: form, on_change: on_change}, socket) do
     cron_data =
-      Phoenix.HTML.Form.input_value(form, :trigger_cron_expression)
+      Phoenix.HTML.Form.input_value(form, :cron_expression)
       |> get_cron_data()
       |> Map.merge(
         %{
@@ -25,7 +96,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
     {:ok,
      socket
-     |> assign(:parent, parent)
+     |> assign(:on_change, on_change)
      |> assign(:form, form)
      |> assign(:cron_data, cron_data)
      |> assign(:initial_values, %{
@@ -168,8 +239,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       )
 
     if Map.get(cron_data, :frequency) != "custom" do
-      {mod, id} = socket.assigns.parent
-      send_update(mod, id: id, cron_expression: cron_expression)
+      socket.assigns.on_change.(cron_expression)
     end
 
     {:noreply, socket |> assign(:cron_data, cron_data)}
@@ -283,74 +353,6 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       values={@minute_values}
       selected={@selected_minute}
     />
-    """
-  end
-
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <div id="cron-setup-component" class="grid grid-flow-col auto-cols-max gap-1">
-      <.frequency_field
-        target={@myself}
-        values={@initial_values["frequencies"]}
-        selected={Map.get(@cron_data, :frequency, "hourly")}
-      />
-      <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.minute_field
-            target={@myself}
-            values={@initial_values["minutes"]}
-            selected={Map.get(@cron_data, :minute, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "daily" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.time_field
-            target={@myself}
-            minute_values={@initial_values["minutes"]}
-            hour_values={@initial_values["hours"]}
-            selected_minute={Map.get(@cron_data, :minute, "00")}
-            selected_hour={Map.get(@cron_data, :hour, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.weekday_field
-            target={@myself}
-            values={@initial_values["weekdays"]}
-            selected={Map.get(@cron_data, :weekday, 1)}
-          />
-          <.time_field
-            target={@myself}
-            minute_values={@initial_values["minutes"]}
-            hour_values={@initial_values["hours"]}
-            selected_minute={Map.get(@cron_data, :minute, "00")}
-            selected_hour={Map.get(@cron_data, :hour, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
-        <div class="grid grid-flow-col auto-cols-max gap-1">
-          <.monthday_field
-            target={@myself}
-            values={@initial_values["minutes"]}
-            selected={Map.get(@cron_data, :monthday, "01")}
-          />
-          <.time_field
-            target={@myself}
-            minute_values={@initial_values["minutes"]}
-            hour_values={@initial_values["hours"]}
-            selected_minute={Map.get(@cron_data, :minute, "00")}
-            selected_hour={Map.get(@cron_data, :hour, "00")}
-          />
-        </div>
-      <% end %>
-      <%= if Map.get(@cron_data, :frequency) == "custom" do %>
-        <Form.text_field id={:trigger_cron_expression} form={@form} />
-      <% end %>
-    </div>
     """
   end
 end

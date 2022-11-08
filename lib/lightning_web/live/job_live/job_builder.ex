@@ -29,6 +29,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
+  def update_cron_expression(job_id, cron_expression) do
+    send_update(__MODULE__,
+      id: id(job_id),
+      cron_expression: cron_expression,
+      event: :cron_expression_changed
+    )
+  end
+
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
 
@@ -78,7 +86,15 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 </div>
                 <div class="md:col-span-2">
                   <%= for t <- inputs_for(f, :trigger) do %>
-                    <.trigger_picker form={t} upstream_jobs={@upstream_jobs} />
+                    <.trigger_picker
+                      form={t}
+                      upstream_jobs={@upstream_jobs}
+                      on_cron_change={
+                        fn cron_expression ->
+                          update_cron_expression(@job_id, cron_expression)
+                        end
+                      }
+                    />
                   <% end %>
                 </div>
                 <div class="md:col-span-2">
@@ -107,12 +123,16 @@ defmodule LightningWeb.JobLive.JobBuilder do
             </.form>
           </.panel_content>
           <.panel_content for_hash="input">
-            <.live_component
-              module={LightningWeb.JobLive.ManualRunComponent}
-              current_user={@current_user}
-              id={"manual-job-#{@job_id}"}
-              job_id={@job_id}
-            />
+            <%= if @is_persisted do %>
+              <.live_component
+                module={LightningWeb.JobLive.ManualRunComponent}
+                current_user={@current_user}
+                id={"manual-job-#{@job_id}"}
+                job_id={@job_id}
+              />
+            <% else %>
+              <p>Please save your Job first.</p>
+            <% end %>
           </.panel_content>
           <.panel_content for_hash="editor">
             <.compiler_component adaptor={@job_adaptor} />
@@ -186,7 +206,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
   end
 
   def handle_event("save", %{"job_form" => params}, socket) do
-    params = Map.merge(socket.assigns.params, params)
+    params = merge_params(socket.assigns.params, params)
+
     changeset = Job.changeset(socket.assigns.job, params)
 
     socket =
@@ -215,9 +236,21 @@ defmodule LightningWeb.JobLive.JobBuilder do
     |> push_patch(to: socket.assigns.return_to)
   end
 
+  defp merge_params(prev, next) do
+    Map.merge(prev, next, fn k, v1, v2 ->
+      case k do
+        "trigger" ->
+          Map.merge(v1, v2)
+
+        _ ->
+          v2
+      end
+    end)
+  end
+
   defp assign_changeset_and_params(socket, params) do
     socket
-    |> update(:params, fn prev -> Map.merge(prev, params) end)
+    |> update(:params, fn prev -> merge_params(prev, params) end)
     |> update(:changeset, fn _changeset, %{params: params, job: job} ->
       Job.changeset(job, params)
       |> Map.put(:action, :validate)
@@ -261,7 +294,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
          )
      )
      |> assign_new(:params, fn -> params end)
-     |> assign_new(:job_id, fn -> job.id || "new" end)}
+     |> assign_new(:job_id, fn -> job.id || "new" end)
+     |> assign_new(:is_persisted, fn -> not is_nil(job.id) end)}
   end
 
   def update(%{event: :job_adaptor_changed, job_adaptor: job_adaptor}, socket) do
@@ -269,6 +303,17 @@ defmodule LightningWeb.JobLive.JobBuilder do
      socket
      |> assign(job_adaptor: job_adaptor)
      |> assign_changeset_and_params(%{"adaptor" => job_adaptor})}
+  end
+
+  def update(
+        %{event: :cron_expression_changed, cron_expression: cron_expression},
+        socket
+      ) do
+    {:ok,
+     socket
+     |> assign_changeset_and_params(%{
+       "trigger" => %{"cron_expression" => cron_expression}
+     })}
   end
 
   def update(%{event: :credential_changed, credential: credential}, socket) do

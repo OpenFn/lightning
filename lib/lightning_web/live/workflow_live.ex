@@ -5,8 +5,6 @@ defmodule LightningWeb.WorkflowLive do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
-  alias Lightning.Projects
-  alias Lightning.Jobs.JobForm
 
   defp encode_project_space(project) do
     Workflows.get_workflows_for(project)
@@ -84,6 +82,22 @@ defmodule LightningWeb.WorkflowLive do
     )
   end
 
+  defp apply_action(socket, :new_job, %{"project_id" => project_id}) do
+    socket
+    |> assign(
+      active_menu_item: :overview,
+      job: %Lightning.Jobs.Job{},
+      job_params: %{
+        "workflow" => %{"project_id" => project_id},
+        "trigger" => %{"type" => :webhook}
+      },
+      initial_job_params: %{
+        "project_id" => socket.assigns.project.id
+      },
+      page_title: socket.assigns.project.name
+    )
+  end
+
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
     job = Lightning.Jobs.get_job!(job_id)
 
@@ -91,7 +105,6 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
-      job_form: JobForm.from_job(job),
       initial_job_params: %{},
       page_title: socket.assigns.project.name
     )
@@ -120,7 +133,9 @@ defmodule LightningWeb.WorkflowLive do
             </div>
           </.link>
           &nbsp;&nbsp;
-          <.link navigate={Routes.project_job_edit_path(@socket, :new, @project.id)}>
+          <.link navigate={
+            Routes.project_workflow_path(@socket, :new_job, @project.id)
+          }>
             <Common.button>
               <div class="h-full">
                 <Heroicons.plus class="h-4 w-4 inline-block" />

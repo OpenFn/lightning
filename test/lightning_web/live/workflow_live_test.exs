@@ -69,12 +69,6 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       # TODO: test that the compiler and editor get the new adaptor
 
-      # view
-      # |> form("#job-form", job_form: %{trigger: %{type: "on_job_failure"}})
-      # |> render_change()
-
-      # view |> element("#job-form") |> render() |> IO.inspect()
-
       view |> element("#job-form") |> render_submit()
 
       assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
@@ -125,6 +119,21 @@ defmodule LightningWeb.WorkflowLiveTest do
              "Should have the upstream job selected"
 
       view |> pick_adaptor_name("@openfn/language-common")
+
+      assert view
+             |> element("#adaptor-version")
+             |> render()
+             |> parse()
+             |> xpath(~x"option/text()"l) == [
+               'latest',
+               '2.14.0',
+               '1.10.3',
+               '1.2.22',
+               '1.2.14',
+               '1.2.3',
+               '1.1.12',
+               '1.1.0'
+             ]
 
       assert view |> has_warning_on_editor_tab?()
 
@@ -187,6 +196,9 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view |> encoded_project_space_matches(project)
     end
+
+    # TODO test that jobs in different projects are not available in flow triggers
+    # TODO test that the current job is not visible in upstream jobs
   end
 
   defp has_expected_adaptor?(view, expected_adaptor) do
@@ -335,7 +347,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> form("#job-form",
-               job_form: %{trigger_type: "cron"}
+               job_form: %{trigger: %{type: "cron"}}
              )
              |> render_change()
 
@@ -406,7 +418,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> form("#job-form",
-               job_form: %{trigger_type: "cron"}
+               job_form: %{trigger: %{type: "cron"}}
              )
              |> render_change()
 
@@ -470,7 +482,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> form("#job-form",
-               job_form: %{trigger_type: "cron"}
+               job_form: %{trigger: %{type: "cron"}}
              )
              |> render_change()
 
@@ -538,7 +550,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> form("#job-form",
-               job_form: %{trigger_type: "cron"}
+               job_form: %{trigger: %{type: "cron"}}
              )
              |> render_change()
 

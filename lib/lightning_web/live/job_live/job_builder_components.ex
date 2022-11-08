@@ -13,6 +13,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   attr :form, :map, required: true
   attr :upstream_jobs, :list, required: true
+  attr :on_cron_change, :any, required: true
 
   def trigger_picker(assigns) do
     assigns =
@@ -71,7 +72,12 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     <% end %>
 
     <%= if @requires_cron_job do %>
-      <Form.text_field form={@form} id={:cron_expression} />
+      <.live_component
+        id="cron-setup"
+        module={LightningWeb.JobLive.CronSetupComponent}
+        on_change={@on_cron_change}
+        form={@form}
+      />
     <% end %>
     """
   end
