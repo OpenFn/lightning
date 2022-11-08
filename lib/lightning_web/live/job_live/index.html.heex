@@ -9,7 +9,7 @@
         </div>
       </.link>
       &nbsp;&nbsp;
-      <.link navigate={Routes.project_job_edit_path(@socket, :new, @project.id)}>
+      <.link navigate={workflow_new_job_path(@project.id)}>
         <Common.button>
           <div class="h-full">
             <Icon.plus class="h-4 w-4 inline-block" />
@@ -46,9 +46,7 @@
           <.td class="col-span-2">
             <span>
               <.link
-                navigate={
-                  Routes.project_job_edit_path(@socket, :edit, @project.id, job)
-                }
+                navigate={workflow_edit_job_path(@project.id, job.id)}
                 class="button"
               >
                 Edit

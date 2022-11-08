@@ -19,21 +19,23 @@
 //
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
-import "phoenix_html";
+import 'phoenix_html';
 // Establish Phoenix Socket and LiveView configuration.
-import { Socket } from "phoenix";
-import { LiveSocket } from "phoenix_live_view";
-import topbar from "../vendor/topbar";
+import { Socket } from 'phoenix';
+import { LiveSocket } from 'phoenix_live_view';
+import topbar from '../vendor/topbar';
 
-import WorkflowDiagram from "./workflow-diagram";
-import Compiler from "./compiler";
-import Editor from "./editor";
+import WorkflowDiagram from './workflow-diagram';
+import Compiler from './compiler';
+import Editor from './editor';
+
+import Alpine from 'alpinejs';
 
 let Hooks = { WorkflowDiagram, Compiler, Editor };
 Hooks.AssocListChange = {
   mounted() {
-    this.el.addEventListener("change", (event) => {
-      this.pushEventTo(this.el, "select_item", { id: this.el.value });
+    this.el.addEventListener('change', event => {
+      this.pushEventTo(this.el, 'select_item', { id: this.el.value });
     });
   },
 };
@@ -52,27 +54,39 @@ Hooks.AutoResize = {
   },
 };
 
+window.Alpine = Alpine;
+
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
-  .getAttribute("content");
+  .getAttribute('content');
 
-let liveSocket = new LiveSocket("/live", Socket, {
+let liveSocket = new LiveSocket('/live', Socket, {
   params: { _csrf_token: csrfToken },
   hooks: Hooks,
+  dom: {
+    onBeforeElUpdated(from, to) {
+      if (from._x_dataStack) {
+        console.log({ from, to });
+        window.Alpine.clone(from, to);
+      }
+    },
+  },
 });
+
+Alpine.start();
 
 // Show progress bar on live navigation and form submits
 // Include a 120ms timeout to avoid small flashes when things load quickly.
-topbar.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
+topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
 let topBarScheduled = undefined;
-window.addEventListener("phx:page-loading-start", () => {
+window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {
     topBarScheduled = setTimeout(() => topbar.show(), 120);
   }
 });
-window.addEventListener("phx:page-loading-stop", () => {
+window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();

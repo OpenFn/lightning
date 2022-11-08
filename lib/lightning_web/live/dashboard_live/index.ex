@@ -54,7 +54,7 @@ defmodule LightningWeb.DashboardLive.Index do
             </.link>
             &nbsp;&nbsp;
             <.link navigate={
-              Routes.project_job_edit_path(@socket, :new, @project.id)
+              Routes.project_workflow_path(@socket, :new_job, @project.id)
             }>
               <Common.button>
                 <div class="h-full">

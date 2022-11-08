@@ -6,6 +6,7 @@ defmodule LightningWeb.JobLive.Index do
 
   alias Lightning.Jobs
   alias Lightning.Jobs.Job
+  import LightningWeb.RouteHelpers
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 

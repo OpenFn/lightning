@@ -9,6 +9,8 @@ defmodule LightningWeb.CredentialLive.Edit do
   alias Lightning.Credentials.Credential
   alias Lightning.Projects
 
+  import LightningWeb.Components.Form
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}

@@ -126,3 +126,4 @@
   100% { opacity: 0; }
 }
 
+[x-cloak] { display: none !important; }

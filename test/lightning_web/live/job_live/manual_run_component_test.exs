@@ -6,6 +6,8 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
   import Lightning.CredentialsFixtures
   import Lightning.InvocationFixtures
 
+  alias LightningWeb.RouteHelpers
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -28,7 +30,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   test "renders", %{conn: conn, job: job, project: project} do
     {:ok, view, _html} =
-      live(conn, Routes.project_job_edit_path(conn, :edit, project.id, job.id))
+      live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
 
     assert view |> enter_dataclip_id("") =~ html_escape("can't be blank")
     assert view |> enter_dataclip_id("abc") =~ "is invalid"
@@ -52,7 +54,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   test "doesn't appear on new Job", %{conn: conn, project: project} do
     {:ok, view, _html} =
-      live(conn, Routes.project_job_edit_path(conn, :new, project.id))
+      live(conn, RouteHelpers.workflow_new_job_path(project.id))
 
     refute view |> has_element?("input[name='manual_run[dataclip_id]']")
   end

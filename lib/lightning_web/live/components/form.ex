@@ -2,6 +2,10 @@ defmodule LightningWeb.Components.Form do
   @moduledoc false
   use LightningWeb, :component
 
+  slot :inner_block, required: true
+  attr :changeset, :map
+  attr :rest, :global, include: ~w(form disabled)
+
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
   def submit_button(assigns) do
     base_classes = ~w[
@@ -33,29 +37,20 @@ defmodule LightningWeb.Components.Form do
 
     assigns =
       assigns
-      |> assign_new(:disabled, fn ->
-        if assigns[:changeset] do
-          !assigns.changeset.valid?
-        else
-          false
-        end
-      end)
-      |> assign_new(:class, fn %{disabled: disabled} ->
-        if disabled do
+      |> assign_new(:class, fn -> "" end)
+      |> update(:class, fn class, %{rest: rest} ->
+        if rest[:disabled] do
           inactive_classes
         else
           active_classes
         end
-        |> Enum.concat(List.wrap(assigns[:class]))
+        |> Enum.concat(List.wrap(class))
       end)
-      |> assign_new(:disabled_with, fn -> "" end)
 
     ~H"""
-    <%= submit(@value,
-      phx_disable_with: @disabled_with,
-      disabled: @disabled,
-      class: @class
-    ) %>
+    <button type="submit" class={@class} {@rest}>
+      <%= render_slot(@inner_block) %>
+    </button>
     """
   end
 
@@ -330,6 +325,7 @@ defmodule LightningWeb.Components.Form do
 
   def select_field(assigns) do
     select_classes = ~w[
+      mt-1
       block
       w-full
       rounded-md
