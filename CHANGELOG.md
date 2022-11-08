@@ -25,6 +25,7 @@ and this project adheres to
 - Workflow Job editor now behaves like a panel
 - Split JobLive.InspectorFormComponent into different plug-able subcomponents
 - Configure cron expressions thru a form
+- Added new Job Builder form on Workflow Diagram
 
 ## [0.2.0] - 2022-09-12
 
