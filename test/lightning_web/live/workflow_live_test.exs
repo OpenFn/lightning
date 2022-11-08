@@ -260,12 +260,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(
-            conn,
-            :edit_job,
-            project.id,
-            job.id
-          )
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
         )
 
       assert job.trigger.type == :webhook
@@ -308,6 +303,19 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert job.trigger.type == :cron
       assert job.trigger.cron_expression == "05 * * * *"
+
+      # view |> form("#job-form") |> render_submit()
+
+      # assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      # view
+      # |> render_patch(
+      #   Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+      # )
+
+      # assert view
+      #        |> has_element?("#frequency option[selected][value=monthly]"),
+      #        "Should have the option that was previously selected"
     end
 
     test "cron_setup_component can set trigger to a daily cron", %{
