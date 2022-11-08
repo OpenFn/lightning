@@ -10,17 +10,17 @@ defmodule Lightning.RunLive.RunStatusComponent do
       ) do
     [{index, %{"selected" => selected?}}] = Map.to_list(values)
     index = String.to_integer(index)
-    selectable_options = socket.assigns.selectable_options
-    current_option = Enum.at(selectable_options, index)
+    selectable_statuses = socket.assigns.selectable_statuses
+    current_option = Enum.at(selectable_statuses, index)
 
-    updated_options =
+    updated_statuses =
       List.replace_at(
-        selectable_options,
+        selectable_statuses,
         index,
         %{current_option | selected: selected?}
       )
 
-    send(self(), {:updated_options, updated_options})
+    send(self(), {:updated_statuses, updated_statuses})
 
     {:noreply, socket}
   end
@@ -52,7 +52,7 @@ defmodule Lightning.RunLive.RunStatusComponent do
     socket =
       socket
       |> assign(:id, id)
-      |> assign(:selectable_options, options)
+      |> assign(:selectable_statuses, options)
       |> assign(:form, form)
 
     {:ok, socket}

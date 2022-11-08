@@ -7,16 +7,18 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
 
-  alias Lightning.Invocation.RunSearchForm
-  alias Lightning.Invocation.RunSearchForm.RunStatusOption
+  alias Lightning.RunSearchForm
+  alias Lightning.RunSearchForm.RunStatusOption
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
-  def handle_info({:updated_options, statuses}, socket) do
+  def handle_info({:updated_statuses, statuses}, socket) do
+
+    run_search_changeset= socket.assigns.run_search_changeset
     {:noreply,
      socket
-     |> assign(:changeset, build_search_changeset(statuses))
+     |> assign(:run_search_changeset, run_search_changeset |> Ecto.Changeset.put_embed(:options, statuses))
      |> assign(:statuses, statuses)}
   end
 
@@ -33,7 +35,7 @@ defmodule LightningWeb.RunLive.Index do
 
     {:ok,
      socket
-     |> assign(:changeset, build_search_changeset(statuses))
+     |> assign_new(:run_search_changeset, fn -> build_search_changeset(statuses) end)
      |> assign(:workflows, workflows)
      |> assign(:statuses, statuses)
      |> assign(
