@@ -14,7 +14,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       |> get_cron_data()
       |> Map.merge(
         %{
-          frequency: :daily,
+          frequency: "daily",
           hour: "00",
           minute: "00",
           weekday: "01",
@@ -29,24 +29,24 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
      |> assign(:form, form)
      |> assign(:cron_data, cron_data)
      |> assign(:initial_values, %{
-       :frequencies => [
-         "Every hour": :hourly,
-         "Every day": :daily,
-         "Every week": :weekly,
-         "Every month": :monthly,
-         Custom: :custom
+       "frequencies" => [
+         "Every hour": "hourly",
+         "Every day": "daily",
+         "Every week": "weekly",
+         "Every month": "monthly",
+         Custom: "custom"
        ],
-       :minutes =>
+       "minutes" =>
          0..59
          |> Enum.map(fn x ->
            String.pad_leading(Integer.to_string(x), 2, "0")
          end),
-       :hours =>
+       "hours" =>
          0..23
          |> Enum.map(fn x ->
            String.pad_leading(Integer.to_string(x), 2, "0")
          end),
-       :weekdays => [
+       "weekdays" => [
          Monday: "01",
          Tuesday: "02",
          Wednesday: "03",
@@ -55,7 +55,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
          Saturday: "06",
          Sunday: "07"
        ],
-       :monthdays =>
+       "monthdays" =>
          1..31
          |> Enum.map(fn x ->
            String.pad_leading(Integer.to_string(x), 2, "0")
@@ -67,29 +67,29 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   def get_cron_data(cron_expression) do
     rules = %{
-      :hourly => ~r/^(?<minute>[\d]{1,2}) \* \* \* \*$/,
-      :daily => ~r/^(?<minute>[\d]{1,2}) (?<hour>[\d]{1,2}) \* \* \*$/,
-      :weekly =>
+      "hourly" => ~r/^(?<minute>[\d]{1,2}) \* \* \* \*$/,
+      "daily" => ~r/^(?<minute>[\d]{1,2}) (?<hour>[\d]{1,2}) \* \* \*$/,
+      "weekly" =>
         ~r/^(?<minute>[\d]{1,2}) (?<hour>[\d]{1,2}) \* \* (?<weekday>[\d]{1,2})$/,
-      :monthly =>
+      "monthly" =>
         ~r/^(?<minute>[\d]{1,2}) (?<hour>[\d]{1,2}) (?<monthday>[\d]{1,2}) \* \*$/
     }
 
     cond do
-      String.match?(cron_expression, rules[:hourly]) ->
-        process_regex(cron_expression, rules[:hourly], :hourly)
+      String.match?(cron_expression, rules["hourly"]) ->
+        process_regex(cron_expression, rules["hourly"], "hourly")
 
-      String.match?(cron_expression, rules[:daily]) ->
-        process_regex(cron_expression, rules[:daily], :daily)
+      String.match?(cron_expression, rules["daily"]) ->
+        process_regex(cron_expression, rules["daily"], "daily")
 
-      String.match?(cron_expression, rules[:weekly]) ->
-        process_regex(cron_expression, rules[:weekly], :weekly)
+      String.match?(cron_expression, rules["weekly"]) ->
+        process_regex(cron_expression, rules["weekly"], "weekly")
 
-      String.match?(cron_expression, rules[:monthly]) ->
-        process_regex(cron_expression, rules[:monthly], :monthly)
+      String.match?(cron_expression, rules["monthly"]) ->
+        process_regex(cron_expression, rules["monthly"], "monthly")
 
       true ->
-        Map.merge(%{}, %{:frequency => :custom})
+        Map.merge(%{}, %{:frequency => "custom"})
     end
   end
 
@@ -104,7 +104,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   def get_cron_expression(cron_data, prev_cron_expression) do
     case cron_data do
       %{
-        frequency: :hourly,
+        frequency: "hourly",
         hour: _hour,
         minute: minute,
         monthday: _monthday,
@@ -113,7 +113,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         "#{minute} * * * *"
 
       %{
-        frequency: :daily,
+        frequency: "daily",
         hour: hour,
         minute: minute,
         monthday: _monthday,
@@ -122,7 +122,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         "#{minute} #{hour} * * *"
 
       %{
-        frequency: :weekly,
+        frequency: "weekly",
         hour: hour,
         minute: minute,
         monthday: _monthday,
@@ -131,7 +131,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         "#{minute} #{hour} * * #{weekday}"
 
       %{
-        frequency: :monthly,
+        frequency: "monthly",
         hour: hour,
         minute: minute,
         monthday: monthday,
@@ -167,7 +167,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         |> Map.get(:trigger_cron_expression)
       )
 
-    if Map.get(cron_data, :frequency) != :custom do
+    if Map.get(cron_data, :frequency) != "custom" do
       {mod, id} = socket.assigns.parent
       send_update(mod, id: id, cron_expression: cron_expression)
     end
@@ -292,62 +292,62 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     <div id="cron-setup-component" class="grid grid-flow-col auto-cols-max gap-1">
       <.frequency_field
         target={@myself}
-        values={@initial_values[:frequencies]}
-        selected={Map.get(@cron_data, :frequency, :hourly)}
+        values={@initial_values["frequencies"]}
+        selected={Map.get(@cron_data, :frequency, "hourly")}
       />
-      <%= if Map.get(@cron_data, :frequency) == :hourly do %>
+      <%= if Map.get(@cron_data, :frequency) == "hourly" do %>
         <div class="grid grid-flow-col auto-cols-max gap-1">
           <.minute_field
             target={@myself}
-            values={@initial_values[:minutes]}
+            values={@initial_values["minutes"]}
             selected={Map.get(@cron_data, :minute, "00")}
           />
         </div>
       <% end %>
-      <%= if Map.get(@cron_data, :frequency) == :daily do %>
+      <%= if Map.get(@cron_data, :frequency) == "daily" do %>
         <div class="grid grid-flow-col auto-cols-max gap-1">
           <.time_field
             target={@myself}
-            minute_values={@initial_values[:minutes]}
-            hour_values={@initial_values[:hours]}
+            minute_values={@initial_values["minutes"]}
+            hour_values={@initial_values["hours"]}
             selected_minute={Map.get(@cron_data, :minute, "00")}
             selected_hour={Map.get(@cron_data, :hour, "00")}
           />
         </div>
       <% end %>
-      <%= if Map.get(@cron_data, :frequency) == :weekly do %>
+      <%= if Map.get(@cron_data, :frequency) == "weekly" do %>
         <div class="grid grid-flow-col auto-cols-max gap-1">
           <.weekday_field
             target={@myself}
-            values={@initial_values[:weekdays]}
+            values={@initial_values["weekdays"]}
             selected={Map.get(@cron_data, :weekday, 1)}
           />
           <.time_field
             target={@myself}
-            minute_values={@initial_values[:minutes]}
-            hour_values={@initial_values[:hours]}
+            minute_values={@initial_values["minutes"]}
+            hour_values={@initial_values["hours"]}
             selected_minute={Map.get(@cron_data, :minute, "00")}
             selected_hour={Map.get(@cron_data, :hour, "00")}
           />
         </div>
       <% end %>
-      <%= if Map.get(@cron_data, :frequency) == :monthly do %>
+      <%= if Map.get(@cron_data, :frequency) == "monthly" do %>
         <div class="grid grid-flow-col auto-cols-max gap-1">
           <.monthday_field
             target={@myself}
-            values={@initial_values[:minutes]}
+            values={@initial_values["minutes"]}
             selected={Map.get(@cron_data, :monthday, "01")}
           />
           <.time_field
             target={@myself}
-            minute_values={@initial_values[:minutes]}
-            hour_values={@initial_values[:hours]}
+            minute_values={@initial_values["minutes"]}
+            hour_values={@initial_values["hours"]}
             selected_minute={Map.get(@cron_data, :minute, "00")}
             selected_hour={Map.get(@cron_data, :hour, "00")}
           />
         </div>
       <% end %>
-      <%= if Map.get(@cron_data, :frequency) == :custom do %>
+      <%= if Map.get(@cron_data, :frequency) == "custom" do %>
         <Form.text_field id={:trigger_cron_expression} form={@form} />
       <% end %>
     </div>

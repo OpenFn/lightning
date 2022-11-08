@@ -161,11 +161,11 @@ defmodule LightningWeb.WorkflowLiveTest do
 
     test "get_cron_data/1" do
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_data("5 0 * 8 *")
-             |> Map.get(:frequency) == :custom
+             |> Map.get(:frequency) == "custom"
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_data("5 0 8 * *") ==
                %{
-                 :frequency => :monthly,
+                 :frequency => "monthly",
                  :minute => "05",
                  :hour => "00",
                  :monthday => "08"
@@ -173,7 +173,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_data("5 0 * * 6") ==
                %{
-                 :frequency => :weekly,
+                 :frequency => "weekly",
                  :minute => "05",
                  :hour => "00",
                  :weekday => "06"
@@ -181,14 +181,14 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_data("50 0 * * *") ==
                %{
-                 :frequency => :daily,
+                 :frequency => "daily",
                  :minute => "50",
                  :hour => "00"
                }
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_data("50 * * * *") ==
                %{
-                 :frequency => :hourly,
+                 :frequency => "hourly",
                  :minute => "50"
                }
 
@@ -198,7 +198,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     test "get_cron_expression/2" do
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
-                 frequency: :hourly,
+                 frequency: "hourly",
                  hour: "00",
                  minute: "34",
                  monthday: "01",
@@ -209,7 +209,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
-                 frequency: :daily,
+                 frequency: "daily",
                  hour: "00",
                  minute: "34",
                  monthday: "01",
@@ -220,7 +220,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
-                 frequency: :weekly,
+                 frequency: "weekly",
                  hour: "00",
                  minute: "34",
                  monthday: "01",
@@ -231,7 +231,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
-                 frequency: :monthly,
+                 frequency: "monthly",
                  hour: "00",
                  minute: "34",
                  monthday: "01",
@@ -242,7 +242,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert LightningWeb.JobLive.CronSetupComponent.get_cron_expression(
                %{
-                 frequency: :custom,
+                 frequency: "custom",
                  hour: "00",
                  minute: "34",
                  monthday: "01",
@@ -252,7 +252,7 @@ defmodule LightningWeb.WorkflowLiveTest do
              ) == "50 * * * *"
     end
 
-    test "cron_setup_component wired to job-form and works", %{
+    test "cron_setup_component can set trigger to an hourly cron", %{
       conn: conn,
       project: project,
       job: job
@@ -267,6 +267,8 @@ defmodule LightningWeb.WorkflowLiveTest do
             job.id
           )
         )
+
+      assert job.trigger.type == :webhook
 
       assert html =~ project.name
 
@@ -294,12 +296,275 @@ defmodule LightningWeb.WorkflowLiveTest do
              |> element("#frequency")
              |> render_change(%{cron_component: %{frequency: "hourly"}})
 
+      assert view |> element("#minute") |> render() =~ "00"
+
       assert view
              |> element("#minute")
              |> render_change(%{cron_component: %{minute: "05"}})
 
-      view |> form("#job-form") |> render_submit()
+      view |> form("#job-form") |> render_submit() =~ "Job updated successfully"
+
+      job = Lightning.Jobs.get_job!(job.id)
+
+      assert job.trigger.type == :cron
+      assert job.trigger.cron_expression == "05 * * * *"
     end
+
+    test "cron_setup_component can set trigger to a daily cron", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.id
+          )
+        )
+
+      assert job.trigger.type == :webhook
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#job-form")
+
+      assert view
+             |> form("#job-form",
+               job_form: %{trigger_type: "cron"}
+             )
+             |> render_change()
+
+      assert view
+             |> element("#frequency")
+             |> render()
+             |> parse()
+             |> xpath(~x"option/text()"l) == [
+               'Every hour',
+               'Every day',
+               'Every week',
+               'Every month',
+               'Custom'
+             ]
+
+      assert view
+             |> element("#frequency")
+             |> render_change(%{cron_component: %{frequency: "daily"}})
+
+      assert view |> element("#minute") |> render() =~ "00"
+
+      assert view |> element("#hour") |> render() =~ "00"
+
+      assert view
+             |> element("#minute")
+             |> render_change(%{cron_component: %{minute: "05"}})
+
+      assert view
+             |> element("#hour")
+             |> render_change(%{cron_component: %{hour: "05"}})
+
+      view |> form("#job-form") |> render_submit() =~ "Job updated successfully"
+
+      job = Lightning.Jobs.get_job!(job.id)
+
+      assert job.trigger.type == :cron
+      assert job.trigger.cron_expression == "05 05 * * *"
+    end
+
+    test "cron_setup_component can set trigger to an weekly cron", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.id
+          )
+        )
+
+      assert job.trigger.type == :webhook
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#job-form")
+
+      assert view
+             |> form("#job-form",
+               job_form: %{trigger_type: "cron"}
+             )
+             |> render_change()
+
+      assert view
+             |> element("#frequency")
+             |> render()
+             |> parse()
+             |> xpath(~x"option/text()"l) == [
+               'Every hour',
+               'Every day',
+               'Every week',
+               'Every month',
+               'Custom'
+             ]
+
+      assert view
+             |> element("#frequency")
+             |> render_change(%{cron_component: %{frequency: "weekly"}})
+
+      assert view |> element("#minute") |> render() =~ "00"
+      assert view |> element("#hour") |> render() =~ "00"
+      assert view |> element("#weekday") |> render() =~ "01"
+
+      assert view
+             |> element("#minute")
+             |> render_change(%{cron_component: %{minute: "05"}})
+
+      assert view
+             |> element("#hour")
+             |> render_change(%{cron_component: %{hour: "05"}})
+
+      assert view
+             |> element("#weekday")
+             |> render_change(%{cron_component: %{weekday: "05"}})
+
+      view |> form("#job-form") |> render_submit() =~ "Job updated successfully"
+
+      job = Lightning.Jobs.get_job!(job.id)
+
+      assert job.trigger.type == :cron
+      assert job.trigger.cron_expression == "05 05 * * 05"
+    end
+
+    test "cron_setup_component can set trigger to an monthly cron", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.id
+          )
+        )
+
+      assert job.trigger.type == :webhook
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#job-form")
+
+      assert view
+             |> form("#job-form",
+               job_form: %{trigger_type: "cron"}
+             )
+             |> render_change()
+
+      assert view
+             |> element("#frequency")
+             |> render()
+             |> parse()
+             |> xpath(~x"option/text()"l) == [
+               'Every hour',
+               'Every day',
+               'Every week',
+               'Every month',
+               'Custom'
+             ]
+
+      assert view
+             |> element("#frequency")
+             |> render_change(%{cron_component: %{frequency: "monthly"}})
+
+      assert view |> element("#minute") |> render() =~ "00"
+      assert view |> element("#hour") |> render() =~ "00"
+      assert view |> element("#monthday") |> render() =~ "01"
+
+      assert view
+             |> element("#minute")
+             |> render_change(%{cron_component: %{minute: "05"}})
+
+      assert view
+             |> element("#hour")
+             |> render_change(%{cron_component: %{hour: "05"}})
+
+      assert view
+             |> element("#monthday")
+             |> render_change(%{cron_component: %{monthday: "05"}})
+
+      view |> form("#job-form") |> render_submit() =~ "Job updated successfully"
+
+      job = Lightning.Jobs.get_job!(job.id)
+
+      assert job.trigger.type == :cron
+      assert job.trigger.cron_expression == "05 05 05 * *"
+    end
+
+    # test "cron_setup_component can set trigger to a custom cron", %{
+    #   conn: conn,
+    #   project: project,
+    #   job: job
+    # } do
+    #   {:ok, view, html} =
+    #     live(
+    #       conn,
+    #       Routes.project_workflow_path(
+    #         conn,
+    #         :edit_job,
+    #         project.id,
+    #         job.id
+    #       )
+    #     )
+
+    #   assert job.trigger.type == :webhook
+
+    #   assert html =~ project.name
+
+    #   assert has_element?(view, "#job-form")
+
+    #   assert view
+    #          |> form("#job-form",
+    #            job_form: %{trigger_type: "cron"}
+    #          )
+    #          |> render_change()
+
+    #   assert view
+    #          |> element("#frequency")
+    #          |> render()
+    #          |> parse()
+    #          |> xpath(~x"option/text()"l) == [
+    #            'Every hour',
+    #            'Every day',
+    #            'Every week',
+    #            'Every month',
+    #            'Custom'
+    #          ]
+
+    #   assert view
+    #          |> element("#frequency")
+    #          |> render_change(%{cron_component: %{frequency: "custom"}})
+
+    #          assert view
+    #          |> element("#job-form_trigger_cron_expression")
+    #          |> render(%{job_form: %{trigger_cron_expressio: "* * * * *"}})
+
+    #          view |> form("#job-form") |> render_submit() =~ "Job updated successfully"
+
+    #   job = Lightning.Jobs.get_job!(job.id)
+
+    #   assert job.trigger.type == :cron
+    #   assert job.trigger.cron_expression == "05 05 05 * *"
+    # end
   end
 
   defp extract_project_space(html) do
