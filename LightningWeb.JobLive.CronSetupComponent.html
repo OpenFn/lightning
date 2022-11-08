@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.2.0">
 
-    <title>LightningWeb.JobLive.FormComponent — Lightning v0.2.0</title>
+    <title>LightningWeb.JobLive.CronSetupComponent — Lightning v0.2.0</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -20,7 +20,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-behaviour">
+  <body data-type="modules" class="page-module">
     <script>
 
       try {
@@ -101,19 +101,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.JobLive.FormComponent</span> <small>behaviour</small>
+  <span translate="no">LightningWeb.JobLive.CronSetupComponent</span> 
   <small class="app-vsn" translate="no">(Lightning v0.2.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Macro for Form Components that edit and show Jobs.</p>
+<p>CronSetupComponent</p>
   </section>
 
 
@@ -126,29 +126,6 @@ Lightning
       Summary
     </h1>
 
-  <div class="summary-callbacks summary">
-    <h2>
-      <a href="#callbacks">Callbacks</a>
-    </h2>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#c:save/2" translate="no">save(job_params, socket)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#c:validate/2" translate="no">validate(job_params, socket)</a>
-
-        </div>
-
-      </div>
-
-  </div>
-
   <div class="summary-functions summary">
     <h2>
       <a href="#functions">Functions</a>
@@ -156,18 +133,7 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#coerce_params_for_adaptor_list/1" translate="no">coerce_params_for_adaptor_list(job_params)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Coerce any changes to the &quot;Adaptor&quot; dropdown into a new selection on the
-Version dropdown.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#get_adaptor_version_options/1" translate="no">get_adaptor_version_options(adaptor)</a>
+          <a href="#frequency_field/1" translate="no">frequency_field(assigns)</a>
 
         </div>
 
@@ -175,7 +141,7 @@ Version dropdown.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#requires_cron_job?/1" translate="no">requires_cron_job?(changeset)</a>
+          <a href="#get_cron_data/1" translate="no">get_cron_data(cron_expression)</a>
 
         </div>
 
@@ -183,7 +149,7 @@ Version dropdown.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#requires_upstream_job?/1" translate="no">requires_upstream_job?(changeset)</a>
+          <a href="#get_cron_expression/2" translate="no">get_cron_expression(cron_data, prev_cron_expression)</a>
 
         </div>
 
@@ -191,7 +157,7 @@ Version dropdown.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#save/2" translate="no">save(params, socket)</a>
+          <a href="#hour_field/1" translate="no">hour_field(assigns)</a>
 
         </div>
 
@@ -199,7 +165,7 @@ Version dropdown.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#update/2" translate="no">update(assigns, socket)</a>
+          <a href="#minute_field/1" translate="no">minute_field(assigns)</a>
 
         </div>
 
@@ -207,7 +173,23 @@ Version dropdown.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#validate/2" translate="no">validate(map, socket)</a>
+          <a href="#monthday_field/1" translate="no">monthday_field(assigns)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#time_field/1" translate="no">time_field(assigns)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#weekday_field/1" translate="no">weekday_field(assigns)</a>
 
         </div>
 
@@ -217,81 +199,6 @@ Version dropdown.</p></div>
 
   </section>
 
-
-  <section id="callbacks" class="details-list">
-    <h1 class="section-heading">
-      <a class="hover-link" href="#callbacks">
-        <i class="ri-link-m" aria-hidden="true"></i>
-        <span class="sr-only">Link to this section</span>
-      </a>
-Callbacks
-    </h1>
-    <div class="callbacks-list">
-<section class="detail" id="c:save/2">
-
-  <div class="detail-header">
-    <a href="#c:save/2" class="detail-link" title="Link to this callback">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
-    </a>
-    <h1 class="signature" translate="no">save(job_params, socket)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L175" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@callback</span> save(
-  job_params :: <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveView.html#t:unsigned_params/0">Phoenix.LiveView.unsigned_params</a>(),
-  socket :: <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>()
-) :: <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>()</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="c:validate/2">
-
-  <div class="detail-header">
-    <a href="#c:validate/2" class="detail-link" title="Link to this callback">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this callback</span>
-    </a>
-    <h1 class="signature" translate="no">validate(job_params, socket)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L180" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@callback</span> validate(
-  job_params :: <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveView.html#t:unsigned_params/0">Phoenix.LiveView.unsigned_params</a>(),
-  socket :: <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>()
-) :: <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveView.Socket.html#t:t/0">Phoenix.LiveView.Socket.t</a>()</pre>
-
-      </div>
-
-
-  </section>
-</section>
-
-    </div>
-  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -302,45 +209,16 @@ Callbacks
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="coerce_params_for_adaptor_list/1">
+<section class="detail" id="frequency_field/1">
 
   <div class="detail-header">
-    <a href="#coerce_params_for_adaptor_list/1" class="detail-link" title="Link to this function">
+    <a href="#frequency_field/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">coerce_params_for_adaptor_list(job_params)</h1>
+    <h1 class="signature" translate="no">frequency_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L145" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> coerce_params_for_adaptor_list(%{required(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) =&gt; <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()}) :: %{}</pre>
-
-      </div>
-
-<p>Coerce any changes to the &quot;Adaptor&quot; dropdown into a new selection on the
-Version dropdown.</p>
-  </section>
-</section>
-<section class="detail" id="get_adaptor_version_options/1">
-
-  <div class="detail-header">
-    <a href="#get_adaptor_version_options/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_adaptor_version_options(adaptor)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L108" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L178" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -353,16 +231,16 @@ Version dropdown.</p>
 
   </section>
 </section>
-<section class="detail" id="requires_cron_job?/1">
+<section class="detail" id="get_cron_data/1">
 
   <div class="detail-header">
-    <a href="#requires_cron_job?/1" class="detail-link" title="Link to this function">
+    <a href="#get_cron_data/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">requires_cron_job?(changeset)</h1>
+    <h1 class="signature" translate="no">get_cron_data(cron_expression)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L168" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L66" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -375,16 +253,16 @@ Version dropdown.</p>
 
   </section>
 </section>
-<section class="detail" id="requires_upstream_job?/1">
+<section class="detail" id="get_cron_expression/2">
 
   <div class="detail-header">
-    <a href="#requires_upstream_job?/1" class="detail-link" title="Link to this function">
+    <a href="#get_cron_expression/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">requires_upstream_job?(changeset)</h1>
+    <h1 class="signature" translate="no">get_cron_expression(cron_data, prev_cron_expression)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L164" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L104" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -397,16 +275,16 @@ Version dropdown.</p>
 
   </section>
 </section>
-<section class="detail" id="save/2">
+<section class="detail" id="hour_field/1">
 
   <div class="detail-header">
-    <a href="#save/2" class="detail-link" title="Link to this function">
+    <a href="#hour_field/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">save(params, socket)</h1>
+    <h1 class="signature" translate="no">hour_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L104" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L220" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -419,16 +297,16 @@ Version dropdown.</p>
 
   </section>
 </section>
-<section class="detail" id="update/2">
+<section class="detail" id="minute_field/1">
 
   <div class="detail-header">
-    <a href="#update/2" class="detail-link" title="Link to this function">
+    <a href="#minute_field/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">update(assigns, socket)</h1>
+    <h1 class="signature" translate="no">minute_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L47" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L199" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -441,16 +319,60 @@ Version dropdown.</p>
 
   </section>
 </section>
-<section class="detail" id="validate/2">
+<section class="detail" id="monthday_field/1">
 
   <div class="detail-header">
-    <a href="#validate/2" class="detail-link" title="Link to this function">
+    <a href="#monthday_field/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">validate(map, socket)</h1>
+    <h1 class="signature" translate="no">monthday_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/form_component.ex#L84" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L257" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="time_field/1">
+
+  <div class="detail-header">
+    <a href="#time_field/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">time_field(assigns)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L278" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="weekday_field/1">
+
+  <div class="detail-header">
+    <a href="#weekday_field/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">weekday_field(assigns)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L236" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
