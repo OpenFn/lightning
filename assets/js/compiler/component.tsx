@@ -33,7 +33,7 @@ const useStore = create<CompilerComponentState>((set, get) => ({
     if (specifier) {
       set({ loading: true, statusMessage: 'Loading compiler...', error: null });
 
-      const { Pack, Project, describeDts } = await import('@openfn/compiler');
+      const { Pack, Project, describeDts } = await import('@openfn/describe-package');
       const project = new Project();
 
       set({ statusMessage: 'Loading package...' });
