@@ -141,11 +141,11 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   attr :adaptor, :string, required: true
 
-  def compiler_component(assigns) do
+  def docs_component(assigns) do
     ~H"""
     <div
       data-adaptor={@adaptor}
-      phx-hook="Compiler"
+      phx-hook="AdaptorDocs"
       phx-update="ignore"
       id="compiler-component"
     >
