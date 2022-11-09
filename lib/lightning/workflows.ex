@@ -120,7 +120,7 @@ defmodule Lightning.Workflows do
     |> Repo.all()
   end
 
-  defp trigger_for_project_space(%Job{} = job) do
+  defp trigger_for_project_space(job) do
     case job.trigger.type do
       :webhook ->
         %{
@@ -136,7 +136,7 @@ defmodule Lightning.Workflows do
         %{"expression" => job.trigger.cron_expression}
 
       type when type in [:on_job_failure, :on_job_success] ->
-        %{"upstreamJob" => job.trigger.upstream_job}
+        %{"upstreamJob" => job.trigger.upstream_job_id}
     end
     |> Enum.into(%{
       "type" => job.trigger.type
@@ -155,7 +155,7 @@ defmodule Lightning.Workflows do
             "name" => job.name,
             "adaptor" => job.adaptor,
             "workflowId" => job.workflow_id,
-            "trigger" => trigger_for_project_space(job) |> IO.inspect()
+            "trigger" => trigger_for_project_space(job)
           }
         end),
       "workflows" =>
