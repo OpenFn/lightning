@@ -8,24 +8,41 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.3.0] - 2022-11-09
+
+### Added
+
 - Add seed data for demo site
-- create adaptor credentials through a form
+- Create adaptor credentials through a form
+- Configure cron expressions through a form
+- View runs grouped by work orders and attempts
+- Run an existing Job with any dataclip uuid from the Job form
+
+### Changed
+
 - Redirect users to projects list page when they click on Admin Settings menu
 - Move job, project, input and output Dataclips to Run table
-- Reverse the relationship between Jobs and Triggers, Triggers now can exist on
+- Reverse the relationship between Jobs and Triggers. Triggers now can exist on
   their own; setting the stage for branching and merging workflows
 - Updated Elixir and frontend dependencies
 - [BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not
   compatible.
 - Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.
-- Added the ability to Run an existing Job with any dataclip uuid from the Job
-  form
 - Upgraded LiveView to 0.18.0
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel
 - Split JobLive.InspectorFormComponent into different plug-able subcomponents
-- Configure cron expressions thru a form
-- Added new Job Builder form on Workflow Diagram
+- New Job Builder form on Workflow Diagram
+
+### Fixed
+
+- Scheduled deletion no longer appears when creating a new user
 
 ## [0.2.0] - 2022-09-12
 
