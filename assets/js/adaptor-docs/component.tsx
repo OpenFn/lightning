@@ -32,31 +32,20 @@ const useStore = create<AdaptorDocsComponentState>((set, get) => ({
 
     if (specifier) {
       set({ loading: true, statusMessage: 'Loading adaptor docs...', error: null });
+      const operations = [];
 
-      const { Pack, Project, describeDts } = await import('@openfn/describe-package');
+      const { Project, describeDts, fetchDTSListing, fetchFile } = await import('@openfn/describe-package');
       const project = new Project();
 
       set({ statusMessage: 'Loading package...' });
-      const pack = await Pack.fromUnpkg(specifier);
 
-      const packageOrDts = /(?:package.json)|(?:\.d\.ts$)/i;
-
-      if (!pack.types) {
-        set({ error: 'no-types', loading: false });
-        // throw new Error(
-        //   `No 'types' field found for ${pack.specifier}`
-        // );
-        return;
+      const files = await fetchDTSListing(specifier);
+      
+      for await (const fileName of files) {
+        const f = await fetchFile(`${specifier}${fileName}`)
+        project.createFile(f, fileName);
+        operations.push(...describeDts(project, fileName));
       }
-
-      const files = await pack.getFiles(
-        pack.fileListing.filter(path => packageOrDts.test(path))
-      );
-
-      project.addToFS(files);
-      project.createFile(files.get(pack.types)!, pack.types);
-
-      const operations = describeDts(project, pack.types);
 
       set({
         operations,
