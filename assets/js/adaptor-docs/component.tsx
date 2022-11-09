@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import InfoCircle from './InfoIcon';
 import ErrorIcon from './ErrorIcon';
 
-interface CompilerComponentState {
+interface AdaptorDocsComponentState {
   specifier: string | null;
   loading: boolean;
   error: string | null;
@@ -17,7 +17,7 @@ interface CompilerComponentState {
   loadModule: () => void;
 }
 
-const useStore = create<CompilerComponentState>((set, get) => ({
+const useStore = create<AdaptorDocsComponentState>((set, get) => ({
   specifier: null,
   error: null,
   loading: false,
@@ -31,7 +31,7 @@ const useStore = create<CompilerComponentState>((set, get) => ({
     const specifier = get().specifier;
 
     if (specifier) {
-      set({ loading: true, statusMessage: 'Loading compiler...', error: null });
+      set({ loading: true, statusMessage: 'Loading adaptor docs...', error: null });
 
       const { Pack, Project, describeDts } = await import('@openfn/describe-package');
       const project = new Project();
@@ -182,7 +182,7 @@ export function mount(el: Element, { specifier }) {
 
   useStore.setState({ specifier });
 
-  function update(state: Partial<CompilerComponentState>) {
+  function update(state: Partial<AdaptorDocsComponentState>) {
     useStore.setState(state);
   }
 

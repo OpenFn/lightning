@@ -26,12 +26,12 @@ import { LiveSocket } from 'phoenix_live_view';
 import topbar from '../vendor/topbar';
 
 import WorkflowDiagram from './workflow-diagram';
-import Compiler from './compiler';
+import AdaptorDocs from './adaptor-docs';
 import Editor from './editor';
 
 import Alpine from 'alpinejs';
 
-let Hooks = { WorkflowDiagram, Compiler, Editor };
+let Hooks = { WorkflowDiagram, AdaptorDocs, Editor };
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener('change', event => {
