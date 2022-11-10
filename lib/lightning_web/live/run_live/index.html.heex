@@ -3,10 +3,10 @@
     <Layout.header socket={@socket} title={@page_title} />
   </:header>
   <Layout.centered>
-    <div class="bg-gray-100 dark:bg-gray-700 relative">
+    <div class="bg-gray-100 dark:bg-gray-700 relative flex">
       <div
         data-entity="work_order_index"
-        class="flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
+        class="flex-1 flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
       >
         <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
           <div class="grid grid-cols-5 gap-4">
@@ -26,6 +26,17 @@
             />
           <% end %>
         </div>
+      </div>
+      <div class="w-64 bg-gray-200 m-2 p-2 sticky top-0 self-start">
+        <.form :let={f} for={@changeset} id="run-search-form" phx-change="validate">
+          <.live_component
+            id="run-status-select"
+            module={Lightning.RunLive.RunStatusComponent}
+            options={@run_statuses}
+            form={f}
+            selected={fn opts -> send(self(), {:updated_options, opts}) end}
+          />
+        </.form>
       </div>
     </div>
     <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />

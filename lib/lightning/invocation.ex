@@ -287,15 +287,38 @@ defmodule Lightning.Invocation do
     Run.changeset(run, attrs)
   end
 
-  @spec list_work_orders_for_project_query(Lightning.Projects.Project.t()) ::
-          Ecto.Query.t()
-  def list_work_orders_for_project_query(%Project{id: project_id}) do
-    # we can use a ^custom_query to control (order_by ...) the way preloading is done
+  def filter_status_where(statuses) do
 
+    Enum.reduce(statuses, dynamic(true), fn
+      "success", dynamic ->
+        dynamic([r], ^dynamic or r.exit_code == 0)
+
+      "failure", dynamic ->
+        dynamic([r], ^dynamic or r.exit_code == 1)
+
+      "timeout", dynamic ->
+        dynamic([r], ^dynamic or r.exit_code == 2)
+
+      "crash", dynamic ->
+        dynamic([r], ^dynamic or r.exit_code > 2)
+
+      _, dynamic ->
+        # Not a where parameter
+        dynamic
+    end)
+  end
+
+  def list_work_orders_for_project_query(
+        %Project{id: project_id},
+        %{"status" => status}
+      ) do
+    # we can use a ^custom_query to control (order_by ...) the way preloading is done
+    IO.inspect filter_status_where(status), label: "BOCAZ"
     runs_query =
       from(r in Lightning.Invocation.Run,
         join: j in assoc(r, :job),
         order_by: [asc: r.finished_at],
+        where: ^filter_status_where(status),
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,
@@ -336,13 +359,9 @@ defmodule Lightning.Invocation do
     )
   end
 
-  @spec list_work_orders_for_project(
-          Lightning.Projects.Project.t(),
-          keyword | map
-        ) ::
-          Scrivener.Page.t()
-  def list_work_orders_for_project(%Project{} = project, params \\ %{}) do
-    list_work_orders_for_project_query(project)
+  def list_work_orders_for_project(%Project{} = project, params \\ %{"status" => [:success, :failure, :timeout, :crash]}) do
+
+    list_work_orders_for_project_query(project, params)
     |> Repo.paginate(params)
   end
 end

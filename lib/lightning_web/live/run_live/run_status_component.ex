@@ -3,32 +3,12 @@ defmodule Lightning.RunLive.RunStatusComponent do
   use LightningWeb, :live_component
 
   @impl true
-  def handle_event(
-        "checked",
-        %{"run_search_form" => %{"options" => values}},
-        socket
-      ) do
-    [{index, %{"selected" => selected?}}] = Map.to_list(values)
-    index = String.to_integer(index)
-    selectable_statuses = socket.assigns.selectable_statuses
-    current_option = Enum.at(selectable_statuses, index)
+  attr :label, :string
 
-    updated_statuses =
-      List.replace_at(
-        selectable_statuses,
-        index,
-        %{current_option | selected: selected?}
-      )
-
-    send(self(), {:updated_statuses, updated_statuses})
-
-    {:noreply, socket}
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <div id={"#{@id}-options-container"}>
+      <div class="font-semibold my-4">Filter by status</div>
       <%= inputs_for @form, :options, fn opt -> %>
         <div class="form-check">
           <div class="selectable-option">
@@ -46,15 +26,38 @@ defmodule Lightning.RunLive.RunStatusComponent do
   end
 
   @impl true
-  def update(params, socket) do
-    %{options: options, form: form, id: id} = params
-
+  def update(assigns, socket) do
+    %{options: options, form: form, id: id, selected: selected} = assigns
     socket =
       socket
       |> assign(:id, id)
-      |> assign(:selectable_statuses, options)
+      |> assign(:options, options)
       |> assign(:form, form)
+      |> assign(:selected, selected)
 
     {:ok, socket}
+  end
+
+
+  @impl true
+  def handle_event(
+        "checked",
+        %{"run_search_form" => %{"options" => values}},
+        socket
+      ) do
+    [{index, %{"selected" => selected?}}] = Map.to_list(values)
+    index = String.to_integer(index)
+    current_option = Enum.at(socket.assigns.options, index)
+
+    updated_statuses =
+      List.replace_at(
+        socket.assigns.options,
+        index,
+        %{current_option | selected: selected?}
+      )
+
+      socket.assigns.selected.(updated_statuses)
+
+      {:noreply, socket}
   end
 end

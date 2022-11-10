@@ -12,32 +12,17 @@ defmodule LightningWeb.RunLive.Index do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
-  @impl true
-  def handle_info({:updated_statuses, statuses}, socket) do
-
-    run_search_changeset= socket.assigns.run_search_changeset
-    {:noreply,
-     socket
-     |> assign(:run_search_changeset, run_search_changeset |> Ecto.Changeset.put_embed(:options, statuses))
-     |> assign(:statuses, statuses)}
-  end
+  @run_statuses [
+    %RunStatusOption{id: :success, label: "Success", selected: true},
+    %RunStatusOption{id: :failure, label: "Failure", selected: true},
+    %RunStatusOption{id: :timeout, label: "Timeout", selected: true},
+    %RunStatusOption{id: :crash, label: "Crash", selected: true}
+  ]
 
   @impl true
   def mount(_params, _session, socket) do
-    statuses = [
-      %RunStatusOption{id: 1, label: "Success", selected: true},
-      %RunStatusOption{id: 2, label: "Failure", selected: true},
-      %RunStatusOption{id: 3, label: "Timeout", selected: true},
-      %RunStatusOption{id: 3, label: "Crash", selected: true}
-    ]
-
-    workflows = []
-
     {:ok,
      socket
-     |> assign_new(:run_search_changeset, fn -> build_search_changeset(statuses) end)
-     |> assign(:workflows, workflows)
-     |> assign(:statuses, statuses)
      |> assign(
        active_menu_item: :runs,
        work_orders: [],
@@ -48,13 +33,8 @@ defmodule LightningWeb.RunLive.Index do
            socket.assigns.project,
            &1
          )
-     )}
-  end
-
-  defp build_search_changeset(statuses) do
-    %RunSearchForm{}
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_embed(:options, statuses)
+     )
+     |> assign_multi_select_options(@run_statuses)}
   end
 
   @impl true
@@ -63,6 +43,7 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
+IO.inspect socket.assigns
     socket
     |> assign(
       page_title: "Runs",
@@ -70,5 +51,43 @@ defmodule LightningWeb.RunLive.Index do
       page:
         Invocation.list_work_orders_for_project(socket.assigns.project, params)
     )
+  end
+
+  @impl true
+  def handle_info({:updated_options, options}, socket) do
+    {:noreply,
+     assign_multi_select_options(socket, options)
+     |> push_patch(
+       to:
+         Routes.project_run_index_path(
+           socket,
+           :index,
+           socket.assigns.project,
+           status: options |> to_query()
+         )
+     )}
+  end
+
+  defp to_query(options) do
+    options |> Enum.filter(&(&1.selected in [true, "true"])) |> Enum.map(& &1.id)
+  end
+
+  @impl true
+  def handle_event("validate", %{"run_search_form" => multi_component}, socket) do
+    options = multi_component["options"]
+
+    {:noreply, assign_multi_select_options(socket, options)}
+  end
+
+  defp assign_multi_select_options(socket, statuses) do
+    socket
+    |> assign(:changeset, build_changeset(statuses))
+    |> assign(:run_statuses, statuses)
+  end
+
+  defp build_changeset(options) do
+    %RunSearchForm{}
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_embed(:options, options)
   end
 end
