@@ -42,14 +42,14 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, params) do
-IO.inspect socket.assigns
+  defp apply_action(socket, :index, _params) do
+
     socket
     |> assign(
       page_title: "Runs",
       run: %Run{},
       page:
-        Invocation.list_work_orders_for_project(socket.assigns.project, params)
+        Invocation.list_work_orders_for_project(socket.assigns.project, status: socket.assigns.run_statuses |> to_query())
     )
   end
 
@@ -62,9 +62,9 @@ IO.inspect socket.assigns
          Routes.project_run_index_path(
            socket,
            :index,
-           socket.assigns.project,
-           status: options |> to_query()
-         )
+           socket.assigns.project
+           #status: options |> to_query()
+         ), replace: true
      )}
   end
 

@@ -288,19 +288,18 @@ defmodule Lightning.Invocation do
   end
 
   def filter_status_where(statuses) do
+    Enum.reduce(statuses, dynamic(false), fn
+      :success, dynamic ->
+        dynamic([runs: r], ^dynamic or r.exit_code == 0)
 
-    Enum.reduce(statuses, dynamic(true), fn
-      "success", dynamic ->
-        dynamic([r], ^dynamic or r.exit_code == 0)
+      :failure, dynamic ->
+        dynamic([runs: r], ^dynamic or r.exit_code == 1)
 
-      "failure", dynamic ->
-        dynamic([r], ^dynamic or r.exit_code == 1)
+      :timeout, dynamic ->
+        dynamic([runs: r], ^dynamic or r.exit_code == 2)
 
-      "timeout", dynamic ->
-        dynamic([r], ^dynamic or r.exit_code == 2)
-
-      "crash", dynamic ->
-        dynamic([r], ^dynamic or r.exit_code > 2)
+      :crash, dynamic ->
+        dynamic([runs: r], ^dynamic or r.exit_code > 2)
 
       _, dynamic ->
         # Not a where parameter
@@ -310,15 +309,13 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project_query(
         %Project{id: project_id},
-        %{"status" => status}
+        status: status
       ) do
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
-    IO.inspect filter_status_where(status), label: "BOCAZ"
     runs_query =
       from(r in Lightning.Invocation.Run,
         join: j in assoc(r, :job),
         order_by: [asc: r.finished_at],
-        where: ^filter_status_where(status),
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,
@@ -329,9 +326,9 @@ defmodule Lightning.Invocation do
 
     attempts_query =
       from(a in Lightning.Attempt,
-        join: r in assoc(a, :reason),
+        join: re in assoc(a, :reason),
         order_by: [desc: a.inserted_at],
-        preload: [reason: r, runs: ^runs_query]
+        preload: [reason: re, runs: ^runs_query]
       )
 
     dataclips_query =
@@ -342,7 +339,11 @@ defmodule Lightning.Invocation do
     from(wo in Lightning.WorkOrder,
       join: re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
+      join: att in assoc(wo, :attempts),
+      join: r in assoc(att, :runs),
+      as: :runs,
       where: w.project_id == ^project_id,
+      where: ^filter_status_where(status),
       order_by: [desc: wo.inserted_at],
       preload: [
         reason:
@@ -359,9 +360,8 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project, params \\ %{"status" => [:success, :failure, :timeout, :crash]}) do
-
-    list_work_orders_for_project_query(project, params)
-    |> Repo.paginate(params)
+  def list_work_orders_for_project(%Project{} = project, filter) do
+    list_work_orders_for_project_query(project, filter)
+    |> Repo.paginate(%{project_id: project.id})
   end
 end
