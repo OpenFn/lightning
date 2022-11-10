@@ -34,7 +34,10 @@ defmodule LightningWeb.LiveHelpers do
 
     ~H"""
     <%= if info = live_flash(@flash, :info) do %>
-      <div class="fixed flex justify-center bottom-3 right-0 left-0 z-[100]" id={@id}>
+      <div
+        class="fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
+        id={@id}
+      >
         <p
           class="bg-blue-200 border-blue-300 border opacity-75 py-4 px-5 rounded-md drop-shadow-lg"
           role="alert"
@@ -57,7 +60,10 @@ defmodule LightningWeb.LiveHelpers do
 
     ~H"""
     <%= if error = live_flash(@flash, :error) do %>
-      <div class="fixed flex justify-center bottom-3 right-0 left-0 z-[100]" id={@id}>
+      <div
+        class="fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
+        id={@id}
+      >
         <p
           class="bg-red-300 border-red-400 text-red-900 border opacity-75 py-4 px-5 rounded-md drop-shadow-lg"
           role="alert"
