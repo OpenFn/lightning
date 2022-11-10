@@ -135,7 +135,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </.panel_content>
           <.panel_content for_hash="editor">
-            <.compiler_component adaptor={@job_adaptor} />
+            <.docs_component adaptor={@job_adaptor} />
             <div
               phx-hook="Editor"
               phx-update="ignore"
