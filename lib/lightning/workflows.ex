@@ -124,7 +124,7 @@ defmodule Lightning.Workflows do
     case job.trigger.type do
       :webhook ->
         %{
-          "url" =>
+          "webhookUrl" =>
             Helpers.webhooks_url(
               LightningWeb.Endpoint,
               :create,
@@ -133,7 +133,7 @@ defmodule Lightning.Workflows do
         }
 
       :cron ->
-        %{"expression" => job.trigger.cron_expression}
+        %{"cronExpression" => job.trigger.cron_expression}
 
       type when type in [:on_job_failure, :on_job_success] ->
         %{"upstreamJob" => job.trigger.upstream_job_id}
