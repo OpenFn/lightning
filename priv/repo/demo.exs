@@ -1,6 +1,6 @@
 # Script for
 #
-#     mix run priv/repo/seeds.exs
+#     mix run priv/repo/demo.exs
 #
 # Inside the script, you can read and write to any of your
 # repositories directly:
