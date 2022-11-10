@@ -14,4 +14,4 @@ assignees: ''
 
 ### Release notes
 
-### Tests
+### User acceptance criteria
