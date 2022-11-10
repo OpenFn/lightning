@@ -11,6 +11,18 @@
       credential={@credential}
       projects={@projects}
       return_to={Routes.credential_index_path(@socket, :index)}
-    />
+    >
+      <:buttons :let={changeset}>
+        <.link
+          navigate={Routes.credential_index_path(@socket, :index)}
+          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+        >
+          Cancel
+        </.link>
+        <.submit_button phx-disable-with="Saving..." disabled={!changeset.valid?}>
+          Save
+        </.submit_button>
+      </:buttons>
+    </.live_component>
   </Layout.centered>
 </Layout.page_content>

@@ -5,8 +5,6 @@ defmodule LightningWeb.WorkflowLive do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
-  alias Lightning.Projects
-  alias Lightning.Jobs.JobForm
 
   defp encode_project_space(project) do
     Workflows.get_workflows_for(project)
@@ -45,37 +43,6 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
-  def handle_info({:added_credential, credential}, socket) do
-    project = socket.assigns.project
-
-    project_credential =
-      Projects.get_project_credential(project.id, credential.id)
-
-    {:noreply,
-     socket
-     |> put_flash(:info, "Credential created successfully")
-     |> assign(
-       initial_job_params:
-         Map.merge(socket.assigns.initial_job_params, %{
-           "project_credential_id" => project_credential.id,
-           "project_credential" => project_credential
-         })
-     )
-     |> assign(:new_credential, false)}
-  end
-
-  @impl true
-  def handle_event("new-credential", params, socket) do
-    {:noreply,
-     socket
-     |> assign(:new_credential, true)
-     |> assign(:initial_job_params, params)}
-  end
-
-  def handle_event("close_modal", _args, socket) do
-    {:noreply, socket |> assign(:new_credential, false)}
-  end
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,
@@ -97,22 +64,32 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :new_job, %{"upstream_id" => upstream_id}) do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
-    job = %Lightning.Jobs.Job{
-      trigger: %Lightning.Jobs.Trigger{
-        type: :on_job_success,
-        upstream_job_id: upstream_job.id
-      }
-    }
-
     socket
     |> assign(
       active_menu_item: :overview,
-      job: job,
-      job_form: %JobForm{
-        project_id: socket.assigns.project.id,
-        workflow_id: upstream_job.workflow_id,
-        trigger_type: :on_job_success,
-        trigger_upstream_job_id: upstream_job.id
+      job: %Lightning.Jobs.Job{},
+      job_params: %{
+        "workflow_id" => upstream_job.workflow_id,
+        "trigger" => %{
+          "type" => :on_job_success,
+          "upstream_job_id" => upstream_job.id
+        }
+      },
+      initial_job_params: %{
+        "project_id" => socket.assigns.project.id
+      },
+      page_title: socket.assigns.project.name
+    )
+  end
+
+  defp apply_action(socket, :new_job, %{"project_id" => project_id}) do
+    socket
+    |> assign(
+      active_menu_item: :overview,
+      job: %Lightning.Jobs.Job{},
+      job_params: %{
+        "workflow" => %{"project_id" => project_id},
+        "trigger" => %{"type" => :webhook}
       },
       initial_job_params: %{
         "project_id" => socket.assigns.project.id
@@ -128,7 +105,6 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
-      job_form: JobForm.from_job(job),
       initial_job_params: %{},
       page_title: socket.assigns.project.name
     )
@@ -157,7 +133,9 @@ defmodule LightningWeb.WorkflowLive do
             </div>
           </.link>
           &nbsp;&nbsp;
-          <.link navigate={Routes.project_job_edit_path(@socket, :new, @project.id)}>
+          <.link navigate={
+            Routes.project_workflow_path(@socket, :new_job, @project.id)
+          }>
             <Common.button>
               <div class="h-full">
                 <Heroicons.plus class="h-4 w-4 inline-block" />
@@ -168,15 +146,6 @@ defmodule LightningWeb.WorkflowLive do
         </Layout.header>
       </:header>
       <div class="relative h-full">
-        <%= if @new_credential do %>
-          <.live_component
-            module={LightningWeb.CredentialLive.CredentialEditModal}
-            id="new-credential"
-            job={@job}
-            project={@project}
-            current_user={@current_user}
-          />
-        <% end %>
         <%= case @live_action do %>
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
@@ -185,42 +154,29 @@ defmodule LightningWeb.WorkflowLive do
                 id="job-pane"
               >
                 <.live_component
-                  module={LightningWeb.JobLive.JobSetupComponent}
-                  id="new-job"
-                  job_form={@job_form}
-                  action={:new}
+                  module={LightningWeb.JobLive.JobBuilder}
+                  id="builder-new"
+                  job={@job}
+                  params={@job_params}
                   project={@project}
-                  initial_job_params={@initial_job_params}
+                  current_user={@current_user}
                   return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id
-                    )
+                    Routes.project_workflow_path(@socket, :show, @project.id)
                   }
                 />
               </div>
             </div>
           <% :edit_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 z-10">
-              <div
-                class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-                id="job-pane"
-              >
+              <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
                 <.live_component
-                  module={LightningWeb.JobLive.JobSetupComponent}
-                  id={@job_form.id}
-                  job_form={@job_form}
-                  action={:edit}
-                  current_user={@current_user}
+                  module={LightningWeb.JobLive.JobBuilder}
+                  id={"builder-#{@job.id}"}
+                  job={@job}
                   project={@project}
-                  initial_job_params={@initial_job_params}
+                  current_user={@current_user}
                   return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id
-                    )
+                    Routes.project_workflow_path(@socket, :show, @project.id)
                   }
                 />
               </div>

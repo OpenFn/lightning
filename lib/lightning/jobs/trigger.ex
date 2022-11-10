@@ -93,6 +93,7 @@ defmodule Lightning.Jobs.Trigger do
       type when type in @flow_types ->
         changeset
         |> put_change(:cron_expression, nil)
+        |> validate_required(:upstream_job_id)
         |> assoc_constraint(:upstream_job)
 
       :webhook ->

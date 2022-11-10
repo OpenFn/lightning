@@ -45,7 +45,12 @@ defmodule Lightning.InvocationReasonsTest do
 
       errors =
         InvocationReasons.build(
-          job_fixture(trigger: %{type: :on_job_success}).trigger,
+          job_fixture(
+            trigger: %{
+              type: :on_job_success,
+              upstream_job_id: job_fixture().id
+            }
+          ).trigger,
           dataclip
         )
         |> errors_on()
