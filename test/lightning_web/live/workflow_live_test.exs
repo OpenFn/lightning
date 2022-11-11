@@ -87,15 +87,12 @@ defmodule LightningWeb.WorkflowLiveTest do
   end
 
   describe "new_job" do
-    setup %{project: project} do
-      %{upstream_job: job_fixture(project_id: project.id)}
-    end
-
-    test "renders the workflow inspector", %{
+    test "can be created with an upstream job", %{
       conn: conn,
-      project: project,
-      upstream_job: upstream_job
+      project: project
     } do
+      upstream_job = job_fixture(project_id: project.id)
+
       {:ok, view, html} =
         live(
           conn,
@@ -152,6 +149,37 @@ defmodule LightningWeb.WorkflowLiveTest do
       |> render_change()
 
       refute view |> has_error_for("name")
+
+      view |> submit_form()
+
+      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      assert view |> encoded_project_space_matches(project)
+    end
+
+    test "can be created without an upstream job", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :new_job, project.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#job-form")
+
+      view |> pick_adaptor_name("@openfn/language-common")
+
+      view
+      |> element("#job-editor-new")
+      |> render_hook(:job_body_changed, %{source: "some body"})
+
+      view
+      |> form("#job-form", job_form: %{enabled: true, name: "My Job"})
+      |> render_change()
 
       view |> submit_form()
 

@@ -23,8 +23,7 @@ defmodule LightningWeb.WorkflowLive do
      |> assign(
        active_menu_item: :projects,
        encoded_project_space: encode_project_space(project),
-       new_credential: false,
-       initial_job_params: %{}
+       new_credential: false
      )}
   end
 
@@ -75,9 +74,6 @@ defmodule LightningWeb.WorkflowLive do
           "upstream_job_id" => upstream_job.id
         }
       },
-      initial_job_params: %{
-        "project_id" => socket.assigns.project.id
-      },
       page_title: socket.assigns.project.name
     )
   end
@@ -88,12 +84,9 @@ defmodule LightningWeb.WorkflowLive do
       active_menu_item: :overview,
       job: %Lightning.Jobs.Job{},
       job_params: %{
-        "workflow" => %{"project_id" => project_id},
         "trigger" => %{"type" => :webhook}
       },
-      initial_job_params: %{
-        "project_id" => socket.assigns.project.id
-      },
+      workflow: Workflows.Workflow.new(%{project_id: project_id}),
       page_title: socket.assigns.project.name
     )
   end
@@ -105,7 +98,6 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       job: job,
-      initial_job_params: %{},
       page_title: socket.assigns.project.name
     )
   end
@@ -157,6 +149,7 @@ defmodule LightningWeb.WorkflowLive do
                   module={LightningWeb.JobLive.JobBuilder}
                   id="builder-new"
                   job={@job}
+                  workflow={assigns[:workflow]}
                   params={@job_params}
                   project={@project}
                   current_user={@current_user}
