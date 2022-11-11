@@ -98,4 +98,38 @@ defmodule Lightning.DemoTest do
              |> Enum.empty?()
     end
   end
+
+  describe "Tear down demo data" do
+    setup do
+      Lightning.Demo.setup(create_super: true)
+    end
+
+    test "all initial data gets wiped out of database" do
+      assert Lightning.Accounts.list_users() |> Enum.count() == 4
+      assert Lightning.Projects.list_projects() |> Enum.count() == 2
+      assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
+      assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+
+      Lightning.Demo.tear_down(destroy_super: true)
+
+      assert Lightning.Accounts.list_users() |> Enum.count() == 0
+      assert Lightning.Projects.list_projects() |> Enum.count() == 0
+      assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
+      assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+    end
+
+    test "all initial data gets wiped out of database except superusers" do
+      assert Lightning.Accounts.list_users() |> Enum.count() == 4
+      assert Lightning.Projects.list_projects() |> Enum.count() == 2
+      assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
+      assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
+
+      Lightning.Demo.tear_down(destroy_super: false)
+
+      assert Lightning.Accounts.list_users() |> Enum.count() == 1
+      assert Lightning.Projects.list_projects() |> Enum.count() == 0
+      assert Lightning.Workflows.list_workflows() |> Enum.count() == 0
+      assert Lightning.Jobs.list_jobs() |> Enum.count() == 0
+    end
+  end
 end
