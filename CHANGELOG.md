@@ -14,7 +14,7 @@ and this project adheres to
 
 ### Fixed
 
-## [0.3.0] - 2022-11-09
+## [0.3.0] - 2022-11-11
 
 ### Added
 
@@ -38,11 +38,6 @@ and this project adheres to
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel
 - Split JobLive.InspectorFormComponent into different plug-able subcomponents
-- New Job Builder form on Workflow Diagram
-
-### Fixed
-
-- Scheduled deletion no longer appears when creating a new user
 
 ## [0.2.0] - 2022-09-12
 

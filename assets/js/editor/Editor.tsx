@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Monaco from "@monaco-editor/react";
 import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types";
 
-import { fetchDTSListing, fetchFile } from '@openfn/compiler';
+import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 
 type EditorProps = {
   source?: string;

@@ -25,7 +25,6 @@ let EditorComponent: typeof Editor | undefined;
 
 export default {
   mounted(this: EditorEntrypoint) {
-    console.log('> mount');
     import('./Editor').then(module => {
       EditorComponent = module.default as typeof Editor;
       this.componentRoot = createRoot(this.el);

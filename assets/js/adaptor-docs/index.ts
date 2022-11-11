@@ -1,10 +1,10 @@
-// Hook for Compiler
+// Hook for AdaptorDocs
 // Dependencies are imported dynamically, saving loading Typescript
 // and everything else until they are needed.
 
-import type { mount } from "./component";
+import type { mount } from './component';
 
-interface CompilerComponentEntrypoint {
+interface AdaptorDocsComponentEntrypoint {
   component: ReturnType<typeof mount> | null;
   mounted(): void;
   destroyed(): void;
@@ -13,13 +13,13 @@ interface CompilerComponentEntrypoint {
 }
 
 export default {
-  mounted(this: CompilerComponentEntrypoint) {
+  mounted(this: AdaptorDocsComponentEntrypoint) {
     // Detect changes to the `data-adaptor` attribute on the component.
-    this.observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
+    this.observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
         if (
-          mutation.type === "attributes" &&
-          mutation.attributeName == "data-adaptor"
+          mutation.type === 'attributes' &&
+          mutation.attributeName == 'data-adaptor'
         ) {
           if (this.component) {
             this.component.update({
@@ -32,14 +32,13 @@ export default {
 
     this.observer.observe(this.el, { attributes: true });
 
-    import("./component").then(({ mount }) => {
+    import('./component').then(({ mount }) => {
       this.component = mount(this.el, { specifier: this.el.dataset.adaptor });
     });
   },
   destroyed() {
     this.component?.unmount();
     this.observer?.disconnect();
-    console.log("unmounted compiler");
   },
   component: null,
-} as CompilerComponentEntrypoint;
+} as AdaptorDocsComponentEntrypoint;
