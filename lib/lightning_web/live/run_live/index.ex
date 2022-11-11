@@ -42,34 +42,43 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp build_filter(socket) do
+    status =
+      socket.assigns.run_statuses
+      |> Enum.filter(&(&1.selected in [true, "true"]))
+      |> Enum.map(& &1.id)
 
+    [status: status]
+  end
+
+  defp apply_action(socket, :index, params) do
     socket
     |> assign(
       page_title: "Runs",
       run: %Run{},
       page:
-        Invocation.list_work_orders_for_project(socket.assigns.project, status: socket.assigns.run_statuses |> to_query())
+        Invocation.list_work_orders_for_project(
+          socket.assigns.project,
+          params,
+          build_filter(socket)
+        )
     )
   end
 
   @impl true
   def handle_info({:updated_options, options}, socket) do
     {:noreply,
-     assign_multi_select_options(socket, options)
+     socket
+     |> assign_multi_select_options(options)
      |> push_patch(
        to:
          Routes.project_run_index_path(
            socket,
            :index,
            socket.assigns.project
-           #status: options |> to_query()
-         ), replace: true
+         ),
+       replace: true
      )}
-  end
-
-  defp to_query(options) do
-    options |> Enum.filter(&(&1.selected in [true, "true"])) |> Enum.map(& &1.id)
   end
 
   @impl true

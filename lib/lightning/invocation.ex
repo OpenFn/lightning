@@ -360,8 +360,8 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter) do
+  def list_work_orders_for_project(%Project{} = project, params, filter) do
     list_work_orders_for_project_query(project, filter)
-    |> Repo.paginate(%{project_id: project.id})
+    |> Repo.paginate(params)
   end
 end
