@@ -18,7 +18,7 @@ defmodule LightningWeb.RunLive.RunComponent do
         <span class="mx-2 flex">
           <%= case @run.exit_code do %>
             <% val when val > 0-> %>
-              <Heroicons.check_circle
+              <Heroicons.x_circle
                 solid
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400"
               />
