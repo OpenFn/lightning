@@ -289,6 +289,10 @@ defmodule Lightning.Invocation do
 
   def filter_status_where(statuses) do
     Enum.reduce(statuses, dynamic(false), fn
+
+      :pending, dynamic ->
+        dynamic([runs: r], ^dynamic or is_nil(r.exit_code))
+
       :success, dynamic ->
         dynamic([runs: r], ^dynamic or r.exit_code == 0)
 
@@ -309,7 +313,7 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project_query(
         %Project{id: project_id},
-        status: status
+        [status: status]
       ) do
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     runs_query =
@@ -344,6 +348,7 @@ defmodule Lightning.Invocation do
       as: :runs,
       where: w.project_id == ^project_id,
       where: ^filter_status_where(status),
+      distinct: wo.id,
       order_by: [desc: wo.inserted_at],
       preload: [
         reason:
@@ -360,8 +365,13 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project, params, filter) do
+  def list_work_orders_for_project(%Project{} = project, filter, params \\ %{}) do
     list_work_orders_for_project_query(project, filter)
-    |> Repo.paginate(params)
+    |> Repo.paginate(params) |> IO.inspect()
   end
+
+  def list_work_orders_for_project(%Project{} = project) do
+    list_work_orders_for_project(project, [status: [:success, :failure, :timeout, :crash, :pending]])
+  end
+
 end
