@@ -208,7 +208,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
   def handle_event("save", %{"job_form" => params}, socket) do
     params = merge_params(socket.assigns.params, params)
 
-    changeset = Job.changeset(socket.assigns.job, params)
+    %{job: job, workflow: workflow, is_persisted: is_persisted} = socket.assigns
+
+    changeset =
+      build_changeset(job, params, workflow)
+      |> Map.put(:action, if(is_persisted, do: :update, else: :insert))
 
     socket =
       changeset
@@ -252,9 +256,19 @@ defmodule LightningWeb.JobLive.JobBuilder do
     socket
     |> update(:params, fn prev -> merge_params(prev, params) end)
     |> update(:changeset, fn _changeset, %{params: params, job: job} ->
-      Job.changeset(job, params)
+      build_changeset(job, params, socket.assigns.workflow)
       |> Map.put(:action, :validate)
     end)
+  end
+
+  defp build_changeset(job, params, nil) do
+    Job.changeset(job, params)
+  end
+
+  defp build_changeset(job, params, workflow) do
+    Ecto.Changeset.change(job)
+    |> Job.put_workflow(workflow)
+    |> Job.changeset(params)
   end
 
   # NOTE: consider multiple update functions to handle new, new from (job) and
@@ -273,7 +287,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
     job = job |> Lightning.Repo.preload([:trigger, :workflow])
     credentials = Lightning.Projects.list_project_credentials(project)
     params = assigns[:params] || %{}
-    changeset = Job.changeset(job, params)
+
+    changeset = build_changeset(job, params, assigns[:workflow])
 
     {:ok,
      socket
@@ -285,6 +300,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
        job_body: job.body,
        job_adaptor: job.adaptor,
        return_to: return_to,
+       workflow: assigns[:workflow],
        changeset: changeset,
        credentials: credentials,
        upstream_jobs:
