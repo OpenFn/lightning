@@ -12,7 +12,6 @@ defmodule Lightning.RunLive.RunSearchFormComponent do
     %RunStatusOption{id: 3, label: "Crash", selected: true}
   ]
 
-
   @impl true
   def render(assigns) do
     assigns =
@@ -35,12 +34,11 @@ defmodule Lightning.RunLive.RunSearchFormComponent do
               send(self(), {:search_updated, statuses})
 
               socket
-                |> assign(
-                  :run_search_changeset,
-                  changeset
-                  |> Ecto.Changeset.put_embed(:options, statuses)
-                )
-
+              |> assign(
+                :run_search_changeset,
+                changeset
+                |> Ecto.Changeset.put_embed(:options, statuses)
+              )
             end
           }
         />

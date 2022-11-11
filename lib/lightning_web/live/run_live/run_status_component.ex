@@ -28,6 +28,7 @@ defmodule Lightning.RunLive.RunStatusComponent do
   @impl true
   def update(assigns, socket) do
     %{options: options, form: form, id: id, selected: selected} = assigns
+
     socket =
       socket
       |> assign(:id, id)
@@ -37,7 +38,6 @@ defmodule Lightning.RunLive.RunStatusComponent do
 
     {:ok, socket}
   end
-
 
   @impl true
   def handle_event(
@@ -56,8 +56,8 @@ defmodule Lightning.RunLive.RunStatusComponent do
         %{current_option | selected: selected?}
       )
 
-      socket.assigns.selected.(updated_statuses)
+    socket.assigns.selected.(updated_statuses)
 
-      {:noreply, socket}
+    {:noreply, socket}
   end
 end
