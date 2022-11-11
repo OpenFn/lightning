@@ -67,7 +67,6 @@ let liveSocket = new LiveSocket('/live', Socket, {
   dom: {
     onBeforeElUpdated(from, to) {
       if (from._x_dataStack) {
-        console.log({ from, to });
         window.Alpine.clone(from, to);
       }
     },
