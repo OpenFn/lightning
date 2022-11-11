@@ -31,7 +31,7 @@ defmodule LightningWeb.RunLive.AttemptComponent do
           <span class="flex items-center">
             <Heroicons.clock solid class="mr-1 h-5 w-5" />
             <span>
-              Re-run at <%= @last_run.finished_at
+              Started at <%= @last_run.finished_at
               |> Calendar.strftime("%c") %>
 
               <%= case @last_run.exit_code do %>
