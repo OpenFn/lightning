@@ -45,9 +45,9 @@ defmodule LightningWeb.JobLive.JobBuilder do
     ~H"""
     <div
       id={@id}
-      x-data="{ tab: window.location.hash ? window.location.hash.substring(1) : 'setup' }"
+      x-data="{ tab: window.location.hash.substring(1) || 'setup' }"
       class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-      x-cloak
+      x-show="tab"
     >
       <div class="flex flex-col h-full">
         <div class="flex-none">

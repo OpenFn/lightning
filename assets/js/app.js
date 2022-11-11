@@ -66,14 +66,12 @@ let liveSocket = new LiveSocket('/live', Socket, {
   hooks: Hooks,
   dom: {
     onBeforeElUpdated(from, to) {
-      if (from._x_dataStack) {
-        window.Alpine.clone(from, to);
+      if (from.__x) {
+        window.Alpine.clone(from.__x, to);
       }
     },
   },
 });
-
-Alpine.start();
 
 // Show progress bar on live navigation and form submits
 // Include a 120ms timeout to avoid small flashes when things load quickly.
