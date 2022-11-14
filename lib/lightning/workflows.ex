@@ -4,9 +4,7 @@ defmodule Lightning.Workflows do
   """
 
   import Ecto.Query, warn: false
-  alias Quantum.Job
   alias Lightning.Repo
-  alias Lightning.Jobs.{Job}
   alias LightningWeb.Router.Helpers
   alias Lightning.Workflows.Workflow
   alias Lightning.Projects.Project
@@ -125,11 +123,7 @@ defmodule Lightning.Workflows do
       :webhook ->
         %{
           "webhookUrl" =>
-            Helpers.webhooks_url(
-              LightningWeb.Endpoint,
-              :create,
-              [job.id]
-            )
+            Helpers.webhooks_url(LightningWeb.Endpoint, :create, [job.id])
         }
 
       :cron ->
