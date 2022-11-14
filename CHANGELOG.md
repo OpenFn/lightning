@@ -27,6 +27,7 @@ and this project adheres to
 - Configure cron expressions thru a form
 - Added new Job Builder form on Workflow Diagram
 - Fixed adaptor documentation drop-down
+- Ensure new jobs with cron triggers receive a default frequency
 
 ## [0.2.0] - 2022-09-12
 

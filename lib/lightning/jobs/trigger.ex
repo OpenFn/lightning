@@ -71,7 +71,8 @@ defmodule Lightning.Jobs.Trigger do
   end
 
   defp validate_cron(changeset, _options \\ []) do
-    validate_change(changeset, :cron_expression, fn _, cron_expression ->
+    changeset
+    |> validate_change(:cron_expression, fn _, cron_expression ->
       Crontab.CronExpression.Parser.parse(cron_expression)
       |> case do
         {:error, error_message} ->
@@ -103,11 +104,21 @@ defmodule Lightning.Jobs.Trigger do
 
       :cron ->
         changeset
+        |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
         |> put_change(:upstream_job_id, nil)
 
       nil ->
         changeset
+    end
+  end
+
+  defp put_default(changeset, field, value) do
+    changeset
+    |> get_field(field)
+    |> case do
+      nil -> changeset |> put_change(field, value)
+      _ -> changeset
     end
   end
 end

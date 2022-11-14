@@ -47,11 +47,9 @@ defmodule Lightning.JobsTest do
           enabled: false
         )
 
-      assert Jobs.get_jobs_for_cron_execution(
-               DateTime.utc_now()
-               |> DateTime.to_unix()
-             ) ==
-               [Jobs.get_job!(job_1.id)]
+      assert Jobs.get_jobs_for_cron_execution(DateTime.utc_now()) == [
+               Jobs.get_job!(job_1.id)
+             ]
     end
 
     test "get_job!/1 returns the job with given id" do

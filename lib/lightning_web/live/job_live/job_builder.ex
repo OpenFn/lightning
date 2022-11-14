@@ -325,10 +325,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
         %{event: :cron_expression_changed, cron_expression: cron_expression},
         socket
       ) do
+    %{id: trigger_id} =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_field(:trigger)
+
     {:ok,
      socket
      |> assign_changeset_and_params(%{
-       "trigger" => %{"cron_expression" => cron_expression}
+       "trigger" => %{"cron_expression" => cron_expression, "id" => trigger_id}
      })}
   end
 
