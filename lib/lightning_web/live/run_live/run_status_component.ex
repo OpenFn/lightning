@@ -1,5 +1,7 @@
 defmodule Lightning.RunLive.RunStatusComponent do
-  @moduledoc false
+  @moduledoc """
+  Run Status MutliSelect.
+  """
   use LightningWeb, :live_component
 
   @impl true

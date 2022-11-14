@@ -412,4 +412,133 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> render_click() =~ "Pending"
     end
   end
+
+  describe "Search and Filtering" do
+    test "Search form is displayed", %{
+      conn: conn,
+      project: project
+    } do
+      job =
+        workflow_job_fixture(
+          workflow_name: "my workflow",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -1),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Filter by status"
+
+      assert view
+             |> element("input#run-search-form_options_0_selected[checked]")
+             |> has_element?()
+
+      assert view
+             |> element("input#run-search-form_options_1_selected[checked]")
+             |> has_element?()
+
+      assert view
+             |> element("input#run-search-form_options_2_selected[checked]")
+             |> has_element?()
+
+      assert view
+             |> element("input#run-search-form_options_3_selected[checked]")
+             |> has_element?()
+
+      assert view
+             |> element("input#run-search-form_options_4_selected[checked]")
+             |> has_element?()
+    end
+
+    test "Run with failure status shows when option checked", %{
+      conn: conn,
+      project: project
+    } do
+      job =
+        workflow_job_fixture(
+          workflow_name: "my workflow",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -1),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Failure"
+
+      view
+      |> element("input#run-search-form_options_1_selected[checked]")
+      |> render_change()
+    end
+  end
 end

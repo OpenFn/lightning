@@ -10,7 +10,7 @@ defmodule Lightning.RunLive.Components do
       <%= label(
         @form,
         :workflow_id,
-        title: "Workflow",
+        title: "Filter by workflow",
         for: "workflowField",
         class: "font-semibold my-4"
       ) %>
