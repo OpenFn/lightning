@@ -131,7 +131,6 @@ defmodule LightningWeb.RunLive.Index do
     %RunSearchForm{}
     |> Ecto.Changeset.change()
     |> Ecto.Changeset.put_embed(:options, statuses)
-    # todo embed workflow
     |> Ecto.Changeset.put_change(:workflow_id, "")
   end
 end
