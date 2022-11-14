@@ -310,7 +310,7 @@ defmodule Lightning.InvocationTest do
           })
         )
 
-      [actual_wo] =
+      [actual_wo | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
@@ -334,7 +334,7 @@ defmodule Lightning.InvocationTest do
           finished_at: ~U[2022-10-27 15:00:00.000000Z]
         })
 
-      [actual_wo] =
+      [actual_wo | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()

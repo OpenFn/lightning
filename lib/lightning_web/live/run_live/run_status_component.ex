@@ -49,14 +49,14 @@ defmodule Lightning.RunLive.RunStatusComponent do
     index = String.to_integer(index)
     current_option = Enum.at(socket.assigns.options, index)
 
-    updated_statuses =
+    selected_statuses =
       List.replace_at(
         socket.assigns.options,
         index,
         %{current_option | selected: selected?}
       )
 
-    socket.assigns.selected.(updated_statuses)
+    socket.assigns.selected.(selected_statuses)
 
     {:noreply, socket}
   end

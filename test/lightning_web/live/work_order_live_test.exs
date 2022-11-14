@@ -128,7 +128,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       div =
         view
         |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+          "section#inner_content div[data-entity='work_order_list']"
         )
         |> render()
 
@@ -296,6 +296,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         ]
       })
       |> Lightning.Repo.insert!()
+
+
 
       {:ok, view, _html} =
         live(

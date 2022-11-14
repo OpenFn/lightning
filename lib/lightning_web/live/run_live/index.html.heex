@@ -38,12 +38,16 @@
           id="run-search-form"
           phx-change="validate"
         >
+          <Lightning.RunLive.Components.workflow_select
+            form={f}
+            values={@workflows}
+          />
           <.live_component
             id="run-status-select"
             module={Lightning.RunLive.RunStatusComponent}
             options={@run_statuses}
             form={f}
-            selected={fn opts -> send(self(), {:updated_options, opts}) end}
+            selected={fn statuses -> send(self(), {:selected_statuses, statuses}) end}
           />
         </.form>
       </div>

@@ -287,9 +287,15 @@ defmodule Lightning.Invocation do
     Run.changeset(run, attrs)
   end
 
-  def filter_status_where(statuses) do
-    Enum.reduce(statuses, dynamic(false), fn
+  def filter_workflow_where(workflow_id) do
+    case workflow_id do
+      "" -> dynamic(true)
+      _ -> dynamic([workflow: w], w.id == ^workflow_id)
+    end
+  end
 
+  def filter_run_status_where(statuses) do
+    Enum.reduce(statuses, dynamic(false), fn
       :pending, dynamic ->
         dynamic([runs: r], ^dynamic or is_nil(r.exit_code))
 
@@ -313,7 +319,8 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project_query(
         %Project{id: project_id},
-        [status: status]
+        status: status,
+        workflow_id: workflow_id
       ) do
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     runs_query =
@@ -343,11 +350,13 @@ defmodule Lightning.Invocation do
     from(wo in Lightning.WorkOrder,
       join: re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
+      as: :workflow,
       join: att in assoc(wo, :attempts),
       join: r in assoc(att, :runs),
       as: :runs,
       where: w.project_id == ^project_id,
-      where: ^filter_status_where(status),
+      where: ^filter_workflow_where(workflow_id),
+      where: ^filter_run_status_where(status),
       distinct: wo.id,
       order_by: [desc: wo.inserted_at],
       preload: [
@@ -365,13 +374,23 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter, params \\ %{}) do
+  def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
-    |> Repo.paginate(params) |> IO.inspect()
+    |> Repo.paginate(params)
   end
 
   def list_work_orders_for_project(%Project{} = project) do
-    list_work_orders_for_project(project, [status: [:success, :failure, :timeout, :crash, :pending]])
+    list_work_orders_for_project(
+      project,
+      [
+        status: [:success, :failure, :timeout, :crash, :pending],
+        workflow_id: ""
+      ],
+      %{}
+    )
   end
 
+  def list_work_orders_for_project(%Project{} = project, filter) do
+    list_work_orders_for_project(project, filter, %{})
+  end
 end

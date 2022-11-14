@@ -16,11 +16,15 @@ defmodule LightningWeb.RunLive.Index do
     %RunStatusOption{id: :success, label: "Success", selected: true},
     %RunStatusOption{id: :failure, label: "Failure", selected: true},
     %RunStatusOption{id: :timeout, label: "Timeout", selected: true},
-    %RunStatusOption{id: :crash, label: "Crash", selected: true}
+    %RunStatusOption{id: :crash, label: "Crash", selected: true},
+    %RunStatusOption{id: :pending, label: "Pending", selected: true}
   ]
 
   @impl true
   def mount(_params, _session, socket) do
+    workflows =
+      Lightning.Workflows.list_workflows() |> Enum.map(&{&1.name, &1.id})
+
     {:ok,
      socket
      |> assign(
@@ -34,7 +38,7 @@ defmodule LightningWeb.RunLive.Index do
            &1
          )
      )
-     |> assign_multi_select_options(@run_statuses)}
+     |> init_filter([statuses: @run_statuses, workflows: workflows])}
   end
 
   @impl true
@@ -48,7 +52,7 @@ defmodule LightningWeb.RunLive.Index do
       |> Enum.filter(&(&1.selected in [true, "true"]))
       |> Enum.map(& &1.id)
 
-    [status: status]
+    [status: status, workflow_id: socket.assigns.workflow_id]
   end
 
   defp apply_action(socket, :index, params) do
@@ -59,17 +63,25 @@ defmodule LightningWeb.RunLive.Index do
       page:
         Invocation.list_work_orders_for_project(
           socket.assigns.project,
-          params,
-          build_filter(socket)
+          build_filter(socket),
+          params
         )
     )
   end
 
   @impl true
-  def handle_info({:updated_options, options}, socket) do
+  def handle_info({:selected_statuses, statuses}, socket) do
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:options, statuses)
+
+
     {:noreply,
      socket
-     |> assign_multi_select_options(options)
+     |> assign(:run_statuses, statuses)
+     |> assign(:changeset, changeset)
      |> push_patch(
        to:
          Routes.project_run_index_path(
@@ -82,21 +94,48 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
-  def handle_event("validate", %{"run_search_form" => multi_component}, socket) do
-    options = multi_component["options"]
+  def handle_event(
+    "selected_workflow",
+        %{"run_search_form" => %{"workflow_id" => workflow_id}},
+        socket
+      ) do
 
-    {:noreply, assign_multi_select_options(socket, options)}
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_change(:workflow_id, workflow_id)
+
+    {:noreply,
+     socket
+     |> assign(:workflow_id, workflow_id)
+     |> assign(:changeset, changeset)
+     |> push_patch(
+       to:
+         Routes.project_run_index_path(
+           socket,
+           :index,
+           socket.assigns.project
+         ),
+       replace: true
+     )}
   end
 
-  defp assign_multi_select_options(socket, statuses) do
+
+  defp init_filter(socket, [statuses: statuses , workflows: workflows]) do
+
+    changeset = build_changeset(statuses)
     socket
-    |> assign(:changeset, build_changeset(statuses))
+    |> assign(:changeset, changeset)
     |> assign(:run_statuses, statuses)
+    |> assign(:workflows, workflows)
+    |> assign(:workflow_id, "")
   end
 
-  defp build_changeset(options) do
+  defp build_changeset(statuses) do
     %RunSearchForm{}
     |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_embed(:options, options)
+    |> Ecto.Changeset.put_embed(:options, statuses)
+    |> Ecto.Changeset.put_change(:workflow_id, "") # todo embed workflow
   end
+
 end
