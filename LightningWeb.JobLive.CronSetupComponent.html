@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-FCE939D5.js"></script>
+    <script src="dist/sidebar_items-B7157200.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,6 +133,14 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#build_cron_expression/2" translate="no">build_cron_expression(prev, next)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#frequency_field/1" translate="no">frequency_field(assigns)</a>
 
         </div>
@@ -142,14 +150,6 @@ Lightning
       <div class="summary-row">
         <div class="summary-signature">
           <a href="#get_cron_data/1" translate="no">get_cron_data(cron_expression)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#get_cron_expression/2" translate="no">get_cron_expression(cron_data, prev_cron_expression)</a>
 
         </div>
 
@@ -219,6 +219,28 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="build_cron_expression/2">
+
+  <div class="detail-header">
+    <a href="#build_cron_expression/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_cron_expression(prev, next)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L179" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="frequency_field/1">
 
   <div class="detail-header">
@@ -228,7 +250,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">frequency_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L252" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L250" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -263,28 +285,6 @@ Functions
 
   </section>
 </section>
-<section class="detail" id="get_cron_expression/2">
-
-  <div class="detail-header">
-    <a href="#get_cron_expression/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_cron_expression(cron_data, prev_cron_expression)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L179" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
 <section class="detail" id="hour_field/1">
 
   <div class="detail-header">
@@ -294,7 +294,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">hour_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L296" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L294" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -316,7 +316,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">minute_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L273" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L271" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -338,7 +338,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">monthday_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L337" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L335" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -388,7 +388,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">time_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L360" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L358" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -410,7 +410,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">weekday_field(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L314" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/cron_setup_component.ex#L312" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

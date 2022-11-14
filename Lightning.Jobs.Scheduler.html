@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-FCE939D5.js"></script>
+    <script src="dist/sidebar_items-B7157200.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -134,12 +134,20 @@ their cron schedule, and then running them.</p>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#enqueue_cronjobs/1" translate="no">enqueue_cronjobs(date_time \\ DateTime.utc_now())</a>
+          <a href="#enqueue_cronjobs/0" translate="no">enqueue_cronjobs()</a>
 
         </div>
 
           <div class="summary-synopsis"><p>Find and start any cronjobs that are scheduled to run for a given time
 (defaults to the current time).</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#enqueue_cronjobs/1" translate="no">enqueue_cronjobs(date_time)</a>
+
+        </div>
 
       </div>
 
@@ -157,18 +165,16 @@ their cron schedule, and then running them.</p>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="enqueue_cronjobs/1">
-
-    <span id="enqueue_cronjobs/0"></span>
+<section class="detail" id="enqueue_cronjobs/0">
 
   <div class="detail-header">
-    <a href="#enqueue_cronjobs/1" class="detail-link" title="Link to this function">
+    <a href="#enqueue_cronjobs/0" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">enqueue_cronjobs(date_time \\ DateTime.utc_now())</h1>
+    <h1 class="signature" translate="no">enqueue_cronjobs()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L32" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L33" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -180,6 +186,34 @@ Functions
 
 <p>Find and start any cronjobs that are scheduled to run for a given time
 (defaults to the current time).</p>
+  </section>
+</section>
+<section class="detail" id="enqueue_cronjobs/1">
+
+  <div class="detail-header">
+    <a href="#enqueue_cronjobs/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">enqueue_cronjobs(date_time)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/scheduler.ex#L35" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> enqueue_cronjobs(<a href="https://hexdocs.pm/elixir/DateTime.html#t:t/0">DateTime.t</a>()) :: :ok</pre>
+
+      </div>
+
+
   </section>
 </section>
 
