@@ -653,15 +653,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert html =~ "Filter by workflow"
 
-      div =
-        view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
-        )
-        |> render()
-
-      assert div =~ "Failure"
-
       assert view
              |> element("option[value=#{job.workflow_id}]")
              |> has_element?()
@@ -676,7 +667,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element("select#workflowField")
-             |> render_change(%{"run_search_form[workflow_id]" => job_two.workflow_id})
+             |> render_change(%{
+               "run_search_form[workflow_id]" => job_two.workflow_id
+             })
 
       div =
         view
@@ -688,10 +681,11 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute div =~ "workflow 1"
       assert div =~ "workflow 2"
 
-
       assert view
              |> element("select#workflowField")
-             |> render_change(%{"run_search_form[workflow_id]" => job.workflow_id})
+             |> render_change(%{
+               "run_search_form[workflow_id]" => job.workflow_id
+             })
 
       div =
         view
@@ -702,8 +696,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert div =~ "workflow 1"
       refute div =~ "workflow 2"
-
     end
-
   end
 end
