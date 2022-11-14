@@ -23,7 +23,7 @@ defmodule LightningWeb.RunLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     workflows =
-      Lightning.Workflows.list_workflows() |> Enum.map(&{&1.name, &1.id})
+      Lightning.Workflows.get_workflows_for(socket.assigns.project) |> Enum.map(&{&1.name, &1.id})
 
     {:ok,
      socket

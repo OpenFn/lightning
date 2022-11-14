@@ -564,6 +564,146 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Failure"
     end
 
+    test "Filter by workflow", %{
+      conn: conn,
+      project: project
+    } do
+      job =
+        workflow_job_fixture(
+          workflow_name: "workflow 1",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -1),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      job_two =
+        workflow_job_fixture(
+          workflow_name: "workflow 2",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_two.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_two.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_two.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -1),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      job_other_project =
+        workflow_job_fixture(
+          workflow_name: "my workflow",
+          project_id: Lightning.ProjectsFixtures.project_fixture().id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Filter by workflow"
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Failure"
+
+      assert view
+             |> element("option[value=#{job.workflow_id}]")
+             |> has_element?()
+
+      assert view
+             |> element("option[value=#{job_two.workflow_id}]")
+             |> has_element?()
+
+      refute view
+             |> element("option[value=#{job_other_project.workflow_id}]")
+             |> has_element?()
+
+      assert view
+             |> element("select#workflowField")
+             |> render_change(%{"run_search_form[workflow_id]" => job_two.workflow_id})
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+        )
+        |> render()
+
+      refute div =~ "workflow 1"
+      assert div =~ "workflow 2"
+
+
+      assert view
+             |> element("select#workflowField")
+             |> render_change(%{"run_search_form[workflow_id]" => job.workflow_id})
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+        )
+        |> render()
+
+      assert div =~ "workflow 1"
+      refute div =~ "workflow 2"
+
+    end
 
   end
 end
