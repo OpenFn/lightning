@@ -536,9 +536,34 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert div =~ "Failure"
 
+      # uncheck :failure
+
       view
       |> element("input#run-search-form_options_1_selected[checked]")
-      |> render_change()
+      |> render_change(%{"run_search_form[options][1][selected]" => false})
+
+      refute view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+             )
+             |> has_element?()
+
+      # recheck failure
+
+      view
+      |> element("input#run-search-form_options_1_selected")
+      |> render_change(%{"run_search_form[options][1][selected]" => true})
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Failure"
     end
+
+
   end
 end
