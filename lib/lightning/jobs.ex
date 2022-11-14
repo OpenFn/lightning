@@ -62,15 +62,18 @@ defmodule Lightning.Jobs do
   Returns a list of jobs to execute, given a current timestamp in Unix. This is
   used by the scheduler, which calls this function once every minute.
   """
-  @spec get_jobs_for_cron_execution(integer) :: [Job.t()]
-  def get_jobs_for_cron_execution(timestamp) do
+  @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
+  def get_jobs_for_cron_execution(datetime) do
     list_active_cron_jobs()
     |> Enum.filter(fn job ->
-      cron_expression = Map.get(Map.get(job, :trigger), :cron_expression)
-      {:ok, cron} = Crontab.CronExpression.Parser.parse(cron_expression)
-      datetime = timestamp |> DateTime.from_unix!(:millisecond)
+      cron_expression = job.trigger.cron_expression
 
-      if Crontab.DateChecker.matches_date?(cron, datetime), do: job
+      with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
+           true <- Crontab.DateChecker.matches_date?(cron, datetime) do
+        job
+      else
+        _ -> false
+      end
     end)
   end
 

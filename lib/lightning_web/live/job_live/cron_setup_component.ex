@@ -176,8 +176,8 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       end)
       |> Map.merge(%{:frequency => key})
 
-  def get_cron_expression(cron_data, prev_cron_expression) do
-    case cron_data do
+  def build_cron_expression(prev, next) do
+    case next do
       %{
         frequency: "hourly",
         hour: _hour,
@@ -215,7 +215,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         "#{minute} #{hour} #{monthday} * *"
 
       _ ->
-        prev_cron_expression
+        prev
     end
   end
 
@@ -235,11 +235,9 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       )
 
     cron_expression =
-      get_cron_expression(
-        cron_data,
-        socket.assigns.form
-        |> Map.get(:data)
-        |> Map.get(:trigger_cron_expression)
+      build_cron_expression(
+        socket.assigns.form |> input_value(:cron_expression),
+        cron_data
       )
 
     if Map.get(cron_data, :frequency) != "custom" do

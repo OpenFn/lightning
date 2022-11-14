@@ -29,9 +29,11 @@ defmodule Lightning.Jobs.Scheduler do
   Find and start any cronjobs that are scheduled to run for a given time
   (defaults to the current time).
   """
-  def enqueue_cronjobs(date_time \\ DateTime.utc_now()) do
+  @spec enqueue_cronjobs(DateTime.t()) :: :ok
+  def enqueue_cronjobs(), do: enqueue_cronjobs(DateTime.utc_now())
+
+  def enqueue_cronjobs(date_time) do
     date_time
-    |> DateTime.to_unix()
     |> Jobs.get_jobs_for_cron_execution()
     |> Enum.each(fn job ->
       {:ok, %{attempt_run: attempt_run}} = invoke_cronjob(job)
