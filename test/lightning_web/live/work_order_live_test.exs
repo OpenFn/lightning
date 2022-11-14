@@ -127,9 +127,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list']"
-        )
+        |> element("section#inner_content div[data-entity='work_order_list']")
         |> render()
 
       assert div =~ "Pending"
@@ -296,8 +294,6 @@ defmodule LightningWeb.RunWorkOrderTest do
         ]
       })
       |> Lightning.Repo.insert!()
-
-
 
       {:ok, view, _html} =
         live(

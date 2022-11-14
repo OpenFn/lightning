@@ -7,7 +7,8 @@ defmodule Lightning.RunLive.Components do
   def workflow_select(assigns) do
     ~H"""
     <div>
-      <%= label(@form,
+      <%= label(
+        @form,
         :workflow_id,
         title: "Workflow",
         for: "workflowField",

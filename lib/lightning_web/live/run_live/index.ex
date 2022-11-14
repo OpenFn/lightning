@@ -38,7 +38,7 @@ defmodule LightningWeb.RunLive.Index do
            &1
          )
      )
-     |> init_filter([statuses: @run_statuses, workflows: workflows])}
+     |> init_filter(statuses: @run_statuses, workflows: workflows)}
   end
 
   @impl true
@@ -71,12 +71,10 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info({:selected_statuses, statuses}, socket) do
-
     changeset =
       socket.assigns.changeset
       |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_embed(:options, statuses)
-
 
     {:noreply,
      socket
@@ -95,11 +93,10 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_event(
-    "selected_workflow",
+        "selected_workflow",
         %{"run_search_form" => %{"workflow_id" => workflow_id}},
         socket
       ) do
-
     changeset =
       socket.assigns.changeset
       |> Ecto.Changeset.change()
@@ -120,10 +117,9 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-
-  defp init_filter(socket, [statuses: statuses , workflows: workflows]) do
-
+  defp init_filter(socket, statuses: statuses, workflows: workflows) do
     changeset = build_changeset(statuses)
+
     socket
     |> assign(:changeset, changeset)
     |> assign(:run_statuses, statuses)
@@ -135,7 +131,7 @@ defmodule LightningWeb.RunLive.Index do
     %RunSearchForm{}
     |> Ecto.Changeset.change()
     |> Ecto.Changeset.put_embed(:options, statuses)
-    |> Ecto.Changeset.put_change(:workflow_id, "") # todo embed workflow
+    # todo embed workflow
+    |> Ecto.Changeset.put_change(:workflow_id, "")
   end
-
 end
