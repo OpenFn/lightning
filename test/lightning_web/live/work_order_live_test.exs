@@ -697,5 +697,127 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "workflow 1"
       refute div =~ "workflow 2"
     end
+
+    test "Filter by run started_at", %{
+      conn: conn,
+      project: project
+    } do
+      job_one =
+        workflow_job_fixture(
+          workflow_name: "workflow 1",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_one.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_one.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_one.id,
+              started_at:
+                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      job_two =
+        workflow_job_fixture(
+          workflow_name: "workflow 2",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_two.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_two.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_two.id,
+              started_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      assert html =~ "2022-08-23"
+      assert html =~ "2022-08-29"
+
+      # set date after to 2022-08-25
+
+      result =
+        view
+        |> element("input#run-search-form_date_after")
+        |> render_change(%{
+          "run_search_form[date_after]" => ~N[2022-08-25 00:00:00.123456]
+        })
+
+      assert result =~ "2022-08-29"
+      refute result =~ "2022-08-23"
+
+      # set date before to 2022-08-28
+
+      # reset after date
+      view
+      |> element("input#run-search-form_date_after")
+      |> render_change(%{"run_search_form[date_after]" => nil})
+
+      result =
+        view
+        |> element("input#run-search-form_date_before")
+        |> render_change(%{
+          "run_search_form[date_before]" => ~N[2022-08-28 00:00:00.123456]
+        })
+
+      assert result =~ "2022-08-23"
+      refute result =~ "2022-08-29"
+
+      # reset before date
+      result =
+        view
+        |> element("input#run-search-form_date_before")
+        |> render_change(%{"run_search_form[date_before]" => nil})
+
+      assert result =~ "2022-08-23"
+      assert result =~ "2022-08-29"
+    end
   end
 end

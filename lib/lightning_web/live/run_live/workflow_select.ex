@@ -13,7 +13,6 @@ defmodule Lightning.RunLive.Components do
           :workflow_id,
           title: "Filter by workflow",
           for: "workflowField"
-
         ) %>
       </div>
       <%= error_tag(@form, :workflow_id, class: "block w-full rounded-md") %>

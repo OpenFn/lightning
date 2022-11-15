@@ -289,26 +289,24 @@ defmodule Lightning.Invocation do
 
   def filter_workflow_where(workflow_id) do
     case workflow_id do
-      "" -> dynamic(true)
+      d when d in ["", nil] -> dynamic(true)
       _ -> dynamic([workflow: w], w.id == ^workflow_id)
     end
   end
 
   def filter_run_started_after_where(date_after) do
     case date_after do
-      "" -> dynamic(true)
+      d when d in ["", nil] -> dynamic(true)
       _ -> dynamic([runs: r], r.started_at >= ^date_after)
     end
   end
 
   def filter_run_started_before_where(date_before) do
     case date_before do
-      "" -> dynamic(true)
+      d when d in ["", nil] -> dynamic(true)
       _ -> dynamic([runs: r], r.started_at <= ^date_before)
     end
   end
-
-
 
   def filter_run_status_where(statuses) do
     Enum.reduce(statuses, dynamic(false), fn
@@ -395,8 +393,6 @@ defmodule Lightning.Invocation do
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
-
-    IO.inspect filter
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
   end
