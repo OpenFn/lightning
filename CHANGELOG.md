@@ -28,6 +28,7 @@ and this project adheres to
 - Added new Job Builder form on Workflow Diagram
 - Fixed adaptor documentation drop-down
 - Ensure new jobs with cron triggers receive a default frequency
+- Webhooks are now referenced by the trigger id instead of job id.
 
 ## [0.2.0] - 2022-09-12
 
