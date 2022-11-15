@@ -310,20 +310,20 @@ defmodule Lightning.Invocation do
 
   def filter_run_status_where(statuses) do
     Enum.reduce(statuses, dynamic(false), fn
-      :pending, dynamic ->
-        dynamic([runs: r], ^dynamic or is_nil(r.exit_code))
+      :pending, query ->
+        dynamic([runs: r], ^query or is_nil(r.exit_code))
 
-      :success, dynamic ->
-        dynamic([runs: r], ^dynamic or r.exit_code == 0)
+      :success, query ->
+        dynamic([runs: r], ^query or r.exit_code == 0)
 
-      :failure, dynamic ->
-        dynamic([runs: r], ^dynamic or r.exit_code == 1)
+      :failure, query ->
+        dynamic([runs: r], ^query or r.exit_code == 1)
 
-      :timeout, dynamic ->
-        dynamic([runs: r], ^dynamic or r.exit_code == 2)
+      :timeout, query ->
+        dynamic([runs: r], ^query or r.exit_code == 2)
 
-      :crash, dynamic ->
-        dynamic([runs: r], ^dynamic or r.exit_code > 2)
+      :crash, query ->
+        dynamic([runs: r], ^query or r.exit_code > 2)
 
       _, dynamic ->
         # Not a where parameter
@@ -341,8 +341,12 @@ defmodule Lightning.Invocation do
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     runs_query =
       from(r in Lightning.Invocation.Run,
+        as: :runs,
         join: j in assoc(r, :job),
         order_by: [asc: r.finished_at],
+        where: ^filter_run_status_where(status),
+        where: ^filter_run_started_after_where(date_after),
+        where: ^filter_run_started_before_where(date_before),
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,
