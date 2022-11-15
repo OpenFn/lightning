@@ -68,11 +68,12 @@ defmodule Lightning.JobsTest do
     test "get_job_by_webhook/1 returns the job for a path" do
       job = job_fixture()
 
-      assert Jobs.get_job_by_webhook(job.id) |> unload_relation(:workflow) == job
+      assert Jobs.get_job_by_webhook(job.trigger.id)
+             |> unload_relation(:workflow) == job
 
       job = job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
 
-      assert Jobs.get_job_by_webhook(job.id) == nil
+      assert Jobs.get_job_by_webhook(job.trigger.id) == nil
       assert Jobs.get_job_by_webhook("foo") |> unload_relation(:workflow) == job
     end
 

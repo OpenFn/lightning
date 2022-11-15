@@ -54,7 +54,7 @@ defmodule LightningWeb.EndToEndTest do
     Oban.Testing.with_testing_mode(:manual, fn ->
       message = %{"a" => 1}
 
-      conn = post(conn, "/i/#{webhook_job.id}", message)
+      conn = post(conn, "/i/#{webhook_job.trigger.id}", message)
 
       assert %{"run_id" => run_id, "attempt_id" => attempt_id} =
                json_response(conn, 200)

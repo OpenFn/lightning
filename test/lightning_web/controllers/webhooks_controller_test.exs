@@ -6,21 +6,25 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   import Lightning.JobsFixtures
 
-  test "POST /i", %{conn: conn} do
-    expect(Lightning.Pipeline.Runner, :start, fn _run -> %Engine.Result{} end)
-    job = job_fixture()
+  describe "POST /i" do
+    test "with a trigger id", %{conn: conn} do
+      expect(Lightning.Pipeline.Runner, :start, fn _run -> %Engine.Result{} end)
+      job = job_fixture()
 
-    message = %{"foo" => "bar"}
-    conn = post(conn, "/i/#{job.id}", message)
-    assert %{"work_order_id" => _, "run_id" => run_id} = json_response(conn, 200)
+      message = %{"foo" => "bar"}
+      conn = post(conn, "/i/#{job.trigger.id}", message)
 
-    %{input_dataclip: %{body: body}} =
-      Invocation.get_run!(run_id)
-      |> Repo.preload(:input_dataclip)
+      assert %{"work_order_id" => _, "run_id" => run_id} =
+               json_response(conn, 200)
 
-    assert body == message
+      %{input_dataclip: %{body: body}} =
+        Invocation.get_run!(run_id)
+        |> Repo.preload(:input_dataclip)
 
-    conn = post(conn, "/i/bar")
-    assert json_response(conn, 404) == %{}
+      assert body == message
+
+      conn = post(conn, "/i/bar")
+      assert json_response(conn, 404) == %{}
+    end
   end
 end

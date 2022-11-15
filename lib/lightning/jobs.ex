@@ -139,7 +139,7 @@ defmodule Lightning.Jobs do
     from(j in Job,
       join: t in assoc(j, :trigger),
       where:
-        fragment("coalesce(?, ?)", t.custom_path, type(j.id, :string)) == ^path,
+        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path,
       preload: [:trigger, :workflow]
     )
     |> Repo.one()
