@@ -294,6 +294,22 @@ defmodule Lightning.Invocation do
     end
   end
 
+  def filter_run_started_after_where(date_after) do
+    case date_after do
+      "" -> dynamic(true)
+      _ -> dynamic([runs: r], r.started_at >= ^date_after)
+    end
+  end
+
+  def filter_run_started_before_where(date_before) do
+    case date_before do
+      "" -> dynamic(true)
+      _ -> dynamic([runs: r], r.started_at <= ^date_before)
+    end
+  end
+
+
+
   def filter_run_status_where(statuses) do
     Enum.reduce(statuses, dynamic(false), fn
       :pending, dynamic ->
@@ -320,7 +336,9 @@ defmodule Lightning.Invocation do
   def list_work_orders_for_project_query(
         %Project{id: project_id},
         status: status,
-        workflow_id: workflow_id
+        workflow_id: workflow_id,
+        date_after: date_after,
+        date_before: date_before
       ) do
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     runs_query =
@@ -357,6 +375,8 @@ defmodule Lightning.Invocation do
       where: w.project_id == ^project_id,
       where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_status_where(status),
+      where: ^filter_run_started_after_where(date_after),
+      where: ^filter_run_started_before_where(date_before),
       distinct: wo.id,
       order_by: [desc: wo.inserted_at],
       preload: [
@@ -375,6 +395,8 @@ defmodule Lightning.Invocation do
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
+
+    IO.inspect filter
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
   end
@@ -384,7 +406,9 @@ defmodule Lightning.Invocation do
       project,
       [
         status: [:success, :failure, :timeout, :crash, :pending],
-        workflow_id: ""
+        workflow_id: "",
+        date_after: "",
+        date_before: ""
       ],
       %{}
     )

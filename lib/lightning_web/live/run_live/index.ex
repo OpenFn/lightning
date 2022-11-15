@@ -53,7 +53,12 @@ defmodule LightningWeb.RunLive.Index do
       |> Enum.filter(&(&1.selected in [true, "true"]))
       |> Enum.map(& &1.id)
 
-    [status: status, workflow_id: socket.assigns.workflow_id]
+    [
+      status: status,
+      workflow_id: socket.assigns.workflow_id,
+      date_after: socket.assigns.date_after,
+      date_before: socket.assigns.date_before
+    ]
   end
 
   defp apply_action(socket, :index, params) do
@@ -118,6 +123,67 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  def handle_event(
+        "change_after",
+        %{"run_search_form" => %{"date_after" => date_after}},
+        socket
+      ) do
+    date_after =
+      case date_after do
+        "" -> nil
+        date -> Timex.parse!(date, "{ISO:Extended}")
+      end
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_change(:date_after, date_after)
+
+    {:noreply,
+     socket
+     |> assign(:date_after, date_after)
+     |> assign(:changeset, changeset)
+     |> push_patch(
+       to:
+         Routes.project_run_index_path(
+           socket,
+           :index,
+           socket.assigns.project
+         ),
+       replace: true
+     )}
+  end
+
+  def handle_event(
+        "change_before",
+        %{"run_search_form" => %{"date_before" => date_before}},
+        socket
+      ) do
+    case date_before do
+      "" -> nil
+      date -> Timex.parse!(date, "{ISO:Extended}")
+    end
+
+    changeset =
+      socket.assigns.changeset
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_change(:date_before, date_before)
+
+    {:noreply,
+     socket
+     |> assign(:date_before, date_before)
+     |> assign(:changeset, changeset)
+     |> push_patch(
+       to:
+         Routes.project_run_index_path(
+           socket,
+           :index,
+           socket.assigns.project
+         ),
+       replace: true
+     )}
+  end
+
   defp init_filter(socket, statuses: statuses, workflows: workflows) do
     changeset = build_changeset(statuses)
 
@@ -126,6 +192,8 @@ defmodule LightningWeb.RunLive.Index do
     |> assign(:run_statuses, statuses)
     |> assign(:workflows, workflows)
     |> assign(:workflow_id, "")
+    |> assign(:date_after, "")
+    |> assign(:date_before, "")
   end
 
   defp build_changeset(statuses) do
