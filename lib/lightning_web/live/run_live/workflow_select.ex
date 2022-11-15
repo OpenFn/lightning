@@ -7,13 +7,15 @@ defmodule Lightning.RunLive.Components do
   def workflow_select(assigns) do
     ~H"""
     <div>
-      <%= label(
-        @form,
-        :workflow_id,
-        title: "Filter by workflow",
-        for: "workflowField",
-        class: "font-semibold my-4"
-      ) %>
+      <div class="font-semibold my-4">
+        <%= label(
+          @form,
+          :workflow_id,
+          title: "Filter by workflow",
+          for: "workflowField"
+
+        ) %>
+      </div>
       <%= error_tag(@form, :workflow_id, class: "block w-full rounded-md") %>
       <.select_field
         form={@form}
