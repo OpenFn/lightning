@@ -69,6 +69,28 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     });
     setMonaco(monaco);
   }, []);
+
+
+  const handleEditorDidMount = useCallback((editor: any) => {
+    // TODO tear down this listener on unmount
+    document.addEventListener('insert-snippet', (e) => {
+      // with help from stack overflow https://stackoverflow.com/questions/41642649/how-do-i-insert-text-into-a-monaco-editor
+      const selection = editor.getSelection();
+      // TODO if there's no selection I guess we go at the end?
+      // May also need to scroll down
+      const op = {
+        range: selection,
+        // @ts-ignore
+        text: e.snippet,
+        forceMoveMarkers: true
+      };
+      // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
+      // TODO we have to check the undo stack too (seems OK at first glance)
+      // TODO an instant autoformat wouldbe nice
+      editor.executeEdits("snippets", [op]);
+    })
+  }, []);
+
   
   useEffect(() => {
     if (adaptor) {
@@ -90,6 +112,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     value={source || '// Write your code here'}
     options={options}
     beforeMount={handleEditorWillMount}
+    onMount={handleEditorDidMount}
     onChange={handleSourceChange}
   />)
 }
