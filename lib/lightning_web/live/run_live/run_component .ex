@@ -4,6 +4,8 @@ defmodule LightningWeb.RunLive.RunComponent do
   """
   use LightningWeb, :live_component
 
+  import LightningWeb.RouteHelpers
+
   @impl true
   def update(assigns, socket) do
     {:ok, socket |> assign(assigns)}
@@ -29,7 +31,10 @@ defmodule LightningWeb.RunLive.RunComponent do
               />
             <% _ -> %>
           <% end %>
-          <%= @run.job.name %>
+
+          <.link navigate={show_run_path(@project.id, @run.id)}>
+            <%= @run.job.name %>
+          </.link>
         </span>
       </span>
     </li>

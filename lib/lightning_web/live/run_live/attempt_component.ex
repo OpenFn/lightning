@@ -57,6 +57,7 @@ defmodule LightningWeb.RunLive.AttemptComponent do
                 module={LightningWeb.RunLive.RunComponent}
                 id={run.id}
                 run={run}
+                project={@project}
               />
             <% end %>
           </ol>

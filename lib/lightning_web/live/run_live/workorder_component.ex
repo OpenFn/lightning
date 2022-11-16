@@ -7,7 +7,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   import LightningWeb.RunLive.Components
 
   @impl true
-  def update(%{work_order: work_order}, socket) do
+  def update(%{work_order: work_order, project: project}, socket) do
     last_attempt = Enum.at(work_order.attempts, 0)
     last_run = List.last(last_attempt.runs)
 
@@ -20,6 +20,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     socket =
       socket
       |> assign(
+        project: project,
         work_order: work_order,
         last_attempt: last_attempt,
         last_run: last_run,
@@ -62,7 +63,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <% nil -> %>
               <.pending_pill>Pending</.pending_pill>
             <% val when val == 0 -> %>
-              <.success_pill />
+              <.success_pill>Success</.success_pill>
             <% val when val > 0 -> %>
               <.failure_pill>Failure</.failure_pill>
           <% end %>
@@ -86,6 +87,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             module={LightningWeb.RunLive.AttemptComponent}
             id={attempt.id}
             attempt={attempt}
+            project={@project}
           />
         <% end %>
       <% end %>

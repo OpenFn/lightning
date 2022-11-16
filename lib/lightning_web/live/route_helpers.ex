@@ -16,4 +16,13 @@ defmodule LightningWeb.RouteHelpers do
       job_id
     )
   end
+
+  def show_run_path(project_id, run_id) do
+    Routes.project_run_show_path(
+      LightningWeb.Endpoint,
+      :show,
+      project_id,
+      run_id
+    )
+  end
 end
