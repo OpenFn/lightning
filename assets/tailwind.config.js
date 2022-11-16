@@ -1,5 +1,6 @@
 // See the Tailwind configuration guide for advanced usage
 // https://tailwindcss.com/docs/configuration
+const defaultTheme = require('tailwindcss/defaultTheme');
 
 module.exports = {
   darkMode: 'class',
@@ -35,6 +36,10 @@ module.exports = {
         // danger
         'danger-500': '#ef4444',
         'danger-700': '#b91c1c',
+      },
+      fontFamily: {
+        sans: ['Inter var', ...defaultTheme.fontFamily.sans],
+        mono: ['Fira Code VF', ...defaultTheme.fontFamily.mono],
       },
     },
   },

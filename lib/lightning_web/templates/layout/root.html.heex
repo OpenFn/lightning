@@ -4,10 +4,21 @@
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="//" />
     <%= csrf_meta_tag() %>
     <.live_title suffix=" · OpenFn Lightning">
       <%= assigns[:page_title] || "Lightning" %>
     </.live_title>
+    <link
+      phx-track-static
+      rel="stylesheet"
+      href={Routes.static_path(@conn, "/assets/fonts/inter.css")}
+    />
+    <link
+      phx-track-static
+      rel="stylesheet"
+      href={Routes.static_path(@conn, "/assets/fonts/fira-code.css")}
+    />
     <link
       phx-track-static
       rel="stylesheet"

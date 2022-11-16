@@ -44,6 +44,9 @@ config :esbuild,
          js/workflow-diagram/component.tsx
          js/adaptor-docs/index.tsx
          js/editor/Editor.tsx
+         fonts/inter.css
+         fonts/fira-code.css
+         --loader:.woff2=file
          --format=esm --splitting --bundle
          --target=es2020
          --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
