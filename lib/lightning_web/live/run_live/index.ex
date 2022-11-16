@@ -12,16 +12,16 @@ defmodule LightningWeb.RunLive.Index do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
-  @run_statuses [
-    %RunStatusOption{id: :success, label: "Success", selected: true},
-    %RunStatusOption{id: :failure, label: "Failure", selected: true},
-    %RunStatusOption{id: :timeout, label: "Timeout", selected: true},
-    %RunStatusOption{id: :crash, label: "Crash", selected: true},
-    %RunStatusOption{id: :pending, label: "Pending", selected: true}
-  ]
-
   @impl true
   def mount(_params, _session, socket) do
+    run_statuses = [
+      %RunStatusOption{id: :success, label: "Success", selected: true},
+      %RunStatusOption{id: :failure, label: "Failure", selected: true},
+      %RunStatusOption{id: :timeout, label: "Timeout", selected: true},
+      %RunStatusOption{id: :crash, label: "Crash", selected: true},
+      %RunStatusOption{id: :pending, label: "Pending", selected: true}
+    ]
+
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
       |> Enum.map(&{&1.name, &1.id})
@@ -39,23 +39,30 @@ defmodule LightningWeb.RunLive.Index do
            &1
          )
      )
-     |> init_search_form(statuses: @run_statuses, workflows: workflows)}
+     |> init_search_form(statuses: run_statuses, workflows: workflows)}
   end
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    {:noreply,
+     socket
+     |> assign(
+       page_title: "Runs",
+       run: %Run{}
+     )
+     |> apply_action(socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :index, params) do
+    changeset = socket.assigns.changeset
+
     socket
     |> assign(
-      page_title: "Runs",
-      run: %Run{},
+      options: Ecto.Changeset.fetch_field!(changeset, :options),
       page:
         Invocation.list_work_orders_for_project(
           socket.assigns.project,
-          build_filter(socket.assigns.changeset),
+          build_filter(changeset),
           params
         )
     )
@@ -67,18 +74,21 @@ defmodule LightningWeb.RunLive.Index do
       socket.assigns.changeset
       |> Ecto.Changeset.put_embed(:options, statuses)
 
+    socket =
+      socket
+      |> assign(:changeset, changeset)
+      |> assign(:options, statuses)
+
     {:noreply,
      socket
-     |> assign(:run_statuses, statuses)
-     |> assign(:changeset, changeset)
      |> push_patch(
        to:
          Routes.project_run_index_path(
            socket,
            :index,
-           socket.assigns.project,
-           build_filter(changeset)
-           |> Enum.into(%{})
+           socket.assigns.project
+           #  build_filter(changeset)
+           #  |> Enum.into(%{})
          )
      )}
   end
@@ -101,16 +111,19 @@ defmodule LightningWeb.RunLive.Index do
       |> Ecto.Changeset.put_change(:date_after, date_after)
       |> Ecto.Changeset.put_change(:date_before, date_before)
 
+    socket =
+      socket
+      |> assign(:changeset, changeset)
+
     {:noreply,
      socket
-     |> assign(:changeset, changeset)
      |> push_patch(
        to:
          Routes.project_run_index_path(
            socket,
            :index,
-           socket.assigns.project,
-           build_filter(changeset) |> Enum.into(%{})
+           socket.assigns.project
+           # build_filter(changeset) |> Enum.into(%{})
          )
      )}
   end
@@ -123,24 +136,23 @@ defmodule LightningWeb.RunLive.Index do
 
     socket
     |> assign(:changeset, changeset)
-    |> assign(:run_statuses, statuses)
     |> assign(:workflows, workflows)
   end
 
   # return a keyword  list of criteria:value
   defp build_filter(changeset) do
-    fields = changeset |> Ecto.Changeset.apply_changes()
+    # fields = changeset |> Ecto.Changeset.apply_changes()
 
     status =
-      fields.options
+      Ecto.Changeset.fetch_field!(changeset, :options)
       |> Enum.filter(&(&1.selected in [true, "true"]))
       |> Enum.map(& &1.id)
 
     [
       status: status,
-      workflow_id: fields.workflow_id,
-      date_after: fields.date_after,
-      date_before: fields.date_before
+      workflow_id: Ecto.Changeset.fetch_field!(changeset, :workflow_id),
+      date_after: Ecto.Changeset.fetch_field!(changeset, :date_after),
+      date_before: Ecto.Changeset.fetch_field!(changeset, :date_before)
     ]
   end
 end

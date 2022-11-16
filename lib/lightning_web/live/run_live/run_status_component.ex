@@ -34,9 +34,9 @@ defmodule Lightning.RunLive.RunStatusComponent do
     socket =
       socket
       |> assign(:id, id)
-      |> assign(:options, options)
       |> assign(:form, form)
       |> assign(:selected, selected)
+      |> assign(:options, options)
 
     {:ok, socket}
   end

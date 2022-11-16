@@ -58,7 +58,7 @@
           <.live_component
             id="run-status-select"
             module={Lightning.RunLive.RunStatusComponent}
-            options={@run_statuses}
+            options={@options}
             form={f}
             selected={
               fn statuses -> send(self(), {:selected_statuses, statuses}) end
