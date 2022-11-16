@@ -666,7 +666,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
 
       assert view
-             |> element("select#workflowField")
+             |> element("form#run-search-form")
              |> render_change(%{
                "run_search_form[workflow_id]" => job_two.workflow_id
              })
@@ -682,7 +682,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "workflow 2"
 
       assert view
-             |> element("select#workflowField")
+             |> element("form#run-search-form")
              |> render_change(%{
                "run_search_form[workflow_id]" => job.workflow_id
              })
@@ -785,7 +785,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       result =
         view
-        |> element("input#run-search-form_date_after")
+        |> element("form#run-search-form")
         |> render_change(%{
           "run_search_form[date_after]" => ~N[2022-08-25 00:00:00.123456]
         })
@@ -797,12 +797,12 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       # reset after date
       view
-      |> element("input#run-search-form_date_after")
+      |> element("form#run-search-form")
       |> render_change(%{"run_search_form[date_after]" => nil})
 
       result =
         view
-        |> element("input#run-search-form_date_before")
+        |> element("form#run-search-form")
         |> render_change(%{
           "run_search_form[date_before]" => ~N[2022-08-28 00:00:00.123456]
         })
@@ -813,7 +813,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # reset before date
       result =
         view
-        |> element("input#run-search-form_date_before")
+        |> element("form#run-search-form")
         |> render_change(%{"run_search_form[date_before]" => nil})
 
       assert result =~ "2022-08-23"
