@@ -62,33 +62,44 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     }
   }, [onChange]);
   
-  const handleEditorWillMount = useCallback((monaco: typeof Monaco) => {
+  const handleEditorDidMount = useCallback((editor: any, monaco: typeof Monaco) => {
+    setMonaco(monaco);
+
     monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
       // This seems to be needed to track the modules in d.ts files
       allowNonTsExtensions: true,
     });
-    setMonaco(monaco);
-  }, []);
 
-
-  const handleEditorDidMount = useCallback((editor: any) => {
-    // TODO tear down this listener on unmount
-    document.addEventListener('insert-snippet', (e) => {
-      // with help from stack overflow https://stackoverflow.com/questions/41642649/how-do-i-insert-text-into-a-monaco-editor
-      const selection = editor.getSelection();
-      // TODO if there's no selection I guess we go at the end?
-      // May also need to scroll down
+    const handleInsertSnippet = (e: Event) => {
+      // Snippets are always added to the end of the job code
+      const lastLine = editor.getModel().getLineCount();
       const op = {
-        range: selection,
-        // @ts-ignore
-        text: e.snippet,
+        range: new monaco.Range(lastLine, 0, lastLine, 0),
+        // @ts-ignore event typings
+        text: `\n${e.snippet}`,
         forceMoveMarkers: true
       };
+      
+      // Append the snippet
       // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
-      // TODO we have to check the undo stack too (seems OK at first glance)
-      // TODO an instant autoformat would be nice
       editor.executeEdits("snippets", [op]);
-    })
+
+      // Ensure the snippet is fully visible
+      const newLastLine = editor.getModel().getLineCount();
+      editor.revealLines(lastLine + 1, newLastLine, 0) // 0 = smooth scroll
+
+      // Set the selection to the start of the snippet
+      editor.setSelection(new monaco.Range(lastLine+1, 0, lastLine+1, 0));
+      
+      // ensure the editor has focus
+      editor.focus();
+    }
+
+    const listener = document.addEventListener('insert-snippet', handleInsertSnippet)
+    
+    return () => {
+      document.removeEventListener(handleInsertSnippet);
+     }
   }, []);
 
   
@@ -111,7 +122,6 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     theme="vs-dark"
     value={source || '// Write your code here'}
     options={options}
-    beforeMount={handleEditorWillMount}
     onMount={handleEditorDidMount}
     onChange={handleSourceChange}
   />)
