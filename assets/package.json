@@ -10,8 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "@monaco-editor/react": "^4.4.5",
-    "@openfn/adaptor-docs": "file:../../kit/dist/openfn-adaptor-docs-0.0.1.tgz",
-    "@openfn/describe-package": "file:../../kit/packages/describe-package/openfn-describe-package-0.0.8.tgz",
+    "@openfn/describe-package": "0.0.9",
+    "@openfn/adaptor-docs": "0.0.2",
     "@openfn/workflow-diagram": "0.0.9",
     "@tailwindcss/container-queries": "^0.1.0",
     "@tailwindcss/forms": "^0.5.3",
