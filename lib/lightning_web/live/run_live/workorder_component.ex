@@ -83,12 +83,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       </div>
       <%= if @show_details do %>
         <%= for attempt <- @work_order.attempts do %>
-          <.live_component
-            module={LightningWeb.RunLive.AttemptComponent}
-            id={attempt.id}
-            attempt={attempt}
-            project={@project}
-          />
+          <.attempt_item attempt={attempt} project={@project} />
         <% end %>
       <% end %>
     </div>
