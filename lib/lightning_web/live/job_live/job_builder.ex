@@ -135,18 +135,18 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </.panel_content>
           <.panel_content for_hash="editor">
-            <div class="flex flex-row h-full" style="width:50vw">
+            <div class="flex flex-col h-full">
               <div
                 phx-hook="Editor"
                 phx-update="ignore"
                 id={"job-editor-#{@job_id}"}
-                class="flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-full"
+                class=" rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
                 data-adaptor={@job_adaptor}
                 data-source={@job_body}
                 data-change-event="job_body_changed"
                 phx-target={@myself}
               />
-              <div class="flex-1 overflow-auto h-full" style="min-width: 200px">
+              <div class="flex-1 overflow-auto" style="max-width: 400px;">
                 <.docs_component adaptor={@job_adaptor} />
               </div>
             </div>
