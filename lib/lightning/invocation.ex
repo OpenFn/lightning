@@ -325,9 +325,9 @@ defmodule Lightning.Invocation do
       :crash, query ->
         dynamic([runs: r], ^query or r.exit_code > 2)
 
-      _, dynamic ->
+      _, query ->
         # Not a where parameter
-        dynamic
+        query
     end)
   end
 
@@ -412,9 +412,5 @@ defmodule Lightning.Invocation do
       ],
       %{}
     )
-  end
-
-  def list_work_orders_for_project(%Project{} = project, filter) do
-    list_work_orders_for_project(project, filter, %{})
   end
 end

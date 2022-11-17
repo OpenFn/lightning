@@ -221,7 +221,7 @@ defmodule Lightning.InvocationTest do
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
 
-    test "list_work_orders_for_project/2 returns runs ordered by desc finished_at" do
+    test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
       job_one = workflow_job_fixture(workflow_name: "chw-help")
       # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)
 
