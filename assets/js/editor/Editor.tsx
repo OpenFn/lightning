@@ -86,7 +86,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       };
       // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ICodeEditor.html#executeEdits
       // TODO we have to check the undo stack too (seems OK at first glance)
-      // TODO an instant autoformat wouldbe nice
+      // TODO an instant autoformat would be nice
       editor.executeEdits("snippets", [op]);
     })
   }, []);

@@ -14,8 +14,3 @@ export default ({ adaptor }: DocsProps) => {
   }, []);
   return <Docs specifier={adaptor} onInsert={handleInsert} />;
 }
-
-// export default ({ adaptor }: DocsProps) => {
-//   const [d] = useState(adaptor);
-//   return <h1>{d}</h1>
-// }
