@@ -29,6 +29,9 @@ and this project adheres to
 - Fixed adaptor documentation drop-down
 - Ensure new jobs with cron triggers receive a default frequency
 - Webhooks are now referenced by the trigger id instead of job id.
+- Filter runs by status
+- Filter runs by workflow
+- Filter runs by date
 
 ## [0.2.0] - 2022-09-12
 
