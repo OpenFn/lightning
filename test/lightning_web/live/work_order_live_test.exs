@@ -7,7 +7,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
-  import Lightning.CredentialsFixtures
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -145,24 +144,14 @@ defmodule LightningWeb.RunWorkOrderTest do
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       job_c =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
@@ -234,24 +223,14 @@ defmodule LightningWeb.RunWorkOrderTest do
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       job_c =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
@@ -329,24 +308,14 @@ defmodule LightningWeb.RunWorkOrderTest do
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       job_c =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
