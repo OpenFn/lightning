@@ -97,7 +97,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   def panel_content(assigns) do
     ~H"""
-    <div x-show={"tab === '#{@for_hash}'"}>
+    <div x-show={"tab === '#{@for_hash}'"} class="h-full">
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -147,7 +147,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       data-adaptor={@adaptor}
       phx-hook="AdaptorDocs"
       phx-update="ignore"
-      id="compiler-component"
+      id="adaptor-docs-component"
     >
       <!-- Placeholder while the component loads -->
       <div>

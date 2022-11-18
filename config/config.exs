@@ -42,7 +42,7 @@ config :esbuild,
     args:
       ~w(js/app.js
          js/workflow-diagram/component.tsx
-         js/adaptor-docs/index.ts
+         js/adaptor-docs/index.tsx
          js/editor/Editor.tsx
          --format=esm --splitting --bundle
          --target=es2020

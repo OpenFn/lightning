@@ -23,15 +23,15 @@ import 'phoenix_html';
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
-import topbar from '../vendor/topbar';
+import Alpine from 'alpinejs';
 
+import topbar from '../vendor/topbar';
 import WorkflowDiagram from './workflow-diagram';
 import AdaptorDocs from './adaptor-docs';
 import Editor from './editor';
 
-import Alpine from 'alpinejs';
-
 let Hooks = { WorkflowDiagram, AdaptorDocs, Editor };
+
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener('change', event => {
