@@ -215,12 +215,14 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
+          name: "Job A",
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
       job_b =
         job_fixture(
+          name: "Job B",
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
           workflow_id: job_a.workflow_id
@@ -228,6 +230,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       job_c =
         job_fixture(
+          name: "Job C",
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
           workflow_id: job_a.workflow_id
@@ -294,6 +297,25 @@ defmodule LightningWeb.RunWorkOrderTest do
                "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
              |> render_click() =~ "Failure"
+
+      {:ok, view, _html} =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child a",
+          "Job A"
+        )
+        |> render_click()
+        |> follow_redirect(conn)
+
+      assert view
+             |> has_element?(
+               "div[id^=finished-at]",
+               now |> Timex.shift(seconds: -20) |> Calendar.strftime("%c")
+             )
+
+      assert view |> has_element?("div[id^=ran-for]", "5000ms")
+
+      assert view |> has_element?("div[id^=exit-code]", "0")
     end
 
     test "When run A and B are successful but C is pending, workflow run status is 'Pending'",

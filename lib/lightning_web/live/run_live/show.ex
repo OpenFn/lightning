@@ -41,12 +41,13 @@ defmodule LightningWeb.RunLive.Show do
 
     # Format the log lines replacing single spaces with non-breaking spaces.
     log_lines =
-      run.log
-      |> Enum.with_index()
-      |> Enum.map(fn {line, num} ->
-        {line |> spaces_to_nbsp(),
-         (num + 1) |> to_string() |> String.pad_leading(3) |> spaces_to_nbsp()}
-      end)
+      run.log ||
+        []
+        |> Enum.with_index()
+        |> Enum.map(fn {line, num} ->
+          {line |> spaces_to_nbsp(),
+           (num + 1) |> to_string() |> String.pad_leading(3) |> spaces_to_nbsp()}
+        end)
 
     assigns =
       assigns
@@ -62,15 +63,15 @@ defmodule LightningWeb.RunLive.Show do
         <Layout.header socket={@socket} title={@page_title} />
       </:header>
       <Layout.centered>
-        <div class="flex flex-row">
+        <div class="flex flex-row" id={"finished-at-#{@run.id}"}>
           <div class="basis-3/4 font-semibold text-secondary-700">Finished</div>
           <div class="basis-1/4 text-right"><%= @run_finished_at %></div>
         </div>
-        <div class="flex flex-row">
+        <div class="flex flex-row" id={"ran-for-#{@run.id}"}>
           <div class="basis-3/4 font-semibold text-secondary-700">Ran for</div>
           <div class="basis-1/4 text-right"><%= @ran_for %>ms</div>
         </div>
-        <div class="flex flex-row">
+        <div class="flex flex-row" id={"exit-code-#{@run.id}"}>
           <div class="basis-3/4 font-semibold text-secondary-700">Exit Code</div>
           <div class="basis-1/4 text-right">
             <%= case @run.exit_code do %>
@@ -85,7 +86,7 @@ defmodule LightningWeb.RunLive.Show do
         <style>
           div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content; }
         </style>
-        <div class="rounded-md mt-4 text-slate-200 bg-slate-700 border-slate-300 shadow-sm 
+        <div class="rounded-md mt-4 text-slate-200 bg-slate-700 border-slate-300 shadow-sm
                     font-mono proportional-nums w-full">
           <%= for { line, i } <- @log do %>
             <div class="group flex flex-row hover:bg-slate-600
