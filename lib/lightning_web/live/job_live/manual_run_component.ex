@@ -17,6 +17,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         phx-target={@myself}
         class="h-full flex flex-col"
       >
+        <%= error_tag(f, :dataclip_id) %>
         <Form.select_field
           form={f}
           name={:dataclip_id}
@@ -110,11 +111,11 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       changeset: changeset,
       form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
     )
-    |> update_selection()
+    |> update_selection(changeset)
   end
 
-  defp update_selection(socket) do
-    id = Ecto.Changeset.get_field(socket.assigns.changeset, :dataclip_id)
+  defp update_selection(socket, changeset) do
+    id = Ecto.Changeset.get_field(changeset, :dataclip_id)
     dataclips = socket.assigns.dataclips
 
     selected_dataclip = Enum.find(dataclips, fn d -> d.id == id end)
