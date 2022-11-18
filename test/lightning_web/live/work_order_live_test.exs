@@ -811,4 +811,79 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert result =~ "2022-08-29"
     end
   end
+
+  describe "Show" do
+    test "log_view component" do
+      log_lines = ["First line", "Second line"]
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.log_view/1,
+          log: log_lines
+        )
+        |> Floki.parse_fragment!()
+
+      assert html |> Floki.find("div[data-line-number]") |> length() == 2
+
+      # Check that the log lines are present.
+      # Replace the resulting utf-8 &nbsp; back into a regular space.
+      assert html
+             |> Floki.find("div[data-log-line]")
+             |> Floki.text(sep: "\n")
+             |> String.replace(<<160::utf8>>, " ") ==
+               log_lines |> Enum.join("\n")
+    end
+
+    test "run_details component with finished run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+      finished_at = now |> Timex.shift(seconds: -1)
+
+      run = run_fixture(started_at: started_at, finished_at: finished_at)
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               Calendar.strftime(finished_at, "%c")
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "24000ms"
+
+      assert html
+             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "?"
+    end
+
+    test "run_details component with pending run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+      run = run_fixture(started_at: started_at)
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "Running..."
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               ~r/25\d\d\dms/
+
+      assert html
+             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "?"
+    end
+  end
 end
