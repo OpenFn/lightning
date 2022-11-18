@@ -129,6 +129,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 current_user={@current_user}
                 id={"manual-job-#{@job_id}"}
                 job_id={@job_id}
+                project={@project}
               />
             <% else %>
               <p>Please save your Job first.</p>

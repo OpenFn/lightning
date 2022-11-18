@@ -37,6 +37,18 @@ defmodule Lightning.Invocation do
     list_dataclips_query(%Project{id: project_id}) |> Repo.all()
   end
 
+  def list_dataclips_for_job(%Lightning.Jobs.Job{id: job_id}) do
+    from(r in Run,
+      join: d in assoc(r, :input_dataclip),
+      where: r.job_id == ^job_id,
+      select: d,
+      distinct: [d.inserted_at],
+      order_by: [desc: r.inserted_at],
+      limit: 3
+    )
+    |> Repo.all()
+  end
+
   @doc """
   Gets a single dataclip.
 

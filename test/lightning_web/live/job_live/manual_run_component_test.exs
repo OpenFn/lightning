@@ -19,7 +19,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   defp enter_dataclip_id(view, value) do
     view
-    |> element("input[name='manual_run[dataclip_id]']")
+    |> element("select[name='manual_run[dataclip_id]']")
     |> render_change(manual_run: [dataclip_id: value])
   end
 
