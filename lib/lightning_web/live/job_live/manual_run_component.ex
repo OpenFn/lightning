@@ -29,7 +29,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           selected={@selected_dataclip.id}
           phx-change="changed"
           phx-target={@myself}
-          prompt=""
         />
         <div class="flex-1 bg-gray-100 m-2 p-3 font-mono">
           <%= @selected_dataclip.body %>

@@ -69,10 +69,8 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
 
-    assert view
-           |> has_element?(
-             "select[name='manual_run[dataclip_id]'] option:last-child[value='']"
-           )
+    refute view
+           |> has_element?("select[name='manual_run[dataclip_id]'] option")
   end
 
   test "shows 3 latest dataclips for a job with several runs", %{
