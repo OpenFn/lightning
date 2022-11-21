@@ -97,7 +97,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   def panel_content(assigns) do
     ~H"""
-    <div x-show={"tab === '#{@for_hash}'"} class="h-full">
+    <div class="h-[calc(100%-0.75rem)]" x-show={"tab === '#{@for_hash}'"}>
       <%= render_slot(@inner_block) %>
     </div>
     """
