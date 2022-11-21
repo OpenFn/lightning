@@ -42,8 +42,8 @@ defmodule Lightning.Invocation do
       join: d in assoc(r, :input_dataclip),
       where: r.job_id == ^job_id,
       select: d,
-      distinct: [d.inserted_at],
-      order_by: [desc: r.inserted_at],
+      distinct: [desc: d.inserted_at],
+      order_by: [desc: d.inserted_at],
       limit: 3
     )
     |> Repo.all()
