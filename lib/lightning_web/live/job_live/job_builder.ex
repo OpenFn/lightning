@@ -79,7 +79,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             >
               <div class="md:grid md:grid-cols-4 md:gap-4 @container">
                 <div class="md:col-span-2">
-                  <Form.text_field form={f} id={:name} />
+                  <Form.text_field form={f} label="Job Name" id={:name} />
                 </div>
                 <div class="md:col-span-2">
                   <Form.check_box form={f} id={:enabled} />
@@ -148,7 +148,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 data-change-event="job_body_changed"
                 phx-target={@myself}
               />
-              <div class="flex-1 overflow-auto" style="max-width: 400px;">
+              <div class="flex-1 overflow-auto">
                 <.docs_component adaptor={@job_adaptor} />
               </div>
             </div>
