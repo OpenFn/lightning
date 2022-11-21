@@ -69,7 +69,14 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
      |> assign(:form, form)}
   end
 
-  defp display_name_for_adaptor(name) do
+  @doc """
+  Converts standard adaptor names into "label","value" lists and returns
+  non-standard names as merely "value"; both can be passed directly into a
+  select option list.
+  """
+  @spec display_name_for_adaptor(String.t()) ::
+          String.t() | {String.t(), String.t()}
+  def display_name_for_adaptor(name) do
     if String.starts_with?(name, "@openfn/language-") do
       # Show most relevant slice of the name for standard adaptors
       {String.slice(name, 17..-1), name}

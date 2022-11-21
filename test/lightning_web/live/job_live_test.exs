@@ -6,6 +6,8 @@ defmodule LightningWeb.JobLiveTest do
   import Lightning.ProjectsFixtures
   import Lightning.CredentialsFixtures
 
+  alias LightningWeb.JobLive.AdaptorPicker
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -51,6 +53,19 @@ defmodule LightningWeb.JobLiveTest do
                  conn,
                  Routes.project_job_index_path(conn, :index, project.id)
                )
+    end
+  end
+
+  describe "The adaptor picker" do
+    test "abbreviates standard adaptors via display_name_for_adaptor/1" do
+      assert AdaptorPicker.display_name_for_adaptor("@openfn/language-abc") ==
+               {"abc", "@openfn/language-abc"}
+
+      assert AdaptorPicker.display_name_for_adaptor("@openfn/adaptor-xyz") ==
+               "@openfn/adaptor-xyz"
+
+      assert AdaptorPicker.display_name_for_adaptor("@other_org/some_module") ==
+               "@other_org/some_module"
     end
   end
 end
