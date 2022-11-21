@@ -166,7 +166,5 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              "select[name='manual_run[dataclip_id]'] option[selected='selected']"
            )
            |> render() =~ d2.id
-
-
   end
 end

@@ -47,7 +47,10 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   defp get_current_dataclip(state, job_id) do
-    if(is_map_key(state, :dataclip) && is_map_key(state, :job_id) and state.job_id == job_id) do
+    if(
+      is_map_key(state, :dataclip) && is_map_key(state, :job_id) and
+        state.job_id == job_id
+    ) do
       state.dataclip
     else
       nil
@@ -76,11 +79,12 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     current_dataclip = get_current_dataclip(builder_state, job_id)
     has_current_dataclip? = not is_nil(current_dataclip)
 
-    selected_dataclip =  cond do
-      no_dataclip? ->  %{id: "", body: ""}
-      has_current_dataclip? -> current_dataclip
-      true -> last_dataclip
-    end
+    selected_dataclip =
+      cond do
+        no_dataclip? -> %{id: "", body: ""}
+        has_current_dataclip? -> current_dataclip
+        true -> last_dataclip
+      end
 
     init_form =
       if selected_dataclip.id do
@@ -132,8 +136,11 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     dataclips = socket.assigns.dataclips
     selected_dataclip = Enum.find(dataclips, fn d -> d.id == id end)
 
-
-    send(self(), {:update_builder_state, %{dataclip: selected_dataclip, job_id: socket.assigns.job_id}})
+    send(
+      self(),
+      {:update_builder_state,
+       %{dataclip: selected_dataclip, job_id: socket.assigns.job_id}}
+    )
 
     {:noreply, socket}
   end
