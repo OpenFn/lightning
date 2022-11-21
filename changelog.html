@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-3F7AF750.js"></script>
+    <script src="dist/sidebar_items-474B8984.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -117,18 +117,53 @@ and this project adheres to
   </a>
   [Unreleased]
 </h2>
-<ul><li>Add seed data for demo site</li><li>create adaptor credentials through a form</li><li>Redirect users to projects list page when they click on Admin Settings menu</li><li>Move job, project, input and output Dataclips to Run table</li><li>Reverse the relationship between Jobs and Triggers, Triggers now can exist on
+<h3 id="added" class="section-heading">
+  <a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added</p>
+  </a>
+  Added
+</h3>
+<h3 id="changed" class="section-heading">
+  <a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">changed</p>
+  </a>
+  Changed
+</h3>
+<h3 id="fixed" class="section-heading">
+  <a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">fixed</p>
+  </a>
+  Fixed
+</h3>
+<h2 id="0-3-0-2022-11-21" class="section-heading">
+  <a href="#0-3-0-2022-11-21" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">0-3-0-2022-11-21</p>
+  </a>
+  [0.3.0] - 2022-11-21
+</h2>
+<h3 id="added-1" class="section-heading">
+  <a href="#added-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-1</p>
+  </a>
+  Added
+</h3>
+<ul><li>Add seed data for demo site</li><li>Create adaptor credentials through a form</li><li>Configure cron expressions through a form</li><li>View runs grouped by work orders and attempts</li><li>Run an existing Job with any dataclip uuid from the Job form</li></ul><h3 id="changed-1" class="section-heading">
+  <a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">changed-1</p>
+  </a>
+  Changed
+</h3>
+<ul><li>Redirect users to projects list page when they click on Admin Settings menu</li><li>Move job, project, input and output Dataclips to Run table</li><li>Reverse the relationship between Jobs and Triggers. Triggers now can exist on
 their own; setting the stage for branching and merging workflows</li><li>Updated Elixir and frontend dependencies</li><li>[BREAKING CHANGE] Pipeline now uses WorkOrders, previous data is not
-compatible.</li><li>Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.</li><li>Added the ability to Run an existing Job with any dataclip uuid from the Job
-form</li><li>Upgraded LiveView to 0.18.0</li><li>Upgraded Elixir to 1.14.1 and OTP 25</li><li>Workflow Job editor now behaves like a panel</li><li>Split JobLive.InspectorFormComponent into different plug-able subcomponents</li><li>Configure cron expressions thru a form</li><li>Added new Job Builder form on Workflow Diagram</li><li>Fixed adaptor documentation drop-down</li><li>Ensure new jobs with cron triggers receive a default frequency</li><li>Webhooks are now referenced by the trigger id instead of job id.</li><li>Filter runs by status</li><li>Filter runs by workflow</li><li>Filter runs by date</li><li>Show page for Runs</li><li>Show latest matching inputs for a job</li></ul><h2 id="0-2-0-2022-09-12" class="section-heading">
+compatible.</li><li>Runs, Dataclips and Attempts now all correctly use usec resolution timestamps.</li><li>Upgraded LiveView to 0.18.0</li><li>Upgraded Elixir to 1.14.1 and OTP 25</li><li>Workflow Job editor now behaves like a panel</li><li>Split JobLive.InspectorFormComponent into different plug-able subcomponents</li><li>Ensure new jobs with cron triggers receive a default frequency</li><li>Webhooks are now referenced by the trigger id instead of job id.</li><li>Filter runs by status</li><li>Filter runs by workflow</li><li>Filter runs by date</li><li>View a job run from the runs history</li><li>View latest matching inputs to run a job with</li></ul><h2 id="0-2-0-2022-09-12" class="section-heading">
   <a href="#0-2-0-2022-09-12" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">0-2-0-2022-09-12</p>
   </a>
   [0.2.0] - 2022-09-12
 </h2>
-<h3 id="changed" class="section-heading">
-  <a href="#changed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed</p>
+<h3 id="changed-2" class="section-heading">
+  <a href="#changed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">changed-2</p>
   </a>
   Changed
 </h3>
@@ -145,9 +180,9 @@ Workflow model, see
   </a>
   [0.1.13] - 2022-08-29
 </h2>
-<h3 id="added" class="section-heading">
-  <a href="#added" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added</p>
+<h3 id="added-2" class="section-heading">
+  <a href="#added-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-2</p>
   </a>
   Added
 </h3>
@@ -155,9 +190,9 @@ Workflow model, see
 this is just for authenticating, not yet for creating new accounts via OIDC)</li><li>Add Monaco editor to the step/job panel</li><li>Allow users to delete their own accounts. Schedule their user and credentials
 data for deletion when they do.</li><li>Allow superusers to delete a user account. Schedule the user's credentials and
 user data for deletion when they do.</li><li>If a user is scheduled for deletion, disable their account and prevent them
-from logging in.</li><li>The 'User profile' and 'Credentials' page now have a sidebar menu</li></ul><h3 id="changed-1" class="section-heading">
-  <a href="#changed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-1</p>
+from logging in.</li><li>The 'User profile' and 'Credentials' page now have a sidebar menu</li></ul><h3 id="changed-3" class="section-heading">
+  <a href="#changed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">changed-3</p>
   </a>
   Changed
 </h3>
@@ -168,9 +203,9 @@ owner</li><li>Users only have the following roles: user, superuser</li></ul><h2 
   </a>
   [0.1.12] - 2022-08-15
 </h2>
-<h3 id="added-1" class="section-heading">
-  <a href="#added-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-1</p>
+<h3 id="added-3" class="section-heading">
+  <a href="#added-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-3</p>
   </a>
   Added
 </h3>
@@ -178,9 +213,9 @@ owner</li><li>Users only have the following roles: user, superuser</li></ul><h2 
 e.g., <code class="inline">language-dhis2</code> provides a single schema which defines the required
 attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides multiple
 credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes for
-<code class="inline">state.configuration</code> and which might be used by lots of different jobs.)</p><h3 id="fixed" class="section-heading">
-  <a href="#fixed" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed</p>
+<code class="inline">state.configuration</code> and which might be used by lots of different jobs.)</p><h3 id="fixed-1" class="section-heading">
+  <a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">fixed-1</p>
   </a>
   Fixed
 </h3>
@@ -190,9 +225,9 @@ credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define
   </a>
   [0.1.11] - 2022-08-05
 </h2>
-<h3 id="fixed-1" class="section-heading">
-  <a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-1</p>
+<h3 id="fixed-2" class="section-heading">
+  <a href="#fixed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">fixed-2</p>
   </a>
   Fixed
 </h3>
@@ -203,15 +238,15 @@ crashes in Oban</li></ul><h2 id="0-1-10-2022-08-05" class="section-heading">
   </a>
   [0.1.10] - 2022-08-05
 </h2>
-<h3 id="added-2" class="section-heading">
-  <a href="#added-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-2</p>
+<h3 id="added-4" class="section-heading">
+  <a href="#added-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-4</p>
   </a>
   Added
 </h3>
-<ul><li>Credential auditing</li><li>Build/version information display for easier debugging</li></ul><h3 id="fixed-2" class="section-heading">
-  <a href="#fixed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-2</p>
+<ul><li>Credential auditing</li><li>Build/version information display for easier debugging</li></ul><h3 id="fixed-3" class="section-heading">
+  <a href="#fixed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">fixed-3</p>
   </a>
   Fixed
 </h3>
@@ -221,23 +256,23 @@ crashes in Oban</li></ul><h2 id="0-1-10-2022-08-05" class="section-heading">
   </a>
   [0.1.9] - 2022-07-27
 </h2>
-<h3 id="added-3" class="section-heading">
-  <a href="#added-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-3</p>
+<h3 id="added-5" class="section-heading">
+  <a href="#added-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-5</p>
   </a>
   Added
 </h3>
 <ul><li>Navigate to user profile or credentials page and log out through the user icon
 dropdown</li><li>Create and edit dataclips</li><li>Add a production tag to credentials</li><li>View a dropdown of operations and their description for the language-common
-<code class="inline">v2.0.0-rc2</code> adaptor (this pattern to be rolled out across adaptors)</li></ul><h3 id="changed-2" class="section-heading">
-  <a href="#changed-2" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-2</p>
+<code class="inline">v2.0.0-rc2</code> adaptor (this pattern to be rolled out across adaptors)</li></ul><h3 id="changed-4" class="section-heading">
+  <a href="#changed-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">changed-4</p>
   </a>
   Changed
 </h3>
-<ul><li>Navigate between projects through a project picker on the navbar</li></ul><h3 id="fixed-3" class="section-heading">
-  <a href="#fixed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">fixed-3</p>
+<ul><li>Navigate between projects through a project picker on the navbar</li></ul><h3 id="fixed-4" class="section-heading">
+  <a href="#fixed-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">fixed-4</p>
   </a>
   Fixed
 </h3>
@@ -253,9 +288,9 @@ dropdown</li><li>Create and edit dataclips</li><li>Add a production tag to crede
   </a>
   [0.1.7] - 2022-06-24
 </h2>
-<h3 id="added-4" class="section-heading">
-  <a href="#added-4" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-4</p>
+<h3 id="added-6" class="section-heading">
+  <a href="#added-6" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-6</p>
   </a>
   Added
 </h3>
@@ -265,17 +300,17 @@ dropdown</li><li>Create and edit dataclips</li><li>Add a production tag to crede
   </a>
   [0.1.6] - 2022-06-07
 </h2>
-<h3 id="added-5" class="section-heading">
-  <a href="#added-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">added-5</p>
+<h3 id="added-7" class="section-heading">
+  <a href="#added-7" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">added-7</p>
   </a>
   Added
 </h3>
 <ul><li><p>Register, log in and log out of an account</p></li><li><p>Allow superusers and admin users to create projects</p></li><li><p>Allow admin users to create or disable a user’s account</p></li><li><p>Allow superusers for local deployments to create users and give them access to
 project spaces</p></li><li><p>Create and edit a job with a webhook, flow/fail or cron trigger</p></li><li><p>Create and edit credentials for a job</p></li><li><p>Copy a job's webhook URL</p></li><li><p>View all workflows in a project visually</p></li><li><p>Deploy lightning locally with Docker</p></li><li><p>Enable a job to automatically process incoming requests</p></li><li><p>Run a job with a webhook or flow/fail trigger</p></li><li><p>View job runs along with their logs, exit code, start and end time</p></li><li><p>View data clips that have initiated job runs (http requests for webhooks, run
-results)</p></li></ul><h3 id="changed-3" class="section-heading">
-  <a href="#changed-3" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">changed-3</p>
+results)</p></li></ul><h3 id="changed-5" class="section-heading">
+  <a href="#changed-5" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">changed-5</p>
   </a>
   Changed
 </h3>
