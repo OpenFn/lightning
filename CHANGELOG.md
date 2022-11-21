@@ -33,6 +33,7 @@ and this project adheres to
 - Filter runs by workflow
 - Filter runs by date
 - Show page for Runs
+- Show latest matching inputs for a job
 
 ## [0.2.0] - 2022-09-12
 
