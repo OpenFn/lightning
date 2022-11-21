@@ -7,7 +7,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
-  import Lightning.CredentialsFixtures
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -145,24 +144,14 @@ defmodule LightningWeb.RunWorkOrderTest do
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       job_c =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
@@ -226,32 +215,25 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
+          name: "Job A",
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
       job_b =
         job_fixture(
+          name: "Job B",
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       job_c =
         job_fixture(
+          name: "Job C",
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
@@ -315,6 +297,25 @@ defmodule LightningWeb.RunWorkOrderTest do
                "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
              )
              |> render_click() =~ "Failure"
+
+      {:ok, view, _html} =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child a",
+          "Job A"
+        )
+        |> render_click()
+        |> follow_redirect(conn)
+
+      assert view
+             |> has_element?(
+               "div[id^=finished-at]",
+               now |> Timex.shift(seconds: -20) |> Calendar.strftime("%c")
+             )
+
+      assert view |> has_element?("div[id^=ran-for]", "5000ms")
+
+      assert view |> has_element?("div[id^=exit-code]", "0")
     end
 
     test "When run A and B are successful but C is pending, workflow run status is 'Pending'",
@@ -329,24 +330,14 @@ defmodule LightningWeb.RunWorkOrderTest do
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       job_c =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => state)],
-          workflow_id: job_a.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          workflow_id: job_a.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
@@ -818,6 +809,81 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert result =~ "2022-08-23"
       assert result =~ "2022-08-29"
+    end
+  end
+
+  describe "Show" do
+    test "log_view component" do
+      log_lines = ["First line", "Second line"]
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.log_view/1,
+          log: log_lines
+        )
+        |> Floki.parse_fragment!()
+
+      assert html |> Floki.find("div[data-line-number]") |> length() == 2
+
+      # Check that the log lines are present.
+      # Replace the resulting utf-8 &nbsp; back into a regular space.
+      assert html
+             |> Floki.find("div[data-log-line]")
+             |> Floki.text(sep: "\n")
+             |> String.replace(<<160::utf8>>, " ") ==
+               log_lines |> Enum.join("\n")
+    end
+
+    test "run_details component with finished run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+      finished_at = now |> Timex.shift(seconds: -1)
+
+      run = run_fixture(started_at: started_at, finished_at: finished_at)
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               Calendar.strftime(finished_at, "%c")
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "24000ms"
+
+      assert html
+             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "?"
+    end
+
+    test "run_details component with pending run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+      run = run_fixture(started_at: started_at)
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "Running..."
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               ~r/25\d\d\dms/
+
+      assert html
+             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "?"
     end
   end
 end
