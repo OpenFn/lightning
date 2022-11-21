@@ -130,6 +130,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 id={"manual-job-#{@job_id}"}
                 job_id={@job_id}
                 project={@project}
+                builder_state={@builder_state}
               />
             <% else %>
               <p>Please save your Job first.</p>
@@ -285,7 +286,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
           job: job,
           project: project,
           current_user: current_user,
-          return_to: return_to
+          return_to: return_to,
+          builder_state: builder_state
         } = assigns,
         socket
       ) do
@@ -308,6 +310,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
        workflow: assigns[:workflow],
        changeset: changeset,
        credentials: credentials,
+       builder_state: builder_state,
        upstream_jobs:
          Lightning.Jobs.get_upstream_jobs_for(
            changeset

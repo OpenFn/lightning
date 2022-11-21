@@ -6,7 +6,10 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   attr :job_id, :string, required: true
   attr :current_user, Lightning.Accounts.User, required: true
+  attr :builder_state, :any, required: true
+  attr :selected_dataclip, Lightning.Invocation.Dataclip
 
+  @impl true
   def render(assigns) do
     ~H"""
     <div id={@id} class="h-full">
@@ -23,12 +26,14 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           name={:dataclip_id}
           id={:dataclip_id}
           values={@dataclips_options}
-          selected={@selected}
+          selected={@selected_dataclip.id}
           phx-change="changed"
           phx-target={@myself}
           prompt=""
         />
-        <div class="flex-1 bg-gray-100 p-3 font-mono"><%= @selected_body %></div>
+        <div class="flex-1 bg-gray-100 m-2 p-3 font-mono">
+          <%= @selected_dataclip.body %>
+        </div>
         <Common.button
           text="Run"
           disabled={!@changeset.valid?}
@@ -42,18 +47,34 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   @impl true
-  def update(%{job_id: job_id, current_user: current_user, id: id}, socket) do
+  def update(
+        %{
+          job_id: job_id,
+          current_user: current_user,
+          id: id,
+          builder_state: builder_state
+        },
+        socket
+      ) do
     dataclips =
-      Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{id: job_id})
+      Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
+        id: job_id
+      })
 
     dataclips_options = dataclips |> Enum.map(&{&1.id, &1.id})
-    most_recent_dataclip = List.first(dataclips)
+
+    selected_dataclip =
+      if is_map_key(builder_state, :dataclip) do
+        builder_state.dataclip
+      else
+        List.first(dataclips)
+      end
 
     init_form =
-      unless most_recent_dataclip == nil do
-        %{"manual_run" => %{dataclip_id: most_recent_dataclip.id}}
-      else
+      if is_nil(selected_dataclip) do
         %{}
+      else
+        %{"manual_run" => %{dataclip_id: selected_dataclip.id}}
       end
 
     {:ok,
@@ -62,19 +83,16 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        job_id: job_id,
        current_user: current_user,
        id: id,
+       builder_state: builder_state,
        dataclips: dataclips,
        dataclips_options: dataclips_options,
-       selected:
-         unless most_recent_dataclip == nil do
-           most_recent_dataclip.id
-         else
-           nil
-         end
+       selected_dataclip: selected_dataclip || %{id: "", body: ""}
      )
      |> update_form(init_form)}
   end
 
   @impl true
+
   def handle_event("confirm", _params, socket) do
     socket.assigns.changeset
     |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
@@ -96,7 +114,15 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   def handle_event("changed", params, socket) do
-    {:noreply, socket |> update_form(params)}
+    socket = socket |> update_form(params)
+
+    id = Ecto.Changeset.get_field(socket.assigns.changeset, :dataclip_id)
+    dataclips = socket.assigns.dataclips
+    selected_dataclip = Enum.find(dataclips, fn d -> d.id == id end)
+
+    send(self(), {:update_builder_state, %{dataclip: selected_dataclip}})
+
+    {:noreply, socket}
   end
 
   defp update_form(socket, params) do
@@ -110,24 +136,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     |> assign(
       changeset: changeset,
       form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
-    )
-    |> update_selection(changeset)
-  end
-
-  defp update_selection(socket, changeset) do
-    id = Ecto.Changeset.get_field(changeset, :dataclip_id)
-    dataclips = socket.assigns.dataclips
-
-    selected_dataclip = Enum.find(dataclips, fn d -> d.id == id end)
-
-    socket
-    |> assign(
-      selected_body:
-        unless is_nil(selected_dataclip) do
-          selected_dataclip.body
-        else
-          ""
-        end
     )
   end
 

@@ -23,7 +23,8 @@ defmodule LightningWeb.WorkflowLive do
      |> assign(
        active_menu_item: :projects,
        encoded_project_space: encode_project_space(project),
-       new_credential: false
+       new_credential: false,
+       builder_state: %{}
      )}
   end
 
@@ -39,6 +40,16 @@ defmodule LightningWeb.WorkflowLive do
      socket
      |> assign(
        encoded_project_space: encode_project_space(socket.assigns.project)
+     )}
+  end
+
+  # Update the builder state when an input dataclip is selected for a specific job
+  def handle_info({:update_builder_state, %{dataclip: dataclip}}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       builder_state:
+         socket.assigns.builder_state |> Map.merge(%{dataclip: dataclip})
      )}
   end
 
@@ -153,6 +164,7 @@ defmodule LightningWeb.WorkflowLive do
                   params={@job_params}
                   project={@project}
                   current_user={@current_user}
+                  builder_state={@builder_state}
                   return_to={
                     Routes.project_workflow_path(@socket, :show, @project.id)
                   }
@@ -168,6 +180,7 @@ defmodule LightningWeb.WorkflowLive do
                   job={@job}
                   project={@project}
                   current_user={@current_user}
+                  builder_state={@builder_state}
                   return_to={
                     Routes.project_workflow_path(@socket, :show, @project.id)
                   }
