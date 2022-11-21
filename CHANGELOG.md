@@ -14,7 +14,7 @@ and this project adheres to
 
 ### Fixed
 
-## [0.3.0] - 2022-11-11
+## [0.3.0] - 2022-11-21
 
 ### Added
 
@@ -38,6 +38,13 @@ and this project adheres to
 - Upgraded Elixir to 1.14.1 and OTP 25
 - Workflow Job editor now behaves like a panel
 - Split JobLive.InspectorFormComponent into different plug-able subcomponents
+- Ensure new jobs with cron triggers receive a default frequency
+- Webhooks are now referenced by the trigger id instead of job id.
+- Filter runs by status
+- Filter runs by workflow
+- Filter runs by date
+- View a job run from the runs history
+- View latest matching inputs to run a job with
 
 ## [0.2.0] - 2022-09-12
 

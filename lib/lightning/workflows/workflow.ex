@@ -32,6 +32,11 @@ defmodule Lightning.Workflows.Workflow do
     timestamps()
   end
 
+  def new(attrs \\ %{}) do
+    change(%__MODULE__{}, attrs)
+    |> put_change(:id, Ecto.UUID.generate())
+  end
+
   @doc false
   def changeset(workflow, attrs) do
     workflow

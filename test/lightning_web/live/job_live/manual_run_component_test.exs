@@ -8,6 +8,8 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   alias LightningWeb.RouteHelpers
 
+  alias Lightning.Attempt
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -19,7 +21,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   defp enter_dataclip_id(view, value) do
     view
-    |> element("input[name='manual_run[dataclip_id]']")
+    |> element("select[name='manual_run[dataclip_id]']")
     |> render_change(manual_run: [dataclip_id: value])
   end
 
@@ -56,6 +58,128 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(conn, RouteHelpers.workflow_new_job_path(project.id))
 
-    refute view |> has_element?("input[name='manual_run[dataclip_id]']")
+    refute view |> has_element?("select[name='manual_run[dataclip_id]']")
+  end
+
+  test "has no option on job with no runs", %{
+    conn: conn,
+    job: job,
+    project: project
+  } do
+    {:ok, view, _html} =
+      live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
+
+    refute view
+           |> has_element?("select[name='manual_run[dataclip_id]'] option")
+  end
+
+  test "shows 3 latest dataclips for a job with several runs", %{
+    conn: conn,
+    job: _job,
+    project: project,
+    user: user
+  } do
+    job =
+      workflow_job_fixture(
+        project_id: project.id,
+        body: ~s[fn(state => { return {...state, extra: "data"} })]
+      )
+
+    work_order = work_order_fixture(workflow_id: job.workflow_id)
+
+    [d1, d2, d3, d4] =
+      1..4 |> Enum.map(fn _ -> dataclip_fixture(project_id: project.id) end)
+
+    reason =
+      reason_fixture(
+        trigger_id: job.trigger.id,
+        dataclip_id: d4.id
+      )
+
+    now = Timex.now()
+
+    Attempt.new(%{
+      work_order_id: work_order.id,
+      reason_id: reason.id,
+      runs: [
+        %{
+          job_id: job.id,
+          started_at: now |> Timex.shift(seconds: -50),
+          finished_at: now |> Timex.shift(seconds: -40),
+          exit_code: 0,
+          input_dataclip_id: d1.id
+        },
+        %{
+          job_id: job.id,
+          started_at: now |> Timex.shift(seconds: -40),
+          finished_at: now |> Timex.shift(seconds: -30),
+          exit_code: 0,
+          input_dataclip_id: d2.id
+        },
+        %{
+          job_id: job.id,
+          started_at: now |> Timex.shift(seconds: -30),
+          finished_at: now |> Timex.shift(seconds: -1),
+          exit_code: 0,
+          input_dataclip_id: d3.id
+        },
+        %{
+          job_id: job.id,
+          started_at: now |> Timex.shift(seconds: -25),
+          finished_at: now |> Timex.shift(seconds: -10),
+          exit_code: 0,
+          input_dataclip_id: d4.id
+        }
+      ]
+    })
+    |> Lightning.Repo.insert!()
+
+    {:ok, view, _html} =
+      live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
+
+    refute view
+           |> has_element?(
+             "select[name='manual_run[dataclip_id]'] option[value=#{d1.id}]"
+           )
+
+    assert view
+           |> has_element?(
+             "select[name='manual_run[dataclip_id]'] option[value=#{d2.id}]"
+           )
+
+    assert view
+           |> has_element?(
+             "select[name='manual_run[dataclip_id]'] option[value=#{d3.id}]"
+           )
+
+    assert view
+           |> element(
+             "select[name='manual_run[dataclip_id]'] option[selected='selected']"
+           )
+           |> render() =~ d4.id
+
+    view |> enter_dataclip_id(d2.id)
+
+    assert view
+           |> element(
+             "select[name='manual_run[dataclip_id]'] option[selected='selected']"
+           )
+           |> render() =~ d2.id
+
+    assert render_component(LightningWeb.JobLive.ManualRunComponent,
+             id: "manual-job-#{job.id}",
+             project: project,
+             job_id: job.id,
+             current_user: user,
+             builder_state: %{job_id: job.id, dataclip: d3}
+           ) =~ "<option selected value=\"#{d3.id}\">#{d3.id}</option>"
+
+    assert render_component(LightningWeb.JobLive.ManualRunComponent,
+             id: "manual-job-#{job.id}",
+             project: project,
+             job_id: job.id,
+             current_user: user,
+             builder_state: %{job_id: job.id, dataclip: d4}
+           ) =~ "<option selected value=\"#{d4.id}\">#{d4.id}</option>"
   end
 end

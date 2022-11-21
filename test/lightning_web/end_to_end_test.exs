@@ -13,7 +13,7 @@ defmodule LightningWeb.EndToEndTest do
   setup :register_and_log_in_superuser
 
   defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.8 (Node.js v18.12.0"
-  defp expected_adaptor, do: "@openfn/language-http@4.2.2"
+  defp expected_adaptor, do: "@openfn/language-http@4.2.3"
 
   test "the whole thing", %{conn: conn} do
     project = project_fixture()
@@ -54,7 +54,7 @@ defmodule LightningWeb.EndToEndTest do
     Oban.Testing.with_testing_mode(:manual, fn ->
       message = %{"a" => 1}
 
-      conn = post(conn, "/i/#{webhook_job.id}", message)
+      conn = post(conn, "/i/#{webhook_job.trigger.id}", message)
 
       assert %{"run_id" => run_id, "attempt_id" => attempt_id} =
                json_response(conn, 200)

@@ -96,7 +96,7 @@ defmodule LightningWeb.Router do
         live "/jobs", JobLive.Index, :index
 
         live "/runs", RunLive.Index, :index
-        live "/runs/:id", RunLive.Index, :show
+        live "/runs/:id", RunLive.Show, :show
 
         live "/dataclips", DataclipLive.Index, :index
         live "/dataclips/new", DataclipLive.Edit, :new

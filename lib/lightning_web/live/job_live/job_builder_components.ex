@@ -97,7 +97,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   def panel_content(assigns) do
     ~H"""
-    <div x-show={"tab === '#{@for_hash}'"}>
+    <div class="h-[calc(100%-0.75rem)]" x-show={"tab === '#{@for_hash}'"}>
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -113,7 +113,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       class="whitespace-nowrap flex items-center py-3 px-3 border-b-2 font-medium text-sm"
       x-bind:class={"tab === '#{@hash}' ? 'border-primary-500 text-primary-600 dark:text-primary-500 dark:border-primary-500' : 'border-transparent text-gray-500 dark:hover:text-gray-300 dark:text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300'"}
       @click.prevent={"tab = '#{@hash}'; window.location.hash = '#{@hash}'"}
-      href="#"
+      href={"##{@hash}"}
     >
       <%= render_slot(@inner_block) %>
     </a>
@@ -147,7 +147,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       data-adaptor={@adaptor}
       phx-hook="AdaptorDocs"
       phx-update="ignore"
-      id="compiler-component"
+      id="adaptor-docs-component"
     >
       <!-- Placeholder while the component loads -->
       <div>

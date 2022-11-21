@@ -5,7 +5,7 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query, warn: false
   alias Lightning.Repo
-
+  alias LightningWeb.Router.Helpers
   alias Lightning.Workflows.Workflow
   alias Lightning.Projects.Project
 
@@ -118,6 +118,25 @@ defmodule Lightning.Workflows do
     |> Repo.all()
   end
 
+  defp trigger_for_project_space(job) do
+    case job.trigger.type do
+      :webhook ->
+        %{
+          "webhookUrl" =>
+            Helpers.webhooks_url(LightningWeb.Endpoint, :create, [job.id])
+        }
+
+      :cron ->
+        %{"cronExpression" => job.trigger.cron_expression}
+
+      type when type in [:on_job_failure, :on_job_success] ->
+        %{"upstreamJob" => job.trigger.upstream_job_id}
+    end
+    |> Enum.into(%{
+      "type" => job.trigger.type
+    })
+  end
+
   @spec to_project_space([Workflow.t()]) :: %{}
   def to_project_space(workflows) when is_list(workflows) do
     %{
@@ -130,10 +149,7 @@ defmodule Lightning.Workflows do
             "name" => job.name,
             "adaptor" => job.adaptor,
             "workflowId" => job.workflow_id,
-            "trigger" => %{
-              "type" => job.trigger.type,
-              "upstreamJob" => job.trigger.upstream_job_id
-            }
+            "trigger" => trigger_for_project_space(job)
           }
         end),
       "workflows" =>

@@ -3,7 +3,9 @@ defmodule Lightning.Demo do
   Demo encapsulates logic for setting up initial data for the demo site
   """
 
-  alias Lightning.{Projects, Accounts, Jobs, Workflows}
+  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo}
+
+  import Ecto.Query
 
   @spec setup(nil | maybe_improper_list | map) :: %{
           jobs: [...],
@@ -151,5 +153,44 @@ defmodule Lightning.Demo do
         upload_to_google_sheet
       ]
     }
+  end
+
+  def tear_down(opts \\ [destroy_super: false]) do
+    delete_all_entities([
+      Lightning.Attempt,
+      Lightning.AttemptRun,
+      Lightning.AuthProviders.AuthConfig,
+      Lightning.Credentials.Audit,
+      Lightning.Projects.ProjectCredential,
+      Lightning.Credentials.Credential,
+      Lightning.WorkOrder,
+      Lightning.InvocationReason,
+      Lightning.Invocation.Dataclip,
+      Lightning.Invocation.Run,
+      Lightning.Jobs.Job,
+      Lightning.Jobs.Trigger,
+      Lightning.Projects.ProjectUser,
+      Lightning.Projects.Project,
+      Lightning.Workflows.Workflow
+    ])
+
+    delete_other_tables(["oban_jobs", "oban_peers"])
+
+    if opts[:destroy_super] do
+      Repo.delete_all(Lightning.Accounts.User)
+    else
+      from(u in Lightning.Accounts.User, where: u.role != :superuser)
+      |> Repo.all()
+      |> Enum.each(fn user -> Lightning.Accounts.delete_user(user) end)
+    end
+  end
+
+  defp delete_all_entities(entities),
+    do: Enum.each(entities, fn entity -> Repo.delete_all(entity) end)
+
+  defp delete_other_tables(tables_names) do
+    Enum.each(tables_names, fn name ->
+      Ecto.Adapters.SQL.query!(Repo, "DELETE FROM #{name}")
+    end)
   end
 end

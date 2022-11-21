@@ -23,15 +23,15 @@ import 'phoenix_html';
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
-import topbar from '../vendor/topbar';
+import Alpine from 'alpinejs';
 
+import topbar from '../vendor/topbar';
 import WorkflowDiagram from './workflow-diagram';
 import AdaptorDocs from './adaptor-docs';
 import Editor from './editor';
 
-import Alpine from 'alpinejs';
-
 let Hooks = { WorkflowDiagram, AdaptorDocs, Editor };
+
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener('change', event => {
@@ -66,15 +66,12 @@ let liveSocket = new LiveSocket('/live', Socket, {
   hooks: Hooks,
   dom: {
     onBeforeElUpdated(from, to) {
-      if (from._x_dataStack) {
-        console.log({ from, to });
-        window.Alpine.clone(from, to);
+      if (from.__x) {
+        window.Alpine.clone(from.__x, to);
       }
     },
   },
 });
-
-Alpine.start();
 
 // Show progress bar on live navigation and form submits
 // Include a 120ms timeout to avoid small flashes when things load quickly.

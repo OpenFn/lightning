@@ -1,0 +1,43 @@
+@font-face {
+  font-family: 'Fira Code';
+  src: url('FiraCode-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: url('FiraCode-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: url('FiraCode-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: url('FiraCode-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: url('FiraCode-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Code VF';
+  src: url('FiraCode-VF.woff2') format('woff2-variations');
+  /* font-weight requires a range: https://developer.mozilla.org/en-US/docs/    Web/CSS/CSS_Fonts/Variable_Fonts_Guide#Using_a_variable_font_font-face_chang    es */
+  font-weight: 300 700;
+  font-style: normal;
+}
+

@@ -37,6 +37,18 @@ defmodule Lightning.Invocation do
     list_dataclips_query(%Project{id: project_id}) |> Repo.all()
   end
 
+  def list_dataclips_for_job(%Lightning.Jobs.Job{id: job_id}) do
+    from(r in Run,
+      join: d in assoc(r, :input_dataclip),
+      where: r.job_id == ^job_id,
+      select: d,
+      distinct: [desc: d.inserted_at],
+      order_by: [desc: d.inserted_at],
+      limit: 3
+    )
+    |> Repo.all()
+  end
+
   @doc """
   Gets a single dataclip.
 
@@ -287,15 +299,66 @@ defmodule Lightning.Invocation do
     Run.changeset(run, attrs)
   end
 
-  @spec list_work_orders_for_project_query(Lightning.Projects.Project.t()) ::
-          Ecto.Query.t()
-  def list_work_orders_for_project_query(%Project{id: project_id}) do
-    # we can use a ^custom_query to control (order_by ...) the way preloading is done
+  def filter_workflow_where(workflow_id) do
+    case workflow_id do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([workflow: w], w.id == ^workflow_id)
+    end
+  end
 
+  def filter_run_started_after_where(date_after) do
+    case date_after do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([runs: r], r.started_at >= ^date_after)
+    end
+  end
+
+  def filter_run_started_before_where(date_before) do
+    case date_before do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([runs: r], r.started_at <= ^date_before)
+    end
+  end
+
+  def filter_run_status_where(statuses) do
+    Enum.reduce(statuses, dynamic(false), fn
+      :pending, query ->
+        dynamic([runs: r], ^query or is_nil(r.exit_code))
+
+      :success, query ->
+        dynamic([runs: r], ^query or r.exit_code == 0)
+
+      :failure, query ->
+        dynamic([runs: r], ^query or r.exit_code == 1)
+
+      :timeout, query ->
+        dynamic([runs: r], ^query or r.exit_code == 2)
+
+      :crash, query ->
+        dynamic([runs: r], ^query or r.exit_code > 2)
+
+      _, query ->
+        # Not a where parameter
+        query
+    end)
+  end
+
+  def list_work_orders_for_project_query(
+        %Project{id: project_id},
+        status: status,
+        workflow_id: workflow_id,
+        date_after: date_after,
+        date_before: date_before
+      ) do
+    # we can use a ^custom_query to control (order_by ...) the way preloading is done
     runs_query =
       from(r in Lightning.Invocation.Run,
+        as: :runs,
         join: j in assoc(r, :job),
         order_by: [asc: r.finished_at],
+        where: ^filter_run_status_where(status),
+        where: ^filter_run_started_after_where(date_after),
+        where: ^filter_run_started_before_where(date_before),
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,
@@ -306,9 +369,9 @@ defmodule Lightning.Invocation do
 
     attempts_query =
       from(a in Lightning.Attempt,
-        join: r in assoc(a, :reason),
+        join: re in assoc(a, :reason),
         order_by: [desc: a.inserted_at],
-        preload: [reason: r, runs: ^runs_query]
+        preload: [reason: re, runs: ^runs_query]
       )
 
     dataclips_query =
@@ -319,7 +382,16 @@ defmodule Lightning.Invocation do
     from(wo in Lightning.WorkOrder,
       join: re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
+      as: :workflow,
+      join: att in assoc(wo, :attempts),
+      join: r in assoc(att, :runs),
+      as: :runs,
       where: w.project_id == ^project_id,
+      where: ^filter_workflow_where(workflow_id),
+      where: ^filter_run_status_where(status),
+      where: ^filter_run_started_after_where(date_after),
+      where: ^filter_run_started_before_where(date_before),
+      distinct: wo.id,
       order_by: [desc: wo.inserted_at],
       preload: [
         reason:
@@ -336,13 +408,21 @@ defmodule Lightning.Invocation do
     )
   end
 
-  @spec list_work_orders_for_project(
-          Lightning.Projects.Project.t(),
-          keyword | map
-        ) ::
-          Scrivener.Page.t()
-  def list_work_orders_for_project(%Project{} = project, params \\ %{}) do
-    list_work_orders_for_project_query(project)
+  def list_work_orders_for_project(%Project{} = project, filter, params) do
+    list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
+  end
+
+  def list_work_orders_for_project(%Project{} = project) do
+    list_work_orders_for_project(
+      project,
+      [
+        status: [:success, :failure, :timeout, :crash, :pending],
+        workflow_id: "",
+        date_after: "",
+        date_before: ""
+      ],
+      %{}
+    )
   end
 end

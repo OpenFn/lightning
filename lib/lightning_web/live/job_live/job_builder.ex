@@ -45,9 +45,9 @@ defmodule LightningWeb.JobLive.JobBuilder do
     ~H"""
     <div
       id={@id}
-      x-data="{ tab: window.location.hash ? window.location.hash.substring(1) : 'setup' }"
+      x-data="{ tab: window.location.hash.substring(1) || 'setup' }"
       class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-      x-cloak
+      x-show="tab"
     >
       <div class="flex flex-col h-full">
         <div class="flex-none">
@@ -129,23 +129,29 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 current_user={@current_user}
                 id={"manual-job-#{@job_id}"}
                 job_id={@job_id}
+                project={@project}
+                builder_state={@builder_state}
               />
             <% else %>
               <p>Please save your Job first.</p>
             <% end %>
           </.panel_content>
           <.panel_content for_hash="editor">
-            <.docs_component adaptor={@job_adaptor} />
-            <div
-              phx-hook="Editor"
-              phx-update="ignore"
-              id={"job-editor-#{@job_id}"}
-              class="rounded-md border border-secondary-300 shadow-sm h-96 bg-vs-dark"
-              data-adaptor={@job_adaptor}
-              data-source={@job_body}
-              data-change-event="job_body_changed"
-              phx-target={@myself}
-            />
+            <div class="flex flex-col h-full">
+              <div
+                phx-hook="Editor"
+                phx-update="ignore"
+                id={"job-editor-#{@job_id}"}
+                class=" rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
+                data-adaptor={@job_adaptor}
+                data-source={@job_body}
+                data-change-event="job_body_changed"
+                phx-target={@myself}
+              />
+              <div class="flex-1 overflow-auto" style="max-width: 400px;">
+                <.docs_component adaptor={@job_adaptor} />
+              </div>
+            </div>
           </.panel_content>
           <.panel_content for_hash="output">
             Output block
@@ -208,7 +214,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
   def handle_event("save", %{"job_form" => params}, socket) do
     params = merge_params(socket.assigns.params, params)
 
-    changeset = Job.changeset(socket.assigns.job, params)
+    %{job: job, workflow: workflow, is_persisted: is_persisted} = socket.assigns
+
+    changeset =
+      build_changeset(job, params, workflow)
+      |> Map.put(:action, if(is_persisted, do: :update, else: :insert))
 
     socket =
       changeset
@@ -252,9 +262,19 @@ defmodule LightningWeb.JobLive.JobBuilder do
     socket
     |> update(:params, fn prev -> merge_params(prev, params) end)
     |> update(:changeset, fn _changeset, %{params: params, job: job} ->
-      Job.changeset(job, params)
+      build_changeset(job, params, socket.assigns.workflow)
       |> Map.put(:action, :validate)
     end)
+  end
+
+  defp build_changeset(job, params, nil) do
+    Job.changeset(job, params)
+  end
+
+  defp build_changeset(job, params, workflow) do
+    Ecto.Changeset.change(job)
+    |> Job.put_workflow(workflow)
+    |> Job.changeset(params)
   end
 
   # NOTE: consider multiple update functions to handle new, new from (job) and
@@ -266,14 +286,16 @@ defmodule LightningWeb.JobLive.JobBuilder do
           job: job,
           project: project,
           current_user: current_user,
-          return_to: return_to
+          return_to: return_to,
+          builder_state: builder_state
         } = assigns,
         socket
       ) do
     job = job |> Lightning.Repo.preload([:trigger, :workflow])
     credentials = Lightning.Projects.list_project_credentials(project)
     params = assigns[:params] || %{}
-    changeset = Job.changeset(job, params)
+
+    changeset = build_changeset(job, params, assigns[:workflow])
 
     {:ok,
      socket
@@ -285,8 +307,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
        job_body: job.body,
        job_adaptor: job.adaptor,
        return_to: return_to,
+       workflow: assigns[:workflow],
        changeset: changeset,
        credentials: credentials,
+       builder_state: builder_state,
        upstream_jobs:
          Lightning.Jobs.get_upstream_jobs_for(
            changeset
@@ -309,10 +333,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
         %{event: :cron_expression_changed, cron_expression: cron_expression},
         socket
       ) do
+    %{id: trigger_id} =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_field(:trigger)
+
     {:ok,
      socket
      |> assign_changeset_and_params(%{
-       "trigger" => %{"cron_expression" => cron_expression}
+       "trigger" => %{"cron_expression" => cron_expression, "id" => trigger_id}
      })}
   end
 
