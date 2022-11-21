@@ -30,9 +30,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           phx-change="changed"
           phx-target={@myself}
         />
-        <div class="flex-1 bg-gray-100 m-2 p-3 font-mono">
-          <%= @selected_dataclip.body %>
-        </div>
+        <pre class="flex-1 bg-gray-100 m-2 p-3 font-mono"><%= @selected_dataclip.body %></pre>
         <Common.button
           text="Run"
           disabled={!@changeset.valid?}
@@ -78,16 +76,16 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
     selected_dataclip =
       cond do
-        no_dataclip? -> %{id: "", body: ""}
+        no_dataclip? -> nil
         has_current_dataclip? -> current_dataclip
         true -> last_dataclip
       end
 
     init_form =
-      if selected_dataclip.id do
-        %{"manual_run" => %{dataclip_id: selected_dataclip.id}}
-      else
+      if is_nil(selected_dataclip) do
         %{}
+      else
+        %{"manual_run" => %{dataclip_id: selected_dataclip.id}}
       end
 
     {:ok,
@@ -99,7 +97,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        builder_state: builder_state,
        dataclips: dataclips,
        dataclips_options: dataclips_options,
-       selected_dataclip: selected_dataclip
+       selected_dataclip: selected_dataclip |> format()
      )
      |> update_form(init_form)}
   end
@@ -139,7 +137,22 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        %{dataclip: selected_dataclip, job_id: socket.assigns.job_id}}
     )
 
-    {:noreply, socket}
+    {:noreply,
+     socket |> assign(selected_dataclip: selected_dataclip |> format())}
+  end
+
+  defp format(dataclip) when is_nil(dataclip) do
+    %{id: "", body: ""}
+  end
+
+  defp format(dataclip) do
+    %{
+      id: dataclip.id,
+      body:
+        dataclip.body
+        |> Jason.encode!()
+        |> Jason.Formatter.pretty_print()
+    }
   end
 
   defp update_form(socket, params) do
