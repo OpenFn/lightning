@@ -44,12 +44,16 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   # Update the builder state when an input dataclip is selected for a specific job
-  def handle_info({:update_builder_state, %{dataclip: dataclip}}, socket) do
+  def handle_info(
+        {:update_builder_state, %{dataclip: dataclip, job_id: job_id}},
+        socket
+      ) do
     {:noreply,
      socket
      |> assign(
        builder_state:
-         socket.assigns.builder_state |> Map.merge(%{dataclip: dataclip})
+         socket.assigns.builder_state
+         |> Map.merge(%{dataclip: dataclip, job_id: job_id})
      )}
   end
 
