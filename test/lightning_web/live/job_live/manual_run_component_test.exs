@@ -78,7 +78,8 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
   test "shows 3 latest dataclips for a job with several runs", %{
     conn: conn,
     job: _job,
-    project: project
+    project: project,
+    user: user
   } do
     job =
       workflow_job_fixture(
@@ -166,5 +167,21 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              "select[name='manual_run[dataclip_id]'] option[selected='selected']"
            )
            |> render() =~ d2.id
+
+    assert render_component(LightningWeb.JobLive.ManualRunComponent,
+             id: "manual-job-#{job.id}",
+             project: project,
+             job_id: job.id,
+             current_user: user,
+             builder_state: %{job_id: job.id, dataclip: d3}
+           ) =~ "<option selected value=\"#{d3.id}\">#{d3.id}</option>"
+
+    assert render_component(LightningWeb.JobLive.ManualRunComponent,
+             id: "manual-job-#{job.id}",
+             project: project,
+             job_id: job.id,
+             current_user: user,
+             builder_state: %{job_id: job.id, dataclip: d4}
+           ) =~ "<option selected value=\"#{d4.id}\">#{d4.id}</option>"
   end
 end
