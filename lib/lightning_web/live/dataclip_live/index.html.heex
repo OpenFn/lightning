@@ -28,7 +28,19 @@
             <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
           </.td>
           <.td><.type_pill dataclip={dataclip} /></.td>
-          <.td><%= dataclip.body %></.td>
+          <.td>
+            <code>
+              <%= dataclip.body
+              |> html_escape()
+              |> safe_to_string()
+              |> String.slice(0, 500) %><%= if html_escape(dataclip.body)
+                                               |> safe_to_string
+                                               |> String.length() >
+                                                 500,
+                                               do: "...",
+                                               else: "" %>
+            </code>
+          </.td>
 
           <.td>
             <span>
