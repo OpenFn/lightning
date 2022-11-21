@@ -47,10 +47,8 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   defp get_current_dataclip(state, job_id) do
-    if(
-      is_map_key(state, :dataclip) && is_map_key(state, :job_id) and
-        state.job_id == job_id
-    ) do
+    if is_map_key(state, :dataclip) && is_map_key(state, :job_id) &&
+         state.job_id == job_id do
       state.dataclip
     else
       nil
