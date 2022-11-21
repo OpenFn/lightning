@@ -69,12 +69,22 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
      |> assign(:form, form)}
   end
 
+  defp display_name_for_adaptor(name) do
+    if String.starts_with?(name, "@openfn/language-") do
+      # Show most relevant slice of the name for standard adaptors
+      {String.slice(name, 17..-1), name}
+    else
+      # Display full adaptor names for non-standard OpenFn adaptors
+      name
+    end
+  end
+
   def get_adaptor_version_options(adaptor) do
     # Gets @openfn/language-foo@1.2.3 or @openfn/language-foo
 
     adaptor_names =
       Lightning.AdaptorRegistry.all()
-      |> Enum.map(&Map.get(&1, :name))
+      |> Enum.map(&display_name_for_adaptor(&1.name))
       |> Enum.sort()
 
     {module_name, version, versions} =
