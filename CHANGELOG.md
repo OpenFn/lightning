@@ -14,6 +14,14 @@ and this project adheres to
 
 ### Fixed
 
+## [0.3.1] - 2022-11-22
+
+### Fixed
+
+- Fixed bug that attempted to execute HTML scripts in dataclips
+- Fixed bug that prevented work orders from displaying in the order of their
+  last run, descending.
+
 ## [0.3.0] - 2022-11-21
 
 ### Added

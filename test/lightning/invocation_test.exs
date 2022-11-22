@@ -227,9 +227,9 @@ defmodule Lightning.InvocationTest do
       workflow = job.workflow
 
       wo_one = work_order_fixture(workflow_id: workflow.id)
+      wo_four = work_order_fixture(workflow_id: workflow.id)
       wo_two = work_order_fixture(workflow_id: workflow.id)
       wo_three = work_order_fixture(workflow_id: workflow.id)
-      wo_four = work_order_fixture(workflow_id: workflow.id)
 
       dataclip = dataclip_fixture()
 
