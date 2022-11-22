@@ -328,57 +328,6 @@ defmodule Lightning.InvocationTest do
       assert expected_order == simplified_result
     end
 
-    # TODO: @Mamadou, this was never tested. Please note the :desc_nulls_first requirement
-    # test "list_work_orders_for_project/1 returns work orders ordered by last run finished at desc, with nulls first" do
-    #   job = workflow_job_fixture(workflow_name: "chw-help")
-    #   reason = reason_fixture(trigger_id: job.trigger.id)
-    #   workflow = job.workflow
-
-    #   wo_one = work_order_fixture(workflow_id: workflow.id)
-    #   wo_two = work_order_fixture(workflow_id: workflow.id)
-    #   wo_three = work_order_fixture(workflow_id: workflow.id)
-    #   wo_four = work_order_fixture(workflow_id: workflow.id)
-
-    #   {:ok, attempt_four} =
-    #     Lightning.AttemptService.create_attempt(wo_four, job, reason)
-
-    #   {:ok, attempt_one} =
-    #     Lightning.AttemptService.create_attempt(wo_one, job, reason)
-
-    #   {:ok, attempt_three} =
-    #     Lightning.AttemptService.create_attempt(wo_three, job, reason)
-
-    #   {:ok, attempt_two} =
-    #     Lightning.AttemptService.create_attempt(wo_two, job, reason)
-
-    #   simplified_result =
-    #     Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
-    #       id: workflow.project_id
-    #     }).entries()
-    #     |> IO.inspect()
-    #     |> Enum.map(fn wo ->
-    #       %{
-    #         id: wo.id,
-    #         last_run_finished_at:
-    #           Enum.at(wo.attempts, 0)
-    #           |> Map.get(:runs)
-    #           |> Enum.at(0)
-    #           |> Map.get(:finished_at)
-    #       }
-    #     end)
-
-    #   expected_order =
-    #     [
-    #       %{id: wo_one.id, last_run_finished_at: attempt_one.inserted_at},
-    #       %{id: wo_two.id, last_run_finished_at: attempt_two.inserted_at},
-    #       %{id: wo_three.id, last_run_finished_at: attempt_three.inserted_at},
-    #       %{id: wo_four.id, last_run_finished_at: attempt_four.inserted_at}
-    #     ]
-    #     |> Enum.sort(&(Timex.compare(&1.last_run_finished_at, &2.last_run_finished_at) > 0))
-
-    #   assert expected_order == simplified_result
-    # end
-
     test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
       job_one = workflow_job_fixture(workflow_name: "chw-help")
       # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)

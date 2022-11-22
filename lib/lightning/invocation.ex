@@ -393,7 +393,7 @@ defmodule Lightning.Invocation do
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
       distinct: true,
-      order_by: [desc: r.finished_at],
+      order_by: [desc_nulls_first: r.finished_at],
       preload: [
         reason:
           ^from(r in Lightning.InvocationReason,
@@ -412,8 +412,6 @@ defmodule Lightning.Invocation do
         work_order: wo
       }
     )
-
-    # from(wo in query, order_by: [asc: fragment("last_run_finished_at")])
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
