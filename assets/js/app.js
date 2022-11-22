@@ -23,14 +23,14 @@ import 'phoenix_html';
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
-import Alpine from 'alpinejs';
 
 import topbar from '../vendor/topbar';
 import WorkflowDiagram from './workflow-diagram';
 import AdaptorDocs from './adaptor-docs';
+import TabSelector from './tab-selector';
 import Editor from './editor';
 
-let Hooks = { WorkflowDiagram, AdaptorDocs, Editor };
+let Hooks = { WorkflowDiagram, AdaptorDocs, Editor, TabSelector };
 
 Hooks.AssocListChange = {
   mounted() {
@@ -54,8 +54,6 @@ Hooks.AutoResize = {
   },
 };
 
-window.Alpine = Alpine;
-
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -64,13 +62,6 @@ let csrfToken = document
 let liveSocket = new LiveSocket('/live', Socket, {
   params: { _csrf_token: csrfToken },
   hooks: Hooks,
-  dom: {
-    onBeforeElUpdated(from, to) {
-      if (from.__x) {
-        window.Alpine.clone(from.__x, to);
-      }
-    },
-  },
 });
 
 // Show progress bar on live navigation and form submits
@@ -78,11 +69,13 @@ let liveSocket = new LiveSocket('/live', Socket, {
 topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
 let topBarScheduled = undefined;
+
 window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {
     topBarScheduled = setTimeout(() => topbar.show(), 120);
   }
 });
+
 window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;

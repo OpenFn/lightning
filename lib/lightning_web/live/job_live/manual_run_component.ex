@@ -112,7 +112,8 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       {:ok, _} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Run enqueued.")}
+         |> put_flash(:info, "Run enqueued.")
+         |> push_event("push-hash", %{hash: "output"})}
 
       {:error, changeset} ->
         {:noreply,

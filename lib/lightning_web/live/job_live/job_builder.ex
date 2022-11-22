@@ -51,7 +51,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
     >
       <div class="flex flex-col h-full">
         <div class="flex-none">
-          <div class="flex gap-x-8 gap-y-2 border-b border-gray-200 dark:border-gray-600">
+          <.tab_bar id={@id} default_hash="setup">
             <!-- The tabs navigation -->
             <.tab_item hash="setup">Setup</.tab_item>
             <.tab_item hash="input">Input</.tab_item>
@@ -62,7 +62,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               </.when_invalid>
             </.tab_item>
             <.tab_item hash="output">Output</.tab_item>
-          </div>
+          </.tab_bar>
         </div>
         <div class="grow overflow-y-auto p-3">
           <!-- The tabs content -->

@@ -1,6 +1,7 @@
 defmodule LightningWeb.JobLive.JobBuilderComponents do
   use LightningWeb, :component
 
+  alias Phoenix.LiveView.JS
   alias LightningWeb.Components.Form
   import Ecto.Changeset, only: [get_field: 2]
 
@@ -92,12 +93,31 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     end
   end
 
+  attr :id, :string, required: true
+  attr :default_hash, :string, required: true
+  slot :inner_block, required: true
+
+  def tab_bar(assigns) do
+    ~H"""
+    <div
+      id={"tab-bar-#{@id}"}
+      class="flex gap-x-8 gap-y-2 border-b border-gray-200 dark:border-gray-600"
+      data-active-classes="border-b-2 border-primary-500 text-primary-600"
+      data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      data-default-hash={@default_hash}
+      phx-hook="TabSelector"
+    >
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
   attr :for_hash, :string, required: true
   slot :inner_block, required: true
 
   def panel_content(assigns) do
     ~H"""
-    <div class="h-[calc(100%-0.75rem)]" x-show={"tab === '#{@for_hash}'"}>
+    <div class="h-[calc(100%-0.75rem)] hidden" data-panel-hash={@for_hash}>
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -110,14 +130,23 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     ~H"""
     <a
       id={"tab-item-#{@hash}"}
-      class="whitespace-nowrap flex items-center py-3 px-3 border-b-2 font-medium text-sm"
-      x-bind:class={"tab === '#{@hash}' ? 'border-primary-500 text-primary-600 dark:text-primary-500 dark:border-primary-500' : 'border-transparent text-gray-500 dark:hover:text-gray-300 dark:text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300'"}
-      @click.prevent={"tab = '#{@hash}'; window.location.hash = '#{@hash}'"}
+      class="whitespace-nowrap flex items-center py-3 px-3 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      data-hash={@hash}
+      phx-click={switch_tabs(@hash)}
       href={"##{@hash}"}
     >
       <%= render_slot(@inner_block) %>
     </a>
     """
+  end
+
+  defp switch_tabs(hash) do
+    JS.hide(to: "[data-panel-hash]")
+    |> JS.show(
+      to: "[data-panel-hash=#{hash}]",
+      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
+      time: 300
+    )
   end
 
   attr :changeset, :map, required: true
