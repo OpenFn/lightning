@@ -419,10 +419,10 @@ defmodule Lightning.Invocation do
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
-    |> reorder()
+    |> find_uniq_wo()
   end
 
-  def reorder(page) do
+  def find_uniq_wo(page) do
     %{page | entries: Enum.uniq_by(page.entries, fn wo -> wo.id end)}
   end
 
