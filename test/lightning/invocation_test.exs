@@ -221,6 +221,109 @@ defmodule Lightning.InvocationTest do
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
 
+    test "list_work_orders_for_project/1 returns work orders ordered by last run finished at desc, with nulls first" do
+      job = workflow_job_fixture(workflow_name: "chw-help")
+      reason = reason_fixture(trigger_id: job.trigger.id)
+      workflow = job.workflow
+
+      wo_one = work_order_fixture(workflow_id: workflow.id)
+      wo_two = work_order_fixture(workflow_id: workflow.id)
+      wo_three = work_order_fixture(workflow_id: workflow.id)
+      wo_four = work_order_fixture(workflow_id: workflow.id)
+
+      dataclip = dataclip_fixture()
+
+      now = Timex.now()
+
+      %{runs: [run_one]} =
+        Lightning.Attempt.new(%{
+          work_order_id: wo_one.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -50),
+              finished_at: now |> Timex.shift(seconds: -40),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      %{runs: [run_two]} =
+        Lightning.Attempt.new(%{
+          work_order_id: wo_two.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -40),
+              finished_at: now |> Timex.shift(seconds: -30),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      %{runs: [run_three]} =
+        Lightning.Attempt.new(%{
+          work_order_id: wo_three.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -30),
+              finished_at: now |> Timex.shift(seconds: -20),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      %{runs: [run_four]} =
+        Lightning.Attempt.new(%{
+          work_order_id: wo_four.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -20),
+              finished_at: nil,
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      simplified_result =
+        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
+          id: workflow.project_id
+        }).entries()
+        |> Enum.map(fn %{work_order: wo} ->
+          %{
+            id: wo.id,
+            last_run_finished_at:
+              Enum.at(wo.attempts, 0)
+              |> Map.get(:runs)
+              |> Enum.at(0)
+              |> Map.get(:finished_at)
+          }
+        end)
+
+      expected_order = [
+        %{id: wo_four.id, last_run_finished_at: run_four.finished_at},
+        %{id: wo_three.id, last_run_finished_at: run_three.finished_at},
+        %{id: wo_two.id, last_run_finished_at: run_two.finished_at},
+        %{id: wo_one.id, last_run_finished_at: run_one.finished_at}
+      ]
+
+      assert expected_order == simplified_result
+    end
+
     test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
       job_one = workflow_job_fixture(workflow_name: "chw-help")
       # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)
@@ -310,7 +413,7 @@ defmodule Lightning.InvocationTest do
           })
         )
 
-      [actual_wo | _] =
+      [%{work_order: actual_wo} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
@@ -334,7 +437,7 @@ defmodule Lightning.InvocationTest do
           finished_at: ~U[2022-10-27 15:00:00.000000Z]
         })
 
-      [actual_wo | _] =
+      [%{work_order: actual_wo} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
