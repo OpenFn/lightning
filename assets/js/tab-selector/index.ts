@@ -25,6 +25,7 @@ export default {
       );
     }
 
+    // Trigger a URL hash change when the server sends a 'push-hash' event.
     this.handleEvent('push-hash', ({ hash }) => {
       window.location.hash = hash;
     });
@@ -39,22 +40,23 @@ export default {
     this.defaultHash = defaultHash;
 
     window.addEventListener('hashchange', this._onHashChange);
-    // window.addEventListener('phx:push-hash', this._onPushHash);
 
     this.hashChanged(window.location.hash.replace('#', '') || this.defaultHash);
   },
   hashChanged(newHash: string) {
     this.tabItems.forEach(elem => {
       const { hash } = elem.dataset;
-      const panel = document.querySelector(`[data-panel-hash=${hash}]`);
+      const panel = document.querySelector(
+        `[data-panel-hash=${hash}]`
+      ) as HTMLElement;
 
       if (newHash == hash) {
-        panel?.classList.remove('hidden');
+        panel.style.display = 'block';
 
         elem.classList.remove(...this.inactiveClasses);
         elem.classList.add(...this.activeClasses);
       } else {
-        // panel?.classList.add('hidden');
+        panel.style.display = 'none';
 
         elem.classList.remove(...this.activeClasses);
         elem.classList.add(...this.inactiveClasses);

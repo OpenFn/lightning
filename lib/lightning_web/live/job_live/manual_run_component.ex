@@ -30,7 +30,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           phx-change="changed"
           phx-target={@myself}
         />
-        <pre class="flex-1 bg-gray-100 m-2 p-3 font-mono"><%= @selected_dataclip.body %></pre>
+        <LightningWeb.RunLive.Components.log_view log={@selected_dataclip.body} />
         <Common.button
           text="Run"
           disabled={!@changeset.valid?}
@@ -143,7 +143,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   defp format(dataclip) when is_nil(dataclip) do
-    %{id: "", body: ""}
+    %{id: "", body: []}
   end
 
   defp format(dataclip) do
@@ -153,6 +153,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         dataclip.body
         |> Jason.encode!()
         |> Jason.Formatter.pretty_print()
+        |> String.split("\n")
     }
   end
 

@@ -117,7 +117,12 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   def panel_content(assigns) do
     ~H"""
-    <div class="h-[calc(100%-0.75rem)] hidden" data-panel-hash={@for_hash}>
+    <div
+      class="h-[calc(100%-0.75rem)]"
+      data-panel-hash={@for_hash}
+      style="display: none;"
+      lv-keep-style
+    >
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -130,8 +135,11 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     ~H"""
     <a
       id={"tab-item-#{@hash}"}
-      class="whitespace-nowrap flex items-center py-3 px-3 font-medium text-sm border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      class="whitespace-nowrap flex items-center py-3 px-3 font-medium
+             text-sm border-b-2 border-transparent text-gray-500
+             hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
       data-hash={@hash}
+      lv-keep-class
       phx-click={switch_tabs(@hash)}
       href={"##{@hash}"}
     >

@@ -34,7 +34,7 @@ let Hooks = { WorkflowDiagram, AdaptorDocs, Editor, TabSelector };
 
 Hooks.AssocListChange = {
   mounted() {
-    this.el.addEventListener('change', event => {
+    this.el.addEventListener('change', _event => {
       this.pushEventTo(this.el, 'select_item', { id: this.el.value });
     });
   },
@@ -62,6 +62,20 @@ let csrfToken = document
 let liveSocket = new LiveSocket('/live', Socket, {
   params: { _csrf_token: csrfToken },
   hooks: Hooks,
+  dom: {
+    onBeforeElUpdated(from, to) {
+      // If an element has any of the 'lv-keep-*' attributes, copy across
+      // the given attribute to maintain various styles and properties
+      // that have had their control handed-over to a Hook or JS implementation.
+      if (from.attributes['lv-keep-style']) {
+        to.setAttribute('style', from.attributes.style.value);
+      }
+
+      if (from.attributes['lv-keep-class']) {
+        to.setAttribute('class', from.attributes.class.value);
+      }
+    },
+  },
 });
 
 // Show progress bar on live navigation and form submits
