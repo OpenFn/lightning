@@ -370,6 +370,7 @@ defmodule Lightning.Invocation do
     attempts_query =
       from(a in Lightning.Attempt,
         join: re in assoc(a, :reason),
+        join: r in assoc(a, :runs),
         order_by: [desc: a.inserted_at],
         preload: [reason: re, runs: ^runs_query]
       )
@@ -391,8 +392,8 @@ defmodule Lightning.Invocation do
       where: ^filter_run_status_where(status),
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
-      distinct: wo.id,
-      order_by: [desc: wo.inserted_at],
+      distinct: true,
+      order_by: [desc: r.finished_at],
       preload: [
         reason:
           ^from(r in Lightning.InvocationReason,
@@ -404,13 +405,25 @@ defmodule Lightning.Invocation do
             select: %{id: wf.id, name: wf.name, project_id: wf.project_id}
           ),
         attempts: ^attempts_query
-      ]
+      ],
+      select: %{
+        id: wo.id,
+        last_finished_at: r.finished_at,
+        work_order: wo
+      }
     )
+
+    # from(wo in query, order_by: [asc: fragment("last_run_finished_at")])
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
+    |> reorder()
+  end
+
+  def reorder(page) do
+    %{page | entries: Enum.uniq_by(page.entries, fn wo -> wo.id end)}
   end
 
   def list_work_orders_for_project(%Project{} = project) do
