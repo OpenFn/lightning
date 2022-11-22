@@ -291,7 +291,7 @@ defmodule Lightning.InvocationTest do
             %{
               job_id: job.id,
               started_at: now |> Timex.shift(seconds: -20),
-              finished_at: now |> Timex.shift(seconds: -10),
+              finished_at: nil,
               exit_code: 0,
               input_dataclip_id: dataclip.id
             }
@@ -314,16 +314,12 @@ defmodule Lightning.InvocationTest do
           }
         end)
 
-      expected_order =
-        [
-          %{id: wo_one.id, last_run_finished_at: run_one.finished_at},
-          %{id: wo_two.id, last_run_finished_at: run_two.finished_at},
-          %{id: wo_three.id, last_run_finished_at: run_three.finished_at},
-          %{id: wo_four.id, last_run_finished_at: run_four.finished_at}
-        ]
-        |> Enum.sort(
-          &(Timex.compare(&1.last_run_finished_at, &2.last_run_finished_at) > 0)
-        )
+      expected_order = [
+        %{id: wo_four.id, last_run_finished_at: run_four.finished_at},
+        %{id: wo_three.id, last_run_finished_at: run_three.finished_at},
+        %{id: wo_two.id, last_run_finished_at: run_two.finished_at},
+        %{id: wo_one.id, last_run_finished_at: run_one.finished_at}
+      ]
 
       assert expected_order == simplified_result
     end
