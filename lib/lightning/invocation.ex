@@ -268,6 +268,19 @@ defmodule Lightning.Invocation do
     run
     |> Run.changeset(attrs)
     |> Repo.update()
+    |> case do
+      {:ok, run} = res ->
+        LightningWeb.Endpoint.broadcast!(
+          "run:#{run.id}",
+          "update",
+          %{}
+        )
+
+        res
+
+      res ->
+        res
+    end
   end
 
   @doc """

@@ -163,11 +163,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
             </div>
           </.panel_content>
           <.panel_content for_hash="output">
-            <%= if @run do %>
-              <LightningWeb.RunLive.Components.run_details run={@run} />
-              <LightningWeb.RunLive.Components.log_view log={@run.log || []} />
-
-              <%= @run.id %>
+            <%= if @follow_run_id do %>
+              <%= live_render(
+                @socket,
+                LightningWeb.RunLive.RunViewerLive,
+                id: "run-viewer-#{@follow_run_id}",
+                session: %{"run_id" => @follow_run_id},
+                sticky: true
+              ) %>
             <% end %>
           </.panel_content>
         </div>
@@ -293,7 +296,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   @impl true
   def mount(socket) do
-    {:ok, socket |> assign(run: nil)}
+    {:ok, socket |> assign(follow_run_id: nil)}
   end
 
   @impl true
@@ -376,6 +379,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
   end
 
   def update(%{event: :follow_run, attempt_run: attempt_run}, socket) do
-    {:ok, socket |> assign(run: attempt_run.run)}
+    {:ok, socket |> assign(follow_run_id: attempt_run.run.id)}
   end
 end
