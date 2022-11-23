@@ -1,5 +1,7 @@
 defmodule LightningWeb.JobLive.ManualRunComponentTest do
   use LightningWeb.ConnCase, async: true
+  use Oban.Testing, repo: Lightning.Repo
+
   import Phoenix.LiveViewTest
 
   import Lightning.JobsFixtures
@@ -52,6 +54,8 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
     assert view |> run_button() |> render_click() =~
              "Run enqueued."
+
+    assert_enqueued(worker: Lightning.Pipeline)
   end
 
   test "doesn't appear on new Job", %{conn: conn, project: project} do
@@ -171,6 +175,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              project: project,
              job_id: job.id,
              current_user: user,
+             on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d3}
            ) =~ "<option selected value=\"#{d3.id}\">#{d3.id}</option>"
 
@@ -179,6 +184,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              project: project,
              job_id: job.id,
              current_user: user,
+             on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d4}
            ) =~ "<option selected value=\"#{d4.id}\">#{d4.id}</option>"
   end

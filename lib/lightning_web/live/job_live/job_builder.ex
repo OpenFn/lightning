@@ -37,6 +37,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
+  def follow_run(job_id, attempt_run) do
+    send_update(__MODULE__,
+      id: id(job_id),
+      attempt_run: attempt_run,
+      event: :follow_run
+    )
+  end
+
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
 
@@ -129,6 +137,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 current_user={@current_user}
                 id={"manual-job-#{@job_id}"}
                 job_id={@job_id}
+                on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
               />
@@ -154,7 +163,12 @@ defmodule LightningWeb.JobLive.JobBuilder do
             </div>
           </.panel_content>
           <.panel_content for_hash="output">
-            Output block
+            <%= if @run do %>
+              <LightningWeb.RunLive.Components.run_details run={@run} />
+              <LightningWeb.RunLive.Components.log_view log={@run.log || []} />
+
+              <%= @run.id %>
+            <% end %>
           </.panel_content>
         </div>
         <div class="flex-none sticky p-3 border-t">
@@ -277,8 +291,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
     |> Job.changeset(params)
   end
 
-  # NOTE: consider multiple update functions to handle new, new from (job) and
-  # inspecting attempt runs.
+  @impl true
+  def mount(socket) do
+    {:ok, socket |> assign(run: nil)}
+  end
+
   @impl true
   def update(
         %{
@@ -356,5 +373,9 @@ defmodule LightningWeb.JobLive.JobBuilder do
      |> assign_changeset_and_params(%{
        "project_credential_id" => project_credential_id
      })}
+  end
+
+  def update(%{event: :follow_run, attempt_run: attempt_run}, socket) do
+    {:ok, socket |> assign(run: attempt_run.run)}
   end
 end

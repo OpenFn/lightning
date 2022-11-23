@@ -7,6 +7,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   attr :job_id, :string, required: true
   attr :current_user, Lightning.Accounts.User, required: true
   attr :builder_state, :any, required: true
+  attr :on_run, :any, required: true
   attr :selected_dataclip, Lightning.Invocation.Dataclip
 
   @impl true
@@ -55,10 +56,11 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   @impl true
   def update(
         %{
-          job_id: job_id,
+          builder_state: builder_state,
           current_user: current_user,
           id: id,
-          builder_state: builder_state
+          job_id: job_id,
+          on_run: on_run
         },
         socket
       ) do
@@ -97,19 +99,21 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        builder_state: builder_state,
        dataclips: dataclips,
        dataclips_options: dataclips_options,
+       on_run: on_run,
        selected_dataclip: selected_dataclip |> format()
      )
      |> update_form(init_form)}
   end
 
   @impl true
-
   def handle_event("confirm", _params, socket) do
     socket.assigns.changeset
     |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
     |> create_manual_workorder()
     |> case do
-      {:ok, _} ->
+      {:ok, %{attempt_run: attempt_run}} ->
+        socket.assigns.on_run.(attempt_run)
+
         {:noreply,
          socket
          |> put_flash(:info, "Run enqueued.")
@@ -183,12 +187,16 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     with {:ok, dataclip} <- get_dataclip(changeset),
          {:ok, job} <- get_job(changeset),
          user <- changeset |> Ecto.Changeset.get_field(:user) do
-      {:ok, %{attempt_run: attempt_run}} =
-        Lightning.WorkOrderService.multi_for_manual(job, dataclip, user)
-        |> Repo.transaction()
+      # HACK: Oban's testing functions only apply to `self` and LiveView
+      # tests run in child processes, so for now we need to set the testing
+      # mode from within the process.
+      Process.put(:oban_testing, :manual)
 
-      Lightning.Pipeline.new(%{attempt_run_id: attempt_run.id})
-      |> Oban.insert()
+      Lightning.WorkOrderService.multi_for_manual(job, dataclip, user)
+      |> Oban.insert(:pipeline, fn %{attempt_run: attempt_run} ->
+        Lightning.Pipeline.new(%{attempt_run_id: attempt_run.id})
+      end)
+      |> Repo.transaction()
     end
   end
 

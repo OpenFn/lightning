@@ -96,15 +96,27 @@ defmodule LightningWeb.RunLive.Components do
 
   def run_details(%{run: run} = assigns) do
     run_finished_at =
-      if run.finished_at do
-        run.finished_at |> Calendar.strftime("%c")
+      cond do
+        run.finished_at ->
+          run.finished_at |> Calendar.strftime("%c")
+
+        run.started_at ->
+          "Running..."
+
+        true ->
+          "Not started."
       end
 
     ran_for =
-      if run.finished_at do
-        DateTime.diff(run.finished_at, run.started_at, :millisecond)
-      else
-        DateTime.diff(DateTime.utc_now(), run.started_at, :millisecond)
+      cond do
+        run.finished_at ->
+          "#{DateTime.diff(run.finished_at, run.started_at, :millisecond)} ms"
+
+        run.started_at ->
+          "#{DateTime.diff(DateTime.utc_now(), run.started_at, :millisecond)} ms"
+
+        true ->
+          "Not started."
       end
 
     assigns =
@@ -116,16 +128,16 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div class="flex flex-row" id={"finished-at-#{@run.id}"}>
-      <div class="basis-3/4 font-semibold text-secondary-700">Finished</div>
-      <div class="basis-1/4 text-right"><%= @run_finished_at || "Running..." %></div>
+      <div class="basis-1/2 font-semibold text-secondary-700">Finished</div>
+      <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
     </div>
     <div class="flex flex-row" id={"ran-for-#{@run.id}"}>
-      <div class="basis-3/4 font-semibold text-secondary-700">Ran for</div>
-      <div class="basis-1/4 text-right"><%= @ran_for %>ms</div>
+      <div class="basis-1/2 font-semibold text-secondary-700">Ran for</div>
+      <div class="basis-1/2 text-right"><%= @ran_for %></div>
     </div>
     <div class="flex flex-row" id={"exit-code-#{@run.id}"}>
-      <div class="basis-3/4 font-semibold text-secondary-700">Exit Code</div>
-      <div class="basis-1/4 text-right">
+      <div class="basis-1/2 font-semibold text-secondary-700">Exit Code</div>
+      <div class="basis-1/2 text-right">
         <%= case @run.exit_code do %>
           <% nil -> %>
             <.pending_pill class="font-mono font-bold">?</.pending_pill>
@@ -224,7 +236,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   def pending_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-grey-200 text-grey-800])
+    assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
 
     ~H"""
     <span class={@classes}>
