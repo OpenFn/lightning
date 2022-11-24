@@ -9,8 +9,7 @@ defmodule Lightning.RunLive.RunSearchForComponent do
 
   def render(assigns) do
     ~H"""
-    <div id={"#{@id}-searchfor_options-container"}>
-      <div class="font-semibold my-4">Search for</div>
+    <div class="my-4" id={"#{@id}-searchfor_options-container"}>
       <%= inputs_for @form, :searchfor_options, fn opt -> %>
         <div class="form-check">
           <div class="selectable-option">

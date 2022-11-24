@@ -57,6 +57,15 @@
                 <Heroicons.magnifying_glass class="w-6 h-6 text-white" />
               </button>
             </div>
+            <.live_component
+              id="run-searchfor-select"
+              module={Lightning.RunLive.RunSearchForComponent}
+              searchfor_options={@searchfor_options}
+              form={f}
+              selected={
+                fn options -> send(self(), {:selected_searchfors, options}) end
+              }
+            />
           </div>
           <div>
             <div class="font-semibold my-4">Filter by date</div>
@@ -77,15 +86,7 @@
               </div>
             </div>
           </div>
-          <.live_component
-            id="run-searchfor-select"
-            module={Lightning.RunLive.RunSearchForComponent}
-            searchfor_options={@searchfor_options}
-            form={f}
-            selected={
-              fn options -> send(self(), {:selected_searchfors, options}) end
-            }
-          />
+
           <Lightning.RunLive.Components.workflow_select
             form={f}
             values={@workflows}
