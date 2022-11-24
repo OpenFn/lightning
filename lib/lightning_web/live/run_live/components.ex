@@ -210,21 +210,101 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  attr :dataclip, :map, required: true
+  attr :dataclip, :any, required: true
 
   def dataclip_view(%{dataclip: dataclip} = assigns) do
     lines =
-      dataclip.body
-      |> Jason.encode!()
-      |> Jason.Formatter.pretty_print()
-      |> String.split("\n")
+      if dataclip do
+        dataclip.body
+        |> Jason.encode!()
+        |> Jason.Formatter.pretty_print()
+        |> String.split("\n")
+      end
 
     assigns = assigns |> assign(lines: lines)
 
     ~H"""
-    <.log_view log={@lines} />
+    <%= if @dataclip do %>
+      <.log_view log={@lines} />
+    <% else %>
+      <.no_dataclip_message />
+    <% end %>
     """
   end
+
+  def no_dataclip_message(assigns) do
+    ~H"""
+    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
+      <div class="flex flex-col">
+        <div class="m-auto">
+          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
+        </div>
+        <div class="font-sm text-slate-400 text-center">
+          <span class="text-slate-500 font-semibold">
+            Nothing here yet.
+          </span>
+          <br /> The resulting dataclip will appear here
+          when the run finishes successfully.
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def no_log_message(assigns) do
+    ~H"""
+    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
+      <div class="flex flex-col">
+        <div class="m-auto">
+          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
+        </div>
+        <div class="font-sm text-slate-400 text-center">
+          <span class="text-slate-500 font-semibold">
+            Nothing here yet.
+          </span>
+          <br /> The resulting log will appear here when the run completes.
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  # ------------------- Toggle Bar ---------------------
+  # Used to switch between Log and Output
+
+  slot :inner_block, required: true
+  attr :class, :string, default: "items-end"
+  attr :rest, :global
+
+  def toggle_bar(assigns) do
+    ~H"""
+    <div class={"flex flex-col #{@class}"} {@rest}>
+      <div class="flex rounded-lg p-1 bg-gray-200 font-semibold">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :active, :string, default: "false"
+  slot :inner_block, required: true
+  attr :rest, :global
+
+  def toggle_item(assigns) do
+    ~H"""
+    <div
+      data-active={@active}
+      class="group text-sm shadow-sm text-gray-700
+                     data-[active=true]:bg-white data-[active=true]:text-indigo-500
+                     px-4 py-2 rounded-md align-middle flex items-center cursor-pointer"
+      {@rest}
+    >
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
+  # -------------------- Status Pills -------------------
 
   @base_classes ~w[
     my-auto whitespace-nowrap rounded-full

@@ -29,7 +29,7 @@ defmodule LightningWeb.RunLive.Show do
       from(r in Run, where: r.id == ^id, preload: :output_dataclip)
       |> Lightning.Repo.one()
 
-    socket |> assign(run: run, log: run.log || [])
+    socket |> assign(run: run, log: run.log)
   end
 
   @impl true
@@ -39,13 +39,18 @@ defmodule LightningWeb.RunLive.Show do
 
   def switch_section(section) do
     JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
+    |> JS.set_attribute({"data-active", "false"},
+      to: "[data-section]:not([data-section=#{section}])"
+    )
+    |> show_section(section)
+  end
+
+  def show_section(js \\ %JS{}, section) do
+    js
     |> JS.show(
       to: "##{section}_section",
       transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
-      time: 125
-    )
-    |> JS.set_attribute({"data-active", "false"},
-      to: "[data-section]:not([data-section=#{section}])"
+      time: 200
     )
     |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
   end
@@ -59,63 +64,31 @@ defmodule LightningWeb.RunLive.Show do
       </:header>
       <Layout.centered>
         <.run_details run={@run} />
-        <.toggle_bar class="mt-4 items-end" phx-mounted={switch_section(@section)}>
-          <.toggle_item
-            active={@section == "outout"}
-            data-section="outout"
-            phx-click={switch_section("outout")}
-          >
+        <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
+          <.toggle_item data-section="output" phx-click={switch_section("output")}>
             Output
           </.toggle_item>
           <.toggle_item
-            active={@section == "log"}
             data-section="log"
             phx-click={switch_section("log")}
+            active="true"
           >
             Log
           </.toggle_item>
         </.toggle_bar>
 
-        <div id="log_section" style="display: none;">
-          <.log_view log={@log} />
+        <div id="log_section" style="display: none;" class="@container">
+          <%= if @log do %>
+            <.log_view log={@log} />
+          <% else %>
+            <.no_log_message />
+          <% end %>
         </div>
-        <div id="outout_section" style="display: none;">
+        <div id="output_section" style="display: none;" class="@container">
           <.dataclip_view dataclip={@run.output_dataclip} />
         </div>
       </Layout.centered>
     </Layout.page_content>
-    """
-  end
-
-  slot :inner_block, required: true
-  attr :class, :string, default: "items-end"
-  attr :rest, :global
-
-  def toggle_bar(assigns) do
-    ~H"""
-    <div class={"flex flex-col #{@class}"} {@rest}>
-      <div class="flex rounded-lg p-1 bg-gray-200 font-semibold">
-        <%= render_slot(@inner_block) %>
-      </div>
-    </div>
-    """
-  end
-
-  attr :active, :boolean, default: false
-  slot :inner_block, required: true
-  attr :rest, :global
-
-  def toggle_item(assigns) do
-    ~H"""
-    <div
-      data-active={@active}
-      class="group text-sm shadow-sm text-gray-700
-                     data-[active=true]:bg-white data-[active=true]:text-indigo-500
-                     px-4 py-2 rounded-md align-middle flex items-center cursor-pointer"
-      {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
     """
   end
 end
