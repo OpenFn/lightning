@@ -278,6 +278,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       })
       |> Lightning.Repo.insert!()
 
+      Lightning.Invocation.list_work_orders_for_project(project)
+
       {:ok, view, _html} =
         live(
           conn,
@@ -454,23 +456,33 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "Filter by status"
 
       assert view
-             |> element("input#run-search-form_options_0_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_0_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_1_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_1_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_2_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_2_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_3_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_3_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_4_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_4_selected[checked]"
+             )
              |> has_element?()
     end
 
@@ -531,7 +543,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck :failure
 
       view
-      |> element("input#run-search-form_options_1_selected[checked]")
+      |> element("input#run-search-form_status_options_1_selected[checked]")
       |> render_change(%{"run_search_form[options][1][selected]" => false})
 
       refute view
@@ -543,7 +555,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> element("input#run-search-form_options_1_selected")
+      |> element("input#run-search-form_status_options_1_selected")
       |> render_change(%{"run_search_form[options][1][selected]" => true})
 
       div =
@@ -810,6 +822,87 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert result =~ "2022-08-23"
       assert result =~ "2022-08-29"
+    end
+
+    test "Filter by run run_log and dataclip_body", %{
+      conn: conn,
+      project: project
+    } do
+      job_one =
+        workflow_job_fixture(
+          workflow_name: "workflow 1",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_one.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_one.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_one.id,
+              started_at:
+                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      job_two =
+        workflow_job_fixture(
+          workflow_name: "workflow 2",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_two.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_two.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_two.id,
+              started_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      {:ok, _view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
     end
   end
 end

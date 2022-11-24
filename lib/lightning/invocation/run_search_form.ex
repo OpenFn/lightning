@@ -5,14 +5,16 @@ defmodule Lightning.RunSearchForm do
   use Ecto.Schema
 
   embedded_schema do
+    field :search_term, :string
     field :date_before, :utc_datetime_usec
     field :date_after, :utc_datetime_usec
     field :workflow_id, :string
     embeds_one :workflow, Lightning.Workflows.Workflow
-    embeds_many :options, Lightning.RunSearchForm.RunStatusOption
+    embeds_many :status_options, Lightning.RunSearchForm.MultiSelectOption
+    embeds_many :searchfor_options, Lightning.RunSearchForm.MultiSelectOption
   end
 
-  defmodule RunStatusOption do
+  defmodule MultiSelectOption do
     @moduledoc false
     use Ecto.Schema
 

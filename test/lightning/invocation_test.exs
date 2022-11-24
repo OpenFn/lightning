@@ -223,15 +223,18 @@ defmodule Lightning.InvocationTest do
 
     test "list_work_orders_for_project/1 returns work orders ordered by last run finished at desc, with nulls first" do
       job = workflow_job_fixture(workflow_name: "chw-help")
-      reason = reason_fixture(trigger_id: job.trigger.id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(dataclip_id: dataclip.id, trigger_id: job.trigger.id)
+
       workflow = job.workflow
 
       wo_one = work_order_fixture(workflow_id: workflow.id)
       wo_four = work_order_fixture(workflow_id: workflow.id)
       wo_two = work_order_fixture(workflow_id: workflow.id)
       wo_three = work_order_fixture(workflow_id: workflow.id)
-
-      dataclip = dataclip_fixture()
 
       now = Timex.now()
 
@@ -330,9 +333,11 @@ defmodule Lightning.InvocationTest do
 
       workflow = job_one.workflow
       work_order = work_order_fixture(workflow_id: workflow.id)
-      reason = reason_fixture(trigger_id: job_one.trigger.id)
 
-      dataclip = dataclip_fixture()
+      dataclip = dataclip_fixture(project_id: workflow.project_id)
+
+      reason =
+        reason_fixture(dataclip_id: dataclip.id, trigger_id: job_one.trigger.id)
 
       ### when inserting in this order
 

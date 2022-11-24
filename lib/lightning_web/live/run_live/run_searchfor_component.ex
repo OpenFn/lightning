@@ -1,6 +1,6 @@
-defmodule Lightning.RunLive.RunStatusComponent do
+defmodule Lightning.RunLive.RunSearchForComponent do
   @moduledoc """
-  Run Status MutliSelect.
+  Run Search for MutliSelect.
   """
   use LightningWeb, :live_component
 
@@ -9,9 +9,9 @@ defmodule Lightning.RunLive.RunStatusComponent do
 
   def render(assigns) do
     ~H"""
-    <div id={"#{@id}-status_options-container"}>
-      <div class="font-semibold my-4">Filter by status</div>
-      <%= inputs_for @form, :status_options, fn opt -> %>
+    <div id={"#{@id}-searchfor_options-container"}>
+      <div class="font-semibold my-4">Search for</div>
+      <%= inputs_for @form, :searchfor_options, fn opt -> %>
         <div class="form-check">
           <div class="selectable-option">
             <%= checkbox(opt, :selected,
@@ -29,15 +29,19 @@ defmodule Lightning.RunLive.RunStatusComponent do
 
   @impl true
   def update(assigns, socket) do
-    %{status_options: status_options, form: form, id: id, selected: selected} =
-      assigns
+    %{
+      searchfor_options: searchfor_options,
+      form: form,
+      id: id,
+      selected: selected
+    } = assigns
 
     socket =
       socket
       |> assign(:id, id)
       |> assign(:form, form)
       |> assign(:selected, selected)
-      |> assign(:status_options, status_options)
+      |> assign(:searchfor_options, searchfor_options)
 
     {:ok, socket}
   end
@@ -45,16 +49,16 @@ defmodule Lightning.RunLive.RunStatusComponent do
   @impl true
   def handle_event(
         "checked",
-        %{"run_search_form" => %{"status_options" => values}},
+        %{"run_search_form" => %{"searchfor_options" => values}},
         socket
       ) do
     [{index, %{"selected" => selected?}}] = Map.to_list(values)
     index = String.to_integer(index)
-    current_option = Enum.at(socket.assigns.status_options, index)
+    current_option = Enum.at(socket.assigns.searchfor_options, index)
 
     selected_statuses =
       List.replace_at(
-        socket.assigns.status_options,
+        socket.assigns.searchfor_options,
         index,
         %{current_option | selected: selected?}
       )

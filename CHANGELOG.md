@@ -12,6 +12,7 @@ and this project adheres to
 
 - Added a Delete job button in Inspector
 
+- Filter workflow runs by text/value in run logs or input body
 ### Changed
 
 - Updated @openfn/workflow-diagram to 0.4.0
