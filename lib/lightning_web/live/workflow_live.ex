@@ -58,7 +58,7 @@ defmodule LightningWeb.WorkflowLive do
               </div>
             </div>
           <% :edit_job -> %>
-            <div class="absolute w-1/3 inset-y-0 right-0 z-10">
+            <div class="absolute w-1/2 inset-y-0 right-0 z-10">
               <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
                 <.live_component
                   module={LightningWeb.JobLive.JobBuilder}

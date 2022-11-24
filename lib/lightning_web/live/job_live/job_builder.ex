@@ -113,6 +113,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                   <button
                     id="new-credential-launcher"
                     type="button"
+                    class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
                     phx-click="open_new_credential"
                     phx-target={@myself}
                   >
@@ -164,13 +165,32 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </.panel_content>
           <.panel_content for_hash="output">
             <%= if @follow_run_id do %>
-              <%= live_render(
-                @socket,
-                LightningWeb.RunLive.RunViewerLive,
-                id: "run-viewer-#{@follow_run_id}",
-                session: %{"run_id" => @follow_run_id},
-                sticky: true
-              ) %>
+              <div class="h-full">
+                <%= live_render(
+                  @socket,
+                  LightningWeb.RunLive.RunViewerLive,
+                  id: "run-viewer-#{@follow_run_id}",
+                  session: %{"run_id" => @follow_run_id},
+                  sticky: true
+                ) %>
+              </div>
+            <% else %>
+              <div class="w-1/2 h-16 text-center m-auto pt-4">
+                <div class="font-semibold text-gray-500 pb-2">
+                  No Run
+                </div>
+                <div class="text-xs text-gray-400">
+                  Select a dataclip on the
+                  <a
+                    href="#input"
+                    class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+                  >
+                    Input
+                  </a>
+                  tab,
+                  and click the Run button to start one.
+                </div>
+              </div>
             <% end %>
           </.panel_content>
         </div>

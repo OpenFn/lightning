@@ -1,18 +1,18 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
 
+  alias LightningWeb.RunLive.Components
+
   @impl true
   def render(assigns) do
     ~H"""
-    <LightningWeb.RunLive.Components.run_details run={@run} />
-    <LightningWeb.RunLive.Components.log_view log={@run.log || []} />
+    <Components.run_details run={@run} />
+    <Components.log_view log={@run.log || []} />
     """
   end
 
   @impl true
-  def mount(params, %{"run_id" => run_id}, socket) do
-    IO.inspect(socket, label: "socket")
-    IO.inspect(params, label: "params")
+  def mount(_params, %{"run_id" => run_id}, socket) do
     run = Lightning.Invocation.get_run!(run_id)
 
     LightningWeb.Endpoint.subscribe("run:#{run.id}")
@@ -24,11 +24,9 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   """
   @impl true
   def handle_info(
-        %Phoenix.Socket.Broadcast{event: "update", payload: _payload} = msg,
+        %Phoenix.Socket.Broadcast{event: "update", payload: _payload},
         socket
       ) do
-    IO.inspect(msg)
-
     {:noreply,
      socket |> assign(run: socket.assigns.run |> Lightning.Repo.reload!())}
   end
