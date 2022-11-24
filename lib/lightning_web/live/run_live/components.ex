@@ -210,6 +210,22 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
+  attr :dataclip, :map, required: true
+
+  def dataclip_view(%{dataclip: dataclip} = assigns) do
+    lines =
+      dataclip.body
+      |> Jason.encode!()
+      |> Jason.Formatter.pretty_print()
+      |> String.split("\n")
+
+    assigns = assigns |> assign(lines: lines)
+
+    ~H"""
+    <.log_view log={@lines} />
+    """
+  end
+
   @base_classes ~w[
     my-auto whitespace-nowrap rounded-full
     py-2 px-4 text-center align-baseline text-xs font-medium leading-none
