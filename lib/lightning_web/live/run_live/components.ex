@@ -304,6 +304,26 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  alias Phoenix.LiveView.JS
+
+  def switch_section(section) do
+    JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
+    |> JS.set_attribute({"data-active", "false"},
+      to: "[data-section]:not([data-section=#{section}])"
+    )
+    |> show_section(section)
+  end
+
+  def show_section(js \\ %JS{}, section) do
+    js
+    |> JS.show(
+      to: "##{section}_section",
+      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
+      time: 200
+    )
+    |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
+  end
+
   # -------------------- Status Pills -------------------
 
   @base_classes ~w[

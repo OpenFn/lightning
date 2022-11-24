@@ -5,7 +5,6 @@ defmodule LightningWeb.RunLive.Show do
   use LightningWeb, :live_view
 
   alias Lightning.Invocation.Run
-  alias Phoenix.LiveView.JS
 
   import Ecto.Query
   import LightningWeb.RunLive.Components
@@ -30,24 +29,6 @@ defmodule LightningWeb.RunLive.Show do
       |> Lightning.Repo.one()
 
     socket |> assign(run: run, log: run.log)
-  end
-
-  def switch_section(section) do
-    JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
-    |> JS.set_attribute({"data-active", "false"},
-      to: "[data-section]:not([data-section=#{section}])"
-    )
-    |> show_section(section)
-  end
-
-  def show_section(js \\ %JS{}, section) do
-    js
-    |> JS.show(
-      to: "##{section}_section",
-      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
-      time: 200
-    )
-    |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
   end
 
   @impl true
