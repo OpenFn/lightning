@@ -115,6 +115,26 @@ defmodule Lightning.Pipeline.Runner do
   end
 
   @doc """
+  Scrubs values from all keys in configuration, will be replaced by extensions
+  to scrubber.ex, which is currently only used for logs.
+  """
+  @spec scrub_result(body :: map()) :: map()
+  def scrub_result(%{} = body) do
+    case Map.get(body, :configuration) do
+      nil ->
+        body
+
+      map ->
+        safe_body = body
+
+        Map.keys(map)
+        |> Enum.each(fn k -> Map.put(safe_body, k, "***") end)
+
+        safe_body
+    end
+  end
+
+  @doc """
   Creates a dataclip linked to the run that just finished.
   If either the file doesn't exist or there is a JSON decoding error, it logs
   and returns an error tuple.
@@ -136,7 +156,7 @@ defmodule Lightning.Pipeline.Runner do
         output_dataclip: %{
           project_id: job.workflow.project_id,
           type: :run_result,
-          body: body
+          body: scrub_result(body)
         }
       })
     else
