@@ -491,6 +491,22 @@ defmodule LightningWeb.RunWorkOrderTest do
                "input#run-search-form_status_options_4_selected[checked]"
              )
              |> has_element?()
+
+      assert view
+             |> element("input#run-search-form_search_term")
+             |> has_element?()
+
+      assert view
+             |> element(
+               "input#run-search-form_searchfor_options_0_selected[checked]"
+             )
+             |> has_element?()
+
+      assert view
+             |> element(
+               "input#run-search-form_searchfor_options_1_selected[checked]"
+             )
+             |> has_element?()
     end
 
     test "Run with failure status shows when option checked", %{
@@ -844,7 +860,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_one.workflow_id)
 
-      dataclip = dataclip_fixture()
+      dataclip =
+        dataclip_fixture(type: :http_request, body: %{"name" => "searchtext"})
 
       reason =
         reason_fixture(
@@ -879,7 +896,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_two.workflow_id)
 
-      dataclip = dataclip_fixture()
+      dataclip = dataclip_fixture(type: :http_request, body: %{"name" => "bar"})
 
       reason =
         reason_fixture(
@@ -905,11 +922,33 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      {:ok, _view, _html} =
+      {:ok, view, _html} =
         live(
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Failure"
+
+      # search :searchtext
+
+      view
+      |> element("#run-search-form")
+      |> render_submit(%{"search_term" => "searchtext"})
+
+      assert view
+             |> element(
+               "section#inner_content div[data-entity='work_order_list']"
+             )
+             |> render()
+             |> IO.inspect() =~ "workflow 2"
     end
   end
 
