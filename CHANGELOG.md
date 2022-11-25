@@ -13,6 +13,7 @@ and this project adheres to
 ### Changed
 
 - Updated @openfn/workflow-diagram to 0.4.0
+- Make plus button part of job nodes in Workflow Diagram
 
 ### Fixed
 
@@ -33,7 +34,6 @@ and this project adheres to
 - Configure cron expressions through a form
 - View runs grouped by work orders and attempts
 - Run an existing Job with any dataclip uuid from the Job form
-- Make plus button part of job nodes in Workflow Diagram
 
 ### Changed
 
