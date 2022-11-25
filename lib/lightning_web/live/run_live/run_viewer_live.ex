@@ -26,8 +26,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
         %Phoenix.Socket.Broadcast{event: "update", payload: _payload},
         socket
       ) do
-    {:noreply,
-     socket |> assign(run: socket.assigns.run |> Lightning.Repo.reload!())}
+    {:noreply, socket |> assign(run: get_run_with_output(socket.assigns.run.id))}
   end
 
   defp get_run_with_output(id) do
