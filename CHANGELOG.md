@@ -12,6 +12,8 @@ and this project adheres to
 
 ### Changed
 
+- Updated @openfn/workflow-diagram to 0.4.0
+
 ### Fixed
 
 ## [0.3.1] - 2022-11-22
