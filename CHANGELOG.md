@@ -14,6 +14,8 @@ and this project adheres to
 
 - Updated @openfn/workflow-diagram to 0.4.0
 - Make plus button part of job nodes in Workflow Diagram
+- Updated @openfn/adaptor-docs to 0.0.5
+- Updated @openfn/describe-package to 0.0.10
 
 ### Fixed
 
