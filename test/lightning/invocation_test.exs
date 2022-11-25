@@ -303,9 +303,13 @@ defmodule Lightning.InvocationTest do
         |> Lightning.Repo.insert!()
 
       simplified_result =
-        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
-          id: workflow.project_id
-        }).entries()
+        Invocation.list_work_orders_for_project(
+          %Lightning.Projects.Project{
+            id: workflow.project_id
+          },
+          [],
+          %{"page_size" => 10}
+        ).entries()
         |> Enum.map(fn %{work_order: wo} ->
           %{
             id: wo.id,
@@ -455,11 +459,230 @@ defmodule Lightning.InvocationTest do
 
       assert actual_last_run.id == run_three.id
     end
+
+    test "list_work_orders_for_project/3 returns paginated work orders with ordering" do
+      #  we set a page size of 3
+
+      # from now we set
+      # 3 work_orders of workflow 1
+      # 3 work_orders of workflow 2
+      # 3 work_orders of workflow 3 (most recents)
+
+      # all 15 workorders are executed one after another in asc order of finished_at
+
+      # we expect to have in page 1, only workorders of workflow-3 correctly ordered
+
+      # we expect to have in page 2, only workorders of workflow-2 correctly ordered
+
+      # we expect to have in page 3, only workorders of workflow-1 correctly ordered
+
+      project = project_fixture()
+      now = Timex.now()
+
+      job1 =
+        workflow_job_fixture(
+          project_id: project.id,
+          workflow_name: "workflow-1"
+        )
+
+      workflow1 = job1.workflow
+
+      %{work_order: wf1_wo1, run: wf1_run1} =
+        create_work_order(project, job1, now, 10)
+
+      %{work_order: wf1_wo2, run: wf1_run2} =
+        create_work_order(project, job1, now, 20)
+
+      %{work_order: wf1_wo3, run: wf1_run3} =
+        create_work_order(project, job1, now, 30)
+
+      job2 =
+        workflow_job_fixture(
+          project_id: project.id,
+          workflow_name: "workflow-2"
+        )
+
+      workflow2 = job2.workflow
+
+      %{work_order: wf2_wo1, run: wf2_run1} =
+        create_work_order(project, job2, now, 40)
+
+      %{work_order: wf2_wo2, run: wf2_run2} =
+        create_work_order(project, job2, now, 50)
+
+      %{work_order: wf2_wo3, run: wf2_run3} =
+        create_work_order(project, job2, now, 60)
+
+      job3 =
+        workflow_job_fixture(
+          project_id: project.id,
+          workflow_name: "workflow-3"
+        )
+
+      workflow3 = job3.workflow
+
+      %{work_order: wf3_wo1, run: wf3_run1} =
+        create_work_order(project, job3, now, 70)
+
+      %{work_order: wf3_wo2, run: wf3_run2} =
+        create_work_order(project, job3, now, 80)
+
+      %{work_order: wf3_wo3, run: wf3_run3} =
+        create_work_order(project, job3, now, 90)
+
+      ### PAGE 1 -----------------------------------------------------------------------
+
+      page_one_result = get_simplified_page(project, 1, [])
+
+      # all work_orders in page_one are from workflow 3
+      assert page_one_result |> length() == 3
+
+      assert page_one_result
+             |> Enum.all?(fn el -> el.workflow_id == workflow3.id end)
+
+      # all work_orders in page_one are ordered by finished_at
+
+      expected_order = [
+        %{
+          id: wf3_wo3.id,
+          last_run_finished_at: wf3_run3.finished_at,
+          workflow_id: workflow3.id
+        },
+        %{
+          id: wf3_wo2.id,
+          last_run_finished_at: wf3_run2.finished_at,
+          workflow_id: workflow3.id
+        },
+        %{
+          id: wf3_wo1.id,
+          last_run_finished_at: wf3_run1.finished_at,
+          workflow_id: workflow3.id
+        }
+      ]
+
+      assert expected_order == page_one_result
+
+      ### PAGE 2 -----------------------------------------------------------------------
+
+      page_two_result = get_simplified_page(project, 2, [])
+
+      # all work_orders in page_one are from workflow 2
+      assert page_two_result |> length() == 3
+
+      assert page_two_result
+             |> Enum.all?(fn el -> el.workflow_id == workflow2.id end)
+
+      # all work_orders in page_two are ordered by finished_at
+
+      expected_order = [
+        %{
+          id: wf2_wo3.id,
+          last_run_finished_at: wf2_run3.finished_at,
+          workflow_id: workflow2.id
+        },
+        %{
+          id: wf2_wo2.id,
+          last_run_finished_at: wf2_run2.finished_at,
+          workflow_id: workflow2.id
+        },
+        %{
+          id: wf2_wo1.id,
+          last_run_finished_at: wf2_run1.finished_at,
+          workflow_id: workflow2.id
+        }
+      ]
+
+      assert expected_order == page_two_result
+
+      ### PAGE 3 -----------------------------------------------------------------------
+
+      page_three_result = get_simplified_page(project, 3, [])
+
+      # all work_orders in page_one are from workflow 1
+      assert page_three_result |> length() == 3
+
+      assert page_three_result
+             |> Enum.all?(fn el -> el.workflow_id == workflow1.id end)
+
+      # all work_orders in page_three are ordered by finished_at
+
+      expected_order = [
+        %{
+          id: wf1_wo3.id,
+          last_run_finished_at: wf1_run3.finished_at,
+          workflow_id: workflow1.id
+        },
+        %{
+          id: wf1_wo2.id,
+          last_run_finished_at: wf1_run2.finished_at,
+          workflow_id: workflow1.id
+        },
+        %{
+          id: wf1_wo1.id,
+          last_run_finished_at: wf1_run1.finished_at,
+          workflow_id: workflow1.id
+        }
+      ]
+
+      assert expected_order == page_three_result
+    end
   end
 
-  # defp shift_date(date, shift_attrs) do
-  #   date
-  #   |> Timex.shift(shift_attrs)
-  #   |> Timex.to_naive_datetime()
-  # end
+  defp create_work_order(project, job, now, seconds) do
+    workflow = job.workflow
+    dataclip = dataclip_fixture(project_id: project.id)
+
+    reason =
+      reason_fixture(
+        dataclip_id: dataclip.id,
+        trigger_id: job.trigger.id
+      )
+
+    wo =
+      work_order_fixture(
+        project_id: project.id,
+        workflow_id: workflow.id
+      )
+
+    %{runs: [run]} =
+      Lightning.Attempt.new(%{
+        work_order_id: wo.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job.id,
+            started_at: now |> Timex.shift(seconds: seconds),
+            finished_at:
+              now
+              |> Timex.shift(seconds: seconds + 10),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Repo.insert!()
+
+    %{work_order: wo, run: run}
+  end
+
+  defp get_simplified_page(project, page, filter) do
+    Invocation.list_work_orders_for_project(
+      %Lightning.Projects.Project{
+        id: project.id
+      },
+      filter,
+      %{"page" => page, "page_size" => 3}
+    ).entries()
+    |> Enum.map(fn %{work_order: wo} ->
+      %{
+        id: wo.id,
+        workflow_id: wo.workflow_id,
+        last_run_finished_at:
+          Enum.at(wo.attempts, 0)
+          |> Map.get(:runs)
+          |> Enum.at(0)
+          |> Map.get(:finished_at)
+      }
+    end)
+  end
 end

@@ -464,6 +464,22 @@ defmodule Lightning.Invocation do
     )
   end
 
+  def list_work_orders_for_project(%Project{} = project, filter, params)
+      when filter in [nil, []] do
+    list_work_orders_for_project(
+      project,
+      [
+        status: [:success, :failure, :timeout, :crash, :pending],
+        searchfors: [],
+        search_term: "",
+        workflow_id: "",
+        date_after: "",
+        date_before: ""
+      ],
+      params
+    )
+  end
+
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
