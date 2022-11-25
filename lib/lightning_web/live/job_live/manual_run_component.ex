@@ -38,7 +38,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           phx-click="confirm"
           phx-target={@myself}
         />
-        <.live_info_block myself={@myself} flash={@flash} />
       </.form>
     </div>
     """
@@ -116,7 +115,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
         {:noreply,
          socket
-         |> put_flash(:info, "Run enqueued.")
          |> push_event("push-hash", %{hash: "output"})}
 
       {:error, changeset} ->

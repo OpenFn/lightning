@@ -7,7 +7,6 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Invocation.Run
 
   import Ecto.Query
-  import LightningWeb.RunLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -28,7 +27,7 @@ defmodule LightningWeb.RunLive.Show do
       from(r in Run, where: r.id == ^id, preload: :output_dataclip)
       |> Lightning.Repo.one()
 
-    socket |> assign(run: run, log: run.log)
+    socket |> assign(run: run)
   end
 
   @impl true
@@ -39,30 +38,7 @@ defmodule LightningWeb.RunLive.Show do
         <Layout.header socket={@socket} title={@page_title} />
       </:header>
       <Layout.centered>
-        <.run_details run={@run} />
-        <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
-          <.toggle_item data-section="output" phx-click={switch_section("output")}>
-            Output
-          </.toggle_item>
-          <.toggle_item
-            data-section="log"
-            phx-click={switch_section("log")}
-            active="true"
-          >
-            Log
-          </.toggle_item>
-        </.toggle_bar>
-
-        <div id="log_section" style="display: none;" class="@container">
-          <%= if @log do %>
-            <.log_view log={@log} />
-          <% else %>
-            <.no_log_message />
-          <% end %>
-        </div>
-        <div id="output_section" style="display: none;" class="@container">
-          <.dataclip_view dataclip={@run.output_dataclip} />
-        </div>
+        <LightningWeb.RunLive.Components.run_viewer run={@run} />
       </Layout.centered>
     </Layout.page_content>
     """

@@ -92,6 +92,38 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  # --------------- Run Details ---------------
+  attr :run, :any, required: true
+
+  def run_viewer(assigns) do
+    ~H"""
+    <.run_details run={@run} />
+    <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
+      <.toggle_item data-section="output" phx-click={switch_section("output")}>
+        Output
+      </.toggle_item>
+      <.toggle_item
+        data-section="log"
+        phx-click={switch_section("log")}
+        active="true"
+      >
+        Log
+      </.toggle_item>
+    </.toggle_bar>
+
+    <div id="log_section" style="display: none;" class="@container">
+      <%= if @run.log do %>
+        <.log_view log={@run.log} />
+      <% else %>
+        <.no_log_message />
+      <% end %>
+    </div>
+    <div id="output_section" style="display: none;" class="@container">
+      <.dataclip_view dataclip={@run.output_dataclip} />
+    </div>
+    """
+  end
+
   attr :run, :any, required: true
 
   def run_details(%{run: run} = assigns) do

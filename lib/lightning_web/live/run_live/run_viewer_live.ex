@@ -1,36 +1,12 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
 
-  import LightningWeb.RunLive.Components
   import Ecto.Query, only: [from: 2]
 
   @impl true
   def render(assigns) do
     ~H"""
-    <.run_details run={@run} />
-    <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
-      <.toggle_item data-section="output" phx-click={switch_section("output")}>
-        Output
-      </.toggle_item>
-      <.toggle_item
-        data-section="log"
-        phx-click={switch_section("log")}
-        active="true"
-      >
-        Log
-      </.toggle_item>
-    </.toggle_bar>
-
-    <div id="log_section" style="display: none;" class="@container">
-      <%= if @run.log do %>
-        <.log_view log={@run.log} />
-      <% else %>
-        <.no_log_message />
-      <% end %>
-    </div>
-    <div id="output_section" style="display: none;" class="@container">
-      <.dataclip_view dataclip={@run.output_dataclip} />
-    </div>
+    <LightningWeb.RunLive.Components.run_viewer run={@run} />
     """
   end
 

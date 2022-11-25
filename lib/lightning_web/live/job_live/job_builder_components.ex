@@ -149,7 +149,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   end
 
   defp switch_tabs(hash) do
-    JS.hide(to: "[data-panel-hash]")
+    JS.hide(to: "[data-panel-hash]:not([data-panel-hash=#{hash}])")
     |> JS.show(
       to: "[data-panel-hash=#{hash}]",
       transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
