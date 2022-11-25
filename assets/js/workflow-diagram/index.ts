@@ -48,16 +48,13 @@ export default {
       const projectSpace = this.updateProjectSpace();
 
       this.component.update({
+        onJobAddClick: node => {
+          this.addJob(node.data.id);
+        },
         onNodeClick: (event, node) => {
           switch (node.type) {
             case 'job':
-              const plusIds = new Set(['plusButton', 'plusIcon']);
-              const target = event.target as HTMLElement;
-              if (plusIds.has(target.id)) {
-                this.addJob(node.data.id);
-              } else {
-                this.selectJob(node.data.id);
-              }
+              this.selectJob(node.data.id);
               break;
 
             case 'workflow':
