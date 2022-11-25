@@ -913,7 +913,6 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
   end
 
-
   describe "Show" do
     test "log_view component" do
       log_lines = ["First line", "Second line"]
