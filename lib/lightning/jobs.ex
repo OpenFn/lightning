@@ -194,7 +194,10 @@ defmodule Lightning.Jobs do
 
   """
   def delete_job(%Job{} = job) do
-    Repo.delete(job)
+    job
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.foreign_key_constraint(:trigger_id)
+    |> Repo.delete()
   end
 
   @doc """

@@ -2,9 +2,10 @@ defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   alias Lightning.Workflows
+  alias Lightning.Jobs
 
   defp encode_project_space(project) do
     Workflows.get_workflows_for(project)
@@ -26,6 +27,40 @@ defmodule LightningWeb.WorkflowLive do
        new_credential: false,
        builder_state: %{}
      )}
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    job = Jobs.get_job!(id)
+
+    case Jobs.delete_job(job) do
+      {:ok, _} ->
+        LightningWeb.Endpoint.broadcast!(
+          "project_space:#{socket.assigns.project.id}",
+          "update",
+          %{}
+        )
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Job deleted successfully")
+         |> push_patch(
+           to:
+             Routes.project_workflow_path(
+               socket,
+               :show,
+               socket.assigns.project.id
+             )
+         )}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Unable to delete this job because it has downstream jobs"
+         )}
+    end
   end
 
   @doc """

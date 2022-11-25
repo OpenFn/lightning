@@ -171,6 +171,18 @@ defmodule LightningWeb.JobLive.JobBuilder do
           >
             Save
           </Form.submit_button>
+          <a
+            href="#"
+            phx-click="delete"
+            phx-value-id={@job_id}
+            data={[
+              confirm:
+                "This action is irreversible, are you sure you want to continue?"
+            ]}
+            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+          >
+            Delete
+          </a>
         </div>
       </div>
     </div>
