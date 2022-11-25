@@ -37,6 +37,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
+  def follow_run(job_id, attempt_run) do
+    send_update(__MODULE__,
+      id: id(job_id),
+      attempt_run: attempt_run,
+      event: :follow_run
+    )
+  end
+
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
 
@@ -51,7 +59,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
     >
       <div class="flex flex-col h-full">
         <div class="flex-none">
-          <div class="flex gap-x-8 gap-y-2 border-b border-gray-200 dark:border-gray-600">
+          <.tab_bar id={@id} default_hash="setup">
             <!-- The tabs navigation -->
             <.tab_item hash="setup">Setup</.tab_item>
             <.tab_item hash="input">Input</.tab_item>
@@ -62,7 +70,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               </.when_invalid>
             </.tab_item>
             <.tab_item hash="output">Output</.tab_item>
-          </div>
+          </.tab_bar>
         </div>
         <div class="grow overflow-y-auto p-3">
           <!-- The tabs content -->
@@ -105,6 +113,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                   <button
                     id="new-credential-launcher"
                     type="button"
+                    class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
                     phx-click="open_new_credential"
                     phx-target={@myself}
                   >
@@ -129,6 +138,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 current_user={@current_user}
                 id={"manual-job-#{@job_id}"}
                 job_id={@job_id}
+                on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
               />
@@ -154,7 +164,34 @@ defmodule LightningWeb.JobLive.JobBuilder do
             </div>
           </.panel_content>
           <.panel_content for_hash="output">
-            Output block
+            <%= if @follow_run_id do %>
+              <div class="h-full">
+                <%= live_render(
+                  @socket,
+                  LightningWeb.RunLive.RunViewerLive,
+                  id: "run-viewer-#{@follow_run_id}",
+                  session: %{"run_id" => @follow_run_id},
+                  sticky: true
+                ) %>
+              </div>
+            <% else %>
+              <div class="w-1/2 h-16 text-center m-auto pt-4">
+                <div class="font-semibold text-gray-500 pb-2">
+                  No Run
+                </div>
+                <div class="text-xs text-gray-400">
+                  Select a dataclip on the
+                  <a
+                    href="#input"
+                    class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+                  >
+                    Input
+                  </a>
+                  tab,
+                  and click the Run button to start one.
+                </div>
+              </div>
+            <% end %>
           </.panel_content>
         </div>
         <div class="flex-none sticky p-3 border-t">
@@ -277,8 +314,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
     |> Job.changeset(params)
   end
 
-  # NOTE: consider multiple update functions to handle new, new from (job) and
-  # inspecting attempt runs.
+  @impl true
+  def mount(socket) do
+    {:ok, socket |> assign(follow_run_id: nil)}
+  end
+
   @impl true
   def update(
         %{
@@ -356,5 +396,9 @@ defmodule LightningWeb.JobLive.JobBuilder do
      |> assign_changeset_and_params(%{
        "project_credential_id" => project_credential_id
      })}
+  end
+
+  def update(%{event: :follow_run, attempt_run: attempt_run}, socket) do
+    {:ok, socket |> assign(follow_run_id: attempt_run.run.id)}
   end
 end

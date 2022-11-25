@@ -23,18 +23,18 @@ import 'phoenix_html';
 // Establish Phoenix Socket and LiveView configuration.
 import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
-import Alpine from 'alpinejs';
 
 import topbar from '../vendor/topbar';
 import WorkflowDiagram from './workflow-diagram';
 import AdaptorDocs from './adaptor-docs';
+import TabSelector from './tab-selector';
 import Editor from './editor';
 
-let Hooks = { WorkflowDiagram, AdaptorDocs, Editor };
+let Hooks = { WorkflowDiagram, AdaptorDocs, Editor, TabSelector };
 
 Hooks.AssocListChange = {
   mounted() {
-    this.el.addEventListener('change', event => {
+    this.el.addEventListener('change', _event => {
       this.pushEventTo(this.el, 'select_item', { id: this.el.value });
     });
   },
@@ -54,8 +54,6 @@ Hooks.AutoResize = {
   },
 };
 
-window.Alpine = Alpine;
-
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -66,8 +64,15 @@ let liveSocket = new LiveSocket('/live', Socket, {
   hooks: Hooks,
   dom: {
     onBeforeElUpdated(from, to) {
-      if (from.__x) {
-        window.Alpine.clone(from.__x, to);
+      // If an element has any of the 'lv-keep-*' attributes, copy across
+      // the given attribute to maintain various styles and properties
+      // that have had their control handed-over to a Hook or JS implementation.
+      if (from.attributes['lv-keep-style']) {
+        to.setAttribute('style', from.attributes.style.value);
+      }
+
+      if (from.attributes['lv-keep-class']) {
+        to.setAttribute('class', from.attributes.class.value);
       }
     },
   },
@@ -78,11 +83,13 @@ let liveSocket = new LiveSocket('/live', Socket, {
 topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
 let topBarScheduled = undefined;
+
 window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {
     topBarScheduled = setTimeout(() => topbar.show(), 120);
   }
 });
+
 window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;

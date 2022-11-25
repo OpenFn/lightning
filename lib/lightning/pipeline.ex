@@ -31,7 +31,6 @@ defmodule Lightning.Pipeline do
   @spec process(AttemptRun.t()) :: :ok
   def process(%AttemptRun{} = attempt_run) do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
-    # run = Invocation.get_run!(event)
     result = Runner.start(run)
 
     jobs = get_jobs_for_result(run.job_id, result)
