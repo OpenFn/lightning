@@ -196,7 +196,9 @@ defmodule Lightning.Jobs do
   def delete_job(%Job{} = job) do
     job
     |> Ecto.Changeset.change()
-    |> Ecto.Changeset.foreign_key_constraint(:trigger_id)
+    |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
+      message: "This job is associated with downstream jobs"
+    )
     |> Repo.delete()
   end
 

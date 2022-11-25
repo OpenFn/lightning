@@ -173,6 +173,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </Form.submit_button>
           <a
             href="#"
+            id="delete-job"
             phx-click="delete"
             phx-value-id={@job_id}
             data={[

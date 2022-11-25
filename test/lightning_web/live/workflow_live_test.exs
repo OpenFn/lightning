@@ -9,6 +9,9 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   import Lightning.JobsFixtures
 
+  alias Lightning.Jobs
+  alias Lightning.Jobs.Job
+
   describe "show" do
     setup %{project: project} do
       %{job: job_fixture(project_id: project.id)}
@@ -83,6 +86,53 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert has_element?(view, "#builder-#{job.id}")
 
       assert view |> has_expected_adaptor?("@openfn/language-http@latest")
+    end
+
+    test "deleting a job", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#delete-job")
+
+      assert view
+             |> element("#delete-job")
+             |> render_click() =~ "Job deleted successfully"
+
+      job = job_fixture()
+
+      {:ok, %Job{} = _} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: job.id},
+          workflow_id: job.workflow_id
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#delete-job")
+
+      assert view
+             |> element("#delete-job")
+             |> render_click() =~
+               "Unable to delete this job because it has downstream jobs"
     end
   end
 
