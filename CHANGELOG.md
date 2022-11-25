@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Added a Delete job button in Inspector
+
 ### Changed
 
 ### Fixed
