@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.3.1">
 
-    <title>Lightning.Auditing.Model — Lightning v0.3.1</title>
+    <title>LightningWeb.RunLive.RunViewerLive — Lightning v0.3.1</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,20 +101,16 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/model.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Auditing.Model</span> 
+  <span translate="no">LightningWeb.RunLive.RunViewerLive</span> 
   <small class="app-vsn" translate="no">(Lightning v0.3.1)</small>
 
 </h1>
 
-
-  <section id="moduledoc">
-<p>Macro module to add common model behaviour to a given Ecto model</p>
-  </section>
 
 
   <section id="summary" class="details-list">
@@ -133,22 +129,11 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#event/5" translate="no">event(schema, event, row_id, actor_id, metadata \\ %{})</a>
+          <a href="#handle_info/2" translate="no">handle_info(broadcast, socket)</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Creates a <code class="inline">schema</code> changeset for the <code class="inline">event</code> identified by <code class="inline">row_id</code> and caused
-by <code class="inline">actor_id</code>.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#save/2" translate="no">save(changes, repo)</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>Saves the event to the <code class="inline">Repo</code>.</p></div>
+          <div class="summary-synopsis"><p>Reload the run when any update messages arrive.</p></div>
 
       </div>
 
@@ -166,18 +151,16 @@ by <code class="inline">actor_id</code>.</p></div>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="event/5">
-
-    <span id="event/4"></span>
+<section class="detail" id="handle_info/2">
 
   <div class="detail-header">
-    <a href="#event/5" class="detail-link" title="Link to this function">
+    <a href="#handle_info/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">event(schema, event, row_id, actor_id, metadata \\ %{})</h1>
+    <h1 class="signature" translate="no">handle_info(broadcast, socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/model.ex#L98" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/run_live/run_viewer_live.ex#L25" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -187,51 +170,7 @@ Functions
 
   <section class="docstring">
 
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> event(
-  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">module</a>(),
-  <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>(),
-  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>() | nil
-) :: :no_changes | <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
-
-      </div>
-
-<p>Creates a <code class="inline">schema</code> changeset for the <code class="inline">event</code> identified by <code class="inline">row_id</code> and caused
-by <code class="inline">actor_id</code>.</p><p>The given <code class="inline">metadata</code> can be either <code class="inline">nil</code>, <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a>, struct or map.</p><p>It returns <code class="inline">:no_changes</code> in case of an <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> metadata that changed nothing
-or an <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html"><code class="inline">Ecto.Changeset</code></a> with the event ready to be inserted.</p>
-  </section>
-</section>
-<section class="detail" id="save/2">
-
-  <div class="detail-header">
-    <a href="#save/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">save(changes, repo)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auditing/model.ex#L71" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> save(<a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>() | :no_changes, <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Repo.html#t:t/0">Ecto.Repo.t</a>()) ::
-  {:ok, :no_changes} | {:ok, <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Schema.html#t:t/0">Ecto.Schema.t</a>()} | {:error, <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()}</pre>
-
-      </div>
-
-<p>Saves the event to the <code class="inline">Repo</code>.</p><p>In case of nothing changes, do nothing.</p><p>It returns <code class="inline">{:ok, :no_changes}</code> if nothing changed, <code class="inline">{:ok, struct}</code> if the log
-has been successfully saved or <code class="inline">{:error, changeset}</code> in case of error.</p>
+<p>Reload the run when any update messages arrive.</p>
   </section>
 </section>
 
