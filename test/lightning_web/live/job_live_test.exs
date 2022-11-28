@@ -7,6 +7,8 @@ defmodule LightningWeb.JobLiveTest do
   import Lightning.CredentialsFixtures
 
   alias LightningWeb.JobLive.AdaptorPicker
+  alias Lightning.Jobs
+  alias Lightning.Jobs.Job
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -66,6 +68,62 @@ defmodule LightningWeb.JobLiveTest do
 
       assert AdaptorPicker.display_name_for_adaptor("@other_org/some_module") ==
                "@other_org/some_module"
+    end
+  end
+
+  describe "Deleting a job from inspector" do
+    test "jobs with no dowstream jobs can be deleted", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#delete-job")
+
+      view
+      |> element("#delete-job")
+      |> render_click()
+
+      assert_patched(
+        view,
+        Routes.project_workflow_path(conn, :show, project.id)
+      )
+    end
+
+    test "jobs with downstream jobs can't be deleted", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, %Job{} = _} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: job.id},
+          workflow_id: job.workflow_id
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(
+               view,
+               "button#delete-job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
+             )
     end
   end
 end

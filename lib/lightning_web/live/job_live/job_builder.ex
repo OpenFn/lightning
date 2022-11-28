@@ -226,6 +226,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               id="delete-job"
               text="Delete"
               phx-click="delete"
+              phx-target={@myself}
               phx-value-id={@job_id}
               disabled={!is_deletable(@job_id)}
               data={[
@@ -240,6 +241,33 @@ defmodule LightningWeb.JobLive.JobBuilder do
       </div>
     </div>
     """
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    job = Jobs.get_job!(id)
+
+    case Jobs.delete_job(job) do
+      {:ok, _} ->
+        LightningWeb.Endpoint.broadcast!(
+          "project_space:#{socket.assigns.project.id}",
+          "update",
+          %{}
+        )
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Job deleted successfully")
+         |> push_patch(to: socket.assigns.return_to)}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Unable to delete this job because it has downstream jobs"
+         )}
+    end
   end
 
   @impl true
