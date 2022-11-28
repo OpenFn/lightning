@@ -48,7 +48,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <div class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white">
         <%= @workflow_name %>
       </div>
-      <div class="my-auto p-6"><%= @work_order.reason.dataclip_id %></div>
+      <div class="my-auto p-6"><%= @work_order.reason.type %></div>
       <div class="my-auto p-6">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
           <div><%= @work_order.reason.id %></div>
