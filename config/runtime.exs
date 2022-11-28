@@ -38,13 +38,20 @@ config :lightning, Oban,
        {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}}
      ]}
   ],
-  shutdown_grace_period: 15_000,
+  shutdown_grace_period:
+    System.get_env("MAX_RUN_DURATION", "60000")
+    |> String.to_integer(),
   dispatch_cooldown: 100,
   queues: [
     scheduler: 1,
     background: 1,
     runs: System.get_env("GLOBAL_RUNS_CONCURRENCY", "1") |> String.to_integer()
   ]
+
+config :lightning,
+       :max_run_duration,
+       System.get_env("MAX_RUN_DURATION", "60000")
+       |> String.to_integer()
 
 config :lightning,
        :queue_result_retention_period,
