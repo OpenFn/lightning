@@ -45,7 +45,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
       event: :follow_run
     )
   end
-  
+
   defp is_deletable(job_id) do
     Jobs.get_job!(job_id) |> Jobs.get_downstream_jobs_for() |> Enum.count() == 0
   end
