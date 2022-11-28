@@ -123,7 +123,11 @@ defmodule Lightning.Workflows do
       :webhook ->
         %{
           "webhookUrl" =>
-            Helpers.webhooks_url(LightningWeb.Endpoint, :create, [job.id])
+            Helpers.webhooks_url(
+              LightningWeb.Endpoint,
+              :create,
+              [job.trigger.id]
+            )
         }
 
       :cron ->
