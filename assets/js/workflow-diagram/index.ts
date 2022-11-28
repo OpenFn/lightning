@@ -48,7 +48,10 @@ export default {
       const projectSpace = this.updateProjectSpace();
 
       this.component.update({
-        onNodeClick: (_event, node) => {
+        onJobAddClick: node => {
+          this.addJob(node.data.id);
+        },
+        onNodeClick: (event, node) => {
           switch (node.type) {
             case 'job':
               this.selectJob(node.data.id);
@@ -56,10 +59,6 @@ export default {
 
             case 'workflow':
               this.selectWorkflow(node.data.id);
-              break;
-
-            case 'add':
-              this.addJob(node.data.parentId);
               break;
           }
         },

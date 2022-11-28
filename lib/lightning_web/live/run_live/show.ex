@@ -7,13 +7,14 @@ defmodule LightningWeb.RunLive.Show do
   alias Lightning.Invocation.Run
 
   import Ecto.Query
-  import LightningWeb.RunLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket |> assign(active_menu_item: :runs, page_title: "Run")}
+    {:ok,
+     socket
+     |> assign(active_menu_item: :runs, page_title: "Run")}
   end
 
   @impl true
@@ -22,9 +23,11 @@ defmodule LightningWeb.RunLive.Show do
   end
 
   def apply_action(socket, :show, %{"id" => id}) do
-    run = from(r in Run, where: r.id == ^id) |> Lightning.Repo.one()
+    run =
+      from(r in Run, where: r.id == ^id, preload: :output_dataclip)
+      |> Lightning.Repo.one()
 
-    socket |> assign(run: run, log: run.log || [])
+    socket |> assign(run: run)
   end
 
   @impl true
@@ -35,8 +38,7 @@ defmodule LightningWeb.RunLive.Show do
         <Layout.header socket={@socket} title={@page_title} />
       </:header>
       <Layout.centered>
-        <.run_details run={@run} />
-        <.log_view log={@log} />
+        <LightningWeb.RunLive.Components.run_viewer run={@run} />
       </Layout.centered>
     </Layout.page_content>
     """

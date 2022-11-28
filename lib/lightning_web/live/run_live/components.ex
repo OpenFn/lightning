@@ -92,19 +92,63 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  # --------------- Run Details ---------------
+  attr :run, :any, required: true
+
+  def run_viewer(assigns) do
+    ~H"""
+    <.run_details run={@run} />
+    <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
+      <.toggle_item data-section="output" phx-click={switch_section("output")}>
+        Output
+      </.toggle_item>
+      <.toggle_item
+        data-section="log"
+        phx-click={switch_section("log")}
+        active="true"
+      >
+        Log
+      </.toggle_item>
+    </.toggle_bar>
+
+    <div id="log_section" style="display: none;" class="@container">
+      <%= if @run.log do %>
+        <.log_view log={@run.log} />
+      <% else %>
+        <.no_log_message />
+      <% end %>
+    </div>
+    <div id="output_section" style="display: none;" class="@container">
+      <.dataclip_view dataclip={@run.output_dataclip} />
+    </div>
+    """
+  end
+
   attr :run, :any, required: true
 
   def run_details(%{run: run} = assigns) do
     run_finished_at =
-      if run.finished_at do
-        run.finished_at |> Calendar.strftime("%c")
+      cond do
+        run.finished_at ->
+          run.finished_at |> Calendar.strftime("%c")
+
+        run.started_at ->
+          "Running..."
+
+        true ->
+          "Not started."
       end
 
     ran_for =
-      if run.finished_at do
-        DateTime.diff(run.finished_at, run.started_at, :millisecond)
-      else
-        DateTime.diff(DateTime.utc_now(), run.started_at, :millisecond)
+      cond do
+        run.finished_at ->
+          "#{DateTime.diff(run.finished_at, run.started_at, :millisecond)} ms"
+
+        run.started_at ->
+          "#{DateTime.diff(DateTime.utc_now(), run.started_at, :millisecond)} ms"
+
+        true ->
+          "Not started."
       end
 
     assigns =
@@ -115,25 +159,27 @@ defmodule LightningWeb.RunLive.Components do
       )
 
     ~H"""
-    <div class="flex flex-row" id={"finished-at-#{@run.id}"}>
-      <div class="basis-3/4 font-semibold text-secondary-700">Finished</div>
-      <div class="basis-1/4 text-right"><%= @run_finished_at || "Running..." %></div>
-    </div>
-    <div class="flex flex-row" id={"ran-for-#{@run.id}"}>
-      <div class="basis-3/4 font-semibold text-secondary-700">Ran for</div>
-      <div class="basis-1/4 text-right"><%= @ran_for %>ms</div>
-    </div>
-    <div class="flex flex-row" id={"exit-code-#{@run.id}"}>
-      <div class="basis-3/4 font-semibold text-secondary-700">Exit Code</div>
-      <div class="basis-1/4 text-right">
-        <%= case @run.exit_code do %>
-          <% nil -> %>
-            <.pending_pill class="font-mono font-bold">?</.pending_pill>
-          <% val when val > 0-> %>
-            <.failure_pill class="font-mono font-bold"><%= val %></.failure_pill>
-          <% val when val == 0 -> %>
-            <.success_pill class="font-mono font-bold">0</.success_pill>
-        <% end %>
+    <div class="flex flex-col gap-2">
+      <div class="flex gap-4 flex-row text-sm" id={"finished-at-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Finished</div>
+        <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
+      </div>
+      <div class="flex flex-row text-sm" id={"ran-for-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Ran for</div>
+        <div class="basis-1/2 text-right"><%= @ran_for %></div>
+      </div>
+      <div class="flex flex-row text-sm" id={"exit-code-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Exit Code</div>
+        <div class="basis-1/2 text-right">
+          <%= case @run.exit_code do %>
+            <% nil -> %>
+              <.pending_pill class="font-mono font-bold">?</.pending_pill>
+            <% val when val > 0-> %>
+              <.failure_pill class="font-mono font-bold"><%= val %></.failure_pill>
+            <% val when val == 0 -> %>
+              <.success_pill class="font-mono font-bold">0</.success_pill>
+          <% end %>
+        </div>
       </div>
     </div>
     """
@@ -149,7 +195,7 @@ defmodule LightningWeb.RunLive.Components do
       div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content; }
     </style>
     <div class="rounded-md mt-4 text-slate-200 bg-slate-700 border-slate-300 shadow-sm
-                    font-mono proportional-nums w-full">
+                    font-mono proportional-nums w-full text-sm">
       <%= for { line, i } <- @log do %>
         <.log_line num={i} line={line} />
       <% end %>
@@ -196,6 +242,122 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
+  attr :dataclip, :any, required: true
+
+  def dataclip_view(%{dataclip: dataclip} = assigns) do
+    lines =
+      if dataclip do
+        dataclip.body
+        |> Jason.encode!()
+        |> Jason.Formatter.pretty_print()
+        |> String.split("\n")
+      end
+
+    assigns = assigns |> assign(lines: lines)
+
+    ~H"""
+    <%= if @dataclip do %>
+      <.log_view log={@lines} />
+    <% else %>
+      <.no_dataclip_message />
+    <% end %>
+    """
+  end
+
+  def no_dataclip_message(assigns) do
+    ~H"""
+    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
+      <div class="flex flex-col">
+        <div class="m-auto">
+          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
+        </div>
+        <div class="font-sm text-slate-400 text-center">
+          <span class="text-slate-500 font-semibold">
+            Nothing here yet.
+          </span>
+          <br /> The resulting dataclip will appear here
+          when the run finishes successfully.
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  def no_log_message(assigns) do
+    ~H"""
+    <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
+      <div class="flex flex-col">
+        <div class="m-auto">
+          <Heroicons.question_mark_circle class="h-16 w-16 stroke-gray-400" />
+        </div>
+        <div class="font-sm text-slate-400 text-center">
+          <span class="text-slate-500 font-semibold">
+            Nothing here yet.
+          </span>
+          <br /> The resulting log will appear here when the run completes.
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  # ------------------- Toggle Bar ---------------------
+  # Used to switch between Log and Output
+
+  slot :inner_block, required: true
+  attr :class, :string, default: "items-end"
+  attr :rest, :global
+
+  def toggle_bar(assigns) do
+    ~H"""
+    <div class={"flex flex-col #{@class}"} {@rest}>
+      <div class="flex rounded-lg p-1 bg-gray-200 font-semibold">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :active, :string, default: "false"
+  slot :inner_block, required: true
+  attr :rest, :global
+
+  def toggle_item(assigns) do
+    ~H"""
+    <div
+      data-active={@active}
+      class="group text-sm shadow-sm text-gray-700
+                     data-[active=true]:bg-white data-[active=true]:text-indigo-500
+                     px-4 py-2 rounded-md align-middle flex items-center cursor-pointer"
+      {@rest}
+    >
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
+  alias Phoenix.LiveView.JS
+
+  def switch_section(section) do
+    JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
+    |> JS.set_attribute({"data-active", "false"},
+      to: "[data-section]:not([data-section=#{section}])"
+    )
+    |> show_section(section)
+  end
+
+  def show_section(js \\ %JS{}, section) do
+    js
+    |> JS.show(
+      to: "##{section}_section",
+      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
+      time: 200
+    )
+    |> JS.set_attribute({"data-active", "true"}, to: "[data-section=#{section}]")
+  end
+
+  # -------------------- Status Pills -------------------
+
   @base_classes ~w[
     my-auto whitespace-nowrap rounded-full
     py-2 px-4 text-center align-baseline text-xs font-medium leading-none
@@ -224,7 +386,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   def pending_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-grey-200 text-grey-800])
+    assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
 
     ~H"""
     <span class={@classes}>

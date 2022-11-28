@@ -261,6 +261,7 @@ defmodule LightningWeb.Components.Form do
       h-4
       w-4
       text-primary-600
+      text-sm
       border-secondary-300
       rounded
     ]
@@ -272,7 +273,7 @@ defmodule LightningWeb.Components.Form do
       block
       w-full
       shadow-sm
-      sm:text-sm
+      text-sm
       border-secondary-300
       rounded-md
     ]
@@ -331,6 +332,7 @@ defmodule LightningWeb.Components.Form do
       rounded-md
       border-secondary-300
       shadow-sm
+      text-sm
       focus:border-primary-300
       focus:ring
       focus:ring-primary-200
