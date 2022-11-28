@@ -127,12 +127,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ project.name
 
-      assert has_element?(view, "#delete-job")
-
-      assert view
-             |> element("#delete-job")
-             |> render_click() =~
-               "Unable to delete this job because it has downstream jobs"
+      assert has_element?(
+               view,
+               "button#delete-job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
+             )
     end
   end
 

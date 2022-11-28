@@ -5,6 +5,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   use LightningWeb, :live_component
   alias LightningWeb.Components.Form
+  alias Lightning.Jobs
   alias Lightning.Jobs.Job
 
   import LightningWeb.JobLive.JobBuilderComponents
@@ -37,8 +38,20 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
-  attr :return_to, :string, required: true
-  attr :params, :map, default: %{}
+  defp is_deletable(job_id) do
+    Jobs.get_job!(job_id) |> Jobs.get_downstream_jobs_for() |> Enum.count() == 0
+  end
+
+  defp delete_job_title(job_id) do
+    if is_deletable(job_id) do
+      "Delete this job"
+    else
+      "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
+    end
+  end
+
+  attr(:return_to, :string, required: true)
+  attr(:params, :map, default: %{})
 
   @impl true
   def render(assigns) do
@@ -171,19 +184,21 @@ defmodule LightningWeb.JobLive.JobBuilder do
           >
             Save
           </Form.submit_button>
-          <a
-            href="#"
-            id="delete-job"
-            phx-click="delete"
-            phx-value-id={@job_id}
-            data={[
-              confirm:
-                "This action is irreversible, are you sure you want to continue?"
-            ]}
-            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
-          >
-            Delete
-          </a>
+          <%= if @job_id != "new" do %>
+            <Common.button
+              id="delete-job"
+              text="Delete"
+              phx-click="delete"
+              phx-value-id={@job_id}
+              disabled={!is_deletable(@job_id)}
+              data={[
+                confirm:
+                  "This action is irreversible, are you sure you want to continue?"
+              ]}
+              title={delete_job_title(@job_id)}
+              color="red"
+            />
+          <% end %>
         </div>
       </div>
     </div>
