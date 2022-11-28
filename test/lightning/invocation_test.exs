@@ -223,6 +223,7 @@ defmodule Lightning.InvocationTest do
 
     test "list_work_orders_for_project/1 returns work orders ordered by last run finished at desc, with nulls first" do
       job = workflow_job_fixture(workflow_name: "chw-help")
+      job_2 = job_fixture(workflow_id: job.workflow_id)
       reason = reason_fixture(trigger_id: job.trigger.id)
       workflow = job.workflow
 
@@ -235,7 +236,7 @@ defmodule Lightning.InvocationTest do
 
       now = Timex.now()
 
-      %{runs: [run_one]} =
+      %{runs: [_run_one, run_two]} =
         Lightning.Attempt.new(%{
           work_order_id: wo_one.id,
           reason_id: reason.id,
@@ -246,12 +247,19 @@ defmodule Lightning.InvocationTest do
               finished_at: now |> Timex.shift(seconds: -40),
               exit_code: 0,
               input_dataclip_id: dataclip.id
+            },
+            %{
+              job_id: job_2.id,
+              started_at: now |> Timex.shift(seconds: -41),
+              finished_at: now |> Timex.shift(seconds: -43),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
             }
           ]
         })
         |> Lightning.Repo.insert!()
 
-      %{runs: [run_two]} =
+      %{runs: [run_three]} =
         Lightning.Attempt.new(%{
           work_order_id: wo_two.id,
           reason_id: reason.id,
@@ -267,7 +275,7 @@ defmodule Lightning.InvocationTest do
         })
         |> Lightning.Repo.insert!()
 
-      %{runs: [run_three]} =
+      %{runs: [run_four]} =
         Lightning.Attempt.new(%{
           work_order_id: wo_three.id,
           reason_id: reason.id,
@@ -283,7 +291,7 @@ defmodule Lightning.InvocationTest do
         })
         |> Lightning.Repo.insert!()
 
-      %{runs: [run_four]} =
+      %{runs: [run_five]} =
         Lightning.Attempt.new(%{
           work_order_id: wo_four.id,
           reason_id: reason.id,
@@ -315,10 +323,10 @@ defmodule Lightning.InvocationTest do
         end)
 
       expected_order = [
-        %{id: wo_four.id, last_run_finished_at: run_four.finished_at},
-        %{id: wo_three.id, last_run_finished_at: run_three.finished_at},
-        %{id: wo_two.id, last_run_finished_at: run_two.finished_at},
-        %{id: wo_one.id, last_run_finished_at: run_one.finished_at}
+        %{id: wo_four.id, last_run_finished_at: run_five.finished_at},
+        %{id: wo_three.id, last_run_finished_at: run_four.finished_at},
+        %{id: wo_two.id, last_run_finished_at: run_three.finished_at},
+        %{id: wo_one.id, last_run_finished_at: run_two.finished_at}
       ]
 
       assert expected_order == simplified_result

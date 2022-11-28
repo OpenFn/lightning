@@ -398,14 +398,26 @@ defmodule Lightning.Invocation do
       join: w in assoc(wo, :workflow),
       as: :workflow,
       join: att in assoc(wo, :attempts),
-      join: r in assoc(att, :runs),
+      left_lateral_join:
+        r in fragment(
+          """
+          SELECT r.*
+          FROM runs r
+          JOIN attempt_runs ar ON
+          ar.run_id = r.id
+          WHERE ar.attempt_id = ?
+          ORDER BY
+          COALESCE (r.finished_at, r.started_at, r.inserted_at) DESC NULLS FIRST
+          LIMIT 1
+          """,
+          att.id
+        ),
       as: :runs,
       where: w.project_id == ^project_id,
       where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_status_where(status),
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
-      distinct: true,
       order_by: [desc_nulls_first: r.finished_at],
       preload: [
         reason:
@@ -430,11 +442,6 @@ defmodule Lightning.Invocation do
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
-    |> find_uniq_wo()
-  end
-
-  def find_uniq_wo(page) do
-    %{page | entries: Enum.uniq_by(page.entries, fn wo -> wo.id end)}
   end
 
   def list_work_orders_for_project(%Project{} = project) do
