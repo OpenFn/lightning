@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive do
   on_mount({LightningWeb.Hooks, :project_scope})
 
   alias Lightning.Workflows
+  import LightningWeb.WorkflowLive.Components
 
   @impl true
   def render(assigns) do
@@ -12,6 +13,16 @@ defmodule LightningWeb.WorkflowLive do
     <Layout.page_content>
       <:header>
         <Layout.header title={@page_title} socket={@socket}>
+          <%!-- <.link navigate={
+            Routes.project_job_index_path(@socket, :index, @project.id)
+          }>
+            <div class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-200 hover:bg-secondary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
+              <div class="h-full">
+                <Heroicons.table_cells solid class="h-4 w-4 inline-block" />
+              </div>
+            </div>
+          </.link> --%>
+          <%!-- &nbsp;&nbsp;
           <.link navigate={
             Routes.project_workflow_path(@socket, :new_job, @project.id)
           }>
@@ -21,11 +32,13 @@ defmodule LightningWeb.WorkflowLive do
                 <span class="inline-block align-middle">New Job</span>
               </div>
             </Common.button>
-          </.link>
+          </.link> --%>
         </Layout.header>
       </:header>
       <div class="relative h-full">
         <%= case @live_action do %>
+          <% :index -> %>
+            <.workflow_list page={@page} />
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
               <div
@@ -42,7 +55,7 @@ defmodule LightningWeb.WorkflowLive do
                   current_user={@current_user}
                   builder_state={@builder_state}
                   return_to={
-                    Routes.project_workflow_path(@socket, :show, @project.id)
+                    Routes.project_workflow_path(@socket, :index, @project.id)
                   }
                 />
               </div>
@@ -58,7 +71,7 @@ defmodule LightningWeb.WorkflowLive do
                   current_user={@current_user}
                   builder_state={@builder_state}
                   return_to={
-                    Routes.project_workflow_path(@socket, :show, @project.id)
+                    Routes.project_workflow_path(@socket, :index, @project.id)
                   }
                 />
               </div>
@@ -74,7 +87,7 @@ defmodule LightningWeb.WorkflowLive do
                   return_to={
                     Routes.project_workflow_path(
                       @socket,
-                      :show,
+                      :index,
                       @project.id
                     )
                   }
@@ -83,15 +96,17 @@ defmodule LightningWeb.WorkflowLive do
             </div>
           <% _ -> %>
         <% end %>
+        <%= unless (@live_action == :index) do %>
         <div
           phx-hook="WorkflowDiagram"
           class="h-full w-full"
           id={"hook-#{@project.id}"}
           phx-update="ignore"
-          base-path={Routes.project_workflow_path(@socket, :show, @project.id)}
+          base-path={Routes.project_workflow_path(@socket, :index, @project.id)}
           data-project-space={@encoded_project_space}
         >
         </div>
+        <% end %>
       </div>
     </Layout.page_content>
     """
@@ -118,6 +133,33 @@ defmodule LightningWeb.WorkflowLive do
        builder_state: %{}
      )}
   end
+
+
+  @impl true
+  def handle_event("create-workflow", _ , socket) do
+
+
+   {:ok,  %Workflows.Workflow{id: workflow_id}} = Workflows.create_workflow(%{project_id: socket.assigns.project.id})
+
+    {:noreply,
+     socket
+     |> assign(
+       page:
+       Workflows.get_workflows_for_query(socket.assigns.project)
+       |> Lightning.Repo.paginate(%{})
+     )
+     |> push_redirect(
+      to:
+        Routes.project_workflow_path(
+          socket,
+          :edit_workflow,
+          socket.assigns.project.id,
+          workflow_id
+        )
+    )}
+
+  end
+
 
   @doc """
   Update the encoded project space, when a change is broadcasted via pubsub
@@ -153,11 +195,22 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :show, _params) do
+  # defp apply_action(socket, :index, _params) do
+  #   socket
+  #   |> assign(
+  #     active_menu_item: :overview,
+  #     page_title: socket.assigns.project.name
+  #   )
+  # end
+
+  defp apply_action(socket, :index, params) do
     socket
     |> assign(
       active_menu_item: :overview,
-      page_title: socket.assigns.project.name
+      page_title: socket.assigns.project.name,
+      page:
+        Workflows.get_workflows_for_query(socket.assigns.project)
+        |> Lightning.Repo.paginate(params)
     )
   end
 
