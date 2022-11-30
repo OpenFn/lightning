@@ -125,7 +125,7 @@ defmodule LightningWeb.Components.Common do
     <div
       :if={msg = live_flash(@flash, @kind)}
       id="flash"
-      class="rounded-md bg-red-50 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
+      class="rounded-md bg-red-200 border-red-300 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
         JS.push("lv:clear-flash")
         |> JS.remove_class("fade-in-scale", to: "#flash")
@@ -133,14 +133,14 @@ defmodule LightningWeb.Components.Common do
       }
       phx-hook="Flash"
     >
-      <div class="flex justify-between items-center space-x-3 text-red-700">
+      <div class="flex justify-between items-center space-x-3 text-red-900">
         <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>
         </p>
         <button
           type="button"
-          class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+          class="inline-flex bg-red-200 rounded-md p-1.5 text-red-500 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-800"
         >
           <Heroicons.x_mark
             solid
