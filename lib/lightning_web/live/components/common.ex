@@ -125,7 +125,7 @@ defmodule LightningWeb.Components.Common do
     <div
       :if={msg = live_flash(@flash, @kind)}
       id="flash"
-      class="rounded-md bg-red-50 p-4 fixed top-1 right-1 w-96 fade-in-scale z-50"
+      class="rounded-md bg-red-50 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
         JS.push("lv:clear-flash")
         |> JS.remove_class("fade-in-scale", to: "#flash")
@@ -134,7 +134,7 @@ defmodule LightningWeb.Components.Common do
       phx-hook="Flash"
     >
       <div class="flex justify-between items-center space-x-3 text-red-700">
-        <.icon name={:exclamation_circle} class="w-5 w-5" />
+        <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>
         </p>
@@ -142,7 +142,10 @@ defmodule LightningWeb.Components.Common do
           type="button"
           class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
         >
-          <.icon name={:x} class="w-4 h-4" />
+          <Heroicons.x_mark
+            solid
+            class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
+          />
         </button>
       </div>
     </div>
@@ -154,7 +157,7 @@ defmodule LightningWeb.Components.Common do
     <div
       :if={msg = live_flash(@flash, @kind)}
       id="flash"
-      class="rounded-md bg-green-50 p-4 fixed top-1 right-1 w-96 fade-in-scale z-50"
+      class="rounded-md bg-blue-200 border-blue-300 rounded-md p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
       phx-click={
         JS.push("lv:clear-flash")
         |> JS.remove_class("fade-in-scale")
@@ -163,23 +166,26 @@ defmodule LightningWeb.Components.Common do
       phx-value-key="info"
       phx-hook="Flash"
     >
-      <div class="flex justify-between items-center space-x-3 text-green-700">
-        <.icon name={:check_circle} class="w-5 h-5" />
+      <div class="flex justify-between items-center space-x-3 text-blue-900">
+        <Heroicons.check_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>
         </p>
         <button
           type="button"
-          class="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+          class="inline-flex bg-blue-200 rounded-md p-1.5 text-blue-500 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-200 focus:ring-blue-800"
         >
-          <.icon name={:x} class="w-4 h-4" />
+          <Heroicons.x_mark
+            solid
+            class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
+          />
         </button>
       </div>
     </div>
     """
   end
 
-  defp hide(js \\ %JS{}, selector) do
+  defp hide(js, selector) do
     JS.hide(js,
       to: selector,
       time: 300,
@@ -187,20 +193,5 @@ defmodule LightningWeb.Components.Common do
         {"transition ease-in duration-300", "transform opacity-100 scale-100",
          "transform opacity-0 scale-95"}
     )
-  end
-
-  defp icon(assigns) do
-    assigns =
-      assign_new(assigns, :"aria-hidden", fn ->
-        !Map.has_key?(assigns, :"aria-label")
-      end)
-
-    ~H"""
-    <%= if @outlined do %>
-      <%= apply(Heroicons.Outline, @name, [Map.to_list(@rest)]) %>
-    <% else %>
-      <%= apply(Heroicons.Solid, @name, [Map.to_list(@rest)]) %>
-    <% end %>
-    """
   end
 end
