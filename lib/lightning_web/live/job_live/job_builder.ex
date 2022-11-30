@@ -363,6 +363,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
     |> Job.changeset(params)
   end
 
+  defp is_deletable(%Job{id: nil}), do: false
+
+  defp is_deletable(%Job{id: job_id}),
+    do:
+      Lightning.Jobs.get_job!(job_id)
+      |> Lightning.Jobs.get_downstream_jobs_for()
+      |> Enum.count() == 0
+
   @impl true
   def mount(socket) do
     {:ok, socket |> assign(follow_run_id: nil)}
@@ -392,10 +400,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
         |> Ecto.Changeset.apply_changes()
       )
 
-    is_deletable =
-      Lightning.Jobs.get_job!(job.id)
-      |> Lightning.Jobs.get_downstream_jobs_for()
-      |> Enum.count() == 0
+    is_deletable = is_deletable(job)
 
     {:ok,
      socket
