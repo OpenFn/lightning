@@ -26,8 +26,8 @@ Note that for secure deployments, it's recommended to use a combination of
 
 - `SECRET_KEY_BASE` - a secret key used as a base to generate secrets for
   encrypting and signing data.
-- `PRIMARY_ENCRYPTION_KEY` - a base64 encoded 32 character long string.
-  See [Encryption](#encryption).
+- `PRIMARY_ENCRYPTION_KEY` - a base64 encoded 32 character long string. See
+  [Encryption](#encryption).
 - `ADAPTORS_PATH` - where you store your locally installed adaptors
 - `LIGHTNING_LISTEN_ADDRESS`" - the address the web server should bind to,
   defaults to `0.0.0.0`
@@ -40,3 +40,5 @@ Note that for secure deployments, it's recommended to use a combination of
 - `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
 - `URL_PORT` - the port, usually `443` for production
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
+- `MAX_RUN_DURATION` - the maximum time (in milliseconds) that jobs are allowed
+  to run (keep this below your termination_grace_period if using kubernetes)

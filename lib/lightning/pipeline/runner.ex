@@ -94,7 +94,7 @@ defmodule Lightning.Pipeline.Runner do
       env: %{
         "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
       },
-      timeout: 60_000
+      timeout: Application.get_env(:lightning, :max_run_duration)
     }
 
     Handler.start(
