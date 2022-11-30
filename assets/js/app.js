@@ -32,6 +32,21 @@ import Editor from './editor';
 
 let Hooks = { WorkflowDiagram, AdaptorDocs, Editor, TabSelector };
 
+Hooks.Flash = {
+  mounted() {
+    let hide = () =>
+      liveSocket.execJS(this.el, this.el.getAttribute('phx-click'));
+    this.timer = setTimeout(() => hide(), 2000);
+    this.el.addEventListener('phx:hide-start', () => clearTimeout(this.timer));
+    this.el.addEventListener('mouseover', () => {
+      clearTimeout(this.timer);
+      this.timer = setTimeout(() => hide(), 2000);
+    });
+  },
+  destroyed() {
+    clearTimeout(this.timer);
+  },
+};
 Hooks.AssocListChange = {
   mounted() {
     this.el.addEventListener('change', _event => {
