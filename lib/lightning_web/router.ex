@@ -105,8 +105,9 @@ defmodule LightningWeb.Router do
         live "/j/new", WorkflowLive, :new_job
         live "/j/:job_id", WorkflowLive, :edit_job
         live "/w/:workflow_id", WorkflowLive, :edit_workflow
-        live "/", WorkflowLive, :index
-
+        live "/w/:workflow_id/view", WorkflowLive, :view_workflow
+        live "/", WorkflowLive, :show
+        live "/workflows", WorkflowLive, :index
       end
 
       live "/credentials", CredentialLive.Index, :index

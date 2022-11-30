@@ -38,7 +38,7 @@ defmodule LightningWeb.WorkflowLive do
       <div class="relative h-full">
         <%= case @live_action do %>
           <% :index -> %>
-            <.workflow_list page={@page} />
+            <.workflow_list page={@page} project={@project} />
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
               <div
@@ -55,7 +55,7 @@ defmodule LightningWeb.WorkflowLive do
                   current_user={@current_user}
                   builder_state={@builder_state}
                   return_to={
-                    Routes.project_workflow_path(@socket, :index, @project.id)
+                    Routes.project_workflow_path(@socket, :show, @project.id)
                   }
                 />
               </div>
@@ -71,7 +71,7 @@ defmodule LightningWeb.WorkflowLive do
                   current_user={@current_user}
                   builder_state={@builder_state}
                   return_to={
-                    Routes.project_workflow_path(@socket, :index, @project.id)
+                    Routes.project_workflow_path(@socket, :show, @project.id)
                   }
                 />
               </div>
@@ -87,7 +87,7 @@ defmodule LightningWeb.WorkflowLive do
                   return_to={
                     Routes.project_workflow_path(
                       @socket,
-                      :index,
+                      :show,
                       @project.id
                     )
                   }
@@ -97,23 +97,30 @@ defmodule LightningWeb.WorkflowLive do
           <% _ -> %>
         <% end %>
         <%= unless (@live_action == :index) do %>
-        <div
-          phx-hook="WorkflowDiagram"
-          class="h-full w-full"
-          id={"hook-#{@project.id}"}
-          phx-update="ignore"
-          base-path={Routes.project_workflow_path(@socket, :index, @project.id)}
-          data-project-space={@encoded_project_space}
-        >
-        </div>
+          <div
+            phx-hook="WorkflowDiagram"
+            class="h-full w-full"
+            id={"hook-#{@project.id}"}
+            phx-update="ignore"
+            base-path={Routes.project_workflow_path(@socket, :show, @project.id)}
+            data-project-space={@encoded_project_space}
+          >
+          </div>
         <% end %>
       </div>
     </Layout.page_content>
     """
   end
 
-  defp encode_project_space(project) do
+  defp encode_project_space(%Lightning.Projects.Project{} = project) do
     Workflows.get_workflows_for(project)
+    |> Workflows.to_project_space()
+    |> Jason.encode!()
+    |> Base.encode64()
+  end
+
+  defp encode_project_space(%Workflows.Workflow{} = workflow) do
+    [workflow]
     |> Workflows.to_project_space()
     |> Jason.encode!()
     |> Base.encode64()
@@ -134,32 +141,43 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
-
   @impl true
-  def handle_event("create-workflow", _ , socket) do
-
-
-   {:ok,  %Workflows.Workflow{id: workflow_id}} = Workflows.create_workflow(%{project_id: socket.assigns.project.id})
+  @spec handle_event(
+          <<_::120>>,
+          any,
+          atom
+          | %{
+              :__struct__ => atom,
+              :assigns =>
+                atom
+                | %{
+                    :project => Lightning.Projects.Project.t(),
+                    optional(any) => any
+                  },
+              optional(any) => any
+            }
+        ) :: {:noreply, Phoenix.LiveView.Socket.t()}
+  def handle_event("create-workflow", _, socket) do
+    {:ok, %Workflows.Workflow{id: workflow_id}} =
+      Workflows.create_workflow(%{project_id: socket.assigns.project.id})
 
     {:noreply,
      socket
      |> assign(
        page:
-       Workflows.get_workflows_for_query(socket.assigns.project)
-       |> Lightning.Repo.paginate(%{})
+         Workflows.get_workflows_for_query(socket.assigns.project)
+         |> Lightning.Repo.paginate(%{})
      )
      |> push_redirect(
-      to:
-        Routes.project_workflow_path(
-          socket,
-          :edit_workflow,
-          socket.assigns.project.id,
-          workflow_id
-        )
-    )}
-
+       to:
+         Routes.project_workflow_path(
+           socket,
+           :view_workflow,
+           socket.assigns.project.id,
+           workflow_id
+         )
+     )}
   end
-
 
   @doc """
   Update the encoded project space, when a change is broadcasted via pubsub
@@ -195,13 +213,13 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  # defp apply_action(socket, :index, _params) do
-  #   socket
-  #   |> assign(
-  #     active_menu_item: :overview,
-  #     page_title: socket.assigns.project.name
-  #   )
-  # end
+  defp apply_action(socket, :show, _params) do
+    socket
+    |> assign(
+      active_menu_item: :overview,
+      page_title: socket.assigns.project.name
+    )
+  end
 
   defp apply_action(socket, :index, params) do
     socket
@@ -261,5 +279,22 @@ defmodule LightningWeb.WorkflowLive do
 
     socket
     |> assign(page_title: socket.assigns.project.name, workflow: workflow)
+  end
+
+  defp apply_action(socket, :view_workflow, %{"workflow_id" => workflow_id}) do
+    workflow = Lightning.Workflows.get_workflow!(workflow_id)
+
+    socket
+    |> assign(
+      page_title: socket.assigns.project.name,
+      workflow: workflow,
+      encoded_project_space:
+        encode_project_space(
+          workflow
+          |> Lightning.Repo.preload(
+            jobs: [:credential, :workflow, trigger: [:upstream_job]]
+          )
+        )
+    )
   end
 end
