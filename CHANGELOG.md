@@ -27,6 +27,7 @@ and this project adheres to
 - Fixed bug that attempted to execute HTML scripts in dataclips
 - Fixed bug that prevented work orders from displaying in the order of their
   last run, descending.
+- Remove alerts after set timeout or close
 
 ## [0.3.0] - 2022-11-21
 
