@@ -7,8 +7,6 @@ defmodule LightningWeb.JobLiveTest do
   import Lightning.CredentialsFixtures
 
   alias LightningWeb.JobLive.AdaptorPicker
-  alias Lightning.Jobs
-  alias Lightning.Jobs.Job
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -102,15 +100,9 @@ defmodule LightningWeb.JobLiveTest do
       project: project,
       job: job
     } do
-      {:ok, %Job{} = _} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: job.id},
-          workflow_id: job.workflow_id
-        })
+      workflow_job_fixture(
+        trigger: %{type: "on_job_success", upstream_job_id: job.id}
+      )
 
       {:ok, view, html} =
         live(

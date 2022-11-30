@@ -46,18 +46,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
-  defp is_deletable(job_id) do
-    Jobs.get_job!(job_id) |> Jobs.get_downstream_jobs_for() |> Enum.count() == 0
-  end
-
-  defp delete_job_title(job_id) do
-    if is_deletable(job_id) do
-      "Delete this job"
-    else
-      "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
-    end
-  end
-
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
 
@@ -228,12 +216,17 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-click="delete"
               phx-target={@myself}
               phx-value-id={@job_id}
-              disabled={!is_deletable(@job_id)}
+              disabled={!@is_deletable}
               data={[
                 confirm:
                   "This action is irreversible, are you sure you want to continue?"
               ]}
-              title={delete_job_title(@job_id)}
+              title={
+                if @is_deletable,
+                  do: "Delete this job",
+                  else:
+                    "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
+              }
               color="red"
             />
           <% end %>
@@ -393,6 +386,17 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
     changeset = build_changeset(job, params, assigns[:workflow])
 
+    upstream_jobs =
+      Lightning.Jobs.get_upstream_jobs_for(
+        changeset
+        |> Ecto.Changeset.apply_changes()
+      )
+
+    is_deletable =
+      Lightning.Jobs.get_job!(job.id)
+      |> Lightning.Jobs.get_downstream_jobs_for()
+      |> Enum.count() == 0
+
     {:ok,
      socket
      |> assign(
@@ -407,11 +411,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        changeset: changeset,
        credentials: credentials,
        builder_state: builder_state,
-       upstream_jobs:
-         Lightning.Jobs.get_upstream_jobs_for(
-           changeset
-           |> Ecto.Changeset.apply_changes()
-         )
+       upstream_jobs: upstream_jobs,
+       is_deletable: is_deletable
      )
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)

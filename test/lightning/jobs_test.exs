@@ -300,9 +300,8 @@ defmodule Lightning.JobsTest do
 
       {:error, changeset} = Jobs.delete_job(job)
 
-      assert {:trigger_id,
-              {"This job is associated with downstream jobs",
-               [constraint: :foreign, constraint_name: "jobs_trigger_id_fkey"]}} in changeset.errors
+      assert %{trigger_id: ["This job is associated with downstream jobs"]} =
+               errors_on(changeset)
     end
   end
 
