@@ -123,7 +123,7 @@ defmodule LightningWeb.Components.Common do
   def flash(%{kind: :error} = assigns) do
     ~H"""
     <div
-      :if={msg = Phoenix.Flash.get(@flash, @kind)}
+      :if={msg = live_flash(@flash, @kind)}
       id="flash"
       class="rounded-md bg-red-50 p-4 fixed top-1 right-1 w-96 fade-in-scale z-50"
       phx-click={
@@ -152,7 +152,7 @@ defmodule LightningWeb.Components.Common do
   def flash(%{kind: :info} = assigns) do
     ~H"""
     <div
-      :if={msg = Phoenix.Flash.get(@flash, @kind)}
+      :if={msg = live_flash(@flash, @kind)}
       id="flash"
       class="rounded-md bg-green-50 p-4 fixed top-1 right-1 w-96 fade-in-scale z-50"
       phx-click={
