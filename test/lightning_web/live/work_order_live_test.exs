@@ -23,8 +23,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
-      work_order = work_order_fixture(workflow_id: job.workflow_id)
-
       dataclip = dataclip_fixture()
 
       reason =
@@ -32,6 +30,9 @@ defmodule LightningWeb.RunWorkOrderTest do
           trigger_id: job.trigger.id,
           dataclip_id: dataclip.id
         )
+
+      work_order =
+        work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
 
       now = Timex.now()
 
@@ -65,7 +66,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> render()
 
       assert table =~ "my workflow"
-      assert table =~ "#{work_order.reason_id}"
+      assert table =~ "#{reason.dataclip_id}"
 
       # toggle work_order details
       # TODO move to test work_order_component
