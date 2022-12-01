@@ -22,9 +22,9 @@ defmodule LightningWeb.WorkflowLive.Components do
       <.link
         class="font-bold mb-2"
         navigate={
-          Routes.project_workflow_path(
+          Routes.project_process_path(
             LightningWeb.Endpoint,
-            :view_workflow,
+            :show,
             @project.id,
             @workflow.id
           )
