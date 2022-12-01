@@ -43,8 +43,8 @@
       </div>
     </nav>
     <main class="flex-auto">
-      <.live_info_block flash={@flash} />
-      <.live_error_block flash={@flash} />
+      <Common.flash flash={@flash} kind={:info} />
+      <Common.flash flash={@flash} kind={:error} />
       <.live_nav_block flash={@flash}>
         <%= @inner_content %>
       </.live_nav_block>

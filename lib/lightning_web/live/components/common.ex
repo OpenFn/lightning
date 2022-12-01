@@ -2,6 +2,8 @@ defmodule LightningWeb.Components.Common do
   @moduledoc false
   use LightningWeb, :component
 
+  alias Phoenix.LiveView.JS
+
   def button(assigns) do
     class =
       button_classes(
@@ -116,5 +118,80 @@ defmodule LightningWeb.Components.Common do
       <%= render_slot(@inner_block) %>
     </div>
     """
+  end
+
+  def flash(%{kind: :error} = assigns) do
+    ~H"""
+    <div
+      :if={msg = live_flash(@flash, @kind)}
+      id="flash"
+      class="rounded-md bg-red-200 border-red-300 p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
+      phx-click={
+        JS.push("lv:clear-flash")
+        |> JS.remove_class("fade-in-scale", to: "#flash")
+        |> hide("#flash")
+      }
+      phx-hook="Flash"
+    >
+      <div class="flex justify-between items-center space-x-3 text-red-900">
+        <Heroicons.exclamation_circle solid class="w-5 h-5" />
+        <p class="flex-1 text-sm font-medium" role="alert">
+          <%= msg %>
+        </p>
+        <button
+          type="button"
+          class="inline-flex bg-red-200 rounded-md p-1.5 text-red-500 hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-800"
+        >
+          <Heroicons.x_mark
+            solid
+            class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
+          />
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  def flash(%{kind: :info} = assigns) do
+    ~H"""
+    <div
+      :if={msg = live_flash(@flash, @kind)}
+      id="flash"
+      class="rounded-md bg-blue-200 border-blue-300 rounded-md p-4 fixed w-fit mx-auto flex justify-center bottom-3 right-0 left-0 z-[100]"
+      phx-click={
+        JS.push("lv:clear-flash")
+        |> JS.remove_class("fade-in-scale")
+        |> hide("#flash")
+      }
+      phx-value-key="info"
+      phx-hook="Flash"
+    >
+      <div class="flex justify-between items-center space-x-3 text-blue-900">
+        <Heroicons.check_circle solid class="w-5 h-5" />
+        <p class="flex-1 text-sm font-medium" role="alert">
+          <%= msg %>
+        </p>
+        <button
+          type="button"
+          class="inline-flex bg-blue-200 rounded-md p-1.5 text-blue-500 hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-200 focus:ring-blue-800"
+        >
+          <Heroicons.x_mark
+            solid
+            class="w-4 h-4 ml-1 mr-1 text-white-400 dark:text-white-100"
+          />
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  defp hide(js, selector) do
+    JS.hide(js,
+      to: selector,
+      time: 300,
+      transition:
+        {"transition ease-in duration-300", "transform opacity-100 scale-100",
+         "transform opacity-0 scale-95"}
+    )
   end
 end
