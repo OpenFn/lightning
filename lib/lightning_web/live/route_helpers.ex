@@ -8,15 +8,6 @@ defmodule LightningWeb.RouteHelpers do
     Routes.project_workflow_path(LightningWeb.Endpoint, :new_job, project_id)
   end
 
-  def workflow_new_w_job_path(project_id, workflow_id) do
-    Routes.project_workflow_path(
-      LightningWeb.Endpoint,
-      :new_workflow_job,
-      project_id,
-      workflow_id
-    )
-  end
-
   def workflow_edit_job_path(project_id, job_id) do
     Routes.project_workflow_path(
       LightningWeb.Endpoint,

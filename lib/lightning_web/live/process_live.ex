@@ -120,8 +120,8 @@ defmodule LightningWeb.ProcessLive do
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
                   module={LightningWeb.ProcessLive.WorkflowInspector}
-                  id={@workflow.id}
-                  workflow={@workflow}
+                  id={@current_workflow.id}
+                  workflow={@current_workflow}
                   project={@project}
                   return_to={
                     Routes.project_process_path(
@@ -204,7 +204,7 @@ defmodule LightningWeb.ProcessLive do
          Workflows.get_workflows_for_query(socket.assigns.project)
          |> Lightning.Repo.paginate(%{})
      )
-     |> push_redirect(
+     |> push_patch(
        to:
          Routes.project_process_path(
            socket,
@@ -290,6 +290,7 @@ defmodule LightningWeb.ProcessLive do
         }
       },
       current_workflow: workflow,
+      encoded_project_space: encode_project_space(workflow),
       page_title: socket.assigns.project.name
     )
   end
@@ -313,6 +314,7 @@ defmodule LightningWeb.ProcessLive do
           name: workflow.name,
           project_id: project_id
         }),
+      encoded_project_space: encode_project_space(workflow),
       page_title: socket.assigns.project.name
     )
   end
@@ -332,13 +334,21 @@ defmodule LightningWeb.ProcessLive do
     )
   end
 
-  defp apply_action(socket, :edit_workflow, %{"workflow_id" => workflow_id}) do
+  defp apply_action(socket, :edit_workflow, %{
+         "project_id" => project_id,
+         "workflow_id" => workflow_id
+       }) do
     workflow = Lightning.Workflows.get_workflow!(workflow_id)
 
     socket
     |> assign(
       page_title: socket.assigns.project.name,
-      current_workflow: workflow
+      current_workflow: workflow,
+      workflow:
+        Workflows.Workflow.changeset(workflow, %{
+          name: workflow.name,
+          project_id: project_id
+        })
     )
   end
 

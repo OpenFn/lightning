@@ -199,7 +199,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(
+          Routes.project_process_path(
             conn,
             :edit_workflow,
             project.id,
@@ -217,7 +217,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> form("#workflow-form") |> render_submit()
 
-      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+      assert_patch(
+        view,
+        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+      )
 
       assert view |> encoded_project_space_matches(project)
     end

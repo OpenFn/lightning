@@ -301,7 +301,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
     params = merge_params(socket.assigns.params, params)
 
     %{job: job, workflow: workflow, is_persisted: is_persisted} = socket.assigns
-    IO.inspect(workflow, label: "WF")
 
     changeset =
       build_changeset(job, params, workflow)

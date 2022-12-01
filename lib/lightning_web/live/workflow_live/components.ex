@@ -18,25 +18,19 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def workflow_card(assigns) do
     ~H"""
-    <div class="w-72 h-44 bg-white rounded-md border shadow p-4 flex flex-col h-full justify-between">
-      <.link
-        class="font-bold mb-2"
-        navigate={
-          Routes.project_process_path(
-            LightningWeb.Endpoint,
-            :show,
-            @project.id,
-            @workflow.id
-          )
-        }
-      >
-        <%= @workflow.name %>
-      </.link>
-      <div class="">This is the desscription of the workflow and it is harcoded</div>
-      <div class="bg-gray-100 w-full h-10 flex items-center justify-center">
-        TOOLBAR
-      </div>
-    </div>
+    <.link
+      class="w-72 h-44 bg-white rounded-md border shadow flex h-full justify-center items-center font-bold mb-2 hover:bg-gray-50"
+      navigate={
+        Routes.project_process_path(
+          LightningWeb.Endpoint,
+          :show,
+          @project.id,
+          @workflow.id
+        )
+      }
+    >
+      <%= @workflow.name %>
+    </.link>
     """
   end
 

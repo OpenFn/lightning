@@ -77,7 +77,7 @@ defmodule LightningWeb.WorkflowLive do
             <div class="absolute top-0 right-0 m-2 z-10">
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
-                  module={LightningWeb.WorkflowLive.WorkflowInspector}
+                  module={LightningWeb.ProcessLive.WorkflowInspector}
                   id={@workflow.id}
                   workflow={@workflow}
                   project={@project}

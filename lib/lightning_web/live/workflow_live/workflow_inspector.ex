@@ -1,4 +1,4 @@
-defmodule LightningWeb.WorkflowLive.WorkflowInspector do
+defmodule LightningWeb.ProcessLive.WorkflowInspector do
   @moduledoc false
   use LightningWeb, :live_component
 
@@ -38,7 +38,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowInspector do
         LightningWeb.Endpoint.broadcast!(
           "project_space:#{socket.assigns.project.id}",
           "update",
-          %{}
+          %{workflow_id: socket.assigns.workflow.id}
         )
 
         {:noreply,
