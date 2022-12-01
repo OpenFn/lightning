@@ -120,18 +120,7 @@ defmodule Lightning.Pipeline.Runner do
   """
   @spec scrub_result(body :: map()) :: map()
   def scrub_result(%{} = body) do
-    case Map.get(body, :configuration) do
-      nil ->
-        body
-
-      map ->
-        safe_body = body
-
-        Map.keys(map)
-        |> Enum.each(fn k -> Map.put(safe_body, k, "***") end)
-
-        safe_body
-    end
+    Map.delete(body, "configuration")
   end
 
   @doc """

@@ -2,10 +2,15 @@ defmodule Lightning.Pipeline.RunnerTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Pipeline
-  import Lightning.JobsFixtures
-  import Lightning.InvocationFixtures
-  import Lightning.CredentialsFixtures
-  import Lightning.ProjectsFixtures
+
+  import Lightning.{
+    JobsFixtures,
+    InvocationFixtures,
+    CredentialsFixtures,
+    ProjectsFixtures
+  }
+
+  alias Lightning.Pipeline.Runner
 
   test "start/2 takes a run and executes it" do
     project = project_fixture()
@@ -61,7 +66,11 @@ defmodule Lightning.Pipeline.RunnerTest do
       Repo.reload!(run)
       |> Repo.preload(:output_dataclip)
 
-    assert run.output_dataclip.body == expected_state
+    expected_run_result_body = %{
+      "data" => dataclip_body
+    }
+
+    assert run.output_dataclip.body == expected_run_result_body
 
     refute is_nil(run.started_at)
     refute is_nil(run.finished_at)
@@ -72,6 +81,16 @@ defmodule Lightning.Pipeline.RunnerTest do
     refute log =~ ~S(password":"immasecret")
 
     assert length(run.log) > 0
+
+    assert Repo.all(Lightning.Invocation.Dataclip)
+           |> Enum.any?(fn result ->
+             Map.has_key?(result, "configuration")
+           end) == false
+  end
+
+  test "scrub_result/1 removes :configuration from a map" do
+    map = %{"data" => true, "configuration" => %{"secret" => "hello"}}
+    assert Runner.scrub_result(map) == %{"data" => true}
   end
 
   test "create_dataclip_from_result/3" do
