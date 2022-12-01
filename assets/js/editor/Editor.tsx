@@ -4,6 +4,8 @@ import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 
+const DEFAULT_TEXT = '// Get started by adding operations from the API reference';
+
 type EditorProps = {
   source?: string;
   adaptor?: string; // fully specified adaptor name - <id>@<version>
@@ -120,7 +122,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     defaultLanguage="javascript"
     loading=""
     theme="vs-dark"
-    value={source || '// Write your code here'}
+    value={source || DEFAULT_TEXT}
     options={options}
     onMount={handleEditorDidMount}
     onChange={handleSourceChange}
