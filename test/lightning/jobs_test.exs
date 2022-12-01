@@ -284,6 +284,25 @@ defmodule Lightning.JobsTest do
       assert {:ok, %Job{}} = Jobs.delete_job(job)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
     end
+
+    test "delete_job/1 can't delete job with downstream jobs" do
+      job = job_fixture()
+
+      {:ok, %Job{} = _} =
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          trigger: %{type: "on_job_success", upstream_job_id: job.id},
+          workflow_id: job.workflow_id
+        })
+
+      {:error, changeset} = Jobs.delete_job(job)
+
+      assert %{trigger_id: ["This job is associated with downstream jobs"]} =
+               errors_on(changeset)
+    end
   end
 
   describe "create_job/1" do

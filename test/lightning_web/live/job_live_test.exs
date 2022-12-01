@@ -68,4 +68,54 @@ defmodule LightningWeb.JobLiveTest do
                "@other_org/some_module"
     end
   end
+
+  describe "Deleting a job from inspector" do
+    test "jobs with no dowstream jobs can be deleted", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#delete-job")
+
+      view
+      |> element("#delete-job")
+      |> render_click()
+
+      assert_patched(
+        view,
+        Routes.project_workflow_path(conn, :show, project.id)
+      )
+    end
+
+    test "jobs with downstream jobs can't be deleted", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      workflow_job_fixture(
+        trigger: %{type: "on_job_success", upstream_job_id: job.id}
+      )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(
+               view,
+               "button#delete-job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
+             )
+    end
+  end
 end

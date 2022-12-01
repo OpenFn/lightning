@@ -5,6 +5,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   use LightningWeb, :live_component
   alias LightningWeb.Components.Form
+  alias Lightning.Jobs
   alias Lightning.Jobs.Job
 
   import LightningWeb.JobLive.JobBuilderComponents
@@ -208,10 +209,58 @@ defmodule LightningWeb.JobLive.JobBuilder do
           >
             Save
           </Form.submit_button>
+          <%= if @job_id != "new" do %>
+            <Common.button
+              id="delete-job"
+              text="Delete"
+              phx-click="delete"
+              phx-target={@myself}
+              phx-value-id={@job_id}
+              disabled={!@is_deletable}
+              data={[
+                confirm:
+                  "This action is irreversible, are you sure you want to continue?"
+              ]}
+              title={
+                if @is_deletable,
+                  do: "Delete this job",
+                  else:
+                    "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
+              }
+              color="red"
+            />
+          <% end %>
         </div>
       </div>
     </div>
     """
+  end
+
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    job = Jobs.get_job!(id)
+
+    case Jobs.delete_job(job) do
+      {:ok, _} ->
+        LightningWeb.Endpoint.broadcast!(
+          "project_space:#{socket.assigns.project.id}",
+          "update",
+          %{}
+        )
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Job deleted successfully")
+         |> push_patch(to: socket.assigns.return_to)}
+
+      {:error, _} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Unable to delete this job because it has downstream jobs"
+         )}
+    end
   end
 
   @impl true
@@ -314,6 +363,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
     |> Job.changeset(params)
   end
 
+  defp is_deletable(%Job{id: nil}), do: false
+
+  defp is_deletable(%Job{id: job_id}),
+    do:
+      Lightning.Jobs.get_job!(job_id)
+      |> Lightning.Jobs.get_downstream_jobs_for()
+      |> Enum.count() == 0
+
   @impl true
   def mount(socket) do
     {:ok, socket |> assign(follow_run_id: nil)}
@@ -337,6 +394,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
     changeset = build_changeset(job, params, assigns[:workflow])
 
+    upstream_jobs =
+      Lightning.Jobs.get_upstream_jobs_for(
+        changeset
+        |> Ecto.Changeset.apply_changes()
+      )
+
+    is_deletable = is_deletable(job)
+
     {:ok,
      socket
      |> assign(
@@ -351,11 +416,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        changeset: changeset,
        credentials: credentials,
        builder_state: builder_state,
-       upstream_jobs:
-         Lightning.Jobs.get_upstream_jobs_for(
-           changeset
-           |> Ecto.Changeset.apply_changes()
-         )
+       upstream_jobs: upstream_jobs,
+       is_deletable: is_deletable
      )
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)
