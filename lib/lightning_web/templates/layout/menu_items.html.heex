@@ -6,7 +6,7 @@
           <%= unless project.id == @project.id do %>
             <.dropdown_menu_item
               link_type="live_redirect"
-              to={Routes.project_workflow_path(@socket, :index, project.id)}
+              to={Routes.project_process_path(@socket, :index, project.id)}
               label={project.name}
             />
           <% end %>

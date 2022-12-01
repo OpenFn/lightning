@@ -26,7 +26,7 @@ defmodule LightningWeb.DashboardLive.Index do
     if project != nil do
       socket
       |> push_redirect(
-        to: Routes.project_workflow_path(socket, :show, project.id)
+        to: Routes.project_process_path(socket, :index, project.id)
       )
     else
       socket
