@@ -3,6 +3,7 @@ defmodule Lightning.AttemptServiceTest do
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
+  import Lightning.AccountsFixtures
   alias Lightning.Attempt
   alias Lightning.AttemptService
   alias Lightning.Invocation.{Run}
@@ -61,6 +62,77 @@ defmodule Lightning.AttemptServiceTest do
       {:ok, attempt_run} = AttemptService.append(attempt, new_run)
 
       assert Ecto.assoc(attempt_run.run, :attempts) |> Repo.all() == [attempt]
+    end
+  end
+
+  describe "retry" do
+    setup do
+      workflow_scenario()
+    end
+
+    test "creates a new attempt starting from an existing run", %{
+      jobs: jobs,
+      workflow: workflow
+    } do
+      work_order = work_order_fixture(workflow_id: workflow.id)
+      dataclip = dataclip_fixture()
+      user = user_fixture()
+
+      # first attempt
+      attempt_runs =
+        Enum.map([jobs.a, jobs.b, jobs.c, jobs.e, jobs.f], fn j ->
+          %{
+            job_id: j.id,
+            input_dataclip_id: dataclip.id,
+            exit_code: 0
+          }
+        end) ++
+          [%{job_id: jobs.d.id, exit_code: 1, input_dataclip_id: dataclip.id}]
+
+      attempt =
+        Lightning.Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: work_order.reason_id,
+          runs: attempt_runs
+        })
+        |> Repo.insert!()
+
+      # find the failed run for this attempt
+      run =
+        from(r in Run,
+          join: a in assoc(r, :attempts),
+          where: a.id == ^attempt.id,
+          where: r.exit_code == 1
+        )
+        |> Repo.one()
+
+      reason = Lightning.InvocationReasons.build(:retry, %{user: user, run: run})
+
+      {:ok, attempt_run} = AttemptService.retry(attempt, run, reason)
+
+      refute attempt_run.attempt_id == attempt.id
+
+      original_runs =
+        from(r in Run,
+          join: a in assoc(r, :attempts),
+          where: a.id == ^attempt.id,
+          select: r.id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      new_runs =
+        from(r in Run,
+          join: a in assoc(r, :attempts),
+          where: a.id == ^attempt_run.attempt_id,
+          select: r.id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      assert MapSet.intersection(original_runs, new_runs) |> MapSet.size() == 5
+      refute MapSet.member?(original_runs, attempt_run.run_id)
+      assert MapSet.member?(new_runs, attempt_run.run_id)
     end
   end
 end

@@ -9,7 +9,7 @@ defmodule Lightning.AttemptService do
   alias Lightning.Invocation.{Run}
 
   @doc """
-  Creates a reason.
+  Create an attempt
 
   ## Examples
 
@@ -63,5 +63,50 @@ defmodule Lightning.AttemptService do
       run |> Ecto.Changeset.put_change(:previous_id, attempt_run.run_id)
     )
     |> Repo.insert()
+  end
+
+  @doc """
+  Creates a new Attempt starting from a given run.
+
+  All upstream/prior Runs that were performed on that attempt are associated
+  with the new Attempt, where as the specified run is used to create a new one
+  and is added to the Attempt.
+
+  Any runs downstream from the Run given are ignored.
+  """
+  @spec retry(Attempt.t(), Run.t(), Lightning.InvocationReason.t()) ::
+          {:ok, AttemptRun.t()} | {:error, Ecto.Changeset.t(AttemptRun.t())}
+  def retry(%Attempt{} = attempt, %Run{} = run, reason) do
+    attempt = Repo.preload(attempt, :work_order)
+
+    # get all the jobs for the workflow
+
+    workflow_jobs =
+      from(j in Lightning.Jobs.Job,
+        join: wf in assoc(j, :workflow),
+        join: a in assoc(wf, :attempts),
+        where: a.id == ^attempt.id,
+        preload: [trigger: :upstream_job]
+      )
+      |> Repo.all()
+
+    graph =
+      Lightning.Workflows.Graph.new(workflow_jobs)
+      |> Lightning.Workflows.Graph.remove(run.job_id)
+
+    remaining_jobs = graph.jobs |> Enum.map(& &1.id)
+
+    runs =
+      from(r in Run,
+        join: a in assoc(r, :attempts),
+        where: a.id == ^attempt.id,
+        where: r.job_id in ^remaining_jobs
+      )
+      |> Repo.all()
+
+    build_attempt(attempt.work_order, reason)
+    |> Ecto.Changeset.put_assoc(:runs, runs)
+    |> Repo.insert!()
+    |> append(Run.new_from(run))
   end
 end

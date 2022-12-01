@@ -2,10 +2,12 @@ defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation
+  alias Lightning.Invocation.{Run}
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
   import Lightning.JobsFixtures
+  import Lightning.WorkflowsFixtures
 
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip

@@ -64,5 +64,13 @@ defmodule Lightning.Invocation.InvocationReasonTest do
 
       assert errors[:user_id] == ["can't be blank"]
     end
+
+    test ":retry must have an associated user" do
+      errors =
+        InvocationReason.changeset(%InvocationReason{}, %{type: :retry})
+        |> errors_on()
+
+      assert errors[:user_id] == ["can't be blank"]
+    end
   end
 end

@@ -9,13 +9,13 @@ defmodule Lightning.InvocationReasonsTest do
   alias Lightning.InvocationReasons
   alias Lightning.InvocationReason
 
-  describe "reasons" do
-    test "create_reason/1 with invalid data returns error changeset" do
+  describe "create_reason/1" do
+    test "with invalid data returns error changeset" do
       assert {:error, %Ecto.Changeset{}} =
                InvocationReasons.create_reason(%{type: nil})
     end
 
-    test "create_reason/1 with valid data creates a reason" do
+    test "with valid data creates a reason" do
       valid_attrs = %{
         type: :webhook,
         user_id: user_fixture().id,
@@ -27,8 +27,10 @@ defmodule Lightning.InvocationReasonsTest do
       assert {:ok, %InvocationReason{}} =
                InvocationReasons.create_reason(valid_attrs)
     end
+  end
 
-    test "build/2 with trigger of type :webhook or :cron returns a valid reason" do
+  describe "build/2" do
+    test "with trigger of type :webhook or :cron returns a valid reason" do
       dataclip = dataclip_fixture()
 
       assert %Ecto.Changeset{valid?: true} =
@@ -56,6 +58,23 @@ defmodule Lightning.InvocationReasonsTest do
         |> errors_on()
 
       assert {:type, ["is invalid"]} in errors
+    end
+
+    test "with :manual" do
+      dataclip = dataclip_fixture()
+
+      assert %Ecto.Changeset{valid?: true} =
+               InvocationReasons.build(:manual, %{
+                 user: user_fixture(),
+                 dataclip: dataclip
+               })
+    end
+
+    test "with :retry" do
+      run = run_fixture()
+
+      assert %Ecto.Changeset{valid?: true} =
+               InvocationReasons.build(:retry, %{user: user_fixture(), run: run})
     end
   end
 end

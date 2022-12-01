@@ -27,6 +27,8 @@ defmodule Lightning.Workflows.Workflow do
 
     has_many :jobs, Job
     has_many :triggers, Trigger
+    has_many :work_orders, Lightning.WorkOrder
+    has_many :attempts, through: [:work_orders, :attempts]
     belongs_to :project, Project
 
     timestamps()
