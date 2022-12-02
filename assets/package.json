@@ -4,7 +4,7 @@
   "description": "",
   "main": "js/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx ava ./test/index.ts"
   },
   "author": "",
   "license": "ISC",
@@ -18,14 +18,15 @@
     "cronstrue": "^2.14.0",
     "elkjs": "^0.8.2",
     "monaco-editor": "^0.34.0",
+    "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-flow-renderer": "^10.3.16",
     "react-markdown": "^8.0.3",
-    "react": "^18.1.0",
     "zustand": "^4.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.15",
-    "@types/react-dom": "^18.0.6"
+    "@types/react-dom": "^18.0.6",
+    "ava": "^5.1.0"
   }
 }
