@@ -5,7 +5,7 @@ defmodule LightningWeb.RouteHelpers do
   alias LightningWeb.Router.Helpers, as: Routes
 
   def workflow_edit_job_path(project_id, workflow_id, job_id) do
-    Routes.project_process_path(
+    Routes.project_workflow_path(
       LightningWeb.Endpoint,
       :edit_job,
       project_id,

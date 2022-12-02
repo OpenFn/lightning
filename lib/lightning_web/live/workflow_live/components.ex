@@ -1,4 +1,4 @@
-defmodule LightningWeb.ProcessLive.Components do
+defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
@@ -21,7 +21,7 @@ defmodule LightningWeb.ProcessLive.Components do
     <.link
       class="w-72 h-44 bg-white rounded-md border shadow flex h-full justify-center items-center font-bold mb-2 hover:bg-gray-50"
       navigate={
-        Routes.project_process_path(
+        Routes.project_workflow_path(
           LightningWeb.Endpoint,
           :show,
           @project.id,

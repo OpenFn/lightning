@@ -1,11 +1,11 @@
-defmodule LightningWeb.ProcessLive do
+defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
-  import LightningWeb.ProcessLive.Components
+  import LightningWeb.WorkflowLive.Components
 
   @impl true
   def render(assigns) do
@@ -26,7 +26,7 @@ defmodule LightningWeb.ProcessLive do
           </.link> --%>
           <%!-- &nbsp;&nbsp;
           <.link navigate={
-            Routes.project_process_path(@socket, :new_job, @project.id)
+            Routes.project_workflow_path(@socket, :new_job, @project.id)
           }>
             <Common.button>
               <div class="h-full">
@@ -57,7 +57,7 @@ defmodule LightningWeb.ProcessLive do
                   current_user={@current_user}
                   builder_state={@builder_state}
                   return_to={
-                    Routes.project_process_path(
+                    Routes.project_workflow_path(
                       @socket,
                       :show,
                       @project.id,
@@ -78,7 +78,7 @@ defmodule LightningWeb.ProcessLive do
                   current_user={@current_user}
                   builder_state={@builder_state}
                   return_to={
-                    Routes.project_process_path(
+                    Routes.project_workflow_path(
                       @socket,
                       :show,
                       @project.id,
@@ -96,7 +96,7 @@ defmodule LightningWeb.ProcessLive do
                 </div>
                 <div class="text-xs text-gray-400">
                   <.link patch={
-                    Routes.project_process_path(
+                    Routes.project_workflow_path(
                       @socket,
                       :new_job,
                       @project.id,
@@ -119,12 +119,12 @@ defmodule LightningWeb.ProcessLive do
             <div class="absolute top-0 right-0 m-2 z-10">
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
-                  module={LightningWeb.ProcessLive.WorkflowInspector}
+                  module={LightningWeb.WorkflowLive.WorkflowInspector}
                   id={@current_workflow.id}
                   workflow={@current_workflow}
                   project={@project}
                   return_to={
-                    Routes.project_process_path(
+                    Routes.project_workflow_path(
                       @socket,
                       :show,
                       @project.id,
@@ -143,7 +143,7 @@ defmodule LightningWeb.ProcessLive do
             id={"hook-#{@project.id}"}
             phx-update="ignore"
             base-path={
-              Routes.project_process_path(
+              Routes.project_workflow_path(
                 @socket,
                 :show,
                 @project.id,
@@ -206,7 +206,7 @@ defmodule LightningWeb.ProcessLive do
      )
      |> push_patch(
        to:
-         Routes.project_process_path(
+         Routes.project_workflow_path(
            socket,
            :show,
            socket.assigns.project.id,

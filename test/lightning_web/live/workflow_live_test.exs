@@ -19,19 +19,19 @@ defmodule LightningWeb.WorkflowLiveTest do
       %{workflow: workflow_two} = workflow_job_fixture(project_id: project.id)
 
       {:ok, view, html} =
-        live(conn, Routes.project_process_path(conn, :index, project.id))
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
 
       assert view
              |> element(
-               "a[href='#{Routes.project_process_path(conn, :show, project.id, workflow_one.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :show, project.id, workflow_one.id)}']"
              )
              |> has_element?()
 
       assert view
              |> element(
-               "a[href='#{Routes.project_process_path(conn, :show, project.id, workflow_two.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :show, project.id, workflow_two.id)}']"
              )
              |> has_element?()
     end
@@ -47,7 +47,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, _view, html} =
         live(
           conn,
-          Routes.project_process_path(conn, :show, project.id, workflow.id)
+          Routes.project_workflow_path(conn, :show, project.id, workflow.id)
         )
 
       assert html =~ project.name
@@ -63,7 +63,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(conn, :show, project.id, workflow.id)
+          Routes.project_workflow_path(conn, :show, project.id, workflow.id)
         )
 
       assert html =~ project.name
@@ -93,7 +93,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
@@ -124,14 +124,14 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
 
       assert render(view) =~ "Job updated successfully"
 
       view
       |> render_patch(
-        Routes.project_process_path(
+        Routes.project_workflow_path(
           conn,
           :edit_job,
           project.id,
@@ -156,7 +156,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :new_job,
             project.id,
@@ -212,7 +212,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_process_path(
+        Routes.project_workflow_path(
           conn,
           :show,
           project.id,
@@ -232,7 +232,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(conn, :new_job, project.id, workflow.id)
+          Routes.project_workflow_path(conn, :new_job, project.id, workflow.id)
         )
 
       assert html =~ project.name
@@ -253,7 +253,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_process_path(conn, :show, project.id, workflow.id)
+        Routes.project_workflow_path(conn, :show, project.id, workflow.id)
       )
 
       assert view |> encoded_project_space_matches(project)
@@ -273,7 +273,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_workflow,
             project.id,
@@ -293,7 +293,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
 
       assert view |> encoded_project_space_matches(project)
@@ -441,7 +441,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :new_job,
             project.id,
@@ -480,7 +480,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
 
       job =
@@ -503,7 +503,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
@@ -563,7 +563,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
@@ -617,7 +617,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
@@ -681,7 +681,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
@@ -727,7 +727,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,

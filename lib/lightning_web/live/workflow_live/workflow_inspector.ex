@@ -1,4 +1,4 @@
-defmodule LightningWeb.ProcessLive.WorkflowInspector do
+defmodule LightningWeb.WorkflowLive.WorkflowInspector do
   @moduledoc false
   use LightningWeb, :live_component
 

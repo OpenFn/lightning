@@ -78,7 +78,7 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
@@ -97,7 +97,7 @@ defmodule LightningWeb.JobLiveTest do
 
       assert_patched(
         view,
-        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
     end
 
@@ -113,7 +113,7 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_process_path(
+          Routes.project_workflow_path(
             conn,
             :edit_job,
             project.id,
