@@ -1,4 +1,4 @@
-defmodule LightningWeb.WorkflowLive.Components do
+defmodule LightningWeb.ProcessLive.Components do
   @moduledoc false
   use LightningWeb, :component
 

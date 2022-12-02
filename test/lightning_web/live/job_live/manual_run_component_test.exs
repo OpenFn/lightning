@@ -17,7 +17,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   setup %{project: project} do
     project_credential_fixture(project_id: project.id)
-    job = job_fixture(project_id: project.id)
+    job = workflow_job_fixture(project_id: project.id)
     %{job: job}
   end
 
@@ -34,7 +34,10 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   test "renders", %{conn: conn, job: job, project: project} do
     {:ok, view, _html} =
-      live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
+      live(
+        conn,
+        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+      )
 
     assert view |> enter_dataclip_id("") =~ html_escape("can't be blank")
     assert view |> enter_dataclip_id("abc") =~ "is invalid"
@@ -63,20 +66,16 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     assert run_viewer |> render() =~ "Not started."
   end
 
-  test "doesn't appear on new Job", %{conn: conn, project: project} do
-    {:ok, view, _html} =
-      live(conn, RouteHelpers.workflow_new_job_path(project.id))
-
-    refute view |> has_element?("select[name='manual_run[dataclip_id]']")
-  end
-
   test "has no option on job with no runs", %{
     conn: conn,
     job: job,
     project: project
   } do
     {:ok, view, _html} =
-      live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
+      live(
+        conn,
+        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+      )
 
     refute view
            |> has_element?("select[name='manual_run[dataclip_id]'] option")
@@ -144,7 +143,10 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     |> Lightning.Repo.insert!()
 
     {:ok, view, _html} =
-      live(conn, RouteHelpers.workflow_edit_job_path(project.id, job.id))
+      live(
+        conn,
+        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+      )
 
     refute view
            |> has_element?(

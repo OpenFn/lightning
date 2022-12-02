@@ -5,7 +5,7 @@ defmodule LightningWeb.ProcessLive do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
-  import LightningWeb.WorkflowLive.Components
+  import LightningWeb.ProcessLive.Components
 
   @impl true
   def render(assigns) do
