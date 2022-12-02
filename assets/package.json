@@ -4,7 +4,8 @@
   "description": "",
   "main": "js/app.js",
   "scripts": {
-    "test": "npx ava ./test/index.test.ts"
+    "test": "npx ava ./test/index.test.ts",
+    "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml"
   },
   "author": "",
   "license": "ISC",
@@ -28,6 +29,7 @@
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "ava": "^5.1.0",
+    "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.1"
   },
   "ava": {
