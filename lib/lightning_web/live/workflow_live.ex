@@ -148,13 +148,6 @@ defmodule LightningWeb.WorkflowLive do
     """
   end
 
-  defp encode_project_space(%Lightning.Projects.Project{} = project) do
-    Workflows.get_workflows_for(project)
-    |> Workflows.to_project_space()
-    |> Jason.encode!()
-    |> Base.encode64()
-  end
-
   defp encode_project_space(%Workflows.Workflow{} = workflow) do
     workflow
     |> Lightning.Repo.preload(
