@@ -4,7 +4,7 @@
   "description": "",
   "main": "js/app.js",
   "scripts": {
-    "test": "npx ava ./test/index.ts"
+    "test": "npx ava ./test/index.test.ts"
   },
   "author": "",
   "license": "ISC",
@@ -27,6 +27,21 @@
   "devDependencies": {
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
-    "ava": "^5.1.0"
+    "ava": "^5.1.0",
+    "ts-node": "^10.9.1"
+  },
+  "ava": {
+    "extensions": {
+      "ts": "module"
+    },
+    "environmentVariables": {
+      "TS_NODE_TRANSPILE_ONLY": "true"
+    },
+    "nodeArguments": [
+      "--loader=ts-node/esm"
+    ],
+    "files": [
+      "test/**/*test.ts"
+    ]
   }
 }
