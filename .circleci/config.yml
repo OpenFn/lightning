@@ -96,4 +96,4 @@ workflows:
       - build:
           name: 'Check Javascript tests'
           execute:
-            - run: cd assets && npm run test-report
+            - run: cd assets && npm install && npm run test-report
