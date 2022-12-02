@@ -41,7 +41,7 @@ const JobNode = ({
         'bg-white',
         'cursor-pointer',
         'h-full',
-        'p-2',
+        'p-1',
         'rounded-md',
         'shadow-sm',
         'text-center',
@@ -59,7 +59,13 @@ const JobNode = ({
         style={{ border: 'none', height: 0, top: 0 }}
       />
 
-      <div className={cc(['h-full', 'text-center'])}>
+      <div
+        className={cc([
+          'h-full',
+          'text-center',
+          !data.hasChildren && 'items-center',
+        ])}
+      >
         <div
           className={cc([
             'flex',
@@ -69,7 +75,7 @@ const JobNode = ({
             'text-center',
           ])}
         >
-          <p>{data?.label}</p>
+          <p className="line-clamp-2 align-middle">{data?.label}</p>
         </div>
       </div>
       <div
