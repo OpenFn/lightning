@@ -245,7 +245,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
         LightningWeb.Endpoint.broadcast!(
           "project_space:#{socket.assigns.project.id}",
           "update",
-          %{}
+          %{workflow_id: job.workflow_id}
         )
 
         {:noreply,
