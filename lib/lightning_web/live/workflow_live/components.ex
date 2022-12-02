@@ -38,7 +38,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="w-72 h-44 bg-white rounded-md border shadow p-4 flex flex-col h-full justify-between">
       <div class="font-bold mb-2">Create a new workflow</div>
-      <div class="">Create a new workfloow for yout organisation</div>
+      <div class="">Create a new workflow for your organisation</div>
       <div>
         <button
           phx-click="create-workflow"
