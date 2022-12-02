@@ -37,6 +37,23 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  describe "create" do
+    test "Create empty workflow for a project", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "Create a workflow"
+
+      assert view
+             |> element("button[phx-click='create-workflow']")
+             |> render_click() =~
+               "Add your first job"
+    end
+  end
+
   describe "show" do
     test "renders prompt to create new job when workflow has no jobs", %{
       conn: conn,
