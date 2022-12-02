@@ -73,4 +73,24 @@ defmodule LightningWeb.Components.Layout do
     </div>
     """
   end
+
+  def nav(assigns) do
+    ~H"""
+    <nav class="bg-secondary-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <img
+                class="h-8 w-8"
+                src={Routes.static_path(@conn, "/images/square-logo.png")}
+                alt="OpenFn"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    """
+  end
 end
