@@ -8,18 +8,63 @@ defmodule LightningWeb.WorkflowLiveTest do
   setup :create_project_for_current_user
 
   import Lightning.JobsFixtures
+  import Lightning.WorkflowsFixtures
+
+  describe "index" do
+    test "lists all workflows for a project", %{
+      conn: conn,
+      project: project
+    } do
+      %{workflow: workflow_one} = workflow_job_fixture(project_id: project.id)
+      %{workflow: workflow_two} = workflow_job_fixture(project_id: project.id)
+
+      {:ok, view, html} =
+        live(conn, Routes.project_process_path(conn, :index, project.id))
+
+      assert html =~ "Create a workflow"
+
+      assert view
+             |> element(
+               "a[href='#{Routes.project_process_path(conn, :show, project.id, workflow_one.id)}']"
+             )
+             |> has_element?()
+
+      assert view
+             |> element(
+               "a[href='#{Routes.project_process_path(conn, :show, project.id, workflow_two.id)}']"
+             )
+             |> has_element?()
+    end
+  end
 
   describe "show" do
-    setup %{project: project} do
-      %{job: job_fixture(project_id: project.id)}
+    test "renders prompt to create new job when workflow has no jobs", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_process_path(conn, :show, project.id, workflow.id)
+        )
+
+      assert html =~ project.name
+      assert html =~ "Add your first job"
     end
 
     test "renders the workflow diagram", %{
       conn: conn,
       project: project
     } do
+      %{workflow: workflow} = workflow_job_fixture(project_id: project.id)
+
       {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :show, project.id))
+        live(
+          conn,
+          Routes.project_process_path(conn, :show, project.id, workflow.id)
+        )
 
       assert html =~ project.name
 
@@ -37,7 +82,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "edit_job" do
     setup %{project: project} do
-      %{job: job_fixture(project_id: project.id)}
+      %{job: workflow_job_fixture(project_id: project.id)}
     end
 
     test "renders the job inspector", %{
@@ -48,7 +93,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_process_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert html =~ project.name
@@ -71,13 +122,22 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> element("#job-form") |> render_submit()
 
-      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+      assert_patch(
+        view,
+        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+      )
 
       assert render(view) =~ "Job updated successfully"
 
       view
       |> render_patch(
-        Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+        Routes.project_process_path(
+          conn,
+          :edit_job,
+          project.id,
+          job.workflow_id,
+          job.id
+        )
       )
 
       assert has_element?(view, "#builder-#{job.id}")
@@ -91,15 +151,16 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      upstream_job = job_fixture(project_id: project.id)
+      upstream_job = workflow_job_fixture(project_id: project.id)
 
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(
+          Routes.project_process_path(
             conn,
             :new_job,
             project.id,
+            upstream_job.workflow_id,
             %{"upstream_id" => upstream_job.id}
           )
         )
@@ -149,7 +210,15 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> submit_form()
 
-      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+      assert_patch(
+        view,
+        Routes.project_process_path(
+          conn,
+          :show,
+          project.id,
+          upstream_job.workflow_id
+        )
+      )
 
       assert view |> encoded_project_space_matches(project)
     end
@@ -158,10 +227,12 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
+      %{workflow: workflow} = workflow_job_fixture()
+
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :new_job, project.id)
+          Routes.project_process_path(conn, :new_job, project.id, workflow.id)
         )
 
       assert html =~ project.name
@@ -180,7 +251,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> submit_form()
 
-      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+      assert_patch(
+        view,
+        Routes.project_process_path(conn, :show, project.id, workflow.id)
+      )
 
       assert view |> encoded_project_space_matches(project)
     end
@@ -188,7 +262,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "edit_workflow" do
     setup %{project: project} do
-      %{job: job_fixture(project_id: project.id)}
+      %{job: workflow_job_fixture(project_id: project.id)}
     end
 
     test "renders the workflow inspector", %{
@@ -262,7 +336,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     alias LightningWeb.JobLive.CronSetupComponent
 
     setup %{project: project} do
-      %{job: job_fixture(project_id: project.id)}
+      %{job: workflow_job_fixture(project_id: project.id)}
     end
 
     test "get_cron_data/1" do
@@ -361,12 +435,18 @@ defmodule LightningWeb.WorkflowLiveTest do
     test "cron_setup_component can create a new job with a default cron trigger",
          %{
            conn: conn,
-           project: project
+           project: project,
+           job: job
          } do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :new_job, project.id)
+          Routes.project_process_path(
+            conn,
+            :new_job,
+            project.id,
+            job.workflow_id
+          )
         )
 
       assert html =~ project.name
@@ -397,7 +477,11 @@ defmodule LightningWeb.WorkflowLiveTest do
              |> render_change()
 
       view |> submit_form() =~ "Job updated successfully"
-      assert_patch(view, Routes.project_workflow_path(conn, :show, project.id))
+
+      assert_patch(
+        view,
+        Routes.project_process_path(conn, :show, project.id, job.workflow_id)
+      )
 
       job =
         Lightning.Repo.get_by!(Lightning.Jobs.Job, %{name: "my job"})
@@ -419,7 +503,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_process_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert job.trigger.type == :webhook
@@ -473,7 +563,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_process_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert job.trigger.type == :webhook
@@ -521,7 +617,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_process_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert job.trigger.type == :webhook
@@ -579,7 +681,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_process_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert job.trigger.type == :webhook
@@ -619,7 +727,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_process_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert view |> has_element?("#minute", "10")
