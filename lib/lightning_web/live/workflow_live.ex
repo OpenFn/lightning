@@ -15,7 +15,7 @@ defmodule LightningWeb.WorkflowLive do
     <Layout.page_content>
       <:header>
         <Layout.header title={@page_title} socket={@socket}>
-          <%!-- <.link navigate={
+          <.link navigate={
             Routes.project_job_index_path(@socket, :index, @project.id)
           }>
             <div class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-200 hover:bg-secondary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
@@ -23,18 +23,7 @@ defmodule LightningWeb.WorkflowLive do
                 <Heroicons.table_cells solid class="h-4 w-4 inline-block" />
               </div>
             </div>
-          </.link> --%>
-          <%!-- &nbsp;&nbsp;
-          <.link navigate={
-            Routes.project_workflow_path(@socket, :new_job, @project.id)
-          }>
-            <Common.button>
-              <div class="h-full">
-                <Heroicons.plus class="h-4 w-4 inline-block" />
-                <span class="inline-block align-middle">New Job</span>
-              </div>
-            </Common.button>
-          </.link> --%>
+          </.link>
         </Layout.header>
       </:header>
       <div class="relative h-full">
@@ -186,7 +175,6 @@ defmodule LightningWeb.WorkflowLive do
      socket
      |> assign(
        active_menu_item: :projects,
-       encoded_project_space: encode_project_space(project),
        new_credential: false,
        builder_state: %{}
      )}
@@ -330,6 +318,7 @@ defmodule LightningWeb.WorkflowLive do
       active_menu_item: :overview,
       job: job,
       current_workflow: workflow,
+      encoded_project_space: encode_project_space(workflow),
       page_title: socket.assigns.project.name
     )
   end
@@ -344,6 +333,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       page_title: socket.assigns.project.name,
       current_workflow: workflow,
+      encoded_project_space: encode_project_space(workflow),
       workflow:
         Workflows.Workflow.changeset(workflow, %{
           name: workflow.name,
