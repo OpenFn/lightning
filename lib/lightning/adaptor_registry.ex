@@ -57,14 +57,23 @@ defmodule Lightning.AdaptorRegistry do
     end
 
     @doc """
-    Retrieve all packages for a given user or organization
+    Retrieve all packages for a given user or organization. Return empty list if
+    application cannot connect to NPM. (E.g., because it's started offline.)
     """
     @spec user_packages(user :: String.t()) :: [map()]
     def user_packages(user) do
-      get!("/-/user/#{user}/package", [],
+      get("/-/user/#{user}/package", [],
         hackney: [pool: :default],
         recv_timeout: 15_000
-      ).body
+      )
+      |> case do
+        {:error, %HTTPoison.Error{reason: :nxdomain, id: nil}} ->
+          Logger.info("Unable to connect to NPM; no adaptors fetched.")
+          []
+
+        {:ok, resp} ->
+          Map.get(resp, :body)
+      end
     end
 
     @doc """

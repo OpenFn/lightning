@@ -144,7 +144,7 @@ function mergeTuples(
 
 function hasDescendent(projectSpace: ProjectSpace, job: Job): boolean {
   return Boolean(
-    projectSpace.jobs.find((j) => {
+    projectSpace.jobs.find(j => {
       if (j.trigger.type in ['on_job_failure', 'on_job_success']) {
         return (j.trigger as FlowTrigger).upstreamJob == job.id;
       }
@@ -169,7 +169,7 @@ const rootLayoutOptions: LayoutOptions = {
 
 function groupByWorkflow(projectSpace: ProjectSpace): Map<Workflow, Job[]> {
   return new Map(
-    projectSpace.workflows.map((workflow) => [
+    projectSpace.workflows.map(workflow => [
       workflow,
       projectSpace.jobs.filter(({ workflowId }) => workflowId == workflow.id),
     ])

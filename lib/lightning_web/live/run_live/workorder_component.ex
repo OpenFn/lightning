@@ -14,7 +14,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     last_run_finished_at =
       case last_run.finished_at do
         nil -> nil
-        finished_at -> finished_at |> Calendar.strftime("%c")
+        finished_at -> finished_at |> Calendar.strftime("%c %Z")
       end
 
     socket =
@@ -51,7 +51,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <div class="my-auto p-6"><%= @work_order.reason.type %></div>
       <div class="my-auto p-6">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
-          <div><%= @work_order.reason.dataclip_id %></div>
+          <span
+            title={@work_order.reason.dataclip_id}
+            class="font-normal text-xs whitespace-nowrap text-ellipsis
+            bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
+            underline-offset-2 hover:text-indigo-500"
+          >
+            <%= display_short_uuid(@work_order.reason.dataclip_id) %>
+          </span>
         <% end %>
       </div>
       <div class="my-auto p-6">

@@ -23,7 +23,8 @@ defmodule LightningWeb.RunLive.Components do
             <Heroicons.clock solid class="mr-1 h-5 w-5" />
             <span>
               <%= if @last_run.finished_at do %>
-                Run finished at <%= @last_run.finished_at |> Calendar.strftime("%c") %>
+                Run finished at <%= @last_run.finished_at
+                |> Calendar.strftime("%c %Z") %>
               <% else %>
                 Running...
               <% end %>
@@ -84,7 +85,8 @@ defmodule LightningWeb.RunLive.Components do
             navigate={show_run_path(@project.id, @run.id)}
             class="hover:underline hover:underline-offset-2"
           >
-            <%= @run.job.name %>
+            <%= @run.job.name %> @ <%= @run.finished_at
+            |> Calendar.strftime("%c %Z") %>
           </.link>
         </span>
       </span>
@@ -130,7 +132,7 @@ defmodule LightningWeb.RunLive.Components do
     run_finished_at =
       cond do
         run.finished_at ->
-          run.finished_at |> Calendar.strftime("%c")
+          run.finished_at |> Calendar.strftime("%c.%f %Z")
 
         run.started_at ->
           "Running..."

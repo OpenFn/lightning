@@ -316,7 +316,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view
              |> has_element?(
                "div[id^=finished-at]",
-               now |> Timex.shift(seconds: -20) |> Calendar.strftime("%c")
+               now |> Timex.shift(seconds: -20) |> Calendar.strftime("%c.%f %Z")
              )
 
       assert view |> has_element?("div[id^=ran-for]", "5000 ms")

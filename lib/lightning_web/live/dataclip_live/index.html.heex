@@ -25,7 +25,7 @@
       <%= for dataclip <- @page.entries do %>
         <.tr id={"dataclip-#{dataclip.id}"}>
           <.td>
-            <%= dataclip.inserted_at |> Calendar.strftime("%c") %>
+            <%= dataclip.inserted_at |> Calendar.strftime("%c %Z") %>
           </.td>
           <.td><.type_pill dataclip={dataclip} /></.td>
           <.td>
