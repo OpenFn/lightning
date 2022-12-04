@@ -113,7 +113,7 @@ export default {
   // Add `w/<id>` to the URL.
   selectWorkflow(id: string) {
     const selectWorkflowUrl = new URL(this.baseUrl);
-    selectWorkflowUrl.pathname += `/w/${id}`;
+    //selectWorkflowUrl.pathname = `/w/${id}`;
     this.liveSocket.pushHistoryPatch(
       selectWorkflowUrl.toString(),
       'push',
