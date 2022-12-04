@@ -1,33 +1,32 @@
 defmodule ObanManager do
   require Logger
 
-  alias OpenFn.{
-    Repo,
-    Run,
-    RunService,
-    FlowService,
-    ObanQuery
-  }
+  # def handle_event([:oban, :circuit, :open], _measure, meta, _pid),
+  #   do: Logger.info("Circuit open #{inspect(meta, pretty: true)}")
 
-  def handle_event([:oban, :circuit, :open], _measure, meta, _pid),
-    do: Logger.info("Circuit open #{inspect(meta, pretty: true)}")
+  # def handle_event([:oban, :circuit, :trip], _measure, meta, _pid) do
+  #   Logger.error("Circuit tripped with #{inspect(meta, pretty: true)}")
 
-  def handle_event([:oban, :circuit, :trip], _measure, meta, _pid) do
-    Logger.error("Circuit tripped with #{inspect(meta, pretty: true)}")
+  #   context =
+  #     Map.take(meta, [:name])
+  #     |> scrub_context
 
-    context =
-      Map.take(meta, [:name])
-      |> scrub_context
-
-    Sentry.capture_exception(meta.error,
-      stacktrace: meta.stacktrace,
-      message: meta.message,
-      extra: context,
-      tags: %{type: "oban"}
-    )
-  end
+  #   Sentry.capture_exception(meta.error,
+  #     stacktrace: meta.stacktrace,
+  #     message: meta.message,
+  #     extra: context,
+  #     tags: %{type: "oban"}
+  #   )
+  # end
 
   def handle_event([:oban, :job, :exception] = first, measure, meta, _pid) do
+
+    # Lightning.Invocation.update_run(run, %{
+    #   finished_at: DateTime.utc_now(),
+    #   exit_code: result.exit_code,
+    #   log: scrubbed_log
+    # })
+
     IO.inspect(first, label: "first")
     IO.inspect(measure, label: "measure")
     IO.inspect(meta, label: "meta")
@@ -54,6 +53,7 @@ defmodule ObanManager do
     # error = meta.error
 
     # dead? = meta.attempt >= meta.max_attempts
+
     # timeout? = Map.get(error, :reason) == :timeout
 
     # if timeout? do
@@ -88,17 +88,17 @@ defmodule ObanManager do
     #     ])
 
     # handle_crashed_run(
-    #     get_in(args, ["run", "id"]),
-    #     get_in(args, ["state"]),
-    #     error,
-    #     timeout?
-    #   )
+    #   get_in(args, ["run", "id"]),
+    #   get_in(args, ["state"]),
+    #   error,
+    #   timeout?
+    # )
   end
 
   @doc """
   Attempt to create a record of the crash, updating an existing run in the db.
   """
-  def handle_crashed_run(run_id, state, error, timeout?) do
+  # def handle_crashed_run(run_id, state, error, timeout?) do
     # run = Repo.get(Run, run_id)
 
     # result =
@@ -153,12 +153,12 @@ defmodule ObanManager do
     # |> RunService.ensure_result_handled(run)
     # |> FlowService.ensure_flow_controlled(state)
     # |> clean_timeouts_for_run()
-  end
+  # end
 
   @doc """
   Attempt to create a record of the crash, updating an existing run in the db.
   """
-  def handle_orphaned_run(run_id, state) do
+  # def handle_orphaned_run(run_id, state) do
     # run = Repo.get(Run, run_id)
 
     # %Engine.Result{
@@ -180,7 +180,7 @@ defmodule ObanManager do
     # }
     # |> RunService.ensure_result_handled(run)
     # |> FlowService.ensure_flow_controlled(state)
-  end
+  # end
 
   @doc """
   Given a run which we are certain has been handled properly (i.e., exit_code
@@ -193,6 +193,7 @@ defmodule ObanManager do
   process from the normal operation of the platform which, sadly, includes and
   handles unresponsive NodeVMs as part of its standard operating procedure.
   """
+
   # def clean_timeouts_for_run(%Run{id: id}) do
   #   Logger.warn(
   #     "Deleting discarded ObanJob(s) for Run ##{id}; it failed with Oban.TimeoutError and was handled."
@@ -202,8 +203,8 @@ defmodule ObanManager do
   #   |> Repo.delete_all()
   # end
 
-  # defp scrub_context(context) do
-  #   {_private_state, safe_context} = pop_in(context, [:args, "state"])
-  #   safe_context
-  # end
+  defp scrub_context(context) do
+    {_private_state, safe_context} = pop_in(context, [:args, "state"])
+    safe_context
+  end
 end

@@ -26,7 +26,7 @@ defmodule Lightning.Pipeline do
   @spec process(AttemptRun.t()) :: :ok
   def process(%AttemptRun{} = attempt_run) do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
-    result = Runner.start(run)
+    result = Runner.start(run) |> handle_result()
 
     jobs = get_jobs_for_result(run.job_id, result)
 
@@ -54,7 +54,41 @@ defmodule Lightning.Pipeline do
     :ok
   end
 
-  defp result_to_trigger_type(%Lightning.Runtime.Result{exit_reason: reason}) do
+  # This is from a either a timeout, or the outside process being stopped.
+  defp handle_result(%Engine.Result{exit_reason: :killed, log: log} = result) do
+    timeout_log = [
+      "==== TIMEOUT ===================================================================",
+      "",
+      "We had to abort this run because it took too long. Here's what to do:",
+      "",
+      " - Check your destination system to ensure it's working and responding properly",
+      "   to API requests.",
+      " - Check your job expression to make sure you haven't created any infinite loops",
+      "   or long sleep/wait commands.",
+      "",
+      "Only enterprise plans support runs lasting more than 100 seconds.",
+      "Contact enterprise@openfn.org to enable long-running jobs."
+    ]
+
+    %{result | log: log ++ timeout_log, exit_code: 2}
+  end
+
+  # This _shouldn't_ match, although it's possible for a ShellRuntime to
+  # exit without a value - that should be considered a bug.
+  defp handle_result(%Engine.Result{log: log, exit_code: nil} = result) do
+    handle_result(%{
+      result
+      | exit_code:
+          if(Enum.any?(log, &String.contains?(&1, "out of memory")),
+            do: 134,
+            else: 11
+          )
+    })
+  end
+
+  defp handle_result(%Engine.Result{} = result), do: result
+
+  defp result_to_trigger_type(%Engine.Result{exit_reason: reason}) do
     case reason do
       :error -> :on_job_failure
       :ok -> :on_job_success
@@ -67,6 +101,8 @@ defmodule Lightning.Pipeline do
   end
 
   defp get_next_dataclip_id(result, run) do
+    IO.inspect(result, label: "REASON")
+
     case result.exit_reason do
       :error ->
         run.input_dataclip_id

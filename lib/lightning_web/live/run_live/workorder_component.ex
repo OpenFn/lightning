@@ -94,6 +94,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <.success_pill>Success</.success_pill>
             <% val when val > 0 -> %>
               <.failure_pill>Failure</.failure_pill>
+            <% val when val < 0 -> %>
+              <.failure_pill>Timeout</.failure_pill>
           <% end %>
 
           <button
