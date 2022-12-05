@@ -944,6 +944,12 @@ defmodule LightningWeb.RunWorkOrderTest do
       # search :some data
 
       view
+      |> search_for("xxxx", [])
+
+      refute workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
       |> search_for("xxxx", [:body, :log])
 
       refute workflow_displayed(view, "workflow 1")
@@ -1048,6 +1054,10 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> Floki.text() =~
                "?"
     end
+  end
+
+  def search_for(view, term, types) when types == [] do
+    search_for(view, term, [:body, :log])
   end
 
   def search_for(view, term, types) do

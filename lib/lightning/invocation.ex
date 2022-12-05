@@ -361,7 +361,7 @@ defmodule Lightning.Invocation do
     dynamic(true)
   end
 
-  def filter_run_body_and_logs_where(search_term, searchfors) do
+  def filter_run_body_and_logs_where(search_term, searchfors) when searchfors != [] do
     Enum.reduce(searchfors, dynamic(false), fn
       :log, query ->
         dynamic(
@@ -392,6 +392,7 @@ defmodule Lightning.Invocation do
         date_after: date_after,
         date_before: date_before
       ) do
+
     # we can use a ^custom_query to control (order_by ...) the way preloading is done
     runs_query =
       from(r in Lightning.Invocation.Run,
