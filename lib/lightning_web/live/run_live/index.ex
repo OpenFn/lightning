@@ -98,8 +98,6 @@ defmodule LightningWeb.RunLive.Index do
            socket,
            :index,
            socket.assigns.project
-           #  build_filter(changeset)
-           #  |> Enum.into(%{})
          )
      )}
   end
@@ -122,7 +120,6 @@ defmodule LightningWeb.RunLive.Index do
         "validate",
         %{
           "run_search_form" => %{
-            # "search_term" => search_term,
             "workflow_id" => workflow_id,
             "date_after" => date_after,
             "date_before" => date_before
@@ -132,7 +129,6 @@ defmodule LightningWeb.RunLive.Index do
       ) do
     changeset =
       socket.assigns.changeset
-      # |> Ecto.Changeset.put_change(:search_term, search_term)
       |> Ecto.Changeset.put_change(:workflow_id, workflow_id)
       |> Ecto.Changeset.put_change(:date_after, date_after)
       |> Ecto.Changeset.put_change(:date_before, date_before)
@@ -149,7 +145,6 @@ defmodule LightningWeb.RunLive.Index do
            socket,
            :index,
            socket.assigns.project
-           # build_filter(changeset) |> Enum.into(%{})
          )
      )}
   end

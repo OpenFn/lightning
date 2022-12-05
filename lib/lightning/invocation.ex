@@ -443,7 +443,6 @@ defmodule Lightning.Invocation do
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
-      # distinct: wo.id,
       order_by: [desc_nulls_first: r.finished_at],
       preload: [
         reason:
@@ -483,8 +482,7 @@ defmodule Lightning.Invocation do
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
-
-    # |> find_uniq_wo()
+    |> find_uniq_wo()
   end
 
   def find_uniq_wo(page) do

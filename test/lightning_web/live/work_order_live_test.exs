@@ -851,6 +851,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project
     } do
+      # workflow 1 -> 1 run success -> contains body with some data
+      # workflow 2 -> 1 run failure -> contains log with some log
+
       job_one =
         workflow_job_fixture(
           workflow_name: "workflow 1",
@@ -861,7 +864,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       work_order = work_order_fixture(workflow_id: job_one.workflow_id)
 
       dataclip =
-        dataclip_fixture(type: :http_request, body: %{"name" => "searchtext"})
+        dataclip_fixture(type: :http_request, body: %{"name" => "some data"})
 
       reason =
         reason_fixture(
@@ -916,7 +919,8 @@ defmodule LightningWeb.RunWorkOrderTest do
               finished_at:
                 DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
-              input_dataclip_id: dataclip.id
+              input_dataclip_id: dataclip.id,
+              log: ["xxx", "xxx some log zzz", "bbbb"]
             }
           ]
         })
@@ -937,18 +941,37 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert div =~ "Failure"
 
-      # search :searchtext
+      # search :some data
 
       view
-      |> element("#run-search-form")
-      |> render_submit(%{"search_term" => "searchtext"})
+      |> search_for("xxxx", [:body, :log])
 
-      assert view
-             |> element(
-               "section#inner_content div[data-entity='work_order_list']"
-             )
-             |> render()
-             |> IO.inspect() =~ "workflow 2"
+      refute workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("some data", [:body, :log])
+
+      assert workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("bar", [:body, :log])
+
+      refute workflow_displayed(view, "workflow 1")
+      assert workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("some log", [:body])
+
+      refute workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("some log", [:log])
+
+      refute workflow_displayed(view, "workflow 1")
+      assert workflow_displayed(view, "workflow 2")
     end
   end
 
@@ -1024,6 +1047,42 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
                "?"
+    end
+  end
+
+  def search_for(view, term, types) do
+    for {type, index} <- [:body, :log] |> Enum.with_index() do
+      checked = type in types
+
+      IO.inspect({index, checked})
+
+      view
+      |> element("input#run-search-form_searchfor_options_#{index}_selected")
+      |> render_change(%{
+        "run_search_form[searchfor_options][#{index}][selected]" => checked
+      })
+    end
+
+    view
+    |> element("input#run-search-form_search_term")
+    |> render_change(%{"run_search_form[search_term]" => term})
+
+    view
+    |> form("#run-search-form")
+    |> render_submit()
+  end
+
+  def workflow_displayed(view, name) do
+    elem =
+      view
+      |> element(
+        "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+      )
+
+    if elem |> has_element?() do
+      elem |> render() =~ name
+    else
+      false
     end
   end
 end
