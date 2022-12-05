@@ -1054,8 +1054,6 @@ defmodule LightningWeb.RunWorkOrderTest do
     for {type, index} <- [:body, :log] |> Enum.with_index() do
       checked = type in types
 
-      IO.inspect({index, checked})
-
       view
       |> element("input#run-search-form_searchfor_options_#{index}_selected")
       |> render_change(%{
