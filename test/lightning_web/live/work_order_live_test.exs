@@ -1016,7 +1016,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html
              |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               "24000ms"
+               "24000 ms"
 
       assert html
              |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
@@ -1041,7 +1041,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html
              |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
              |> Floki.text() =~
-               ~r/25\d\d\dms/
+               ~r/25\d\d\d ms/
 
       assert html
              |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
