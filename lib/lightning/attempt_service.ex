@@ -109,4 +109,26 @@ defmodule Lightning.AttemptService do
     |> Repo.insert!()
     |> append(Run.new_from(run))
   end
+
+  def get_for_rerun(attempt_id, run_id) do
+    from(ar in AttemptRun,
+      where: ar.attempt_id == ^attempt_id and ar.run_id == ^run_id,
+      preload: [
+        :attempt,
+        run:
+          ^from(r in Run,
+            select: [
+              :id,
+              :job_id,
+              :started_at,
+              :finished_at,
+              :exit_code,
+              :input_dataclip_id,
+              :output_dataclip_id
+            ]
+          )
+      ]
+    )
+    |> Repo.one()
+  end
 end

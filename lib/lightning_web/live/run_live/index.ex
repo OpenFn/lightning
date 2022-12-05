@@ -4,7 +4,7 @@ defmodule LightningWeb.RunLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Invocation
+  alias Lightning.{AttemptService, Invocation, RunSearchForm, Pipeline}
   alias Lightning.Invocation.Run
 
   alias Lightning.RunSearchForm
@@ -93,12 +93,7 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> push_patch(
-       to:
-         Routes.project_run_index_path(
-           socket,
-           :index,
-           socket.assigns.project
-         )
+       to: Routes.project_run_index_path(socket, :index, socket.assigns.project)
      )}
   end
 
@@ -116,6 +111,28 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
+  def handle_event(
+        "rerun",
+        %{"attempt_id" => attempt_id, "run_id" => run_id},
+        socket
+      ) do
+    %{attempt: attempt, run: run} =
+      AttemptService.get_for_rerun(attempt_id, run_id)
+
+    reason =
+      Lightning.InvocationReasons.build(:retry, %{
+        user: socket.assigns.current_user,
+        run: run
+      })
+
+    {:ok, attempt_run} = AttemptService.retry(attempt, run, reason)
+
+    Pipeline.new(%{attempt_run_id: attempt_run.id})
+    |> Oban.insert()
+
+    {:noreply, socket}
+  end
+
   def handle_event(
         "validate",
         %{
@@ -140,12 +157,7 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> push_patch(
-       to:
-         Routes.project_run_index_path(
-           socket,
-           :index,
-           socket.assigns.project
-         )
+       to: Routes.project_run_index_path(socket, :index, socket.assigns.project)
      )}
   end
 
