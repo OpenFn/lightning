@@ -73,7 +73,6 @@ defmodule Lightning.PipelineTest do
       assert expected_run.input_dataclip_id == dataclip.id
 
       assert %{
-               "configuration" => %{"credential" => "body"},
                "data" => %{},
                "error" => error
              } = expected_run.output_dataclip.body
@@ -158,12 +157,10 @@ defmodule Lightning.PipelineTest do
       assert expected_run.input_dataclip_id == output_dataclip_id
 
       assert %{
-               "configuration" => %{"credential" => "body"},
                "data" => %{}
              } = expected_run.output_dataclip.body
 
       assert %{
-               "configuration" => %{"credential" => "body"},
                "data" => %{},
                "extra" => "data"
              } = expected_run.output_dataclip.body
