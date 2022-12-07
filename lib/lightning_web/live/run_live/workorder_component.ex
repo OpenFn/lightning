@@ -57,10 +57,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     end)
   end
 
+  attr :show_details, :boolean, default: false
+
   @impl true
   def render(assigns) do
-    assigns = assigns |> assign_new(:show_details, fn -> false end)
-
     ~H"""
     <div
       data-entity="work_order"

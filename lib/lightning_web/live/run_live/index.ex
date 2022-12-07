@@ -184,13 +184,15 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
+  # NOTE: this event was previously called "ignore", however there is an
+  # issue with form recovery in LiveView where only the first input (if it has
+  # a `phx-change` on it) is sent.
+  # https://github.com/phoenixframework/phoenix_live_view/issues/2333
+  # We have changed the event name to "validate" since that is what
+  # the form recovery event will use.
   def handle_event(
-        "ignore",
-        %{
-          "run_search_form" => %{
-            "search_term" => search_term
-          }
-        },
+        "validate",
+        %{"run_search_form" => %{"search_term" => search_term}},
         socket
       ) do
     changeset =
