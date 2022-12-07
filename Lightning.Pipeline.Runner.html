@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-766B8014.js"></script>
+    <script src="dist/sidebar_items-7618B470.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,6 +155,17 @@ and returns an error tuple.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#scrub_result/1" translate="no">scrub_result(body)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Scrubs values from all keys in configuration, will be replaced by extensions
+to scrubber.ex, which is currently only used for logs.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#start/2" translate="no">start(run, opts \\ [])</a>
 
         </div>
@@ -186,7 +197,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_dataclip_from_result(result, run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L127" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L136" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -219,7 +230,7 @@ and returns an error tuple.</p>
     </a>
     <h1 class="signature" translate="no">find_or_install_adaptor(adaptor)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L166" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L175" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -237,6 +248,35 @@ and returns an error tuple.</p>
 
 <p>Make sure an adaptor matching the name is available.</p><p>If it is available, return it's <code class="inline">Engine.Adaptor</code> struct - if not then
 install it.</p>
+  </section>
+</section>
+<section class="detail" id="scrub_result/1">
+
+  <div class="detail-header">
+    <a href="#scrub_result/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">scrub_result(body)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L122" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> scrub_result(body :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()</pre>
+
+      </div>
+
+<p>Scrubs values from all keys in configuration, will be replaced by extensions
+to scrubber.ex, which is currently only used for logs.</p>
   </section>
 </section>
 <section class="detail" id="start/2">
