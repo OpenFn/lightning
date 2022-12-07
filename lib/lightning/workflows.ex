@@ -110,12 +110,16 @@ defmodule Lightning.Workflows do
   """
   @spec get_workflows_for(Project.t()) :: [Workflow.t()]
   def get_workflows_for(%Project{} = project) do
+    get_workflows_for_query(project)
+    |> Repo.all()
+  end
+
+  def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       join: j in assoc(w, :jobs),
       preload: [jobs: {j, [:credential, :workflow, trigger: [:upstream_job]]}],
       where: w.project_id == ^project.id
     )
-    |> Repo.all()
   end
 
   defp trigger_for_project_space(job) do

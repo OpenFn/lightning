@@ -13,7 +13,7 @@ defmodule LightningWeb.JobLiveTest do
 
   setup %{project: project} do
     project_credential_fixture(project_id: project.id)
-    job = job_fixture(project_id: project.id)
+    job = workflow_job_fixture(project_id: project.id)
     %{job: job}
   end
 
@@ -70,7 +70,7 @@ defmodule LightningWeb.JobLiveTest do
   end
 
   describe "Deleting a job from inspector" do
-    test "jobs with no dowstream jobs can be deleted", %{
+    test "jobs with no downstream jobs can be deleted", %{
       conn: conn,
       project: project,
       job: job
@@ -78,7 +78,13 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert html =~ project.name
@@ -89,9 +95,9 @@ defmodule LightningWeb.JobLiveTest do
       |> element("#delete-job")
       |> render_click()
 
-      assert_patched(
+      assert_patch(
         view,
-        Routes.project_workflow_path(conn, :show, project.id)
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
     end
 
@@ -107,7 +113,13 @@ defmodule LightningWeb.JobLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :edit_job, project.id, job.id)
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert html =~ project.name

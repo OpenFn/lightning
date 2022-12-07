@@ -21,6 +21,7 @@ and this project adheres to
 - Updated @openfn/adaptor-docs to 0.0.5
 - Updated @openfn/describe-package to 0.0.10
 - Create an follow a manual Run from the Job Inspector
+- View all workflows in a project on the workflows index page
 
 ### Fixed
 

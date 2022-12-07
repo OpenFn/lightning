@@ -200,7 +200,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
           <%= live_patch("Cancel",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
-            to: Routes.project_workflow_path(@socket, :show, @project.id)
+            to: @return_to
           ) %>
           <Form.submit_button
             disabled={!@changeset.valid?}
@@ -245,7 +245,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
         LightningWeb.Endpoint.broadcast!(
           "project_space:#{socket.assigns.project.id}",
           "update",
-          %{}
+          %{workflow_id: job.workflow_id}
         )
 
         {:noreply,
@@ -321,10 +321,13 @@ defmodule LightningWeb.JobLive.JobBuilder do
   end
 
   defp on_save_success(socket) do
+    workflow_id =
+      socket.assigns.changeset |> Ecto.Changeset.get_field(:workflow_id)
+
     LightningWeb.Endpoint.broadcast!(
       "project_space:#{socket.assigns.project.id}",
       "update",
-      %{}
+      %{workflow_id: workflow_id}
     )
 
     socket

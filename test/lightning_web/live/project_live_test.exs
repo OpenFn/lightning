@@ -103,33 +103,33 @@ defmodule LightningWeb.ProjectLiveTest do
           conn,
           Routes.project_workflow_path(
             conn,
-            :show,
+            :index,
             Lightning.Projects.first_project_for_user(user)
           )
         )
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_1.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_1.id)}']"
              )
              |> has_element?()
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_2.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_2.id)}']"
              )
              |> has_element?()
 
       refute view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_3.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_3.id)}']"
              )
              |> has_element?()
 
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :show, project_1.id)
+          Routes.project_workflow_path(conn, :index, project_1.id)
         )
 
       assert html =~ project_1.name
@@ -137,20 +137,20 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_2.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_2.id)}']"
              )
              |> has_element?()
 
       refute view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_3.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_3.id)}']"
              )
              |> has_element?()
 
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :show, project_2.id)
+          Routes.project_workflow_path(conn, :index, project_2.id)
         )
 
       assert html =~ project_2.name
@@ -158,19 +158,19 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_1.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_1.id)}']"
              )
              |> has_element?()
 
       refute view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project_3.id)}']"
+               "a[href='#{Routes.project_workflow_path(conn, :index, project_3.id)}']"
              )
              |> has_element?()
 
       assert live(
                conn,
-               Routes.project_workflow_path(conn, :show, project_3.id)
+               Routes.project_workflow_path(conn, :index, project_3.id)
              ) ==
                {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
     end

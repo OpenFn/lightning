@@ -450,7 +450,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   describe "New credential from project context " do
     setup %{project: project} do
-      %{job: job_fixture(project_id: project.id)}
+      %{job: workflow_job_fixture(project_id: project.id)}
     end
 
     test "open credential modal from the job inspector (edit_job)", %{
@@ -461,32 +461,14 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          RouteHelpers.workflow_edit_job_path(project.id, job.id)
+          RouteHelpers.workflow_edit_job_path(
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       assert has_element?(view, "#builder-#{job.id}")
-
-      # open the new credential modal
-
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
-      # assertions
-
-      assert has_element?(view, "#credential-form")
-      refute has_element?(view, "#project_list")
-    end
-
-    test "open credential modal from the new job form", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          RouteHelpers.workflow_new_job_path(project.id)
-        )
 
       # open the new credential modal
 
@@ -508,58 +490,15 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          RouteHelpers.workflow_edit_job_path(project.id, job.id)
+          RouteHelpers.workflow_edit_job_path(
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       # open the new credential modal
 
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
-      # fill the modal and save
-
-      view
-      |> form("#credential-form",
-        credential: %{
-          schema: "raw"
-        }
-      )
-      |> render_change()
-
-      view
-      |> form("#credential-form",
-        credential: %{
-          name: "newly created credential",
-          schema: "raw",
-          body: Jason.encode!(%{"a" => 1})
-        }
-      )
-      |> render_submit()
-
-      # assertions
-
-      refute has_element?(view, "#credential-form")
-
-      assert view
-             |> element(
-               ~S{#job-form select#credentialField option[selected=selected]}
-             )
-             |> render() =~ "newly created credential",
-             "Should have the project credential selected"
-    end
-
-    test "create new credential from new job form and update the job form", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, view, _html} =
-        live(
-          conn,
-          RouteHelpers.workflow_new_job_path(project.id)
-        )
-
-      # open the new credential modal
       assert view
              |> element("#new-credential-launcher", "New credential")
              |> render_click()
@@ -604,7 +543,11 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, view, _html} =
         live(
           conn,
-          RouteHelpers.workflow_edit_job_path(project.id, job.id)
+          RouteHelpers.workflow_edit_job_path(
+            project.id,
+            job.workflow_id,
+            job.id
+          )
         )
 
       # change the job name so we can assert that the form state had been

@@ -58,10 +58,10 @@ defmodule LightningWeb.DashboardLiveTest do
         live(conn, Routes.dashboard_index_path(conn, :index))
         |> follow_redirect(
           conn,
-          Routes.project_workflow_path(conn, :show, project.id)
+          Routes.project_workflow_path(conn, :index, project.id)
         )
 
-      assert html =~ "WorkflowDiagram"
+      assert html =~ "Create a workflow"
     end
   end
 end

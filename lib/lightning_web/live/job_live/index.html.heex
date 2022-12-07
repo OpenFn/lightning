@@ -1,15 +1,6 @@
 <Layout.page_content>
   <:header>
-    <Layout.header title={@page_title} socket={@socket}>
-      <.link navigate={workflow_new_job_path(@project.id)}>
-        <Common.button>
-          <div class="h-full">
-            <Icon.plus class="h-4 w-4 inline-block" />
-            <span class="inline-block align-middle">New Job</span>
-          </div>
-        </Common.button>
-      </.link>
-    </Layout.header>
+    <Layout.header title={@page_title} socket={@socket}></Layout.header>
   </:header>
   <Layout.centered>
     <.table>
@@ -38,7 +29,9 @@
           <.td class="col-span-2">
             <span>
               <.link
-                navigate={workflow_edit_job_path(@project.id, job.id)}
+                navigate={
+                  workflow_edit_job_path(@project.id, job.workflow_id, job.id)
+                }
                 class="button"
               >
                 Edit
