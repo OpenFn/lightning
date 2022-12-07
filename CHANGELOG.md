@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - Added a Delete job button in Inspector
+- Filter workflow runs by text/value in run logs or input body
 
 ### Changed
 

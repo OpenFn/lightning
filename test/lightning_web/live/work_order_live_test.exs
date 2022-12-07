@@ -155,14 +155,19 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: job_a.workflow_id
         )
 
-      work_order = work_order_fixture(workflow_id: job_a.workflow_id)
-
-      dataclip = dataclip_fixture()
+      dataclip = dataclip_fixture(project_id: project.id)
 
       reason =
         reason_fixture(
           trigger_id: job_a.trigger.id,
           dataclip_id: dataclip.id
+        )
+
+      work_order =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_a.workflow_id,
+          reason_id: reason.id
         )
 
       now = Timex.now()
@@ -183,18 +188,20 @@ defmodule LightningWeb.RunWorkOrderTest do
             started_at: now |> Timex.shift(seconds: -10),
             finished_at: now |> Timex.shift(seconds: -5),
             exit_code: 0,
-            input_dataclip_id: dataclip.id
+            input_dataclip_id: dataclip_fixture(project_id: project.id).id
           },
           %{
             job_id: job_c.id,
             started_at: now |> Timex.shift(seconds: -5),
             finished_at: now |> Timex.shift(seconds: -1),
             exit_code: 0,
-            input_dataclip_id: dataclip.id
+            input_dataclip_id: dataclip_fixture(project_id: project.id).id
           }
         ]
       })
       |> Lightning.Repo.insert!()
+
+      Lightning.Invocation.list_work_orders_for_project(project).entries()
 
       {:ok, view, _html} =
         live(
@@ -239,19 +246,17 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_a.workflow_id)
 
-      dataclip = dataclip_fixture()
-
-      reason =
-        reason_fixture(
-          trigger_id: job_a.trigger.id,
-          dataclip_id: dataclip.id
-        )
+      dataclip = dataclip_fixture(project_id: project.id)
 
       now = Timex.now()
 
       Attempt.new(%{
         work_order_id: work_order.id,
-        reason_id: reason.id,
+        reason_id:
+          reason_fixture(
+            trigger_id: job_a.trigger.id,
+            dataclip_id: dataclip.id
+          ).id,
         runs: [
           %{
             job_id: job_a.id,
@@ -262,17 +267,17 @@ defmodule LightningWeb.RunWorkOrderTest do
           },
           %{
             job_id: job_b.id,
-            started_at: now |> Timex.shift(seconds: -10),
-            finished_at: now |> Timex.shift(seconds: -5),
-            exit_code: 1,
-            input_dataclip_id: dataclip.id
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip_fixture(project_id: project.id).id
           },
           %{
             job_id: job_c.id,
-            started_at: now |> Timex.shift(seconds: -5),
-            finished_at: now |> Timex.shift(seconds: -1),
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
             exit_code: 1,
-            input_dataclip_id: dataclip.id
+            input_dataclip_id: dataclip_fixture(project_id: project.id).id
           }
         ]
       })
@@ -341,9 +346,13 @@ defmodule LightningWeb.RunWorkOrderTest do
           workflow_id: job_a.workflow_id
         )
 
-      work_order = work_order_fixture(workflow_id: job_a.workflow_id)
+      work_order =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_a.workflow_id
+        )
 
-      dataclip = dataclip_fixture()
+      dataclip = dataclip_fixture(project_id: project.id)
 
       reason =
         reason_fixture(
@@ -369,14 +378,14 @@ defmodule LightningWeb.RunWorkOrderTest do
             started_at: now |> Timex.shift(seconds: -10),
             finished_at: now |> Timex.shift(seconds: -5),
             exit_code: 0,
-            input_dataclip_id: dataclip.id
+            input_dataclip_id: dataclip_fixture(project_id: project.id).id
           },
           %{
             job_id: job_c.id,
             started_at: now |> Timex.shift(seconds: -5),
             finished_at: now |> Timex.shift(seconds: -1),
             exit_code: nil,
-            input_dataclip_id: dataclip.id
+            input_dataclip_id: dataclip_fixture(project_id: project.id).id
           }
         ]
       })
@@ -454,23 +463,49 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "Filter by status"
 
       assert view
-             |> element("input#run-search-form_options_0_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_0_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_1_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_1_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_2_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_2_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_3_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_3_selected[checked]"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_options_4_selected[checked]")
+             |> element(
+               "input#run-search-form_status_options_4_selected[checked]"
+             )
+             |> has_element?()
+
+      assert view
+             |> element("input#run-search-form_search_term")
+             |> has_element?()
+
+      assert view
+             |> element(
+               "input#run-search-form_searchfor_options_0_selected[checked]"
+             )
+             |> has_element?()
+
+      assert view
+             |> element(
+               "input#run-search-form_searchfor_options_1_selected[checked]"
+             )
              |> has_element?()
     end
 
@@ -531,20 +566,20 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck :failure
 
       view
-      |> element("input#run-search-form_options_1_selected[checked]")
-      |> render_change(%{"run_search_form[options][1][selected]" => false})
+      |> element("input#run-search-form_status_options_1_selected[checked]")
+      |> render_change(%{"run_search_form[status_options][1][selected]" => false})
 
       refute view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+               "section#inner_content div[data-entity='work _order_list'] > div:first-child > div:last-child"
              )
              |> has_element?()
 
       # recheck failure
 
       view
-      |> element("input#run-search-form_options_1_selected")
-      |> render_change(%{"run_search_form[options][1][selected]" => true})
+      |> element("input#run-search-form_status_options_1_selected")
+      |> render_change(%{"run_search_form[status_options][1][selected]" => true})
 
       div =
         view
@@ -810,6 +845,252 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert result =~ "2022-08-23"
       assert result =~ "2022-08-29"
+    end
+
+    test "Filter by run run_log and dataclip_body", %{
+      conn: conn,
+      project: project
+    } do
+      # workflow 1 -> 1 run success -> contains body with some data
+      # workflow 2 -> 1 run failure -> contains log with some log
+
+      job_one =
+        workflow_job_fixture(
+          workflow_name: "workflow 1",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_one.workflow_id)
+
+      dataclip =
+        dataclip_fixture(type: :http_request, body: %{"name" => "some data"})
+
+      reason =
+        reason_fixture(
+          trigger_id: job_one.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_one.id,
+              started_at:
+                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      job_two =
+        workflow_job_fixture(
+          workflow_name: "workflow 2",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_two.workflow_id)
+
+      dataclip = dataclip_fixture(type: :http_request, body: %{"name" => "bar"})
+
+      reason =
+        reason_fixture(
+          trigger_id: job_two.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      %{id: _attempt_id} =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_two.id,
+              started_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              exit_code: 1,
+              input_dataclip_id: dataclip.id,
+              log: ["xxx", "xxx some log zzz", "bbbb"]
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      div =
+        view
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
+        )
+        |> render()
+
+      assert div =~ "Failure"
+
+      # search :some data
+
+      view
+      |> search_for("xxxx", [])
+
+      refute workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("xxxx", [:body, :log])
+
+      refute workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("some data", [:body, :log])
+
+      assert workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("bar", [:body, :log])
+
+      refute workflow_displayed(view, "workflow 1")
+      assert workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("some log", [:body])
+
+      refute workflow_displayed(view, "workflow 1")
+      refute workflow_displayed(view, "workflow 2")
+
+      view
+      |> search_for("some log", [:log])
+
+      refute workflow_displayed(view, "workflow 1")
+      assert workflow_displayed(view, "workflow 2")
+    end
+  end
+
+  describe "Show" do
+    test "log_view component" do
+      log_lines = ["First line", "Second line"]
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.log_view/1,
+          log: log_lines
+        )
+        |> Floki.parse_fragment!()
+
+      assert html |> Floki.find("div[data-line-number]") |> length() == 2
+
+      # Check that the log lines are present.
+      # Replace the resulting utf-8 &nbsp; back into a regular space.
+      assert html
+             |> Floki.find("div[data-log-line]")
+             |> Floki.text(sep: "\n")
+             |> String.replace(<<160::utf8>>, " ") ==
+               log_lines |> Enum.join("\n")
+    end
+
+    test "run_details component with finished run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+      finished_at = now |> Timex.shift(seconds: -1)
+
+      run = run_fixture(started_at: started_at, finished_at: finished_at)
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               Calendar.strftime(finished_at, "%c")
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "24000 ms"
+
+      assert html
+             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "?"
+    end
+
+    test "run_details component with pending run" do
+      now = Timex.now()
+
+      started_at = now |> Timex.shift(seconds: -25)
+      run = run_fixture(started_at: started_at)
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        |> Floki.parse_fragment!()
+
+      assert html
+             |> Floki.find("div#finished-at-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~ "Running..."
+
+      assert html
+             |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               ~r/25\d\d\d ms/
+
+      assert html
+             |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
+             |> Floki.text() =~
+               "?"
+    end
+  end
+
+  def search_for(view, term, types) when types == [] do
+    search_for(view, term, [:body, :log])
+  end
+
+  def search_for(view, term, types) do
+    for {type, index} <- [:body, :log] |> Enum.with_index() do
+      checked = type in types
+
+      view
+      |> element("input#run-search-form_searchfor_options_#{index}_selected")
+      |> render_change(%{
+        "run_search_form[searchfor_options][#{index}][selected]" => checked
+      })
+    end
+
+    view
+    |> element("input#run-search-form_search_term")
+    |> render_change(%{"run_search_form[search_term]" => term})
+
+    view
+    |> form("#run-search-form")
+    |> render_submit()
+  end
+
+  def workflow_displayed(view, name) do
+    elem =
+      view
+      |> element(
+        "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+      )
+
+    if elem |> has_element?() do
+      elem |> render() =~ name
+    else
+      false
     end
   end
 end

@@ -356,9 +356,39 @@ defmodule Lightning.Invocation do
     end)
   end
 
+  def filter_run_body_and_logs_where(search_term, searchfors)
+      when search_term in ["", nil] or searchfors == [] do
+    dynamic(true)
+  end
+
+  def filter_run_body_and_logs_where(search_term, searchfors)
+      when searchfors != [] do
+    Enum.reduce(searchfors, dynamic(false), fn
+      :log, query ->
+        dynamic(
+          [runs: r],
+          ^query or
+            fragment("cast(?  as VARCHAR) ilike ?", r.log, ^"%#{search_term}%")
+        )
+
+      :body, query ->
+        dynamic(
+          [input: i],
+          ^query or
+            fragment("cast(?  as VARCHAR) ilike ?", i.body, ^"%#{search_term}%")
+        )
+
+      _, query ->
+        # Not a where parameter
+        query
+    end)
+  end
+
   def list_work_orders_for_project_query(
         %Project{id: project_id},
         status: status,
+        searchfors: searchfors,
+        search_term: search_term,
         workflow_id: workflow_id,
         date_after: date_after,
         date_before: date_before
@@ -368,10 +398,14 @@ defmodule Lightning.Invocation do
       from(r in Lightning.Invocation.Run,
         as: :runs,
         join: j in assoc(r, :job),
+        join: d in assoc(r, :input_dataclip),
+        as: :input,
         order_by: [asc: r.finished_at],
+        where: r.input_dataclip_id == d.id,
         where: ^filter_run_status_where(status),
         where: ^filter_run_started_after_where(date_after),
         where: ^filter_run_started_before_where(date_before),
+        where: ^filter_run_body_and_logs_where(search_term, searchfors),
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,
@@ -394,23 +428,26 @@ defmodule Lightning.Invocation do
       )
 
     from(wo in Lightning.WorkOrder,
-      join: re in assoc(wo, :reason),
+      join: wo_re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
       as: :workflow,
       join: att in assoc(wo, :attempts),
       join: r in assoc(att, :runs),
       as: :runs,
+      join: att_re in assoc(att, :reason),
+      join: d in assoc(r, :input_dataclip),
+      as: :input,
       where: w.project_id == ^project_id,
+      where: d.id in [wo_re.dataclip_id, att_re.dataclip_id],
       where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_status_where(status),
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
-      distinct: true,
+      where: ^filter_run_body_and_logs_where(search_term, searchfors),
       order_by: [desc_nulls_first: r.finished_at],
       preload: [
         reason:
           ^from(r in Lightning.InvocationReason,
-            join: d in assoc(r, :dataclip),
             preload: [dataclip: ^dataclips_query]
           ),
         workflow:
@@ -424,6 +461,22 @@ defmodule Lightning.Invocation do
         last_finished_at: r.finished_at,
         work_order: wo
       }
+    )
+  end
+
+  def list_work_orders_for_project(%Project{} = project, filter, params)
+      when filter in [nil, []] do
+    list_work_orders_for_project(
+      project,
+      [
+        status: [:success, :failure, :timeout, :crash, :pending],
+        searchfors: [],
+        search_term: "",
+        workflow_id: "",
+        date_after: "",
+        date_before: ""
+      ],
+      params
     )
   end
 
@@ -442,6 +495,8 @@ defmodule Lightning.Invocation do
       project,
       [
         status: [:success, :failure, :timeout, :crash, :pending],
+        searchfors: [],
+        search_term: "",
         workflow_id: "",
         date_after: "",
         date_before: ""
