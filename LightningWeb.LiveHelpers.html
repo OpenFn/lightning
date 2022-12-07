@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-9ED190E2.js"></script>
+    <script src="dist/sidebar_items-4BAA4A27.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,6 +133,14 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#display_short_uuid/1" translate="no">display_short_uuid(uuid_string)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#live_error_block/1" translate="no">live_error_block(assigns)</a>
 
         </div>
@@ -171,6 +179,34 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="display_short_uuid/1">
+
+  <div class="detail-header">
+    <a href="#display_short_uuid/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">display_short_uuid(uuid_string)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/live_helpers.ex#L145" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> display_short_uuid(<a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
 <section class="detail" id="live_error_block/1">
 
   <div class="detail-header">
@@ -219,13 +255,13 @@ the URL when the modal is closed.</p><h2 id="live_info_block/1-examples" class="
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">modal</span><span class="w"> </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="7626351415-1">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="7626351415-2">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="7626351415-2">)</span><span class="p" data-group-id="7626351415-1">}</span><span class="o">&gt;</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="o">&lt;</span><span class="o">.</span><span class="n">modal</span><span class="w"> </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="0410871590-1">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="0410871590-2">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="0410871590-2">)</span><span class="p" data-group-id="0410871590-1">}</span><span class="o">&gt;</span><span class="w">
   </span><span class="o">&lt;</span><span class="o">.</span><span class="n">live_component</span><span class="w">
-    </span><span class="n">module</span><span class="o">=</span><span class="p" data-group-id="7626351415-3">{</span><span class="nc">LightningWeb.JobLive.BigFormComponent</span><span class="p" data-group-id="7626351415-3">}</span><span class="w">
-    </span><span class="n">id</span><span class="o">=</span><span class="p" data-group-id="7626351415-4">{</span><span class="na">@job</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="7626351415-4">}</span><span class="w">
-    </span><span class="n">title</span><span class="o">=</span><span class="p" data-group-id="7626351415-5">{</span><span class="na">@page_title</span><span class="p" data-group-id="7626351415-5">}</span><span class="w">
-    </span><span class="n">action</span><span class="o">=</span><span class="p" data-group-id="7626351415-6">{</span><span class="na">@live_action</span><span class="p" data-group-id="7626351415-6">}</span><span class="w">
-    </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="7626351415-7">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="7626351415-8">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="7626351415-8">)</span><span class="p" data-group-id="7626351415-7">}</span><span class="w">
+    </span><span class="n">module</span><span class="o">=</span><span class="p" data-group-id="0410871590-3">{</span><span class="nc">LightningWeb.JobLive.BigFormComponent</span><span class="p" data-group-id="0410871590-3">}</span><span class="w">
+    </span><span class="n">id</span><span class="o">=</span><span class="p" data-group-id="0410871590-4">{</span><span class="na">@job</span><span class="o">.</span><span class="n">id</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="ss">:new</span><span class="p" data-group-id="0410871590-4">}</span><span class="w">
+    </span><span class="n">title</span><span class="o">=</span><span class="p" data-group-id="0410871590-5">{</span><span class="na">@page_title</span><span class="p" data-group-id="0410871590-5">}</span><span class="w">
+    </span><span class="n">action</span><span class="o">=</span><span class="p" data-group-id="0410871590-6">{</span><span class="na">@live_action</span><span class="p" data-group-id="0410871590-6">}</span><span class="w">
+    </span><span class="n">return_to</span><span class="o">=</span><span class="p" data-group-id="0410871590-7">{</span><span class="nc">Routes</span><span class="o">.</span><span class="n">job_index_path</span><span class="p" data-group-id="0410871590-8">(</span><span class="na">@socket</span><span class="p">,</span><span class="w"> </span><span class="ss">:index</span><span class="p" data-group-id="0410871590-8">)</span><span class="p" data-group-id="0410871590-7">}</span><span class="w">
     </span><span class="ss">job</span><span class="p">:</span><span class="w"> </span><span class="na">@job</span><span class="w">
   </span><span class="o">/</span><span class="o">&gt;</span><span class="w">
 </span><span class="o">&lt;</span><span class="o">/</span><span class="o">.</span><span class="n">modal</span><span class="o">&gt;</span></code></pre>

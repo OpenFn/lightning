@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-9ED190E2.js"></script>
+    <script src="dist/sidebar_items-4BAA4A27.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -524,7 +524,8 @@ exception in case of failure.</p></div>
 
         </div>
 
-          <div class="summary-synopsis"><p>Retrieve all packages for a given user or organization</p></div>
+          <div class="summary-synopsis"><p>Retrieve all packages for a given user or organization. Return empty list if
+application cannot connect to NPM. (E.g., because it's started offline.)</p></div>
 
       </div>
 
@@ -1046,7 +1047,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">package_detail(package_name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L74" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L83" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1659,14 +1660,14 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2416429395-1">%</span><span class="nc" data-group-id="2416429395-1">HTTPoison.Request</span><span class="p" data-group-id="2416429395-1">{</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="0629438134-1">%</span><span class="nc" data-group-id="0629438134-1">HTTPoison.Request</span><span class="p" data-group-id="0629438134-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2416429395-2">[</span><span class="p" data-group-id="2416429395-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2416429395-3">}</span><span class="p" data-group-id="2416429395-2">]</span><span class="w">
-</span><span class="p" data-group-id="2416429395-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="0629438134-2">[</span><span class="p" data-group-id="0629438134-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="0629438134-3">}</span><span class="p" data-group-id="0629438134-2">]</span><span class="w">
+</span><span class="p" data-group-id="0629438134-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="2416429395-4">(</span><span class="n">request</span><span class="p" data-group-id="2416429395-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="0629438134-4">(</span><span class="n">request</span><span class="p" data-group-id="0629438134-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1724,7 +1725,7 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="8585500059-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8585500059-2">[</span><span class="p" data-group-id="8585500059-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="8585500059-3">}</span><span class="p" data-group-id="8585500059-2">]</span><span class="p" data-group-id="8585500059-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="3889028537-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3889028537-2">[</span><span class="p" data-group-id="3889028537-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="3889028537-3">}</span><span class="p" data-group-id="3889028537-2">]</span><span class="p" data-group-id="3889028537-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/5">
@@ -1827,7 +1828,7 @@ request fails.</p>
     </a>
     <h1 class="signature" translate="no">user_packages(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L63" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_registry.ex#L64" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1843,7 +1844,8 @@ request fails.</p>
 
       </div>
 
-<p>Retrieve all packages for a given user or organization</p>
+<p>Retrieve all packages for a given user or organization. Return empty list if
+application cannot connect to NPM. (E.g., because it's started offline.)</p>
   </section>
 </section>
 
