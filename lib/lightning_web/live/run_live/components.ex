@@ -34,11 +34,18 @@ defmodule LightningWeb.RunLive.Components do
                 Running...
               <% end %>
 
+              <% IO.inspect(@last_run, label: "LAST RUN") %>
               <%= case @last_run.exit_code do %>
                 <% nil -> %>
-                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
-                    Pending
-                  </span>
+                  <%= if @last_run.finished_at do %>
+                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
+                      Failure
+                    </span>
+                  <% else %>
+                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
+                      Pending
+                    </span>
+                  <% end %>
                 <% val when val > 0-> %>
                   <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
                     Failure
@@ -71,13 +78,21 @@ defmodule LightningWeb.RunLive.Components do
     <li>
       <span class="my-4 flex">
         &vdash;
-        <span class="mx-2 flex group">
+        <span class="mx-2 flex">
+          <% IO.inspect(@run, label: "THE RUN") %>
           <%= case @run.exit_code do %>
             <% nil -> %>
-              <Heroicons.ellipsis_horizontal_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-              />
+              <%= if @run.finished_at do %>
+                <Heroicons.x_circle
+                  solid
+                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
+                />
+              <% else %>
+                <Heroicons.ellipsis_horizontal_circle
+                  solid
+                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
+                />
+              <% end %>
             <% val when val > 0-> %>
               <Heroicons.x_circle
                 solid
@@ -115,7 +130,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   # --------------- Run Details ---------------
-  attr :run, :any, required: true
+  attr(:run, :any, required: true)
 
   def run_viewer(assigns) do
     ~H"""
@@ -146,7 +161,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr :run, :any, required: true
+  attr(:run, :any, required: true)
 
   def run_details(%{run: run} = assigns) do
     run_finished_at =
@@ -207,7 +222,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr :log, :list, required: true
+  attr(:log, :list, required: true)
 
   def log_view(%{log: log} = assigns) do
     assigns = assigns |> assign(log: log |> Enum.with_index(1))
@@ -225,8 +240,8 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr :line, :string, required: true
-  attr :num, :integer, required: true
+  attr(:line, :string, required: true)
+  attr(:num, :integer, required: true)
 
   def log_line(%{line: line, num: num} = assigns) do
     # Format the log lines replacing single spaces with non-breaking spaces.
@@ -264,7 +279,7 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  attr :dataclip, :any, required: true
+  attr(:dataclip, :any, required: true)
 
   def dataclip_view(%{dataclip: dataclip} = assigns) do
     lines =
@@ -326,9 +341,9 @@ defmodule LightningWeb.RunLive.Components do
   # ------------------- Toggle Bar ---------------------
   # Used to switch between Log and Output
 
-  slot :inner_block, required: true
-  attr :class, :string, default: "items-end"
-  attr :rest, :global
+  slot(:inner_block, required: true)
+  attr(:class, :string, default: "items-end")
+  attr(:rest, :global)
 
   def toggle_bar(assigns) do
     ~H"""
@@ -340,9 +355,9 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr :active, :string, default: "false"
-  slot :inner_block, required: true
-  attr :rest, :global
+  attr(:active, :string, default: "false")
+  slot(:inner_block, required: true)
+  attr(:rest, :global)
 
   def toggle_item(assigns) do
     ~H"""
