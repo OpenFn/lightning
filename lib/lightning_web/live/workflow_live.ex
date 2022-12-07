@@ -7,6 +7,9 @@ defmodule LightningWeb.WorkflowLive do
   alias Lightning.Workflows
   import LightningWeb.WorkflowLive.Components
 
+  def editable do
+  end
+
   @impl true
   def render(assigns) do
     assigns = assigns |> assign_new(:show_canvas, fn -> true end)
@@ -15,6 +18,31 @@ defmodule LightningWeb.WorkflowLive do
     <Layout.page_content>
       <:header>
         <Layout.header title={@page_title} socket={@socket}>
+          <:details>
+            <%= case @live_action do %>
+              <% :index -> %>
+                <div>/ Workflows</div>
+              <% :new_job -> %>
+                <div>/ new workflow</div>
+              <% _ -> %>
+                <div>
+                  <.live_component
+                    module={LightningWeb.WorkflowLive.WorkflowNameEditor}
+                    id={@current_workflow.id}
+                    workflow={@current_workflow}
+                    project={@project}
+                    return_to={
+                      Routes.project_workflow_path(
+                        @socket,
+                        :show,
+                        @project.id,
+                        @current_workflow.id
+                      )
+                    }
+                  />
+                </div>
+            <% end %>
+          </:details>
           <.link navigate={
             Routes.project_job_index_path(@socket, :index, @project.id)
           }>

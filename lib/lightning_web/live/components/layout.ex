@@ -23,8 +23,9 @@ defmodule LightningWeb.Components.Layout do
     ~H"""
     <div class="flex-none bg-white shadow-sm z-20">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
-        <h1 class="text-3xl font-bold text-secondary-900">
+        <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= @title %>
+          <%= if assigns[:details], do: render_slot(@details) %>
         </h1>
         <div class="grow"></div>
         <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
