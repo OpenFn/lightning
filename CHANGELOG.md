@@ -22,6 +22,8 @@ and this project adheres to
 - Updated @openfn/describe-package to 0.0.10
 - Create an follow a manual Run from the Job Inspector
 - View all workflows in a project on the workflows index page
+- Move @openfn/workflow-diagram into the application, the NPM module
+  is now deprecated.
 
 ### Fixed
 
