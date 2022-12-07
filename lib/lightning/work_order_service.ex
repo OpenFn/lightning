@@ -130,4 +130,9 @@ defmodule Lightning.WorkOrderService do
     |> Ecto.Changeset.put_assoc(:workflow, workflow)
     |> Ecto.Changeset.put_assoc(:reason, reason)
   end
+
+  def get_work_order(id) do
+    from(wo in WorkOrder, where: wo.id == ^id)
+    |> Repo.one()
+  end
 end

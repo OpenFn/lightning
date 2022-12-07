@@ -10,7 +10,7 @@ defmodule Lightning.InvocationReason do
   alias Lightning.Jobs.Trigger
   alias Lightning.Accounts.User
 
-  @source_types [:manual, :webhook, :cron]
+  @source_types [:manual, :webhook, :cron, :retry]
   @type source_type :: unquote(Enum.reduce(@source_types, &{:|, [], [&1, &2]}))
 
   @type t :: %__MODULE__{
@@ -35,6 +35,7 @@ defmodule Lightning.InvocationReason do
     timestamps()
   end
 
+  @spec new(map()) :: Ecto.Changeset.t(__MODULE__.t())
   def new(attrs \\ %{}) do
     change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
     |> change(attrs)
@@ -61,7 +62,7 @@ defmodule Lightning.InvocationReason do
         |> validate_required([:trigger_id])
         |> assoc_constraint(:trigger)
 
-      type when type in [:manual] ->
+      type when type in [:manual, :retry] ->
         changeset
         |> validate_required([:user_id])
 

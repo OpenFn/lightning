@@ -4,7 +4,7 @@ defmodule LightningWeb.RunLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Invocation
+  alias Lightning.{AttemptService, Invocation, RunSearchForm, Pipeline}
   alias Lightning.Invocation.Run
 
   alias Lightning.RunSearchForm
@@ -26,6 +26,8 @@ defmodule LightningWeb.RunLive.Index do
       %MultiSelectOption{id: :body, label: "Input body", selected: true},
       %MultiSelectOption{id: :log, label: "Logs", selected: true}
     ]
+
+    LightningWeb.Endpoint.subscribe("workorder:#{socket.assigns.project.id}")
 
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
@@ -93,12 +95,7 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> push_patch(
-       to:
-         Routes.project_run_index_path(
-           socket,
-           :index,
-           socket.assigns.project
-         )
+       to: Routes.project_run_index_path(socket, :index, socket.assigns.project)
      )}
   end
 
@@ -115,7 +112,50 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, socket}
   end
 
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          event: "new_attempt",
+          payload: %{work_order_id: work_order_id}
+        },
+        socket
+      ) do
+    send_update(LightningWeb.RunLive.WorkOrderComponent,
+      id: work_order_id,
+      event: "new_attempt"
+    )
+
+    {:noreply, socket}
+  end
+
   @impl true
+  def handle_event(
+        "rerun",
+        %{"attempt_id" => attempt_id, "run_id" => run_id},
+        socket
+      ) do
+    %{attempt: attempt, run: run} =
+      AttemptService.get_for_rerun(attempt_id, run_id)
+
+    reason =
+      Lightning.InvocationReasons.build(:retry, %{
+        user: socket.assigns.current_user,
+        run: run
+      })
+
+    {:ok, attempt_run} = AttemptService.retry(attempt, run, reason)
+
+    Pipeline.new(%{attempt_run_id: attempt_run.id})
+    |> Oban.insert()
+
+    LightningWeb.Endpoint.broadcast!(
+      "workorder:#{socket.assigns.project.id}",
+      "new_attempt",
+      %{work_order_id: attempt.work_order_id}
+    )
+
+    {:noreply, socket}
+  end
+
   def handle_event(
         "validate",
         %{
@@ -140,22 +180,19 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> push_patch(
-       to:
-         Routes.project_run_index_path(
-           socket,
-           :index,
-           socket.assigns.project
-         )
+       to: Routes.project_run_index_path(socket, :index, socket.assigns.project)
      )}
   end
 
+  # NOTE: this event was previously called "ignore", however there is an
+  # issue with form recovery in LiveView where only the first input (if it has
+  # a `phx-change` on it) is sent.
+  # https://github.com/phoenixframework/phoenix_live_view/issues/2333
+  # We have changed the event name to "validate" since that is what
+  # the form recovery event will use.
   def handle_event(
-        "ignore",
-        %{
-          "run_search_form" => %{
-            "search_term" => search_term
-          }
-        },
+        "validate",
+        %{"run_search_form" => %{"search_term" => search_term}},
         socket
       ) do
     changeset =

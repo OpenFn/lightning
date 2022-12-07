@@ -393,7 +393,32 @@ defmodule Lightning.Invocation do
         date_after: date_after,
         date_before: date_before
       ) do
-    # we can use a ^custom_query to control (order_by ...) the way preloading is done
+    from(wo in Lightning.WorkOrder,
+      join: wo_re in assoc(wo, :reason),
+      join: w in assoc(wo, :workflow),
+      as: :workflow,
+      join: att in assoc(wo, :attempts),
+      join: r in assoc(att, :runs),
+      as: :runs,
+      join: att_re in assoc(att, :reason),
+      join: d in assoc(r, :input_dataclip),
+      as: :input,
+      where: w.project_id == ^project_id,
+      where: d.id in [wo_re.dataclip_id, att_re.dataclip_id],
+      where: ^filter_workflow_where(workflow_id),
+      where: ^filter_run_status_where(status),
+      where: ^filter_run_started_after_where(date_after),
+      where: ^filter_run_started_before_where(date_before),
+      where: ^filter_run_body_and_logs_where(search_term, searchfors),
+      order_by: [desc_nulls_first: r.finished_at]
+    )
+  end
+
+  def get_workorders_by_ids(ids) do
+    from(wo in Lightning.WorkOrder, where: wo.id in ^ids)
+  end
+
+  def with_attempts(query) do
     runs_query =
       from(r in Lightning.Invocation.Run,
         as: :runs,
@@ -401,11 +426,6 @@ defmodule Lightning.Invocation do
         join: d in assoc(r, :input_dataclip),
         as: :input,
         order_by: [asc: r.finished_at],
-        where: r.input_dataclip_id == d.id,
-        where: ^filter_run_status_where(status),
-        where: ^filter_run_started_after_where(date_after),
-        where: ^filter_run_started_before_where(date_before),
-        where: ^filter_run_body_and_logs_where(search_term, searchfors),
         preload: [
           job:
             ^from(job in Lightning.Jobs.Job,
@@ -427,24 +447,8 @@ defmodule Lightning.Invocation do
         select: %{id: d.id, type: d.type}
       )
 
-    from(wo in Lightning.WorkOrder,
-      join: wo_re in assoc(wo, :reason),
-      join: w in assoc(wo, :workflow),
-      as: :workflow,
-      join: att in assoc(wo, :attempts),
-      join: r in assoc(att, :runs),
-      as: :runs,
-      join: att_re in assoc(att, :reason),
-      join: d in assoc(r, :input_dataclip),
-      as: :input,
-      where: w.project_id == ^project_id,
-      where: d.id in [wo_re.dataclip_id, att_re.dataclip_id],
-      where: ^filter_workflow_where(workflow_id),
-      where: ^filter_run_status_where(status),
-      where: ^filter_run_started_after_where(date_after),
-      where: ^filter_run_started_before_where(date_before),
-      where: ^filter_run_body_and_logs_where(search_term, searchfors),
-      order_by: [desc_nulls_first: r.finished_at],
+    # we can use a ^custom_query to control (order_by ...) the way preloading is done
+    from(wo in query,
       preload: [
         reason:
           ^from(r in Lightning.InvocationReason,
@@ -455,12 +459,7 @@ defmodule Lightning.Invocation do
             select: %{id: wf.id, name: wf.name, project_id: wf.project_id}
           ),
         attempts: ^attempts_query
-      ],
-      select: %{
-        id: wo.id,
-        last_finished_at: r.finished_at,
-        work_order: wo
-      }
+      ]
     )
   end
 
@@ -482,12 +481,9 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
+    |> select([wo, runs: r], %{id: wo.id, last_finished_at: r.finished_at})
     |> Repo.paginate(params)
     |> find_uniq_wo()
-  end
-
-  def find_uniq_wo(page) do
-    %{page | entries: Enum.uniq_by(page.entries, fn wo -> wo.id end)}
   end
 
   def list_work_orders_for_project(%Project{} = project) do
@@ -503,5 +499,9 @@ defmodule Lightning.Invocation do
       ],
       %{}
     )
+  end
+
+  def find_uniq_wo(page) do
+    %{page | entries: Enum.uniq_by(page.entries, fn wo -> wo.id end)}
   end
 end

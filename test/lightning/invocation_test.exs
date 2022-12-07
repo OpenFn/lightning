@@ -2,10 +2,13 @@ defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation
+  alias Lightning.Invocation.{Run}
+  alias Lightning.WorkOrderService
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
   import Lightning.JobsFixtures
+  import Lightning.WorkflowsFixtures
 
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip
@@ -303,29 +306,15 @@ defmodule Lightning.InvocationTest do
         |> Lightning.Repo.insert!()
 
       simplified_result =
-        Invocation.list_work_orders_for_project(
-          %Lightning.Projects.Project{
-            id: workflow.project_id
-          },
-          [],
-          %{"page_size" => 10}
-        ).entries()
-        |> Enum.map(fn %{work_order: wo} ->
-          %{
-            id: wo.id,
-            last_run_finished_at:
-              Enum.at(wo.attempts, 0)
-              |> Map.get(:runs)
-              |> Enum.at(0)
-              |> Map.get(:finished_at)
-          }
-        end)
+        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
+          id: workflow.project_id
+        }).entries()
 
       expected_order = [
-        %{id: wo_four.id, last_run_finished_at: run_four.finished_at},
-        %{id: wo_three.id, last_run_finished_at: run_three.finished_at},
-        %{id: wo_two.id, last_run_finished_at: run_two.finished_at},
-        %{id: wo_one.id, last_run_finished_at: run_one.finished_at}
+        %{id: wo_four.id, last_finished_at: run_four.finished_at},
+        %{id: wo_three.id, last_finished_at: run_three.finished_at},
+        %{id: wo_two.id, last_finished_at: run_two.finished_at},
+        %{id: wo_one.id, last_finished_at: run_one.finished_at}
       ]
 
       assert expected_order == simplified_result
@@ -422,14 +411,17 @@ defmodule Lightning.InvocationTest do
           })
         )
 
-      [%{work_order: actual_wo} | _] =
+      [%{id: id} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
 
+      actual_wo =
+        WorkOrderService.get_work_order(id) |> Repo.preload(attempts: :runs)
+
       # last created attempt should be first in work_order.attempts list
 
-      actual_last_attempt = Enum.at(actual_wo.attempts, 0)
+      actual_last_attempt = List.last(actual_wo.attempts)
 
       assert actual_last_attempt.id == attempt_two.id
 
@@ -446,12 +438,15 @@ defmodule Lightning.InvocationTest do
           finished_at: ~U[2022-10-27 15:00:00.000000Z]
         })
 
-      [%{work_order: actual_wo} | _] =
+      [%{id: id} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
 
-      actual_last_attempt = Enum.at(actual_wo.attempts, 0)
+      actual_wo =
+        WorkOrderService.get_work_order(id) |> Repo.preload(attempts: :runs)
+
+      actual_last_attempt = List.last(actual_wo.attempts)
 
       assert actual_last_attempt.id == attempt_two.id
 
@@ -485,8 +480,6 @@ defmodule Lightning.InvocationTest do
           workflow_name: "workflow-1"
         )
 
-      workflow1 = job1.workflow
-
       %{work_order: wf1_wo1, run: wf1_run1} =
         create_work_order(project, job1, now, 10)
 
@@ -501,8 +494,6 @@ defmodule Lightning.InvocationTest do
           project_id: project.id,
           workflow_name: "workflow-2"
         )
-
-      workflow2 = job2.workflow
 
       %{work_order: wf2_wo1, run: wf2_run1} =
         create_work_order(project, job2, now, 40)
@@ -519,8 +510,6 @@ defmodule Lightning.InvocationTest do
           workflow_name: "workflow-3"
         )
 
-      workflow3 = job3.workflow
-
       %{work_order: wf3_wo1, run: wf3_run1} =
         create_work_order(project, job3, now, 70)
 
@@ -534,30 +523,12 @@ defmodule Lightning.InvocationTest do
 
       page_one_result = get_simplified_page(project, 1, [])
 
-      # all work_orders in page_one are from workflow 3
-      assert page_one_result |> length() == 3
-
-      assert page_one_result
-             |> Enum.all?(fn el -> el.workflow_id == workflow3.id end)
-
       # all work_orders in page_one are ordered by finished_at
 
       expected_order = [
-        %{
-          id: wf3_wo3.id,
-          last_run_finished_at: wf3_run3.finished_at,
-          workflow_id: workflow3.id
-        },
-        %{
-          id: wf3_wo2.id,
-          last_run_finished_at: wf3_run2.finished_at,
-          workflow_id: workflow3.id
-        },
-        %{
-          id: wf3_wo1.id,
-          last_run_finished_at: wf3_run1.finished_at,
-          workflow_id: workflow3.id
-        }
+        %{id: wf3_wo3.id, last_finished_at: wf3_run3.finished_at},
+        %{id: wf3_wo2.id, last_finished_at: wf3_run2.finished_at},
+        %{id: wf3_wo1.id, last_finished_at: wf3_run1.finished_at}
       ]
 
       assert expected_order == page_one_result
@@ -566,30 +537,11 @@ defmodule Lightning.InvocationTest do
 
       page_two_result = get_simplified_page(project, 2, [])
 
-      # all work_orders in page_one are from workflow 2
-      assert page_two_result |> length() == 3
-
-      assert page_two_result
-             |> Enum.all?(fn el -> el.workflow_id == workflow2.id end)
-
       # all work_orders in page_two are ordered by finished_at
-
       expected_order = [
-        %{
-          id: wf2_wo3.id,
-          last_run_finished_at: wf2_run3.finished_at,
-          workflow_id: workflow2.id
-        },
-        %{
-          id: wf2_wo2.id,
-          last_run_finished_at: wf2_run2.finished_at,
-          workflow_id: workflow2.id
-        },
-        %{
-          id: wf2_wo1.id,
-          last_run_finished_at: wf2_run1.finished_at,
-          workflow_id: workflow2.id
-        }
+        %{id: wf2_wo3.id, last_finished_at: wf2_run3.finished_at},
+        %{id: wf2_wo2.id, last_finished_at: wf2_run2.finished_at},
+        %{id: wf2_wo1.id, last_finished_at: wf2_run1.finished_at}
       ]
 
       assert expected_order == page_two_result
@@ -598,30 +550,11 @@ defmodule Lightning.InvocationTest do
 
       page_three_result = get_simplified_page(project, 3, [])
 
-      # all work_orders in page_one are from workflow 1
-      assert page_three_result |> length() == 3
-
-      assert page_three_result
-             |> Enum.all?(fn el -> el.workflow_id == workflow1.id end)
-
       # all work_orders in page_three are ordered by finished_at
-
       expected_order = [
-        %{
-          id: wf1_wo3.id,
-          last_run_finished_at: wf1_run3.finished_at,
-          workflow_id: workflow1.id
-        },
-        %{
-          id: wf1_wo2.id,
-          last_run_finished_at: wf1_run2.finished_at,
-          workflow_id: workflow1.id
-        },
-        %{
-          id: wf1_wo1.id,
-          last_run_finished_at: wf1_run1.finished_at,
-          workflow_id: workflow1.id
-        }
+        %{id: wf1_wo3.id, last_finished_at: wf1_run3.finished_at},
+        %{id: wf1_wo2.id, last_finished_at: wf1_run2.finished_at},
+        %{id: wf1_wo1.id, last_finished_at: wf1_run1.finished_at}
       ]
 
       assert expected_order == page_three_result
@@ -673,16 +606,5 @@ defmodule Lightning.InvocationTest do
       filter,
       %{"page" => page, "page_size" => 3}
     ).entries()
-    |> Enum.map(fn %{work_order: wo} ->
-      %{
-        id: wo.id,
-        workflow_id: wo.workflow_id,
-        last_run_finished_at:
-          Enum.at(wo.attempts, 0)
-          |> Map.get(:runs)
-          |> Enum.at(0)
-          |> Map.get(:finished_at)
-      }
-    end)
   end
 end

@@ -44,6 +44,21 @@ defmodule Lightning.Invocation.Run do
     |> validate()
   end
 
+  @doc """
+  Creates a new Run changeset, but copies over certain fields.
+  This is used to create new runs for retrys.
+  """
+  @spec new_from(run :: __MODULE__.t()) :: Ecto.Changeset.t(__MODULE__.t())
+  def new_from(%__MODULE__{} = run) do
+    attrs =
+      [:job_id, :input_dataclip_id, :previous_id]
+      |> Enum.reduce(%{}, fn key, acc ->
+        Map.put(acc, key, Map.get(run, key))
+      end)
+
+    new(attrs)
+  end
+
   @doc false
   def changeset(run, attrs) do
     run

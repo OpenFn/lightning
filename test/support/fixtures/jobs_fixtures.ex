@@ -64,4 +64,93 @@ defmodule Lightning.JobsFixtures do
     |> Lightning.Jobs.Job.changeset(attrs)
     |> Lightning.Repo.insert!()
   end
+
+  def workflow_scenario() do
+    project = project_fixture()
+    workflow = workflow_fixture(project_id: project.id)
+
+    #       +---+
+    #   +---- A ----+
+    #   |   +---+   |
+    #   |           |
+    #   |           |
+    #   |           |
+    # +-|-+       +-|-+
+    # | B |       | E |
+    # +-|-+       +-|-+
+    #   |           |
+    #   |           |
+    # +-+-+       +-+-+
+    # | C |       | F |
+    # +-|-+       +-|-+
+    #   |           |
+    #   |           |
+    # +-+-+       +-+-+
+    # | D |       | G |
+    # +---+       +---+
+    #
+
+    job_a =
+      job_fixture(
+        name: "job_a",
+        workflow_id: workflow.id,
+        trigger: %{type: :webhook}
+      )
+
+    job_b =
+      job_fixture(
+        name: "job_b",
+        workflow_id: workflow.id,
+        trigger: %{type: :on_job_success, upstream_job_id: job_a.id}
+      )
+
+    job_c =
+      job_fixture(
+        name: "job_c",
+        workflow_id: workflow.id,
+        trigger: %{type: :on_job_success, upstream_job_id: job_b.id}
+      )
+
+    job_d =
+      job_fixture(
+        name: "job_d",
+        workflow_id: workflow.id,
+        trigger: %{type: :on_job_success, upstream_job_id: job_c.id}
+      )
+
+    job_e =
+      job_fixture(
+        name: "job_e",
+        workflow_id: workflow.id,
+        trigger: %{type: :on_job_success, upstream_job_id: job_a.id}
+      )
+
+    job_f =
+      job_fixture(
+        name: "job_f",
+        workflow_id: workflow.id,
+        trigger: %{type: :on_job_success, upstream_job_id: job_e.id}
+      )
+
+    job_g =
+      job_fixture(
+        name: "job_g",
+        workflow_id: workflow.id,
+        trigger: %{type: :on_job_success, upstream_job_id: job_f.id}
+      )
+
+    %{
+      workflow: workflow,
+      project: project,
+      jobs: %{
+        a: job_a,
+        b: job_b,
+        c: job_c,
+        d: job_d,
+        e: job_e,
+        f: job_f,
+        g: job_g
+      }
+    }
+  end
 end

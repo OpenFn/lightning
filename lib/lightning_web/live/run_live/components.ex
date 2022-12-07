@@ -2,9 +2,13 @@ defmodule LightningWeb.RunLive.Components do
   @moduledoc false
   use LightningWeb, :component
   import LightningWeb.RouteHelpers
+  alias Phoenix.LiveView.JS
 
-  def attempt_item(assigns) do
-    runs = assigns.attempt.runs
+  attr :project, :map, required: true
+  attr :attempt, :map, required: true
+
+  def attempt_item(%{attempt: attempt} = assigns) do
+    runs = attempt.runs
     last_run = List.last(runs)
 
     assigns =
@@ -13,6 +17,7 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div
+      phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"attempt-#{@attempt.id}"}
       data-entity="attempt"
       class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
@@ -48,7 +53,7 @@ defmodule LightningWeb.RunLive.Components do
           </span>
           <ol class="mt-2 list-none space-y-4">
             <%= for run <- @run_list do %>
-              <.run_list_item project={@project} run={run} />
+              <.run_list_item project_id={@project.id} attempt={@attempt} run={run} />
             <% end %>
           </ol>
         </li>
@@ -57,12 +62,16 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  attr :run, :map, required: true
+  attr :attempt, :map, required: true
+  attr :project_id, :string, required: true
+
   def run_list_item(assigns) do
     ~H"""
     <li>
       <span class="my-4 flex">
         &vdash;
-        <span class="mx-2 flex">
+        <span class="mx-2 flex group">
           <%= case @run.exit_code do %>
             <% nil -> %>
               <Heroicons.ellipsis_horizontal_circle
@@ -82,12 +91,21 @@ defmodule LightningWeb.RunLive.Components do
           <% end %>
 
           <.link
-            navigate={show_run_path(@project.id, @run.id)}
+            navigate={show_run_path(@project_id, @run.id)}
             class="hover:underline hover:underline-offset-2"
           >
             <%= @run.job.name %> @ <%= @run.finished_at
             |> Calendar.strftime("%c %Z") %>
           </.link>
+          <span
+            class="pl-2 opacity-0 group-hover:opacity-100 hover:underline hover:underline-offset-2 cursor-pointer"
+            phx-click="rerun"
+            phx-value-attempt_id={@attempt.id}
+            phx-value-run_id={@run.id}
+            title="Rerun workflow from start"
+          >
+            rerun
+          </span>
         </span>
       </span>
     </li>
