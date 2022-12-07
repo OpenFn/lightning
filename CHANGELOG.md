@@ -13,6 +13,7 @@ and this project adheres to
 - Added a Delete job button in Inspector
 - Filter workflow runs by text/value in run logs or input body
 - Drop "configuration" key from Run output dataclips after completion
+- Ability to 'rerun' a run from the Run list
 
 ### Changed
 
