@@ -1,32 +1,72 @@
-<h1>Reset password</h1>
+<Layout.nav conn={@conn} />
+<Layout.page_content>
+  <:header>
+    <Layout.header title="Reset password" />
+  </:header>
+  <Layout.centered>
+    <div id="reset-password-edit">
+      <.form
+        :let={f}
+        for={@changeset}
+        action={Routes.user_reset_password_path(@conn, :update, @token)}
+      >
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
+            <%= if error = get_flash(@conn, :error) do %>
+              <div class="alert alert-danger" role="alert">
+                <%= error %>
+              </div>
+            <% end %>
+            <%= if info = get_flash(@conn, :info) do %>
+              <p class="alert alert-info" role="alert">
+                <%= info %>
+              </p>
+            <% end %>
+            <div class="grid grid-flow-row gap-4 auto-rows-max">
+              <div>
+                <LightningWeb.Components.Form.password_field
+                  form={f}
+                  id={:password}
+                  label="New password"
+                  required={true}
+                />
+              </div>
 
-<.form
-  :let={f}
-  for={@changeset}
-  action={Routes.user_reset_password_path(@conn, :update, @token)}
->
-  <%= if @changeset.action do %>
-    <div class="alert alert-danger">
-      <p>Oops, something went wrong! Please check the errors below.</p>
+              <div>
+                <LightningWeb.Components.Form.password_field
+                  form={f}
+                  id={:password_confirmation}
+                  label="Confirm new password"
+                  required={true}
+                />
+              </div>
+
+              <LightningWeb.Components.Form.submit_button>
+                Reset password
+              </LightningWeb.Components.Form.submit_button>
+
+              <LightningWeb.Components.Form.divider />
+              <div class="text-xs text-secondary-700">
+                <div class="flex">
+                  <dix class="flex-none">
+                    <%= link("Log in", to: Routes.user_session_path(@conn, :new)) %>
+                  </dix>
+                  <div class="grow"></div>
+
+                  <div class="flex-none">
+                    <%= link("Register",
+                      to: Routes.user_registration_path(@conn, :new)
+                    ) %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </.form>
+      <div class="grid grid-cols-6 gap-6">
+        <div class="col-span-3"></div>
+      </div>
     </div>
-  <% end %>
-
-  <%= label(f, :password, "New password") %>
-  <%= password_input(f, :password, required: true) %>
-  <%= error_tag(f, :password) %>
-
-  <%= label(f, :password_confirmation, "Confirm new password") %>
-  <%= password_input(f, :password_confirmation, required: true) %>
-  <%= error_tag(f, :password_confirmation) %>
-
-  <div>
-    <%= submit("Reset password") %>
-  </div>
-</.form>
-
-<p>
-  <%= link("Register", to: Routes.user_registration_path(@conn, :new)) %> | <%= link(
-    "Log in",
-    to: Routes.user_session_path(@conn, :new)
-  ) %>
-</p>
+  </Layout.centered>
+</Layout.page_content>
