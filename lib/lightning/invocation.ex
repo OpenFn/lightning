@@ -481,10 +481,7 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
-    |> select([wo, runs: r], %{
-      id: wo.id,
-      last_finished_at: r.finished_at
-    })
+    |> select([wo, runs: r], %{id: wo.id, last_finished_at: r.finished_at})
     |> Repo.paginate(params)
     |> find_uniq_wo()
   end

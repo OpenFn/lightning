@@ -74,7 +74,12 @@ defmodule Lightning.AttemptService do
 
   Any runs downstream from the Run given are ignored.
   """
-  @spec retry(Attempt.t(), Run.t(), Lightning.InvocationReason.t()) ::
+  @spec retry(
+          Attempt.t(),
+          Run.t(),
+          Ecto.Changeset.t(Lightning.InvocationReason.t())
+          | Lightning.InvocationReason.t()
+        ) ::
           {:ok, AttemptRun.t()} | {:error, Ecto.Changeset.t(AttemptRun.t())}
   def retry(%Attempt{} = attempt, %Run{} = run, reason) do
     attempt = Repo.preload(attempt, :work_order)
