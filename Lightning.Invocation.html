@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-4BAA4A27.js"></script>
+    <script src="dist/sidebar_items-C164FDA8.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -301,6 +301,14 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#get_workorders_by_ids/1" translate="no">get_workorders_by_ids(ids)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#list_dataclips/0" translate="no">list_dataclips()</a>
 
         </div>
@@ -403,6 +411,14 @@ Lightning
 
       </div>
 
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#with_attempts/1" translate="no">with_attempts(query)</a>
+
+        </div>
+
+      </div>
+
   </div>
 
   </section>
@@ -444,8 +460,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="5258641947-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="5258641947-1">)</span><span class="w">
-</span><span class="p" data-group-id="5258641947-2">%</span><span class="nc" data-group-id="5258641947-2">Ecto.Changeset</span><span class="p" data-group-id="5258641947-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5258641947-3">%</span><span class="nc" data-group-id="5258641947-3">Dataclip</span><span class="p" data-group-id="5258641947-3">{</span><span class="p" data-group-id="5258641947-3">}</span><span class="p" data-group-id="5258641947-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_dataclip</span><span class="p" data-group-id="9459580387-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="9459580387-1">)</span><span class="w">
+</span><span class="p" data-group-id="9459580387-2">%</span><span class="nc" data-group-id="9459580387-2">Ecto.Changeset</span><span class="p" data-group-id="9459580387-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9459580387-3">%</span><span class="nc" data-group-id="9459580387-3">Dataclip</span><span class="p" data-group-id="9459580387-3">{</span><span class="p" data-group-id="9459580387-3">}</span><span class="p" data-group-id="9459580387-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_run/2">
@@ -475,8 +491,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="7603475481-1">(</span><span class="n">run</span><span class="p" data-group-id="7603475481-1">)</span><span class="w">
-</span><span class="p" data-group-id="7603475481-2">%</span><span class="nc" data-group-id="7603475481-2">Ecto.Changeset</span><span class="p" data-group-id="7603475481-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7603475481-3">%</span><span class="nc" data-group-id="7603475481-3">Run</span><span class="p" data-group-id="7603475481-3">{</span><span class="p" data-group-id="7603475481-3">}</span><span class="p" data-group-id="7603475481-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_run</span><span class="p" data-group-id="7762275548-1">(</span><span class="n">run</span><span class="p" data-group-id="7762275548-1">)</span><span class="w">
+</span><span class="p" data-group-id="7762275548-2">%</span><span class="nc" data-group-id="7762275548-2">Ecto.Changeset</span><span class="p" data-group-id="7762275548-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7762275548-3">%</span><span class="nc" data-group-id="7762275548-3">Run</span><span class="p" data-group-id="7762275548-3">{</span><span class="p" data-group-id="7762275548-3">}</span><span class="p" data-group-id="7762275548-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_dataclip/1">
@@ -514,11 +530,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="9568573858-1">(</span><span class="p" data-group-id="9568573858-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9568573858-2">}</span><span class="p" data-group-id="9568573858-1">)</span><span class="w">
-</span><span class="p" data-group-id="9568573858-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9568573858-4">%</span><span class="nc" data-group-id="9568573858-4">Dataclip</span><span class="p" data-group-id="9568573858-4">{</span><span class="p" data-group-id="9568573858-4">}</span><span class="p" data-group-id="9568573858-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1547952490-1">(</span><span class="p" data-group-id="1547952490-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1547952490-2">}</span><span class="p" data-group-id="1547952490-1">)</span><span class="w">
+</span><span class="p" data-group-id="1547952490-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1547952490-4">%</span><span class="nc" data-group-id="1547952490-4">Dataclip</span><span class="p" data-group-id="1547952490-4">{</span><span class="p" data-group-id="1547952490-4">}</span><span class="p" data-group-id="1547952490-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="9568573858-5">(</span><span class="p" data-group-id="9568573858-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9568573858-6">}</span><span class="p" data-group-id="9568573858-5">)</span><span class="w">
-</span><span class="p" data-group-id="9568573858-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9568573858-8">%</span><span class="nc" data-group-id="9568573858-8">Ecto.Changeset</span><span class="p" data-group-id="9568573858-8">{</span><span class="p" data-group-id="9568573858-8">}</span><span class="p" data-group-id="9568573858-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_dataclip</span><span class="p" data-group-id="1547952490-5">(</span><span class="p" data-group-id="1547952490-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1547952490-6">}</span><span class="p" data-group-id="1547952490-5">)</span><span class="w">
+</span><span class="p" data-group-id="1547952490-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1547952490-8">%</span><span class="nc" data-group-id="1547952490-8">Ecto.Changeset</span><span class="p" data-group-id="1547952490-8">{</span><span class="p" data-group-id="1547952490-8">}</span><span class="p" data-group-id="1547952490-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_run/1">
@@ -548,11 +564,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="3463792276-1">(</span><span class="p" data-group-id="3463792276-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3463792276-2">}</span><span class="p" data-group-id="3463792276-1">)</span><span class="w">
-</span><span class="p" data-group-id="3463792276-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3463792276-4">%</span><span class="nc" data-group-id="3463792276-4">Run</span><span class="p" data-group-id="3463792276-4">{</span><span class="p" data-group-id="3463792276-4">}</span><span class="p" data-group-id="3463792276-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="5752426366-1">(</span><span class="p" data-group-id="5752426366-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5752426366-2">}</span><span class="p" data-group-id="5752426366-1">)</span><span class="w">
+</span><span class="p" data-group-id="5752426366-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5752426366-4">%</span><span class="nc" data-group-id="5752426366-4">Run</span><span class="p" data-group-id="5752426366-4">{</span><span class="p" data-group-id="5752426366-4">}</span><span class="p" data-group-id="5752426366-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="3463792276-5">(</span><span class="p" data-group-id="3463792276-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3463792276-6">}</span><span class="p" data-group-id="3463792276-5">)</span><span class="w">
-</span><span class="p" data-group-id="3463792276-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3463792276-8">%</span><span class="nc" data-group-id="3463792276-8">Ecto.Changeset</span><span class="p" data-group-id="3463792276-8">{</span><span class="p" data-group-id="3463792276-8">}</span><span class="p" data-group-id="3463792276-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_run</span><span class="p" data-group-id="5752426366-5">(</span><span class="p" data-group-id="5752426366-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5752426366-6">}</span><span class="p" data-group-id="5752426366-5">)</span><span class="w">
+</span><span class="p" data-group-id="5752426366-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5752426366-8">%</span><span class="nc" data-group-id="5752426366-8">Ecto.Changeset</span><span class="p" data-group-id="5752426366-8">{</span><span class="p" data-group-id="5752426366-8">}</span><span class="p" data-group-id="5752426366-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_dataclip/1">
@@ -580,11 +596,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="0356763852-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="0356763852-1">)</span><span class="w">
-</span><span class="p" data-group-id="0356763852-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0356763852-3">%</span><span class="nc" data-group-id="0356763852-3">Dataclip</span><span class="p" data-group-id="0356763852-3">{</span><span class="p" data-group-id="0356763852-3">}</span><span class="p" data-group-id="0356763852-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="7465175511-1">(</span><span class="n">dataclip</span><span class="p" data-group-id="7465175511-1">)</span><span class="w">
+</span><span class="p" data-group-id="7465175511-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7465175511-3">%</span><span class="nc" data-group-id="7465175511-3">Dataclip</span><span class="p" data-group-id="7465175511-3">{</span><span class="p" data-group-id="7465175511-3">}</span><span class="p" data-group-id="7465175511-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="0356763852-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="0356763852-4">)</span><span class="w">
-</span><span class="p" data-group-id="0356763852-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0356763852-6">%</span><span class="nc" data-group-id="0356763852-6">Ecto.Changeset</span><span class="p" data-group-id="0356763852-6">{</span><span class="p" data-group-id="0356763852-6">}</span><span class="p" data-group-id="0356763852-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_dataclip</span><span class="p" data-group-id="7465175511-4">(</span><span class="n">dataclip</span><span class="p" data-group-id="7465175511-4">)</span><span class="w">
+</span><span class="p" data-group-id="7465175511-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7465175511-6">%</span><span class="nc" data-group-id="7465175511-6">Ecto.Changeset</span><span class="p" data-group-id="7465175511-6">{</span><span class="p" data-group-id="7465175511-6">}</span><span class="p" data-group-id="7465175511-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_run/1">
@@ -612,11 +628,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="1088681679-1">(</span><span class="n">run</span><span class="p" data-group-id="1088681679-1">)</span><span class="w">
-</span><span class="p" data-group-id="1088681679-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1088681679-3">%</span><span class="nc" data-group-id="1088681679-3">Run</span><span class="p" data-group-id="1088681679-3">{</span><span class="p" data-group-id="1088681679-3">}</span><span class="p" data-group-id="1088681679-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="0575012661-1">(</span><span class="n">run</span><span class="p" data-group-id="0575012661-1">)</span><span class="w">
+</span><span class="p" data-group-id="0575012661-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0575012661-3">%</span><span class="nc" data-group-id="0575012661-3">Run</span><span class="p" data-group-id="0575012661-3">{</span><span class="p" data-group-id="0575012661-3">}</span><span class="p" data-group-id="0575012661-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="1088681679-4">(</span><span class="n">run</span><span class="p" data-group-id="1088681679-4">)</span><span class="w">
-</span><span class="p" data-group-id="1088681679-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1088681679-6">%</span><span class="nc" data-group-id="1088681679-6">Ecto.Changeset</span><span class="p" data-group-id="1088681679-6">{</span><span class="p" data-group-id="1088681679-6">}</span><span class="p" data-group-id="1088681679-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_run</span><span class="p" data-group-id="0575012661-4">(</span><span class="n">run</span><span class="p" data-group-id="0575012661-4">)</span><span class="w">
+</span><span class="p" data-group-id="0575012661-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0575012661-6">%</span><span class="nc" data-group-id="0575012661-6">Ecto.Changeset</span><span class="p" data-group-id="0575012661-6">{</span><span class="p" data-group-id="0575012661-6">}</span><span class="p" data-group-id="0575012661-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="filter_run_body_and_logs_where/2">
@@ -738,7 +754,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">find_uniq_wo(page)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L489" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L504" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -783,14 +799,14 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="3888356079-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="3888356079-1">)</span><span class="w">
-</span><span class="p" data-group-id="3888356079-2">%</span><span class="nc" data-group-id="3888356079-2">Dataclip</span><span class="p" data-group-id="3888356079-2">{</span><span class="p" data-group-id="3888356079-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="8575286786-1">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="8575286786-1">)</span><span class="w">
+</span><span class="p" data-group-id="8575286786-2">%</span><span class="nc" data-group-id="8575286786-2">Dataclip</span><span class="p" data-group-id="8575286786-2">{</span><span class="p" data-group-id="8575286786-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="3888356079-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="3888356079-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="8575286786-3">(</span><span class="s">&quot;27b73932-16c7-4a72-86a3-85d805ccff98&quot;</span><span class="p" data-group-id="8575286786-3">)</span><span class="w">
 </span><span class="no">nil</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="3888356079-4">(</span><span class="p" data-group-id="3888356079-5">%</span><span class="nc" data-group-id="3888356079-5">Run</span><span class="p" data-group-id="3888356079-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="3888356079-5">}</span><span class="p" data-group-id="3888356079-4">)</span><span class="w">
-</span><span class="p" data-group-id="3888356079-6">%</span><span class="nc" data-group-id="3888356079-6">Dataclip</span><span class="p" data-group-id="3888356079-6">{</span><span class="p" data-group-id="3888356079-6">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip</span><span class="p" data-group-id="8575286786-4">(</span><span class="p" data-group-id="8575286786-5">%</span><span class="nc" data-group-id="8575286786-5">Run</span><span class="p" data-group-id="8575286786-5">{</span><span class="ss">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;a uuid&quot;</span><span class="p" data-group-id="8575286786-5">}</span><span class="p" data-group-id="8575286786-4">)</span><span class="w">
+</span><span class="p" data-group-id="8575286786-6">%</span><span class="nc" data-group-id="8575286786-6">Dataclip</span><span class="p" data-group-id="8575286786-6">{</span><span class="p" data-group-id="8575286786-6">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_dataclip!/1">
@@ -824,10 +840,10 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="5576362375-1">(</span><span class="mi">123</span><span class="p" data-group-id="5576362375-1">)</span><span class="w">
-</span><span class="p" data-group-id="5576362375-2">%</span><span class="nc" data-group-id="5576362375-2">Dataclip</span><span class="p" data-group-id="5576362375-2">{</span><span class="p" data-group-id="5576362375-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="1106157865-1">(</span><span class="mi">123</span><span class="p" data-group-id="1106157865-1">)</span><span class="w">
+</span><span class="p" data-group-id="1106157865-2">%</span><span class="nc" data-group-id="1106157865-2">Dataclip</span><span class="p" data-group-id="1106157865-2">{</span><span class="p" data-group-id="1106157865-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="5576362375-3">(</span><span class="mi">456</span><span class="p" data-group-id="5576362375-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_dataclip!</span><span class="p" data-group-id="1106157865-3">(</span><span class="mi">456</span><span class="p" data-group-id="1106157865-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -906,10 +922,10 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="2043247820-1">(</span><span class="mi">123</span><span class="p" data-group-id="2043247820-1">)</span><span class="w">
-</span><span class="p" data-group-id="2043247820-2">%</span><span class="nc" data-group-id="2043247820-2">Run</span><span class="p" data-group-id="2043247820-2">{</span><span class="p" data-group-id="2043247820-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="9124538475-1">(</span><span class="mi">123</span><span class="p" data-group-id="9124538475-1">)</span><span class="w">
+</span><span class="p" data-group-id="9124538475-2">%</span><span class="nc" data-group-id="9124538475-2">Run</span><span class="p" data-group-id="9124538475-2">{</span><span class="p" data-group-id="9124538475-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="2043247820-3">(</span><span class="mi">456</span><span class="p" data-group-id="2043247820-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_run!</span><span class="p" data-group-id="9124538475-3">(</span><span class="mi">456</span><span class="p" data-group-id="9124538475-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -933,6 +949,28 @@ Functions
   <section class="docstring">
 
 <p>Fetches a run and preloads the job via the run's event.</p>
+  </section>
+</section>
+<section class="detail" id="get_workorders_by_ids/1">
+
+  <div class="detail-header">
+    <a href="#get_workorders_by_ids/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_workorders_by_ids(ids)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L417" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 <section class="detail" id="list_dataclips/0">
@@ -966,8 +1004,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="5910286024-1">(</span><span class="p" data-group-id="5910286024-1">)</span><span class="w">
-</span><span class="p" data-group-id="5910286024-2">[</span><span class="p" data-group-id="5910286024-3">%</span><span class="nc" data-group-id="5910286024-3">Dataclip</span><span class="p" data-group-id="5910286024-3">{</span><span class="p" data-group-id="5910286024-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5910286024-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_dataclips</span><span class="p" data-group-id="8787566383-1">(</span><span class="p" data-group-id="8787566383-1">)</span><span class="w">
+</span><span class="p" data-group-id="8787566383-2">[</span><span class="p" data-group-id="8787566383-3">%</span><span class="nc" data-group-id="8787566383-3">Dataclip</span><span class="p" data-group-id="8787566383-3">{</span><span class="p" data-group-id="8787566383-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8787566383-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_dataclips/1">
@@ -1076,8 +1114,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="7258022939-1">(</span><span class="p" data-group-id="7258022939-1">)</span><span class="w">
-</span><span class="p" data-group-id="7258022939-2">[</span><span class="p" data-group-id="7258022939-3">%</span><span class="nc" data-group-id="7258022939-3">Run</span><span class="p" data-group-id="7258022939-3">{</span><span class="p" data-group-id="7258022939-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="7258022939-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_runs</span><span class="p" data-group-id="9471881795-1">(</span><span class="p" data-group-id="9471881795-1">)</span><span class="w">
+</span><span class="p" data-group-id="9471881795-2">[</span><span class="p" data-group-id="9471881795-3">%</span><span class="nc" data-group-id="9471881795-3">Run</span><span class="p" data-group-id="9471881795-3">{</span><span class="p" data-group-id="9471881795-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9471881795-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="list_runs_for_project/2">
@@ -1148,7 +1186,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">list_work_orders_for_project(project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L493" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L489" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1170,7 +1208,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">list_work_orders_for_project(project, filter, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L467" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L466" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1230,11 +1268,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3747882584-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3747882584-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="3747882584-2">}</span><span class="p" data-group-id="3747882584-1">)</span><span class="w">
-</span><span class="p" data-group-id="3747882584-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3747882584-4">%</span><span class="nc" data-group-id="3747882584-4">Dataclip</span><span class="p" data-group-id="3747882584-4">{</span><span class="p" data-group-id="3747882584-4">}</span><span class="p" data-group-id="3747882584-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="9806209960-1">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9806209960-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="9806209960-2">}</span><span class="p" data-group-id="9806209960-1">)</span><span class="w">
+</span><span class="p" data-group-id="9806209960-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9806209960-4">%</span><span class="nc" data-group-id="9806209960-4">Dataclip</span><span class="p" data-group-id="9806209960-4">{</span><span class="p" data-group-id="9806209960-4">}</span><span class="p" data-group-id="9806209960-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="3747882584-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3747882584-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3747882584-6">}</span><span class="p" data-group-id="3747882584-5">)</span><span class="w">
-</span><span class="p" data-group-id="3747882584-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3747882584-8">%</span><span class="nc" data-group-id="3747882584-8">Ecto.Changeset</span><span class="p" data-group-id="3747882584-8">{</span><span class="p" data-group-id="3747882584-8">}</span><span class="p" data-group-id="3747882584-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_dataclip</span><span class="p" data-group-id="9806209960-5">(</span><span class="n">dataclip</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9806209960-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9806209960-6">}</span><span class="p" data-group-id="9806209960-5">)</span><span class="w">
+</span><span class="p" data-group-id="9806209960-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9806209960-8">%</span><span class="nc" data-group-id="9806209960-8">Ecto.Changeset</span><span class="p" data-group-id="9806209960-8">{</span><span class="p" data-group-id="9806209960-8">}</span><span class="p" data-group-id="9806209960-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="update_run/2">
@@ -1262,11 +1300,33 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="2994337048-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2994337048-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="2994337048-2">}</span><span class="p" data-group-id="2994337048-1">)</span><span class="w">
-</span><span class="p" data-group-id="2994337048-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2994337048-4">%</span><span class="nc" data-group-id="2994337048-4">Run</span><span class="p" data-group-id="2994337048-4">{</span><span class="p" data-group-id="2994337048-4">}</span><span class="p" data-group-id="2994337048-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="7704020428-1">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7704020428-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="7704020428-2">}</span><span class="p" data-group-id="7704020428-1">)</span><span class="w">
+</span><span class="p" data-group-id="7704020428-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7704020428-4">%</span><span class="nc" data-group-id="7704020428-4">Run</span><span class="p" data-group-id="7704020428-4">{</span><span class="p" data-group-id="7704020428-4">}</span><span class="p" data-group-id="7704020428-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="2994337048-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2994337048-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="2994337048-6">}</span><span class="p" data-group-id="2994337048-5">)</span><span class="w">
-</span><span class="p" data-group-id="2994337048-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2994337048-8">%</span><span class="nc" data-group-id="2994337048-8">Ecto.Changeset</span><span class="p" data-group-id="2994337048-8">{</span><span class="p" data-group-id="2994337048-8">}</span><span class="p" data-group-id="2994337048-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_run</span><span class="p" data-group-id="7704020428-5">(</span><span class="n">run</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7704020428-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7704020428-6">}</span><span class="p" data-group-id="7704020428-5">)</span><span class="w">
+</span><span class="p" data-group-id="7704020428-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7704020428-8">%</span><span class="nc" data-group-id="7704020428-8">Ecto.Changeset</span><span class="p" data-group-id="7704020428-8">{</span><span class="p" data-group-id="7704020428-8">}</span><span class="p" data-group-id="7704020428-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="with_attempts/1">
+
+  <div class="detail-header">
+    <a href="#with_attempts/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">with_attempts(query)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation.ex#L421" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

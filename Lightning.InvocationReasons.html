@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-4BAA4A27.js"></script>
+    <script src="dist/sidebar_items-C164FDA8.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -126,6 +126,21 @@ Lightning
       Summary
     </h1>
 
+  <div class="summary-types summary">
+    <h2>
+      <a href="#types">Types</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#t:reason_type/0" translate="no">reason_type()</a>
+
+        </div>
+
+      </div>
+
+  </div>
+
   <div class="summary-functions summary">
     <h2>
       <a href="#functions">Functions</a>
@@ -154,6 +169,47 @@ Lightning
   </section>
 
 
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Types
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:reason_type/0">
+
+  <div class="detail-header">
+    <a href="#t:reason_type/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">reason_type()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L12" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> reason_type() :: :manual | :retry | <a href="Lightning.Jobs.Trigger.html#t:t/0">Lightning.Jobs.Trigger.t</a>()</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
   <section id="functions" class="details-list">
     <h1 class="section-heading">
       <a class="hover-link" href="#functions">
@@ -172,7 +228,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">build(type, arg2)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L12" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L16" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -181,6 +237,12 @@ Functions
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> build(<a href="#t:reason_type/0">reason_type</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.InvocationReason.html#t:t/0">Lightning.InvocationReason.t</a>())</pre>
+
+      </div>
 
 
   </section>
@@ -196,7 +258,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_reason(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L43" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/reasons.ex#L51" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -212,11 +274,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="8088272028-1">(</span><span class="p" data-group-id="8088272028-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="8088272028-2">}</span><span class="p" data-group-id="8088272028-1">)</span><span class="w">
-</span><span class="p" data-group-id="8088272028-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8088272028-4">%</span><span class="nc" data-group-id="8088272028-4">InvocationReason</span><span class="p" data-group-id="8088272028-4">{</span><span class="p" data-group-id="8088272028-4">}</span><span class="p" data-group-id="8088272028-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="6102129275-1">(</span><span class="p" data-group-id="6102129275-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="6102129275-2">}</span><span class="p" data-group-id="6102129275-1">)</span><span class="w">
+</span><span class="p" data-group-id="6102129275-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6102129275-4">%</span><span class="nc" data-group-id="6102129275-4">InvocationReason</span><span class="p" data-group-id="6102129275-4">{</span><span class="p" data-group-id="6102129275-4">}</span><span class="p" data-group-id="6102129275-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="8088272028-5">(</span><span class="p" data-group-id="8088272028-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8088272028-6">}</span><span class="p" data-group-id="8088272028-5">)</span><span class="w">
-</span><span class="p" data-group-id="8088272028-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8088272028-8">%</span><span class="nc" data-group-id="8088272028-8">Ecto.Changeset</span><span class="p" data-group-id="8088272028-8">{</span><span class="p" data-group-id="8088272028-8">}</span><span class="p" data-group-id="8088272028-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_reason</span><span class="p" data-group-id="6102129275-5">(</span><span class="p" data-group-id="6102129275-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="6102129275-6">}</span><span class="p" data-group-id="6102129275-5">)</span><span class="w">
+</span><span class="p" data-group-id="6102129275-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6102129275-8">%</span><span class="nc" data-group-id="6102129275-8">Ecto.Changeset</span><span class="p" data-group-id="6102129275-8">{</span><span class="p" data-group-id="6102129275-8">}</span><span class="p" data-group-id="6102129275-7">}</span></code></pre>
   </section>
 </section>
 

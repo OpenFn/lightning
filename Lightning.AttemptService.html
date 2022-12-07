@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-4BAA4A27.js"></script>
+    <script src="dist/sidebar_items-C164FDA8.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -155,7 +155,25 @@ Lightning
 
         </div>
 
-          <div class="summary-synopsis"><p>Creates a reason.</p></div>
+          <div class="summary-synopsis"><p>Create an attempt</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_for_rerun/2" translate="no">get_for_rerun(attempt_id, run_id)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#retry/3" translate="no">retry(attempt, run, reason)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates a new Attempt starting from a given run.</p></div>
 
       </div>
 
@@ -249,17 +267,76 @@ set as the previous Run for the new unsaved Run.</p>
 
   <section class="docstring">
 
-<p>Creates a reason.</p><h2 id="create_attempt/3-examples" class="section-heading">
+<p>Create an attempt</p><h2 id="create_attempt/3-examples" class="section-heading">
   <a href="#create_attempt/3-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">examples</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="3798469126-1">(</span><span class="p" data-group-id="3798469126-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3798469126-2">}</span><span class="p" data-group-id="3798469126-1">)</span><span class="w">
-</span><span class="p" data-group-id="3798469126-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3798469126-4">%</span><span class="nc" data-group-id="3798469126-4">Attempt</span><span class="p" data-group-id="3798469126-4">{</span><span class="p" data-group-id="3798469126-4">}</span><span class="p" data-group-id="3798469126-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="9896535150-1">(</span><span class="p" data-group-id="9896535150-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9896535150-2">}</span><span class="p" data-group-id="9896535150-1">)</span><span class="w">
+</span><span class="p" data-group-id="9896535150-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9896535150-4">%</span><span class="nc" data-group-id="9896535150-4">Attempt</span><span class="p" data-group-id="9896535150-4">{</span><span class="p" data-group-id="9896535150-4">}</span><span class="p" data-group-id="9896535150-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="3798469126-5">(</span><span class="p" data-group-id="3798469126-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3798469126-6">}</span><span class="p" data-group-id="3798469126-5">)</span><span class="w">
-</span><span class="p" data-group-id="3798469126-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3798469126-8">%</span><span class="nc" data-group-id="3798469126-8">Ecto.Changeset</span><span class="p" data-group-id="3798469126-8">{</span><span class="p" data-group-id="3798469126-8">}</span><span class="p" data-group-id="3798469126-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="9896535150-5">(</span><span class="p" data-group-id="9896535150-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9896535150-6">}</span><span class="p" data-group-id="9896535150-5">)</span><span class="w">
+</span><span class="p" data-group-id="9896535150-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9896535150-8">%</span><span class="nc" data-group-id="9896535150-8">Ecto.Changeset</span><span class="p" data-group-id="9896535150-8">{</span><span class="p" data-group-id="9896535150-8">}</span><span class="p" data-group-id="9896535150-7">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="get_for_rerun/2">
+
+  <div class="detail-header">
+    <a href="#get_for_rerun/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_for_rerun(attempt_id, run_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L118" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="retry/3">
+
+  <div class="detail-header">
+    <a href="#retry/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">retry(attempt, run, reason)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L84" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> retry(
+  <a href="Lightning.Attempt.html#t:t/0">Lightning.Attempt.t</a>(),
+  <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>(),
+  <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.InvocationReason.html#t:t/0">Lightning.InvocationReason.t</a>())
+  | <a href="Lightning.InvocationReason.html#t:t/0">Lightning.InvocationReason.t</a>()
+) ::
+  {:ok, <a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>())}</pre>
+
+      </div>
+
+<p>Creates a new Attempt starting from a given run.</p><p>All upstream/prior Runs that were performed on that attempt are associated
+with the new Attempt, where as the specified run is used to create a new one
+and is added to the Attempt.</p><p>Any runs downstream from the Run given are ignored.</p>
   </section>
 </section>
 
