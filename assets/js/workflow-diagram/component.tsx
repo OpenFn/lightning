@@ -1,6 +1,6 @@
 import React, { MouseEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import WorkflowDiagram, { Store } from '@openfn/workflow-diagram';
+import WorkflowDiagram, { Store } from './src';
 
 type UpdateParams = {
   onNodeClick(event: MouseEvent, node: any): void;

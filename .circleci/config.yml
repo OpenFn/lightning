@@ -3,7 +3,6 @@ version: 2.1
 default_version: &default_version 1.14.1
 
 orbs:
-  # TODO: decide which one we like and stick with it
   codecov: codecov/codecov@1.0.5
 
 commands:
@@ -85,7 +84,7 @@ workflows:
           execute:
             - run: MIX_ENV=test mix sobelow
       - build:
-          name: 'Check elixir tests (codecov)'
+          name: 'Check Elixir tests (codecov)'
           execute:
             - run: MIX_ENV=test mix do ecto.create, ecto.migrate
             - run:
@@ -94,3 +93,7 @@ workflows:
                 file: test/reports/excoveralls.json
             - store_test_results:
                 path: test/reports/
+      - build:
+          name: 'Check Javascript tests'
+          execute:
+            - run: cd assets && npm install && npm run test-report

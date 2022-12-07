@@ -140,4 +140,9 @@ defmodule LightningWeb.LiveHelpers do
     <% end %>
     """
   end
+
+  @spec display_short_uuid(binary()) :: binary()
+  def display_short_uuid(uuid_string) do
+    uuid_string |> String.slice(0..7)
+  end
 end

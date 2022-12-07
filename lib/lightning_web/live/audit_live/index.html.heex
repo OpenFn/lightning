@@ -14,7 +14,7 @@
       <%= for audit <- @page.entries do %>
         <.tr id={"audit-#{audit.id}"} class="border-dotted border-gray-100">
           <.td>
-            <%= audit.inserted_at |> Calendar.strftime("%c") %>
+            <%= audit.inserted_at |> Calendar.strftime("%c %Z") %>
           </.td>
           <.td class="text-center">
             <.badge color="success" label={audit.event} />
@@ -26,7 +26,7 @@
                 Credential
               </div>
               <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
-                <%= audit.row_id |> String.slice(0..7) %>
+                <%= display_short_uuid(audit.row_id) %>
               </div>
             </div>
           </.td>

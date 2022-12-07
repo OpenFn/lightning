@@ -10,7 +10,7 @@
       >
         <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
           <div class="grid grid-cols-5 gap-4">
-            <div class="py-3 px-6 font-medium">Workflow name</div>
+            <div class="py-3 px-6 font-medium">Workflow</div>
             <div class="py-3 px-6 font-medium">Reason</div>
             <div class="py-3 px-6 font-medium">Input</div>
             <div class="py-3 px-6 font-medium">Last run</div>
@@ -32,7 +32,7 @@
           url={@pagination_path}
         />
       </div>
-      <div class="w-96 bg-gray-200 m-2 p-2 sticky top-0 self-start">
+      <div class="w-96 bg-gray-200 ml-4 p-4 pt-0 sticky top-0 self-start rounded-md">
         <.form
           :let={f}
           for={@changeset}
@@ -68,7 +68,7 @@
             />
           </div>
           <div>
-            <div class="font-semibold my-4">Filter by date</div>
+            <div class="font-semibold my-4">Filter runs by date</div>
             <div class="flex justify-between">
               <div>
                 <label>After</label>
