@@ -2,14 +2,23 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
+  alias Lightning.Invocation
   use Phoenix.Component
   use LightningWeb, :live_component
   import LightningWeb.RunLive.Components
 
   @impl true
   def update(%{work_order: work_order, project: project}, socket) do
-    last_attempt = Enum.at(work_order.attempts, 0)
-    last_run = List.last(last_attempt.runs)
+    {:ok,
+     socket |> assign(project: project) |> set_work_order_details(work_order)}
+  end
+
+  def update(%{event: "new_attempt", work_order: work_order}, socket) do
+    {:ok, socket |> set_work_order_details(work_order)}
+  end
+
+  defp set_work_order_details(socket, work_order) do
+    last_run = List.last(List.first(work_order.attempts).runs)
 
     last_run_finished_at =
       case last_run.finished_at do
@@ -17,23 +26,35 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         finished_at -> finished_at |> Calendar.strftime("%c %Z")
       end
 
-    socket =
-      socket
-      |> assign(
-        project: project,
-        work_order: work_order,
-        last_attempt: last_attempt,
-        last_run: last_run,
-        last_run_finished_at: last_run_finished_at,
-        workflow_name: work_order.workflow.name || "Untitled"
-      )
-
-    {:ok, socket}
+    socket
+    |> assign(
+      work_order: work_order,
+      attempts: work_order.attempts,
+      last_run: last_run,
+      last_run_finished_at: last_run_finished_at,
+      workflow_name: work_order.workflow.name || "Untitled"
+    )
   end
 
   @impl true
   def handle_event("toggle-details", %{}, socket) do
     {:noreply, assign(socket, :show_details, !socket.assigns[:show_details])}
+  end
+
+  @impl true
+  def preload(list_of_assigns) do
+    # TODO this gets called when using `send_update` as well.
+    ids = Enum.map(list_of_assigns, & &1.id)
+
+    work_orders =
+      Invocation.get_workorders_by_ids(ids)
+      |> Invocation.with_attempts()
+      |> Lightning.Repo.all()
+      |> Enum.into(%{}, fn %{id: id} = wo -> {id, wo} end)
+
+    Enum.map(list_of_assigns, fn assigns ->
+      Map.put(assigns, :work_order, work_orders[assigns.id])
+    end)
   end
 
   @impl true
@@ -89,7 +110,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </div>
       </div>
       <%= if @show_details do %>
-        <%= for attempt <- @work_order.attempts do %>
+        <%= for attempt <- @attempts do %>
           <.attempt_item attempt={attempt} project={@project} />
         <% end %>
       <% end %>

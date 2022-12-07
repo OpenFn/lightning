@@ -27,6 +27,8 @@ defmodule LightningWeb.RunLive.Index do
       %MultiSelectOption{id: :log, label: "Logs", selected: true}
     ]
 
+    LightningWeb.Endpoint.subscribe("workorder:#{socket.assigns.project.id}")
+
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
       |> Enum.map(&{&1.name, &1.id})
@@ -110,6 +112,21 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, socket}
   end
 
+  def handle_info(
+        %Phoenix.Socket.Broadcast{
+          event: "new_attempt",
+          payload: %{work_order_id: work_order_id}
+        },
+        socket
+      ) do
+    send_update(LightningWeb.RunLive.WorkOrderComponent,
+      id: work_order_id,
+      event: "new_attempt"
+    )
+
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_event(
         "rerun",
@@ -129,6 +146,12 @@ defmodule LightningWeb.RunLive.Index do
 
     Pipeline.new(%{attempt_run_id: attempt_run.id})
     |> Oban.insert()
+
+    LightningWeb.Endpoint.broadcast!(
+      "workorder:#{socket.assigns.project.id}",
+      "new_attempt",
+      %{work_order_id: attempt.work_order_id}
+    )
 
     {:noreply, socket}
   end

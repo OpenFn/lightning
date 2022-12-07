@@ -3,6 +3,7 @@ defmodule Lightning.InvocationTest do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.{Run}
+  alias Lightning.WorkOrderService
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
@@ -305,29 +306,15 @@ defmodule Lightning.InvocationTest do
         |> Lightning.Repo.insert!()
 
       simplified_result =
-        Invocation.list_work_orders_for_project(
-          %Lightning.Projects.Project{
-            id: workflow.project_id
-          },
-          [],
-          %{"page_size" => 10}
-        ).entries()
-        |> Enum.map(fn %{work_order: wo} ->
-          %{
-            id: wo.id,
-            last_run_finished_at:
-              Enum.at(wo.attempts, 0)
-              |> Map.get(:runs)
-              |> Enum.at(0)
-              |> Map.get(:finished_at)
-          }
-        end)
+        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
+          id: workflow.project_id
+        }).entries()
 
       expected_order = [
-        %{id: wo_four.id, last_run_finished_at: run_four.finished_at},
-        %{id: wo_three.id, last_run_finished_at: run_three.finished_at},
-        %{id: wo_two.id, last_run_finished_at: run_two.finished_at},
-        %{id: wo_one.id, last_run_finished_at: run_one.finished_at}
+        %{id: wo_four.id, last_finished_at: run_four.finished_at},
+        %{id: wo_three.id, last_finished_at: run_three.finished_at},
+        %{id: wo_two.id, last_finished_at: run_two.finished_at},
+        %{id: wo_one.id, last_finished_at: run_one.finished_at}
       ]
 
       assert expected_order == simplified_result
@@ -424,11 +411,12 @@ defmodule Lightning.InvocationTest do
           })
         )
 
-      [%{work_order: actual_wo} | _] =
+      [%{id: id} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
 
+      actual_wo = WorkOrderService.get_work_order(id) |> Repo.preload(:attempts)
       # last created attempt should be first in work_order.attempts list
 
       actual_last_attempt = Enum.at(actual_wo.attempts, 0)
@@ -448,10 +436,12 @@ defmodule Lightning.InvocationTest do
           finished_at: ~U[2022-10-27 15:00:00.000000Z]
         })
 
-      [%{work_order: actual_wo} | _] =
+      [%{id: id} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
+
+      actual_wo = WorkOrderService.get_work_order(id) |> Repo.preload(:attempts)
 
       actual_last_attempt = Enum.at(actual_wo.attempts, 0)
 

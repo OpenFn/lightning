@@ -18,11 +18,10 @@
           </div>
         </div>
         <div data-entity="work_order_list" class="bg-gray-100">
-          <%= for %{work_order: wo} <- @page.entries do %>
+          <%= for wo <- @page.entries do %>
             <.live_component
               module={LightningWeb.RunLive.WorkOrderComponent}
               id={wo.id}
-              work_order={wo}
               project={@project}
             />
           <% end %>
