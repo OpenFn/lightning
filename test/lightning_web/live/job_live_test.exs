@@ -70,7 +70,7 @@ defmodule LightningWeb.JobLiveTest do
   end
 
   describe "Deleting a job from inspector" do
-    test "jobs with no dowstream jobs can be deleted", %{
+    test "jobs with no downstream jobs can be deleted", %{
       conn: conn,
       project: project,
       job: job
@@ -95,7 +95,7 @@ defmodule LightningWeb.JobLiveTest do
       |> element("#delete-job")
       |> render_click()
 
-      assert_patched(
+      assert_patch(
         view,
         Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
