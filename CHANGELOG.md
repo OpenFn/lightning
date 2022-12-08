@@ -33,6 +33,7 @@ and this project adheres to
 - [BREAKING CHANGE] Ported `mix openfn.install.runtime` into application, use
   `mix lightning.install_runtime`.
 - [BREAKING CHANGE] Introduced `@openfn/cli` as the new runtime for Jobs
+- Rename a workflow through the page heading
 
 ### Fixed
 
