@@ -94,8 +94,10 @@ defmodule LightningWeb.RunLive.Components do
             navigate={show_run_path(@project_id, @run.id)}
             class="hover:underline hover:underline-offset-2"
           >
-            <%= @run.job.name %> @ <%= @run.finished_at
-            |> Calendar.strftime("%c %Z") %>
+            <%= @run.job.name %>
+            <span :if={@run.finished_at}>
+              @ <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
+            </span>
           </.link>
           <span
             class="pl-2 opacity-0 group-hover:opacity-100 hover:underline hover:underline-offset-2 cursor-pointer"
