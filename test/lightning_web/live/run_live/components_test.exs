@@ -1,4 +1,4 @@
-defmodule LightningWeb.RunComponentsTest do
+defmodule LightningWeb.RunLive.ComponentsTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -6,13 +6,42 @@ defmodule LightningWeb.RunComponentsTest do
   alias LightningWeb.RunLive.Components
   import Lightning.InvocationFixtures
 
+  import Lightning.Factories
+
+  test "run_list_item component" do
+    reason = insert(:reason, type: :webhook)
+
+    attempt =
+      build(:attempt,
+        work_order: build(:workorder, reason: reason),
+        runs: [build(:run)],
+        reason: reason
+      )
+      |> insert()
+
+    run = attempt.runs |> List.first()
+    project_id = run.job.workflow.project_id
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: attempt.runs |> List.first(),
+        attempt: attempt,
+        project_id: project_id
+      )
+      |> Floki.parse_fragment!()
+
+    assert html
+           |> Floki.find(
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, run.id)}"]}
+           )
+           |> Enum.any?()
+  end
+
   test "log_view component" do
     log_lines = ["First line", "Second line"]
 
     html =
-      render_component(&Components.log_view/1,
-        log: log_lines
-      )
+      render_component(&Components.log_view/1, log: log_lines)
       |> Floki.parse_fragment!()
 
     assert html |> Floki.find("div[data-line-number]") |> length() == 2
