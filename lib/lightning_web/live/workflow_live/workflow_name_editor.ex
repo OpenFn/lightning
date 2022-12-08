@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
   @impl true
   def update(
-        %{workflow: workflow, project: project},
+        %{workflow: workflow, return_to: return_to, project: project},
         socket
       ) do
     changeset =
@@ -18,6 +18,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
      |> assign(
        workflow: workflow,
        changeset: changeset,
+       return_to: return_to,
        project: project
      )}
   end
@@ -43,7 +44,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
         {:noreply,
          socket
-         |> put_flash(:info, "workflow updated successfully")}
+         |> put_flash(:info, "workflow updated successfully")
+         |> push_patch(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -72,7 +74,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
               "border-transparent shadow-sm border-secondary-300 rounded-md group-focus-within:border-secondary-300 sm:text-3xl font-bold text-secondary-900 hover:bg-gray-100"
           ) %>
         </div>
-        <div class="w-full hidden group-focus-within:block">
+        <div class="hidden group-focus-within:inline">
           <Form.submit_button phx-disable-with="Saving" disabled={!@changeset.valid?}>
             Save
           </Form.submit_button>
