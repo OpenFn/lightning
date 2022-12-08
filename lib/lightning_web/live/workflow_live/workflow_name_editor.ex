@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
   @impl true
   def update(
-        %{workflow: workflow, return_to: return_to, project: project},
+        %{workflow: workflow, project: project},
         socket
       ) do
     changeset =
@@ -18,7 +18,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
      |> assign(
        workflow: workflow,
        changeset: changeset,
-       return_to: return_to,
        project: project
      )}
   end
@@ -44,8 +43,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
         {:noreply,
          socket
-         |> put_flash(:info, "workflow updated successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+         |> put_flash(:info, "workflow updated successfully")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
@@ -60,7 +58,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
       <.form
         :let={f}
         for={@changeset}
-        id="workflow-form"
+        id="workflow-inplace-form"
         phx-target={@myself}
         phx-change="validate"
         phx-submit="save"

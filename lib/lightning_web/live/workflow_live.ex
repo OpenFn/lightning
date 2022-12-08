@@ -31,14 +31,6 @@ defmodule LightningWeb.WorkflowLive do
                     id={@current_workflow.id}
                     workflow={@current_workflow}
                     project={@project}
-                    return_to={
-                      Routes.project_workflow_path(
-                        @socket,
-                        :show,
-                        @project.id,
-                        @current_workflow.id
-                      )
-                    }
                   />
                 </div>
             <% end %>
