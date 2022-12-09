@@ -406,13 +406,17 @@ defmodule Lightning.Invocation do
       join: d in assoc(r, :input_dataclip),
       as: :input,
       where: w.project_id == ^project_id,
-      where: d.id in [wo_re.dataclip_id, att_re.dataclip_id],
       where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_status_where(status),
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
-      order_by: [desc_nulls_first: r.finished_at]
+      select: %{
+        id: wo.id,
+        last_finished_at: max(r.finished_at) |> selected_as(:last_finished_at)
+      },
+      group_by: wo.id,
+      order_by: [desc_nulls_first: selected_as(:last_finished_at)]
     )
   end
 
@@ -483,9 +487,7 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
-    |> select([wo, runs: r], %{id: wo.id, last_finished_at: r.finished_at})
     |> Repo.paginate(params)
-    |> find_uniq_wo()
   end
 
   def list_work_orders_for_project(%Project{} = project) do
@@ -501,9 +503,5 @@ defmodule Lightning.Invocation do
       ],
       %{}
     )
-  end
-
-  def find_uniq_wo(page) do
-    %{page | entries: Enum.uniq_by(page.entries, fn wo -> wo.id end)}
   end
 end
