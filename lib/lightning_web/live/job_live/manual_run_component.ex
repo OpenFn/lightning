@@ -2,7 +2,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   use LightningWeb, :live_component
 
   alias LightningWeb.Components.Form
-  alias Lightning.Repo
 
   attr :job_id, :string, required: true
   attr :current_user, Lightning.Accounts.User, required: true
@@ -190,11 +189,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       # mode from within the process.
       Process.put(:oban_testing, :manual)
 
-      Lightning.WorkOrderService.multi_for_manual(job, dataclip, user)
-      |> Oban.insert(:pipeline, fn %{attempt_run: attempt_run} ->
-        Lightning.Pipeline.new(%{attempt_run_id: attempt_run.id})
-      end)
-      |> Repo.transaction()
+      Lightning.WorkOrderService.create_manual_workorder(job, dataclip, user)
     end
   end
 
