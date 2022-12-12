@@ -1,157 +1,66 @@
-defmodule OpenFn.CrashTest do
-  use LightningWeb.ConnCase, async: false
+defmodule Lightning.CrashTest do
+  use Lightning.DataCase, async: true
   use Oban.Testing, repo: Lightning.Repo
 
-  alias Lightning.{TestUtil, Repo, ObanQuery}
+  alias Lightning.Pipeline
+  import Lightning.JobsFixtures
+  import Lightning.InvocationFixtures
+  import Lightning.CredentialsFixtures
+  import Lightning.ProjectsFixtures
 
-  setup do
-    initial_env = %{
-      init_run_duration: Application.get_env(:lightning, :max_run_duration),
-      init_long_run_duration:
-        Application.get_env(:lightning, :max_long_run_duration),
-      init_grace_period: Application.get_env(:lightning, :run_exit_grace_period)
-    }
+  describe "Crash test" do
+    test "timeout jobs generate results with :killed status" do
+      Application.put_env(:lightning, :max_run_duration, 5 * 1000)
+      project = project_fixture()
 
-    setup =
-      TestUtil.users_and_conns([:owner, :supportable_project])
-      |> Map.put(:initial_env, initial_env)
-
-    {:ok, setup}
-  end
-
-  defp restore_env(init) do
-    Application.put_env(:open_fn, :max_run_duration, init.init_run_duration)
-
-    Application.put_env(
-      :open_fn,
-      :max_long_run_duration,
-      init.init_long_run_duration
-    )
-
-    Application.put_env(:open_fn, :run_exit_grace_period, init.init_grace_period)
-  end
-
-  describe "rambo" do
-    test "kills a job that's running too long", %{
-      owner: owner,
-      supportable_project: supportable_project,
-      initial_env: initial_env
-    } do
-      Application.put_env(:open_fn, :max_run_duration, "1")
-
-      receipt = insert(:receipt, project: supportable_project)
-
-      job =
-        insert(:job,
-          project: supportable_project,
-          adaptor: "http",
-          expression: "alterState(state => {
-            return new Promise((resolve, reject) => {
-              setTimeout(() => {
-                resolve(state);
-              }, 1500);
-            });
-          });"
+      project_credential =
+        project_credential_fixture(
+          name: "test credential",
+          body: %{"username" => "foo", "password" => "bar"},
+          project_id: project.id
         )
 
-      run = %{"job_id" => job.id, "receipt_id" => receipt.id}
-      response = owner.conn |> post(run_path(owner.conn, :create), run)
-      assert response.status == 200
-
-      assert :ok == TestUtil.drain_all(Repo)
-      run = Repo.get_by!(OpenFn.Run, job_id: job.id)
-
-      assert run.exit_code == 2
-
-      assert Enum.at(run.log, 5) |> String.starts_with?("==== TIMEOUT =")
-      assert run.receipt_id == receipt.id
-      assert run.project_id == supportable_project.id
-
-      restore_env(initial_env)
-    end
-
-    test "doesn't kill a job running longer than normal if it's set to long run",
-         %{
-           owner: owner,
-           supportable_project: supportable_project,
-           initial_env: initial_env
-         } do
-      Application.put_env(:open_fn, :max_run_duration, "1")
-      Application.put_env(:open_fn, :max_long_run_duration, "5")
-
-      receipt = insert(:receipt, project: supportable_project)
-
       job =
-        insert(:job,
-          project: supportable_project,
-          adaptor: "http",
-          long_run: true,
-          expression: "alterState(state => {
+        workflow_job_fixture(
+          adaptor: "@openfn/language-common",
+          body: """
+          fn(state => {
             return new Promise((resolve, reject) => {
               setTimeout(() => {
+                console.log('wait, and then resolve');
                 resolve(state);
-              }, 1500);
+              }, 10 * 1000);
             });
-          });"
+          });
+          """,
+          project_id: project.id,
+          project_credential_id: project_credential.id
         )
 
-      run = %{"job_id" => job.id, "receipt_id" => receipt.id}
-      response = owner.conn |> post(run_path(owner.conn, :create), run)
-      assert response.status == 200
-
-      TestUtil.drain_all(Repo)
-      run = Repo.get_by!(OpenFn.Run, job_id: job.id)
-
-      assert run.exit_code == 0
-
-      restore_env(initial_env)
-    end
-  end
-
-  describe "the oban manager" do
-    test "kills a job that's running too long and won't quit", %{
-      owner: owner,
-      supportable_project: supportable_project,
-      initial_env: initial_env
-    } do
-      Application.put_env(:open_fn, :max_run_duration, "3")
-      Application.put_env(:open_fn, :run_exit_grace_period, "-2")
-
-      receipt = insert(:receipt, project: supportable_project)
-
-      job =
-        insert(:job,
-          project: supportable_project,
-          adaptor: "http",
-          expression: "alterState(state => {
-            return new Promise((resolve, reject) => {
-              setTimeout(() => {
-                resolve(state);
-              }, 5000);
-            });
-          });"
+      dataclip =
+        dataclip_fixture(
+          body: %{"foo" => "bar"},
+          project_id: project.id,
+          type: :http_request
         )
 
-      run = %{"job_id" => job.id, "receipt_id" => receipt.id}
+      run = run_fixture(job_id: job.id, input_dataclip_id: dataclip.id)
+      result = %Engine.Result{} = Pipeline.Runner.start(run)
 
-      response = owner.conn |> post(run_path(owner.conn, :create), run)
-      assert response.status == 200
+      assert result.exit_reason == :killed
+      assert result.exit_code == nil
 
-      assert :ok == TestUtil.drain_all(Repo)
-      :timer.sleep(100)
+      assert File.read!(result.final_state_path) == ""
 
-      run = Repo.get_by!(OpenFn.Run, job_id: job.id)
+      run =
+        Repo.reload!(run)
+        |> Repo.preload(:output_dataclip)
 
-      assert run.exit_code == 4
-      assert Enum.at(run.log, 0) |> String.starts_with?("==== TIMEOUT")
-      assert run.receipt_id == receipt.id
-      assert run.project_id == supportable_project.id
+      assert run.output_dataclip == nil
 
-      :timer.sleep(100)
-      discards = ObanQuery.timeouts_for_run(run.id) |> Repo.aggregate(:count)
-      assert discards == 0
-
-      restore_env(initial_env)
+      refute is_nil(run.started_at)
+      refute is_nil(run.finished_at)
+      assert run.exit_code == nil
     end
   end
 end
