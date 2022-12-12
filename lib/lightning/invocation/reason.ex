@@ -35,7 +35,8 @@ defmodule Lightning.InvocationReason do
     timestamps()
   end
 
-  @spec new(map()) :: Ecto.Changeset.t(__MODULE__.t())
+  @spec new(attrs :: %{optional(atom()) => any()}) ::
+          Ecto.Changeset.t(__MODULE__.t())
   def new(attrs \\ %{}) do
     change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
     |> change(attrs)

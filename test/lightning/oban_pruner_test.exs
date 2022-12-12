@@ -1,5 +1,4 @@
 defmodule Lightning.ObanPrunerTest do
-  use Oban.Testing, repo: Lightning.Repo
   use Lightning.DataCase, async: true
 
   alias Lightning.Repo

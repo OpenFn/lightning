@@ -33,6 +33,8 @@ defmodule Lightning.WorkOrderService do
         Pipeline.new(%{attempt_run_id: models.attempt_run.id})
         |> Oban.insert()
 
+        job = job |> Repo.preload(:workflow)
+
         broadcast(
           job.workflow.project_id,
           %Events.AttemptCreated{attempt: models.attempt}
@@ -65,8 +67,9 @@ defmodule Lightning.WorkOrderService do
     end
   end
 
+  # @spec retry_attempt_run(AttemptRun.t(), User.t()) :: Ecto.Multi.t()
   def retry_attempt_run(attempt_run, user) do
-    %{attempt: attempt, run: run} = attempt_run
+    %{attempt: attempt, run: run} = attempt_run |> Repo.preload([:attempt, :run])
 
     multi =
       Multi.new()
@@ -77,7 +80,7 @@ defmodule Lightning.WorkOrderService do
         AttemptService.retry(attempt, run, reason)
       end)
 
-    with {:ok, %{attempt: attempt, attempt_run: attempt_run}} <-
+    with {:ok, %{attempt: attempt, attempt_run: attempt_run} = models} <-
            Repo.transaction(multi) do
       Pipeline.new(%{attempt_run_id: attempt_run.id})
       |> Oban.insert()
@@ -92,6 +95,8 @@ defmodule Lightning.WorkOrderService do
         |> Repo.one!()
 
       broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
+
+      {:ok, models}
     end
   end
 

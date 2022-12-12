@@ -1,7 +1,7 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.{Jobs, Pipeline, WorkOrderService, Repo}
+  alias Lightning.{Jobs, WorkOrderService}
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
