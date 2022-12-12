@@ -23,6 +23,11 @@ defmodule Lightning.Pipeline do
     |> process()
   end
 
+  # @impl Oban.Worker
+  # def timeout(_job),
+  #   do:
+  #     Application.get_env(:lightning, :max_run_duration)
+
   @spec process(AttemptRun.t()) :: :ok
   def process(%AttemptRun{} = attempt_run) do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
