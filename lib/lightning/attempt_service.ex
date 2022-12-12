@@ -4,6 +4,7 @@ defmodule Lightning.AttemptService do
   """
 
   import Ecto.Query, warn: false
+  alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.{Attempt, AttemptRun}
   alias Lightning.Invocation.{Run}
@@ -79,40 +80,59 @@ defmodule Lightning.AttemptService do
           Run.t(),
           Ecto.Changeset.t(Lightning.InvocationReason.t())
           | Lightning.InvocationReason.t()
-        ) ::
-          {:ok, AttemptRun.t()} | {:error, Ecto.Changeset.t(AttemptRun.t())}
+        ) :: Ecto.Multi.t()
   def retry(%Attempt{} = attempt, %Run{} = run, reason) do
     attempt = Repo.preload(attempt, :work_order)
 
-    # get all the jobs for the workflow
+    workflow_jobs = get_jobs_for(attempt) |> Repo.all()
 
-    workflow_jobs =
-      from(j in Lightning.Jobs.Job,
-        join: wf in assoc(j, :workflow),
-        join: a in assoc(wf, :attempts),
-        where: a.id == ^attempt.id,
-        preload: [trigger: :upstream_job]
-      )
-      |> Repo.all()
-
-    graph =
-      Lightning.Workflows.Graph.new(workflow_jobs)
-      |> Lightning.Workflows.Graph.remove(run.job_id)
-
-    remaining_jobs = graph.jobs |> Enum.map(& &1.id)
-
-    runs =
+    existing_runs =
       from(r in Run,
         join: a in assoc(r, :attempts),
-        where: a.id == ^attempt.id,
-        where: r.job_id in ^remaining_jobs
+        where: a.id == ^attempt.id
       )
       |> Repo.all()
 
-    build_attempt(attempt.work_order, reason)
-    |> Ecto.Changeset.put_assoc(:runs, runs)
-    |> Repo.insert!()
-    |> append(Run.new_from(run))
+    {skipped_runs, new_run} = calculate_runs(workflow_jobs, existing_runs, run)
+
+    Multi.new()
+    |> Multi.insert(:attempt, fn _ ->
+      build_attempt(attempt.work_order, reason)
+      |> Ecto.Changeset.put_assoc(
+        :runs,
+        skipped_runs
+      )
+    end)
+    |> Multi.insert(:attempt_run, fn %{attempt: attempt} ->
+      AttemptRun.new()
+      |> Ecto.Changeset.put_assoc(:attempt, attempt)
+      |> Ecto.Changeset.put_assoc(:run, new_run)
+    end)
+  end
+
+  def get_jobs_for(%Attempt{id: id}) do
+    from(j in Lightning.Jobs.Job,
+      join: wf in assoc(j, :workflow),
+      join: a in assoc(wf, :attempts),
+      where: a.id == ^id,
+      preload: [trigger: :upstream_job]
+    )
+  end
+
+  def calculate_runs(jobs, existing_runs, starting_run) do
+    # TODO sanity check that ALL existing runs have a place in the graph
+
+    runs_by_job_id =
+      existing_runs
+      |> Enum.into(%{}, fn %Run{job_id: job_id} = run -> {job_id, run} end)
+
+    graph =
+      Lightning.Workflows.Graph.new(jobs)
+      |> Lightning.Workflows.Graph.remove(starting_run.job_id)
+
+    {graph.jobs
+     |> Enum.map(fn %{id: id} -> runs_by_job_id[id] end)
+     |> Enum.reject(&is_nil/1), Run.new_from(starting_run)}
   end
 
   def get_for_rerun(attempt_id, run_id) do

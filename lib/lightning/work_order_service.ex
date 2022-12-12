@@ -6,12 +6,99 @@ defmodule Lightning.WorkOrderService do
   import Ecto.Query, warn: false
 
   alias Lightning.Repo
-  alias Lightning.{WorkOrder, InvocationReasons, AttemptRun, AttemptService}
+
+  alias Lightning.{
+    WorkOrder,
+    InvocationReasons,
+    AttemptRun,
+    AttemptService,
+    Pipeline
+  }
+
+  alias Lightning.Workorders.Events
+
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Accounts.User
   alias Lightning.Jobs.Job
 
   alias Ecto.Multi
+
+  @pubsub Lightning.PubSub
+
+  def create_webhook_workorder(job, dataclip_body) do
+    multi_for(:webhook, job, dataclip_body)
+    |> Repo.transaction()
+    |> case do
+      {:ok, models} ->
+        Pipeline.new(%{attempt_run_id: models.attempt_run.id})
+        |> Oban.insert()
+
+        job = job |> Repo.preload(:workflow)
+
+        broadcast(
+          job.workflow.project_id,
+          %Events.AttemptCreated{attempt: models.attempt}
+        )
+
+        {:ok, models}
+
+      any ->
+        any
+    end
+  end
+
+  def create_manual_workorder(job, dataclip, user) do
+    multi_for_manual(job, dataclip, user)
+    |> Repo.transaction()
+    |> case do
+      {:ok, models} ->
+        Lightning.Pipeline.new(%{attempt_run_id: models.attempt_run.id})
+        |> Oban.insert()
+
+        broadcast(
+          job.workflow.project_id,
+          %Events.AttemptCreated{attempt: models.attempt}
+        )
+
+        {:ok, models}
+
+      any ->
+        any
+    end
+  end
+
+  # @spec retry_attempt_run(AttemptRun.t(), User.t()) :: Ecto.Multi.t()
+  def retry_attempt_run(attempt_run, user) do
+    %{attempt: attempt, run: run} = attempt_run |> Repo.preload([:attempt, :run])
+
+    multi =
+      Multi.new()
+      |> Multi.insert(:reason, fn _ ->
+        Lightning.InvocationReasons.build(:retry, %{user: user, run: run})
+      end)
+      |> Multi.merge(fn %{reason: reason} ->
+        AttemptService.retry(attempt, run, reason)
+      end)
+
+    with {:ok, %{attempt: attempt, attempt_run: attempt_run} = models} <-
+           Repo.transaction(multi) do
+      Pipeline.new(%{attempt_run_id: attempt_run.id})
+      |> Oban.insert()
+
+      project_id =
+        from(r in Run,
+          join: j in assoc(r, :job),
+          join: p in assoc(j, :project),
+          where: r.id == ^attempt_run.run_id,
+          select: [p.id]
+        )
+        |> Repo.one!()
+
+      broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
+
+      {:ok, models}
+    end
+  end
 
   @spec multi_for_manual(Job.t(), Dataclip.t(), User.t()) :: Ecto.Multi.t()
   def multi_for_manual(job, dataclip, user) do
@@ -36,10 +123,7 @@ defmodule Lightning.WorkOrderService do
       |> Ecto.Changeset.put_assoc(:attempt, attempt)
       |> Ecto.Changeset.put_assoc(
         :run,
-        Run.new(%{
-          job_id: job.id,
-          input_dataclip_id: dataclip.id
-        })
+        Run.new(%{job_id: job.id, input_dataclip_id: dataclip.id})
       )
     end)
   end
@@ -135,4 +219,25 @@ defmodule Lightning.WorkOrderService do
     from(wo in WorkOrder, where: wo.id == ^id)
     |> Repo.one()
   end
+
+  def attempt_updated(%Run{} = run) do
+    run = run |> Repo.preload([:attempts, job: :workflow])
+
+    for attempt <- run.attempts do
+      broadcast(
+        run.job.workflow.project_id,
+        %Events.AttemptUpdated{attempt: attempt}
+      )
+    end
+  end
+
+  def subscribe(project_id) do
+    Phoenix.PubSub.subscribe(@pubsub, topic(project_id))
+  end
+
+  defp broadcast(project_id, msg) do
+    Phoenix.PubSub.broadcast(@pubsub, topic(project_id), {__MODULE__, msg})
+  end
+
+  defp topic(project_id), do: "project:#{project_id}"
 end

@@ -13,7 +13,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      socket |> assign(project: project) |> set_work_order_details(work_order)}
   end
 
-  def update(%{event: "new_attempt", work_order: work_order}, socket) do
+  def update(%{work_order: work_order}, socket) do
     {:ok, socket |> set_work_order_details(work_order)}
   end
 

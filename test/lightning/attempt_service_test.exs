@@ -108,7 +108,9 @@ defmodule Lightning.AttemptServiceTest do
 
       reason = Lightning.InvocationReasons.build(:retry, %{user: user, run: run})
 
-      {:ok, attempt_run} = AttemptService.retry(attempt, run, reason)
+      {:ok, %{attempt_run: attempt_run}} =
+        AttemptService.retry(attempt, run, reason)
+        |> Repo.transaction()
 
       refute attempt_run.attempt_id == attempt.id
 

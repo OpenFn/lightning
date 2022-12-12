@@ -276,6 +276,8 @@ defmodule Lightning.Invocation do
           %{}
         )
 
+        Lightning.WorkOrderService.attempt_updated(run)
+
         res
 
       res ->

@@ -27,6 +27,8 @@ defmodule Lightning.DataCase do
       import Lightning.ModelHelpers
 
       import Lightning.DataCase
+
+      use Oban.Testing, repo: Lightning.Repo
     end
   end
 
