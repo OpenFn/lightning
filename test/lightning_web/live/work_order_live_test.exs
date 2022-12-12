@@ -427,7 +427,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           %{
             job_id: job_c.id,
             started_at: now |> Timex.shift(seconds: -5),
-            finished_at: now |> Timex.shift(seconds: -1),
+            # A pending job can't have a finished_at value
+            finished_at: nil,
             exit_code: nil,
             input_dataclip_id: dataclip_fixture(project_id: project.id).id
           }
