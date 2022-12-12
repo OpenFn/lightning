@@ -1,6 +1,12 @@
 defmodule ObanManager do
+  @moduledoc """
+  The Oban Manager
+  """
   require Logger
 
+  @doc """
+  handles oban events
+  """
   def handle_event([:oban, :circuit, :open], _measure, meta, _pid),
     do: Logger.info("Circuit open #{inspect(meta, pretty: true)}")
 
