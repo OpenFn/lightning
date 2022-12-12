@@ -107,6 +107,7 @@ ENV ADAPTORS_PATH /app/priv/openfn
 # Only copy the final release and the adaptor directory from the build stage
 COPY --from=builder --chown=lightning:root /app/_build/${MIX_ENV}/rel/lightning ./
 COPY --from=builder --chown=lightning:root /app/priv/openfn ./priv/openfn
+COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 
 USER lightning
 
