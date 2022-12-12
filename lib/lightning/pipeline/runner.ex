@@ -40,7 +40,6 @@ defmodule Lightning.Pipeline.Runner do
         exit_code: result.exit_code,
         log: scrubbed_log
       })
-      |> IO.inspect(label: "CALLED?")
 
       Runner.create_dataclip_from_result(result, run)
     end

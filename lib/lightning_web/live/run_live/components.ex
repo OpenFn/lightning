@@ -34,7 +34,6 @@ defmodule LightningWeb.RunLive.Components do
                 Running...
               <% end %>
 
-              <% IO.inspect(@last_run, label: "LAST RUN") %>
               <%= case @last_run.exit_code do %>
                 <% nil -> %>
                   <%= if @last_run.finished_at do %>
@@ -79,7 +78,6 @@ defmodule LightningWeb.RunLive.Components do
       <span class="my-4 flex">
         &vdash;
         <span class="mx-2 flex">
-          <% IO.inspect(@run, label: "THE RUN") %>
           <%= case @run.exit_code do %>
             <% nil -> %>
               <%= if @run.finished_at do %>
