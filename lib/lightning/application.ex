@@ -9,7 +9,7 @@ defmodule Lightning.Application do
   @impl true
   def start(_type, _args) do
     # Only add the Sentry backend if a dsn is provided.
-    if Application.get_env(:sentry, :dsn),
+    if Application.get_env(:sentry, :included_environments) |> Enum.any?(),
       do: Logger.add_backend(Sentry.LoggerBackend)
 
     adaptor_registry_childspec =
