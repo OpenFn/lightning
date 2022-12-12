@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-C164FDA8.js"></script>
+    <script src="dist/sidebar_items-0FC47112.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,7 +133,31 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#attempt_updated/1" translate="no">attempt_updated(run)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#build/2" translate="no">build(workflow, reason)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_manual_workorder/3" translate="no">create_manual_workorder(job, dataclip, user)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_webhook_workorder/2" translate="no">create_webhook_workorder(job, dataclip_body)</a>
 
         </div>
 
@@ -173,6 +197,22 @@ Lightning
 
       </div>
 
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#retry_attempt_run/2" translate="no">retry_attempt_run(attempt_run, user)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#subscribe/1" translate="no">subscribe(project_id)</a>
+
+        </div>
+
+      </div>
+
   </div>
 
   </section>
@@ -187,6 +227,28 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="attempt_updated/1">
+
+  <div class="detail-header">
+    <a href="#attempt_updated/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">attempt_updated(run)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L223" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="build/2">
 
   <div class="detail-header">
@@ -196,7 +258,51 @@ Functions
     </a>
     <h1 class="signature" translate="no">build(workflow, reason)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L128" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L212" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create_manual_workorder/3">
+
+  <div class="detail-header">
+    <a href="#create_manual_workorder/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_manual_workorder(job, dataclip, user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L50" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="create_webhook_workorder/2">
+
+  <div class="detail-header">
+    <a href="#create_webhook_workorder/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_webhook_workorder(job, dataclip_body)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L28" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -220,7 +326,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_work_order(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L122" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L206" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -236,11 +342,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="7939409481-1">(</span><span class="p" data-group-id="7939409481-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7939409481-2">}</span><span class="p" data-group-id="7939409481-1">)</span><span class="w">
-</span><span class="p" data-group-id="7939409481-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7939409481-4">%</span><span class="nc" data-group-id="7939409481-4">WorkOrder</span><span class="p" data-group-id="7939409481-4">{</span><span class="p" data-group-id="7939409481-4">}</span><span class="p" data-group-id="7939409481-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="3478623559-1">(</span><span class="p" data-group-id="3478623559-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3478623559-2">}</span><span class="p" data-group-id="3478623559-1">)</span><span class="w">
+</span><span class="p" data-group-id="3478623559-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3478623559-4">%</span><span class="nc" data-group-id="3478623559-4">WorkOrder</span><span class="p" data-group-id="3478623559-4">{</span><span class="p" data-group-id="3478623559-4">}</span><span class="p" data-group-id="3478623559-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="7939409481-5">(</span><span class="p" data-group-id="7939409481-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7939409481-6">}</span><span class="p" data-group-id="7939409481-5">)</span><span class="w">
-</span><span class="p" data-group-id="7939409481-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7939409481-8">%</span><span class="nc" data-group-id="7939409481-8">Ecto.Changeset</span><span class="p" data-group-id="7939409481-8">{</span><span class="p" data-group-id="7939409481-8">}</span><span class="p" data-group-id="7939409481-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="3478623559-5">(</span><span class="p" data-group-id="3478623559-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3478623559-6">}</span><span class="p" data-group-id="3478623559-5">)</span><span class="w">
+</span><span class="p" data-group-id="3478623559-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3478623559-8">%</span><span class="nc" data-group-id="3478623559-8">Ecto.Changeset</span><span class="p" data-group-id="3478623559-8">{</span><span class="p" data-group-id="3478623559-8">}</span><span class="p" data-group-id="3478623559-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_work_order/1">
@@ -252,7 +358,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_work_order(id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L134" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L218" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -274,7 +380,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">multi_for(type, job, dataclip_body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L54" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L138" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -308,7 +414,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">multi_for_manual(job, dataclip, user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L17" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L104" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -327,6 +433,50 @@ Functions
 ) :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
 
       </div>
+
+
+  </section>
+</section>
+<section class="detail" id="retry_attempt_run/2">
+
+  <div class="detail-header">
+    <a href="#retry_attempt_run/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">retry_attempt_run(attempt_run, user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L71" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="subscribe/1">
+
+  <div class="detail-header">
+    <a href="#subscribe/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">subscribe(project_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L234" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
 
 
   </section>
