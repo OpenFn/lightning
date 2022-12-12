@@ -8,7 +8,10 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   describe "POST /i" do
     test "with a trigger id", %{conn: conn} do
-      expect(Lightning.Pipeline.Runner, :start, fn _run -> %Engine.Result{} end)
+      expect(Lightning.Pipeline.Runner, :start, fn _run ->
+        %Lightning.Runtime.Result{}
+      end)
+
       job = job_fixture()
 
       message = %{"foo" => "bar"}

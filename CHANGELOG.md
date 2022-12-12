@@ -29,6 +29,8 @@ and this project adheres to
 - Move @openfn/workflow-diagram into the application, the NPM module is now
   deprecated.
 - Remove workflow name from first node
+- Move the used parts of `@openfn/engine` into the application.
+- [BREAKING CHANGE] Introduced `@openfn/cli` as the new runtime for Jobs
 
 ### Fixed
 

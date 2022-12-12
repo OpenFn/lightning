@@ -17,7 +17,7 @@ defmodule Lightning.Application do
        Application.get_env(:lightning, Lightning.AdaptorRegistry, [])}
 
     adaptor_service_childspec =
-      {Engine.Adaptor.Service,
+      {Lightning.AdaptorService,
        [name: :adaptor_service]
        |> Keyword.merge(Application.get_env(:lightning, :adaptor_service))}
 

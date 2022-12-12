@@ -59,7 +59,7 @@ defmodule Lightning.Pipeline do
     :ok
   end
 
-  defp result_to_trigger_type(%Engine.Result{exit_reason: reason}) do
+  defp result_to_trigger_type(%Lightning.Runtime.Result{exit_reason: reason}) do
     case reason do
       :error -> :on_job_failure
       :ok -> :on_job_success

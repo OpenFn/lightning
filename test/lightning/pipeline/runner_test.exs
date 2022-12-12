@@ -52,7 +52,7 @@ defmodule Lightning.Pipeline.RunnerTest do
       )
 
     run = run_fixture(job_id: job.id, input_dataclip_id: dataclip.id)
-    result = %Engine.Result{} = Pipeline.Runner.start(run)
+    result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
 
     expected_state = %{
       "data" => dataclip_body,
@@ -95,12 +95,12 @@ defmodule Lightning.Pipeline.RunnerTest do
 
   test "create_dataclip_from_result/3" do
     assert Pipeline.Runner.create_dataclip_from_result(
-             %Engine.Result{final_state_path: "no_such_path"},
+             %Lightning.Runtime.Result{final_state_path: "no_such_path"},
              run_fixture()
            ) == {:error, :enoent}
 
     assert Pipeline.Runner.create_dataclip_from_result(
-             %Engine.Result{
+             %Lightning.Runtime.Result{
                final_state_path:
                  Temp.open!(%{suffix: ".json"}, &IO.write(&1, ""))
              },

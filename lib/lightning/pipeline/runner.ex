@@ -5,14 +5,14 @@ defmodule Lightning.Pipeline.Runner do
   require Logger
   alias Lightning.Invocation
 
-  import Engine.Adaptor.Service,
+  import Lightning.AdaptorService,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
 
   defmodule Handler do
     @moduledoc """
     Custom handler callbacks for Lightnings use of Engine to execute runs.
     """
-    use Engine.Run.Handler
+    use Lightning.Runtime.Handler
     alias Lightning.Pipeline.Runner
     import Lightning.Invocation, only: [update_run: 2]
 
@@ -61,7 +61,8 @@ defmodule Lightning.Pipeline.Runner do
   update the run when a Run is started and when it's finished, attaching
   the `exit_code` and `log` when they are available.
   """
-  @spec start(run :: Invocation.Run.t(), opts :: []) :: Engine.Result.t()
+  @spec start(run :: Invocation.Run.t(), opts :: []) ::
+          Lightning.Runtime.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
     run = Lightning.Repo.preload(run, [:output_dataclip, job: :credential])
 
@@ -85,7 +86,7 @@ defmodule Lightning.Pipeline.Runner do
       Application.get_env(:lightning, :adaptor_service)
       |> Keyword.get(:adaptors_path)
 
-    runspec = %Engine.RunSpec{
+    runspec = %Lightning.Runtime.RunSpec{
       adaptor: adaptor_path,
       state_path: state_path,
       adaptors_path: "#{adaptors_path}/lib",
@@ -129,12 +130,12 @@ defmodule Lightning.Pipeline.Runner do
   and returns an error tuple.
   """
   @spec create_dataclip_from_result(
-          result :: Engine.Result.t(),
+          result :: Lightning.Runtime.Result.t(),
           run :: Invocation.Run.t()
         ) ::
           {:ok, Invocation.Dataclip.t()} | {:error, any}
   def create_dataclip_from_result(
-        %Engine.Result{} = result,
+        %Lightning.Runtime.Result{} = result,
         run
       ) do
     with {:ok, data} <- File.read(result.final_state_path),
@@ -171,7 +172,8 @@ defmodule Lightning.Pipeline.Runner do
   If it is available, return it's `Engine.Adaptor` struct - if not then
   install it.
   """
-  @spec find_or_install_adaptor(adaptor :: String.t()) :: Engine.Adaptor.t()
+  @spec find_or_install_adaptor(adaptor :: String.t()) ::
+          Lighting.AdaptorService.Adaptor.t()
   def find_or_install_adaptor(adaptor) when is_binary(adaptor) do
     package_spec = resolve_package_name(adaptor)
 
