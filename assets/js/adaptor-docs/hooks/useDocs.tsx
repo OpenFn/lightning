@@ -8,6 +8,7 @@ const useDocs = (specifier: string) => {
   useEffect(() => {
     setDocs(null); // Reset docs when the specifier changes
     describePackage(specifier, {}).then((result) => {
+      console.log(result)
       setDocs(result);
     });
   }, [specifier])
