@@ -34,7 +34,7 @@ export default {
   },
   render() {
     const { adaptor } = this.el.dataset;
-    if (DocsComponent) {
+    if (DocsComponent && adaptor) {
       this.componentRoot?.render(<DocsComponent adaptor={adaptor} />);
     }
   },

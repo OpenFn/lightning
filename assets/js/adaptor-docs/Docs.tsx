@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import Docs from '@openfn/adaptor-docs';
+import DocsPanel from '@openfn/adaptor-docs';
 
 type DocsProps = {
   adaptor: string; // name of the adaptor to load. aka specfier.
@@ -12,5 +12,5 @@ export default ({ adaptor }: DocsProps) => {
     e.snippet = text;
     document.dispatchEvent(e);
   }, []);
-  return <Docs specifier={adaptor} onInsert={handleInsert} />;
+  return <DocsPanel specifier={adaptor} onInsert={handleInsert} />;
 }
