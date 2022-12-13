@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import DocsPanel from '@openfn/adaptor-docs';
+import DocsPanel from './components/DocsPanel';
 
 type DocsProps = {
   adaptor: string; // name of the adaptor to load. aka specfier.
