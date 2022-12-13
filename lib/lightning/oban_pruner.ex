@@ -28,7 +28,12 @@ defmodule ObanPruner do
       )
       |> Repo.delete_all()
 
-    Logger.debug(fn -> "Pruned #{pruned} Oban jobs." end)
+    Logger.debug(fn ->
+      # coveralls-ignore-start
+      "Pruned #{pruned} Oban jobs."
+      # coveralls-ignore-stop
+    end)
+
     {:ok, pruned}
   end
 end

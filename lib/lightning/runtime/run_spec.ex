@@ -28,4 +28,8 @@ defmodule Lightning.Runtime.RunSpec do
                 env: nil,
                 timeout: nil
               ]
+
+  def new(fields \\ []) do
+    struct!(__MODULE__, fields)
+  end
 end

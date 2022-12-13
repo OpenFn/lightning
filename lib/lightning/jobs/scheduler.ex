@@ -50,7 +50,9 @@ defmodule Lightning.Jobs.Scheduler do
     case last_state_for_job(job.id) do
       nil ->
         Logger.debug(fn ->
+          # coveralls-ignore-start
           "Starting cronjob #{job.id} for the first time. (No previous final state.)"
+          # coveralls-ignore-stop
         end)
 
         # Add a facility to specify _which_ global state should be use as
@@ -71,7 +73,9 @@ defmodule Lightning.Jobs.Scheduler do
 
       dataclip ->
         Logger.debug(fn ->
+          # coveralls-ignore-start
           "Starting cronjob #{job.id} using the final state of its last successful run."
+          # coveralls-ignore-stop
         end)
 
         WorkOrderService.multi_for(:cron, job, dataclip)

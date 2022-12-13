@@ -10,7 +10,13 @@ defmodule Lightning.Runtime.ChildProcess do
 
   def run(%RunSpec{} = runspec, opts \\ []) do
     command = build_command(runspec)
-    Logger.debug(fn -> "ChildProcess.run/2 called with #{inspect(runspec)}" end)
+
+    Logger.debug(fn ->
+      # coveralls-ignore-start
+      "ChildProcess.run/2 called with #{inspect(runspec)}"
+      # coveralls-ignore-stop
+    end)
+
     env = build_env(runspec, opts[:env])
 
     rambo_opts =
@@ -21,12 +27,15 @@ defmodule Lightning.Runtime.ChildProcess do
       |> Keyword.put(:env, env)
 
     Logger.debug(fn ->
+      # coveralls-ignore-start
       """
       env:
       #{Enum.map_join(rambo_opts[:env], " ", fn {k, v} -> "#{k}=#{v}" end)}
       cmd:
       #{command}
       """
+
+      # coveralls-ignore-stop
     end)
 
     Rambo.run(
@@ -37,12 +46,12 @@ defmodule Lightning.Runtime.ChildProcess do
     |> case do
       {msg, %Rambo{} = res} ->
         {msg,
-         %Result{
+         Result.new(
            exit_reason: msg,
            exit_code: res.status,
            log: String.split(res.out <> res.err, "\n"),
            final_state_path: runspec.final_state_path
-         }}
+         )}
 
       {:error, _} ->
         raise "Command failed to execute."

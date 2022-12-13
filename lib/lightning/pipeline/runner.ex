@@ -53,7 +53,7 @@ defmodule Lightning.Pipeline.Runner do
   Given a valid run:
   - Persist the Dataclip and the Job's body to disk
   - Create a blank output file on disk
-  - Build up a `%Engine.Runspec{}` with the paths, and adaptor module name
+  - Build up a `%Lightning.Runtime.Runspec{}` with the paths, and adaptor module name
 
   And start it via `Handler.start/2`.
 
@@ -86,17 +86,18 @@ defmodule Lightning.Pipeline.Runner do
       Application.get_env(:lightning, :adaptor_service)
       |> Keyword.get(:adaptors_path)
 
-    runspec = %Lightning.Runtime.RunSpec{
-      adaptor: adaptor_path,
-      state_path: state_path,
-      adaptors_path: "#{adaptors_path}/lib",
-      final_state_path: final_state_path,
-      expression_path: expression_path,
-      env: %{
-        "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
-      },
-      timeout: Application.get_env(:lightning, :max_run_duration)
-    }
+    runspec =
+      Lightning.Runtime.RunSpec.new(
+        adaptor: adaptor_path,
+        state_path: state_path,
+        adaptors_path: "#{adaptors_path}/lib",
+        final_state_path: final_state_path,
+        expression_path: expression_path,
+        env: %{
+          "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
+        },
+        timeout: Application.get_env(:lightning, :max_run_duration)
+      )
 
     Handler.start(
       runspec,
