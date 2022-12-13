@@ -30,6 +30,8 @@ and this project adheres to
   deprecated.
 - Remove workflow name from first node
 - Move the used parts of `@openfn/engine` into the application.
+- [BREAKING CHANGE] Ported `mix openfn.install.runtime` into application, use
+  `mix lightning.install_runtime`.
 - [BREAKING CHANGE] Introduced `@openfn/cli` as the new runtime for Jobs
 
 ### Fixed
