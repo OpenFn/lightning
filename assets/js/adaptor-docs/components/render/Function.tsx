@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FunctionDescription } from '@openfn/describe-package';
+import { marked } from 'marked';
 
 type RenderFunctionProps = {
   fn: FunctionDescription;
@@ -45,7 +46,6 @@ type ExampleProps = {
 }
 
 const Example = ({ eg, onInsert }: ExampleProps) => {
-  console.log(eg)
   let code = '';
   let caption;
   if (typeof eg === 'string') {
@@ -75,14 +75,13 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
 }
 
 const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
-  console.log(fn)
   return (
     <details>
       <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
         <span className="relative top-px">{getSignature(fn)}</span>
       </summary>
       <div className="block mb-4 pl-4">
-        <p className="block text-sm">{fn.description}</p>
+        <p className="block text-sm" dangerouslySetInnerHTML={{ __html: marked.parse(fn.description)}}></p>
         {fn.examples.map((eg, idx) =>
           <Example eg={eg} onInsert={onInsert} key={`${fn.name}-eg-${idx}`} />
         )}
