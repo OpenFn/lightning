@@ -28,6 +28,13 @@ const options: MonacoProps['options'] = {
 
   codeLens: false,
   wordBasedSuggestions: false,
+
+  // parameterHints: {
+  //   enabled: false
+  // },
+  suggest: {
+    showKeywords: false,
+  }
 };
 
 type Lib = {
@@ -70,6 +77,9 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
       // This seems to be needed to track the modules in d.ts files
       allowNonTsExtensions: true,
+
+      // Disables core js libs in code completion
+      noLib: true,
     });
 
     const handleInsertSnippet = (e: Event) => {
