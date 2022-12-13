@@ -29,9 +29,6 @@ const options: MonacoProps['options'] = {
   codeLens: false,
   wordBasedSuggestions: false,
 
-  // parameterHints: {
-  //   enabled: false
-  // },
   suggest: {
     showKeywords: false,
   }
