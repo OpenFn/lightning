@@ -94,7 +94,6 @@ defmodule Lightning.AdaptorService do
               status: :present
             }
           end)
-          |> IO.inspect()
 
         {_, 254} ->
           raise "No such directory: #{path}"
