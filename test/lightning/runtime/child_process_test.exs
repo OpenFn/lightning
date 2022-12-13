@@ -11,14 +11,11 @@ defmodule Lightning.Runtime.ChildProcessTest do
   end
 
   test "allows a memory limit to be set" do
-    run_spec = run_spec_fixture(memory_limit: "10")
+    run_spec = run_spec_fixture(memory_limit: "5")
 
     assert {:error, result} =
              ChildProcess.run(run_spec,
-               env: %{
-                 "PATH" =>
-                   "#{run_spec.adaptors_path}/bin:#{System.get_env("PATH")}"
-               }
+               env: %{"PATH" => "./priv/openfn/bin:#{System.get_env("PATH")}"}
              )
 
     # NOTE: we don't appear to get an exit code

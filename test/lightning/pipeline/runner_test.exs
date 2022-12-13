@@ -55,8 +55,7 @@ defmodule Lightning.Pipeline.RunnerTest do
     result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
 
     expected_state = %{
-      "data" => dataclip_body,
-      "configuration" => credential_body
+      "data" => dataclip_body
     }
 
     assert File.read!(result.final_state_path)
@@ -77,15 +76,15 @@ defmodule Lightning.Pipeline.RunnerTest do
     assert run.exit_code == 0
 
     log = Enum.join(run.log, "\n")
-    assert log =~ "@openfn/language-common"
+    # assert log =~ "@openfn/language-common"
     refute log =~ ~S(password":"immasecret")
 
     assert length(run.log) > 0
 
-    assert Repo.all(Lightning.Invocation.Dataclip)
+    refute Repo.all(Lightning.Invocation.Dataclip)
            |> Enum.any?(fn result ->
              Map.has_key?(result, "configuration")
-           end) == false
+           end)
   end
 
   test "scrub_result/1 removes :configuration from a map" do

@@ -65,19 +65,19 @@ defmodule Lightning.Runtime.ChildProcess do
   def build_command(%RunSpec{} = runspec) do
     flags =
       [
-        {"-e", runspec.expression_path},
-        {"-l", runspec.adaptor},
+        {"-a", runspec.adaptor},
         {"-s", runspec.state_path},
+        {"--no-strict-output", nil},
+        {"-l", "debug"},
         if(runspec.final_state_path, do: {"-o", runspec.final_state_path}),
-        if(runspec.test_mode, do: {"--test", nil}),
-        if(runspec.no_console, do: {"--noConsole", nil})
+        {runspec.expression_path, nil}
       ]
       |> Enum.map(&to_shell_args/1)
       |> Enum.reject(&is_nil/1)
       |> Enum.join(" \\\n  ")
 
     ~s"""
-    core execute \\
+    openfn execute \\
       #{flags}
     """
   end

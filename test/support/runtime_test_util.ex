@@ -5,14 +5,16 @@ defmodule Lightning.Runtime.TestUtil do
   end
 
   def run_spec_fixture(opts \\ []) do
-    Lightning.Runtime.RunSpec
-    |> struct!(
+    adaptor_path =
+      Path.expand("./priv/openfn/lib/node_modules/@openfn/language-common")
+
+    Lightning.Runtime.RunSpec.new(
       Enum.into(opts, %{
-        expression_path: write_temp!(~s[alterState((state) => state)]),
-        state_path: write_temp!(~s[{"foo": "bar"}]),
-        adaptor: "@openfn/language-common",
-        adaptors_path: "./priv/openfn",
-        final_state_path: Temp.path!()
+        expression_path: write_temp!(~s[alterState((state) => state)], ".js"),
+        state_path: write_temp!(~s[{"foo": "bar"}], ".json"),
+        adaptor: "@openfn/language-common=#{adaptor_path}",
+        adaptors_path: "./priv/openfn/lib",
+        final_state_path: Temp.path!(%{suffix: ".json"})
       })
     )
   end
@@ -28,8 +30,8 @@ defmodule Lightning.Runtime.TestUtil do
     ]
   end
 
-  def write_temp!(contents) do
-    File.write!(path = Temp.path!(), contents)
+  def write_temp!(contents, extension) do
+    File.write!(path = Temp.path!(%{suffix: extension}), contents)
     path
   end
 end

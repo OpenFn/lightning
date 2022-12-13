@@ -77,19 +77,7 @@ defmodule Lightning.PipelineTest do
                "error" => error
              } = expected_run.output_dataclip.body
 
-      error = Enum.slice(error, 0..4)
-
-      [
-        ~r/╭─[─]+─╮/,
-        ~r/│ ◲ ◱ [ ]+@openfn\/core#v1.4.8 \(Node.js v1[\d\.]+\) │/,
-        ~r/│ ◳ ◰ [ ]+@openfn\/language-common@[\d\.]+ │/,
-        ~r/╰─[─]+─╯/,
-        "Error: I'm supposed to fail."
-      ]
-      |> Enum.zip(error)
-      |> Enum.each(fn {m, l} ->
-        assert l =~ m
-      end)
+      assert error |> Enum.join("\n") =~ "Error: I'm supposed to fail"
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do

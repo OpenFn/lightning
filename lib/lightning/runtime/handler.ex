@@ -176,6 +176,7 @@ defmodule Lightning.Runtime.Handler do
   def env(run_spec, opts) do
     %{}
     |> Map.merge(node_path(run_spec.adaptors_path))
+    |> Map.merge(%{"OPENFN_ADAPTORS_REPO" => run_spec.adaptors_path})
     |> Map.merge(Keyword.get(opts, :env, %{}))
     |> Map.merge(run_spec.env || %{})
   end

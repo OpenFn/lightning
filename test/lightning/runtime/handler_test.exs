@@ -15,7 +15,7 @@ defmodule Lightning.Runtime.HandlerTest do
   test "can retain partial logs" do
     run_spec = %{
       run_spec_fixture()
-      | expression_path: write_temp!(timeout_expression(2000))
+      | expression_path: write_temp!(timeout_expression(2000), ".js")
     }
 
     result =
