@@ -78,7 +78,7 @@ defmodule Lightning.AdaptorService do
 
     @callback list_local(path :: String.t()) :: list(Adaptor.t())
     def list_local(path, _depth \\ 4) when is_binary(path) do
-      System.cmd("npm", ~w[list --global --json --long --prefix #{path}])
+      System.cmd("npm", ~w[list --global --json --long --prefix #{path}], env: [])
       |> case do
         {stdout, 0} ->
           stdout
@@ -94,6 +94,7 @@ defmodule Lightning.AdaptorService do
               status: :present
             }
           end)
+          |> IO.inspect()
 
         {_, 254} ->
           raise "No such directory: #{path}"
@@ -137,7 +138,8 @@ defmodule Lightning.AdaptorService do
             #{Enum.join(adaptors, " ")}
           """
         ],
-        stderr_to_stdout: true
+        stderr_to_stdout: true,
+        env: []
       )
     end
 
