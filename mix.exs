@@ -155,9 +155,7 @@ defmodule Lightning.MixProject do
           Lightning.Invocation.Run
         ],
         Pipeline: [
-          Lightning.Pipeline,
-          Lightning.Pipeline.Runner,
-          Lightning.Pipeline.StateAssembler
+          ~r/Lightning.Pipeline/
         ],
         Jobs: [
           Lightning.Jobs,
@@ -171,6 +169,9 @@ defmodule Lightning.MixProject do
           Lightning.Projects.Policy,
           Lightning.Projects.ProjectCredential,
           Lightning.Projects.ProjectUser
+        ],
+        Runtime: [
+          ~r/Lightning.Runtime/
         ]
       ]
     ]

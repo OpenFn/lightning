@@ -1,4 +1,8 @@
 defmodule Lightning.Runtime.Result do
+  @moduledoc """
+  Data structure used to represent the result of a Run executed by
+  `Lightning.Runtime.ChildProcess`.
+  """
   @type t :: %__MODULE__{
           exit_reason: atom(),
           exit_code: integer(),

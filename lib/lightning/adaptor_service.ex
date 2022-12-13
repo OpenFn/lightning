@@ -74,6 +74,8 @@ defmodule Lightning.AdaptorService do
   end
 
   defmodule Repo do
+    @moduledoc false
+
     @callback list_local(path :: String.t()) :: list(Adaptor.t())
     def list_local(path, _depth \\ 4) when is_binary(path) do
       System.cmd("npm", ~w[list --global --json --long --prefix #{path}])
@@ -227,7 +229,7 @@ defmodule Lightning.AdaptorService do
     )
   end
 
-  defp by_name_and_requirement(adaptor, matcher = %Regex{}, requirement) do
+  defp by_name_and_requirement(adaptor, %Regex{} = matcher, requirement) do
     !!(Regex.match?(matcher, adaptor.name) &&
          Version.match?(adaptor.version, requirement, allow_pre: false))
   end

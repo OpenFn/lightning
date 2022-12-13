@@ -52,7 +52,7 @@ defmodule Lightning.Runtime.ChildProcess do
   @doc """
   Builds up a string for shell execution based on the RunSpec
   """
-  @spec build_command(runspec :: %RunSpec{}) :: binary()
+  @spec build_command(runspec :: RunSpec.t()) :: binary()
   def build_command(%RunSpec{} = runspec) do
     flags =
       [

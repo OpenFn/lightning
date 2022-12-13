@@ -1,9 +1,19 @@
 defmodule Lightning.Runtime.Handler do
+  @moduledoc """
+  A strategy for executing things via ChildProcess.
+
+  This module handles the dirty bits, setting up processes and coordinating
+  results (and logs) as they arrive.
+
+  Since it is a macro, see `Lightning.Pipeline.Runner.Handler` for a usage
+  example.
+  """
   alias Lightning.Runtime.{RunSpec, Result}
 
   @type t :: module
 
   defmodule State do
+    @moduledoc false
     @type t :: %__MODULE__{
             task_supervisor: pid(),
             agent_supervisor: pid(),
@@ -36,7 +46,7 @@ defmodule Lightning.Runtime.Handler do
             ]
 
       @impl true
-      @spec start(run_spec :: %RunSpec{}, opts :: handler_opts()) :: Result.t()
+      @spec start(run_spec :: RunSpec.t(), opts :: handler_opts()) :: Result.t()
       def start(run_spec, opts \\ []) do
         {:ok, task_supervisor} = Task.Supervisor.start_link()
 

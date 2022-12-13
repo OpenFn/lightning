@@ -173,7 +173,7 @@ defmodule Lightning.Pipeline.Runner do
   install it.
   """
   @spec find_or_install_adaptor(adaptor :: String.t()) ::
-          Lighting.AdaptorService.Adaptor.t()
+          Lightning.AdaptorService.Adaptor.t()
   def find_or_install_adaptor(adaptor) when is_binary(adaptor) do
     package_spec = resolve_package_name(adaptor)
 
