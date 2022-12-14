@@ -37,7 +37,7 @@ defmodule Lightning.Application do
     :telemetry.attach_many(
       "oban-errors",
       events,
-      &ObanManager.handle_event/4,
+      &Lightning.ObanManager.handle_event/4,
       nil
     )
 
