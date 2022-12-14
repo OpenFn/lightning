@@ -74,9 +74,12 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
 
     const handleInsertSnippet = (e: Event) => {
       // Snippets are always added to the end of the job code
-      const lastLine = editor.getModel().getLineCount();
+      const model = editor.getModel()
+      const lastLine = model.getLineCount();
+      const eol = model.getLineLength(lastLine)
       const op = {
-        range: new monaco.Range(lastLine, 0, lastLine, 0),
+        // TODO need to be in the end col...
+        range: new monaco.Range(lastLine, eol, lastLine, eol),
         // @ts-ignore event typings
         text: `\n${e.snippet}`,
         forceMoveMarkers: true
@@ -87,7 +90,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       editor.executeEdits("snippets", [op]);
 
       // Ensure the snippet is fully visible
-      const newLastLine = editor.getModel().getLineCount();
+      const newLastLine = editor.model.getLineCount();
       editor.revealLines(lastLine + 1, newLastLine, 0) // 0 = smooth scroll
 
       // Set the selection to the start of the snippet
