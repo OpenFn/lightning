@@ -447,6 +447,32 @@ defmodule Lightning.InvocationTest do
       assert actual_last_run.id == run_three.id
     end
 
+    test "list_work_orders_for_project/3 returns paginated work orders" do
+      project = project_fixture()
+      now = Timex.now()
+
+      job1 =
+        workflow_job_fixture(
+          project_id: project.id,
+          workflow_name: "workflow-1"
+        )
+
+      Enum.each(1..10, fn index ->
+        create_work_order(project, job1, now, 10 * index)
+      end)
+
+      wos =
+        Invocation.list_work_orders_for_project(
+          %Lightning.Projects.Project{
+            id: project.id
+          },
+          nil,
+          %{"page" => 1, "page_size" => 3}
+        ).entries()
+
+      assert length(wos) == 3
+    end
+
     test "list_work_orders_for_project/3 returns paginated work orders with ordering" do
       #  we set a page size of 3
 
