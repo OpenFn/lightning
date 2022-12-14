@@ -23,11 +23,6 @@ defmodule Lightning.Pipeline do
     |> process()
   end
 
-  # @impl Oban.Worker
-  # def timeout(_job),
-  #   do:
-  #     Application.get_env(:lightning, :max_run_duration)
-
   @spec process(AttemptRun.t()) :: :ok
   def process(%AttemptRun{} = attempt_run) do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
@@ -61,7 +56,7 @@ defmodule Lightning.Pipeline do
 
   defp result_to_trigger_type(%Engine.Result{exit_reason: reason}) do
     case reason do
-      error when error in [:error, :killed] -> :on_job_failure
+      :error -> :on_job_failure
       :ok -> :on_job_success
       _ -> nil
     end
@@ -73,7 +68,7 @@ defmodule Lightning.Pipeline do
 
   defp get_next_dataclip_id(result, run) do
     case result.exit_reason do
-      error when error in [:error, :killed] ->
+      :error ->
         run.input_dataclip_id
 
       :ok ->
