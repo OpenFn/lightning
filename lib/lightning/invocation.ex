@@ -413,10 +413,15 @@ defmodule Lightning.Invocation do
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
       select: %{
         id: wo.id,
-        last_finished_at: max(r.finished_at) |> selected_as(:last_finished_at)
+        last_finished_at:
+          fragment(
+            "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
+            r.finished_at
+          )
+          |> selected_as(:last_finished_at)
       },
       group_by: wo.id,
-      order_by: [desc_nulls_first: selected_as(:last_finished_at)]
+      order_by: [desc: selected_as(:last_finished_at)]
     )
   end
 
