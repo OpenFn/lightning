@@ -12,6 +12,50 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :create_project_for_current_user
 
   describe "Index" do
+    test "WorkOrderComponent", %{
+      project: project
+    } do
+      job =
+        workflow_job_fixture(
+          workflow_name: "my workflow",
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order =
+        work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
+
+      now = Timex.now()
+
+      Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: nil,
+            exit_code: nil,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      render_component(LightningWeb.RunLive.WorkOrderComponent,
+        id: work_order.id,
+        work_order: work_order
+      ) =~ "work_order"
+    end
+
     test "lists all workorders", %{
       conn: conn,
       project: project
