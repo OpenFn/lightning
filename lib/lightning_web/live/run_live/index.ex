@@ -32,7 +32,7 @@ defmodule LightningWeb.RunLive.Index do
 
     workflows =
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
-      |> Enum.map(&{&1.name, &1.id})
+      |> Enum.map(&{&1.name || "Untitled", &1.id})
 
     {:ok,
      socket
