@@ -15,10 +15,10 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
 
   const pkg = useDocs(specifier);
   if (pkg === null) {
-    return <div>Loading...</div>
+    return <div className="block m-2">Loading docs...</div>
   }
   if (pkg === false) {
-    return <div>Failed to load docs.</div>
+    return <div className="block m-2">Error: failed to load docs.</div>
   }
   
   const { name, version, functions } = pkg as PackageDescription;
