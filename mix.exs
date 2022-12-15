@@ -46,7 +46,6 @@ defmodule Lightning.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      # {:engine, path: "../engine"},
       # {:rexbug, ">= 1.0.0", only: :test},
       {:bcrypt_elixir, "~> 2.0"},
       {:bodyguard, "~> 2.2"},
@@ -58,7 +57,6 @@ defmodule Lightning.MixProject do
       {:dialyxir, "~> 1.1", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
       {:ecto_sql, "~> 3.6"},
-      {:engine, github: "OpenFn/engine", tag: "v0.7.2"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
@@ -84,6 +82,7 @@ defmodule Lightning.MixProject do
       {:phoenix_live_view, "~> 0.18.0"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
+      {:rambo, "~> 0.3.4"},
       {:scrivener_ecto, "~> 2.7"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
@@ -156,9 +155,7 @@ defmodule Lightning.MixProject do
           Lightning.Invocation.Run
         ],
         Pipeline: [
-          Lightning.Pipeline,
-          Lightning.Pipeline.Runner,
-          Lightning.Pipeline.StateAssembler
+          ~r/Lightning.Pipeline/
         ],
         Jobs: [
           Lightning.Jobs,
@@ -172,6 +169,9 @@ defmodule Lightning.MixProject do
           Lightning.Projects.Policy,
           Lightning.Projects.ProjectCredential,
           Lightning.Projects.ProjectUser
+        ],
+        Runtime: [
+          ~r/Lightning.Runtime/
         ]
       ]
     ]

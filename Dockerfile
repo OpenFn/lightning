@@ -56,7 +56,7 @@ RUN mix deps.compile
 COPY priv priv
 COPY lib lib
 
-RUN mix openfn.install.runtime
+RUN mix lightning.install_runtime
 
 COPY assets assets
 RUN npm install --prefix assets

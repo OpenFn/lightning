@@ -5,14 +5,14 @@ defmodule Lightning.Pipeline.Runner do
   require Logger
   alias Lightning.Invocation
 
-  import Engine.Adaptor.Service,
+  import Lightning.AdaptorService,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
 
   defmodule Handler do
     @moduledoc """
     Custom handler callbacks for Lightnings use of Engine to execute runs.
     """
-    use Engine.Run.Handler
+    use Lightning.Runtime.Handler
     alias Lightning.Pipeline.Runner
     import Lightning.Invocation, only: [update_run: 2]
 
@@ -53,7 +53,7 @@ defmodule Lightning.Pipeline.Runner do
   Given a valid run:
   - Persist the Dataclip and the Job's body to disk
   - Create a blank output file on disk
-  - Build up a `%Engine.Runspec{}` with the paths, and adaptor module name
+  - Build up a `%Lightning.Runtime.Runspec{}` with the paths, and adaptor module name
 
   And start it via `Handler.start/2`.
 
@@ -61,7 +61,8 @@ defmodule Lightning.Pipeline.Runner do
   update the run when a Run is started and when it's finished, attaching
   the `exit_code` and `log` when they are available.
   """
-  @spec start(run :: Invocation.Run.t(), opts :: []) :: Engine.Result.t()
+  @spec start(run :: Invocation.Run.t(), opts :: []) ::
+          Lightning.Runtime.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
     run = Lightning.Repo.preload(run, [:output_dataclip, job: :credential])
 
@@ -74,28 +75,29 @@ defmodule Lightning.Pipeline.Runner do
 
     state = Lightning.Pipeline.StateAssembler.assemble(run)
 
-    %{path: adaptor_path} = find_or_install_adaptor(adaptor)
+    %{path: path} = find_or_install_adaptor(adaptor)
 
     # turn run into RunSpec
-    {:ok, state_path} = write_temp(state, "state")
-    {:ok, final_state_path} = write_temp("", "output")
-    {:ok, expression_path} = write_temp(expression, "expression")
+    {:ok, state_path} = write_temp(state, "state", ".json")
+    {:ok, final_state_path} = write_temp("", "output", ".json")
+    {:ok, expression_path} = write_temp(expression, "expression", ".js")
 
     adaptors_path =
       Application.get_env(:lightning, :adaptor_service)
       |> Keyword.get(:adaptors_path)
 
-    runspec = %Engine.RunSpec{
-      adaptor: adaptor_path,
-      state_path: state_path,
-      adaptors_path: "#{adaptors_path}/lib",
-      final_state_path: final_state_path,
-      expression_path: expression_path,
-      env: %{
-        "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
-      },
-      timeout: Application.get_env(:lightning, :max_run_duration)
-    }
+    runspec =
+      Lightning.Runtime.RunSpec.new(
+        adaptor: "#{adaptor}=#{path}",
+        state_path: state_path,
+        adaptors_path: "#{adaptors_path}/lib",
+        final_state_path: final_state_path,
+        expression_path: expression_path,
+        env: %{
+          "PATH" => "#{adaptors_path}/bin:#{System.get_env("PATH")}"
+        },
+        timeout: Application.get_env(:lightning, :max_run_duration)
+      )
 
     Handler.start(
       runspec,
@@ -105,11 +107,15 @@ defmodule Lightning.Pipeline.Runner do
 
   # In order to run a flow job, `start/2` is called, and on a result
 
-  @spec write_temp(contents :: binary(), prefix :: String.t()) ::
+  @spec write_temp(
+          contents :: binary(),
+          prefix :: String.t(),
+          suffix :: String.t()
+        ) ::
           {:ok, Path.t()} | {:error, any}
-  defp write_temp(contents, prefix) do
+  defp write_temp(contents, prefix, suffix) do
     Temp.open(
-      %{prefix: prefix, suffix: ".json", mode: [:write, :utf8]},
+      %{prefix: prefix, suffix: suffix, mode: [:write, :utf8]},
       &IO.write(&1, contents)
     )
   end
@@ -129,12 +135,12 @@ defmodule Lightning.Pipeline.Runner do
   and returns an error tuple.
   """
   @spec create_dataclip_from_result(
-          result :: Engine.Result.t(),
+          result :: Lightning.Runtime.Result.t(),
           run :: Invocation.Run.t()
         ) ::
           {:ok, Invocation.Dataclip.t()} | {:error, any}
   def create_dataclip_from_result(
-        %Engine.Result{} = result,
+        %Lightning.Runtime.Result{} = result,
         run
       ) do
     with {:ok, data} <- File.read(result.final_state_path),
@@ -171,7 +177,8 @@ defmodule Lightning.Pipeline.Runner do
   If it is available, return it's `Engine.Adaptor` struct - if not then
   install it.
   """
-  @spec find_or_install_adaptor(adaptor :: String.t()) :: Engine.Adaptor.t()
+  @spec find_or_install_adaptor(adaptor :: String.t()) ::
+          Lightning.AdaptorService.Adaptor.t()
   def find_or_install_adaptor(adaptor) when is_binary(adaptor) do
     package_spec = resolve_package_name(adaptor)
 
