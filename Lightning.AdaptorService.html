@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.29.0">
+    <meta name="project" content="Lightning v0.3.1">
+
+    <title>Lightning.AdaptorService — Lightning v0.3.1</title>
+    <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
+
+    <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
+    <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
+    <script src="dist/sidebar_items-9D035F85.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/html-XN2TSG4M.js"></script>
+
+
+  </head>
+  <body data-type="modules" class="page-module">
+    <script>
+
+      try {
+        var settings = JSON.parse(localStorage.getItem('ex_doc:settings') || '{}');
+
+        if (settings.theme === 'dark' ||
+           ((settings.theme === 'system' || settings.theme == null) &&
+             window.matchMedia('(prefers-color-scheme: dark)').matches)
+           ) {
+          document.body.classList.add('dark')
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle" aria-label="toggle sidebar">
+  <i class="ri-menu-line ri-lg" title="Collapse/expand sidebar"></i>
+</button>
+
+<section class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <i class="ri-search-2-line" aria-hidden="true" title="Submit search"></i>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <i class="ri-close-line ri-lg" aria-hidden="true" title="Cancel search"></i>
+    </button>
+    <label class="search-label">
+      <p class="sr-only">Search</p>
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+
+      <a href="https://openfn.github.io/Lightning">
+        <img src="assets/logo.png" alt="Lightning" class="sidebar-projectImage">
+      </a>
+
+    <div class="sidebar-projectDetails">
+      <a href="https://openfn.github.io/Lightning" class="sidebar-projectName" translate="no">
+Lightning
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.3.1
+      </strong>
+    </div>
+    <ul class="sidebar-listNav">
+      <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+        <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+        <li><a id="tasks-list-link" href="#full-list"><span translate="no">Mix</span> Tasks</a></li>
+
+    </ul>
+  </div>
+
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <output role="status" id="toast"></output>
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+<button class="settings display-settings">
+  <i class="ri-settings-3-line"></i>
+  <span class="sr-only">Settings</span>
+</button>
+
+
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L1" title="View Source" class="view-source" rel="help">
+      <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+      <span class="sr-only">View Source</span>
+    </a>
+
+  <span translate="no">Lightning.AdaptorService</span> 
+  <small class="app-vsn" translate="no">(Lightning v0.3.1)</small>
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>The Adaptor Service is use to query and install adaptors in order to run jobs.</p><p>On startup, it queries the filesystem for <code class="inline">package.json</code> files and builds up
+a list of available adaptors.</p><h2 id="module-configuration" class="section-heading">
+  <a href="#module-configuration" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">configuration</p>
+  </a>
+  Configuration
+</h2>
+<p>The service requires at least <code class="inline">:adaptors_path</code>, which is used to both query
+which adaptors are installed and when to install new adaptors.</p><p>Another optional setting is: <code class="inline">:repo</code>, which must point at a module that will be
+used to do the querying and installing.</p><h2 id="module-installing-adaptors" class="section-heading">
+  <a href="#module-installing-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">installing-adaptors</p>
+  </a>
+  Installing Adaptors
+</h2>
+<p>Using the <a href="#install/2"><code class="inline">install/2</code></a> function an adaptor can be installed, which will also
+add it to the list of available adaptors.</p><p>The adaptor is marked as <code class="inline">:installing</code>, to allow for conditional behaviour
+elsewhere such as delaying or rejecting processing until the adaptor becomes
+available.</p><h2 id="module-looking-up-adaptors" class="section-heading">
+  <a href="#module-looking-up-adaptors" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">looking-up-adaptors</p>
+  </a>
+  Looking up adaptors
+</h2>
+<p>The module leans on Elixir's built-in <a href="https://hexdocs.pm/elixir/Version.html"><code class="inline">Version</code></a> module to provide version
+lookups.</p><p>When looking up an adaptor, either a string or a tuple can be used.
+In the case of requesting the latest version, any one of these will return
+the latest version the service is aware of.</p><ul><li><code class="inline">@openfn/language-http</code></li><li><code class="inline">@openfn/language-http@latest</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, nil}</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, &quot;latest&quot;}</code></li><li><code class="inline">{~r/language-http/, &quot;latest&quot;}</code></li></ul><p>You can also request a specific version, or use a range specification:</p><ul><li><code class="inline">@openfn/language-http@1.2.3</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, &quot;~&gt; 1.2.0&quot;}</code></li><li><code class="inline">{&quot;@openfn/language-http&quot;, &quot;&lt; 2.0.0&quot;}</code></li></ul><blockquote><p><strong>NOTE</strong>
+More complex npm style install strings like: <code class="inline">&quot;&gt;=0.1.0 &lt;0.2.0&quot;</code>
+are not supported.
+Generally the tuple style is preferred when using range specifications as
+the npm style strings have a simplistic regex splitter.</p></blockquote><p>See <a href="https://hexdocs.pm/elixir/Version.html">Version</a> for more details on
+matching versions.</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+      Summary
+    </h1>
+
+  <div class="summary-types summary">
+    <h2>
+      <a href="#types">Types</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#t:package_spec/0" translate="no">package_spec()</a>
+
+        </div>
+
+      </div>
+
+  </div>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#build_aliased_name/1" translate="no">build_aliased_name(arg)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Turns a package name and version into a string for NPM.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#child_spec/1" translate="no">child_spec(arg)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#find_adaptor/2" translate="no">find_adaptor(agent, package)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#get_adaptors/1" translate="no">get_adaptors(agent)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#install/2" translate="no">install(agent, package)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#install!/2" translate="no">install!(agent, package_spec)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#installed?/2" translate="no">installed?(agent, package_spec)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#resolve_package_name/1" translate="no">resolve_package_name(package_name)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#start_link/1" translate="no">start_link(opts)</a>
+
+        </div>
+
+      </div>
+
+  </div>
+
+  </section>
+
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Types
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:package_spec/0">
+
+  <div class="detail-header">
+    <a href="#t:package_spec/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">package_spec()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L167" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> package_spec() :: {name :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | <a href="https://hexdocs.pm/elixir/Regex.html#t:t/0">Regex.t</a>(), version :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="build_aliased_name/1">
+
+  <div class="detail-header">
+    <a href="#build_aliased_name/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_aliased_name(arg)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L346" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Turns a package name and version into a string for NPM.</p><p>Since multiple versions of the same package can be installed, it's important
+to rely on npms built-in package aliasing.</p><p>E.g. <code class="inline">@openfn/language-http@1.2.8</code> turns into:</p><pre><code class="makeup elixir" translate="no"><span class="w"> </span><span class="err">`</span><span class="na">@openfn</span><span class="o">/</span><span class="n">language</span><span class="o">-</span><span class="n">http</span><span class="o">-</span><span class="mf">1.2</span><span class="o">.</span><span class="mi">8</span><span class="na">@npm</span><span class="p">:</span><span class="na">@openfn</span><span class="o">/</span><span class="n">language</span><span class="o">-</span><span class="n">http</span><span class="err">@</span><span class="mf">1.2</span><span class="o">.</span><span class="mi">8</span><span class="err">`</span></code></pre><p>Which is pretty long winded but necessary for the reason above.</p><p>If using this module as a base, it's likely you would need to adaptor this
+to suit your particular naming strategy.</p>
+  </section>
+</section>
+<section class="detail" id="child_spec/1">
+
+  <div class="detail-header">
+    <a href="#child_spec/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">child_spec(arg)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L170" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
+  </section>
+</section>
+<section class="detail" id="find_adaptor/2">
+
+  <div class="detail-header">
+    <a href="#find_adaptor/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">find_adaptor(agent, package)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L214" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> find_adaptor(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), package :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  Lightning.AdaptorService.Adaptor.t() | nil</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> find_adaptor(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
+  Lightning.AdaptorService.Adaptor.t() | nil</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="get_adaptors/1">
+
+  <div class="detail-header">
+    <a href="#get_adaptors/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_adaptors(agent)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L209" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="install/2">
+
+  <div class="detail-header">
+    <a href="#install/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">install(agent, package)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L264" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> install(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) ::
+  {:ok, Lightning.AdaptorService.Adaptor.t()}
+  | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
+
+          <pre translate="no"><span class="attribute">@spec</span> install(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
+  {:ok, Lightning.AdaptorService.Adaptor.t()}
+  | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="install!/2">
+
+  <div class="detail-header">
+    <a href="#install!/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">install!(agent, package_spec)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L283" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> install!(<a href="https://hexdocs.pm/elixir/Agent.html#t:agent/0">Agent.agent</a>(), <a href="#t:package_spec/0">package_spec</a>()) ::
+  {:ok, Lightning.AdaptorService.Adaptor.t()}
+  | {:error, {<a href="https://hexdocs.pm/elixir/Collectable.html#t:t/0">Collectable.t</a>(), exit_status :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">non_neg_integer</a>()}}</pre>
+
+      </div>
+
+
+  </section>
+</section>
+<section class="detail" id="installed?/2">
+
+  <div class="detail-header">
+    <a href="#installed?/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">installed?(agent, package_spec)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L257" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="resolve_package_name/1">
+
+  <div class="detail-header">
+    <a href="#resolve_package_name/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">resolve_package_name(package_name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L316" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="start_link/1">
+
+  <div class="detail-header">
+    <a href="#start_link/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">start_link(opts)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/adaptor_service.ex#L203" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+
+        <p>
+          Built using
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.0) for the
+
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
+
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>

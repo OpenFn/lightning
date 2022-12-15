@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-0FC47112.js"></script>
+    <script src="dist/sidebar_items-9D035F85.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -197,7 +197,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_dataclip_from_result(result, run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L136" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L142" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -210,7 +210,7 @@ Functions
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@spec</span> create_dataclip_from_result(
-  result :: <a href="https://hexdocs.pm/engine/0.7.2/Engine.Result.html#t:t/0">Engine.Result.t</a>(),
+  result :: <a href="Lightning.Runtime.Result.html#t:t/0">Lightning.Runtime.Result.t</a>(),
   run :: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()
 ) :: {:ok, <a href="Lightning.Invocation.Dataclip.html#t:t/0">Lightning.Invocation.Dataclip.t</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
 
@@ -230,7 +230,7 @@ and returns an error tuple.</p>
     </a>
     <h1 class="signature" translate="no">find_or_install_adaptor(adaptor)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L175" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L182" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -242,7 +242,8 @@ and returns an error tuple.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> find_or_install_adaptor(adaptor :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: Engine.Adaptor.t()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> find_or_install_adaptor(adaptor :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) ::
+  Lightning.AdaptorService.Adaptor.t()</pre>
 
       </div>
 
@@ -259,7 +260,7 @@ install it.</p>
     </a>
     <h1 class="signature" translate="no">scrub_result(body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L122" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L128" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -290,7 +291,7 @@ to scrubber.ex, which is currently only used for logs.</p>
     </a>
     <h1 class="signature" translate="no">start(run, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L65" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L66" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -302,11 +303,12 @@ to scrubber.ex, which is currently only used for logs.</p>
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> start(run :: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>(), opts :: []) :: <a href="https://hexdocs.pm/engine/0.7.2/Engine.Result.html#t:t/0">Engine.Result.t</a>()</pre>
+          <pre translate="no"><span class="attribute">@spec</span> start(run :: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>(), opts :: []) ::
+  <a href="Lightning.Runtime.Result.html#t:t/0">Lightning.Runtime.Result.t</a>()</pre>
 
       </div>
 
-<p>Execute a Run.</p><p>Given a valid run:</p><ul><li>Persist the Dataclip and the Job's body to disk</li><li>Create a blank output file on disk</li><li>Build up a <code class="inline">%Engine.Runspec{}</code> with the paths, and adaptor module name</li></ul><p>And start it via <code class="inline">Handler.start/2</code>.</p><p>The callbacks implemented on <code class="inline">Handler</code> (<code class="inline">c:Handler.on_start/1</code> and <code class="inline">c:Handler.on_finish/2</code>)
+<p>Execute a Run.</p><p>Given a valid run:</p><ul><li>Persist the Dataclip and the Job's body to disk</li><li>Create a blank output file on disk</li><li>Build up a <code class="inline">%Lightning.Runtime.Runspec{}</code> with the paths, and adaptor module name</li></ul><p>And start it via <code class="inline">Handler.start/2</code>.</p><p>The callbacks implemented on <code class="inline">Handler</code> (<code class="inline">c:Handler.on_start/1</code> and <code class="inline">c:Handler.on_finish/2</code>)
 update the run when a Run is started and when it's finished, attaching
 the <code class="inline">exit_code</code> and <code class="inline">log</code> when they are available.</p>
   </section>

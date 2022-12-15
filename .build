@@ -7,6 +7,7 @@ Lightning.Accounts.UserToken.html
 Lightning.Accounts.html
 Lightning.AdaptorRegistry.Npm.html
 Lightning.AdaptorRegistry.html
+Lightning.AdaptorService.html
 Lightning.Attempt.html
 Lightning.AttemptRun.html
 Lightning.AttemptService.html
@@ -58,6 +59,12 @@ Lightning.RunLive.Components.html
 Lightning.RunLive.RunSearchForComponent.html
 Lightning.RunLive.RunStatusComponent.html
 Lightning.RunSearchForm.html
+Lightning.Runtime.ChildProcess.html
+Lightning.Runtime.Handler.html
+Lightning.Runtime.LogAgent.StringBuffer.html
+Lightning.Runtime.LogAgent.html
+Lightning.Runtime.Result.html
+Lightning.Runtime.RunSpec.html
 Lightning.Scrubber.html
 Lightning.Vault.html
 Lightning.WorkOrder.html
@@ -134,6 +141,7 @@ LightningWeb.UserSessionView.html
 LightningWeb.WebhooksController.html
 LightningWeb.html
 Mix.Tasks.Lightning.GenEncryptionKey.html
+Mix.Tasks.Lightning.InstallRuntime.html
 ObanPruner.html
 api-reference.html
 assets/logo.png
@@ -164,8 +172,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-05450024.js
-dist/sidebar_items-0FC47112.js
+dist/search_items-B6173A78.js
+dist/sidebar_items-9D035F85.js
 index.html
 readme.html
 search.html
