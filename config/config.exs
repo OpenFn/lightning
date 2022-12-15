@@ -10,6 +10,8 @@ import Config
 config :lightning,
   ecto_repos: [Lightning.Repo]
 
+config :lightning, Lightning.Repo, types: Lightning.PostgrexTypes
+
 # Configures the endpoint
 config :lightning, LightningWeb.Endpoint,
   url: [host: "localhost"],

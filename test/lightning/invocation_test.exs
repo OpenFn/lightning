@@ -296,7 +296,7 @@ defmodule Lightning.InvocationTest do
           runs: [
             %{
               job_id: job.id,
-              started_at: now |> Timex.shift(seconds: -20),
+              started_at: now |> Timex.shift(seconds: -25),
               finished_at: nil,
               exit_code: 0,
               input_dataclip_id: dataclip.id
@@ -352,76 +352,68 @@ defmodule Lightning.InvocationTest do
       #       -- run_two
       #       -- run_one
 
-      {:ok, attempt_one} =
-        Lightning.AttemptService.create_attempt(
-          work_order,
-          job_one,
-          reason
-        )
-
-      run_one = Enum.at(attempt_one.runs, 0)
-
-      Invocation.update_run(run_one, %{
-        exit_code: 0,
-        started_at: ~U[2022-10-27 00:00:00.000000Z],
-        finished_at: ~U[2022-10-27 01:00:00.000000Z]
-      })
-
-      Lightning.AttemptService.append(
-        attempt_one,
-        # run_two
-        Run.changeset(%Run{}, %{
-          project_id: workflow.project_id,
-          job_id: job_one.id,
-          input_dataclip_id: dataclip.id,
-          exit_code: 0,
-          started_at: ~U[2022-10-27 01:10:00.000000Z],
-          finished_at: ~U[2022-10-27 02:00:00.000000Z]
+      %{runs: [_run_one, _run_two]} =
+        Lightning.Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_one.id,
+              input_dataclip_id: dataclip.id,
+              exit_code: 0,
+              started_at: ~U[2022-10-27 00:00:00.000000Z],
+              finished_at: ~U[2022-10-27 01:00:00.000000Z]
+            },
+            %{
+              job_id: job_one.id,
+              input_dataclip_id: dataclip.id,
+              exit_code: 0,
+              started_at: ~U[2022-10-27 01:10:00.000000Z],
+              finished_at: ~U[2022-10-27 02:00:00.000000Z]
+            }
+          ]
         })
-      )
+        |> Repo.insert!()
 
       # ---------------------------------------------------------
 
-      {:ok, attempt_two} =
-        Lightning.AttemptService.create_attempt(
-          work_order,
-          job_one,
-          reason
-        )
-
-      run_three = Enum.at(attempt_two.runs, 0)
-
-      Invocation.update_run(run_three, %{
-        exit_code: 0,
-        started_at: ~U[2022-10-27 03:00:00.000000Z],
-        finished_at: ~U[2022-10-27 04:00:00.000000Z]
-      })
-
-      {:ok, %{run: run_four} = _attempt_run} =
-        Lightning.AttemptService.append(
-          attempt_two,
-          # run_four
-          Run.changeset(%Run{}, %{
-            project_id: workflow.project_id,
-            job_id: job_one.id,
-            input_dataclip_id: dataclip.id,
-            exit_code: 0,
-            started_at: ~U[2022-10-27 05:10:00.000000Z],
-            finished_at: ~U[2022-10-27 06:00:00.000000Z]
-          })
-        )
+      %{runs: [run_three, run_four]} =
+        attempt_two =
+        Lightning.Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_one.id,
+              started_at: ~U[2022-10-27 03:00:00.000000Z],
+              finished_at: ~U[2022-10-27 04:00:00.000000Z],
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            },
+            %{
+              job_id: job_one.id,
+              started_at: ~U[2022-10-27 05:10:00.000000Z],
+              finished_at: ~U[2022-10-27 06:00:00.000000Z],
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Repo.insert!()
 
       [%{id: id} | _] =
         Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
           id: workflow.project_id
         }).entries()
 
-      actual_wo =
-        WorkOrderService.get_work_order(id) |> Repo.preload(attempts: :runs)
+      [actual_wo] =
+        Invocation.get_workorders_by_ids([id])
+        |> Invocation.with_attempts()
+        |> Lightning.Repo.all()
 
       # last created attempt should be first in work_order.attempts list
 
-      actual_last_attempt = List.last(actual_wo.attempts)
+      actual_last_attempt = List.first(actual_wo.attempts)
 
       assert actual_last_attempt.id == attempt_two.id
 
@@ -453,6 +445,32 @@ defmodule Lightning.InvocationTest do
       actual_last_run = List.last(actual_last_attempt.runs)
 
       assert actual_last_run.id == run_three.id
+    end
+
+    test "list_work_orders_for_project/3 returns paginated work orders" do
+      project = project_fixture()
+      now = Timex.now()
+
+      job1 =
+        workflow_job_fixture(
+          project_id: project.id,
+          workflow_name: "workflow-1"
+        )
+
+      Enum.each(1..10, fn index ->
+        create_work_order(project, job1, now, 10 * index)
+      end)
+
+      wos =
+        Invocation.list_work_orders_for_project(
+          %Lightning.Projects.Project{
+            id: project.id
+          },
+          nil,
+          %{"page" => 1, "page_size" => 3}
+        ).entries()
+
+      assert length(wos) == 3
     end
 
     test "list_work_orders_for_project/3 returns paginated work orders with ordering" do

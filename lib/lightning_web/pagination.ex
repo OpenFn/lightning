@@ -100,7 +100,7 @@ defmodule LightningWeb.Pagination do
           </span>
           to
           <span class="font-medium">
-            <%= @page.page_number * @page.page_size %>
+            <%= min(@page.page_number * @page.page_size, @page.total_entries) %>
           </span>
           of <span class="font-medium"><%= @page.total_entries %></span>
           results
