@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Better code-assist and intelliense in the Job Editor
+
 ### Added
 
 - Added a Delete job button in Inspector

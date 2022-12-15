@@ -28,10 +28,15 @@ const options: MonacoProps['options'] = {
 
   codeLens: false,
   wordBasedSuggestions: false,
+
+  suggest: {
+    showKeywords: false,
+  }
 };
 
 type Lib = {
   content: string;
+  filePath: string;
 }
 
 // TODO this can take a little while to run, we should consider giving some feedback to the user
@@ -43,11 +48,12 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
   const name = nameParts.join('@');
 
   const results: Lib[] = [];
-  for await (const fileName of fetchDTSListing(specifier)) {
-    if (!fileName.startsWith('node_modules')) {
-      const f = await fetchFile(`${specifier}${fileName}`)
+  for await (const filePath of fetchDTSListing(specifier)) {
+    if (!filePath.startsWith('node_modules')) {
+      const content = await fetchFile(`${specifier}${filePath}`)
       results.push({
-        content: `declare module "${name}" { ${f} }`,
+        content: `declare namespace "${name}" { ${content} }`,
+        filePath
       });
     }
   }
@@ -70,6 +76,9 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
       // This seems to be needed to track the modules in d.ts files
       allowNonTsExtensions: true,
+
+      // Disables core js libs in code completion
+      noLib: true,
     });
 
     const handleInsertSnippet = (e: Event) => {
@@ -97,7 +106,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       editor.focus();
     }
 
-    const listener = document.addEventListener('insert-snippet', handleInsertSnippet)
+    document.addEventListener('insert-snippet', handleInsertSnippet)
     
     return () => {
       document.removeEventListener(handleInsertSnippet);
