@@ -18,11 +18,6 @@ defmodule Lightning.Pipeline do
   import Ecto.Query
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"attempt_id" => attempt_id, "run_id" => run_id}}) do
-    Repo.get_by!(AttemptRun, attempt_id: attempt_id, run_id: run_id)
-    |> process()
-  end
-
   def perform(%Oban.Job{args: %{"attempt_run_id" => attempt_run_id}}) do
     Repo.get!(AttemptRun, attempt_run_id)
     |> process()
