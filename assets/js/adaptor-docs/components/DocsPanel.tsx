@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PackageDescription } from '@openfn/describe-package';
-import useDocs from './useDocs';
+import useDocs from '../hooks/useDocs';
 import Function from './render/Function';
 
 type DocsPanelProps = {
@@ -15,17 +15,17 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
 
   const pkg = useDocs(specifier);
   if (pkg === null) {
-    return <div>Loading...</div>
+    return <div className="block m-2">Loading docs...</div>
   }
   if (pkg === false) {
-    return <div>Failed to load docs.</div>
+    return <div className="block m-2">Error: failed to load docs.</div>
   }
   
   const { name, version, functions } = pkg as PackageDescription;
   return (
     <div className="block m-2">
-      <h1 className="h1 text-lg font-bold text-secondary-700 mb-2">{name} v{version}</h1>
-      <div className="text-sm mb-4">API reference:</div>
+      <h1 className="h1 text-lg font-bold text-secondary-700 mb-2">{name} ({version})</h1>
+      <div className="text-sm mb-4">These are the operations available for this adaptor:</div>
       {functions
         .sort((a, b) => {
           if (a.name > b.name) return 1;

@@ -9,6 +9,8 @@ const useDocs = (specifier: string) => {
     setDocs(null); // Reset docs when the specifier changes
     describePackage(specifier, {}).then((result) => {
       setDocs(result);
+    }).catch((err) => {
+      setDocs(false)
     });
   }, [specifier])
 
