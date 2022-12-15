@@ -27,7 +27,6 @@ const TriggerWorkflowNode = ({
 }: NodeProps & {
   data: { label: string; trigger: Trigger; workflow: Workflow };
 }): JSX.Element => {
-  const workflowName = data.workflow.name ?? 'Untitled';
   const description = descriptionFor(data);
   return (
     <div
@@ -35,7 +34,6 @@ const TriggerWorkflowNode = ({
         text-center text-xs ring-0.5 ring-black ring-opacity-5"
     >
       <div className="flex flex-col items-center justify-center h-full text-center">
-        <p>{workflowName}</p>
         <p
           title={description || ''}
           className="text-[0.6rem] italic text-ellipsis overflow-hidden whitespace-pre-line"

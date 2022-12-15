@@ -28,6 +28,7 @@ and this project adheres to
 - View all workflows in a project on the workflows index page
 - Move @openfn/workflow-diagram into the application, the NPM module is now
   deprecated.
+- Remove workflow name from first node
 
 ### Fixed
 
