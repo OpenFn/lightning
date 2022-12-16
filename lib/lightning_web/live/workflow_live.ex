@@ -7,9 +7,6 @@ defmodule LightningWeb.WorkflowLive do
   alias Lightning.Workflows
   import LightningWeb.WorkflowLive.Components
 
-  def editable do
-  end
-
   @impl true
   def render(assigns) do
     assigns = assigns |> assign_new(:show_canvas, fn -> true end)
