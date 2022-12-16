@@ -39,7 +39,27 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       conn = get(conn, "/")
       response = html_response(conn, 200)
       # assert response =~ email
+
       assert response =~ "Log out</span>"
+    end
+
+    test "creates account and initial project and logs the user in", %{
+      conn: conn
+    } do
+      Application.put_env(:lightning, :init_project_for_new_user, true)
+
+      conn =
+        get(
+          post(conn, Routes.user_registration_path(conn, :create), %{
+            "user" => valid_user_attributes(email: unique_user_email())
+          }),
+          "/"
+        )
+
+      assert conn.assigns.current_user
+             |> Ecto.assoc(:projects)
+             |> Lightning.Repo.one!()
+             |> Map.get(:name) == "openhie-project"
     end
 
     test "render errors for invalid data", %{conn: conn} do
