@@ -17,6 +17,7 @@ and this project adheres to
 - Drop "configuration" key from Run output dataclips after completion
 - Ability to 'rerun' a run from the Run list
 - Attempts and Runs update themselves in the Runs list
+- Configure a project and workflow for a new registering user
 
 ### Changed
 
