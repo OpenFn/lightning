@@ -22,6 +22,8 @@ and this project adheres to
 - Configure a project and workflow for a new registering user
 - Run a job with a custom input
 - Added plausible analytics
+- Allow user to click on Webhook Trigger Node to copy webhook URL on workflow
+  diagram
 
 ### Changed
 
@@ -32,13 +34,14 @@ and this project adheres to
 - Create an follow a manual Run from the Job Inspector
 - View all workflows in a project on the workflows index page
 - Move @openfn/workflow-diagram into the application, the NPM module is now
-  deprecated.
+  deprecated. <<<<<<< HEAD
 - Remove workflow name from first node
 - Move the used parts of `@openfn/engine` into the application.
 - [BREAKING CHANGE] Ported `mix openfn.install.runtime` into application, use
   `mix lightning.install_runtime`.
 - [BREAKING CHANGE] Introduced `@openfn/cli` as the new runtime for Jobs
-- Rename a workflow through the page heading
+- # Rename a workflow through the page heading
+  > > > > > > > d50ba923 (Update CHANGELOG)
 
 ### Fixed
 
