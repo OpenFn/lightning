@@ -8,25 +8,6 @@ defmodule Lightning.ObanManager do
   alias Lightning.AttemptRun
   alias Lightning.Invocation
 
-  @doc """
-  handles oban events
-  """
-  def handle_event([:oban, :circuit, :open], _measure, meta, _pid),
-    do: Logger.info("Circuit open #{inspect(meta, pretty: true)}")
-
-  def handle_event([:oban, :circuit, :trip], _measure, meta, _pid) do
-    Logger.error("Circuit tripped with #{inspect(meta, pretty: true)}")
-
-    context = Map.take(meta, [:name])
-
-    Sentry.capture_exception(meta.error,
-      stacktrace: meta.stacktrace,
-      message: meta.message,
-      extra: context,
-      tags: %{type: "oban"}
-    )
-  end
-
   def handle_event([:oban, :job, :exception], measure, meta, _pid) do
     if meta.job.worker == "Lightning.Pipeline" and
          Map.has_key?(meta.job.args, "attempt_run_id") do
