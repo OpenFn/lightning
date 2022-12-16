@@ -1,6 +1,7 @@
 <Layout.page_content>
   <:header>
-    <Layout.header socket={@socket} title="Projects">
+    <Layout.header socket={@socket}>
+      <:title>Projects</:title>
       <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
         <Common.button>
           <div class="h-full">

@@ -1,6 +1,7 @@
 <Layout.page_content>
   <:header>
-    <Layout.header socket={@socket} title="Users">
+    <Layout.header socket={@socket}>
+      <:title>Users</:title>
       <.link navigate={Routes.user_edit_path(@socket, :new)}>
         <Common.button>
           <div class="h-full">

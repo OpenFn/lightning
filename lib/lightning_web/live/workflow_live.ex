@@ -17,8 +17,9 @@ defmodule LightningWeb.WorkflowLive do
     ~H"""
     <Layout.page_content>
       <:header>
-        <Layout.header title={@page_title} socket={@socket}>
-          <:details>
+        <Layout.header socket={@socket}>
+          <:title>
+            <%= @page_title %>
             <%= case @live_action do %>
               <% :index -> %>
                 <div>/ Workflows</div>
@@ -42,7 +43,7 @@ defmodule LightningWeb.WorkflowLive do
                   />
                 </div>
             <% end %>
-          </:details>
+          </:title>
           <.link navigate={
             Routes.project_job_index_path(@socket, :index, @project.id)
           }>

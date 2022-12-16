@@ -1,6 +1,7 @@
 <Layout.page_content>
   <:header>
-    <Layout.header socket={@socket} title={@page_title}>
+    <Layout.header socket={@socket}>
+      <:title><%= @page_title %></:title>
       <.link navigate={
         Routes.project_dataclip_edit_path(@socket, :new, @project.id)
       }>
