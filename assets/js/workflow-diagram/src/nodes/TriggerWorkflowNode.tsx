@@ -28,6 +28,10 @@ const TriggerWorkflowNode = ({
   data: { label: string; trigger: Trigger; workflow: Workflow };
 }): JSX.Element => {
   const description = descriptionFor(data);
+  const title =
+    data.trigger.type === 'webhook'
+      ? 'Click to copy webhook URL'
+      : description || '';
   return (
     <div
       className="bg-white cursor-pointer h-full py-1 px-1 rounded-md shadow-sm
@@ -35,7 +39,7 @@ const TriggerWorkflowNode = ({
     >
       <div className="flex flex-col items-center justify-center h-full text-center">
         <p
-          title={description || ''}
+          title={title}
           className="text-[0.6rem] italic text-ellipsis overflow-hidden whitespace-pre-line"
         >
           {description}

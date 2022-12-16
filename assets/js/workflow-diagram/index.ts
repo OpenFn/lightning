@@ -2,6 +2,7 @@
 // `component.jsx` is imported dynamically, saving loading React
 // and all the other dependencies until they are needed.
 import type { mount } from './component';
+import { WebhookTrigger } from './src/types';
 
 interface WorkflowDiagramEntrypoint {
   el: HTMLElement;
@@ -53,7 +54,6 @@ export default {
           this.addJob(node.data.id);
         },
         onNodeClick: (event, node) => {
-          console.log(node);
           switch (node.type) {
             case 'trigger':
               this.copyWebhookUrl(node.data.trigger);
@@ -125,8 +125,8 @@ export default {
       this.el
     );
   },
-  copyWebhookUrl(trigger: Object) {
-    if 
+  copyWebhookUrl(trigger: WebhookTrigger) {
+    navigator.clipboard.writeText(trigger.webhookUrl);
   },
   // Remove `?selected=<id>` from the URL.
   unselectNode() {
