@@ -53,22 +53,31 @@ defmodule Lightning.Demo do
         password: "welcome123"
       })
 
+    %{project: openhie_project, workflow: openhie_workflow, jobs: openhie_jobs} =
+      create_openhie_project([
+        %{user_id: admin.id, role: :admin},
+        %{user_id: editor.id, role: :editor},
+        %{user_id: viewer.id, role: :viewer}
+      ])
+
+    %{project: dhis2_project, workflow: dhis2_workflow, jobs: dhis2_jobs} =
+      create_dhis2_project([
+        %{user_id: admin.id, role: :admin}
+      ])
+
+    %{
+      users: [super_user, admin, editor, viewer],
+      projects: [openhie_project, dhis2_project],
+      workflows: [openhie_workflow, dhis2_workflow],
+      jobs: openhie_jobs ++ dhis2_jobs
+    }
+  end
+
+  def create_openhie_project(project_users) do
     {:ok, openhie_project} =
       Projects.create_project(%{
         name: "openhie-project",
-        project_users: [
-          %{user_id: admin.id, role: :admin},
-          %{user_id: editor.id, role: :editor},
-          %{user_id: viewer.id, role: :viewer}
-        ]
-      })
-
-    {:ok, dhis2_project} =
-      Projects.create_project(%{
-        name: "dhis2-project",
-        project_users: [
-          %{user_id: admin.id, role: :admin}
-        ]
+        project_users: project_users
       })
 
     {:ok, openhie_workflow} =
@@ -116,6 +125,25 @@ defmodule Lightning.Demo do
         workflow_id: openhie_workflow.id
       })
 
+    %{
+      project: openhie_project,
+      workflow: openhie_workflow,
+      jobs: [
+        fhir_standard_data,
+        send_to_openhim,
+        notify_upload_successful,
+        notify_upload_failed
+      ]
+    }
+  end
+
+  def create_dhis2_project(project_users) do
+    {:ok, dhis2_project} =
+      Projects.create_project(%{
+        name: "dhis2-project",
+        project_users: project_users
+      })
+
     {:ok, dhis2_workflow} =
       Workflows.create_workflow(%{
         name: "DHIS2 to Sheets",
@@ -141,17 +169,9 @@ defmodule Lightning.Demo do
       })
 
     %{
-      users: [super_user, admin, editor, viewer],
-      projects: [openhie_project, dhis2_project],
-      workflows: [openhie_workflow, dhis2_workflow],
-      jobs: [
-        fhir_standard_data,
-        send_to_openhim,
-        notify_upload_successful,
-        notify_upload_failed,
-        get_dhis2_data,
-        upload_to_google_sheet
-      ]
+      project: dhis2_project,
+      workflow: dhis2_workflow,
+      jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end
 
