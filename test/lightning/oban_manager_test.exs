@@ -71,7 +71,7 @@ defmodule Lightning.CrashTest do
     end
 
     test "timeout jobs generate results with :killed status", %{run: run} do
-      result = %Engine.Result{} = Pipeline.Runner.start(run)
+      result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
 
       assert result.exit_reason == :killed
       assert result.exit_code == nil
