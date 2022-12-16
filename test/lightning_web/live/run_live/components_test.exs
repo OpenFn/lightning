@@ -14,17 +14,23 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     attempt =
       build(:attempt,
         work_order: build(:workorder, reason: reason),
-        runs: [build(:run)],
+        runs: [
+          build(:run),
+          build(:run, finished_at: Timex.now(), exit_code: 0),
+          build(:run, finished_at: Timex.now())
+        ],
         reason: reason
       )
       |> insert()
 
-    run = attempt.runs |> List.first()
-    project_id = run.job.workflow.project_id
+    first_run = attempt.runs |> List.first()
+    second_run = attempt.runs |> Enum.at(1)
+    third_run = attempt.runs |> List.last()
+    project_id = first_run.job.workflow.project_id
 
     html =
       render_component(&Components.run_list_item/1,
-        run: attempt.runs |> List.first(),
+        run: first_run,
         attempt: attempt,
         project_id: project_id
       )
@@ -32,7 +38,53 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, run.id)}"]}
+             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"]}
+           )
+           |> Enum.any?()
+
+    assert html
+           |> Floki.find(
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, first_run.id)}"]}
+           )
+           |> Enum.any?()
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: second_run,
+        attempt: attempt,
+        project_id: project_id
+      )
+      |> Floki.parse_fragment!()
+
+    assert html
+           |> Floki.find(
+             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"]}
+           )
+           |> Enum.any?()
+
+    assert html
+           |> Floki.find(
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, second_run.id)}"]}
+           )
+           |> Enum.any?()
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: third_run,
+        attempt: attempt,
+        project_id: project_id
+      )
+      |> Floki.parse_fragment!()
+
+    assert html
+           |> Floki.find(
+             ~s{svg[class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"]}
+           )
+           |> Enum.any?()
+
+    assert html
+           |> Floki.find(
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, third_run.id)}"]}
            )
            |> Enum.any?()
   end
