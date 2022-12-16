@@ -128,6 +128,55 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> render_click() =~ "attempt-#{attempt_id}"
     end
 
+    test "When the most recent run is finished without exit code, workflow run status is 'Failure'",
+         %{conn: conn, project: project} do
+      job_a =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      work_order = work_order_fixture(workflow_id: job_a.workflow_id)
+
+      dataclip = dataclip_fixture()
+
+      reason =
+        reason_fixture(
+          trigger_id: job_a.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      now = Timex.now()
+
+      Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_a.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: 25),
+            exit_code: nil,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+
+      div =
+        view
+        |> element("section#inner_content div[data-entity='work_order_list']")
+        |> render()
+
+      assert div =~ "Failure"
+    end
+
     test "When the most recent run is not complete, workflow run status is 'Pending'",
          %{conn: conn, project: project} do
       job_a =
