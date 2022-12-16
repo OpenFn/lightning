@@ -128,7 +128,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   # --------------- Run Details ---------------
-  attr(:run, :any, required: true)
+  attr :run, :any, required: true
 
   def run_viewer(assigns) do
     ~H"""
@@ -159,7 +159,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:run, :any, required: true)
+  attr :run, :any, required: true
 
   def run_details(%{run: run} = assigns) do
     run_finished_at =
@@ -220,7 +220,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:log, :list, required: true)
+  attr :log, :list, required: true
 
   def log_view(%{log: log} = assigns) do
     assigns = assigns |> assign(log: log |> Enum.with_index(1))
@@ -238,8 +238,8 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:line, :string, required: true)
-  attr(:num, :integer, required: true)
+  attr :line, :string, required: true
+  attr :num, :integer, required: true
 
   def log_line(%{line: line, num: num} = assigns) do
     # Format the log lines replacing single spaces with non-breaking spaces.
@@ -277,7 +277,7 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  attr(:dataclip, :any, required: true)
+  attr :dataclip, :any, required: true
 
   def dataclip_view(%{dataclip: dataclip} = assigns) do
     lines =
@@ -339,9 +339,9 @@ defmodule LightningWeb.RunLive.Components do
   # ------------------- Toggle Bar ---------------------
   # Used to switch between Log and Output
 
-  slot(:inner_block, required: true)
-  attr(:class, :string, default: "items-end")
-  attr(:rest, :global)
+  slot :inner_block, required: true
+  attr :class, :string, default: "items-end"
+  attr :rest, :global
 
   def toggle_bar(assigns) do
     ~H"""
@@ -353,9 +353,9 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:active, :string, default: "false")
-  slot(:inner_block, required: true)
-  attr(:rest, :global)
+  attr :active, :string, default: "false"
+  slot :inner_block, required: true
+  attr :rest, :global
 
   def toggle_item(assigns) do
     ~H"""

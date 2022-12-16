@@ -95,13 +95,16 @@ defmodule Lightning.CrashTest do
         )
         |> Repo.insert()
 
-      assert attempt_run.run.finished_at |> Kernel.is_nil()
+      refute attempt_run.run.finished_at
 
       ObanManager.handle_event(
         [:oban, :job, :exception],
         %{duration: 5_096_921_850, queue_time: 106_015_000},
         %{
-          args: %{"attempt_run_id" => attempt_run.id},
+          job: %{
+            args: %{"attempt_run_id" => attempt_run.id},
+            worker: "Lightning.Pipeline"
+          },
           error: %CaseClauseError{term: :killed},
           stacktrace: []
         },
@@ -110,7 +113,7 @@ defmodule Lightning.CrashTest do
 
       run = Repo.get!(Run, attempt_run.run.id)
 
-      assert run.finished_at |> Kernel.is_nil() |> Kernel.not()
+      assert run.finished_at
     end
   end
 end

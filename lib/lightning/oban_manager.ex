@@ -28,12 +28,10 @@ defmodule Lightning.ObanManager do
   end
 
   def handle_event([:oban, :job, :exception], measure, meta, _pid) do
-    Repo.get!(AttemptRun, meta.args["attempt_run_id"])
-    |> Ecto.assoc(:run)
-    |> Repo.one!()
-    |> Invocation.update_run(%{
-      finished_at: DateTime.utc_now()
-    })
+    if meta.job.worker == "Lightning.Pipeline" and
+         Map.has_key?(meta.job.args, "attempt_run_id") do
+      update_run(Map.get(meta.job.args, "attempt_run_id"))
+    end
 
     Logger.error(~s"""
     Oban exception:
@@ -45,7 +43,7 @@ defmodule Lightning.ObanManager do
     """)
 
     context =
-      meta
+      meta.job
       |> Map.take([:id, :args, :queue, :worker])
       |> Map.merge(measure)
 
@@ -69,4 +67,13 @@ defmodule Lightning.ObanManager do
       )
     end
   end
+
+  defp update_run(attempt_run_id),
+    do:
+      Repo.get!(AttemptRun, attempt_run_id)
+      |> Ecto.assoc(:run)
+      |> Repo.one!()
+      |> Invocation.update_run(%{
+        finished_at: DateTime.utc_now()
+      })
 end
