@@ -201,7 +201,8 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            )
            |> render() =~ d2.id
 
-    view |> enter_body("{\"a\": 1}")
+    assert view |> enter_body("{\"a\": 1}") =~
+             "{&amp;amp;amp;quot;a&amp;amp;amp;quot;: 1}"
 
     # body textarea is displayed
     assert view
