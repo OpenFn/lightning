@@ -201,18 +201,11 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            )
            |> render() =~ d2.id
 
-    assert view |> enter_body("{\"a\": 1}") =~
-             "{&amp;amp;amp;quot;a&amp;amp;amp;quot;: 1}"
-
-    # body textarea is displayed
-    assert view
-           |> has_element?("textarea#manual_run_body")
+    assert view |> enter_body("{\"aaaa\": 1}")
 
     assert view
-           |> element(
-             "select[name='manual_run[dataclip_id]'] option[selected='selected']"
-           )
-           |> render() =~ "Custom"
+           |> element("button[phx-click='confirm']")
+           |> render_click() =~ "aaaa"
 
     # bad input
     view |> enter_body("xxx") =~ "is invalid"
