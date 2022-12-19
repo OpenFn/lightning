@@ -128,7 +128,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> render_click() =~ "attempt-#{attempt_id}"
     end
 
-    test "When the most recent run is finished without exit code, workflow run status is 'Failure'",
+    test "When the most recent run is finished without exit code, workflow run status is 'Timeout'",
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
@@ -174,7 +174,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> element("section#inner_content div[data-entity='work_order_list']")
         |> render()
 
-      assert div =~ "Failure"
+      assert div =~ "Timeout"
     end
 
     test "When the most recent run is not complete, workflow run status is 'Pending'",

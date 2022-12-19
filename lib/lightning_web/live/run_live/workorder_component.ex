@@ -90,7 +90,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <%= case @last_run.exit_code do %>
             <% nil -> %>
               <%= if @last_run.finished_at do %>
-                <.failure_pill>Failure</.failure_pill>
+                <.failure_pill>Timeout</.failure_pill>
               <% else %>
                 <.pending_pill>Pending</.pending_pill>
               <% end %>
