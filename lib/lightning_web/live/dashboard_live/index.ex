@@ -41,7 +41,8 @@ defmodule LightningWeb.DashboardLive.Index do
     ~H"""
     <Layout.page_content>
       <:header>
-        <Layout.header title={@page_title} socket={@socket}>
+        <Layout.header socket={@socket}>
+          <:title><%= @page_title %></:title>
           <%= if assigns[:project] do %>
             <.link navigate={
               Routes.project_job_index_path(@socket, :index, @project.id)

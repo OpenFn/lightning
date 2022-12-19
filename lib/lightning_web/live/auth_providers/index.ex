@@ -59,7 +59,9 @@ defmodule LightningWeb.AuthProvidersLive.Index do
     ~H"""
     <Layout.page_content>
       <:header>
-        <Layout.header socket={@socket} title="Authentication" />
+        <Layout.header socket={@socket}>
+          <:title>Authentication</:title>
+        </Layout.header>
       </:header>
       <Layout.centered>
         <.live_component

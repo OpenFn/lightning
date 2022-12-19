@@ -282,6 +282,37 @@ defmodule LightningWeb.WorkflowLiveTest do
       %{job: workflow_job_fixture(project_id: project.id)}
     end
 
+    test "renders inplace workflow form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :show,
+            project.id,
+            job.workflow_id
+          )
+        )
+
+      assert html =~ project.name
+      assert html =~ "Untitled"
+
+      assert has_element?(view, "#workflow-#{job.workflow_id}")
+
+      assert view
+             |> form("#workflow-inplace-form", workflow: %{name: "my workflow"})
+             |> render_change()
+
+      assert view |> form("#workflow-inplace-form") |> render_submit() =~
+               "my workflow"
+
+      assert view |> encoded_project_space_matches(project)
+    end
+
     test "renders the workflow inspector", %{
       conn: conn,
       project: project,

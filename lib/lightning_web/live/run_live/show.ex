@@ -35,7 +35,9 @@ defmodule LightningWeb.RunLive.Show do
     ~H"""
     <Layout.page_content>
       <:header>
-        <Layout.header socket={@socket} title={@page_title} />
+        <Layout.header socket={@socket}>
+          <:title><%= @page_title %></:title>
+        </Layout.header>
       </:header>
       <Layout.centered>
         <LightningWeb.RunLive.Components.run_viewer run={@run} />
