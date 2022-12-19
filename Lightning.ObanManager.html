@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.3.1">
 
-    <title>LightningWeb.Hooks — Lightning v0.3.1</title>
+    <title>Lightning.ObanManager — Lightning v0.3.1</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,19 +101,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/hooks.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oban_manager.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.Hooks</span> 
+  <span translate="no">Lightning.ObanManager</span> 
   <small class="app-vsn" translate="no">(Lightning v0.3.1)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>LiveView Hooks</p>
+<p>The Oban Manager</p>
   </section>
 
 
@@ -133,12 +133,9 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#on_mount/4" translate="no">on_mount(atom, arg2, session, socket)</a>
+          <a href="#handle_event/4" translate="no">handle_event(list, measure, meta, pid)</a>
 
         </div>
-
-          <div class="summary-synopsis"><p>Finds and assigns a project to the socket, if a user doesn't have access
-they are redirected and shown a 'No Access' screen via a <code class="inline">:nav</code> flash message.</p></div>
 
       </div>
 
@@ -156,16 +153,16 @@ they are redirected and shown a 'No Access' screen via a <code class="inline">:n
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="on_mount/4">
+<section class="detail" id="handle_event/4">
 
   <div class="detail-header">
-    <a href="#on_mount/4" class="detail-link" title="Link to this function">
+    <a href="#handle_event/4" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">on_mount(atom, arg2, session, socket)</h1>
+    <h1 class="signature" translate="no">handle_event(list, measure, meta, pid)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/hooks.ex#L16" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/oban_manager.ex#L11" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -175,10 +172,7 @@ Functions
 
   <section class="docstring">
 
-<p>Finds and assigns a project to the socket, if a user doesn't have access
-they are redirected and shown a 'No Access' screen via a <code class="inline">:nav</code> flash message.</p><p>There is a fallthru function, when there is no <code class="inline">project_id</code> in the params -
-this is for liveviews that may or may not have a <code class="inline">project_id</code> depending on
-usage - like <code class="inline">DashboardLive</code>.</p>
+
   </section>
 </section>
 
