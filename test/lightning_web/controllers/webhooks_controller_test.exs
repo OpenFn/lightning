@@ -30,4 +30,14 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert json_response(conn, 404) == %{}
     end
   end
+
+  test "return 403 on a disabled message", %{conn: conn} do
+    job = job_fixture(enabled: false)
+
+    conn = post(conn, "/i/#{job.trigger.id}", %{"foo" => "bar"})
+
+    assert %{"message" => message} = json_response(conn, 403)
+
+    assert message =~ "Unable to process request"
+  end
 end
