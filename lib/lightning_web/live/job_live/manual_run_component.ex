@@ -246,7 +246,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   defp create_manual_workorder(changeset) do
-    with {:ok, dataclip} <- get_dataclip(changeset),
+    with {:ok, dataclip} <- find_or_create_dataclip(changeset),
          {:ok, job} <- get_job(changeset),
          user <- changeset |> Ecto.Changeset.get_field(:user) do
       # HACK: Oban's testing functions only apply to `self` and LiveView
@@ -258,7 +258,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     end
   end
 
-  defp get_dataclip(changeset) do
+  defp find_or_create_dataclip(changeset) do
     dataclip_id = Ecto.Changeset.get_field(changeset, :dataclip_id)
     body = Ecto.Changeset.get_field(changeset, :body)
     project_id = Ecto.Changeset.get_field(changeset, :project_id)
@@ -281,6 +281,13 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           "type" => :http_request,
           "body" => body
         })
+        |> case do
+          {:error, _} ->
+            {:error, changeset |> Ecto.Changeset.add_error(:body, "bad input")}
+
+          result ->
+            result
+        end
     end
   end
 
