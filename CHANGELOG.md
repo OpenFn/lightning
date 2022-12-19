@@ -18,6 +18,7 @@ and this project adheres to
 - Ability to 'rerun' a run from the Run list
 - Attempts and Runs update themselves in the Runs list
 - Configure a project and workflow for a new registering user
+- Run a job with a custom input
 
 ### Changed
 
