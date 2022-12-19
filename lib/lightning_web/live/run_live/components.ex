@@ -36,9 +36,15 @@ defmodule LightningWeb.RunLive.Components do
 
               <%= case @last_run.exit_code do %>
                 <% nil -> %>
-                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
-                    Pending
-                  </span>
+                  <%= if @last_run.finished_at do %>
+                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
+                      Timeout
+                    </span>
+                  <% else %>
+                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
+                      Pending
+                    </span>
+                  <% end %>
                 <% val when val > 0-> %>
                   <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
                     Failure
@@ -71,13 +77,20 @@ defmodule LightningWeb.RunLive.Components do
     <li>
       <span class="my-4 flex">
         &vdash;
-        <span class="mx-2 flex group">
+        <span class="mx-2 flex">
           <%= case @run.exit_code do %>
             <% nil -> %>
-              <Heroicons.ellipsis_horizontal_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-              />
+              <%= if @run.finished_at do %>
+                <Heroicons.x_circle
+                  solid
+                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
+                />
+              <% else %>
+                <Heroicons.ellipsis_horizontal_circle
+                  solid
+                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
+                />
+              <% end %>
             <% val when val > 0-> %>
               <Heroicons.x_circle
                 solid

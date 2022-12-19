@@ -28,6 +28,21 @@ defmodule Lightning.Application do
          warmer(module: Lightning.AuthProviders.CacheWarmer)
        ]}
 
+    events = [
+      [:oban, :circuit, :open],
+      [:oban, :circuit, :trip],
+      [:oban, :job, :exception]
+    ]
+
+    :telemetry.attach_many(
+      "oban-errors",
+      events,
+      &Lightning.ObanManager.handle_event/4,
+      nil
+    )
+
+    :ok = Oban.Telemetry.attach_default_logger(:debug)
+
     children = [
       Lightning.Vault,
       # Start the Ecto repository

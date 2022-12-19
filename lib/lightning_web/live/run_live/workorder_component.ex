@@ -89,7 +89,11 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <div class="flex content-center justify-between">
           <%= case @last_run.exit_code do %>
             <% nil -> %>
-              <.pending_pill>Pending</.pending_pill>
+              <%= if @last_run.finished_at do %>
+                <.failure_pill>Timeout</.failure_pill>
+              <% else %>
+                <.pending_pill>Pending</.pending_pill>
+              <% end %>
             <% val when val == 0 -> %>
               <.success_pill>Success</.success_pill>
             <% val when val > 0 -> %>
