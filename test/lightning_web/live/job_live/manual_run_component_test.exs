@@ -27,6 +27,12 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     |> render_change(manual_run: [dataclip_id: value])
   end
 
+  defp enter_body(view, value) do
+    view
+    |> element("select[name='manual_run[dataclip_id]']")
+    |> render_change(manual_run: [dataclip_id: "custom", body: value])
+  end
+
   defp run_button(view, disabled \\ '') do
     view
     |> element("button[disabled='#{disabled}']", "Run")
@@ -66,11 +72,29 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     assert run_viewer |> render() =~ "Not started."
   end
 
-  test "has no option on job with no runs", %{
+  test "has custom option on webhook type job ", %{
     conn: conn,
     job: job,
     project: project
   } do
+    {:ok, view, _html} =
+      live(
+        conn,
+        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+      )
+
+    assert view
+           |> has_element?(
+             "select[name='manual_run[dataclip_id]'] option[value='custom']"
+           )
+  end
+
+  test "has no option on job with no runs and not of type webhook", %{
+    conn: conn,
+    project: project
+  } do
+    job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
+
     {:ok, view, _html} =
       live(
         conn,
@@ -177,10 +201,26 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            )
            |> render() =~ d2.id
 
+    view |> enter_body("{\"a\": 1}")
+
+    # body textarea is displayed
+    assert view
+           |> has_element?("textarea#manual_run_body")
+
+    assert view
+           |> element(
+             "select[name='manual_run[dataclip_id]'] option[selected='selected']"
+           )
+           |> render() =~ "Custom"
+
+    # bad input
+    view |> enter_body("xxx") =~ "is invalid"
+
     assert render_component(LightningWeb.JobLive.ManualRunComponent,
              id: "manual-job-#{job.id}",
              project: project,
              job_id: job.id,
+             job: job,
              current_user: user,
              on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d3}
@@ -190,6 +230,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              id: "manual-job-#{job.id}",
              project: project,
              job_id: job.id,
+             job: job,
              current_user: user,
              on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d4}

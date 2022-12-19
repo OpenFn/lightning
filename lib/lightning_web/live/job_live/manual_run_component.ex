@@ -8,6 +8,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   attr :builder_state, :any, required: true
   attr :on_run, :any, required: true
   attr :selected_dataclip, Lightning.Invocation.Dataclip
+  attr :project, Lightning.Projects.Project
 
   @impl true
   def render(assigns) do
@@ -29,6 +30,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           values={@dataclips_options}
           selected={@selected_dataclip.id}
           phx-target={@myself}
+          phx-change="validate"
         />
         <%= if(@custom_input?) do %>
           <%= textarea(f, :body,
@@ -84,7 +86,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     dataclips_options = dataclips |> Enum.map(&{&1.id, &1.id})
 
     dataclips_options =
-      if(job.trigger.type == :webhook) do
+      if job.trigger.type == :webhook do
         dataclips_options ++ [{"Custom input", "custom"}]
       else
         dataclips_options
@@ -218,7 +220,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   defp changeset(attrs) do
     required_fields =
-      if(attrs["dataclip_id"] == "custom") do
+      if attrs["dataclip_id"] == "custom" do
         [:body]
       else
         [:dataclip_id]
