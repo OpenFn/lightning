@@ -19,9 +19,8 @@ defmodule LightningWeb.WorkflowLive do
             <%= @page_title %>
             <%= case @live_action do %>
               <% :index -> %>
-                <div>/ Workflows</div>
               <% :new_job -> %>
-                <div>/ new workflow</div>
+                <div>&nbsp;/&nbsp;<%= @current_workflow.name %></div>
               <% _ -> %>
                 <div>
                   <.live_component
@@ -259,19 +258,11 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  # defp apply_action(socket, :show, _params) do
-  #   socket
-  #   |> assign(
-  #     active_menu_item: :overview,
-  #     page_title: socket.assigns.project.name
-  #   )
-  # end
-
   defp apply_action(socket, :index, params) do
     socket
     |> assign(
       active_menu_item: :overview,
-      page_title: socket.assigns.project.name,
+      page_title: "Workflows",
       show_canvas: false,
       page:
         Workflows.get_workflows_for_query(socket.assigns.project)
@@ -298,7 +289,7 @@ defmodule LightningWeb.WorkflowLive do
       },
       current_workflow: workflow,
       encoded_project_space: encode_project_space(workflow),
-      page_title: socket.assigns.project.name
+      page_title: "Workflows"
     )
   end
 
@@ -322,7 +313,7 @@ defmodule LightningWeb.WorkflowLive do
           project_id: project_id
         }),
       encoded_project_space: encode_project_space(workflow),
-      page_title: socket.assigns.project.name
+      page_title: "Workflows"
     )
   end
 
@@ -338,7 +329,7 @@ defmodule LightningWeb.WorkflowLive do
       job: job,
       current_workflow: workflow,
       encoded_project_space: encode_project_space(workflow),
-      page_title: socket.assigns.project.name
+      page_title: "Workflows"
     )
   end
 
@@ -350,7 +341,7 @@ defmodule LightningWeb.WorkflowLive do
 
     socket
     |> assign(
-      page_title: socket.assigns.project.name,
+      page_title: "Workflows",
       current_workflow: workflow,
       encoded_project_space: encode_project_space(workflow),
       workflow:
@@ -373,7 +364,7 @@ defmodule LightningWeb.WorkflowLive do
 
     socket
     |> assign(
-      page_title: socket.assigns.project.name,
+      page_title: "Workflows",
       current_workflow: workflow,
       show_canvas: show_canvas,
       encoded_project_space: encode_project_space(workflow)
