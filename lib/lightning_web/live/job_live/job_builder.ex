@@ -139,6 +139,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 current_user={@current_user}
                 id={"manual-job-#{@job_id}"}
                 job_id={@job_id}
+                job={@job}
                 on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
