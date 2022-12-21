@@ -172,6 +172,19 @@ defmodule Lightning.AdaptorRegistry do
     {:reply, versions, state}
   end
 
+  @impl GenServer
+  def handle_call({:latest_for, module_name}, _from, state) do
+    latest =
+      state
+      |> Enum.find(fn %{name: name} -> name == module_name end)
+      |> case do
+        nil -> nil
+        %{latest: latest} -> latest
+      end
+
+    {:reply, latest, state}
+  end
+
   @doc """
   Get the current in-process list of adaptors.
   This call will wait behind the `:continue` message when the process starts
@@ -190,6 +203,15 @@ defmodule Lightning.AdaptorRegistry do
           list() | nil
   def versions_for(server \\ __MODULE__, module_name) do
     GenServer.call(server, {:versions_for, module_name}, @timeout)
+  end
+
+  @doc """
+  Get a latest version for a given module.
+  """
+  @spec latest_for(server :: GenServer.server(), module_name :: String.t()) ::
+          list() | nil
+  def latest_for(server \\ __MODULE__, module_name) do
+    GenServer.call(server, {:latest_for, module_name}, @timeout)
   end
 
   @doc """
