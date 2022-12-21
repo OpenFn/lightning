@@ -1076,6 +1076,41 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   describe "Show" do
+    test "no access to project on show", %{
+      conn: conn,
+      project: project_scoped
+    } do
+      job = workflow_job_fixture(project_id: project_scoped.id)
+      run = run_fixture(job_id: job.id)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_run_show_path(conn, :show, project_scoped.id, run.id)
+        )
+
+      assert html =~ run.id
+
+      project_unscoped = Lightning.ProjectsFixtures.project_fixture()
+
+      job = workflow_job_fixture(project_id: project_scoped.id)
+      run = run_fixture(job_id: job.id)
+
+      error =
+        live(
+          conn,
+          Routes.project_run_show_path(
+            conn,
+            :show,
+            project_unscoped.id,
+            run.id
+          )
+        )
+
+      assert error ==
+               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+    end
+
     test "log_view component" do
       log_lines = ["First line", "Second line"]
 
