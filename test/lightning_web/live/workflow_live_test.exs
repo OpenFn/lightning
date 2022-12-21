@@ -135,6 +135,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> pick_adaptor_name("@openfn/language-http")
 
+      assert view |> has_expected_version?("3.1.12")
+
+      view |> pick_adaptor_version("3.1.10")
+
       # TODO: test that the compiler and editor get the new adaptor
 
       view |> element("#job-form") |> render_submit()
@@ -159,7 +163,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert has_element?(view, "#builder-#{job.id}")
 
-      assert view |> has_expected_version?("3.1.12")
+      assert view |> has_expected_version?("3.1.10")
     end
   end
 
@@ -364,6 +368,12 @@ defmodule LightningWeb.WorkflowLiveTest do
     view
     |> element("#adaptor-name")
     |> render_change(%{adaptor_picker: %{"adaptor_name" => name}})
+  end
+
+  defp pick_adaptor_version(view, version) do
+    view
+    |> element("#adaptor-version")
+    |> render_change(%{adaptor_picker: %{"adaptor_version" => version}})
   end
 
   defp has_warning_on_editor_tab?(view) do
