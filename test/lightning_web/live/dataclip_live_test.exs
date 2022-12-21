@@ -19,7 +19,7 @@ defmodule LightningWeb.DataclipLiveTest do
   describe "Index" do
     setup [:create_dataclip]
 
-    test "no access to project", %{conn: conn} do
+    test "no access to project on index", %{conn: conn} do
       project = Lightning.ProjectsFixtures.project_fixture()
 
       error =
@@ -119,6 +119,45 @@ defmodule LightningWeb.DataclipLiveTest do
 
       # We don't delete dataclips yet, we just nil the body column
       assert has_element?(index_live, "#dataclip-#{dataclip.id}")
+    end
+  end
+
+  describe "Edit" do
+    setup [:create_dataclip]
+
+    test "no access to project on edit", %{
+      conn: conn,
+      dataclip: dataclip,
+      project: project_scoped
+    } do
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_dataclip_edit_path(
+            conn,
+            :edit,
+            project_scoped.id,
+            dataclip.id
+          )
+        )
+
+      assert html =~ dataclip.id
+
+      project_unscoped = Lightning.ProjectsFixtures.project_fixture()
+
+      error =
+        live(
+          conn,
+          Routes.project_dataclip_edit_path(
+            conn,
+            :edit,
+            project_unscoped.id,
+            dataclip.id
+          )
+        )
+
+      assert error ==
+               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
     end
   end
 end
