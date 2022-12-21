@@ -159,7 +159,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert has_element?(view, "#builder-#{job.id}")
 
-      assert view |> has_expected_adaptor?("@openfn/language-http@latest")
+      assert view |> has_expected_version?("3.1.12")
     end
   end
 
@@ -195,9 +195,11 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> pick_adaptor_name("@openfn/language-common")
 
+      view |> element("#adaptor-version") |> render()
+
       assert view
              |> has_option_text?("#adaptor-version", [
-               'latest',
+               'latest (1.6.2)',
                '2.14.0',
                '1.10.3',
                '1.2.22',
@@ -351,10 +353,10 @@ defmodule LightningWeb.WorkflowLiveTest do
     # TODO test that the current job is not visible in upstream jobs
   end
 
-  defp has_expected_adaptor?(view, expected_adaptor) do
+  defp has_expected_version?(view, expected_version) do
     view
     |> has_element?(
-      ~s{#job-form select#adaptor-version option[selected=selected][value="#{expected_adaptor}"]}
+      ~s{#job-form select#adaptor-version option[selected=selected][value="#{expected_version}"]}
     )
   end
 
