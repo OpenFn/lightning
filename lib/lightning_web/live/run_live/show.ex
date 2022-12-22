@@ -14,7 +14,10 @@ defmodule LightningWeb.RunLive.Show do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(active_menu_item: :runs, page_title: "Run")}
+     |> assign(
+       active_menu_item: :runs,
+       page_title: "Run"
+     )}
   end
 
   @impl true
@@ -24,10 +27,14 @@ defmodule LightningWeb.RunLive.Show do
 
   def apply_action(socket, :show, %{"id" => id}) do
     run =
-      from(r in Run, where: r.id == ^id, preload: :output_dataclip)
+      from(r in Run,
+        where: r.id == ^id,
+        preload: [:output_dataclip, :input_dataclip]
+      )
       |> Lightning.Repo.one()
 
-    socket |> assign(run: run)
+    socket
+    |> assign(run: run, show_input_dataclip: true)
   end
 
   @impl true
