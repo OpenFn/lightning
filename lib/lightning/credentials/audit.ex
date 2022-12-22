@@ -9,7 +9,8 @@ defmodule Lightning.Credentials.Audit do
       "created",
       "updated",
       "added_to_project",
-      "removed_from_project"
+      "removed_from_project",
+      "deleted"
     ]
 
   defmodule Metadata do
@@ -68,6 +69,6 @@ defmodule Lightning.Credentials.Audit do
     audit
     |> cast(attrs, [:event, :row_id, :actor_id])
     |> cast_embed(:metadata)
-    |> validate_required([:event, :row_id, :actor_id])
+    |> validate_required([:event, :actor_id])
   end
 end
