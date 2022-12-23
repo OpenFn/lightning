@@ -24,6 +24,7 @@ and this project adheres to
 - Added plausible analytics
 - Allow user to click on Webhook Trigger Node to copy webhook URL on workflow
   diagram
+- Allow any user to delete a credential that they own
 
 ### Changed
 
