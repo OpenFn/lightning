@@ -3,7 +3,15 @@ defmodule Lightning.CredentialsTest do
 
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
-  import Lightning.{CredentialsFixtures, AccountsFixtures, ProjectsFixtures}
+
+  import Lightning.{
+    JobsFixtures,
+    CredentialsFixtures,
+    AccountsFixtures,
+    ProjectsFixtures,
+    InvocationFixtures
+  }
+
   import Ecto.Query
 
   describe "Model interactions" do
@@ -154,14 +162,96 @@ defmodule Lightning.CredentialsTest do
       assert credential == Credentials.get_credential!(credential.id)
     end
 
-    test "delete_credential/1 deletes the credential" do
+    test "delete_credential/1 deletes the unused (by a job) credential" do
       user = user_fixture()
-      credential = credential_fixture(user_id: user.id)
-      assert {:ok, %Credential{}} = Credentials.delete_credential(credential)
+
+      project = project_fixture(user_id: user.id)
+
+      project_credential =
+        project_credential_fixture(user_id: user.id, project_id: project.id)
+
+      credential_id = project_credential.credential_id
+
+      job =
+        workflow_job_fixture(
+          project_id: project.id,
+          project_credential_id: project_credential.id
+        )
+
+      # 1 project_credential created
+      assert length(
+               Lightning.Projects.list_project_credentials(
+                 %Lightning.Projects.Project{id: project_credential.project_id}
+               )
+             ) == 1
+
+      assert {:ok,
+              %{
+                audit: %Lightning.Credentials.Audit{} = audit,
+                credential: %Credential{} = credential
+              }} =
+               Credentials.delete_credential(%Lightning.Credentials.Credential{
+                 id: credential_id,
+                 user_id: user.id
+               })
+
+      assert audit.event == "deleted"
+      assert audit.row_id == credential_id
+
+      # previous  audit records are not deleted
+      # a new audit (event: deleted) is added
+      assert from(a in Lightning.Credentials.Audit,
+               where: a.row_id == ^credential.id
+             )
+             |> Repo.all()
+             |> Enum.all?(fn a ->
+               a.row_id == credential.id &&
+                 a.event in ["created", "updated", "deleted", "added_to_project"]
+             end)
 
       assert_raise Ecto.NoResultsError, fn ->
         Credentials.get_credential!(credential.id)
       end
+
+      # no more project_credentials
+      assert length(
+               Lightning.Projects.list_project_credentials(
+                 %Lightning.Projects.Project{id: project_credential.project_id}
+               )
+             ) == 0
+
+      job = Repo.get!(Lightning.Jobs.Job, job.id)
+
+      assert job.project_credential_id == nil
+    end
+
+    test "delete_credential/1 cannot delete a used credential (by a job)" do
+      user = user_fixture()
+
+      project = project_fixture()
+
+      project_credential =
+        project_credential_fixture(user_id: user.id, project_id: project.id)
+
+      job =
+        workflow_job_fixture(
+          project_id: project.id,
+          project_credential_id: project_credential.id
+        )
+
+      run_fixture(job_id: job.id)
+
+      assert {:error,
+              %Ecto.Changeset{
+                errors: [
+                  job_using_credential:
+                    {"Can't delete. This credential is being used by at least one job",
+                     []}
+                ]
+              }} =
+               Credentials.delete_credential(%Credential{
+                 id: project_credential.credential_id
+               })
     end
 
     test "change_credential/1 returns a credential changeset" do

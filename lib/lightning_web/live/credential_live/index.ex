@@ -51,17 +51,15 @@ defmodule LightningWeb.CredentialLive.Index do
 
       {:error, changeset} ->
         # must be a better way (traverse errors, get messages ...)
-        cond do
-          has_error?(changeset, :job_using_credential) ->
-            {:noreply,
-             socket
-             |> put_flash(
-               :error,
-               "Can't delete. This credential is being used by at least one job"
-             )}
-
-          true ->
-            {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+        if has_error?(changeset, :job_using_credential) do
+          {:noreply,
+           socket
+           |> put_flash(
+             :error,
+             "Can't delete. This credential is being used by at least one job"
+           )}
+        else
+          {:noreply, socket |> put_flash(:error, "Can't delete credential")}
         end
     end
   end

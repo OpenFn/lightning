@@ -219,16 +219,10 @@ defmodule Lightning.Credentials do
          "Can't delete. This credential is being used by at least one job"
        )}
     else
-      # Repo.delete(credential)
       Multi.new()
       |> Multi.delete(:credential, credential)
       |> Multi.insert(:audit, fn _ ->
-        Audit.event("deleted", nil, credential.user_id, %{
-          before: %{
-            credential_id: credential.id
-          },
-          after: %{credential_id: nil}
-        })
+        Audit.event("deleted", credential.id, credential.user_id)
       end)
       |> Repo.transaction()
     end
@@ -236,10 +230,11 @@ defmodule Lightning.Credentials do
 
   defp job_uses_credential?(%Credential{} = credential) do
     query =
-      from(j in Lightning.Jobs.Job,
+      from(r in Lightning.Invocation.Run,
+        join: j in assoc(r, :job),
         join: pc in assoc(j, :project_credential),
         where: pc.credential_id == ^credential.id,
-        select: j.id
+        select: r.id
       )
 
     length(query |> Repo.all()) > 0

@@ -2,9 +2,12 @@ defmodule LightningWeb.CredentialLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Lightning.CredentialsFixtures
 
-  import Lightning.JobsFixtures
+  import Lightning.{
+    JobsFixtures,
+    CredentialsFixtures,
+    InvocationFixtures
+  }
 
   alias LightningWeb.RouteHelpers
   alias Lightning.Credentials
@@ -88,8 +91,8 @@ defmodule LightningWeb.CredentialLiveTest do
     end
 
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
-    @tag :skip
-    test "deletes credential without a shared project", %{
+
+    test "deletes credential not used by a job", %{
       conn: conn,
       credential: credential
     } do
@@ -101,17 +104,42 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> element("#credential-#{credential.id} a", "Delete")
-             |> render_click()
+             |> render_click() =~ "Credential deleted"
 
       refute has_element?(index_live, "#credential-#{credential.id}")
     end
 
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
-    @tag :skip
-    test "deletes a credential with a shared project"
-    # displays warning
-    # removes project_credential
-    # removes from any jobs that are currently using it
+
+    test "do not delete a credential used by a job", %{
+      conn: conn,
+      project_credential: project_credential
+    } do
+      job =
+        workflow_job_fixture(
+          project_id: project_credential.project_id,
+          project_credential_id: project_credential.id
+        )
+
+      run_fixture(job_id: job.id)
+
+      credential_id = project_credential.credential_id
+
+      Lightning.Repo.all(Lightning.Credentials.Credential)
+
+      {:ok, index_live, _html} =
+        live(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      assert index_live
+             |> element("#credential-#{credential_id} a", "Delete")
+             |> render_click() =~
+               "This credential is being used by at least one job"
+
+      assert has_element?(index_live, "#credential-#{credential_id}")
+    end
   end
 
   describe "Clicking new from the list view" do

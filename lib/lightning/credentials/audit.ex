@@ -50,15 +50,13 @@ defmodule Lightning.Credentials.Audit do
   import Ecto.Changeset
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials.Credential
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "credentials_audit" do
     field :event, :string
-
+    field :row_id, Ecto.UUID
     embeds_one :metadata, Metadata
-    belongs_to :row, Credential
     belongs_to :actor, User
 
     timestamps(updated_at: false)
