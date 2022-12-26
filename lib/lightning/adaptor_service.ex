@@ -143,7 +143,7 @@ defmodule Lightning.AdaptorService do
     end
 
     @doc """
-    Given a list of _potentially_ nested package.json files (i.e. dependancies of
+    Given a list of _potentially_ nested package.json files (i.e. dependencies of
     our adaptors), `filter_parent_paths/1` reduces the list down to the parent
     directories by grouping directory names by their shortest common path.
     """

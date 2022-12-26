@@ -1,7 +1,7 @@
 defmodule Lightning.AuthProviders.Handler do
   @moduledoc """
   Module which wraps Oauth configuration and a WellKnown document
-  into a conveinient struct that can be used to authenticate users against
+  into a convenient struct that can be used to authenticate users against
   any OIDC compliant provider.
   """
 

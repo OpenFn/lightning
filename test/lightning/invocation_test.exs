@@ -334,7 +334,7 @@ defmodule Lightning.InvocationTest do
 
       ### when inserting in this order
 
-      # work_oder
+      # work_order
       #   -- attempt_one
       #       -- run_one
       #       -- run_two
@@ -344,7 +344,7 @@ defmodule Lightning.InvocationTest do
 
       ### we expect
 
-      # work_oder
+      # work_order
       #   -- attempt_two
       #       -- run_four
       #       -- run_three

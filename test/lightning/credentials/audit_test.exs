@@ -36,7 +36,7 @@ defmodule Lightning.Credentials.AuditTest do
       assert audit.row_id == credential.id
 
       # Check that the body attribute is encrypted in audit records too.
-      # We can only test the beginning of the encypted string as the
+      # We can only test the beginning of the encrypted string as the
       # algorithm include randomness or padding of some sort.
       # %{}
       assert audit.metadata.before.body =~ "AQpBRVMuR0NNLlYx"

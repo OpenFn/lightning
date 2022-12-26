@@ -85,7 +85,7 @@ defmodule Lightning.AuthProviders do
   end
 
   @doc """
-  Retrive the authorization url for a given handler or handler name.
+  Retrieve the authorization url for a given handler or handler name.
   """
   @spec get_authorize_url(String.t() | Handler.t()) :: String.t() | nil
   def get_authorize_url(name) when is_binary(name) do

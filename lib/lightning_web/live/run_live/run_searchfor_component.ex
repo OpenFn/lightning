@@ -1,6 +1,6 @@
 defmodule Lightning.RunLive.RunSearchForComponent do
   @moduledoc """
-  Run Search for MutliSelect.
+  Run Search for MultiSelect.
   """
   use LightningWeb, :live_component
 
