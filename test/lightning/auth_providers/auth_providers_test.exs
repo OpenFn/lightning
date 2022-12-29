@@ -71,7 +71,7 @@ defmodule Lightning.AuthProvidersTest do
              "Should find the handler that was just created"
 
       assert AuthProviders.get_handler("bar") == {:error, :not_found},
-             "Shouldn't be able to find a non-existant handler"
+             "Shouldn't be able to find a non-existent handler"
 
       auth_url =
         URI.new!(endpoint_url)

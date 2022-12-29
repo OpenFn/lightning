@@ -1,6 +1,6 @@
 defmodule Lightning.RunSearchForm do
   @moduledoc """
-  Run filtering serach form.
+  Run filtering search form.
   """
   use Ecto.Schema
 

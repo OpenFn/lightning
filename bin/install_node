@@ -54,7 +54,7 @@ if [[ $download_only = "false" ]]; then
 	echo "- Extracting to /usr/local"
 	tar xzf node-v${node_version}-linux-x64.tar.gz --strip-components=1 -C /usr/local
 
-	echo "- Checking for existance of binaries in PATH"
+	echo "- Checking for existence of binaries in PATH"
 	which node
 	which npm
 
