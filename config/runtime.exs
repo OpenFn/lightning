@@ -58,6 +58,11 @@ config :lightning,
        System.get_env("QUEUE_RESULT_RETENTION_PERIOD", "60")
        |> String.to_integer()
 
+config :lightning,
+       :init_project_for_new_user,
+       System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
+       |> String.to_atom()
+
 # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
 config :sentry,
   filter: Lightning.SentryEventFilter,

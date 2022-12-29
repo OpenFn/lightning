@@ -83,7 +83,7 @@ defmodule Lightning.Accounts.User do
 
   defp validate_email(changeset) do
     changeset
-    |> validate_required([:email])
+    |> validate_required([:email, :first_name])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
       message: "must have the @ sign and no spaces"
     )

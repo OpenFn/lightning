@@ -120,6 +120,7 @@ defmodule Lightning.AccountsTest do
       {:ok, user} =
         Accounts.register_superuser(%{
           email: email,
+          first_name: "Sizwe",
           password: valid_user_password()
         })
 
@@ -136,7 +137,7 @@ defmodule Lightning.AccountsTest do
       assert %Ecto.Changeset{} =
                changeset = Accounts.change_user_registration(%User{})
 
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :email, :first_name]
     end
 
     test "allows fields to be set" do
@@ -159,7 +160,7 @@ defmodule Lightning.AccountsTest do
   describe "change_user_email/2" do
     test "returns a user changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
-      assert changeset.required == [:email]
+      assert changeset.required == [:email, :first_name]
     end
   end
 
