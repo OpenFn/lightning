@@ -27,7 +27,6 @@ Lightning.Credentials.Policy.html
 Lightning.Credentials.Schema.html
 Lightning.Credentials.SensitiveValues.html
 Lightning.Credentials.html
-Lightning.Demo.html
 Lightning.ExportUtils.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
@@ -67,6 +66,7 @@ Lightning.Runtime.LogAgent.html
 Lightning.Runtime.Result.html
 Lightning.Runtime.RunSpec.html
 Lightning.Scrubber.html
+Lightning.SetupUtils.html
 Lightning.Vault.html
 Lightning.WorkOrder.html
 Lightning.WorkOrderService.html
@@ -173,8 +173,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-CC85D25A.js
-dist/sidebar_items-D1D369AD.js
+dist/search_items-BD39480D.js
+dist/sidebar_items-67E28EF9.js
 index.html
 readme.html
 search.html
