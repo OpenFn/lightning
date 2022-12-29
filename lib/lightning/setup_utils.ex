@@ -1,4 +1,4 @@
-defmodule Lightning.Demo do
+defmodule Lightning.SetupUtils do
   @moduledoc """
   Demo encapsulates logic for setting up initial data for the demo site
   """
@@ -7,7 +7,7 @@ defmodule Lightning.Demo do
 
   import Ecto.Query
 
-  @spec setup(nil | maybe_improper_list | map) :: %{
+  @spec setup_demo(nil | maybe_improper_list | map) :: %{
           jobs: [...],
           projects: [atom | %{:id => any, optional(any) => any}, ...],
           users: [atom | %{:id => any, optional(any) => any}, ...],
@@ -16,7 +16,7 @@ defmodule Lightning.Demo do
   @doc """
   Creates initial data and returns the created records.
   """
-  def setup(opts \\ [create_super: false]) do
+  def setup_demo(opts \\ [create_super: false]) do
     {:ok, super_user} =
       if opts[:create_super] do
         Accounts.register_superuser(%{
@@ -70,6 +70,55 @@ defmodule Lightning.Demo do
       projects: [openhie_project, dhis2_project],
       workflows: [openhie_workflow, dhis2_workflow],
       jobs: openhie_jobs ++ dhis2_jobs
+    }
+  end
+
+  def create_starter_project(name, project_users) do
+    {:ok, project} =
+      Projects.create_project(%{
+        name: name,
+        project_users: project_users
+      })
+
+    {:ok, workflow} =
+      Workflows.create_workflow(%{
+        name: "Sample Workflow",
+        project_id: project.id
+      })
+
+    {:ok, job_1} =
+      Jobs.create_job(%{
+        name: "Check if age is over 18 mo",
+        body:
+          "fn(state => state.data.age_in_months > 18 ? state: throw 'Not eligible.');",
+        adaptor: "@openfn/language-http",
+        trigger: %{type: "webhook"},
+        workflow_id: workflow.id
+      })
+
+    {:ok, job_2} =
+      Jobs.create_job(%{
+        name: "Convert to OHIE standard",
+        body:
+          "fn(state => ({ name: state.data.age, age: state.data.age_in_months });",
+        adaptor: "@openfn/language-common",
+        trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
+        workflow_id: workflow.id
+      })
+
+    {:ok, job_3} =
+      Jobs.create_job(%{
+        name: "Load to DHIS2",
+        body: "fn(state => state);",
+        adaptor: "@openfn/language-dhis2",
+        trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
+        workflow_id: workflow.id
+      })
+
+    %{
+      project: project,
+      workflow: workflow,
+      jobs: [job_1, job_2, job_3]
     }
   end
 

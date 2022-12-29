@@ -51,7 +51,11 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       conn =
         get(
           post(conn, Routes.user_registration_path(conn, :create), %{
-            "user" => valid_user_attributes(email: unique_user_email())
+            "user" =>
+              valid_user_attributes(
+                email: unique_user_email(),
+                first_name: "Emory"
+              )
           }),
           "/"
         )
@@ -59,7 +63,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       assert conn.assigns.current_user
              |> Ecto.assoc(:projects)
              |> Lightning.Repo.one!()
-             |> Map.get(:name) == "openhie-project"
+             |> Map.get(:name) == "emory-demo"
     end
 
     test "render errors for invalid data", %{conn: conn} do

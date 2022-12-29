@@ -10,8 +10,14 @@ defmodule LightningWeb.UserRegistrationController do
     render(conn, "new.html", changeset: changeset)
   end
 
-  defp create_initial_project(%Lightning.Accounts.User{id: user_id}) do
-    Lightning.Demo.create_openhie_project([%{user_id: user_id, role: :admin}])
+  defp create_initial_project(%Lightning.Accounts.User{
+         id: user_id,
+         first_name: first_name
+       }) do
+    Lightning.SetupUtils.create_starter_project(
+      "#{String.downcase(first_name)}-demo",
+      [%{user_id: user_id, role: :admin}]
+    )
   end
 
   def create(conn, %{"user" => user_params}) do

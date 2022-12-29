@@ -6,11 +6,13 @@ defmodule Lightning.AccountsFixtures do
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "hello world!"
+  def valid_first_name, do: "Anna"
 
   def valid_user_attributes(attrs \\ []) when is_list(attrs) do
     Enum.into(attrs, %{
       email: unique_user_email(),
-      password: valid_user_password()
+      password: valid_user_password(),
+      first_name: valid_first_name()
     })
   end
 

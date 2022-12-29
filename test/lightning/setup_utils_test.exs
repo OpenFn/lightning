@@ -1,4 +1,4 @@
-defmodule Lightning.DemoTest do
+defmodule Lightning.SetupUtilsTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Accounts
@@ -9,7 +9,7 @@ defmodule Lightning.DemoTest do
 
   describe "Setup demo site seed data" do
     setup do
-      Lightning.Demo.setup(create_super: true)
+      Lightning.SetupUtils.setup_demo(create_super: true)
     end
 
     test "all initial data is present in database", %{
@@ -101,7 +101,7 @@ defmodule Lightning.DemoTest do
 
   describe "Tear down demo data" do
     setup do
-      Lightning.Demo.setup(create_super: true)
+      Lightning.SetupUtils.setup_demo(create_super: true)
     end
 
     test "all initial data gets wiped out of database" do
@@ -110,7 +110,7 @@ defmodule Lightning.DemoTest do
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
 
-      Lightning.Demo.tear_down(destroy_super: true)
+      Lightning.SetupUtils.tear_down(destroy_super: true)
 
       assert Lightning.Accounts.list_users() |> Enum.count() == 0
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
@@ -124,7 +124,7 @@ defmodule Lightning.DemoTest do
       assert Lightning.Workflows.list_workflows() |> Enum.count() == 2
       assert Lightning.Jobs.list_jobs() |> Enum.count() == 6
 
-      Lightning.Demo.tear_down(destroy_super: false)
+      Lightning.SetupUtils.tear_down(destroy_super: false)
 
       assert Lightning.Accounts.list_users() |> Enum.count() == 1
       assert Lightning.Projects.list_projects() |> Enum.count() == 0
