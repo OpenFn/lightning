@@ -134,7 +134,6 @@ defmodule LightningWeb.RunLive.Components do
   @spec run_viewer(map) :: Phoenix.LiveView.Rendered.t()
   def run_viewer(assigns) do
     assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
-    # IO.inspect(assigns)
 
     ~H"""
     <.run_details run={@run} />
