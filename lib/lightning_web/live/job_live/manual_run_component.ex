@@ -86,7 +86,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     dataclips_options = dataclips |> Enum.map(&{&1.id, &1.id})
 
     dataclips_options =
-      if job.trigger.type == :webhook do
+      if job.trigger.type in [:webhook, :cron] do
         dataclips_options ++ [{"Custom input", "custom"}]
       else
         dataclips_options
@@ -124,7 +124,9 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        on_run: on_run,
        selected_dataclip: selected_dataclip |> format()
      )
-     |> assign_new(:custom_input?, fn -> false end)
+     |> assign_new(:custom_input?, fn ->
+       is_nil(selected_dataclip) && job.trigger.type in [:webhook, :cron]
+     end)
      |> update_form(init_form)}
   end
 

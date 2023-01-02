@@ -87,13 +87,42 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            |> has_element?(
              "select[name='manual_run[dataclip_id]'] option[value='custom']"
            )
+
+    assert view
+           |> has_element?("textarea#manual_run_body")
   end
 
-  test "has no option on job with no runs and not of type webhook", %{
+  test "has custom option on cron type job ", %{
     conn: conn,
     project: project
   } do
     job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
+
+    {:ok, view, _html} =
+      live(
+        conn,
+        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+      )
+
+    assert view
+           |> has_element?(
+             "select[name='manual_run[dataclip_id]'] option[value='custom']"
+           )
+
+    assert view
+           |> has_element?("textarea#manual_run_body")
+  end
+
+  test "has no option on job with no runs and of type on_job_success", %{
+    conn: conn,
+    project: project
+  } do
+    upstream_job = job_fixture()
+
+    job =
+      job_fixture(
+        trigger: %{type: :on_job_success, upstream_job_id: upstream_job.id}
+      )
 
     {:ok, view, _html} =
       live(
