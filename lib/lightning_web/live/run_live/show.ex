@@ -34,7 +34,7 @@ defmodule LightningWeb.RunLive.Show do
       |> Lightning.Repo.one()
 
     socket
-    |> assign(run: run, show_input_dataclip: true)
+    |> assign(run: run)
   end
 
   @impl true
@@ -47,7 +47,10 @@ defmodule LightningWeb.RunLive.Show do
         </Layout.header>
       </:header>
       <Layout.centered>
-        <LightningWeb.RunLive.Components.run_viewer run={@run} />
+        <LightningWeb.RunLive.Components.run_viewer
+          run={@run}
+          show_input_dataclip={true}
+        />
       </Layout.centered>
     </Layout.page_content>
     """

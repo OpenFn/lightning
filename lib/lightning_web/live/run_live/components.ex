@@ -129,9 +129,13 @@ defmodule LightningWeb.RunLive.Components do
 
   # --------------- Run Details ---------------
   attr :run, :any, required: true
+  attr :show_input_dataclip, :boolean
 
+  @spec run_viewer(map) :: Phoenix.LiveView.Rendered.t()
   def run_viewer(assigns) do
-    # IO.inspect(assigns.show_input_dataclip)
+    assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
+    # IO.inspect(assigns)
+
     ~H"""
     <.run_details run={@run} />
     <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
