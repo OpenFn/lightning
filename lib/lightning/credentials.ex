@@ -234,7 +234,8 @@ defmodule Lightning.Credentials do
         join: j in assoc(r, :job),
         join: pc in assoc(j, :project_credential),
         where: pc.credential_id == ^credential.id,
-        select: r.id
+        select: r.id,
+        limit: 1
       )
 
     length(query |> Repo.all()) > 0
