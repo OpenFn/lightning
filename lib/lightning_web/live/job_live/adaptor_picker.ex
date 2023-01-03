@@ -60,13 +60,13 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   @impl true
   def update(%{form: form, on_change: on_change}, socket) do
-    {adaptor_name, version, latest, adaptors, versions} =
+    {adaptor_name, version, adaptors, versions} =
       get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
     {:ok,
      socket
      |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptor_version, version || latest)
+     |> assign(:adaptor_version, version || "latest")
      |> assign(:adaptors, adaptors)
      |> assign(:versions, versions)
      |> assign(:on_change, on_change)
@@ -98,7 +98,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
       |> Enum.map(&display_name_for_adaptor(&1.name))
       |> Enum.sort()
 
-    {module_name, version, latest, versions} =
+    {module_name, version, versions} =
       if adaptor do
         {module_name, version} =
           Lightning.AdaptorRegistry.resolve_package_name(adaptor)
@@ -110,18 +110,23 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           |> List.wrap()
           |> Enum.map(&Map.get(&1, :version))
           |> Enum.sort_by(&Version.parse(&1), :desc)
-          |> Enum.reject(fn version -> version == latest end)
           |> Enum.map(fn version ->
             [key: version, value: version]
           end)
 
-        {module_name, version, latest,
-         [[key: "latest (#{latest})", value: latest] | versions]}
+        key =
+          if latest do
+            "#{latest} (auto-upgrade)"
+          else
+            ""
+          end
+
+        {module_name, version, [[key: key, value: "latest"] | versions]}
       else
-        {nil, nil, nil, []}
+        {nil, nil, []}
       end
 
-    {module_name, version, latest, adaptor_names, versions}
+    {module_name, version, adaptor_names, versions}
   end
 
   @impl true
@@ -130,13 +135,12 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         %{"adaptor_picker" => %{"adaptor_name" => adaptor_name}},
         socket
       ) do
-    latest = Lightning.AdaptorRegistry.latest_for(adaptor_name)
-    socket.assigns.on_change.("#{adaptor_name}@#{latest}")
+    socket.assigns.on_change.("#{adaptor_name}@latest")
 
     {:noreply,
      socket
      |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptor_version, latest)}
+     |> assign(:adaptor_version, "latest")}
   end
 
   def handle_event(

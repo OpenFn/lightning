@@ -298,4 +298,18 @@ defmodule Lightning.AdaptorRegistry do
 
     {package_name, version}
   end
+
+  def resolve_adaptor(adaptor) do
+    __MODULE__.resolve_package_name(adaptor)
+    |> case do
+      {nil, nil} ->
+        ""
+
+      {adaptor_name, "latest"} ->
+        "#{adaptor_name}@#{__MODULE__.latest_for(adaptor_name)}"
+
+      _ ->
+        adaptor
+    end
+  end
 end

@@ -155,13 +155,13 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 phx-update="ignore"
                 id={"job-editor-#{@job_id}"}
                 class=" rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
-                data-adaptor={@job_adaptor}
+                data-adaptor={@resolved_job_adaptor}
                 data-source={@job_body}
                 data-change-event="job_body_changed"
                 phx-target={@myself}
               />
               <div class="flex-1 overflow-auto">
-                <.docs_component adaptor={@job_adaptor} />
+                <.docs_component adaptor={@resolved_job_adaptor} />
               </div>
             </div>
           </.panel_content>
@@ -415,6 +415,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        current_user: current_user,
        job_body: job.body,
        job_adaptor: job.adaptor,
+       resolved_job_adaptor:
+         Lightning.AdaptorRegistry.resolve_adaptor(job.adaptor),
        return_to: return_to,
        workflow: assigns[:workflow],
        changeset: changeset,
@@ -432,6 +434,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
     {:ok,
      socket
      |> assign(job_adaptor: job_adaptor)
+     |> assign(
+       resolved_job_adaptor:
+         Lightning.AdaptorRegistry.resolve_adaptor(job_adaptor)
+     )
      |> assign_changeset_and_params(%{"adaptor" => job_adaptor})}
   end
 

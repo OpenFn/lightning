@@ -135,7 +135,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> pick_adaptor_name("@openfn/language-http")
 
-      assert view |> has_expected_version?("3.1.12")
+      assert view |> has_expected_version?("latest")
 
       view |> pick_adaptor_version("3.1.10")
 
@@ -203,7 +203,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> has_option_text?("#adaptor-version", [
-               'latest (1.6.2)',
+               '1.6.2 (auto-upgrade)',
                '2.14.0',
                '1.10.3',
                '1.2.22',
