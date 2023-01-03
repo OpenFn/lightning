@@ -48,6 +48,17 @@ config :lightning, Oban,
     runs: System.get_env("GLOBAL_RUNS_CONCURRENCY", "1") |> String.to_integer()
   ]
 
+# https://plausible.io/ is an open-source, privacy-friendly alternative to
+# Google Analytics. Provide an src and data-domain for your script below.
+if System.get_env("PLAUSIBLE_SRC"),
+  do:
+    config(
+      :lightning,
+      :plausible,
+      src: System.get_env("PLAUSIBLE_SRC"),
+      "data-domain": System.get_env("PLAUSIBLE_DATA_DOMAIN")
+    )
+
 config :lightning,
        :max_run_duration,
        System.get_env("MAX_RUN_DURATION", "60000")
