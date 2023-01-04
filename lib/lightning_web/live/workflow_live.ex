@@ -54,7 +54,11 @@ defmodule LightningWeb.WorkflowLive do
       <div class="relative h-full">
         <%= case @live_action do %>
           <% :index -> %>
-            <.workflow_list page={@page} project={@project} />
+            <.workflow_list
+              page={@page}
+              project={@project}
+              pagination_path={@pagination_path}
+            />
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
               <div
@@ -194,7 +198,14 @@ defmodule LightningWeb.WorkflowLive do
      |> assign(
        active_menu_item: :projects,
        new_credential: false,
-       builder_state: %{}
+       builder_state: %{},
+       pagination_path:
+         &Routes.project_workflow_path(
+           socket,
+           :index,
+           project,
+           &1
+         )
      )}
   end
 
