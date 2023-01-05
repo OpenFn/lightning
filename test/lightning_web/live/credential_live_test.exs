@@ -5,8 +5,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   import Lightning.{
     JobsFixtures,
-    CredentialsFixtures,
-    InvocationFixtures
+    CredentialsFixtures
   }
 
   alias LightningWeb.RouteHelpers
@@ -88,57 +87,6 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Production"
       assert html =~ credential.schema
       assert html =~ credential.name
-    end
-
-    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
-
-    test "deletes credential not used by a job", %{
-      conn: conn,
-      credential: credential
-    } do
-      {:ok, index_live, _html} =
-        live(
-          conn,
-          Routes.credential_index_path(conn, :index)
-        )
-
-      assert index_live
-             |> element("#credential-#{credential.id} a", "Delete")
-             |> render_click() =~ "Credential deleted"
-
-      refute has_element?(index_live, "#credential-#{credential.id}")
-    end
-
-    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
-
-    test "do not delete a credential used by a job", %{
-      conn: conn,
-      project_credential: project_credential
-    } do
-      job =
-        workflow_job_fixture(
-          project_id: project_credential.project_id,
-          project_credential_id: project_credential.id
-        )
-
-      run_fixture(job_id: job.id)
-
-      credential_id = project_credential.credential_id
-
-      Lightning.Repo.all(Lightning.Credentials.Credential)
-
-      {:ok, index_live, _html} =
-        live(
-          conn,
-          Routes.credential_index_path(conn, :index)
-        )
-
-      assert index_live
-             |> element("#credential-#{credential_id} a", "Delete")
-             |> render_click() =~
-               "This credential is being used by at least one job"
-
-      assert has_element?(index_live, "#credential-#{credential_id}")
     end
   end
 

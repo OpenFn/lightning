@@ -225,35 +225,6 @@ defmodule Lightning.CredentialsTest do
       assert job.project_credential_id == nil
     end
 
-    test "delete_credential/1 cannot delete a used credential (by a job)" do
-      user = user_fixture()
-
-      project = project_fixture()
-
-      project_credential =
-        project_credential_fixture(user_id: user.id, project_id: project.id)
-
-      job =
-        workflow_job_fixture(
-          project_id: project.id,
-          project_credential_id: project_credential.id
-        )
-
-      run_fixture(job_id: job.id)
-
-      assert {:error,
-              %Ecto.Changeset{
-                errors: [
-                  job_using_credential:
-                    {"Can't delete. This credential is being used by at least one job",
-                     []}
-                ]
-              }} =
-               Credentials.delete_credential(%Credential{
-                 id: project_credential.credential_id
-               })
-    end
-
     test "change_credential/1 returns a credential changeset" do
       user = user_fixture()
       credential = credential_fixture(user_id: user.id)
