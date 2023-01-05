@@ -6,8 +6,8 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   import Ecto.Changeset, only: [get_field: 2]
 
   @start_trigger_types [
-    Cron: "cron",
-    Webhook: "webhook"
+    "Cron Schedule": "cron",
+    "Webhook Event": "webhook"
   ]
 
   @flow_trigger_types [
