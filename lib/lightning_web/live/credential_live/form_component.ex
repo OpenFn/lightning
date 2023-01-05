@@ -10,6 +10,18 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   import LightningWeb.Components.Common
 
   @impl true
+  def mount(socket) do
+    schemas_options =
+      Path.wildcard("priv/schemas/*.json")
+      |> Enum.map(fn p ->
+        name = p |> Path.basename() |> String.replace(".json", "")
+        {name, name}
+      end)
+
+    {:ok, socket |> assign(:schemas_options, schemas_options)}
+  end
+
+  @impl true
   def update(%{credential: credential, projects: projects} = assigns, socket) do
     changeset = Credentials.change_credential(credential)
 
@@ -125,6 +137,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         socket |> assign(schema: nil, schema_changeset: nil)
 
       schema_type ->
+
+        IO.inspect(schema_type)
         schema =
           Credentials.Schema.new(
             read_schema(schema_type),
