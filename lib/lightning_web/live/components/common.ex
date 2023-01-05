@@ -194,4 +194,28 @@ defmodule LightningWeb.Components.Common do
          "transform opacity-0 scale-95"}
     )
   end
+
+  def dataclip_type_pill(assigns) do
+    base_classes = ~w[
+      px-2 py-1 rounded-full inline-block text-sm font-mono
+    ]
+
+    class =
+      base_classes ++
+        case assigns[:dataclip].type do
+          :run_result -> ~w[bg-purple-500 text-purple-900]
+          :http_request -> ~w[bg-green-500 text-green-900]
+          :global -> ~w[bg-blue-500 text-blue-900]
+          :saved_input -> ~w[bg-yellow-500 text-yellow-900]
+          _ -> []
+        end
+
+    assigns = assign(assigns, class: class)
+
+    ~H"""
+    <div class={@class}>
+      <%= @dataclip.type %>
+    </div>
+    """
+  end
 end

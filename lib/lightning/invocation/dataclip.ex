@@ -14,6 +14,10 @@ defmodule Lightning.Invocation.Dataclip do
     When repetitive static data is needed to be maintained, instead of hard-coding
     into a Job - a more convenient solution is to create a `:global` Dataclip
     and access it inside the Job.
+  * `:run_result`
+    The final state of a successful run.
+  * `:saved_input`
+    An arbitrary input, created by a user. (Only configuration will be overwritten.)
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -29,8 +33,8 @@ defmodule Lightning.Invocation.Dataclip do
           source_run: Run.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
-  @type source_type :: :http_request | :global | :run_result
-  @source_types [:http_request, :global, :run_result]
+  @type source_type :: :http_request | :global | :run_result | :saved_input
+  @source_types [:http_request, :global, :run_result, :saved_input]
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

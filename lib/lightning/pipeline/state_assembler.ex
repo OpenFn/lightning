@@ -13,6 +13,11 @@ defmodule Lightning.Pipeline.StateAssembler do
   { "data": <the dataclip>, "configuration": <the job's credential> }
   ```
 
+  ## Saved inputs
+
+  Saved custom inputs will only have state.configuration changed, everything else
+  will remain as displayed.
+
   ### Flow Jobs
 
   When a Job is triggered by a previous Jobs success or failure these are the
@@ -79,6 +84,12 @@ defmodule Lightning.Pipeline.StateAssembler do
         |> Jason.encode_to_iodata!()
 
       {:run_result, nil} ->
+        Jason.encode_to_iodata!(
+          dataclip_body
+          |> Map.put("configuration", credential)
+        )
+
+      {:saved_input, nil} ->
         Jason.encode_to_iodata!(
           dataclip_body
           |> Map.put("configuration", credential)
