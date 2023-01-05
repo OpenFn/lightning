@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import Monaco from "@monaco-editor/react";
 import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types";
 
@@ -13,7 +13,7 @@ type EditorProps = {
 }
 
 // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.IStandaloneEditorConstructionOptions.html
-const options: MonacoProps['options'] = {
+const defaultOptions: MonacoProps['options'] = {
   dragAndDrop: false,
   lineNumbersMinChars: 3,
   minimap: {
@@ -63,6 +63,8 @@ async function loadDTS(specifier: string): Promise<Lib[]> {
 export default function Editor({ source, adaptor, onChange }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [monaco, setMonaco] = useState<typeof Monaco>();
+  const [options, setOptions] = useState(defaultOptions);
+  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject}>({});
 
   const handleSourceChange = useCallback((newSource: string) => {
     if (onChange) {
@@ -81,13 +83,12 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       noLib: true,
     });
 
-    const handleInsertSnippet = (e: Event) => {
+    listeners.current.insertSnippet = (e: Event) => {
       // Snippets are always added to the end of the job code
       const model = editor.getModel()
       const lastLine = model.getLineCount();
       const eol = model.getLineLength(lastLine)
       const op = {
-        // TODO need to be in the end col...
         range: new monaco.Range(lastLine, eol, lastLine, eol),
         // @ts-ignore event typings
         text: `\n${e.snippet}`,
@@ -99,7 +100,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       editor.executeEdits("snippets", [op]);
 
       // Ensure the snippet is fully visible
-      const newLastLine = editor.model.getLineCount();
+      const newLastLine = model.getLineCount();
       editor.revealLines(lastLine + 1, newLastLine, 0) // 0 = smooth scroll
 
       // Set the selection to the start of the snippet
@@ -107,15 +108,31 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       
       // ensure the editor has focus
       editor.focus();
-    }
+    };
 
-    document.addEventListener('insert-snippet', handleInsertSnippet)
-    
-    return () => {
-      document.removeEventListener(handleInsertSnippet);
-     }
+    document.addEventListener('insert-snippet', listeners.current.insertSnippet);
   }, []);
 
+  useEffect(() => {
+    // Create a node to hold overflow widgets
+    // This needs to be at the top level so that tooltips clip over Lightning UIs
+    const overflowNode = document.createElement('div');
+    overflowNode.className = "monaco-editor widgets-overflow-container";
+    document.body.appendChild(overflowNode);
+
+    setOptions({
+      ...defaultOptions,
+      overflowWidgetsDomNode: overflowNode,
+      fixedOverflowWidgets: true
+    })
+
+    return () => {
+      overflowNode.parentNode?.removeChild(overflowNode);
+      if (listeners.current?.insertSnippet) {
+        document.removeEventListener('insert-snippet', listeners.current.insertSnippet);
+      }
+     }
+  }, []);
   
   useEffect(() => {
     if (adaptor) {
