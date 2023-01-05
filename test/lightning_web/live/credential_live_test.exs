@@ -5,7 +5,8 @@ defmodule LightningWeb.CredentialLiveTest do
 
   import Lightning.{
     JobsFixtures,
-    CredentialsFixtures
+    CredentialsFixtures,
+    InvocationFixtures
   }
 
   alias LightningWeb.RouteHelpers
@@ -88,6 +89,26 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ credential.schema
       assert html =~ credential.name
     end
+
+    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
+
+    test "deletes credential not used by a job", %{
+      conn: conn,
+      credential: credential
+    } do
+      {:ok, index_live, _html} =
+        live(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      assert index_live
+             |> element("#credential-#{credential.id} a", "Delete")
+             |> render_click() =~ "Credential deleted"
+
+      refute has_element?(index_live, "#credential-#{credential.id}")
+    end
+
   end
 
   describe "Clicking new from the list view" do
