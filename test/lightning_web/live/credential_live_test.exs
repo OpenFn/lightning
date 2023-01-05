@@ -108,7 +108,6 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute has_element?(index_live, "#credential-#{credential.id}")
     end
-
   end
 
   describe "Clicking new from the list view" do
