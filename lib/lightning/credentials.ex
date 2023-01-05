@@ -208,37 +208,12 @@ defmodule Lightning.Credentials do
 
   """
   def delete_credential(%Credential{} = credential) do
-    is_used = job_uses_credential?(credential)
-
-    if is_used do
-      {:error,
-       %Credential{}
-       |> Ecto.Changeset.change()
-       |> Ecto.Changeset.add_error(
-         :job_using_credential,
-         "Can't delete. This credential is being used by at least one job"
-       )}
-    else
-      Multi.new()
-      |> Multi.delete(:credential, credential)
-      |> Multi.insert(:audit, fn _ ->
-        Audit.event("deleted", credential.id, credential.user_id)
-      end)
-      |> Repo.transaction()
-    end
-  end
-
-  defp job_uses_credential?(%Credential{} = credential) do
-    query =
-      from(r in Lightning.Invocation.Run,
-        join: j in assoc(r, :job),
-        join: pc in assoc(j, :project_credential),
-        where: pc.credential_id == ^credential.id,
-        select: r.id,
-        limit: 1
-      )
-
-    length(query |> Repo.all()) > 0
+    Multi.new()
+    |> Multi.delete(:credential, credential)
+    |> Multi.insert(:audit, fn _ ->
+      Audit.event("deleted", credential.id, credential.user_id)
+    end)
+    |> Repo.transaction()
   end
 
   @doc """
