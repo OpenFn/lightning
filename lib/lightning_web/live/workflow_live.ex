@@ -199,6 +199,12 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   @impl true
+  def handle_event("copied-to-clipboard", _, socket) do
+    IO.inspect("heck yeah! wahoo!!")
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("create-workflow", _, socket) do
     {:ok, %Workflows.Workflow{id: workflow_id}} =
       Workflows.create_workflow(%{project_id: socket.assigns.project.id})

@@ -127,6 +127,7 @@ export default {
   },
   copyWebhookUrl(trigger: WebhookTrigger) {
     navigator.clipboard.writeText(trigger.webhookUrl);
+    this.pushEvent('copied-to-clipboard', {});
   },
   // Remove `?selected=<id>` from the URL.
   unselectNode() {
