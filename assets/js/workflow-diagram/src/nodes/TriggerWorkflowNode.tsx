@@ -32,10 +32,13 @@ const TriggerWorkflowNode = ({
     data.trigger.type === 'webhook'
       ? 'Click to copy webhook URL'
       : description || '';
+
+  const cursor =
+    data.trigger.type === 'webhook' ? 'cursor-pointer' : 'cursor-default';
+
   return (
     <div
-      className="bg-white cursor-pointer h-full py-1 px-1 rounded-md shadow-sm
-        text-center text-xs ring-0.5 ring-black ring-opacity-5"
+      className={`bg-white ${cursor} h-full py-1 px-1 rounded-md shadow-sm text-center text-xs ring-0.5 ring-black ring-opacity-5`}
     >
       <div className="flex flex-col items-center justify-center h-full text-center">
         <p
