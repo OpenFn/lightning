@@ -194,14 +194,7 @@ defmodule LightningWeb.WorkflowLive do
      |> assign(
        active_menu_item: :projects,
        new_credential: false,
-       builder_state: %{},
-       pagination_path:
-         &Routes.project_workflow_path(
-           socket,
-           :index,
-           project,
-           &1
-         )
+       builder_state: %{}
      )}
   end
 
