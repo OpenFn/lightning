@@ -9,6 +9,8 @@ and this project adheres to
 ## [Unreleased]
 
 - Better code-assist and intelliense in the Job Editor
+- Fixed overflow on Job Editor Tooltips
+- Fixed auto-scroll when adding a new snippet in the Job Editor
 
 ### Added
 
