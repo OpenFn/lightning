@@ -28,12 +28,6 @@ defmodule LightningWeb.CredentialLive.Index do
     |> assign(:credential, nil)
   end
 
-  defp has_error?(changeset, field) do
-    changeset.errors
-    |> Keyword.get_values(field)
-    |> Enum.any?()
-  end
-
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     credential = Credentials.get_credential!(id)
@@ -49,18 +43,8 @@ defmodule LightningWeb.CredentialLive.Index do
          )
          |> put_flash(:info, "Credential deleted successfully")}
 
-      {:error, changeset} ->
-        # must be a better way (traverse errors, get messages ...)
-        if has_error?(changeset, :job_using_credential) do
-          {:noreply,
-           socket
-           |> put_flash(
-             :error,
-             "Can't delete. This credential is being used by at least one job"
-           )}
-        else
-          {:noreply, socket |> put_flash(:error, "Can't delete credential")}
-        end
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Can't delete credential")}
     end
   end
 
