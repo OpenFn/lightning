@@ -22,6 +22,8 @@ and this project adheres to
 - Configure a project and workflow for a new registering user
 - Run a job with a custom input
 - Added plausible analytics
+- Allow user to click on Webhook Trigger Node to copy webhook URL on workflow
+  diagram
 
 ### Changed
 
