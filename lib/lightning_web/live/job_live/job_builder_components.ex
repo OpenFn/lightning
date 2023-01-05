@@ -5,12 +5,12 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   alias LightningWeb.Components.Form
   import Ecto.Changeset, only: [get_field: 2]
 
-  @trigger_type_1 [
+  @start_trigger_types [
     Cron: "cron",
     Webhook: "webhook"
   ]
 
-  @trigger_type_2 [
+  @flow_trigger_types [
     "On Job Success": "on_job_success",
     "On Job Failure": "on_job_failure"
   ]
@@ -22,8 +22,8 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   def trigger_picker(assigns) do
     trigger_type_options =
       if assigns.form.data.type in [:on_job_success, :on_job_failure],
-        do: @trigger_type_2,
-        else: @trigger_type_1
+        do: @flow_trigger_types,
+        else: @start_trigger_types
 
     assigns =
       assign(assigns,
