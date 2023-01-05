@@ -20,7 +20,6 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   attr :on_cron_change, :any, required: true
 
   def trigger_picker(assigns) do
-
     trigger_type_options =
       if assigns.form.data.type in [:on_job_success, :on_job_failure],
         do: @trigger_type_2,
