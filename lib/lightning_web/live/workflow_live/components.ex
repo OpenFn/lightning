@@ -7,14 +7,13 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div class="w-full">
       <div class="w-full flex flex-wrap gap-4 p-4">
         <.create_workflow_card />
-        <%= for workflow <- @page.entries do %>
+        <%= for workflow <- @workflows do %>
           <.workflow_card
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
           />
         <% end %>
       </div>
-      <LightningWeb.Pagination.pagination_bar page={@page} url={@pagination_path} />
     </div>
     """
   end
