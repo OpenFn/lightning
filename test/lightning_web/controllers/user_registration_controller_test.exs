@@ -46,6 +46,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
     test "creates account and initial project and logs the user in", %{
       conn: conn
     } do
+      # Modify the env so that we created new projects for new users
       Application.put_env(:lightning, :init_project_for_new_user, true)
 
       conn =
@@ -64,6 +65,9 @@ defmodule LightningWeb.UserRegistrationControllerTest do
              |> Ecto.assoc(:projects)
              |> Lightning.Repo.one!()
              |> Map.get(:name) == "emory-demo"
+
+      # Set this back to the default "false" before finishing the test
+      Application.put_env(:lightning, :init_project_for_new_user, false)
     end
 
     test "render errors for invalid data", %{conn: conn} do
