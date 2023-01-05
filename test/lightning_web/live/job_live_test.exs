@@ -130,4 +130,94 @@ defmodule LightningWeb.JobLiveTest do
              )
     end
   end
+
+  describe "The trigger type select list" do
+    test "should only display webhook or cron for the first job in a workflow",
+         %{
+           conn: conn,
+           project: project,
+           job: job
+         } do
+      assert job.trigger.type == :webhook
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
+        )
+
+      assert has_element?(
+               view,
+               "select#triggerType option[value=webhook]"
+             )
+
+      assert has_element?(
+               view,
+               "select#triggerType option[value=cron]"
+             )
+
+      refute has_element?(
+               view,
+               "select#triggerType option[value=on_job_success]"
+             )
+
+      refute has_element?(
+               view,
+               "select#triggerType option[value=on_job_failure]"
+             )
+    end
+
+    test "should only display on_job_success or on_job_failure for downstream jobs in a workflow",
+         %{
+           conn: conn,
+           project: project,
+           job: job
+         } do
+      other_job =
+        job_fixture(
+          trigger: %{type: :on_job_failure, upstream_job_id: job.id},
+          workflow_id: job.workflow_id
+        )
+
+      assert other_job.trigger.type == :on_job_failure
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            other_job.workflow_id,
+            other_job.id
+          )
+        )
+
+      assert has_element?(
+               view,
+               "select#triggerType option[value=on_job_failure]"
+             )
+
+      assert has_element?(
+               view,
+               "select#triggerType option[value=on_job_success]"
+             )
+
+      refute has_element?(
+               view,
+               "select#triggerType option[value=webhook]"
+             )
+
+      refute has_element?(
+               view,
+               "select#triggerType option[value=cron]"
+             )
+    end
+  end
 end
