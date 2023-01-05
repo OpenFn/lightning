@@ -32,10 +32,38 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           phx-target={@myself}
           phx-change="validate"
         />
+        <br />
+        <div class="flex flex-col gap-2">
+          <div class="flex gap-4 flex-row text-sm" id="dataclip-type">
+            <div class="basis-1/2 font-semibold text-secondary-700">
+              Dataclip Type
+            </div>
+            <div class="basis-1/2 text-right">
+              <Common.dataclip_type_pill dataclip={@selected_dataclip} />
+            </div>
+          </div>
+          <div class="flex gap-4 flex-row text-sm" id="dataclip-type">
+            <div class="basis-1/2 font-semibold text-secondary-700">
+              Initial State Assembly
+            </div>
+            <div class="basis-1/2 text-right">
+              <%= if(@selected_dataclip.type == :http_request) do %>
+                The JSON shown here is the <em>body</em>
+                of an HTTP request. The state assembler will place this payload into
+                <code>state.data</code>
+                when the job is run, before adding <code>state.configuration</code>
+                from your selected credential.
+              <% else %>
+                The state assembler will overwrite the <code>configuration</code>
+                attribute below with the body of the currently selected credential.
+              <% end %>
+            </div>
+          </div>
+        </div>
         <%= if(@custom_input?) do %>
           <%= textarea(f, :body,
             class:
-              "rounded-md w-full font-mono bg-secondary-800 text-secondary-50 h-96"
+              "rounded-md mt-4 w-full font-mono bg-secondary-800 text-secondary-50 h-96"
           ) %>
           <%= error_tag(f, :body,
             class:
@@ -44,13 +72,14 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         <% else %>
           <LightningWeb.RunLive.Components.log_view log={@selected_dataclip.body} />
         <% end %>
-
-        <Common.button
-          text="Run"
-          disabled={!@changeset.valid?}
-          phx-click="confirm"
-          phx-target={@myself}
-        />
+        <div class="mt-2">
+          <Common.button
+            text="Run"
+            disabled={!@changeset.valid?}
+            phx-click="confirm"
+            phx-target={@myself}
+          />
+        </div>
       </.form>
     </div>
     """
@@ -83,18 +112,22 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         id: job_id
       })
 
-    dataclips_options = dataclips |> Enum.map(&{&1.id, &1.id})
+    dataclips_options =
+      dataclips
+      |> Enum.map(&{&1.id, &1.id})
 
     dataclips_options =
       if job.trigger.type in [:webhook, :cron] do
-        dataclips_options ++ [{"Custom input", "custom"}]
+        dataclips_options ++ [{"New custom input", "custom"}]
       else
         dataclips_options
       end
 
     last_dataclip = List.first(dataclips)
     no_dataclip? = is_nil(last_dataclip)
+
     current_dataclip = get_current_dataclip(builder_state, job_id)
+
     has_current_dataclip? = not is_nil(current_dataclip)
 
     selected_dataclip =
@@ -189,12 +222,13 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   defp format(dataclip) when is_nil(dataclip) do
-    %{id: "", body: []}
+    %{id: "", body: [], type: :saved_input}
   end
 
   defp format(dataclip) do
     %{
       id: dataclip.id,
+      type: dataclip.type,
       body:
         dataclip.body
         |> Jason.encode!()
@@ -282,7 +316,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       not is_nil(body) ->
         Lightning.Invocation.create_dataclip(%{
           "project_id" => project_id,
-          "type" => :http_request,
+          "type" => :run_result,
           "body" => body
         })
         |> case do
