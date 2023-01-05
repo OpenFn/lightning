@@ -8,8 +8,7 @@ defmodule Lightning.CredentialsTest do
     JobsFixtures,
     CredentialsFixtures,
     AccountsFixtures,
-    ProjectsFixtures,
-    InvocationFixtures
+    ProjectsFixtures
   }
 
   import Ecto.Query
