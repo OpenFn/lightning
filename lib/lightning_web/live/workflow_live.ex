@@ -200,8 +200,9 @@ defmodule LightningWeb.WorkflowLive do
 
   @impl true
   def handle_event("copied-to-clipboard", _, socket) do
-    IO.inspect("heck yeah! wahoo!!")
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
   @impl true
