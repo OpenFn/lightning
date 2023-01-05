@@ -11,7 +11,7 @@ commands:
       - run:
           name: 'Install Node.js and npm'
           command: |
-            curl -sSL "https://nodejs.org/dist/v19.3.0/node-v19.3.0-linux-x64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
+            curl -sSL "https://nodejs.org/dist/v18.12.0/node-v18.12.0-linux-x64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
       - run:
           name: Check current version of node
           command: node -v
@@ -30,7 +30,7 @@ jobs:
     parallelism: 1
     docker:
       - image: elixir:<< parameters.version >>
-      - image: cimg/postgres:14.5
+      - image: cimg/postgres:14.2
 
     steps:
       - install_node
