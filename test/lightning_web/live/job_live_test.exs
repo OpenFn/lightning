@@ -131,8 +131,8 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
-  describe "Conditionnally rendering trigger types" do
-    test "jobs with trigger type of webhook or cron can only have trigger type of webhook or cron",
+  describe "The trigger type select list" do
+    test "should only display webhook or cron for the first job in a workflow",
          %{
            conn: conn,
            project: project,
@@ -173,7 +173,7 @@ defmodule LightningWeb.JobLiveTest do
              )
     end
 
-    test "jobs with trigger type of on_job_success or on_job_failure can only have trigger type of on_job_success or on_job_failure",
+    test "should only display on_job_success or on_job_failure for downstream jobs in a workflow",
          %{
            conn: conn,
            project: project,
