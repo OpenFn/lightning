@@ -54,7 +54,7 @@ defmodule LightningWeb.WorkflowLive do
       <div class="relative h-full">
         <%= case @live_action do %>
           <% :index -> %>
-            <.workflow_list page={@page} project={@project} />
+            <.workflow_list workflows={@workflows} project={@project} />
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
               <div
@@ -205,11 +205,7 @@ defmodule LightningWeb.WorkflowLive do
 
     {:noreply,
      socket
-     |> assign(
-       page:
-         Workflows.get_workflows_for_query(socket.assigns.project)
-         |> Lightning.Repo.paginate(%{})
-     )
+     |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
      |> push_patch(
        to:
          Routes.project_workflow_path(
@@ -258,15 +254,13 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, params) do
+  defp apply_action(socket, :index, _params) do
     socket
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
       show_canvas: false,
-      page:
-        Workflows.get_workflows_for_query(socket.assigns.project)
-        |> Lightning.Repo.paginate(params)
+      workflows: Workflows.get_workflows_for(socket.assigns.project)
     )
   end
 

@@ -15,6 +15,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
     run = get_run_with_output(run_id)
 
     LightningWeb.Endpoint.subscribe("run:#{run.id}")
+
     {:ok, socket |> assign(run: run), layout: false}
   end
 
@@ -26,7 +27,12 @@ defmodule LightningWeb.RunLive.RunViewerLive do
         %Phoenix.Socket.Broadcast{event: "update", payload: _payload},
         socket
       ) do
-    {:noreply, socket |> assign(run: get_run_with_output(socket.assigns.run.id))}
+    {:noreply,
+     socket
+     |> assign(
+       run: get_run_with_output(socket.assigns.run.id),
+       show_input_dataclip: false
+     )}
   end
 
   defp get_run_with_output(id) do

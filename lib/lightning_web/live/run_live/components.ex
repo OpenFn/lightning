@@ -129,11 +129,20 @@ defmodule LightningWeb.RunLive.Components do
 
   # --------------- Run Details ---------------
   attr :run, :any, required: true
+  attr :show_input_dataclip, :boolean
 
+  @spec run_viewer(map) :: Phoenix.LiveView.Rendered.t()
   def run_viewer(assigns) do
+    assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
+
     ~H"""
     <.run_details run={@run} />
     <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
+      <%= if @show_input_dataclip do %>
+        <.toggle_item data-section="input" phx-click={switch_section("input")}>
+          Input
+        </.toggle_item>
+      <% end %>
       <.toggle_item data-section="output" phx-click={switch_section("output")}>
         Output
       </.toggle_item>
@@ -145,6 +154,11 @@ defmodule LightningWeb.RunLive.Components do
         Log
       </.toggle_item>
     </.toggle_bar>
+    <%= if @show_input_dataclip do %>
+      <div id="input_section" style="display: none;" class="@container">
+        <.dataclip_view dataclip={@run.input_dataclip} />
+      </div>
+    <% end %>
 
     <div id="log_section" style="display: none;" class="@container">
       <%= if @run.log do %>

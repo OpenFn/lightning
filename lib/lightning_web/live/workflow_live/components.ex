@@ -4,14 +4,16 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def workflow_list(assigns) do
     ~H"""
-    <div class="w-full flex flex-wrap gap-4 p-4">
-      <.create_workflow_card />
-      <%= for workflow <- @page.entries do %>
-        <.workflow_card
-          workflow={%{workflow | name: workflow.name || "Untitled"}}
-          project={@project}
-        />
-      <% end %>
+    <div class="w-full">
+      <div class="w-full flex flex-wrap gap-4 p-4">
+        <.create_workflow_card />
+        <%= for workflow <- @workflows do %>
+          <.workflow_card
+            workflow={%{workflow | name: workflow.name || "Untitled"}}
+            project={@project}
+          />
+        <% end %>
+      </div>
     </div>
     """
   end
