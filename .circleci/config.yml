@@ -30,7 +30,7 @@ jobs:
     parallelism: 1
     docker:
       - image: elixir:<< parameters.version >>
-      - image: cimg/postgres:14.2
+      - image: cimg/postgres:14.5
 
     steps:
       - install_node
