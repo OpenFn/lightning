@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-67E28EF9.js"></script>
+    <script src="dist/sidebar_items-1ADCE465.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -125,7 +125,9 @@ The data arrived via a webhook.</li><li><code class="inline">:global</code>
 Was created manually, and is intended to be used multiple times.
 When repetitive static data is needed to be maintained, instead of hard-coding
 into a Job - a more convenient solution is to create a <code class="inline">:global</code> Dataclip
-and access it inside the Job.</li></ul>
+and access it inside the Job.</li><li><code class="inline">:run_result</code>
+The final state of a successful run.</li><li><code class="inline">:saved_input</code>
+An arbitrary input, created by a user. (Only configuration will be overwritten.)</li></ul>
   </section>
 
 
@@ -215,7 +217,7 @@ Types
     </a>
     <h1 class="signature" translate="no">source_type()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L32" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L36" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -227,7 +229,7 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> source_type() :: :http_request | :global | :run_result</pre>
+          <pre translate="no"><span class="attribute">@type</span> source_type() :: :http_request | :global | :run_result | :saved_input</pre>
 
       </div>
 
@@ -243,7 +245,7 @@ Types
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L24" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L28" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -295,7 +297,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_types()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L90" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L94" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -319,7 +321,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L47" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L51" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -341,7 +343,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">validate_by_type(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L72" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/dataclip.ex#L76" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
