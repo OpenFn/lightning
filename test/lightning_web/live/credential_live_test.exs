@@ -5,8 +5,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
   import Lightning.{
     JobsFixtures,
-    CredentialsFixtures,
-    InvocationFixtures
+    CredentialsFixtures
   }
 
   alias LightningWeb.RouteHelpers
