@@ -31,14 +31,21 @@ defmodule LightningWeb.CredentialLive.Index do
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     credential = Credentials.get_credential!(id)
-    {:ok, _} = Credentials.delete_credential(credential)
 
-    {:noreply,
-     assign(
-       socket,
-       :credentials,
-       list_credentials(socket.assigns.current_user.id)
-     )}
+    Credentials.delete_credential(credential)
+    |> case do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(
+           :credentials,
+           list_credentials(socket.assigns.current_user.id)
+         )
+         |> put_flash(:info, "Credential deleted successfully")}
+
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+    end
   end
 
   defp list_credentials(user_id) do

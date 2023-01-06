@@ -9,7 +9,8 @@ defmodule Lightning.Credentials.Audit do
       "created",
       "updated",
       "added_to_project",
-      "removed_from_project"
+      "removed_from_project",
+      "deleted"
     ]
 
   defmodule Metadata do
@@ -49,15 +50,13 @@ defmodule Lightning.Credentials.Audit do
   import Ecto.Changeset
 
   alias Lightning.Accounts.User
-  alias Lightning.Credentials.Credential
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "credentials_audit" do
     field :event, :string
-
+    field :row_id, Ecto.UUID
     embeds_one :metadata, Metadata
-    belongs_to :row, Credential
     belongs_to :actor, User
 
     timestamps(updated_at: false)
@@ -68,6 +67,6 @@ defmodule Lightning.Credentials.Audit do
     audit
     |> cast(attrs, [:event, :row_id, :actor_id])
     |> cast_embed(:metadata)
-    |> validate_required([:event, :row_id, :actor_id])
+    |> validate_required([:event, :actor_id])
   end
 end

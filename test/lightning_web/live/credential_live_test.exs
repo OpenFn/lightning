@@ -2,9 +2,11 @@ defmodule LightningWeb.CredentialLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Lightning.CredentialsFixtures
 
-  import Lightning.JobsFixtures
+  import Lightning.{
+    JobsFixtures,
+    CredentialsFixtures
+  }
 
   alias LightningWeb.RouteHelpers
   alias Lightning.Credentials
@@ -88,8 +90,8 @@ defmodule LightningWeb.CredentialLiveTest do
     end
 
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
-    @tag :skip
-    test "deletes credential without a shared project", %{
+
+    test "deletes credential not used by a job", %{
       conn: conn,
       credential: credential
     } do
@@ -101,17 +103,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert index_live
              |> element("#credential-#{credential.id} a", "Delete")
-             |> render_click()
+             |> render_click() =~ "Credential deleted"
 
       refute has_element?(index_live, "#credential-#{credential.id}")
     end
-
-    # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
-    @tag :skip
-    test "deletes a credential with a shared project"
-    # displays warning
-    # removes project_credential
-    # removes from any jobs that are currently using it
   end
 
   describe "Clicking new from the list view" do

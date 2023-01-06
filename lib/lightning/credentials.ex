@@ -208,7 +208,12 @@ defmodule Lightning.Credentials do
 
   """
   def delete_credential(%Credential{} = credential) do
-    Repo.delete(credential)
+    Multi.new()
+    |> Multi.delete(:credential, credential)
+    |> Multi.insert(:audit, fn _ ->
+      Audit.event("deleted", credential.id, credential.user_id)
+    end)
+    |> Repo.transaction()
   end
 
   @doc """
