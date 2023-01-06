@@ -56,7 +56,11 @@ defmodule Lightning.InstallSchemasTest do
       |> expect(:mkdir_p, fn _ -> nil end)
       |> expect(:open!, fn "priv/schemas/asana.json", [:write] -> nil end)
       |> expect(:open!, fn "priv/schemas/primero.json", [:write] -> nil end)
-      |> expect(:close, fn _ -> nil end)
+      |> expect(:close, 2, fn _ -> nil end)
+
+      IO
+      |> expect(:binwrite, fn _, ~s({"name": "language-asana"}) -> nil end)
+      |> expect(:binwrite, fn _, ~s({"name": "language-primero"}) -> nil end)
 
       InstallSchemas.run([])
     end

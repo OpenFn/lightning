@@ -3,6 +3,7 @@ Code.put_compiler_option(:warnings_as_errors, true)
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
 Mimic.copy(:hackney)
 Mimic.copy(File)
+Mimic.copy(IO)
 Mimic.copy(Lightning.Pipeline.Runner)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
