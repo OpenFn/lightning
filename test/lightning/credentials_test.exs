@@ -161,7 +161,7 @@ defmodule Lightning.CredentialsTest do
       assert credential == Credentials.get_credential!(credential.id)
     end
 
-    test "delete_credential/1 deletes the unused (by a job) credential" do
+    test "delete_credential/1 deletes a credential and removes it from associated jobs and projects" do
       user = user_fixture()
 
       project = project_fixture(user_id: user.id)
