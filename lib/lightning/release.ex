@@ -25,7 +25,7 @@ defmodule Lightning.Release do
     Application.fetch_env!(@app, :ecto_repos)
   end
 
-  defp load_app do
+  def load_app do
     Application.ensure_all_started(:ssl)
     Application.load(@app)
   end
