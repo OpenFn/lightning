@@ -42,6 +42,7 @@ and this project adheres to
   `mix lightning.install_runtime`.
 - [BREAKING CHANGE] Introduced `@openfn/cli` as the new runtime for Jobs
 - Rename a workflow through the page heading
+- Hide the dataclips tab for beta
 
 ### Fixed
 
