@@ -3,17 +3,6 @@ defmodule Lightning.SetupUtils do
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
 
-  @doc """
-  Deletes everything in the database including the superuser and creates a set
-  of publicly available users for a demo site via a command that can be run on
-  Kubernetes-deployed systems.
-  """
-  def reset_demo do
-    Lightning.Release.load_app()
-    tear_down(destroy_super: true)
-    setup_demo(create_super: true)
-  end
-
   alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo}
 
   import Ecto.Query
