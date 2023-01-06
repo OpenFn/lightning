@@ -49,7 +49,10 @@
                 to: "#",
                 phx_click: "delete",
                 phx_value_id: credential.id,
-                data: [confirm: "Are you sure?"]
+                data: [
+                  confirm:
+                    "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?"
+                ]
               ) %>
             </span>
           </.td>
