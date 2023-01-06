@@ -21,9 +21,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
   def trigger_picker(assigns) do
     trigger_type_options =
-      if assigns.form.data.type in [:on_job_success, :on_job_failure],
-        do: @flow_trigger_types,
-        else: @start_trigger_types
+      if get_field(assigns.form.source, :type) in [:webhook, :cron],
+        do: @start_trigger_types,
+        else: @flow_trigger_types
 
     assigns =
       assign(assigns,
