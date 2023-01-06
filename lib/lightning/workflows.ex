@@ -117,7 +117,8 @@ defmodule Lightning.Workflows do
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
-      where: w.project_id == ^project.id
+      where: w.project_id == ^project.id,
+      order_by: [asc: w.name]
     )
   end
 
