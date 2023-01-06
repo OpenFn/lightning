@@ -10,7 +10,14 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   use HTTPoison.Base
 
   @schemas_path "priv/schemas/"
-  @default_excluded_adaptors ["language-common", "language-devtools", "language-divoc", "language-bigquery", "language-bigquery", "language-twilio"]
+  @default_excluded_adaptors [
+    "language-common",
+    "language-devtools",
+    "language-divoc",
+    "language-bigquery",
+    "language-bigquery",
+    "language-twilio"
+  ]
 
   @spec run(any) :: any
   def run(args) do
@@ -19,7 +26,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     excluded =
       case args do
         ["--exclude" | adaptor_names] when length(adaptor_names) != [] ->
-          (adaptor_names ++  @default_excluded_adaptors) |> Enum.uniq()
+          (adaptor_names ++ @default_excluded_adaptors) |> Enum.uniq()
 
         _ ->
           @default_excluded_adaptors
@@ -82,7 +89,10 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   end
 
   def fetch_schemas(excluded \\ []) do
-    get("https://registry.npmjs.org/-/user/openfn/package", [])
+    get("https://registry.npmjs.org/-/user/openfn/package", [],
+      hackney: [pool: :default],
+      recv_timeout: 15_000
+    )
     |> case do
       {:error, %HTTPoison.Error{}} ->
         raise "Unable to connect to NPM; no adaptors fetched."
