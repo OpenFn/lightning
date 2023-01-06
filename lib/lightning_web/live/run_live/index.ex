@@ -59,7 +59,7 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> assign(
-       page_title: "Runs",
+       page_title: "History",
        run: %Run{}
      )
      |> apply_action(socket.assigns.live_action, params)}

@@ -26,12 +26,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         finished_at -> finished_at |> Calendar.strftime("%c %Z")
       end
 
+    work_order_inserted_at = work_order.inserted_at |> Calendar.strftime("%c %Z")
+
     socket
     |> assign(
       work_order: work_order,
       attempts: work_order.attempts,
       last_run: last_run,
       last_run_finished_at: last_run_finished_at,
+      work_order_inserted_at: work_order_inserted_at,
       workflow_name: work_order.workflow.name || "Untitled"
     )
   end
@@ -64,7 +67,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     ~H"""
     <div
       data-entity="work_order"
-      class="my-4 grid grid-cols-5 gap-4 rounded-lg bg-white"
+      class="my-4 grid grid-cols-6 gap-4 rounded-lg bg-white"
     >
       <div class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white">
         <%= @workflow_name %>
@@ -81,6 +84,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <%= display_short_uuid(@work_order.reason.dataclip_id) %>
           </span>
         <% end %>
+      </div>
+      <div class="my-auto p-6">
+        <%= @work_order_inserted_at %>
       </div>
       <div class="my-auto p-6">
         <%= @last_run_finished_at %>

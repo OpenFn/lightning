@@ -10,7 +10,7 @@ defmodule Lightning.RunLive.RunStatusComponent do
   def render(assigns) do
     ~H"""
     <div id={"#{@id}-status_options-container"}>
-      <div class="font-semibold my-4">Filter by status</div>
+      <div class="font-semibold my-4">Filter by workorder status</div>
       <%= inputs_for @form, :status_options, fn opt -> %>
         <div class="form-check">
           <div class="selectable-option">
