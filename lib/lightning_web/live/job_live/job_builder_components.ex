@@ -49,7 +49,6 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
         <Form.select_field
           form={@form}
           name={:type}
-          prompt=""
           id="triggerType"
           values={@trigger_type_options}
         />
