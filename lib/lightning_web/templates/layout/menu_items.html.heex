@@ -36,14 +36,14 @@
     <Icon.runs class="h-5 w-5 inline-block mr-2" />
     <span class="inline-block align-middle">Run history</span>
   </Settings.menu_item>
-
-  <Settings.menu_item
+  <!-- # Commented out until new dataclips/globals list is fully functional. -->
+  <!-- <Settings.menu_item
     to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
     active={@active_menu_item == :dataclips}
   >
     <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
     <span class="inline-block align-middle">Dataclips</span>
-  </Settings.menu_item>
+  </Settings.menu_item> -->
 <% else %>
   <Settings.menu_item to={Routes.profile_edit_path(@socket, :edit)}>
     <Heroicons.cog class="h-5 w-5 inline-block mr-2" /> User Profile
