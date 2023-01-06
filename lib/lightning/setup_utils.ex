@@ -1,6 +1,6 @@
 defmodule Lightning.SetupUtils do
   @moduledoc """
-  Demo encapsulates logic for setting up initial data for the demo site
+  SetupUtils encapsulates logic for setting up initial data for various sites.
   """
 
   alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo}
