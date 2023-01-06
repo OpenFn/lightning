@@ -78,6 +78,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         %{"format" => "uri"} -> :url_input
         %{"type" => "string", "writeOnly" => true} -> :password_input
         %{"type" => "string"} -> :text_input
+        %{"type" => "integer"} -> :text_input
         %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> :text_input
       end
 
