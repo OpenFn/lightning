@@ -10,6 +10,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   use HTTPoison.Base
 
   @schemas_path "priv/schemas/"
+  @default_excluded_adaptors ["language-common", "language-devtools", "language-divoc", "language-bigquery", "language-bigquery", "language-twilio"]
 
   @spec run(any) :: any
   def run(args) do
@@ -18,10 +19,10 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     excluded =
       case args do
         ["--exclude" | adaptor_names] when length(adaptor_names) != [] ->
-          adaptor_names
+          (adaptor_names ++  @default_excluded_adaptors) |> Enum.uniq()
 
         _ ->
-          []
+          @default_excluded_adaptors
       end
 
     File.mkdir_p(@schemas_path)
