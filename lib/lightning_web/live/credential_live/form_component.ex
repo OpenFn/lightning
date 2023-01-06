@@ -18,7 +18,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         {name, name}
       end)
 
-    {:ok, socket |> assign(:schemas_options, schemas_options)}
+    {:ok, socket |> assign(:schemas_options, [{"Raw", "raw"} | schemas_options])}
   end
 
   @impl true
@@ -137,8 +137,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         socket |> assign(schema: nil, schema_changeset: nil)
 
       schema_type ->
-        IO.inspect(schema_type)
-
         schema =
           Credentials.Schema.new(
             read_schema(schema_type),
