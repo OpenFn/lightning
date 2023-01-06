@@ -15,6 +15,9 @@ config :lightning, LightningWeb.Endpoint,
 # Do not print debug messages in production
 config :logger, level: :info
 
+config :lightning,
+  schemas_path: "priv/schemas"
+
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key

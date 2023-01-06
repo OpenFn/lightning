@@ -1,0 +1,46 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+        "username": {
+            "title": "Username",
+            "type": "string",
+            "description": "The username used to log in",
+            "minLength": 1
+        },
+        "password": {
+            "title": "Password",
+            "type": "string",
+            "description": "The password used to log in",
+            "writeOnly": true,
+            "minLength": 1
+        },
+        "hostUrl": {
+            "title": "Host URL",
+            "type": "string",
+            "description": "The destination server Url",
+            "format": "uri",
+            "minLength": 1
+        },
+        "apiVersion": {
+            "title": "API Version",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "placeholder": "35",
+            "description": "The DHIS2 API Version to use",
+            "minLength": 1
+        }
+    },
+    "type": "object",
+    "additionalProperties": true,
+    "required": [
+        "hostUrl",
+        "password",
+        "username"
+    ]
+}

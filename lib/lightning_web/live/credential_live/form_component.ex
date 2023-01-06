@@ -11,8 +11,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   @impl true
   def mount(socket) do
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
     schemas_options =
-      Path.wildcard("priv/schemas/*.json")
+      Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
         name = p |> Path.basename() |> String.replace(".json", "")
         {name, name}
@@ -57,7 +59,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp read_schema(schema) do
-    File.read!("./priv/schemas/#{schema}.json")
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
+    File.read!("#{schemas_path}/#{schema}.json")
     |> Jason.decode!()
   end
 
