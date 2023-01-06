@@ -15,15 +15,18 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     "On Job Failure": "on_job_failure"
   ]
 
-  attr :form, :map, required: true
-  attr :upstream_jobs, :list, required: true
-  attr :on_cron_change, :any, required: true
+  attr(:form, :map, required: true)
+  attr(:upstream_jobs, :list, required: true)
+  attr(:on_cron_change, :any, required: true)
 
   def trigger_picker(assigns) do
+    upstream_jobs =
+      Map.get(assigns, :upstream_jobs) |> IO.inspect(label: "upstream job")
+
     trigger_type_options =
-      if assigns.form.data.type in [:on_job_success, :on_job_failure],
-        do: @flow_trigger_types,
-        else: @start_trigger_types
+      if length(upstream_jobs) == 0,
+        do: @start_trigger_types,
+        else: @flow_trigger_types
 
     assigns =
       assign(assigns,
@@ -101,9 +104,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     end
   end
 
-  attr :id, :string, required: true
-  attr :default_hash, :string, required: true
-  slot :inner_block, required: true
+  attr(:id, :string, required: true)
+  attr(:default_hash, :string, required: true)
+  slot(:inner_block, required: true)
 
   def tab_bar(assigns) do
     ~H"""
@@ -120,8 +123,8 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     """
   end
 
-  attr :for_hash, :string, required: true
-  slot :inner_block, required: true
+  attr(:for_hash, :string, required: true)
+  slot(:inner_block, required: true)
 
   def panel_content(assigns) do
     ~H"""
@@ -136,8 +139,8 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     """
   end
 
-  attr :hash, :string, required: true
-  slot :inner_block, required: true
+  attr(:hash, :string, required: true)
+  slot(:inner_block, required: true)
 
   def tab_item(assigns) do
     ~H"""
@@ -165,9 +168,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     )
   end
 
-  attr :changeset, :map, required: true
-  attr :field, :atom, required: true
-  slot :inner_block, required: true
+  attr(:changeset, :map, required: true)
+  attr(:field, :atom, required: true)
+  slot(:inner_block, required: true)
 
   def when_invalid(assigns) do
     has_error =
@@ -184,7 +187,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     """
   end
 
-  attr :adaptor, :string, required: true
+  attr(:adaptor, :string, required: true)
 
   def docs_component(assigns) do
     ~H"""
