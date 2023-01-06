@@ -89,25 +89,28 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         excluded = excluded |> Enum.map(&"@openfn/#{&1}")
 
-        body
-        |> Jason.decode!()
-        |> Enum.map(fn {name, _} -> name end)
-        |> Enum.filter(fn name ->
-          Regex.match?(~r/@openfn\/language-\w+/, name)
-        end)
-        |> Enum.reject(fn name ->
-          name in excluded
-        end)
-        |> Task.async_stream(
-          &persist_schema/1,
-          ordered: false,
-          max_concurrency: 5,
-          timeout: 30_000
-        )
-        |> Stream.map(fn {:ok, detail} -> detail end)
-        |> Enum.to_list()
+        result =
+          body
+          |> Jason.decode!()
+          |> Enum.map(fn {name, _} -> name end)
+          |> Enum.filter(fn name ->
+            Regex.match?(~r/@openfn\/language-\w+/, name)
+          end)
+          |> Enum.reject(fn name ->
+            name in excluded
+          end)
+          |> Task.async_stream(
+            &persist_schema/1,
+            ordered: false,
+            max_concurrency: 5,
+            timeout: 30_000
+          )
+          |> Stream.map(fn {:ok, detail} -> detail end)
+          |> Enum.to_list()
 
-        Mix.shell().info("Schemas installation has finished")
+        Mix.shell().info(
+          "Schemas installation has finished. #{length(result)} installed"
+        )
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         raise "Unable to access openfn user packages. status=#{status_code}"
