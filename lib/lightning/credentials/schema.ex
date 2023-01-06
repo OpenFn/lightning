@@ -67,6 +67,9 @@ defmodule Lightning.Credentials.Schema do
       %{actual: "null", expected: ["string"]} ->
         add_error(changeset, field, "can't be blank")
 
+      %{actual: "null", expected: ["integer"]} ->
+        add_error(changeset, field, "can't be blank")
+
       %ExJsonSchema.Validator.Error.Enum{} ->
         add_error(changeset, field, "can't be blank")
     end
