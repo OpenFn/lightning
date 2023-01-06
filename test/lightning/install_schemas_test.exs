@@ -23,7 +23,7 @@ defmodule Lightning.InstallSchemasTest do
 
       expect(:hackney, :body, fn :client, _timeout ->
         {:ok,
-         ~s({"@openfn/language-primero": "write","@openfn/language-asana": "write"})}
+         ~s({"@openfn/language-primero": "write","@openfn/language-asana": "write", "@openfn/language-common": "write"})}
       end)
 
       expect(:hackney, :request, fn
@@ -61,6 +61,8 @@ defmodule Lightning.InstallSchemasTest do
       IO
       |> expect(:binwrite, fn _, ~s({"name": "language-asana"}) -> nil end)
       |> expect(:binwrite, fn _, ~s({"name": "language-primero"}) -> nil end)
+
+      # |> expect(:binwrite, fn _, ~s({"name": "language-common"}) -> nil end)
 
       InstallSchemas.run([])
     end
