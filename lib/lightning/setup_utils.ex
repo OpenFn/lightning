@@ -91,7 +91,7 @@ defmodule Lightning.SetupUtils do
         name: "Check if age is over 18 mo",
         body:
           "fn(state => state.data.age_in_months > 18 ? state: throw 'Not eligible.');",
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-http@latest",
         trigger: %{type: "webhook"},
         workflow_id: workflow.id
       })
@@ -110,7 +110,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Load to DHIS2",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-dhis2",
+        adaptor: "@openfn/language-dhis2@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         workflow_id: workflow.id
       })
@@ -139,7 +139,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Transform data to FHIR standard",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-http@latest",
         trigger: %{type: "webhook"},
         workflow_id: openhie_workflow.id
       })
@@ -148,7 +148,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-http@latest",
         trigger: %{
           type: "on_job_success",
           upstream_job_id: fhir_standard_data.id
@@ -160,7 +160,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Notify CHW upload successful",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-http@latest",
         trigger: %{type: "on_job_success", upstream_job_id: send_to_openhim.id},
         workflow_id: openhie_workflow.id
       })
@@ -169,7 +169,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Notify CHW upload failed",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-http@latest",
         trigger: %{type: "on_job_failure", upstream_job_id: send_to_openhim.id},
         workflow_id: openhie_workflow.id
       })
@@ -203,7 +203,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Get DHIS2 data",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-dhis2",
+        adaptor: "@openfn/language-dhis2@latest",
         trigger: %{type: "cron", cron_expression: "0 * * * *"},
         workflow_id: dhis2_workflow.id
       })
@@ -212,7 +212,7 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Upload to Google Sheet",
         body: "fn(state => state);",
-        adaptor: "@openfn/language-http",
+        adaptor: "@openfn/language-http@latest",
         trigger: %{type: "on_job_success", upstream_job_id: get_dhis2_data.id},
         workflow_id: dhis2_workflow.id
       })
