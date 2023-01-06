@@ -107,8 +107,8 @@ defmodule LightningWeb.WorkflowLive do
           <% :show -> %>
             <%= if length(@current_workflow.jobs) == 0 do %>
               <div class="w-1/2 h-16 text-center my-16 mx-auto pt-4">
-                <div class="font-semibold text-gray-500 pb-2">
-                  No Job
+                <div class="text-sm font-semibold text-gray-500 pb-4">
+                  Create your first job to get started.
                 </div>
                 <div class="text-xs text-gray-400">
                   <.link patch={
@@ -123,7 +123,7 @@ defmodule LightningWeb.WorkflowLive do
                       <div class="h-full">
                         <Heroicons.plus class="h-4 w-4 inline-block" />
                         <span class="inline-block align-middle">
-                          Add your first job
+                          Create job
                         </span>
                       </div>
                     </Common.button>
