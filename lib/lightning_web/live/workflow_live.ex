@@ -54,7 +54,9 @@ defmodule LightningWeb.WorkflowLive do
       <div class="relative h-full">
         <%= case @live_action do %>
           <% :index -> %>
-            <.workflow_list workflows={@workflows} project={@project} />
+            <Layout.centered>
+              <.workflow_list workflows={@workflows} project={@project} />
+            </Layout.centered>
           <% :new_job -> %>
             <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
               <div
