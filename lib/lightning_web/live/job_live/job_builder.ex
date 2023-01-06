@@ -106,6 +106,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     />
                   <% end %>
                 </div>
+                <div class="col-span-4">
+                  <.live_component
+                    id="adaptor-picker"
+                    module={LightningWeb.JobLive.AdaptorPicker}
+                    on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
+                    form={f}
+                  />
+                </div>
                 <div class="md:col-span-2">
                   <Components.Jobs.credential_select
                     form={f}
@@ -120,14 +128,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
                   >
                     New credential
                   </button>
-                </div>
-                <div class="col-span-4">
-                  <.live_component
-                    id="adaptor-picker"
-                    module={LightningWeb.JobLive.AdaptorPicker}
-                    on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
-                    form={f}
-                  />
                 </div>
               </div>
             </.form>
