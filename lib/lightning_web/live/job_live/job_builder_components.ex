@@ -20,11 +20,8 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   attr(:on_cron_change, :any, required: true)
 
   def trigger_picker(assigns) do
-    upstream_jobs =
-      Map.get(assigns, :upstream_jobs) |> IO.inspect(label: "upstream job")
-
     trigger_type_options =
-      if length(upstream_jobs) == 0,
+      if get_field(assigns.form.source, :type) in [:webhook, :cron],
         do: @start_trigger_types,
         else: @flow_trigger_types
 
