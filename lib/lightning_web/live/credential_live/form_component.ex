@@ -137,8 +137,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         socket |> assign(schema: nil, schema_changeset: nil)
 
       schema_type ->
-
         IO.inspect(schema_type)
+
         schema =
           Credentials.Schema.new(
             read_schema(schema_type),
