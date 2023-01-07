@@ -4,10 +4,6 @@ defmodule LightningWeb.DataclipLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.InvocationFixtures
 
-  @create_attrs %{body: "{}", type: :http_request}
-  @update_attrs %{body: "{}", type: :global}
-  @invalid_attrs %{body: nil, type: :global}
-
   defp create_dataclip(%{project: project}) do
     dataclip = dataclip_fixture(project_id: project.id)
     %{dataclip: dataclip}
@@ -46,64 +42,66 @@ defmodule LightningWeb.DataclipLiveTest do
       refute table =~ "dataclip-#{other_dataclip.id}"
     end
 
-    test "saves new dataclip", %{conn: conn, project: project} do
-      {:ok, index_live, _html} =
-        live(conn, Routes.project_dataclip_index_path(conn, :index, project.id))
+    # Commented for #515 Hide the dataclips tab for beta
+    # test "saves new dataclip", %{conn: conn, project: project} do
+    #   {:ok, index_live, _html} =
+    #     live(conn, Routes.project_dataclip_index_path(conn, :index, project.id))
 
-      {:ok, edit_live, _html} =
-        index_live
-        |> element("a", "New Dataclip")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.project_dataclip_edit_path(conn, :new, project.id)
-        )
+    #   {:ok, edit_live, _html} =
+    #     index_live
+    #     |> element("a", "New Dataclip")
+    #     |> render_click()
+    #     |> follow_redirect(
+    #       conn,
+    #       Routes.project_dataclip_edit_path(conn, :new, project.id)
+    #     )
 
-      assert page_title(edit_live) =~ "New Dataclip"
-      assert render(edit_live) =~ "Save"
+    #   assert page_title(edit_live) =~ "New Dataclip"
+    #   assert render(edit_live) =~ "Save"
 
-      assert edit_live
-             |> form("#dataclip-form", dataclip: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+    #   assert edit_live
+    #          |> form("#dataclip-form", dataclip: @invalid_attrs)
+    #          |> render_change() =~ "can&#39;t be blank"
 
-      {:ok, _, html} =
-        edit_live
-        |> form("#dataclip-form", dataclip: @create_attrs)
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.project_dataclip_index_path(conn, :index, project.id)
-        )
+    #   {:ok, _, html} =
+    #     edit_live
+    #     |> form("#dataclip-form", dataclip: @create_attrs)
+    #     |> render_submit()
+    #     |> follow_redirect(
+    #       conn,
+    #       Routes.project_dataclip_index_path(conn, :index, project.id)
+    #     )
 
-      assert html =~ "Dataclip created successfully"
-    end
+    #   assert html =~ "Dataclip created successfully"
+    # end
 
-    test "updates dataclip in listing", %{
-      conn: conn,
-      dataclip: dataclip,
-      project: project
-    } do
-      {:ok, edit_live, _html} =
-        live(
-          conn,
-          Routes.project_dataclip_edit_path(conn, :edit, project.id, dataclip)
-        )
+    # Commented for #515 Hide the dataclips tab for beta
+    # test "updates dataclip in listing", %{
+    #   conn: conn,
+    #   dataclip: dataclip,
+    #   project: project
+    # } do
+    #   {:ok, edit_live, _html} =
+    #     live(
+    #       conn,
+    #       Routes.project_dataclip_edit_path(conn, :edit, project.id, dataclip)
+    #     )
 
-      assert edit_live
-             |> form("#dataclip-form", dataclip: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
+    #   assert edit_live
+    #          |> form("#dataclip-form", dataclip: @invalid_attrs)
+    #          |> render_change() =~ "can&#39;t be blank"
 
-      {:ok, _, html} =
-        edit_live
-        |> form("#dataclip-form", dataclip: @update_attrs)
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.project_dataclip_index_path(conn, :index, project.id)
-        )
+    #   {:ok, _, html} =
+    #     edit_live
+    #     |> form("#dataclip-form", dataclip: @update_attrs)
+    #     |> render_submit()
+    #     |> follow_redirect(
+    #       conn,
+    #       Routes.project_dataclip_index_path(conn, :index, project.id)
+    #     )
 
-      assert html =~ "Dataclip updated successfully"
-    end
+    #   assert html =~ "Dataclip updated successfully"
+    # end
 
     test "deletes dataclip in listing", %{
       conn: conn,
