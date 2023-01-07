@@ -67,13 +67,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     ~H"""
     <div
       data-entity="work_order"
-      class="my-4 grid grid-cols-6 gap-4 rounded-lg bg-white"
+      class="my-4 grid grid-cols-6 gap-0 rounded-lg bg-white"
     >
-      <div class="my-auto whitespace-nowrap p-6 font-medium text-gray-900 dark:text-white">
+      <div class="my-auto whitespace-nowrap p-4 font-medium text-gray-900 dark:text-white">
         <%= @workflow_name %>
       </div>
-      <div class="my-auto p-6"><%= @work_order.reason.type %></div>
-      <div class="my-auto p-6">
+      <div class="my-auto p-4"><%= @work_order.reason.type %></div>
+      <div class="my-auto p-4">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
           <span
             title={@work_order.reason.dataclip_id}
@@ -85,13 +85,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           </span>
         <% end %>
       </div>
-      <div class="my-auto p-6">
+      <div class="my-auto p-4">
         <%= @work_order_inserted_at %>
       </div>
-      <div class="my-auto p-6">
+      <div class="my-auto p-4">
         <%= @last_run_finished_at %>
       </div>
-      <div class="my-auto p-6">
+      <div class="my-auto p-4">
         <div class="flex content-center justify-between">
           <%= case @last_run.exit_code do %>
             <% nil -> %>
@@ -112,9 +112,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             phx-target={@myself}
           >
             <%= if @show_details do %>
-              <Heroicons.chevron_up outline class="h-5 w-5" />
+              <Heroicons.chevron_up outline class="h-3 w-3" />
             <% else %>
-              <Heroicons.chevron_down outline class="h-5 w-5" />
+              <Heroicons.chevron_down outline class="h-3 w-3" />
             <% end %>
           </button>
         </div>

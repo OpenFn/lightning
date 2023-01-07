@@ -75,8 +75,9 @@ defmodule LightningWeb.RunLive.Components do
   def run_list_item(assigns) do
     ~H"""
     <li>
-      <div class="grid gap-4">
-        <div class="mx-2 flex">
+      <span class="my-4 flex">
+        &vdash;
+        <span class="mx-2 flex">
           <%= case @run.exit_code do %>
             <% nil -> %>
               <%= if @run.finished_at do %>
@@ -119,8 +120,8 @@ defmodule LightningWeb.RunLive.Components do
           >
             rerun
           </span>
-        </div>
-      </div>
+        </span>
+      </span>
     </li>
     """
   end
