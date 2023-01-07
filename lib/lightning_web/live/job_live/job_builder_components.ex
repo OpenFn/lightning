@@ -59,6 +59,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           href={@webhook_url}
           onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
           target="_blank"
+          phx-click="copied-to-clipboard"
         >
           Copy webhook url
         </a>
