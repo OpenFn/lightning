@@ -57,13 +57,14 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
         <a
           id="copyWebhookUrl"
           href={@webhook_url}
+          class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
           onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
           target="_blank"
+          phx-click="copied-to-clipboard"
         >
           Copy webhook url
         </a>
       <% end %>
-
       <%= if @requires_upstream_job do %>
         <%= label @form, :upstream_job_id, class: "block" do %>
           <span class="block text-sm font-medium text-secondary-700">
