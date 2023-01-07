@@ -102,11 +102,11 @@ defmodule LightningWeb.RunLive.Components do
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
               />
           <% end %>
-          <b><%= @run.job.name %>&nbsp;</b>
           <.link
             navigate={show_run_path(@project_id, @run.id)}
             class="hover:underline hover:underline-offset-2"
           >
+            <b><%= @run.job.name %>&nbsp;</b>
             <span :if={@run.finished_at}>
               run at <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
             </span>
