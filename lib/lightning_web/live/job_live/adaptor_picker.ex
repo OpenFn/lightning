@@ -24,7 +24,6 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         <Form.select_field
           form={:adaptor_picker}
           name={:adaptor_name}
-          prompt=""
           selected={@adaptor_name}
           id="adaptor-name"
           values={@adaptors}

@@ -102,7 +102,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, project.id)
         )
 
-      assert html =~ "Runs"
+      assert html =~ "History"
 
       table =
         view
@@ -554,7 +554,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, project.id)
         )
 
-      assert html =~ "Filter by status"
+      assert html =~ "Filter by workorder status"
 
       assert view
              |> element(

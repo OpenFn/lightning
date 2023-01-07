@@ -13,7 +13,7 @@ defmodule Lightning.RunLive.Components do
         form={@form}
         name={:workflow_id}
         id="workflowField"
-        prompt="Select a workflow"
+        prompt="Show all"
         values={@values}
       />
     </div>

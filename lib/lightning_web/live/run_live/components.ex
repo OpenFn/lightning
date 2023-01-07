@@ -20,7 +20,7 @@ defmodule LightningWeb.RunLive.Components do
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"attempt-#{@attempt.id}"}
       data-entity="attempt"
-      class="col-span-5 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
+      class="col-span-6 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
     >
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
         <li>
@@ -28,7 +28,7 @@ defmodule LightningWeb.RunLive.Components do
             <Heroicons.clock solid class="mr-1 h-5 w-5" />
             <span>
               <%= if @last_run.finished_at do %>
-                Run finished at <%= @last_run.finished_at
+                Attempt finished at <%= @last_run.finished_at
                 |> Calendar.strftime("%c %Z") %>
               <% else %>
                 Running...
@@ -102,14 +102,13 @@ defmodule LightningWeb.RunLive.Components do
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
               />
           <% end %>
-
           <.link
             navigate={show_run_path(@project_id, @run.id)}
             class="hover:underline hover:underline-offset-2"
           >
-            <%= @run.job.name %>
+            <b><%= @run.job.name %>&nbsp;</b>
             <span :if={@run.finished_at}>
-              @ <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
+              run at <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
             </span>
           </.link>
           <span
@@ -117,7 +116,7 @@ defmodule LightningWeb.RunLive.Components do
             phx-click="rerun"
             phx-value-attempt_id={@attempt.id}
             phx-value-run_id={@run.id}
-            title="Rerun workflow from start"
+            title="Rerun workflow from here"
           >
             rerun
           </span>
