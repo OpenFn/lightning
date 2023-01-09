@@ -97,7 +97,7 @@ defmodule Lightning.Credentials.SchemaTest do
       assert Ecto.Changeset.get_field(changeset, :password),
              "Should be able to find existing keys via atoms"
 
-      errors = errors_on(changeset) |> IO.inspect()
+      errors = errors_on(changeset)
       assert {:username, ["can't be blank"]} in errors
       assert {:hostUrl, ["can't be blank"]} in errors
       assert {:number, ["can't be blank"]} in errors
@@ -110,7 +110,6 @@ defmodule Lightning.Credentials.SchemaTest do
           "hostUrl" => "http://localhost",
           "number" => 100
         })
-        |> IO.inspect()
 
       assert changeset.valid?
     end
