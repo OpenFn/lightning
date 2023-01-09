@@ -115,7 +115,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
         key =
           if latest do
-            "#{latest} (auto-upgrade)"
+            "latest (≥ #{latest})"
           else
             ""
           end
