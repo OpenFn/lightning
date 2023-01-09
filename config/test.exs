@@ -33,6 +33,9 @@ config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Test
 config :lightning, Lightning.AdaptorRegistry,
   use_cache: "test/fixtures/adaptor_registry_cache.json"
 
+config :lightning,
+  schemas_path: "test/fixtures/schemas"
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 

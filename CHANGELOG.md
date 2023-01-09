@@ -25,6 +25,7 @@ and this project adheres to
 - Allow user to click on Webhook Trigger Node to copy webhook URL on workflow
   diagram
 - Allow any user to delete a credential that they own
+- Create any credential through a form except for OAuth
 
 ### Changed
 

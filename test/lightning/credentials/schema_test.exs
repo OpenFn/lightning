@@ -22,11 +22,15 @@ defmodule Lightning.Credentials.SchemaTest do
             "type": "string",
             "description": "The password used to log in",
             "format": "uri"
+          },
+          "number": {
+            "type": "integer",
+            "description": "A number to log in"
           }
         },
         "type": "object",
         "additionalProperties": true,
-        "required": ["hostUrl", "password", "username"]
+        "required": ["hostUrl", "password", "username", "number"]
       }
       """
       |> Jason.decode!()
@@ -43,13 +47,15 @@ defmodule Lightning.Credentials.SchemaTest do
       assert schema.types == %{
                hostUrl: :string,
                password: :string,
-               username: :string
+               username: :string,
+               number: :integer
              }
 
       assert schema.data == %{
                hostUrl: nil,
                password: nil,
-               username: nil
+               username: nil,
+               number: nil
              }
 
       schema = Schema.new(schema_map, %{"username" => "initial_user"})
@@ -57,13 +63,15 @@ defmodule Lightning.Credentials.SchemaTest do
       assert schema.types == %{
                hostUrl: :string,
                password: :string,
-               username: :string
+               username: :string,
+               number: :integer
              }
 
       assert schema.data == %{
                hostUrl: nil,
                password: nil,
-               username: "initial_user"
+               username: "initial_user",
+               number: nil
              }
     end
   end
@@ -92,13 +100,15 @@ defmodule Lightning.Credentials.SchemaTest do
       errors = errors_on(changeset)
       assert {:username, ["can't be blank"]} in errors
       assert {:hostUrl, ["can't be blank"]} in errors
+      assert {:number, ["can't be blank"]} in errors
 
       schema = Schema.new(schema_map, %{"username" => "initial_username"})
 
       changeset =
         Schema.changeset(schema, %{
           "password" => "pass",
-          "hostUrl" => "http://localhost"
+          "hostUrl" => "http://localhost",
+          "number" => 100
         })
 
       assert changeset.valid?

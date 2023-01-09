@@ -58,6 +58,8 @@ COPY lib lib
 
 RUN mix lightning.install_runtime
 
+RUN mix lightning.install_schemas
+
 COPY assets assets
 RUN npm install --prefix assets
 

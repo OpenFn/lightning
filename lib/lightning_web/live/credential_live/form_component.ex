@@ -10,6 +10,20 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   import LightningWeb.Components.Common
 
   @impl true
+  def mount(socket) do
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
+    schemas_options =
+      Path.wildcard("#{schemas_path}/*.json")
+      |> Enum.map(fn p ->
+        name = p |> Path.basename() |> String.replace(".json", "")
+        {name, name}
+      end)
+
+    {:ok, socket |> assign(:schemas_options, [{"Raw", "raw"} | schemas_options])}
+  end
+
+  @impl true
   def update(%{credential: credential, projects: projects} = assigns, socket) do
     changeset = Credentials.change_credential(credential)
 
@@ -45,7 +59,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp read_schema(schema) do
-    File.read!("./priv/schemas/#{schema}.json")
+    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+
+    File.read!("#{schemas_path}/#{schema}.json")
     |> Jason.decode!()
   end
 
@@ -62,6 +78,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         %{"format" => "uri"} -> :url_input
         %{"type" => "string", "writeOnly" => true} -> :password_input
         %{"type" => "string"} -> :text_input
+        %{"type" => "integer"} -> :text_input
+        %{"type" => "boolean"} -> :text_input
         %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> :text_input
       end
 
