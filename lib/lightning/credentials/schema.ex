@@ -67,7 +67,7 @@ defmodule Lightning.Credentials.Schema do
       %{actual: "null", expected: ["string"]} ->
         add_error(changeset, field, "can't be blank")
 
-      _ ->
+      %{actual: "null", expected: expected} when is_list(expected) ->
         add_error(changeset, field, "can't be blank")
     end
   end
