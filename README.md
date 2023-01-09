@@ -110,6 +110,7 @@ mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
 mix lightning.install_runtime
+mix lightning.install_schemas
 npm install --prefix assets
 ```
 
