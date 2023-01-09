@@ -434,7 +434,7 @@ defmodule Lightning.InvocationTest do
           id: workflow.project_id
         }).entries()
 
-        [actual_wo] =
+      [actual_wo] =
         Invocation.get_workorders_by_ids([id])
         |> Invocation.with_attempts()
         |> Lightning.Repo.all()
