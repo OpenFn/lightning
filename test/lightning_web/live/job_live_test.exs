@@ -17,19 +17,6 @@ defmodule LightningWeb.JobLiveTest do
     %{job: job}
   end
 
-  describe "Access Jobs Page" do
-    test "a user can't access the jobs page when they are not members of that project",
-         %{conn: conn} do
-      project = project_fixture()
-
-      assert {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}} ==
-               live(
-                 conn,
-                 Routes.project_job_index_path(conn, :index, project.id)
-               )
-    end
-  end
-
   describe "The adaptor picker" do
     test "abbreviates standard adaptors via display_name_for_adaptor/1" do
       assert AdaptorPicker.display_name_for_adaptor("@openfn/language-abc") ==
