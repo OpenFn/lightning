@@ -12,25 +12,36 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   @schemas_path "priv/schemas/"
   @default_excluded_adaptors [
     "language-common",
-    "language-devtools",
-    "language-divoc",
-    "language-bigquery",
-    "language-bigquery",
-    "language-twilio"
+    "language-devtools"
+    # "language-divoc",
+    # "language-bigquery",
+    # "language-twilio"
   ]
 
   @spec run(any) :: any
   def run(args) do
     HTTPoison.start()
 
-    excluded =
-      case args do
-        ["--exclude" | adaptor_names] when length(adaptor_names) != [] ->
-          (adaptor_names ++ @default_excluded_adaptors) |> Enum.uniq()
+    init_schema_dir()
 
-        _ ->
-          @default_excluded_adaptors
-      end
+    args
+    |> parse_excluded()
+    |> fetch_schemas()
+  end
+
+  def parse_excluded(args) do
+    args
+    |> case do
+      ["--exclude" | adaptor_names] when adaptor_names != [] ->
+        (adaptor_names ++ @default_excluded_adaptors) |> Enum.uniq()
+
+      _ ->
+        @default_excluded_adaptors
+    end
+  end
+
+  defp init_schema_dir() do
+    File.rm_rf(@schemas_path)
 
     File.mkdir_p(@schemas_path)
     |> case do
@@ -40,36 +51,21 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
       _ ->
         nil
     end
-
-    fetch_schemas(excluded)
   end
 
-  defp get_adaptor_name(package_name) do
-    ~r/(@?[\/\d\n\w-]+)(?:@([\d\.\w-]+))?$/
-    |> Regex.run(package_name)
+  def write_schema(package_name, data) when is_binary(package_name) do
+    file =
+      File.open!(
+        @schemas_path <>
+          String.replace(package_name, "@openfn/language-", "") <> ".json",
+        [:write]
+      )
+
+    IO.binwrite(file, data)
+    File.close(file)
   end
 
-  defp write_schema(package_name, data) when is_binary(package_name) do
-    package_name
-    |> get_adaptor_name()
-    |> case do
-      [_, name] ->
-        file =
-          File.open!(
-            @schemas_path <>
-              String.replace(name, "@openfn/language-", "") <> ".json",
-            [:write]
-          )
-
-        IO.binwrite(file, data)
-        File.close(file)
-
-      _ ->
-        {:error, :bad_format}
-    end
-  end
-
-  defp persist_schema(package_name) do
+  def persist_schema(package_name) do
     get(
       "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json",
       [],
