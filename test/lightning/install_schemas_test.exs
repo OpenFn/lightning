@@ -2,6 +2,9 @@ defmodule Lightning.InstallSchemasTest do
   use ExUnit.Case, async: false
   use Mimic
 
+  import ExUnit.CaptureLog
+  require Logger
+
   alias Mix.Tasks.Lightning.InstallSchemas
 
   @request_options [recv_timeout: 15_000, pool: :default]
@@ -116,9 +119,13 @@ defmodule Lightning.InstallSchemasTest do
         {:ok, %HTTPoison.Response{status_code: 400}}
       end)
 
-      assert_raise RuntimeError, fn ->
-        InstallSchemas.persist_schema("@openfn/language-asana")
-      end
+      {_result, log} =
+        with_log(fn ->
+          InstallSchemas.persist_schema("@openfn/language-asana")
+        end)
+
+      assert log =~
+               "Unable to fetch @openfn/language-asana configuration schema. status=400"
     end
 
     test "fetch_schemas fail 1" do
