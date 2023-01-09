@@ -8,6 +8,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
 
   use Mix.Task
   use HTTPoison.Base
+  require Logger
 
   @schemas_path "priv/schemas/"
   @default_excluded_adaptors [
@@ -80,7 +81,9 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
         write_schema(package_name, body)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
-        raise "Unable to fetch #{package_name} configuration schema. status=#{status_code}"
+        Logger.warn(
+          "Unable to fetch #{package_name} configuration schema. status=#{status_code}"
+        )
     end
   end
 
