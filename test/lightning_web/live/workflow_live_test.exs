@@ -203,7 +203,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> has_option_text?("#adaptor-version", [
-               '1.6.2 (auto-upgrade)',
+               'latest (≥ 1.6.2)',
                '2.14.0',
                '1.10.3',
                '1.2.22',
