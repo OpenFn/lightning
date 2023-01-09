@@ -213,7 +213,7 @@ defmodule LightningWeb.WorkflowLiveTest do
                '1.1.0'
              ])
 
-      assert view |> has_warning_on_editor_tab?()
+      refute view |> has_warning_on_editor_tab?()
 
       view
       |> element("#job-editor-new")
