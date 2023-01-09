@@ -72,6 +72,26 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     assert run_viewer |> render() =~ "Not started."
   end
 
+  test "output messages" do
+    assert render_component(&LightningWeb.RunLive.Components.dataclip_view/1,
+             dataclip: nil,
+             run: %{exit_code: 1}
+           ) =~
+             "This run failed"
+
+    assert render_component(&LightningWeb.RunLive.Components.dataclip_view/1,
+             dataclip: nil,
+             run: %{exit_code: 0}
+           ) =~
+             "There is no output for this run"
+
+    assert render_component(&LightningWeb.RunLive.Components.dataclip_view/1,
+             dataclip: %{body: "dataclip_body"},
+             run: %{exit_code: 0}
+           ) =~
+             "dataclip_body"
+  end
+
   test "has custom option on webhook type job ", %{
     conn: conn,
     job: job,
