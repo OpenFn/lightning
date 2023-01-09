@@ -3,7 +3,6 @@ defmodule LightningWeb.JobLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.JobsFixtures
-  import Lightning.ProjectsFixtures
   import Lightning.CredentialsFixtures
 
   alias LightningWeb.JobLive.AdaptorPicker
