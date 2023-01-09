@@ -155,7 +155,7 @@ defmodule LightningWeb.RunLive.Components do
     </.toggle_bar>
     <%= if @show_input_dataclip do %>
       <div id="input_section" style="display: none;" class="@container">
-        <.dataclip_view dataclip={@run.input_dataclip} />
+        <.dataclip_view dataclip={@run.input_dataclip} run={@run} />
       </div>
     <% end %>
 
@@ -167,7 +167,7 @@ defmodule LightningWeb.RunLive.Components do
       <% end %>
     </div>
     <div id="output_section" style="display: none;" class="@container">
-      <.dataclip_view dataclip={@run.output_dataclip} />
+      <.dataclip_view dataclip={@run.output_dataclip} run={@run} />
     </div>
     """
   end
@@ -291,8 +291,9 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   attr :dataclip, :any, required: true
+  attr :run, :any, required: true
 
-  def dataclip_view(%{dataclip: dataclip} = assigns) do
+  def dataclip_view(%{dataclip: dataclip, run: run} = assigns) do
     lines =
       if dataclip do
         dataclip.body
@@ -304,14 +305,24 @@ defmodule LightningWeb.RunLive.Components do
     assigns = assigns |> assign(lines: lines)
 
     ~H"""
-    <%= if @dataclip do %>
-      <.log_view log={@lines} />
-    <% else %>
-      <.no_dataclip_message />
+    <%= cond  do %>
+      <% run.exit_code > 0 -> %>
+        <.no_dataclip_message
+          label="This run failed"
+          description="There is no output. See the logs for more information"
+        />
+      <% @dataclip -> %>
+        <.log_view log={@lines} />
+      <% is_nil(@dataclip) -> %>
+        <.no_dataclip_message
+          label="There is no output for this run"
+          description="Check your job expression to ensure that the final operation returns something."
+        />
     <% end %>
     """
   end
 
+  @spec no_dataclip_message(any) :: Phoenix.LiveView.Rendered.t()
   def no_dataclip_message(assigns) do
     ~H"""
     <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
@@ -321,10 +332,10 @@ defmodule LightningWeb.RunLive.Components do
         </div>
         <div class="font-sm text-slate-400 text-center">
           <span class="text-slate-500 font-semibold">
-            Nothing here yet.
+            <%= @label || "Nothing here yet." %>
           </span>
-          <br /> The resulting dataclip will appear here
-          when the run finishes successfully.
+          <br /> <%= @description || "The resulting dataclip will appear here
+          when the run finishes successfully." %>
         </div>
       </div>
     </div>
