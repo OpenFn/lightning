@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.3.3">
 
-    <title>Lightning.AuthProviders.WellKnown — Lightning v0.3.3</title>
+    <title>mix lightning.install_schemas — Lightning v0.3.3</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -20,7 +20,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-module">
+  <body data-type="tasks" class="page-task">
     <script>
 
       try {
@@ -101,19 +101,20 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.AuthProviders.WellKnown</span> 
+  <span translate="no">mix lightning.install_schemas</span> 
   <small class="app-vsn" translate="no">(Lightning v0.3.3)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>A datastructure to fetch and hold information about a given OIDC/OAuth provider</p>
+<p>Install the credential json schemas
+Use --exclude language-package1, language-package2 to exclude specific packages</p>
   </section>
 
 
@@ -181,14 +182,6 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#t:t/0" translate="no">t()</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#t:url/0" translate="no">url()</a>
 
         </div>
@@ -225,15 +218,7 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#fetch/1" translate="no">fetch(discovery_url)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#fetch!/1" translate="no">fetch!(discovery_url)</a>
+          <a href="#fetch_schemas/1" translate="no">fetch_schemas(excluded \\ [])</a>
 
         </div>
 
@@ -283,14 +268,6 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#new/1" translate="no">new(json_body)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#options/3" translate="no">options(url, headers \\ [], options \\ [])</a>
 
         </div>
@@ -312,6 +289,14 @@ failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#parse_excluded/1" translate="no">parse_excluded(args)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#patch/4" translate="no">patch(url, body, headers \\ [], options \\ [])</a>
 
         </div>
@@ -328,6 +313,14 @@ failure.</p></div>
 
           <div class="summary-synopsis"><p>Issues a PATCH request to the given url, raising an exception in case of
 failure.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#persist_schema/1" translate="no">persist_schema(package_name)</a>
+
+        </div>
 
       </div>
 
@@ -542,6 +535,16 @@ exception in case of failure.</p></div>
 
       <div class="summary-row">
         <div class="summary-signature">
+          <a href="#run/1" translate="no">run(args)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/mix/Mix.Task.html#c:run/1"><code class="inline">Mix.Task.run/1</code></a>.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
           <a href="#start/0" translate="no">start()</a>
 
         </div>
@@ -557,6 +560,14 @@ exception in case of failure.</p></div>
         </div>
 
           <div class="summary-synopsis"><p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#write_schema/2" translate="no">write_schema(package_name, data)</a>
+
+        </div>
 
       </div>
 
@@ -583,7 +594,7 @@ Types
     </a>
     <h1 class="signature" translate="no">body()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -611,7 +622,7 @@ Types
     </a>
     <h1 class="signature" translate="no">headers()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -639,7 +650,7 @@ Types
     </a>
     <h1 class="signature" translate="no">method()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -667,7 +678,7 @@ Types
     </a>
     <h1 class="signature" translate="no">options()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -695,7 +706,7 @@ Types
     </a>
     <h1 class="signature" translate="no">params()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -723,7 +734,7 @@ Types
     </a>
     <h1 class="signature" translate="no">request()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -742,38 +753,6 @@ Types
 
   </section>
 </section>
-<section class="detail" id="t:t/0">
-
-  <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
-    </a>
-    <h1 class="signature" translate="no">t()</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L11" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.AuthProviders.WellKnown{
-  authorization_endpoint: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  token_endpoint: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
-  userinfo_endpoint: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()
-}</pre>
-
-      </div>
-
-
-  </section>
-</section>
 <section class="detail" id="t:url/0">
 
   <div class="detail-header">
@@ -783,7 +762,7 @@ Types
     </a>
     <h1 class="signature" translate="no">url()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -828,7 +807,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">delete(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -866,7 +845,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">delete!(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -889,16 +868,18 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="fetch/1">
+<section class="detail" id="fetch_schemas/1">
+
+    <span id="fetch_schemas/0"></span>
 
   <div class="detail-header">
-    <a href="#fetch/1" class="detail-link" title="Link to this function">
+    <a href="#fetch_schemas/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fetch(discovery_url)</h1>
+    <h1 class="signature" translate="no">fetch_schemas(excluded \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L19" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L90" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -907,40 +888,6 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
   </div>
 
   <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> fetch(discovery_url :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: {:ok, <a href="#t:t/0">t</a>()} | {:error, reason :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}</pre>
-
-      </div>
-
-
-  </section>
-</section>
-<section class="detail" id="fetch!/1">
-
-  <div class="detail-header">
-    <a href="#fetch!/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">fetch!(discovery_url)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L28" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> fetch!(discovery_url :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) :: <a href="#t:t/0">t</a>()</pre>
-
-      </div>
 
 
   </section>
@@ -958,7 +905,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">get(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -993,7 +940,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">get!(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1027,7 +974,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">head(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1062,7 +1009,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">head!(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1083,34 +1030,6 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
-<section class="detail" id="new/1">
-
-  <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">new(json_body)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L36" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> new(json_body :: %{required(<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()}) :: <a href="#t:t/0">t</a>()</pre>
-
-      </div>
-
-
-  </section>
-</section>
 <section class="detail" id="options/3">
 
     <span id="options/1"></span>
@@ -1124,7 +1043,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">options(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1162,7 +1081,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">options!(url, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1185,6 +1104,28 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
+<section class="detail" id="parse_excluded/1">
+
+  <div class="detail-header">
+    <a href="#parse_excluded/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">parse_excluded(args)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L33" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="patch/4">
 
     <span id="patch/2"></span>
@@ -1198,7 +1139,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">patch(url, body, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1236,7 +1177,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">patch!(url, body, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1259,6 +1200,28 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
 failure.</p><p>If the request does not fail, the response is returned.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
   </section>
 </section>
+<section class="detail" id="persist_schema/1">
+
+  <div class="detail-header">
+    <a href="#persist_schema/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">persist_schema(package_name)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L69" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="post/4">
 
     <span id="post/2"></span>
@@ -1272,7 +1235,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">post(url, body, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1310,7 +1273,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">post!(url, body, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1342,7 +1305,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_headers(headers)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1374,7 +1337,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_request_body(body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1402,7 +1365,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_request_headers(headers)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1430,7 +1393,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_request_options(options)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1458,7 +1421,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_request_params(params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1486,7 +1449,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_request_url(url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1514,7 +1477,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_response(response)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1542,7 +1505,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_response_body(body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1570,7 +1533,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_response_chunk(chunk)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1598,7 +1561,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_response_headers(headers)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1626,7 +1589,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_response_status_code(status_code)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1654,7 +1617,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_status_code(status_code)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1686,7 +1649,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">process_url(url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1724,7 +1687,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">put(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1764,7 +1727,7 @@ otherwise.</p><p>See <a href="#request/5"><code class="inline">request/5</code><
     </a>
     <h1 class="signature" translate="no">put!(url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1796,7 +1759,7 @@ failure.</p><p>If the request does not fail, the response is returned.</p><p>See
     </a>
     <h1 class="signature" translate="no">request(request)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1835,14 +1798,14 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7166197244-1">%</span><span class="nc" data-group-id="7166197244-1">HTTPoison.Request</span><span class="p" data-group-id="7166197244-1">{</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="2821955225-1">%</span><span class="nc" data-group-id="2821955225-1">HTTPoison.Request</span><span class="p" data-group-id="2821955225-1">{</span><span class="w">
   </span><span class="ss">method</span><span class="p">:</span><span class="w"> </span><span class="ss">:post</span><span class="p">,</span><span class="w">
   </span><span class="ss">url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w">
   </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w">
-  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7166197244-2">[</span><span class="p" data-group-id="7166197244-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="7166197244-3">}</span><span class="p" data-group-id="7166197244-2">]</span><span class="w">
-</span><span class="p" data-group-id="7166197244-1">}</span><span class="w">
+  </span><span class="ss">headers</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2821955225-2">[</span><span class="p" data-group-id="2821955225-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="2821955225-3">}</span><span class="p" data-group-id="2821955225-2">]</span><span class="w">
+</span><span class="p" data-group-id="2821955225-1">}</span><span class="w">
 
-</span><span class="n">request</span><span class="p" data-group-id="7166197244-4">(</span><span class="n">request</span><span class="p" data-group-id="7166197244-4">)</span></code></pre>
+</span><span class="n">request</span><span class="p" data-group-id="2821955225-4">(</span><span class="n">request</span><span class="p" data-group-id="2821955225-4">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request/5">
@@ -1860,7 +1823,7 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
     </a>
     <h1 class="signature" translate="no">request(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1900,7 +1863,7 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="1909657659-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1909657659-2">[</span><span class="p" data-group-id="1909657659-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="1909657659-3">}</span><span class="p" data-group-id="1909657659-2">]</span><span class="p" data-group-id="1909657659-1">)</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="n">request</span><span class="p" data-group-id="4091693507-1">(</span><span class="ss">:post</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;https://my.website.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;{</span><span class="se">\&quot;</span><span class="s">foo</span><span class="se">\&quot;</span><span class="s">: 3}&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4091693507-2">[</span><span class="p" data-group-id="4091693507-3">{</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/json&quot;</span><span class="p" data-group-id="4091693507-3">}</span><span class="p" data-group-id="4091693507-2">]</span><span class="p" data-group-id="4091693507-1">)</span></code></pre>
   </section>
 </section>
 <section class="detail" id="request!/5">
@@ -1918,7 +1881,7 @@ re-request with the method set to <code class="inline">:get</code>.</p><h2 id="r
     </a>
     <h1 class="signature" translate="no">request!(method, url, body \\ &quot;&quot;, headers \\ [], options \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1943,6 +1906,34 @@ response in case of a successful request, raising an exception in case the
 request fails.</p>
   </section>
 </section>
+<section class="detail" id="run/1">
+
+  <div class="detail-header">
+    <a href="#run/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">run(args)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L23" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> run(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()</pre>
+
+      </div>
+
+<p>Callback implementation for <a href="https://hexdocs.pm/mix/Mix.Task.html#c:run/1"><code class="inline">Mix.Task.run/1</code></a>.</p>
+  </section>
+</section>
 <section class="detail" id="start/0">
 
   <div class="detail-header">
@@ -1952,7 +1943,7 @@ request fails.</p>
     </a>
     <h1 class="signature" translate="no">start()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1974,7 +1965,7 @@ request fails.</p>
     </a>
     <h1 class="signature" translate="no">stream_next(resp)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/well_known.ex#L5" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L10" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -1992,6 +1983,28 @@ request fails.</p>
       </div>
 
 <p>Requests the next message to be streamed for a given <a href="https://hexdocs.pm/httpoison/1.8.2/HTTPoison.AsyncResponse.html"><code class="inline">HTTPoison.AsyncResponse</code></a>.</p><p>See <a href="#request!/5"><code class="inline">request!/5</code></a> for more detailed information.</p>
+  </section>
+</section>
+<section class="detail" id="write_schema/2">
+
+  <div class="detail-header">
+    <a href="#write_schema/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">write_schema(package_name, data)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/mix/tasks/install_schemas.ex#L57" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

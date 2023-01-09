@@ -144,6 +144,7 @@ LightningWeb.WebhooksController.html
 LightningWeb.html
 Mix.Tasks.Lightning.GenEncryptionKey.html
 Mix.Tasks.Lightning.InstallRuntime.html
+Mix.Tasks.Lightning.InstallSchemas.html
 ObanPruner.html
 api-reference.html
 assets/logo.png
@@ -174,8 +175,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-8647ACE4.js
-dist/sidebar_items-0FEA1517.js
+dist/search_items-FD644ED4.js
+dist/sidebar_items-AFB1E8D9.js
 index.html
 readme.html
 search.html
