@@ -46,6 +46,8 @@ and this project adheres to
 
 ### Fixed
 
+- Don't consider disabled jobs when calculating subsequent runs
+
 ## [0.3.1] - 2022-11-22
 
 ### Fixed

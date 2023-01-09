@@ -86,7 +86,7 @@ defmodule Lightning.PipelineTest do
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
-      %{id: downstream_job_id} =
+      %{id: _downstream_job_id} =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
@@ -96,6 +96,14 @@ defmodule Lightning.PipelineTest do
               name: "my credential",
               body: %{"credential" => "body"}
             ).id
+        )
+
+      %{id: _disabled_downstream_job_id} =
+        job_fixture(
+          trigger: %{type: :on_job_success, upstream_job_id: job.id},
+          enabled: false,
+          body: ~s[fn(state => state)],
+          workflow_id: job.workflow_id
         )
 
       work_order = work_order_fixture(workflow_id: job.workflow_id)
@@ -135,9 +143,7 @@ defmodule Lightning.PipelineTest do
 
       expected_run =
         from(r in Lightning.Invocation.Run,
-          where:
-            r.job_id == ^downstream_job_id and
-              r.previous_id == ^previous_id,
+          where: r.previous_id == ^previous_id,
           preload: [:output_dataclip]
         )
         |> Repo.one!()
