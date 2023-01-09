@@ -45,7 +45,7 @@ and this project adheres to
 - Make adaptor default to common@latest
 - Remove jobs list page
 - Better error handling in the docs panel
-
+- Temporarily remove credential ownership transfer
 
 ### Fixed
 
