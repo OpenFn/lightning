@@ -42,7 +42,28 @@ defmodule LightningWeb.WorkflowLive do
           </:title>
         </Layout.header>
       </:header>
-      <div class="relative h-full">
+      <div class="relative h-full flex">
+        <%= if @show_canvas do %>
+          <div class="grow">
+            <div
+              phx-hook="WorkflowDiagram"
+              class="h-full w-full"
+              id={"hook-#{@project.id}"}
+              phx-update="ignore"
+              base-path={
+                Routes.project_workflow_path(
+                  @socket,
+                  :show,
+                  @project.id,
+                  @current_workflow.id
+                )
+              }
+              data-project-space={@encoded_project_space}
+            >
+            </div>
+          </div>
+        <% end %>
+
         <%= case @live_action do %>
           <% :index -> %>
             <Layout.centered>
@@ -75,24 +96,26 @@ defmodule LightningWeb.WorkflowLive do
               </div>
             </div>
           <% :edit_job -> %>
-            <div class="absolute w-1/2 inset-y-0 right-0 z-10">
-              <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
-                <.live_component
-                  module={LightningWeb.JobLive.JobBuilder}
-                  id={"builder-#{@job.id}"}
-                  job={@job}
-                  project={@project}
-                  current_user={@current_user}
-                  builder_state={@builder_state}
-                  return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id,
-                      @current_workflow.id
-                    )
-                  }
-                />
+            <div class="grow-0 w-1/2 relative">
+              <div class="absolute w-full inset-y-0 z-10">
+                <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
+                  <.live_component
+                    module={LightningWeb.JobLive.JobBuilder}
+                    id={"builder-#{@job.id}"}
+                    job={@job}
+                    project={@project}
+                    current_user={@current_user}
+                    builder_state={@builder_state}
+                    return_to={
+                      Routes.project_workflow_path(
+                        @socket,
+                        :show,
+                        @project.id,
+                        @current_workflow.id
+                      )
+                    }
+                  />
+                </div>
               </div>
             </div>
           <% :show -> %>
@@ -143,24 +166,15 @@ defmodule LightningWeb.WorkflowLive do
             </div>
           <% _ -> %>
         <% end %>
-        <%= if @show_canvas do %>
-          <div
-            phx-hook="WorkflowDiagram"
-            class="h-full w-full"
-            id={"hook-#{@project.id}"}
-            phx-update="ignore"
-            base-path={
-              Routes.project_workflow_path(
-                @socket,
-                :show,
-                @project.id,
-                @current_workflow.id
-              )
-            }
-            data-project-space={@encoded_project_space}
-          >
-          </div>
-        <% end %>
+        <%!-- <div class="flex-none w-14 h-14 ...">
+    01
+    </div>
+    <div class="grow h-14 ...">
+    02
+    </div>
+    <div class="flex-none w-14 h-14 ...">
+    03
+    </div> --%>
       </div>
     </Layout.page_content>
     """

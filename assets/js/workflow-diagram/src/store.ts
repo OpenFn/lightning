@@ -7,6 +7,8 @@ import {
   NodeChange,
   OnEdgesChange,
   OnNodesChange,
+  OnSelectionChangeFunc,
+  ReactFlowInstance,
 } from 'react-flow-renderer';
 import { ProjectSpace, Workflow } from './types';
 import create from 'zustand';
@@ -21,6 +23,9 @@ type RFState = {
   projectSpace: ProjectSpace | null;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
+  onSelectedNodeChange: OnSelectionChangeFunc;
+  reactFlowInstance: ReactFlowInstance | null;
+  selectedNode: Node | undefined;
 };
 
 export const useStore = create<RFState>((set, get) => ({
@@ -38,6 +43,11 @@ export const useStore = create<RFState>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
+  onSelectedNodeChange: ({ nodes }: { nodes: Node[] }) => {
+    set({ selectedNode: nodes[0] });
+  },
+  reactFlowInstance: null,
+  selectedNode: undefined,
 }));
 
 export async function setProjectSpace(
@@ -67,3 +77,23 @@ export async function addWorkspace(workflow: Workflow) {
 
   useStore.setState({ nodes, edges, elkNode });
 }
+
+export function setReactFlowInstance(rf: ReactFlowInstance) {
+  useStore.setState({ reactFlowInstance: rf });
+}
+
+function debounce(fun: () => void, t: number | undefined) {
+  let timeout: string | number | NodeJS.Timeout | undefined;
+  return () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(fun, t);
+  };
+}
+
+export const fitView = debounce(() => {
+  let reactFlowInstance = useStore.getState().reactFlowInstance;
+
+  if (reactFlowInstance) {
+    reactFlowInstance.fitView({ duration: 250 });
+  }
+}, 250);

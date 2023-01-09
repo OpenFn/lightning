@@ -14,6 +14,7 @@ export function mount(el: Element | DocumentFragment) {
   function update({ onNodeClick, onPaneClick, onJobAddClick }: UpdateParams) {
     return componentRoot.render(
       <WorkflowDiagram
+        ref={el}
         className="h-8"
         onJobAddClick={onJobAddClick}
         onNodeClick={onNodeClick}

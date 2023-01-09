@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import JobNode from './nodes/JobNode';
 import OperationNode from './nodes/OperationNode';
 import TriggerWorkflowNode from './nodes/TriggerWorkflowNode';
@@ -17,13 +17,17 @@ const nodeTypes = {
   workflow: EmptyWorkflowNode,
 };
 
-const WorkflowDiagram: React.FC<{
-  projectSpace: ProjectSpace;
-  onJobAddClick?: (node: Node<NodeData>) => void;
-  onNodeClick?: (event: React.MouseEvent, node: Node<NodeData>) => void;
-  onPaneClick?: (event: React.MouseEvent) => void;
-}> = ({ projectSpace, onNodeClick, onPaneClick, onJobAddClick }) => {
-  const { nodes, edges, onNodesChange, onEdgesChange } = Store.useStore();
+const WorkflowDiagram = React.forwardRef<
+  Element,
+  {
+    projectSpace: ProjectSpace;
+    onJobAddClick?: (node: Node<NodeData>) => void;
+    onNodeClick?: (event: React.MouseEvent, node: Node<NodeData>) => void;
+    onPaneClick?: (event: React.MouseEvent) => void;
+  }
+>(({ projectSpace, onNodeClick, onPaneClick, onJobAddClick }, ref) => {
+  const { nodes, edges, onNodesChange, onEdgesChange, onSelectedNodeChange } =
+    Store.useStore();
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node<NodeData>) => {
@@ -41,6 +45,20 @@ const WorkflowDiagram: React.FC<{
     [onJobAddClick, onNodeClick]
   );
 
+  // Observe any changes to the parent div, and trigger
+  // a `fitView` to recenter the diagram.
+  useEffect(() => {
+    if (ref) {
+      const resizeOb = new ResizeObserver(function (_entries) {
+        Store.fitView();
+      });
+      resizeOb.observe(ref);
+      return () => {
+        resizeOb.unobserve(ref);
+      };
+    }
+  }, [ref]);
+
   useEffect(() => {
     if (projectSpace) {
       Store.setProjectSpace(projectSpace);
@@ -56,6 +74,7 @@ const WorkflowDiagram: React.FC<{
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onSelectionChange={onSelectedNodeChange}
         // onConnect={onConnect}
         // If we let folks drag, we have to save new visual configuration...
         nodesDraggable={false}
@@ -66,11 +85,12 @@ const WorkflowDiagram: React.FC<{
         snapGrid={[10, 10]}
         onNodeClick={handleNodeClick}
         onPaneClick={onPaneClick}
+        onInit={Store.setReactFlowInstance}
         fitView
       />
     </ReactFlowProvider>
   );
-};
+});
 
 export { Store };
 export default WorkflowDiagram;

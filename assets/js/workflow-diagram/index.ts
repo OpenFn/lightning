@@ -77,6 +77,7 @@ export default {
   },
   destroyed() {
     console.debug('Unmounting WorkflowDiagram component');
+
     this.observer?.disconnect();
     this.component?.unmount();
   },
