@@ -21,7 +21,7 @@ interface WorkflowDiagramEntrypoint {
   addJob(upstreamId: string): void;
   selectJob(id: string): void;
   selectWorkflow(id: string): void;
-  copyWebhookUrl(trigger: Object): void;
+  copyWebhookUrl(webhookUrl: string): void;
   unselectNode(): void;
 }
 
@@ -56,7 +56,9 @@ export default {
         onNodeClick: (event, node) => {
           switch (node.type) {
             case 'trigger':
-              this.copyWebhookUrl(node.data.trigger);
+              if (node.data.trigger.type === 'webhook') {
+                this.copyWebhookUrl(node.data.trigger.webhookUrl);
+              }
               break;
             case 'job':
               this.selectJob(node.data.id);
@@ -125,8 +127,8 @@ export default {
       this.el
     );
   },
-  copyWebhookUrl(trigger: WebhookTrigger) {
-    navigator.clipboard.writeText(trigger.webhookUrl);
+  copyWebhookUrl(webhookUrl: string) {
+    navigator.clipboard.writeText(webhookUrl);
     this.pushEvent('copied-to-clipboard', {});
   },
   // Remove `?selected=<id>` from the URL.
