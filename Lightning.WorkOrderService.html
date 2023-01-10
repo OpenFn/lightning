@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-AFB1E8D9.js"></script>
+    <script src="dist/sidebar_items-DA8E6B73.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -175,14 +175,6 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#get_work_order/1" translate="no">get_work_order(id)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#multi_for/3" translate="no">multi_for(type, job, dataclip_body)</a>
 
         </div>
@@ -236,7 +228,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">attempt_updated(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L223" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L218" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -342,33 +334,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="7073321661-1">(</span><span class="p" data-group-id="7073321661-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7073321661-2">}</span><span class="p" data-group-id="7073321661-1">)</span><span class="w">
-</span><span class="p" data-group-id="7073321661-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7073321661-4">%</span><span class="nc" data-group-id="7073321661-4">WorkOrder</span><span class="p" data-group-id="7073321661-4">{</span><span class="p" data-group-id="7073321661-4">}</span><span class="p" data-group-id="7073321661-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="1759546878-1">(</span><span class="p" data-group-id="1759546878-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1759546878-2">}</span><span class="p" data-group-id="1759546878-1">)</span><span class="w">
+</span><span class="p" data-group-id="1759546878-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1759546878-4">%</span><span class="nc" data-group-id="1759546878-4">WorkOrder</span><span class="p" data-group-id="1759546878-4">{</span><span class="p" data-group-id="1759546878-4">}</span><span class="p" data-group-id="1759546878-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="7073321661-5">(</span><span class="p" data-group-id="7073321661-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7073321661-6">}</span><span class="p" data-group-id="7073321661-5">)</span><span class="w">
-</span><span class="p" data-group-id="7073321661-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7073321661-8">%</span><span class="nc" data-group-id="7073321661-8">Ecto.Changeset</span><span class="p" data-group-id="7073321661-8">{</span><span class="p" data-group-id="7073321661-8">}</span><span class="p" data-group-id="7073321661-7">}</span></code></pre>
-  </section>
-</section>
-<section class="detail" id="get_work_order/1">
-
-  <div class="detail-header">
-    <a href="#get_work_order/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_work_order(id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L218" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_work_order</span><span class="p" data-group-id="1759546878-5">(</span><span class="p" data-group-id="1759546878-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1759546878-6">}</span><span class="p" data-group-id="1759546878-5">)</span><span class="w">
+</span><span class="p" data-group-id="1759546878-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1759546878-8">%</span><span class="nc" data-group-id="1759546878-8">Ecto.Changeset</span><span class="p" data-group-id="1759546878-8">{</span><span class="p" data-group-id="1759546878-8">}</span><span class="p" data-group-id="1759546878-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="multi_for/3">
@@ -468,7 +438,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">subscribe(project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L234" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/work_order_service.ex#L229" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
