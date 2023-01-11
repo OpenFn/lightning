@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import JobNode from './nodes/JobNode';
 import OperationNode from './nodes/OperationNode';
 import TriggerWorkflowNode from './nodes/TriggerWorkflowNode';
-import type { ProjectSpace } from './types';
 
 import EmptyWorkflowNode from './nodes/EmptyWorkflowNode';
 import ReactFlow, { Node, ReactFlowProvider } from 'react-flow-renderer';
@@ -20,21 +19,19 @@ const nodeTypes = {
 const WorkflowDiagram = React.forwardRef<
   Element,
   {
-    projectSpace: ProjectSpace;
     onJobAddClick?: (node: Node<NodeData>) => void;
     onNodeClick?: (event: React.MouseEvent, node: Node<NodeData>) => void;
     onPaneClick?: (event: React.MouseEvent) => void;
   }
->(({ projectSpace, onNodeClick, onPaneClick, onJobAddClick }, ref) => {
-  const { nodes, edges, onNodesChange, onEdgesChange, onSelectedNodeChange } =
-    Store.useStore();
+>(({ onNodeClick, onPaneClick, onJobAddClick }, ref) => {
+  const { nodes, edges, onNodesChange, onEdgesChange } = Store.useStore();
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: Node<NodeData>) => {
       const plusIds = new Set(['plusButton', 'plusIcon']);
-      if (plusIds.has(event.target.id) && onJobAddClick) {
-        event.stopPropagation();
+      event.stopPropagation();
 
+      if (plusIds.has(event.target.id) && onJobAddClick) {
         onJobAddClick(node);
       } else {
         if (onNodeClick) {
@@ -59,12 +56,6 @@ const WorkflowDiagram = React.forwardRef<
     }
   }, [ref]);
 
-  useEffect(() => {
-    if (projectSpace) {
-      Store.setProjectSpace(projectSpace);
-    }
-  }, [projectSpace]);
-
   return (
     <ReactFlowProvider>
       <ReactFlow
@@ -74,7 +65,7 @@ const WorkflowDiagram = React.forwardRef<
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onSelectionChange={onSelectedNodeChange}
+        // onSelectionChange={onSelectedNodeChange}
         // onConnect={onConnect}
         // If we let folks drag, we have to save new visual configuration...
         nodesDraggable={false}

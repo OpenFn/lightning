@@ -29,5 +29,10 @@ export function mount(el: Element | DocumentFragment) {
 
   componentRoot.render(<h1>Loading</h1>);
 
-  return { update, unmount, setProjectSpace: Store.setProjectSpace };
+  return {
+    update,
+    unmount,
+    setProjectSpace: Store.setProjectSpace,
+    setSelectedNode: Store.selectNode,
+  };
 }

@@ -58,6 +58,7 @@ defmodule LightningWeb.WorkflowLive do
                   )
                 }
                 id={@current_workflow.id}
+                selected_node={@selected_node_id}
                 encoded_project_space={@encoded_project_space}
               />
             </div>
@@ -97,6 +98,7 @@ defmodule LightningWeb.WorkflowLive do
                   )
                 }
                 id={@current_workflow.id}
+                selected_node={@job.id}
                 encoded_project_space={@encoded_project_space}
               />
             </div>
@@ -285,6 +287,7 @@ defmodule LightningWeb.WorkflowLive do
           "upstream_job_id" => upstream_job.id
         }
       },
+      selected_node_id: upstream_job.id,
       current_workflow: workflow,
       encoded_project_space: encode_project_space(workflow),
       page_title: "Workflows"
@@ -304,6 +307,7 @@ defmodule LightningWeb.WorkflowLive do
       job_params: %{
         "trigger" => %{"type" => :webhook}
       },
+      selected_node_id: nil,
       current_workflow: workflow,
       workflow:
         Workflows.Workflow.changeset(workflow, %{

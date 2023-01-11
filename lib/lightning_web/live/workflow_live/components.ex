@@ -88,6 +88,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :id, :string, required: true
   attr :encoded_project_space, :string, required: true
+  attr :selected_node, :string, default: nil
   attr :base_path, :string, required: true
 
   def workflow_diagram(assigns) do
@@ -98,6 +99,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       id={"hook-#{@id}"}
       phx-update="ignore"
       base-path={@base_path}
+      data-selected-node={@selected_node}
       data-project-space={@encoded_project_space}
     >
     </div>

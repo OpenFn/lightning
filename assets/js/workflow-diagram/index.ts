@@ -2,7 +2,6 @@
 // `component.jsx` is imported dynamically, saving loading React
 // and all the other dependencies until they are needed.
 import type { mount } from './component';
-import { WebhookTrigger } from './src/types';
 
 interface WorkflowDiagramEntrypoint {
   el: HTMLElement;
@@ -17,10 +16,11 @@ interface WorkflowDiagramEntrypoint {
     callback: () => (e: string, b: boolean) => void
   ): any;
   setupObserver(): void;
-  updateProjectSpace(): void;
+  updateProjectSpace(encoded: string): void;
   addJob(upstreamId: string): void;
   selectJob(id: string): void;
   selectWorkflow(id: string): void;
+  setSelectedNode(id: string): void;
   copyWebhookUrl(webhookUrl: string): void;
   unselectNode(): void;
 }
@@ -47,7 +47,8 @@ export default {
         throw new Error('Component not set.');
       }
 
-      const projectSpace = this.updateProjectSpace();
+      this.updateProjectSpace(this.el.dataset.projectSpace);
+      this.setSelectedNode(this.el.dataset.selectedNode);
 
       this.component.update({
         onJobAddClick: node => {
@@ -87,21 +88,27 @@ export default {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
         if (oldValue !== newValue) {
-          this.updateProjectSpace();
+          switch (attributeName) {
+            case 'data-project-space':
+              this.updateProjectSpace(newValue);
+
+            case 'data-selected-node':
+              this.setSelectedNode(newValue);
+          }
         }
       });
     });
 
     this.observer.observe(this.el, {
-      attributeFilter: ['data-project-space'],
+      attributeFilter: ['data-project-space', 'data-selected-node'],
       attributeOldValue: true,
     });
   },
-  updateProjectSpace() {
-    const decoded = JSON.parse(atob(this.el.dataset.projectSpace));
-    this.component!.setProjectSpace(decoded);
-
-    return decoded;
+  updateProjectSpace(encoded: string) {
+    this.component!.setProjectSpace(encoded);
+  },
+  setSelectedNode(id: string) {
+    this.component!.setSelectedNode(id);
   },
   // Add `j/new?upstream_id=<id>` to the URL.
   addJob(upstreamId: string) {
