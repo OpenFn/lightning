@@ -18,7 +18,14 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
     return <div className="block m-2">Loading docs...</div>
   }
   if (pkg === false) {
-    return <div className="block m-2">Error: failed to load docs.</div>
+    return (
+      <div className="block m-2">
+        <p>Sorry, an error occurred loading the docs for this adaptor.</p>
+        <p>You can check our docs site at 
+          <a className="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 ml-2" href="https://docs.openfn.org/adaptors/#where-to-find-them." target="none">docs.openfn.org/adaptors</a>.
+        </p>
+      </div>
+    );
   }
   
   const { name, version, functions } = pkg as PackageDescription;
