@@ -38,10 +38,7 @@
   </Settings.menu_item>
 
   <Settings.menu_item
-    to={
-      Routes.project_project_settings_path(@socket, :index, @project.id)
-      |> IO.inspect(label: "HELLOOOO")
-    }
+    to={Routes.project_project_settings_path(@socket, :index, @project.id)}
     active={@active_menu_item == :settings}
   >
     <Icon.settings class="h-5 w-5 inline-block mr-2" />
