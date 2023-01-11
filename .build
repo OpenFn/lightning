@@ -104,7 +104,6 @@ LightningWeb.Hooks.html
 LightningWeb.InitAssigns.html
 LightningWeb.JobLive.AdaptorPicker.html
 LightningWeb.JobLive.CronSetupComponent.html
-LightningWeb.JobLive.Index.html
 LightningWeb.JobLive.JobBuilder.html
 LightningWeb.JobLive.JobBuilderComponents.html
 LightningWeb.JobLive.ManualRunComponent.html
@@ -175,8 +174,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-A16017C5.js
-dist/sidebar_items-DA8E6B73.js
+dist/search_items-E7906A6D.js
+dist/sidebar_items-388269BD.js
 index.html
 readme.html
 search.html
