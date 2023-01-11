@@ -25,6 +25,7 @@
         {
           "id": "A-trigger",
           "__flowProps__": {
+            "selectable": false,
             "data": {
               "label": "Webhook",
               "trigger": {
