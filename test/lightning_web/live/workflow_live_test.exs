@@ -85,15 +85,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ project.name
 
-      expected_encoded_project_space =
-        Lightning.Workflows.get_workflows_for(project)
-        |> Lightning.Workflows.to_project_space()
-        |> Jason.encode!()
-        |> Base.encode64()
-
-      assert view
-             |> element("div#hook-#{project.id}[phx-update=ignore]")
-             |> render() =~ expected_encoded_project_space
+      view |> encoded_project_space_matches(workflow)
     end
   end
 
@@ -243,7 +235,7 @@ defmodule LightningWeb.WorkflowLiveTest do
         )
       )
 
-      assert view |> encoded_project_space_matches(project)
+      view |> encoded_project_space_matches(upstream_job.workflow)
     end
 
     test "can be created without an upstream job", %{
@@ -279,7 +271,7 @@ defmodule LightningWeb.WorkflowLiveTest do
         Routes.project_workflow_path(conn, :show, project.id, workflow.id)
       )
 
-      assert view |> encoded_project_space_matches(project)
+      view |> encoded_project_space_matches(workflow)
     end
   end
 
@@ -316,7 +308,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert view |> form("#workflow-inplace-form") |> render_submit() =~
                "my workflow"
 
-      assert view |> encoded_project_space_matches(project)
+      view
+      |> encoded_project_space_matches(job.workflow |> Lightning.Repo.reload!())
     end
 
     test "renders the workflow inspector", %{
@@ -350,7 +343,8 @@ defmodule LightningWeb.WorkflowLiveTest do
         Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
       )
 
-      assert view |> encoded_project_space_matches(project)
+      view
+      |> encoded_project_space_matches(job.workflow |> Lightning.Repo.reload!())
     end
 
     # TODO test that jobs in different projects are not available in flow triggers
@@ -832,16 +826,11 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   # Pull out the encoded ProjectSpace data from the html, turn it back into a
   # map and compare it to the current value.
-  defp encoded_project_space_matches(view, project) do
-    view
-    |> element("div#hook-#{project.id}[phx-update=ignore]")
-    |> render()
-    |> extract_project_space()
-    |> Base.decode64!()
-    |> Jason.decode!() ==
-      Lightning.Workflows.get_workflows_for(project)
-      |> Lightning.Workflows.to_project_space()
-      |> Jason.encode!()
-      |> Jason.decode!()
+  defp encoded_project_space_matches(view, workflow) do
+    assert view
+           |> element("div#hook-#{workflow.id}[phx-update=ignore]")
+           |> render()
+           |> extract_project_space() ==
+             LightningWeb.WorkflowLive.encode_project_space(workflow)
   end
 end
