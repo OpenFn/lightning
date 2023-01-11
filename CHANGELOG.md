@@ -8,10 +8,6 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Better code-assist and intelliense in the Job Editor
-- Fixed overflow on Job Editor Tooltips
-- Fixed auto-scroll when adding a new snippet in the Job Editor
-
 ### Added
 
 - Added a Delete job button in Inspector
@@ -29,6 +25,7 @@ and this project adheres to
 
 ### Changed
 
+- Better code-assist and intelliense in the Job Editor
 - Updated @openfn/workflow-diagram to 0.4.0
 - Make plus button part of job nodes in Workflow Diagram
 - Updated @openfn/adaptor-docs to 0.0.5
@@ -45,10 +42,13 @@ and this project adheres to
 - Rename a workflow through the page heading
 - Hide the dataclips tab for beta
 - Remove jobs list page
+- Better error handling in the docs panel
 
 ### Fixed
 
 - Don't consider disabled jobs when calculating subsequent runs
+- Fixed overflow on Job Editor Tooltips
+- Fixed auto-scroll when adding a new snippet in the Job Editor
 
 ## [0.3.1] - 2022-11-22
 
