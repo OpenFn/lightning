@@ -43,17 +43,6 @@ defmodule LightningWeb.DashboardLive.Index do
       <:header>
         <Layout.header socket={@socket}>
           <:title><%= @page_title %></:title>
-          <%= if assigns[:project] do %>
-            <.link navigate={
-              Routes.project_job_index_path(@socket, :index, @project.id)
-            }>
-              <div class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-200 hover:bg-secondary-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500">
-                <div class="h-full">
-                  <Heroicons.table_cells solid class="h-4 w-4 inline-block" />
-                </div>
-              </div>
-            </.link>
-          <% end %>
         </Layout.header>
       </:header>
       <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
