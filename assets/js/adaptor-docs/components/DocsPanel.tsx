@@ -8,12 +8,17 @@ type DocsPanelProps = {
   onInsert?: (text: string) => void;
 }
 
+const docsLink = (<p>You can check the external docs site at 
+<a className="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 ml-2" href="https://docs.openfn.org/adaptors/#where-to-find-them." target="none">docs.openfn.org/adaptors</a>.
+</p>)
+
 const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
   if (!specifier) {;
     return <div>Nothing selected</div>;
   }
-
+  
   const pkg = useDocs(specifier);
+  
   if (pkg === null) {
     return <div className="block m-2">Loading docs...</div>
   }
@@ -21,14 +26,22 @@ const DocsPanel = ({ specifier, onInsert }: DocsPanelProps) => {
     return (
       <div className="block m-2">
         <p>Sorry, an error occurred loading the docs for this adaptor.</p>
-        <p>You can check our docs site at 
-          <a className="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 ml-2" href="https://docs.openfn.org/adaptors/#where-to-find-them." target="none">docs.openfn.org/adaptors</a>.
-        </p>
+        {docsLink}    
+      </div>
+    );
+  }
+
+  const { name, version, functions } = pkg as PackageDescription;
+  if (functions.length === 0) {
+    return (
+      <div className="block m-2">
+        <h1 className="h1 text-lg font-bold text-secondary-700 mb-2">{name} ({version})</h1>
+        <p>Sorry, docs are unavailable for this adaptor.</p>
+        {docsLink}    
       </div>
     );
   }
   
-  const { name, version, functions } = pkg as PackageDescription;
   return (
     <div className="block m-2">
       <h1 className="h1 text-lg font-bold text-secondary-700 mb-2">{name} ({version})</h1>
