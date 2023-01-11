@@ -331,7 +331,7 @@ defmodule Lightning.Invocation do
   def filter_workorder_insert_before_where(date_before) do
     case date_before do
       d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([wo], wo.inserted_at <= ^date_before)
+      _ -> dynamic([wo], wo.inserted_at < ^date_before)
     end
   end
 
@@ -345,7 +345,7 @@ defmodule Lightning.Invocation do
   def filter_run_finished_before_where(date_before) do
     case date_before do
       d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.finished_at <= ^date_before)
+      _ -> dynamic([runs: r], r.finished_at < ^date_before)
     end
   end
 

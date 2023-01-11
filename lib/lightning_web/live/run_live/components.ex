@@ -112,7 +112,7 @@ defmodule LightningWeb.RunLive.Components do
             </span>
           </.link>
           <span
-            class="pl-2 group-hover:opacity-100 hover:underline hover:underline-offset-2 cursor-pointer"
+            class="pl-2 text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
             phx-click="rerun"
             phx-value-attempt_id={@attempt.id}
             phx-value-run_id={@run.id}

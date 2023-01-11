@@ -890,7 +890,7 @@ defmodule Lightning.InvocationTest do
                )
 
       # before wo inserted_at
-      assert [%{id: ^id_pending}, %{id: ^id_crash}, %{id: ^id_failure}] =
+      assert [%{id: ^id_crash}, %{id: ^id_failure}] =
                get_simplified_page(project, %{"page" => 1, "page_size" => 10},
                  status: [
                    :success,
@@ -909,7 +909,7 @@ defmodule Lightning.InvocationTest do
                )
 
       # between wo inserted_at
-      assert [%{id: ^id_pending}, %{id: ^id_timeout}, %{id: ^id_crash}] =
+      assert [%{id: ^id_pending}, %{id: ^id_crash}] =
                get_simplified_page(project, %{"page" => 1, "page_size" => 10},
                  status: [
                    :success,

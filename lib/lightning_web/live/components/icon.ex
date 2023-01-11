@@ -17,6 +17,8 @@ defmodule LightningWeb.Components.Icon do
 
   def dataclips(assigns), do: Heroicons.cube(assigns)
 
+  def info(assigns), do: Heroicons.information_circle(assigns)
+
   def left(assigns) do
     ~H"""
     <.outer_svg {assigns}>
