@@ -45,6 +45,8 @@ and this project adheres to
 - Rename a workflow through the page heading
 - Hide the dataclips tab for beta
 - Make adaptor default to common@latest
+- Remove jobs list page
+
 
 ### Fixed
 

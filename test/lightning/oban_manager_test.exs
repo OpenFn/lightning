@@ -13,6 +13,8 @@ defmodule Lightning.CrashTest do
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
 
+  import ExUnit.CaptureLog
+
   describe "Oban manager" do
     setup do
       Application.put_env(:lightning, :max_run_duration, 5 * 1000)
@@ -71,7 +73,7 @@ defmodule Lightning.CrashTest do
     end
 
     test "timeout jobs generate results with :killed status", %{run: run} do
-      result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
+      result = Pipeline.Runner.start(run)
 
       assert result.exit_reason == :killed
       assert result.exit_code == nil
@@ -94,19 +96,21 @@ defmodule Lightning.CrashTest do
     } do
       refute attempt_run.run.finished_at
 
-      ObanManager.handle_event(
-        [:oban, :job, :exception],
-        %{duration: 5_096_921_850, queue_time: 106_015_000},
-        %{
-          job: %{
-            args: %{"attempt_run_id" => attempt_run.id},
-            worker: "Lightning.Pipeline"
+      with_log(fn ->
+        ObanManager.handle_event(
+          [:oban, :job, :exception],
+          %{duration: 5_096_921_850, queue_time: 106_015_000},
+          %{
+            job: %{
+              args: %{"attempt_run_id" => attempt_run.id},
+              worker: "Lightning.Pipeline"
+            },
+            error: %CaseClauseError{term: :killed},
+            stacktrace: []
           },
-          error: %CaseClauseError{term: :killed},
-          stacktrace: []
-        },
-        nil
-      )
+          nil
+        )
+      end)
 
       run = Repo.get!(Run, attempt_run.run.id)
 
@@ -118,19 +122,21 @@ defmodule Lightning.CrashTest do
     } do
       refute attempt_run.run.finished_at
 
-      ObanManager.handle_event(
-        [:oban, :job, :exception],
-        %{duration: 5_096_921_850, queue_time: 106_015_000},
-        %{
-          job: %{
-            args: %{"attempt_run_id" => attempt_run.id},
-            worker: "Lightning.Pipeline"
+      with_log(fn ->
+        ObanManager.handle_event(
+          [:oban, :job, :exception],
+          %{duration: 5_096_921_850, queue_time: 106_015_000},
+          %{
+            job: %{
+              args: %{"attempt_run_id" => attempt_run.id},
+              worker: "Lightning.Pipeline"
+            },
+            error: %CaseClauseError{term: :timeout},
+            stacktrace: []
           },
-          error: %CaseClauseError{term: :timeout},
-          stacktrace: []
-        },
-        nil
-      )
+          nil
+        )
+      end)
 
       run = Repo.get!(Run, attempt_run.run.id)
 

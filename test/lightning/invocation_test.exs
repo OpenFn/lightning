@@ -3,7 +3,6 @@ defmodule Lightning.InvocationTest do
 
   alias Lightning.Invocation
   alias Lightning.Invocation.{Run}
-  alias Lightning.WorkOrderService
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures
@@ -435,10 +434,12 @@ defmodule Lightning.InvocationTest do
           id: workflow.project_id
         }).entries()
 
-      actual_wo =
-        WorkOrderService.get_work_order(id) |> Repo.preload(attempts: :runs)
+      [actual_wo] =
+        Invocation.get_workorders_by_ids([id])
+        |> Invocation.with_attempts()
+        |> Lightning.Repo.all()
 
-      actual_last_attempt = List.last(actual_wo.attempts)
+      actual_last_attempt = List.first(actual_wo.attempts)
 
       assert actual_last_attempt.id == attempt_two.id
 
