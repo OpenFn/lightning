@@ -10,6 +10,7 @@ const useDocs = (specifier: string) => {
     describePackage(specifier, {}).then((result) => {
       setDocs(result);
     }).catch((err) => {
+      console.error(err)
       setDocs(false)
     });
   }, [specifier])
