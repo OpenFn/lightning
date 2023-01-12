@@ -28,9 +28,9 @@ defmodule LightningWeb.ProjectLive.Settings do
     ~H"""
     <div
       id={"tab-bar-#{@id}"}
-      class="flex gap-x-8 gap-y-2 border-b border-gray-200 dark:border-gray-600"
-      data-active-classes="border-b-2 border-primary-500 text-primary-600"
-      data-inactive-classes="border-b-2 border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      class="nav nav-tabs flex flex-col flex-wrap list-none mx-4"
+      data-active-classes="text-primary-500 bg-secondary-200"
+      data-inactive-classes="text-primary-400 hover:bg-secondary-200"
       data-default-hash={@default_hash}
       phx-hook="TabSelector"
     >
@@ -59,9 +59,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     ~H"""
     <a
       id={"tab-item-#{@hash}"}
-      class="whitespace-nowrap flex items-center py-3 px-3 font-medium
-             text-sm border-b-2 border-transparent text-gray-500
-             hover:border-gray-300 hover:text-gray-600 hover:border-gray-300"
+      class="nav-link px-3 py-2 rounded-md text-sm font-medium rounded-md block active"
       data-hash={@hash}
       lv-keep-class
       phx-click={switch_tabs(@hash)}
