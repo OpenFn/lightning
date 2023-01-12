@@ -1,10 +1,10 @@
-alias Phoenix.LiveView.JS
-
 defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
   Index Liveview for Runs
   """
   use LightningWeb, :live_view
+
+  alias Lightning.Projects
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
@@ -12,7 +12,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(active_menu_item: :settings)}
+     |> assign(
+       active_menu_item: :settings,
+       changeset: Projects.change_project(socket.assigns.project)
+     )}
   end
 
   @impl true
@@ -24,58 +27,29 @@ defmodule LightningWeb.ProjectLive.Settings do
     socket |> assign(:page_title, "Projects settings")
   end
 
-  def tab_bar(assigns) do
-    ~H"""
-    <div
-      id={"tab-bar-#{@id}"}
-      class="nav nav-tabs flex flex-col flex-wrap list-none mx-4"
-      data-active-classes="text-primary-500 bg-secondary-200"
-      data-inactive-classes="text-primary-400 hover:bg-secondary-200"
-      data-default-hash={@default_hash}
-      phx-hook="TabSelector"
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
+  @impl true
+  def handle_event("validate", %{"project" => project_params} = _params, socket) do
+    changeset =
+      socket.assigns.project
+      |> Projects.change_project(project_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :changeset, changeset)}
   end
 
-  attr(:for_hash, :string, required: true)
-  slot(:inner_block, required: true)
-
-  def panel_content(assigns) do
-    ~H"""
-    <div
-      class="h-[calc(100%-0.75rem)]"
-      data-panel-hash={@for_hash}
-      style="display: none;"
-      lv-keep-style
-    >
-      <%= render_slot(@inner_block) %>
-    </div>
-    """
+  def handle_event("save", %{"project" => project_params} = _params, socket) do
+    save_project(socket, project_params)
   end
 
-  def tab_item(assigns) do
-    ~H"""
-    <a
-      id={"tab-item-#{@hash}"}
-      class="nav-link px-3 py-2 rounded-md text-sm font-medium rounded-md block active"
-      data-hash={@hash}
-      lv-keep-class
-      phx-click={switch_tabs(@hash)}
-      href={"##{@hash}"}
-    >
-      <%= render_slot(@inner_block) %>
-    </a>
-    """
-  end
+  defp save_project(socket, project_params) do
+    case Projects.update_project(socket.assigns.project, project_params) do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Project updated successfully")}
 
-  defp switch_tabs(hash) do
-    JS.hide(to: "[data-panel-hash]:not([data-panel-hash=#{hash}])")
-    |> JS.show(
-      to: "[data-panel-hash=#{hash}]",
-      transition: {"ease-out duration-300", "opacity-0", "opacity-100"},
-      time: 300
-    )
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :changeset, changeset)}
+    end
   end
 end
