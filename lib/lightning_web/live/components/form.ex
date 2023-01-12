@@ -2,9 +2,9 @@ defmodule LightningWeb.Components.Form do
   @moduledoc false
   use LightningWeb, :component
 
-  slot :inner_block, required: true
-  attr :changeset, :map
-  attr :rest, :global, include: ~w(form disabled)
+  slot(:inner_block, required: true)
+  attr(:changeset, :map)
+  attr(:rest, :global, include: ~w(form disabled))
 
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
   def submit_button(assigns) do
@@ -65,9 +65,22 @@ defmodule LightningWeb.Components.Form do
       min-h-full
     ]
 
-    assigns = assign(assigns, classes: classes)
+    label_classes = ~w[
+      block
+      text-sm
+      font-medium
+      text-secondary-700
+    ]
+
+    assigns =
+      assigns
+      |> assign(label_classes: label_classes)
+      |> assign_new(:classes, fn -> classes end)
 
     ~H"""
+    <%= if @label do %>
+      <%= label(@form, @id, @label, class: @label_classes) %>
+    <% end %>
     <%= error_tag(@form, @id) %>
     <%= textarea(@form, @id, class: @classes) %>
     """
