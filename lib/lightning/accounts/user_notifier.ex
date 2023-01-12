@@ -100,4 +100,26 @@ defmodule Lightning.Accounts.UserNotifier do
     ==============================
     """)
   end
+
+  def deliver_failure_email(users, _run) do
+    recipients = Enum.map(users, & &1.email)
+
+    email =
+      new()
+      |> to(recipients)
+      |> from({"Lightning", admin()})
+      |> subject("subject")
+      |> text_body("body")
+
+    with {:ok, _metadata} <- Mailer.deliver(email) do
+      {:ok, email}
+    end
+
+    # new_email()
+    # |> to(Enum.map(users, fn x -> x.email end))
+    # |> from("openfn@openfn.org")
+    # |> subject(failure_subject(run))
+    # |> text_body(failed_run_text(run))
+    # |> html_body(failed_run_html(run))
+  end
 end

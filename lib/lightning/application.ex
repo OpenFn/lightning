@@ -75,6 +75,8 @@ defmodule Lightning.Application do
       LightningWeb.Endpoint,
       adaptor_registry_childspec,
       adaptor_service_childspec
+      # Start the rate limiter for email alerts
+      # {ExRated, [[], [name: :ex_rated]]}
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]

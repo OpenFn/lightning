@@ -93,7 +93,8 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:temp, "~> 0.4"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      {:ex_rated, "~> 2.0"}
     ]
   end
 

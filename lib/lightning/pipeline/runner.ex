@@ -4,6 +4,7 @@ defmodule Lightning.Pipeline.Runner do
   """
   require Logger
   alias Lightning.Invocation
+  alias Lightning.Accounts.User
 
   import Lightning.AdaptorService,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
@@ -35,13 +36,33 @@ defmodule Lightning.Pipeline.Runner do
 
       scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
 
-      update_run(run, %{
-        finished_at: DateTime.utc_now(),
-        exit_code: result.exit_code,
-        log: scrubbed_log
-      })
+      {:ok, run} =
+        update_run(run, %{
+          finished_at: DateTime.utc_now(),
+          exit_code: result.exit_code,
+          log: scrubbed_log
+        })
 
       Runner.create_dataclip_from_result(result, run)
+
+      alert_on_failure(run)
+    end
+
+    defp alert_on_failure(run) when run.exit_code == 0, do: nil
+
+    defp alert_on_failure(run) do
+      run = Lightning.Repo.preload(run, job: :workflow)
+
+      ExRated.check_rate(run.job.workflow_id, 30_000, 5)
+      |> case do
+        {:ok, _count} ->
+          %{id: run.job.workflow.id}
+          |> Lightning.FailureAlerter.new()
+          |> Oban.insert()
+
+        {:error, _limit} ->
+          nil
+      end
     end
   end
 
