@@ -44,7 +44,9 @@ and this project adheres to
 - [BREAKING CHANGE] Introduced `@openfn/cli` as the new runtime for Jobs
 - Rename a workflow through the page heading
 - Hide the dataclips tab for beta
+- Make adaptor default to common@latest
 - Remove jobs list page
+
 
 ### Fixed
 

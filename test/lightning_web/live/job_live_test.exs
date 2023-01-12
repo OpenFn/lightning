@@ -4,6 +4,8 @@ defmodule LightningWeb.JobLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.JobsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.WorkflowsFixtures
+  import SweetXml
 
   alias LightningWeb.JobLive.AdaptorPicker
 
@@ -26,6 +28,36 @@ defmodule LightningWeb.JobLiveTest do
 
       assert AdaptorPicker.display_name_for_adaptor("@other_org/some_module") ==
                "@other_org/some_module"
+    end
+
+    test "adaptor name and version defaults to common and latest", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :new_job, project.id, workflow.id)
+        )
+
+      assert view |> element("#adaptor-name") |> has_element?()
+      assert view |> element("#adaptor-version") |> has_element?()
+
+      assert view
+             |> element("#adaptor-name")
+             |> render()
+             |> parse()
+             |> xpath(~x"option[@selected]/text()"l)
+             |> to_string() == "common"
+
+      assert view
+             |> element("#adaptor-version")
+             |> render()
+             |> parse()
+             |> xpath(~x"option[@selected]/text()"l)
+             |> to_string() == "latest (≥ 1.6.2)"
     end
   end
 

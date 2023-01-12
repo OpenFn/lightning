@@ -41,10 +41,12 @@ defmodule Lightning.Jobs.Job do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "jobs" do
-    field :body, :string
+    field :body, :string,
+      default: "// Get started by adding operations from your adaptor here"
+
     field :enabled, :boolean, default: false
     field :name, :string
-    field :adaptor, :string
+    field :adaptor, :string, default: "@openfn/language-common@latest"
     belongs_to :trigger, Trigger
 
     belongs_to :project_credential, ProjectCredential
