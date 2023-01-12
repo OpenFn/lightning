@@ -44,8 +44,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "Side menu has credentials and user profile navigation", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
 
       assert index_live
              |> element("nav#side-menu a", "Credentials")
@@ -64,8 +63,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, _index_live, html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, _index_live, html} = live(conn, Routes.credential_index_path(conn, :index))
 
       assert html =~ "Credentials"
       assert html =~ "Projects with Access"
@@ -114,8 +112,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, new_live, _html} =
         index_live
@@ -167,8 +164,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new dhis2 credential", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, new_live, _html} =
         index_live
@@ -228,8 +224,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new http credential", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, new_live, _html} =
         index_live
@@ -299,8 +294,7 @@ defmodule LightningWeb.CredentialLiveTest do
     setup [:create_credential]
 
     test "updates a credential", %{conn: conn, credential: credential} do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, form_live, _} =
         index_live
@@ -340,8 +334,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, form_live, _} =
         index_live
@@ -369,78 +362,77 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential updated successfully"}
     end
 
-    # test "blocks credential transfer to invalid owner; allows to valid owner", %{
-    #   conn: conn,
-    #   user: first_owner
-    # } do
-    #   user_2 = Lightning.AccountsFixtures.user_fixture()
-    #   user_3 = Lightning.AccountsFixtures.user_fixture()
+    test "blocks credential transfer to invalid owner; allows to valid owner", %{
+      conn: conn,
+      user: first_owner
+    } do
+      user_2 = Lightning.AccountsFixtures.user_fixture()
+      user_3 = Lightning.AccountsFixtures.user_fixture()
 
-    #   {:ok, %Lightning.Projects.Project{id: project_id}} =
-    #     Lightning.Projects.create_project(%{
-    #       name: "some-name",
-    #       project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
-    #     })
+      {:ok, %Lightning.Projects.Project{id: project_id}} =
+        Lightning.Projects.create_project(%{
+          name: "some-name",
+          project_users: [%{user_id: first_owner.id}, %{user_id: user_2.id}]
+        })
 
-    #   credential =
-    #     credential_fixture(
-    #       user_id: first_owner.id,
-    #       name: "the one for giving away",
-    #       project_credentials: [
-    #         %{project_id: project_id}
-    #       ]
-    #     )
+      credential =
+        credential_fixture(
+          user_id: first_owner.id,
+          name: "the one for giving away",
+          project_credentials: [
+            %{project_id: project_id}
+          ]
+        )
 
-    #   {:ok, index_live, html} =
-    #     live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, html} = live(conn, Routes.credential_index_path(conn, :index))
 
-    #   # both credentials appear in the list
-    #   assert html =~ "some name"
-    #   assert html =~ "the one for giving away"
+      # both credentials appear in the list
+      assert html =~ "some name"
+      assert html =~ "the one for giving away"
 
-    #   {:ok, form_live, html} =
-    #     index_live
-    #     |> element("#credential-#{credential.id} a", "Edit")
-    #     |> render_click()
-    #     |> follow_redirect(
-    #       conn,
-    #       Routes.credential_edit_path(conn, :edit, credential)
-    #     )
+      {:ok, form_live, html} =
+        index_live
+        |> element("#credential-#{credential.id} a", "Edit")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :edit, credential)
+        )
 
-    #   assert html =~ first_owner.id
-    #   assert html =~ user_2.id
-    #   assert html =~ user_3.id
+      assert html =~ first_owner.id
+      assert html =~ user_2.id
+      assert html =~ user_3.id
 
-    #   assert form_live
-    #          |> form("#credential-form",
-    #            credential: Map.put(@update_attrs, :user_id, user_3.id)
-    #          )
-    #          |> render_change() =~ "Invalid owner"
+      assert form_live
+             |> form("#credential-form",
+               credential: Map.put(@update_attrs, :user_id, user_3.id)
+             )
+             |> render_change() =~ "Invalid owner"
 
-    #   #  Can't transfer to user who doesn't have access to right projects
-    #   assert form_live |> submit_disabled()
+      #  Can't transfer to user who doesn't have access to right projects
+      assert form_live |> submit_disabled()
 
-    #   {:ok, _index_live, html} =
-    #     form_live
-    #     |> form("#credential-form",
-    #       credential: %{
-    #         body: "{\"a\":\"new_secret\"}",
-    #         user_id: user_2.id
-    #       }
-    #     )
-    #     |> render_submit()
-    #     |> follow_redirect(
-    #       conn,
-    #       Routes.credential_index_path(conn, :index)
-    #     )
+      {:ok, _index_live, html} =
+        form_live
+        |> form("#credential-form",
+          credential: %{
+            body: "{\"a\":\"new_secret\"}",
+            user_id: user_2.id
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
 
-    #   {_path, flash} = assert_redirect(form_live)
-    #   assert flash == %{"info" => "Credential updated successfully"}
+      {_path, flash} = assert_redirect(form_live)
+      assert flash == %{"info" => "Credential updated successfully"}
 
-    #   # Once the transfer is made, the credential should not show up in the list
-    #   assert html =~ "some name"
-    #   refute html =~ "the one for giving away"
-    # end
+      # Once the transfer is made, the credential should not show up in the list
+      assert html =~ "some name"
+      refute html =~ "the one for giving away"
+    end
   end
 
   describe "New credential from project context " do
@@ -523,9 +515,7 @@ defmodule LightningWeb.CredentialLiveTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(
-               ~S{#job-form select#credentialField option[selected=selected]}
-             )
+             |> element(~S{#job-form select#credentialField option[selected=selected]})
              |> render() =~ "newly created credential",
              "Should have the project credential selected"
     end
@@ -581,9 +571,7 @@ defmodule LightningWeb.CredentialLiveTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(
-               ~S{#job-form select#credentialField option[selected=selected]}
-             )
+             |> element(~S{#job-form select#credentialField option[selected=selected]})
              |> render() =~ "newly created credential",
              "Should have the project credential selected"
 

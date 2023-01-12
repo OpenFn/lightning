@@ -23,8 +23,7 @@ config :lightning, Lightning.Vault,
 # you can enable the server option below.
 config :lightning, LightningWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
-  secret_key_base:
-    "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
+  secret_key_base: "/8zedVJLxvmGGFoRExE3e870g7CGZZQ1Vq11A5MbQGPKOpK57MahVsPW6Wkkv61n",
   server: false
 
 # In test we don't send emails.
@@ -49,3 +48,6 @@ config :junit_formatter,
   prepend_project_name?: true
 
 config :lightning, Oban, testing: :inline
+
+# Enables / Displays the credential transfer feature for LightningWeb.CredentialLiveTest
+config :lightning, LightningWeb, allow_credential_transfer: true
