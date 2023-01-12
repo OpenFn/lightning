@@ -95,7 +95,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     value = changeset |> get_field(field, nil)
 
     [
-      label(:body, field, text, class: "block text-sm font-medium text-secondary-700"),
+      label(:body, field, text,
+        class: "block text-sm font-medium text-secondary-700"
+      ),
       apply(Phoenix.HTML.Form, type, [
         :body,
         field,
@@ -213,7 +215,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         %{"projectid" => project_id},
         socket
       ) do
-    project_credentials = fetch_field!(socket.assigns.changeset, :project_credentials)
+    project_credentials =
+      fetch_field!(socket.assigns.changeset, :project_credentials)
 
     project_credentials =
       Enum.find(project_credentials, fn pu -> pu.project_id == project_id end)
@@ -236,7 +239,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       |> put_assoc(:project_credentials, project_credentials)
       |> Map.put(:action, :validate)
 
-    available_projects = filter_available_projects(changeset, socket.assigns.all_projects)
+    available_projects =
+      filter_available_projects(changeset, socket.assigns.all_projects)
 
     {:noreply,
      socket
@@ -271,7 +275,8 @@ defmodule LightningWeb.CredentialLive.FormComponent do
       |> put_assoc(:project_credentials, project_credentials_params)
       |> Map.put(:action, :validate)
 
-    available_projects = filter_available_projects(changeset, socket.assigns.all_projects)
+    available_projects =
+      filter_available_projects(changeset, socket.assigns.all_projects)
 
     {:noreply,
      socket

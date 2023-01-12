@@ -41,7 +41,8 @@ config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 config :esbuild,
   version: "0.15.12",
   default: [
-    args: ~w(js/app.js
+    args:
+      ~w(js/app.js
          js/workflow-diagram/component.tsx
          js/adaptor-docs/index.tsx
          js/editor/Editor.tsx

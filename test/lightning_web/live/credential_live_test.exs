@@ -44,7 +44,8 @@ defmodule LightningWeb.CredentialLiveTest do
     test "Side menu has credentials and user profile navigation", %{
       conn: conn
     } do
-      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       assert index_live
              |> element("nav#side-menu a", "Credentials")
@@ -63,7 +64,8 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, _index_live, html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, _index_live, html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       assert html =~ "Credentials"
       assert html =~ "Projects with Access"
@@ -112,7 +114,8 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, new_live, _html} =
         index_live
@@ -164,7 +167,8 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new dhis2 credential", %{
       conn: conn
     } do
-      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, new_live, _html} =
         index_live
@@ -224,7 +228,8 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new http credential", %{
       conn: conn
     } do
-      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, new_live, _html} =
         index_live
@@ -294,7 +299,8 @@ defmodule LightningWeb.CredentialLiveTest do
     setup [:create_credential]
 
     test "updates a credential", %{conn: conn, credential: credential} do
-      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, form_live, _} =
         index_live
@@ -334,7 +340,8 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, index_live, _html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       {:ok, form_live, _} =
         index_live
@@ -384,7 +391,8 @@ defmodule LightningWeb.CredentialLiveTest do
           ]
         )
 
-      {:ok, index_live, html} = live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, html} =
+        live(conn, Routes.credential_index_path(conn, :index))
 
       # both credentials appear in the list
       assert html =~ "some name"
@@ -515,7 +523,9 @@ defmodule LightningWeb.CredentialLiveTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(~S{#job-form select#credentialField option[selected=selected]})
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
              |> render() =~ "newly created credential",
              "Should have the project credential selected"
     end
@@ -571,7 +581,9 @@ defmodule LightningWeb.CredentialLiveTest do
       refute has_element?(view, "#credential-form")
 
       assert view
-             |> element(~S{#job-form select#credentialField option[selected=selected]})
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
              |> render() =~ "newly created credential",
              "Should have the project credential selected"
 
