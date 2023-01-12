@@ -22,6 +22,7 @@ export type NodeData = {
 export interface NodeFlowProps {
   data: NodeData;
   type: string;
+  selectable?: boolean;
 }
 
 export interface FlowElkNode extends ElkNode {

@@ -22,6 +22,7 @@ export function toFlowNode(node: FlowElkNode, parent?: FlowElkNode): Node {
       width: node.width,
       zIndex: isContainer ? -1 : 1,
     },
+    selectable: node.__flowProps__.selectable ? true : false,
     position: { x: node.x || 0, y: node.y || 0 },
     ...nodeData(node),
     ...nodeType(node),

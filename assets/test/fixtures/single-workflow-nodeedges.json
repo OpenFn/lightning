@@ -11,6 +11,7 @@
         "x": 15,
         "y": 15
       },
+      "selectable": false,
       "data": {
         "hasChildren": true,
         "id": "wf-one",
@@ -41,6 +42,7 @@
           "name": "Workflow One"
         }
       },
+      "selectable": false,
       "type": "trigger",
       "parentNode": "wf-one",
       "extent": "parent"
@@ -63,6 +65,7 @@
         "workflowId": "wf-one"
       },
       "type": "job",
+      "selectable": false,
       "parentNode": "wf-one",
       "extent": "parent"
     },
@@ -82,6 +85,7 @@
         "label": "create"
       },
       "type": "operation",
+      "selectable": false,
       "parentNode": "A",
       "extent": "parent"
     },
@@ -101,6 +105,7 @@
         "label": "fn"
       },
       "type": "operation",
+      "selectable": false,
       "parentNode": "A",
       "extent": "parent"
     },
@@ -120,6 +125,7 @@
         "label": "upsert"
       },
       "type": "operation",
+      "selectable": false,
       "parentNode": "A",
       "extent": "parent"
     },
@@ -141,6 +147,7 @@
         "workflowId": "wf-one"
       },
       "type": "job",
+      "selectable": false,
       "parentNode": "wf-one",
       "extent": "parent"
     },
@@ -162,6 +169,7 @@
         "workflowId": "wf-one"
       },
       "type": "job",
+      "selectable": false,
       "parentNode": "wf-one",
       "extent": "parent"
     },
@@ -183,6 +191,7 @@
         "workflowId": "wf-one"
       },
       "type": "job",
+      "selectable": false,
       "parentNode": "wf-one",
       "extent": "parent"
     },
@@ -202,6 +211,7 @@
         "label": "fn"
       },
       "type": "operation",
+      "selectable": false,
       "parentNode": "E",
       "extent": "parent"
     },
@@ -221,6 +231,7 @@
         "label": "upsert"
       },
       "type": "operation",
+      "selectable": false,
       "parentNode": "E",
       "extent": "parent"
     }

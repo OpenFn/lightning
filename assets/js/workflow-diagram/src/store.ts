@@ -5,8 +5,11 @@ import {
   EdgeChange,
   Node,
   NodeChange,
+  NodeSelectionChange,
   OnEdgesChange,
   OnNodesChange,
+  OnSelectionChangeFunc,
+  ReactFlowInstance,
 } from 'react-flow-renderer';
 import { ProjectSpace, Workflow } from './types';
 import create from 'zustand';
@@ -21,6 +24,9 @@ type RFState = {
   projectSpace: ProjectSpace | null;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
+  onSelectedNodeChange: OnSelectionChangeFunc;
+  reactFlowInstance: ReactFlowInstance | null;
+  selectedNode: string | undefined;
 };
 
 export const useStore = create<RFState>((set, get) => ({
@@ -38,18 +44,46 @@ export const useStore = create<RFState>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
+  onSelectedNodeChange: (_data: { nodes: Node[] }) => {},
+  reactFlowInstance: null,
+  selectedNode: undefined,
 }));
 
+function markSelected(nodes: Node[], selectedNode: string | undefined) {
+  if (!selectedNode) {
+    return nodes;
+  }
+
+  return nodes.map(node => {
+    if (selectedNode == node.id) {
+      return {
+        ...node,
+        selected: true,
+      };
+    }
+
+    return node;
+  });
+}
+
 export async function setProjectSpace(
-  projectSpace: ProjectSpace
+  projectSpace: ProjectSpace | string
 ): Promise<void> {
+  if (typeof projectSpace == 'string') {
+    projectSpace = JSON.parse(atob(projectSpace)) as ProjectSpace;
+  }
   let elkNode: FlowElkNode = toElkNode(projectSpace);
 
   elkNode = await doLayout(elkNode);
 
   const [nodes, edges] = toFlow(elkNode);
 
-  useStore.setState({ nodes, edges, projectSpace, elkNode });
+  useStore.setState({
+    nodes: markSelected(nodes, useStore.getState().selectedNode),
+    edges,
+    projectSpace,
+    elkNode,
+  });
 }
 
 export async function addWorkspace(workflow: Workflow) {
@@ -66,4 +100,51 @@ export async function addWorkspace(workflow: Workflow) {
   const [nodes, edges] = toFlow(elkNode);
 
   useStore.setState({ nodes, edges, elkNode });
+}
+
+export function setReactFlowInstance(rf: ReactFlowInstance) {
+  useStore.setState({ reactFlowInstance: rf });
+}
+
+function debounce(fun: () => void, t: number | undefined) {
+  let timeout: string | number | NodeJS.Timeout | undefined;
+  return () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(fun, t);
+  };
+}
+
+export const fitView = debounce(() => {
+  let reactFlowInstance = useStore.getState().reactFlowInstance;
+
+  if (reactFlowInstance) {
+    reactFlowInstance.fitView({ duration: 250 });
+  }
+}, 250);
+
+export function unselectAllNodes() {
+  const nodes = useStore.getState().nodes;
+  const changes: NodeSelectionChange[] = nodes.map(({ id }) => ({
+    id,
+    type: 'select',
+    selected: false,
+  }));
+
+  useStore.setState({ nodes: applyNodeChanges(changes, nodes) });
+}
+
+export function selectNode(selectedId: string) {
+  const nodes = useStore.getState().nodes;
+  const changes: NodeSelectionChange[] = nodes.map(node => {
+    return {
+      id: node.id,
+      type: 'select',
+      selected: selectedId == node.id,
+    };
+  });
+
+  useStore.setState({
+    nodes: applyNodeChanges(changes, nodes),
+    selectedNode: selectedId,
+  });
 }

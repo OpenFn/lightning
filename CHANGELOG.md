@@ -22,6 +22,7 @@ and this project adheres to
   diagram
 - Allow any user to delete a credential that they own
 - Create any credential through a form except for OAuth
+- Refit all diagram nodes on browser and container resize
 
 ### Changed
 

@@ -25,6 +25,7 @@ export function triggerNodeFactory(job: Job, workflow: Workflow): FlowElkNode {
     __flowProps__: {
       data,
       type: 'trigger',
+      selectable: false,
     },
     width: 190,
     height: 70,

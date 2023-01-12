@@ -9,8 +9,6 @@ defmodule LightningWeb.WorkflowLive do
 
   @impl true
   def render(assigns) do
-    assigns = assigns |> assign_new(:show_canvas, fn -> true end)
-
     ~H"""
     <Layout.page_content>
       <:header>
@@ -42,49 +40,95 @@ defmodule LightningWeb.WorkflowLive do
           </:title>
         </Layout.header>
       </:header>
-      <div class="relative h-full">
+      <div class="relative h-full flex">
         <%= case @live_action do %>
           <% :index -> %>
             <Layout.centered>
               <.workflow_list workflows={@workflows} project={@project} />
             </Layout.centered>
           <% :new_job -> %>
-            <div class="absolute w-1/3 inset-y-0 right-0 bottom-0 z-10">
-              <div
-                class="w-auto h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5"
-                id="job-pane"
-              >
-                <.live_component
-                  module={LightningWeb.JobLive.JobBuilder}
-                  id="builder-new"
-                  job={@job}
-                  workflow={assigns[:workflow]}
-                  params={@job_params}
-                  project={@project}
-                  current_user={@current_user}
-                  builder_state={@builder_state}
-                  return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id,
-                      @current_workflow.id
-                    )
-                  }
-                />
+            <div class="grow">
+              <.workflow_diagram
+                base_path={
+                  Routes.project_workflow_path(
+                    @socket,
+                    :show,
+                    @project.id,
+                    @current_workflow.id
+                  )
+                }
+                id={@current_workflow.id}
+                selected_node={@selected_node_id}
+                encoded_project_space={@encoded_project_space}
+              />
+            </div>
+            <div class="grow-0 w-1/2 relative">
+              <div class="absolute w-full inset-y-0 z-10">
+                <div class="w-auto h-full" id="job-pane">
+                  <.live_component
+                    module={LightningWeb.JobLive.JobBuilder}
+                    id="builder-new"
+                    job={@job}
+                    workflow={assigns[:workflow]}
+                    params={@job_params}
+                    project={@project}
+                    current_user={@current_user}
+                    builder_state={@builder_state}
+                    return_to={
+                      Routes.project_workflow_path(
+                        @socket,
+                        :show,
+                        @project.id,
+                        @current_workflow.id
+                      )
+                    }
+                  />
+                </div>
               </div>
             </div>
           <% :edit_job -> %>
-            <div class="absolute w-1/2 inset-y-0 right-0 z-10">
-              <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
-                <.live_component
-                  module={LightningWeb.JobLive.JobBuilder}
-                  id={"builder-#{@job.id}"}
-                  job={@job}
-                  project={@project}
-                  current_user={@current_user}
-                  builder_state={@builder_state}
-                  return_to={
+            <div class="grow">
+              <.workflow_diagram
+                base_path={
+                  Routes.project_workflow_path(
+                    @socket,
+                    :show,
+                    @project.id,
+                    @current_workflow.id
+                  )
+                }
+                id={@current_workflow.id}
+                selected_node={@job.id}
+                encoded_project_space={@encoded_project_space}
+              />
+            </div>
+            <div class="grow-0 w-1/2 relative">
+              <div class="absolute w-full inset-y-0 z-10">
+                <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
+                  <.live_component
+                    module={LightningWeb.JobLive.JobBuilder}
+                    id={"builder-#{@job.id}"}
+                    job={@job}
+                    project={@project}
+                    current_user={@current_user}
+                    builder_state={@builder_state}
+                    return_to={
+                      Routes.project_workflow_path(
+                        @socket,
+                        :show,
+                        @project.id,
+                        @current_workflow.id
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          <% :show -> %>
+            <div class="grow">
+              <%= if Enum.any?(@current_workflow.jobs) do %>
+                <.workflow_diagram
+                  base_path={
                     Routes.project_workflow_path(
                       @socket,
                       :show,
@@ -92,36 +136,17 @@ defmodule LightningWeb.WorkflowLive do
                       @current_workflow.id
                     )
                   }
+                  id={@current_workflow.id}
+                  encoded_project_space={@encoded_project_space}
                 />
-              </div>
+              <% else %>
+                <.create_job_panel
+                  socket={@socket}
+                  project={@project}
+                  workflow={@current_workflow}
+                />
+              <% end %>
             </div>
-          <% :show -> %>
-            <%= if length(@current_workflow.jobs) == 0 do %>
-              <div class="w-1/2 h-16 text-center my-16 mx-auto pt-4">
-                <div class="text-sm font-semibold text-gray-500 pb-4">
-                  Create your first job to get started.
-                </div>
-                <div class="text-xs text-gray-400">
-                  <.link patch={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :new_job,
-                      @project.id,
-                      @current_workflow.id
-                    )
-                  }>
-                    <Common.button>
-                      <div class="h-full">
-                        <Heroicons.plus class="h-4 w-4 inline-block" />
-                        <span class="inline-block align-middle">
-                          Create job
-                        </span>
-                      </div>
-                    </Common.button>
-                  </.link>
-                </div>
-              </div>
-            <% end %>
           <% :edit_workflow -> %>
             <div class="absolute top-0 right-0 m-2 z-10">
               <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
@@ -143,30 +168,12 @@ defmodule LightningWeb.WorkflowLive do
             </div>
           <% _ -> %>
         <% end %>
-        <%= if @show_canvas do %>
-          <div
-            phx-hook="WorkflowDiagram"
-            class="h-full w-full"
-            id={"hook-#{@project.id}"}
-            phx-update="ignore"
-            base-path={
-              Routes.project_workflow_path(
-                @socket,
-                :show,
-                @project.id,
-                @current_workflow.id
-              )
-            }
-            data-project-space={@encoded_project_space}
-          >
-          </div>
-        <% end %>
       </div>
     </Layout.page_content>
     """
   end
 
-  defp encode_project_space(%Workflows.Workflow{} = workflow) do
+  def encode_project_space(%Workflows.Workflow{} = workflow) do
     workflow
     |> Lightning.Repo.preload(
       jobs: [:credential, :workflow, trigger: [:upstream_job]]
@@ -259,7 +266,6 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
-      show_canvas: false,
       workflows: Workflows.get_workflows_for(socket.assigns.project)
     )
   end
@@ -281,6 +287,7 @@ defmodule LightningWeb.WorkflowLive do
           "upstream_job_id" => upstream_job.id
         }
       },
+      selected_node_id: upstream_job.id,
       current_workflow: workflow,
       encoded_project_space: encode_project_space(workflow),
       page_title: "Workflows"
@@ -300,6 +307,7 @@ defmodule LightningWeb.WorkflowLive do
       job_params: %{
         "trigger" => %{"type" => :webhook}
       },
+      selected_node_id: nil,
       current_workflow: workflow,
       workflow:
         Workflows.Workflow.changeset(workflow, %{
@@ -353,14 +361,10 @@ defmodule LightningWeb.WorkflowLive do
         jobs: [:credential, :workflow, trigger: [:upstream_job]]
       )
 
-    # we display the canvas only if workflow has jobs, otherwise we prompt the user to create a job
-    show_canvas = length(workflow.jobs) > 0
-
     socket
     |> assign(
       page_title: "Workflows",
       current_workflow: workflow,
-      show_canvas: show_canvas,
       encoded_project_space: encode_project_space(workflow)
     )
   end

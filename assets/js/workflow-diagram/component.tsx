@@ -14,6 +14,7 @@ export function mount(el: Element | DocumentFragment) {
   function update({ onNodeClick, onPaneClick, onJobAddClick }: UpdateParams) {
     return componentRoot.render(
       <WorkflowDiagram
+        ref={el}
         className="h-8"
         onJobAddClick={onJobAddClick}
         onNodeClick={onNodeClick}
@@ -28,5 +29,10 @@ export function mount(el: Element | DocumentFragment) {
 
   componentRoot.render(<h1>Loading</h1>);
 
-  return { update, unmount, setProjectSpace: Store.setProjectSpace };
+  return {
+    update,
+    unmount,
+    setProjectSpace: Store.setProjectSpace,
+    setSelectedNode: Store.selectNode,
+  };
 }
