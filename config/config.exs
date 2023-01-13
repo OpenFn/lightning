@@ -78,6 +78,9 @@ config :phoenix, :json_library, Jason
 
 config :lightning, Lightning.Vault, json_library: Jason
 
+# Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
+config :lightning, LightningWeb, allow_credential_transfer: false
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

@@ -51,8 +51,7 @@
             <% end %>
           </div>
         </div>
-
-        <%= if @action in [:edit] do %>
+        <%= if @action in [:edit] and @allow_credential_transfer do %>
           <div class="mt-2">
             <%= label(f, :owner,
               class: "block text-sm font-medium text-secondary-700"

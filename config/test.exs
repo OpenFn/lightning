@@ -49,3 +49,6 @@ config :junit_formatter,
   prepend_project_name?: true
 
 config :lightning, Oban, testing: :inline
+
+# Enables / Displays the credential transfer feature for LightningWeb.CredentialLiveTest
+config :lightning, LightningWeb, allow_credential_transfer: true

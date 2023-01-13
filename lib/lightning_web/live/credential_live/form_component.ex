@@ -13,6 +13,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   def mount(socket) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
+    allow_credential_transfer =
+      Application.fetch_env!(:lightning, LightningWeb)
+      |> Keyword.get(:allow_credential_transfer)
+
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
@@ -20,7 +24,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         {name, name}
       end)
 
-    {:ok, socket |> assign(:schemas_options, [{"Raw", "raw"} | schemas_options])}
+    {:ok,
+     socket
+     |> assign(
+       schemas_options: [{"Raw", "raw"} | schemas_options],
+       allow_credential_transfer: allow_credential_transfer
+     )}
   end
 
   @impl true
