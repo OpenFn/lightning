@@ -55,11 +55,12 @@ defmodule Lightning.Pipeline.Runner do
 
       ExRated.check_rate(run.job.workflow_id, 30_000, 5)
       |> case do
-        {:ok, _count} ->
+        {:ok, count} ->
           %{
             "workflow_id" => run.job.workflow.id,
             "run_id" => run.id,
-            "project_id" => run.job.workflow.project_id
+            "project_id" => run.job.workflow.project_id,
+            "failure_count" => count
           }
           |> Lightning.FailureAlerter.new()
           |> Oban.insert()

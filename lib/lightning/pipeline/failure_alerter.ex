@@ -13,7 +13,8 @@ defmodule Lightning.FailureAlerter do
         args: %{
           "workflow_id" => _workflow_id,
           "run_id" => run_id,
-          "project_id" => project_id
+          "project_id" => project_id,
+          "failure_count" => failure_count
         }
       }) do
     run = Repo.get!(Lightning.Invocation.Run, run_id)
