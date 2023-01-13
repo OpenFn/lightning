@@ -6,15 +6,19 @@ defmodule Lightning.FailureAlerter do
     queue: :workflow_failures
 
   alias Lightning.Repo
-  alias Lightning.Accounts.{User, UserNotifier}
+  alias Lightning.Accounts.{UserNotifier}
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{run_id: run_id}}) do
+  def perform(%Oban.Job{
+        args: %{
+          "workflow_id" => _workflow_id,
+          "run_id" => run_id,
+          "project_id" => project_id
+        }
+      }) do
     run = Repo.get!(Lightning.Invocation.Run, run_id)
 
-    # UserQuery.with_project_notifications(run.workflow.project_id)
-    User
-    |> Repo.all()
+    Lightning.Accounts.get_users_to_alert_for_project(%{id: project_id})
     |> UserNotifier.deliver_failure_email(%{id: run_id})
 
     :ok
