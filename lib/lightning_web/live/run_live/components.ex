@@ -167,7 +167,31 @@ defmodule LightningWeb.RunLive.Components do
       <% end %>
     </div>
     <div id="output_section" style="display: none;" class="@container">
-      <.dataclip_view dataclip={@run.output_dataclip} />
+      <%= cond  do %>
+        <% @run.exit_code > 0 -> %>
+          <.dataclip_view
+            dataclip={nil}
+            no_dataclip_message={
+              %{
+                label: "This run failed",
+                description: "There is no output. See the logs for more information"
+              }
+            }
+          />
+        <% is_nil(@run.output_dataclip_id) -> %>
+          <.dataclip_view
+            dataclip={nil}
+            no_dataclip_message={
+              %{
+                label: "There is no output for this run",
+                description:
+                  "Check your job expression to ensure that the final operation returns something."
+              }
+            }
+          />
+        <% true -> %>
+          <.dataclip_view dataclip={@run.output_dataclip} />
+      <% end %>
     </div>
     """
   end
@@ -291,6 +315,7 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   attr :dataclip, :any, required: true
+  attr :no_dataclip_message, :any
 
   def dataclip_view(%{dataclip: dataclip} = assigns) do
     lines =
@@ -301,17 +326,30 @@ defmodule LightningWeb.RunLive.Components do
         |> String.split("\n")
       end
 
-    assigns = assigns |> assign(lines: lines)
+    assigns =
+      assigns
+      |> assign(lines: lines)
+      |> assign_new(:no_dataclip_message, fn ->
+        %{
+          label: "Nothing here yet.",
+          description: "The resulting dataclip will appear here
+    when the run finishes successfully."
+        }
+      end)
 
     ~H"""
     <%= if @dataclip do %>
       <.log_view log={@lines} />
     <% else %>
-      <.no_dataclip_message />
+      <.no_dataclip_message
+        label={@no_dataclip_message.label}
+        description={@no_dataclip_message.description}
+      />
     <% end %>
     """
   end
 
+  @spec no_dataclip_message(any) :: Phoenix.LiveView.Rendered.t()
   def no_dataclip_message(assigns) do
     ~H"""
     <div class="flex items-center flex-col mt-5 @md:w-1/4 @xs:w-1/2 m-auto">
@@ -321,10 +359,9 @@ defmodule LightningWeb.RunLive.Components do
         </div>
         <div class="font-sm text-slate-400 text-center">
           <span class="text-slate-500 font-semibold">
-            Nothing here yet.
+            <%= @label %>
           </span>
-          <br /> The resulting dataclip will appear here
-          when the run finishes successfully.
+          <br /> <%= @description %>
         </div>
       </div>
     </div>
