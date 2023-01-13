@@ -29,6 +29,7 @@ defmodule Lightning.Projects.ProjectUser do
     belongs_to :user, User
     belongs_to :project, Project
     field :delete, :boolean, virtual: true
+    field :failure_alert, :boolean
     field :role, RolesEnum, default: :editor
 
     timestamps()
