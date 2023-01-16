@@ -6,22 +6,31 @@
   </:header>
   <Layout.centered>
     <div class=" relative flex">
-      <div class="ml-4 p-4 pt-0 sticky top-0 self-start rounded-md">
+      <div class="pr-4 pt-0 sticky top-0 self-start rounded-md">
         <div class="flex-none">
           <LightningWeb.Components.Common.tab_bar
             orientation="vertical"
             id={@project.id}
             default_hash="settings"
           >
-            <LightningWeb.Components.Common.tab_item hash="settings">
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="settings"
+            >
               <Heroicons.clipboard class="h-5 w-5 inline-block mr-2 align-middle" />
               <span class="inline-block align-middle">Project</span>
             </LightningWeb.Components.Common.tab_item>
-            <LightningWeb.Components.Common.tab_item hash="credentials">
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="credentials"
+            >
               <Heroicons.key class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Credentials</span>
             </LightningWeb.Components.Common.tab_item>
-            <LightningWeb.Components.Common.tab_item hash="collaboration">
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="collaboration"
+            >
               <Heroicons.users class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Collaboration</span>
             </LightningWeb.Components.Common.tab_item>

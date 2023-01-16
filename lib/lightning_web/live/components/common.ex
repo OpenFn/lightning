@@ -241,7 +241,7 @@ defmodule LightningWeb.Components.Common do
       flex
       flex-col
       flex-wrap
-      list-none mx-4
+      list-none mr-4
     ]
 
     ~H"""
@@ -279,20 +279,22 @@ defmodule LightningWeb.Components.Common do
   end
 
   attr :hash, :string, required: true
+  attr :orientation, :string, required: true
   slot :inner_block, required: true
 
   def tab_item(assigns) do
-    IO.inspect(assigns)
     vertical_classes = ~w[
       nav-link
-      px-3
+      pr-3
       py-2
-      rounded-md
-      text-sm
       font-medium
-      rounded-md
-      block
-      active
+      text-sm
+      border-b-2
+      border-transparent
+      text-gray-500
+      hover:border-gray-300
+      hover:text-gray-600
+      hover:border-gray-300
     ]
 
     horizontal_classes = ~w[
@@ -315,7 +317,7 @@ defmodule LightningWeb.Components.Common do
     <a
       id={"tab-item-#{@hash}"}
       class={
-        if true,
+        if @orientation == "horizontal",
           do: horizontal_classes,
           else: vertical_classes
       }

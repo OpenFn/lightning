@@ -66,19 +66,31 @@ defmodule LightningWeb.JobLive.JobBuilder do
             default_hash="setup"
           >
             <!-- The tabs navigation -->
-            <LightningWeb.Components.Common.tab_item hash="setup">
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="setup"
+            >
               Setup
             </LightningWeb.Components.Common.tab_item>
-            <LightningWeb.Components.Common.tab_item hash="input">
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="input"
+            >
               Input
             </LightningWeb.Components.Common.tab_item>
-            <LightningWeb.Components.Common.tab_item hash="editor">
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="editor"
+            >
               Editor
               <.when_invalid changeset={@changeset} field={:body}>
                 <Heroicons.exclamation_circle mini class="ml-1 w-4 h-4 text-red-500" />
               </.when_invalid>
             </LightningWeb.Components.Common.tab_item>
-            <LightningWeb.Components.Common.tab_item hash="output">
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="output"
+            >
               Output
             </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
