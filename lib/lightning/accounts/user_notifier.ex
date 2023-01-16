@@ -100,6 +100,4 @@ defmodule Lightning.Accounts.UserNotifier do
     ==============================
     """)
   end
-
-
 end

@@ -1,4 +1,5 @@
 defmodule Lightning.FailureEmail do
+  @moduledoc false
   use Phoenix.Swoosh, view: Lightning.FailureNotifierView
 
   alias Lightning.Mailer
@@ -7,16 +8,16 @@ defmodule Lightning.FailureEmail do
     "#{failure_count}th failure for workflow #{name}"
   end
 
-  def deliver_failure_email(users, body_data) do
-    recipients = Enum.map(users, & &1.email)
-
+  def deliver_failure_email(recipients, body_data) do
     email =
       new()
       |> to(recipients)
       |> from(
         {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
       )
-      |> subject(failure_subject(%{name: "workflow"}, body_data[:count]))
+      |> subject(
+        failure_subject(%{name: body_data[:workflow_name]}, body_data[:count])
+      )
       |> render_body("failure_alert.html", body_data)
 
     Mailer.deliver(email)

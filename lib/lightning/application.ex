@@ -8,6 +8,11 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    :mnesia.create_schema([node()])
+    :mnesia.start()
+
+    Lightning.Backend.Mnesia.create_mnesia_table()
+
     # Only add the Sentry backend if a dsn is provided.
     if Application.get_env(:sentry, :included_environments) |> Enum.any?(),
       do: Logger.add_backend(Sentry.LoggerBackend)
@@ -75,8 +80,6 @@ defmodule Lightning.Application do
       LightningWeb.Endpoint,
       adaptor_registry_childspec,
       adaptor_service_childspec
-      # Start the rate limiter for email alerts
-      # {ExRated, [[], [name: :ex_rated]]}
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]

@@ -29,7 +29,7 @@ defmodule Lightning.Projects.ProjectUser do
     belongs_to :user, User
     belongs_to :project, Project
     field :delete, :boolean, virtual: true
-    field :failure_alert, :boolean
+    field :failure_alert, :boolean, default: true
     field :role, RolesEnum, default: :editor
 
     timestamps()
@@ -42,7 +42,7 @@ defmodule Lightning.Projects.ProjectUser do
   @doc false
   def changeset(project_user, attrs) do
     project_user
-    |> cast(attrs, [:user_id, :project_id, :role])
+    |> cast(attrs, [:user_id, :project_id, :role, :failure_alert])
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
       message: "User already a member of this project."

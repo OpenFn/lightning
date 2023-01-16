@@ -5,6 +5,7 @@ Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)
 Mimic.copy(Lightning.Pipeline.Runner)
+Mimic.copy(Lightning.FailureEmail)
 Mimic.copy(Mix.Tasks.Lightning.InstallSchemas)
 
 ExUnit.configure(formatters: [JUnitFormatter, ExUnit.CLIFormatter])

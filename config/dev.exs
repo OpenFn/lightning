@@ -34,6 +34,11 @@ config :lightning,
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
 
+config :lightning, Lightning.FailureAlerter,
+  # 24h = 86_400_000
+  time_scale: 60_000,
+  rate_limit: 3
+
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed

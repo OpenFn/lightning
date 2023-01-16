@@ -4,7 +4,6 @@ defmodule Lightning.Pipeline.Runner do
   """
   require Logger
   alias Lightning.Invocation
-  alias Lightning.Accounts.User
 
   import Lightning.AdaptorService,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
@@ -52,18 +51,34 @@ defmodule Lightning.Pipeline.Runner do
 
     defp alert_on_failure(run) do
       attempt = Lightning.AttemptService.get_last_attempt_for(run)
-      work_order = attempt.work_order
-      workflow = attempt.work_order.workflow
 
-      %{
-        "workflow_id" => workflow.id,
-        "workflow_name" => workflow.name,
-        "run_id" => run.id,
-        "project_id" => workflow.project_id,
-        "work_order_id" => work_order.id
-      }
-      |> Lightning.FailureAlerter.new()
-      |> Oban.insert()
+      attempt
+      |> case do
+        nil ->
+          nil
+
+        attempt ->
+          work_order = attempt.work_order
+          workflow = attempt.work_order.workflow
+
+          recipients =
+            Lightning.Accounts.get_users_to_alert_for_project(%{
+              id: workflow.project_id
+            })
+            |> Enum.map(& &1.email)
+
+          if length(recipients) > 0 do
+            %{
+              "workflow_id" => workflow.id,
+              "workflow_name" => workflow.name,
+              "run_id" => run.id,
+              "project_id" => workflow.project_id,
+              "work_order_id" => work_order.id,
+              "recipients" => recipients
+            }
+            |> Lightning.FailureAlerter.alert()
+          end
+      end
     end
   end
 
