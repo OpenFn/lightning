@@ -51,23 +51,19 @@ defmodule Lightning.Pipeline.Runner do
     defp alert_on_failure(run) when run.exit_code == 0, do: nil
 
     defp alert_on_failure(run) do
-      run = Lightning.Repo.preload(run, job: :workflow)
+      attempt = Lightning.AttemptService.get_last_attempt_for(run)
+      work_order = attempt.work_order
+      workflow = attempt.work_order.workflow
 
-      ExRated.check_rate(run.job.workflow_id, 30_000, 5)
-      |> case do
-        {:ok, count} ->
-          %{
-            "workflow_id" => run.job.workflow.id,
-            "run_id" => run.id,
-            "project_id" => run.job.workflow.project_id,
-            "failure_count" => count
-          }
-          |> Lightning.FailureAlerter.new()
-          |> Oban.insert()
-
-        {:error, _limit} ->
-          nil
-      end
+      %{
+        "workflow_id" => workflow.id,
+        "workflow_name" => workflow.name,
+        "run_id" => run.id,
+        "project_id" => workflow.project_id,
+        "work_order_id" => work_order.id
+      }
+      |> Lightning.FailureAlerter.new()
+      |> Oban.insert()
     end
   end
 

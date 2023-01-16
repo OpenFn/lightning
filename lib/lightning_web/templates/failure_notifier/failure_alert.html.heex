@@ -1,3 +1,14 @@
 <div>
-  <h1>Welcome to Sample, <%= @name %>!</h1>
+  <p>Hi user,</p>
+  <p>
+    Word order <%= @work_order_id %> failed for workflow <%= @workflow_name %> with the following logs:
+  </p>
+  <div style="background-color: #ededed; padding: 16px; margin: 8px 0">
+    <%= @run.log %>>
+  </div>
+  Please view it <a href={@run_url}>here</a>
+  to debug the issue.
+  <p>
+    *This is the <%= @count %>th failures failure in the last 24 hours. If the workflow has more than 5 failed runs in the last 24 hours, you will stop receiving these alerts.
+  </p>
 </div>

@@ -3,25 +3,48 @@ defmodule Lightning.FailureAlerter do
 
   """
   use Oban.Worker,
-    queue: :workflow_failures
+    queue: :workflow_failures,
+    max_attempts: 1
 
   alias Lightning.Repo
-  alias Lightning.Accounts.{UserNotifier}
 
   @impl Oban.Worker
   def perform(%Oban.Job{
         args: %{
-          "workflow_id" => _workflow_id,
+          "workflow_id" => workflow_id,
+          "workflow_name" => workflow_name,
           "run_id" => run_id,
           "project_id" => project_id,
-          "failure_count" => failure_count
+          "work_order_id" => work_order_id
         }
       }) do
     run = Repo.get!(Lightning.Invocation.Run, run_id)
 
-    Lightning.Accounts.get_users_to_alert_for_project(%{id: project_id})
-    |> UserNotifier.deliver_failure_email(%{id: run_id})
+    run_url = LightningWeb.RouteHelpers.show_run_path(project_id, run_id)
 
-    :ok
+    {count, remaining, _, _, _} = ExRated.inspect_bucket(workflow_id, 60_000, 5)
+
+    if(remaining == 0) do
+      {:cancel, "Failure notification rate limit is reached"}
+    else
+      Lightning.Accounts.get_users_to_alert_for_project(%{id: project_id})
+      |> Lightning.FailureEmail.deliver_failure_email(%{
+        work_order_id: work_order_id,
+        count: count + 1,
+        run: run,
+        workflow_name: workflow_name,
+        workflow_id: workflow_id,
+        run_url: run_url
+      })
+      |> case do
+        {:ok, _metadata} ->
+          # this increments the number of ops.
+          ExRated.check_rate(workflow_id, 60_000, 5)
+          :ok
+
+        _ ->
+          {:cancel, "Failure email was not sent"}
+      end
+    end
   end
 end

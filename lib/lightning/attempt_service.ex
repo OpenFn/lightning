@@ -156,4 +156,19 @@ defmodule Lightning.AttemptService do
     )
     |> Repo.one()
   end
+
+  @doc """
+  Get the latest attempt associated to a given run
+  """
+
+  def get_last_attempt_for(%Run{id: id}) do
+    from(a in Attempt,
+      join: r in assoc(a, :runs),
+      where: r.id == ^id,
+      order_by: [desc: a.inserted_at],
+      limit: 1,
+      preload: [work_order: :workflow]
+    )
+    |> Repo.one()
+  end
 end
