@@ -25,3 +25,8 @@
 .monaco-editor .line-numbers.active-line-number {
   color: white !important;
 }
+
+.lightning-status-bar {
+  /* color: white;
+  text-align: right; */
+}
