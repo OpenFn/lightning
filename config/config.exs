@@ -28,12 +28,7 @@ config :joken, default_signer: "secret"
 # Configures the mechanism for erlang node clustering
 config :libcluster,
   topologies: [
-    local: [
-      strategy: Cluster.Strategy.Gossip,
-      config: [
-        multicast_ttl: 2
-      ]
-    ]
+    local: [strategy: Cluster.Strategy.Gossip]
   ]
 
 # Configures the mailer

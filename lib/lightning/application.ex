@@ -47,7 +47,7 @@ defmodule Lightning.Application do
       if System.get_env("K8S_HEADLESS_SERVICE") do
         [
           k8s: [
-            strategy: Elixir.Cluster.Strategy.Kubernetes.DNS,
+            strategy: Cluster.Strategy.Kubernetes.DNS,
             config: [
               service: System.get_env("K8S_HEADLESS_SERVICE"),
               application_name: "lightning",

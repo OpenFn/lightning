@@ -19,12 +19,6 @@ port = String.to_integer(System.get_env("PORT", "4000"))
 url_port = String.to_integer(System.get_env("URL_PORT", "443"))
 url_scheme = System.get_env("URL_SCHEME", "https")
 
-listen_address =
-  System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
-  |> String.split(".")
-  |> Enum.map(&String.to_integer/1)
-  |> List.to_tuple()
-
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
@@ -131,14 +125,23 @@ if config_env() == :prod do
       str -> String.split(str, ",")
     end
 
+  # Binding to loopback ipv4 address prevents access from other machines.
+  # http: [ip: {0, 0, 0, 0}, port: 4000],
+  # Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
+  # Note that this may interfere with Docker networking.
+  # Enable IPv6 and bind on all interfaces.
+  # Set it to {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
+  # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
+  # for details about using IPv6 vs IPv4 and loopback vs public addresses.
+  listen_address =
+    System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
+    |> String.split(".")
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple()
+
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
     http: [
-      # Enable IPv6 and bind on all interfaces.
-      # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-      # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
-      # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-      # ip: {0, 0, 0, 0, 0, 0, 0, 0},
       ip: listen_address,
       port: port,
       compress: true

@@ -3,23 +3,6 @@ defmodule LightningWeb.Endpoint do
 
   use Phoenix.Endpoint, otp_app: :lightning
 
-  @doc """
-  For dynamically configuring the endpoint, such as loading data from
-  environment variables or configuration files, Phoenix invokes the init/2
-  callback on the endpoint, passing the atom :supervisor as the first argument
-  and the endpoint configuration as second.
-  """
-  def init(_supervisor, config) do
-    config =
-      config
-      |> Kernel.put_in([:url, :host], System.get_env("URL_HOST"))
-      |> Kernel.put_in([:url, :scheme], System.get_env("URL_SCHEME"))
-      |> Kernel.put_in([:url, :port], System.get_env("URL_PORT"))
-      |> Kernel.put_in([:http, :port], System.get_env("PORT"))
-
-    {:ok, config}
-  end
-
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
