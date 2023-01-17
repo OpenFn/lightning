@@ -48,7 +48,7 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
   const name = nameParts.join('@');
   
   let results: Lib[] = [];
-  if (name && name !== '@openfn/language-common') {
+  if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`)
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
     results = await loadDTS(`@openfn/language-common@${commonVersion}`, 'module')
