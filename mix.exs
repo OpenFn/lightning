@@ -69,6 +69,7 @@ defmodule Lightning.MixProject do
       {:jason, "~> 1.2"},
       {:joken, "~> 2.5.0"},
       {:junit_formatter, "~> 3.0", only: [:test]},
+      {:libcluster, "~> 3.3"},
       {:mimic, "~> 1.7.2", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
       {:oauth2, "~> 2.0"},
