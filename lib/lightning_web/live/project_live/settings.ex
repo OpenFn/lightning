@@ -29,7 +29,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp apply_action(socket, :index, _params) do
-    socket |> assign(:page_title, "Projects settings")
+    socket |> assign(:page_title, "Project settings")
   end
 
   @impl true
