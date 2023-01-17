@@ -1,42 +1,38 @@
 defmodule Lightning.Credentials.Schema do
   @moduledoc """
-  Dynamic changeset module which uses a JsonSchema (parsed with `ExJsonSchema`)
-  to validate credentials based on the schema provided.
+  Structure that can parse JsonSchemas (using `ExJsonSchema`) and validate
+  changesets for a given schema.
   """
+
   alias ExJsonSchema.Validator
-  import Ecto.Changeset
+  alias Ecto.Changeset
 
   @type t :: %__MODULE__{
-          schema_root: ExJsonSchema.Schema.Root.t(),
+          name: String.t() | nil,
+          root: ExJsonSchema.Schema.Root.t(),
           types: Ecto.Changeset.types(),
-          data: Ecto.Changeset.data()
+          fields: [String.t()]
         }
 
-  defstruct [:schema_root, :types, :data]
+  defstruct [:name, :root, :types, :fields]
 
-  @spec new(schema :: %{String.t() => any()}, data :: %{String.t() => any()}) ::
+  @spec new(json_schema :: %{String.t() => any()}, name :: String.t() | nil) ::
           __MODULE__.t()
-  def new(schema, data \\ %{}) when is_map(schema) do
-    if is_nil(data) do
-      raise "#{__MODULE__}.new/2 got nil for data, expects a map."
-    end
+  def new(json_schema, name \\ nil) when is_map(json_schema) do
+    root = ExJsonSchema.Schema.resolve(json_schema)
+    types = get_types(root)
+    fields = Map.keys(types)
 
-    schema_root = ExJsonSchema.Schema.resolve(schema)
-    types = get_types(schema_root)
-    data = build_body(types, data)
-
-    struct!(__MODULE__, schema_root: schema_root, types: types, data: data)
+    struct!(__MODULE__, name: name, root: root, types: types, fields: fields)
   end
 
-  def changeset(%__MODULE__{} = schema, attrs) do
-    changeset =
-      {schema.data, schema.types}
-      |> cast(attrs, Map.keys(schema.types))
-
+  @spec validate(changeset :: Ecto.Changeset.t(), schema :: __MODULE__.t()) ::
+          Ecto.Changeset.t()
+  def validate(changeset, %__MODULE__{} = schema) do
     validation =
       Validator.validate(
-        schema.schema_root,
-        apply_changes(changeset) |> stringify_keys(),
+        schema.root,
+        Changeset.apply_changes(changeset) |> stringify_keys(),
         error_formatter: false
       )
 
@@ -54,23 +50,23 @@ defmodule Lightning.Credentials.Schema do
 
     case error do
       %{expected: "uri"} ->
-        add_error(changeset, field, "expected to be a URI")
+        Changeset.add_error(changeset, field, "expected to be a URI")
 
       %{missing: fields} ->
         Enum.reduce(fields, changeset, fn field, changeset ->
-          add_error(changeset, field, "can't be blank")
+          Changeset.add_error(changeset, field, "can't be blank")
         end)
 
       %{actual: 0, expected: _} ->
-        add_error(changeset, field, "can't be blank")
+        Changeset.add_error(changeset, field, "can't be blank")
 
       %{actual: "null", expected: expected} when is_list(expected) ->
-        add_error(changeset, field, "can't be blank")
+        Changeset.add_error(changeset, field, "can't be blank")
     end
   end
 
-  defp get_types(schema_root) do
-    schema_root.schema
+  defp get_types(root) do
+    root.schema
     |> Map.get("properties", [])
     |> Enum.map(fn {k, properties} ->
       {k |> String.to_atom(),
@@ -78,14 +74,6 @@ defmodule Lightning.Credentials.Schema do
     end)
     |> Enum.reverse()
     |> Map.new()
-  end
-
-  @spec build_body(types :: Ecto.Changeset.types(), initial :: map()) ::
-          Ecto.Changeset.data()
-  def build_body(types, initial) do
-    Map.new(types, fn {k, _type} ->
-      {k, Map.get(initial, k |> to_string(), nil)}
-    end)
   end
 
   defp stringify_keys(data) when is_map(data) do

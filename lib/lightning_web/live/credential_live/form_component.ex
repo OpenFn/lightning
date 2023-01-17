@@ -67,16 +67,17 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign_new(:show_project_credentials, fn -> true end)}
   end
 
-  defp read_schema(schema) do
+  defp get_schema(schema_name) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-    File.read!("#{schemas_path}/#{schema}.json")
+    File.read!("#{schemas_path}/#{schema_name}.json")
     |> Jason.decode!()
+    |> Credentials.Schema.new(schema_name)
   end
 
-  def schema_input(schema_root, changeset, field) do
+  def schema_input(%Credentials.Schema{} = schema, changeset, field) do
     properties =
-      schema_root.schema
+      schema.root.schema
       |> Map.get("properties")
       |> Map.get(field |> to_string())
 
@@ -152,12 +153,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         socket |> assign(schema: nil, schema_changeset: nil)
 
       schema_type ->
-        schema =
-          Credentials.Schema.new(
-            read_schema(schema_type),
-            socket.assigns.changeset |> fetch_field!(:body) || %{}
-          )
-
+        schema = get_schema(schema_type)
         schema_changeset = create_schema_changeset(schema, params)
 
         changeset =
@@ -183,7 +179,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   defp create_schema_changeset(schema, params) do
-    Credentials.Schema.changeset(schema, params |> Map.get("body", %{}))
+    Credentials.SchemaDocument.changeset(%{}, params |> Map.get("body", %{}),
+      schema: schema
+    )
   end
 
   defp create_changeset(credential, params) do

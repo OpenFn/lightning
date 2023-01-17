@@ -2,6 +2,7 @@ defmodule Lightning.Credentials.SchemaTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Credentials.Schema
+  alias Lightning.Credentials.SchemaDocument
 
   setup do
     schema_map =
@@ -51,14 +52,9 @@ defmodule Lightning.Credentials.SchemaTest do
                number: :integer
              }
 
-      assert schema.data == %{
-               hostUrl: nil,
-               password: nil,
-               username: nil,
-               number: nil
-             }
+      schema = Schema.new(schema_map, "foo")
 
-      schema = Schema.new(schema_map, %{"username" => "initial_user"})
+      assert schema.name == "foo"
 
       assert schema.types == %{
                hostUrl: :string,
@@ -66,22 +62,19 @@ defmodule Lightning.Credentials.SchemaTest do
                username: :string,
                number: :integer
              }
-
-      assert schema.data == %{
-               hostUrl: nil,
-               password: nil,
-               username: "initial_user",
-               number: nil
-             }
     end
   end
 
-  describe "changeset/2" do
-    test "can ", %{schema_map: schema_map} do
-      schema = Schema.new(schema_map)
+  describe "SchemaDocument.changeset/3" do
+    setup %{schema_map: schema_map} do
+      %{schema: Schema.new(schema_map, "test")}
+    end
 
+    test "can ", %{schema: schema} do
       changeset =
-        Schema.changeset(schema, %{"foo" => "bar", "password" => "pass"})
+        SchemaDocument.changeset(%{}, %{"foo" => "bar", "password" => "pass"},
+          schema: schema
+        )
 
       refute changeset.valid?
 
@@ -98,18 +91,21 @@ defmodule Lightning.Credentials.SchemaTest do
              "Should be able to find existing keys via atoms"
 
       errors = errors_on(changeset)
-      assert {:username, ["can't be blank"]} in errors
-      assert {:hostUrl, ["can't be blank"]} in errors
-      assert {:number, ["can't be blank"]} in errors
-
-      schema = Schema.new(schema_map, %{"username" => "initial_username"})
+      assert {"username", ["can't be blank"]} in errors
+      assert {"hostUrl", ["can't be blank"]} in errors
+      assert {"number", ["can't be blank"]} in errors
 
       changeset =
-        Schema.changeset(schema, %{
-          "password" => "pass",
-          "hostUrl" => "http://localhost",
-          "number" => 100
-        })
+        SchemaDocument.changeset(
+          %{},
+          %{
+            "username" => "initial",
+            "password" => "pass",
+            "hostUrl" => "http://localhost",
+            "number" => 100
+          },
+          schema: schema
+        )
 
       assert changeset.valid?
     end

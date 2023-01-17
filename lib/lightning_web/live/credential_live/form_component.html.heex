@@ -44,7 +44,7 @@
                 ) %>
               <% s when byte_size(s) > 0 -> %>
                 <%= for {field, _type} <- @schema.types do %>
-                  <%= schema_input(@schema.schema_root, @schema_changeset, field) %>
+                  <%= schema_input(@schema, @schema_changeset, field) %>
                 <% end %>
               <% _ -> %>
                 <p>Select a credential type</p>
