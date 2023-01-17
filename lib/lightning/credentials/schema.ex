@@ -1,7 +1,7 @@
 defmodule Lightning.Credentials.Schema do
   @moduledoc """
-  Dynamic changeset module which uses a JsonSchema (parsed with `ExJsonSchema`)
-  to validate credentials based on the schema provided.
+  Structure that can parse JsonSchemas (using `ExJsonSchema`) and validate
+  changesets for a given schema.
   """
 
   alias ExJsonSchema.Validator
@@ -16,7 +16,6 @@ defmodule Lightning.Credentials.Schema do
 
   defstruct [:name, :root, :types, :fields]
 
-  # TODO: split the changeset stuff and "schema struct" into different modules
   @spec new(json_schema :: %{String.t() => any()}, name :: String.t() | nil) ::
           __MODULE__.t()
   def new(json_schema, name \\ nil) when is_map(json_schema) do
@@ -27,10 +26,9 @@ defmodule Lightning.Credentials.Schema do
     struct!(__MODULE__, name: name, root: root, types: types, fields: fields)
   end
 
-  # TODO: takes a schema and a changeset and applies validation errors
   @spec validate(changeset :: Ecto.Changeset.t(), schema :: __MODULE__.t()) ::
           Ecto.Changeset.t()
-  def validate(changeset, schema = %__MODULE__{}) do
+  def validate(changeset, %__MODULE__{} = schema) do
     validation =
       Validator.validate(
         schema.root,
@@ -48,7 +46,6 @@ defmodule Lightning.Credentials.Schema do
   end
 
   defp error_to_changeset(%{path: path, error: error}, changeset) do
-    # TODO: perhaps we don't use atoms here?
     field = String.slice(path, 2..-1) |> String.to_existing_atom()
 
     case error do

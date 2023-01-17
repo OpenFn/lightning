@@ -46,7 +46,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
 
   @impl true
   def preload(list_of_assigns) do
-    # TODO this gets called when using `send_update` as well.
     ids = Enum.map(list_of_assigns, & &1.id)
 
     work_orders =

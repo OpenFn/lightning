@@ -75,7 +75,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     |> Credentials.Schema.new(schema_name)
   end
 
-  def schema_input(schema = %Credentials.Schema{}, changeset, field) do
+  def schema_input(%Credentials.Schema{} = schema, changeset, field) do
     properties =
       schema.root.schema
       |> Map.get("properties")

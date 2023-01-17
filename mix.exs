@@ -137,38 +137,22 @@ defmodule Lightning.MixProject do
       homepage_url: "https://openfn.github.io/Lightning",
       groups_for_modules: [
         Accounts: [
-          Lightning.Accounts,
-          Lightning.Accounts.Policy,
-          Lightning.Accounts.UserNotifier,
-          Lightning.Accounts.UserToken,
-          Lightning.Accounts.User
+          ~r/Lightning.Accounts/
         ],
         Credentials: [
-          Lightning.Credentials,
-          Lightning.Credentials.Credential,
-          Lightning.Credentials.Policy
+          ~r/Lightning.Credentials/
         ],
-        Invocation: [
-          Lightning.Invocation,
-          Lightning.Invocation.Dataclip,
-          Lightning.Invocation.Event,
-          Lightning.Invocation.Run
+        Invocations: [
+          ~r/Lightning.Invocation/
         ],
         Pipeline: [
           ~r/Lightning.Pipeline/
         ],
         Jobs: [
-          Lightning.Jobs,
-          Lightning.Jobs.Job,
-          Lightning.Jobs.Query,
-          Lightning.Jobs.Trigger
+          ~r/Lightning.Jobs/
         ],
         Projects: [
-          Lightning.Projects,
-          Lightning.Projects.Project,
-          Lightning.Projects.Policy,
-          Lightning.Projects.ProjectCredential,
-          Lightning.Projects.ProjectUser
+          ~r/Lightning.Projects/
         ],
         Runtime: [
           ~r/Lightning.Runtime/
