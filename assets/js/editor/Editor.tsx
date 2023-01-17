@@ -53,32 +53,6 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
     results = await loadDTS(`@openfn/language-common@${commonVersion}`, 'module')
   }
-  // if (name && name !== '@openfn/language-common') {
-  //   // // so this works (without a filename!)
-  //   // results.push({
-  //   //   content: `declare module "@openfn/language-common" {
-  //   //     /** hello */
-  //   //     export function fn(x: number): number ;
-  //   //   }`
-  //   // })
-
-  //   const pkg = await fetchFile(`${specifier}/package.json`)
-  //   const commonVersion = JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
-  //   if (commonVersion) {
-  //     // const common = await loadDTS(`@openfn/language-common@${commonVersion}`)
-  //     // results.push(...common)
-  //     for await (const filePath of fetchDTSListing(`@openfn/language-common@${commonVersion}`)) {
-  //       if (!filePath.startsWith('node_modules') && !filePath.endsWith('beta.d.ts')) {
-  //       // if (filePath.endsWith('Adaptor.d.ts')) {
-  //         const content = await fetchFile(`@openfn/language-common@${commonVersion}${filePath}`)
-  //         results.push({
-  //           content: `declare namespace "@openfn/language-common" { ${content} }`,
-  //           // filePath
-  //         });
-  //       }
-  //     }
-  //   }
-  // }
 
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
@@ -89,7 +63,6 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
       });
     }
   }
-  console.log(results)
   return results;
 }
 
