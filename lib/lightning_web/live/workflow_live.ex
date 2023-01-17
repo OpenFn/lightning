@@ -2,11 +2,10 @@ defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   alias Lightning.Workflows
   import LightningWeb.WorkflowLive.Components
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -212,7 +211,9 @@ defmodule LightningWeb.WorkflowLive do
 
     {:noreply,
      socket
-     |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
+     |> assign(
+       workflows: Workflows.get_active_workflows_for(socket.assigns.project)
+     )
      |> push_patch(
        to:
          Routes.project_workflow_path(
@@ -222,6 +223,26 @@ defmodule LightningWeb.WorkflowLive do
            workflow_id
          )
      )}
+  end
+
+  @impl true
+  def handle_event("delete-workflow", %{"id" => id}, socket) do
+    Workflows.get_workflow!(id)
+    |> Workflows.mark_for_deletion()
+    |> case do
+      {:ok, _} ->
+        {
+          :noreply,
+          socket
+          |> assign(
+            workflows: Workflows.get_active_workflows_for(socket.assigns.project)
+          )
+          |> put_flash(:info, "Workflow deleted successfully")
+        }
+
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+    end
   end
 
   @doc """
@@ -266,7 +287,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
-      workflows: Workflows.get_workflows_for(socket.assigns.project)
+      workflows: Workflows.get_active_workflows_for(socket.assigns.project)
     )
   end
 

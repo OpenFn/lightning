@@ -31,6 +31,8 @@ defmodule Lightning.Workflows.Workflow do
     has_many :attempts, through: [:work_orders, :attempts]
     belongs_to :project, Project
 
+    field :deleted_at, :utc_datetime
+
     timestamps()
   end
 
@@ -49,5 +51,10 @@ defmodule Lightning.Workflows.Workflow do
     |> unique_constraint([:name, :project_id],
       message: "A workflow with this name does already exist in this project."
     )
+  end
+
+  def request_deletion_changeset(workflow, attrs) do
+    workflow
+    |> cast(attrs, [:deleted_at])
   end
 end

@@ -351,6 +351,53 @@ defmodule LightningWeb.WorkflowLiveTest do
     # TODO test that the current job is not visible in upstream jobs
   end
 
+  describe "delete-workflow" do
+    test "delete a workflow on project index page",
+         %{
+           conn: conn,
+           project: project
+         } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ workflow.name
+
+      assert view
+             |> element("a[phx-click='delete-workflow']")
+             |> render_click() =~
+               "Workflow deleted"
+    end
+
+    test "delete a workflow on edit workflow page",
+         %{
+           conn: conn,
+           project: project,
+           job: job
+         } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :show,
+            project.id,
+            job.workflow_id
+          )
+        )
+
+      assert html =~ workflow.name
+
+      assert view
+             |> element("a[phx-click='delete-workflow']")
+             |> render_click() =~
+               "Workflow deleted"
+    end
+  end
+
   defp has_expected_version?(view, expected_version) do
     view
     |> has_element?(

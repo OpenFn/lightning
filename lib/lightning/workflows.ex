@@ -122,6 +122,23 @@ defmodule Lightning.Workflows do
     )
   end
 
+  @doc """
+  Retrieves a list of active Workflows with their jobs and triggers preloaded.
+  """
+  @spec get_active_workflows_for(Project.t()) :: [Workflow.t()]
+  def get_active_workflows_for(%Project{} = project) do
+    get_active_workflows_for_query(project)
+    |> Repo.all()
+  end
+
+  def get_active_workflows_for_query(%Project{} = project) do
+    from(w in Workflow,
+      preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
+      where: is_nil(w.deleted_at) and w.project_id == ^project.id,
+      order_by: [asc: w.name]
+    )
+  end
+
   defp trigger_for_project_space(job) do
     case job.trigger.type do
       :webhook ->
@@ -164,5 +181,30 @@ defmodule Lightning.Workflows do
         workflows
         |> Enum.map(fn w -> %{"id" => w.id, "name" => w.name} end)
     }
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the workflow request_deletion.
+
+  ## Examples
+
+      iex> change_request_deletion(workflow)
+      %Ecto.Changeset{data: %Workflow{}}
+
+  """
+  def mark_for_deletion(workflow, _attrs \\ %{}) do
+    workflow_jobs_query =
+      from(j in Lightning.Jobs.Job,
+        where: j.workflow_id == ^workflow.id
+      )
+
+    Repo.transaction(fn ->
+      Workflow.request_deletion_changeset(workflow, %{
+        "deleted_at" => DateTime.utc_now()
+      })
+      |> Repo.update()
+
+      Repo.update_all(workflow_jobs_query, set: [enabled: false])
+    end)
   end
 end

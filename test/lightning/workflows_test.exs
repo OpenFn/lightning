@@ -81,6 +81,23 @@ defmodule Lightning.WorkflowsTest do
       end
     end
 
+    test "mark_for_deletion/2 mark delete at request of a workflows and disable all associated jobs" do
+      workflow = WorkflowsFixtures.workflow_fixture()
+
+      assert workflow.deleted_at == nil
+
+      job_1 = JobsFixtures.job_fixture(workflow_id: workflow.id)
+      job_2 = JobsFixtures.job_fixture(workflow_id: workflow.id)
+
+      assert {:ok, _workflow} = Workflows.mark_for_deletion(workflow)
+
+      assert Workflows.get_workflow!(workflow.id).deleted_at != nil
+
+      assert Jobs.get_job!(job_1.id).enabled == false
+
+      assert Jobs.get_job!(job_2.id).enabled == false
+    end
+
     test "change_workflow/1 returns a workflow changeset" do
       workflow = WorkflowsFixtures.workflow_fixture()
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
