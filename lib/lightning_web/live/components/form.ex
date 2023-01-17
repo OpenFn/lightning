@@ -2,9 +2,9 @@ defmodule LightningWeb.Components.Form do
   @moduledoc false
   use LightningWeb, :component
 
-  slot(:inner_block, required: true)
-  attr(:changeset, :map)
-  attr(:rest, :global, include: ~w(form disabled))
+  slot :inner_block, required: true
+  attr :changeset, :map
+  attr :rest, :global, include: ~w(form disabled)
 
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
   def submit_button(assigns) do
