@@ -14,6 +14,11 @@ defmodule LightningWeb.ProjectLive.Settings do
      socket
      |> assign(
        active_menu_item: :settings,
+       is_user_admin:
+         Projects.get_project_user_role(
+           socket.assigns.current_user,
+           socket.assigns.project
+         ) == :admin,
        changeset: Projects.change_project(socket.assigns.project)
      )}
   end
