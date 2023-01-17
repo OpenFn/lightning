@@ -77,7 +77,7 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "projects picker dropdown" do
     setup :register_and_log_in_user
 
-    test "lists all projects", %{conn: conn, user: user} do
+    test "Access project settings page", %{conn: conn, user: user} do
       another_user = user_fixture()
 
       {:ok, project_1} =
@@ -173,6 +173,130 @@ defmodule LightningWeb.ProjectLiveTest do
                Routes.project_workflow_path(conn, :index, project_3.id)
              ) ==
                {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+    end
+  end
+
+  describe "projects settings page" do
+    setup :register_and_log_in_user
+
+    test "access project settings page", %{conn: conn, user: user} do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id}]
+        })
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Projects settings"
+    end
+
+    test "project admin can't edit project name and description with invalid data",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Projects settings"
+
+      invalid_project_name = %{
+        name: "some name"
+      }
+
+      invalid_project_description = %{
+        description:
+          Enum.map(1..250, fn _ ->
+            Enum.random(Enum.to_list(?a..?z) ++ Enum.to_list(?0..?9))
+          end)
+          |> to_string()
+      }
+
+      assert view
+             |> form("#project-settings-form", project: invalid_project_name)
+             |> render_change() =~ "has invalid format"
+
+      assert view
+             |> form("#project-settings-form",
+               project: invalid_project_description
+             )
+             |> render_change() =~ "should be at most 240 character(s)"
+
+      assert view |> has_element?("button[disabled][type=submit]")
+    end
+
+    test "project admin can edit project name and description with valid data",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Projects settings"
+
+      valid_project_attrs = %{
+        name: "somename",
+        description: "some description"
+      }
+
+      assert view
+             |> form("#project-settings-form", project: valid_project_attrs)
+             |> render_submit() =~ "Project updated successfully"
+    end
+
+    test "only users with admin level on project can edit project details", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Projects settings"
+
+      assert view
+             |> has_element?(
+               "input[disabled='disabled'][id='project-settings-form_name']"
+             )
+
+      assert view
+             |> has_element?(
+               "textarea[disabled='disabled'][id='project-settings-form_description']"
+             )
+
+      assert view |> has_element?("button[disabled][type=submit]")
     end
   end
 end
