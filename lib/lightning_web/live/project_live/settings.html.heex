@@ -61,6 +61,7 @@
                 <div class="md:col-span-2">
                   <LightningWeb.Components.Form.text_field
                     form={f}
+                    disabled={@current_user.role not in [:admin, :superuser]}
                     label="Project name"
                     id={:name}
                   />
@@ -74,6 +75,7 @@
                   <LightningWeb.Components.Form.text_area
                     classes="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
                     form={f}
+                    disabled={@current_user.role not in [:admin, :superuser]}
                     label="Project description"
                     id={:description}
                   />
@@ -88,7 +90,10 @@
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
                   <LightningWeb.Components.Form.submit_button
-                    disabled={!@changeset.valid?}
+                    disabled={
+                      !@changeset.valid? ||
+                        @current_user.role not in [:admin, :superuser]
+                    }
                     phx-disable-with="Saving"
                   >
                     Save

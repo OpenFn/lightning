@@ -72,17 +72,20 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
+    opts = assigns_to_attributes(assigns, [:id, :form, :name, :values])
+
     assigns =
       assigns
-      |> assign(label_classes: label_classes)
+      |> assign(label_classes: label_classes, opts: opts)
       |> assign_new(:classes, fn -> classes end)
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <%= if @label do %>
       <%= label(@form, @id, @label, class: @label_classes) %>
     <% end %>
     <%= error_tag(@form, @id) %>
-    <%= textarea(@form, @id, class: @classes) %>
+    <%= textarea(@form, @id, @opts ++ [class: @classes, disabled: @disabled]) %>
     """
   end
 
