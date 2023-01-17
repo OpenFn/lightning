@@ -188,7 +188,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   
   return (
     <>
-      <div className="text-xs text-white text-right pr-2 h-0 z-10 overflow-visible relative">
+      <div className="text-xs text-white text-right h-0 z-10 overflow-visible relative">
         {loading && loadingIndicator}
       </div>
       <Monaco
