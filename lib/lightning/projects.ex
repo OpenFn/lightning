@@ -156,6 +156,25 @@ defmodule Lightning.Projects do
     )
   end
 
+  @doc """
+  Returns the role of a user in a project.
+  Possible roles are :admin, :viewer, :editor, and :owner
+
+  ## Examples
+
+      iex> get_project_user_role(user, project)
+      :admin
+
+      iex> get_project_user_role(user, project)
+      :viewer
+
+      iex> get_project_user_role(user, project)
+      :editor
+
+      iex> get_project_user_role(user, project)
+      :owner
+
+  """
   def get_project_user_role(user, project) do
     project_user_role_query(user, project)
     |> Repo.one()
