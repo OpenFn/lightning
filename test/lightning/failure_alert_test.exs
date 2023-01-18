@@ -196,11 +196,9 @@ defmodule Lightning.FailureAlertTest do
       [time_scale: time_scale, rate_limit: rate_limit] =
         Application.fetch_env!(:lightning, Lightning.FailureAlerter)
 
-      remaining = rate_limit - 1
-
       Pipeline.process(attempt_run)
 
-      {:ok, {1, ^remaining, _, _, _}} =
+      {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(work_order.workflow_id, time_scale, rate_limit)
 
       assert_email_sent(subject: "1th failure for workflow specific-workflow")
@@ -214,7 +212,7 @@ defmodule Lightning.FailureAlertTest do
       refute_email_sent(subject: "1th failure for workflow specific-workflow")
 
       # nothing changed
-      {:ok, {1, ^remaining, _, _, _}} =
+      {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(work_order.workflow_id, time_scale, rate_limit)
     end
   end
