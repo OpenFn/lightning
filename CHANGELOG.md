@@ -52,6 +52,7 @@ and this project adheres to
 - Don't consider disabled jobs when calculating subsequent runs
 - Fixed overflow on Job Editor Tooltips
 - Fixed auto-scroll when adding a new snippet in the Job Editor
+- Fixed common operation typings in Job Editor
 
 ## [0.3.1] - 2022-11-22
 

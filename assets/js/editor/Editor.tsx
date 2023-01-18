@@ -40,20 +40,26 @@ type Lib = {
 }
 
 // TODO this can take a little while to run, we should consider giving some feedback to the user
-async function loadDTS(specifier: string): Promise<Lib[]> {
+async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@')
   nameParts.pop() // remove the version
   const name = nameParts.join('@');
+  
+  let results: Lib[] = [];
+  if (name !== '@openfn/language-common') {
+    const pkg = await fetchFile(`${specifier}/package.json`)
+    const commonVersion = JSON.parse(pkg || '{}').dependencies?.['@openfn/language-common'];
+    results = await loadDTS(`@openfn/language-common@${commonVersion}`, 'module')
+  }
 
-  const results: Lib[] = [];
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       const content = await fetchFile(`${specifier}${filePath}`)
       results.push({
-        content: `declare namespace "${name}" { ${content} }`,
-        filePath
+        content: `declare ${type} "${name}" { ${content} }`,
+        filePath: `${name}${filePath}`
       });
     }
   }
