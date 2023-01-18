@@ -48,9 +48,10 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   defp save_project(socket, project_params) do
     case Projects.update_project(socket.assigns.project, project_params) do
-      {:ok, _project} ->
+      {:ok, project} ->
         {:noreply,
          socket
+         |> assign(:project, project)
          |> put_flash(:info, "Project updated successfully")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
