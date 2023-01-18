@@ -12,9 +12,11 @@ defmodule Lightning.Application do
     :mnesia.create_schema([node()])
     :mnesia.start()
 
-    :ets.tab2list(:ligthning_backend_mnesia)
+    Lightning.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])
 
-    # Lightning.Backend.Mnesia.create_mnesia_table([disc_copies: [node()]])
+    # :mnesia.transaction(fn ->
+    #   :mnesia.match_object({:ligthning_backend_mnesia, :count, 0})
+    # end) |> IO.inspect()
 
     # Only add the Sentry backend if a dsn is provided.
     if Application.get_env(:sentry, :included_environments) |> Enum.any?(),
