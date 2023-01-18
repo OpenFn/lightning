@@ -61,23 +61,20 @@ defmodule Lightning.Pipeline.Runner do
           work_order = attempt.work_order
           workflow = attempt.work_order.workflow
 
-          recipients =
-            Lightning.Accounts.get_users_to_alert_for_project(%{
-              id: workflow.project_id
-            })
-            |> Enum.map(& &1.email)
-
-          if length(recipients) > 0 do
+          Lightning.Accounts.get_users_to_alert_for_project(%{
+            id: workflow.project_id
+          })
+          |> Enum.each(fn user ->
             %{
               "workflow_id" => workflow.id,
               "workflow_name" => workflow.name,
               "run_id" => run.id,
               "project_id" => workflow.project_id,
               "work_order_id" => work_order.id,
-              "recipients" => recipients
+              "recipient" => user
             }
             |> Lightning.FailureAlerter.alert()
-          end
+          end)
       end
     end
   end

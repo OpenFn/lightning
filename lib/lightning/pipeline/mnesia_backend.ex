@@ -38,7 +38,7 @@ defmodule Lightning.Backend.Mnesia do
           {key :: bucket_key, count :: integer, created :: integer,
            updated :: integer}
 
-  @default_table_name :__hammer_backend_mnesia
+  @default_table_name :ligthning_backend_mnesia
   @table_attributes [:key, :bucket, :id, :count, :created, :updated]
   @table_indices [:id, :updated]
   @table_type :set
@@ -46,6 +46,7 @@ defmodule Lightning.Backend.Mnesia do
   ## Public API
 
   def create_mnesia_table do
+
     create_mnesia_table(@default_table_name, [])
   end
 
@@ -54,6 +55,7 @@ defmodule Lightning.Backend.Mnesia do
   end
 
   def create_mnesia_table(opts) when is_list(opts) do
+    IO.inspect("MNSEAI")
     create_mnesia_table(@default_table_name, opts)
   end
 
@@ -74,7 +76,6 @@ defmodule Lightning.Backend.Mnesia do
       |> Keyword.put(:index, @table_indices)
       |> Keyword.put(:type, @table_type)
       |> Keyword.put(:record_name, table_name)
-      |> Keyword.put(:disc_copies, [node()])
 
     Mnesia.create_table(table_name, opts)
   end

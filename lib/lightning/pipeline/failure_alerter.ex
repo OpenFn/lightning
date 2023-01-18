@@ -9,7 +9,7 @@ defmodule Lightning.FailureAlerter do
         "run_id" => run_id,
         "project_id" => project_id,
         "work_order_id" => work_order_id,
-        "recipients" => recipients
+        "recipient" => recipient
       }) do
     run = Repo.get!(Lightning.Invocation.Run, run_id)
 
@@ -24,18 +24,24 @@ defmodule Lightning.FailureAlerter do
     if remaining == 0 do
       {:cancel, "Failure notification rate limit is reached"}
     else
-      Lightning.FailureEmail.deliver_failure_email(recipients, %{
+      Lightning.FailureEmail.deliver_failure_email(recipient.email, %{
         work_order_id: work_order_id,
         count: count + 1,
         run: run,
         workflow_name: workflow_name,
         workflow_id: workflow_id,
-        run_url: run_url
+        run_url: run_url,
+        recipient: recipient
       })
       |> case do
         {:ok, _metadata} ->
           # this increments the number of ops.
-          Hammer.check_rate(workflow_id, time_scale, rate_limit)
+          Hammer.check_rate(
+            "#{workflow_id}::#{recipient.id}",
+            time_scale,
+            rate_limit
+          )
+
           :ok
 
         _ ->

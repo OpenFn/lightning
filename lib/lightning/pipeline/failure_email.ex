@@ -8,10 +8,10 @@ defmodule Lightning.FailureEmail do
     "#{failure_count}th failure for workflow #{name}"
   end
 
-  def deliver_failure_email(recipients, body_data) do
+  def deliver_failure_email(email, body_data) do
     email =
       new()
-      |> to(recipients)
+      |> to(email)
       |> from(
         {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
       )
