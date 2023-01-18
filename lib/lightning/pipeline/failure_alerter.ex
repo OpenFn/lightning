@@ -39,6 +39,17 @@ defmodule Lightning.FailureAlerter do
         })
         |> case do
           {:ok, _metadata} ->
+            Lightning.Notifications.create_notification(%{
+              event: "email-sent",
+              user_id: recipient.id,
+              metadata: %{
+                work_order_id: work_order_id,
+                count: count,
+                workflow_id: workflow_id,
+                run_id: run.id
+              }
+            })
+
             :ok
 
           _ ->
