@@ -8,10 +8,13 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    :mnesia.stop()
     :mnesia.create_schema([node()])
     :mnesia.start()
 
-    Lightning.Backend.Mnesia.create_mnesia_table([disc_copies: [node()]])
+    :ets.tab2list(:ligthning_backend_mnesia)
+
+    # Lightning.Backend.Mnesia.create_mnesia_table([disc_copies: [node()]])
 
     # Only add the Sentry backend if a dsn is provided.
     if Application.get_env(:sentry, :included_environments) |> Enum.any?(),

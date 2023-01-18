@@ -18,8 +18,10 @@ defmodule Lightning.FailureAlerter do
     [time_scale: time_scale, rate_limit: rate_limit] =
       Application.fetch_env!(:lightning, __MODULE__)
 
+    bucket_key = "#{workflow_id}::#{recipient.id}"
+
     {:ok, {count, remaining, _, _, _}} =
-      Hammer.inspect_bucket(workflow_id, time_scale, rate_limit)
+      Hammer.inspect_bucket(bucket_key, time_scale, rate_limit)
 
     if remaining == 0 do
       {:cancel, "Failure notification rate limit is reached"}
@@ -37,7 +39,7 @@ defmodule Lightning.FailureAlerter do
         {:ok, _metadata} ->
           # this increments the number of ops.
           Hammer.check_rate(
-            "#{workflow_id}::#{recipient.id}",
+            bucket_key,
             time_scale,
             rate_limit
           )

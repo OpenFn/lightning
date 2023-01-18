@@ -36,8 +36,8 @@ config :lightning, Lightning.Vault,
 
 config :lightning, Lightning.FailureAlerter,
   # 24h = 86_400_000
-  time_scale: 60_000,
-  rate_limit: 3
+  time_scale: 2 * 60_000,
+  rate_limit: 1
 
 # ## SSL Support
 #

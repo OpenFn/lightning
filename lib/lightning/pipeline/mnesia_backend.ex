@@ -46,7 +46,6 @@ defmodule Lightning.Backend.Mnesia do
   ## Public API
 
   def create_mnesia_table do
-
     create_mnesia_table(@default_table_name, [])
   end
 
@@ -55,7 +54,6 @@ defmodule Lightning.Backend.Mnesia do
   end
 
   def create_mnesia_table(opts) when is_list(opts) do
-    IO.inspect("MNSEAI")
     create_mnesia_table(@default_table_name, opts)
   end
 
