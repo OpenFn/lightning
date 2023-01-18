@@ -192,7 +192,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Projects settings"
+      assert html =~ "Project settings"
     end
 
     test "project admin can't edit project name and description with invalid data",
@@ -212,7 +212,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Projects settings"
+      assert html =~ "Project settings"
 
       invalid_project_name = %{
         name: "some name"
@@ -256,7 +256,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Projects settings"
+      assert html =~ "Project settings"
 
       valid_project_attrs = %{
         name: "somename",
@@ -284,7 +284,7 @@ defmodule LightningWeb.ProjectLiveTest do
           Routes.project_project_settings_path(conn, :index, project.id)
         )
 
-      assert html =~ "Projects settings"
+      assert html =~ "Project settings"
 
       assert view
              |> has_element?(
