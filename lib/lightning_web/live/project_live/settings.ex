@@ -4,7 +4,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Projects
+  alias Lightning.{Projects, Credentials}
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
@@ -26,6 +26,7 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> assign(
        active_menu_item: :settings,
        can_edit_project: can_edit_project,
+       credentials: Credentials.list_credentials(socket.assigns.project),
        changeset: Projects.change_project(socket.assigns.project)
      )}
   end
