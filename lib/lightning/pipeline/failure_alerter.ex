@@ -3,6 +3,37 @@ defmodule Lightning.FailureAlerter do
 
   alias Lightning.Repo
 
+  def alert_on_failure(run) when run.exit_code == 0, do: nil
+
+  def alert_on_failure(run) do
+    attempt = Lightning.AttemptService.get_last_attempt_for(run)
+
+    attempt
+    |> case do
+      nil ->
+        nil
+
+      attempt ->
+        work_order = attempt.work_order
+        workflow = attempt.work_order.workflow
+
+        Lightning.Accounts.get_users_to_alert_for_project(%{
+          id: workflow.project_id
+        })
+        |> Enum.each(fn user ->
+          %{
+            "workflow_id" => workflow.id,
+            "workflow_name" => workflow.name,
+            "run_id" => run.id,
+            "project_id" => workflow.project_id,
+            "work_order_id" => work_order.id,
+            "recipient" => user
+          }
+          |> Lightning.FailureAlerter.alert()
+        end)
+    end
+  end
+
   def alert(%{
         "workflow_id" => workflow_id,
         "workflow_name" => workflow_name,
@@ -50,7 +81,9 @@ defmodule Lightning.FailureAlerter do
               }
             })
 
-            :ok
+            nil
+
+          # :ok
 
           _ ->
             # decrement the counter when email is not delivered
@@ -61,11 +94,13 @@ defmodule Lightning.FailureAlerter do
               -1
             )
 
-            {:cancel, "Failure email was not sent"}
+            nil
+            # {:cancel, "Failure email was not sent"} or Logger
         end
 
       {:deny, _} ->
-        {:cancel, "Failure notification rate limit is reached"}
+        nil
+        # {:cancel, "Failure notification rate limit is reached"} or Logger
     end
   end
 end

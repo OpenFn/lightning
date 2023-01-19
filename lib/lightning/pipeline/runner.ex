@@ -42,40 +42,11 @@ defmodule Lightning.Pipeline.Runner do
           log: scrubbed_log
         })
 
-      Runner.create_dataclip_from_result(result, run)
+      dataclip_result = Runner.create_dataclip_from_result(result, run)
 
-      alert_on_failure(run)
-    end
+      Lightning.FailureAlerter.alert_on_failure(run)
 
-    defp alert_on_failure(run) when run.exit_code == 0, do: nil
-
-    defp alert_on_failure(run) do
-      attempt = Lightning.AttemptService.get_last_attempt_for(run)
-
-      attempt
-      |> case do
-        nil ->
-          nil
-
-        attempt ->
-          work_order = attempt.work_order
-          workflow = attempt.work_order.workflow
-
-          Lightning.Accounts.get_users_to_alert_for_project(%{
-            id: workflow.project_id
-          })
-          |> Enum.each(fn user ->
-            %{
-              "workflow_id" => workflow.id,
-              "workflow_name" => workflow.name,
-              "run_id" => run.id,
-              "project_id" => workflow.project_id,
-              "work_order_id" => work_order.id,
-              "recipient" => user
-            }
-            |> Lightning.FailureAlerter.alert()
-          end)
-      end
+      dataclip_result
     end
   end
 
