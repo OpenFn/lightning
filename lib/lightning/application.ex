@@ -12,8 +12,8 @@ defmodule Lightning.Application do
     :mnesia.stop()
     :mnesia.create_schema([node()])
     :mnesia.start()
-    Lightning.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])
-    :mnesia.wait_for_tables([:ligthning_backend_mnesia], 60_000)
+    Hammer.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])
+    :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
 
     # Only add the Sentry backend if a dsn is provided.
     if Application.get_env(:sentry, :included_environments) |> Enum.any?(),
