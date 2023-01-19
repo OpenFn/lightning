@@ -395,19 +395,33 @@ defmodule Lightning.Invocation do
         date_after: date_after,
         date_before: date_before
       ) do
+    last_attempts =
+      from ar in Lightning.Attempt,
+        group_by: ar.work_order_id,
+        select: %{
+          work_order_id: ar.work_order_id,
+          last_inserted_at:
+            fragment(
+              "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
+              ar.inserted_at
+            )
+        }
+
     from(wo in Lightning.WorkOrder,
       join: wo_re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
       as: :workflow,
       join: att in assoc(wo, :attempts),
+      join: last in subquery(last_attempts),
+      on: last.last_inserted_at == att.inserted_at,
       join: r in assoc(att, :runs),
       as: :runs,
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
       where: w.project_id == ^project_id,
-      where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_status_where(status),
+      where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_started_after_where(date_after),
       where: ^filter_run_started_before_where(date_before),
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
@@ -491,6 +505,17 @@ defmodule Lightning.Invocation do
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
+    from(
+      ar in Lightning.AttemptRun,
+      group_by: ar.attempt_id,
+      select: %{
+        attempt_id: ar.attempt_id,
+        inserted_at: max(ar.inserted_at)
+      }
+    )
+    |> Repo.all()
+    |> IO.inspect()
+
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
   end
