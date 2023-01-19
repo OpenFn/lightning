@@ -195,6 +195,50 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
     end
 
+    test "project admin can view project credentials page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      {:ok, credential} =
+        Lightning.Credentials.create_credential(%{
+          body: %{},
+          name: "some name",
+          user_id: user.id,
+          schema: "raw",
+          project_credentials: [
+            %{project_id: project.id}
+          ]
+        })
+
+      credential = Lightning.Repo.preload(credential, :user)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#credentials"
+        )
+
+      assert html =~ "Name"
+      assert html =~ "Type"
+      assert html =~ "Owner"
+      assert html =~ "Production"
+
+      assert html =~
+               credential.name |> Phoenix.HTML.Safe.to_iodata() |> to_string()
+
+      assert html =~ credential.schema
+      assert html =~ credential.name
+      assert html =~ credential.user.email
+    end
+
     test "project admin can't edit project name and description with invalid data",
          %{
            conn: conn,
