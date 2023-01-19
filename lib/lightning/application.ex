@@ -43,7 +43,24 @@ defmodule Lightning.Application do
 
     :ok = Oban.Telemetry.attach_default_logger(:debug)
 
+    topologies =
+      if System.get_env("K8S_HEADLESS_SERVICE") do
+        [
+          k8s: [
+            strategy: Cluster.Strategy.Kubernetes.DNS,
+            config: [
+              service: System.get_env("K8S_HEADLESS_SERVICE"),
+              application_name: "lightning",
+              polling_interval: 5_000
+            ]
+          ]
+        ]
+      else
+        Application.get_env(:libcluster, :topologies)
+      end
+
     children = [
+      {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
       Lightning.Vault,
       # Start the Ecto repository
       Lightning.Repo,
