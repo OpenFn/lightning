@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.4.0] - 2023-01-18]
+
 ### Added
 
 - Added a Delete job button in Inspector

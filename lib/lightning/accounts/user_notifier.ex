@@ -29,17 +29,14 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_confirmation_instructions(user, url) do
     deliver(user.email, "Confirmation instructions", """
 
-    ==============================
+    Hi #{user.first_name},
 
-    Hi #{user.email},
+    You've just registered for an account on Lightning Beta. Please confirm your account by visiting the URL below:
 
-    You can confirm your account by visiting the URL below:
-
-    #{url}
+    #{url}.
 
     If you didn't create an account with us, please ignore this.
 
-    ==============================
     """)
   end
 
@@ -49,7 +46,6 @@ defmodule Lightning.Accounts.UserNotifier do
   def send_deletion_notification_email(user) do
     deliver(user.email, "Lightning Account Deletion", """
 
-    ==============================
 
     Hi #{user.first_name},
 
@@ -57,7 +53,6 @@ defmodule Lightning.Accounts.UserNotifier do
 
     If you don't want this to happen, please contact #{admin()} as soon as possible.
 
-    ==============================
     """)
   end
 
