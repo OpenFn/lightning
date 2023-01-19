@@ -19,8 +19,8 @@ defmodule Lightning.Accounts.Notification do
   end
 
   @doc false
-  def changeset(%__MODULE__{} = audit, attrs) do
-    audit
+  def changeset(%__MODULE__{} = notification, attrs \\ %{}) do
+    notification
     |> cast(attrs, [:event, :user_id, :metadata])
     |> validate_required([:event, :user_id])
   end
