@@ -13,7 +13,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     can_edit_project =
       case Bodyguard.permit(
              Lightning.Projects.Policy,
-             :access_project_settings,
+             :edit,
              socket.assigns.current_user,
              socket.assigns.project
            ) do
