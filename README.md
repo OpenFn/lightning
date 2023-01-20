@@ -60,7 +60,7 @@ forks" link on GitHub's
 [pull request](https://github.com/OpenFn/Lightning/compare) interface and then
 open one for review.
 
-#### Clone the repo and set ENVs
+#### Clone the repo and optionally set ENVs
 
 ```sh
 git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
@@ -69,7 +69,9 @@ cp .env.example .env # and adjust as necessary!
 ```
 
 Take note of database names and ports in particular—they've got to match across
-your Postgres setup and your ENVs.
+your Postgres setup and your ENVs. You can run lightning without any ENVs
+assuming a vanilla postgres setup (see below), but you may want to make
+adjustments.
 
 #### Database Setup
 
@@ -118,6 +120,12 @@ npm install --prefix assets
 
 Lightning is a web app. To run it in interactive Elixir mode, start the
 development server by running with your environment variables by running:
+
+```sh
+iex -S mix phx.server
+```
+
+or if you have set up custom environment variables, run:
 
 ```sh
 env $(cat .env | grep -v "#" | xargs ) iex -S mix phx.server
@@ -177,6 +185,21 @@ You can generate the HTML and EPUB documentation locally using:
 `mix docs` and opening `doc/index.html` in your browser.
 
 ## Troubleshooting
+
+### Trouble with environment variables
+
+For troubleshooting custom environment variable configuration it's important to
+know how an Elixir app loads and modifies configuration. The order is as
+follows:
+
+1. Stuff in `config.exs` is loaded.
+2. _That_ is then modified (think: _overwritten_) by stuff your ENV-specific
+   config: `dev.exs`, `prod.exs` or `test.exs`.
+3. _That_ is then modified by `runtime.exs` which is where you are allowed to
+   use `System.env()`
+4. _Finally_ `init/2` (if present in a child application) gets called (which
+   takes the config which has been set in steps 1-3) when that child application
+   is started during the parent app startup defined in `application.ex`.
 
 ### Problems with Postgres
 
