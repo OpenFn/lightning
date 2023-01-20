@@ -89,11 +89,12 @@ url_scheme = System.get_env("URL_SCHEME", "https")
 # given, otherwise it uses the existing config and lastly defaults to 4000.
 port =
   (System.get_env("PORT") ||
-     Application.get_env(:lightning, LightningWeb.Endpoint)[:http]
+     Application.get_env(:lightning, LightningWeb.Endpoint)
+     |> Keyword.get(:http, port: nil)
      |> Keyword.get(:port) ||
      4000)
   |> case do
-    p when is_binary(p) -> String.to_integer()
+    p when is_binary(p) -> String.to_integer(p)
     p when is_integer(p) -> p
   end
 
@@ -106,8 +107,9 @@ port =
 # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
 # for details about using IPv6 vs IPv4 and loopback vs public addresses.
 listen_address =
-  (System.get_env("LIGHTNING_LISTEN_ADDRESS") ||
-     Application.get_env(:lightning, LightningWeb.Endpoint)[:http]
+  (System.get_env("LISTEN_ADDRESS") ||
+     Application.get_env(:lightning, LightningWeb.Endpoint)
+     |> Keyword.get(:http, ip: nil)
      |> Keyword.get(:ip) ||
      {127, 0, 0, 1})
   |> case do
