@@ -136,7 +136,37 @@
           </.table>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="collaboration">
-          <div>Collaboration</div>
+          <div>
+            <h6 class="font-medium text-black">Project collaboration</h6>
+            <small class="block my-1 text-xs text-gray-600">
+              The list of collaborators
+            </small>
+          </div>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <.table id="collaborators">
+            <.tr>
+              <.th>Collaborator</.th>
+              <.th>Role</.th>
+            </.tr>
+
+            <%= for credential <- @credentials do %>
+              <.tr id={"credential-#{credential.id}"}>
+                <.td><%= credential.name %></.td>
+                <.td><%= credential.schema %></.td>
+                <.td><%= credential.user.email %></.td>
+                <.td>
+                  <%= if credential.production do %>
+                    <div class="flex">
+                      <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
+                      &nbsp;Production
+                    </div>
+                  <% end %>
+                </.td>
+              </.tr>
+            <% end %>
+          </.table>
         </LightningWeb.Components.Common.panel_content>
       </div>
     </div>
