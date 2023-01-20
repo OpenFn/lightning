@@ -89,7 +89,7 @@ defmodule LightningWeb.EndToEndTest do
       log = run_2.log |> Enum.join("\n")
 
       assert log =~
-               "{ password: '***', username: 'quux' }"
+               ~S[{"password":"***","username":"quux"}]
 
       #  Run 3 should succeed and log "6"
       assert run_3.finished_at != nil
