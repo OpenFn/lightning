@@ -88,14 +88,15 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "Projects"
     end
 
-    test "validate email", %{conn: conn, user: user} do
-      {:ok, profile_live, _html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+    # TODO: @Mtuchi, when emails can be changed again, this comes back.
+    # test "validate email", %{conn: conn, user: user} do
+    #   {:ok, profile_live, _html} =
+    #     live(conn, Routes.profile_edit_path(conn, :edit))
 
-      assert profile_live
-             |> form("#email_form", user: %{email: user.email})
-             |> render_change() =~ "did not change"
-    end
+    #   assert profile_live
+    #          |> form("#email_form", user: %{email: user.email})
+    #          |> render_change() =~ "did not change"
+    # end
 
     test "allows a user to schedule their own account for deletion", %{
       conn: conn,
