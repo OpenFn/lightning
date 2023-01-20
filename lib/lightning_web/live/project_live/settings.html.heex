@@ -11,11 +11,11 @@
           <LightningWeb.Components.Common.tab_bar
             orientation="vertical"
             id={@project.id}
-            default_hash="settings"
+            default_hash="project"
           >
             <LightningWeb.Components.Common.tab_item
               orientation="vertical"
-              hash="settings"
+              hash="project"
             >
               <Heroicons.clipboard class="h-5 w-5 inline-block mr-2 align-middle" />
               <span class="inline-block align-middle">Project</span>
@@ -39,7 +39,7 @@
       </div>
 
       <div class="flex-1 flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400">
-        <LightningWeb.Components.Common.panel_content for_hash="settings">
+        <LightningWeb.Components.Common.panel_content for_hash="project">
           <div id="project-settings-#" class="bg-white p-4 rounded-md">
             <div>
               <h6 class="font-medium text-black">Project details</h6>
