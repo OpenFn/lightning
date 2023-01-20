@@ -505,17 +505,6 @@ defmodule Lightning.Invocation do
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
-    from(
-      ar in Lightning.AttemptRun,
-      group_by: ar.attempt_id,
-      select: %{
-        attempt_id: ar.attempt_id,
-        inserted_at: max(ar.inserted_at)
-      }
-    )
-    |> Repo.all()
-    |> IO.inspect()
-
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
   end
