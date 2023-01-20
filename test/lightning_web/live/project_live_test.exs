@@ -195,6 +195,45 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
     end
 
+    test "project admin can view project collaboration page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      project_users =
+        Lightning.Projects.get_project_with_users!(project.id).project_users
+
+      assert 1 == length(project_users)
+
+      project_user = List.first(project_users)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#collaboration"
+        )
+
+      assert html =~ "Collaborator"
+      assert html =~ "Role"
+
+      assert html =~
+               "#{project_user.user.first_name} #{project_user.user.last_name}"
+               |> Phoenix.HTML.Safe.to_iodata()
+               |> to_string()
+
+      assert html =~ project_user.role |> Atom.to_string()
+
+      assert html =~
+               "#{project_user.user.first_name} #{project_user.user.last_name}"
+    end
+
     test "project admin can view project credentials page",
          %{
            conn: conn,
