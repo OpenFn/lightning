@@ -15,10 +15,6 @@ end
 config :lightning, :email_addresses,
   admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
 
-port = String.to_integer(System.get_env("PORT", "4000"))
-url_port = String.to_integer(System.get_env("URL_PORT", "443"))
-url_scheme = System.get_env("URL_SCHEME", "https")
-
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
@@ -86,6 +82,21 @@ if System.get_env("MAILGUN_API_KEY") do
     domain: System.get_env("MAILGUN_DOMAIN")
 end
 
+url_port = String.to_integer(System.get_env("URL_PORT", "443"))
+url_scheme = System.get_env("URL_SCHEME", "https")
+
+# The webserver port will always prefer and environment variable _when_
+# given, otherwise it uses the existing config and lastly defaults to 4000.
+port =
+  (System.get_env("PORT") ||
+     Application.get_env(:lightning, LightningWeb.Endpoint)[:http]
+     |> Keyword.get(:port) ||
+     4000)
+  |> case do
+    p when is_binary(p) -> String.to_integer()
+    p when is_integer(p) -> p
+  end
+
 # Binding to loopback ipv4 address prevents access from other machines.
 # http: [ip: {0, 0, 0, 0}, port: 4000],
 # Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
@@ -95,10 +106,20 @@ end
 # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
 # for details about using IPv6 vs IPv4 and loopback vs public addresses.
 listen_address =
-  System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
-  |> String.split(".")
-  |> Enum.map(&String.to_integer/1)
-  |> List.to_tuple()
+  (System.get_env("LIGHTNING_LISTEN_ADDRESS") ||
+     Application.get_env(:lightning, LightningWeb.Endpoint)[:http]
+     |> Keyword.get(:ip) ||
+     {127, 0, 0, 1})
+  |> case do
+    p when is_binary(p) ->
+      p
+      |> String.split(".")
+      |> Enum.map(&String.to_integer/1)
+      |> List.to_tuple()
+
+    p when is_tuple(p) ->
+      p
+  end
 
 config :lightning, LightningWeb.Endpoint,
   http: [
