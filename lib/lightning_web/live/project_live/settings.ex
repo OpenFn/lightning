@@ -21,12 +21,18 @@ defmodule LightningWeb.ProjectLive.Settings do
         {:error, :unauthorized} -> false
       end
 
+    project_users =
+      Projects.get_project_with_users!(socket.assigns.project.id).project_users
+
+    credentials = Credentials.list_credentials(socket.assigns.project)
+
     {:ok,
      socket
      |> assign(
        active_menu_item: :settings,
        can_edit_project: can_edit_project,
-       credentials: Credentials.list_credentials(socket.assigns.project),
+       credentials: credentials,
+       project_users: project_users,
        changeset: Projects.change_project(socket.assigns.project)
      )}
   end

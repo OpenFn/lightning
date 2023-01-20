@@ -151,19 +151,12 @@
               <.th>Role</.th>
             </.tr>
 
-            <%= for credential <- @credentials do %>
-              <.tr id={"credential-#{credential.id}"}>
-                <.td><%= credential.name %></.td>
-                <.td><%= credential.schema %></.td>
-                <.td><%= credential.user.email %></.td>
+            <%= for project_user <- @project_users do %>
+              <.tr id={"project_user-#{project_user.id}"}>
                 <.td>
-                  <%= if credential.production do %>
-                    <div class="flex">
-                      <Heroicons.exclamation_triangle class="w-5 h-5 text-secondary-500" />
-                      &nbsp;Production
-                    </div>
-                  <% end %>
+                  <%= project_user.user.first_name %> <%= project_user.user.last_name %>
                 </.td>
+                <.td><%= project_user.role %></.td>
               </.tr>
             <% end %>
           </.table>
