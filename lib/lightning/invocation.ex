@@ -432,8 +432,8 @@ defmodule Lightning.Invocation do
       as: :runs,
       join: last_run in subquery(last_runs),
       on:
-          att.id == last_run.attempt_id and
-          last_run.last_finished_at == r.finished_at or is_nil(r.finished_at),
+        (att.id == last_run.attempt_id and
+           last_run.last_finished_at == r.finished_at) or is_nil(r.finished_at),
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
