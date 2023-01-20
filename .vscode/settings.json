@@ -1,0 +1,9 @@
+{
+  "[elixir]": {
+    "editor.trimAutoWhitespace": true,
+    "editor.defaultFormatter": "JakeBecker.elixir-ls"
+  },
+  "[phoenix-heex]": {
+    "editor.defaultFormatter": "JakeBecker.elixir-ls"
+  },
+}
