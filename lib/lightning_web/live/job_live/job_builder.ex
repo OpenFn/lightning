@@ -4,6 +4,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
   """
 
   use LightningWeb, :live_component
+  alias Lightning.Accounts.User
   alias LightningWeb.Components.Form
   alias Lightning.Jobs
   alias Lightning.Jobs.Job
@@ -226,7 +227,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             to: @return_to
           ) %>
           <Form.submit_button
-            disabled={!@changeset.valid?}
+            disabled={!@changeset.valid? or !@can_edit}
             phx-disable-with="Saving"
             form="job-form"
           >
@@ -445,7 +446,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
        credentials: credentials,
        builder_state: builder_state,
        upstream_jobs: upstream_jobs,
-       is_deletable: is_deletable
+       is_deletable: is_deletable,
+       can_edit:
+         Lightning.Policies.Utils.can_edit(
+           Lightning.Policies.MemberPolicy,
+           :edit_jobs,
+           current_user,
+           project
+         )
      )
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)
