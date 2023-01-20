@@ -396,14 +396,27 @@ defmodule Lightning.Invocation do
         date_before: date_before
       ) do
     last_attempts =
-      from ar in Lightning.Attempt,
-        group_by: ar.work_order_id,
+      from att in Lightning.Attempt,
+        group_by: att.work_order_id,
         select: %{
-          work_order_id: ar.work_order_id,
+          work_order_id: att.work_order_id,
           last_inserted_at:
             fragment(
+              "max(?)",
+              att.inserted_at
+            )
+        }
+
+    last_runs =
+      from r in Lightning.Invocation.Run,
+        join: att in assoc(r, :attempts),
+        group_by: att.id,
+        select: %{
+          attempt_id: att.id,
+          last_finished_at:
+            fragment(
               "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
-              ar.inserted_at
+              r.finished_at
             )
         }
 
@@ -413,9 +426,14 @@ defmodule Lightning.Invocation do
       as: :workflow,
       join: att in assoc(wo, :attempts),
       join: last in subquery(last_attempts),
-      on: last.last_inserted_at == att.inserted_at,
+      on:
+        last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
       join: r in assoc(att, :runs),
       as: :runs,
+      join: last_run in subquery(last_runs),
+      on:
+        att.id == last_run.attempt_id and
+          last_run.last_finished_at == r.finished_at,
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
