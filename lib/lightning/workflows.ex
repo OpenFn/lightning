@@ -117,23 +117,6 @@ defmodule Lightning.Workflows do
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
-      where: w.project_id == ^project.id,
-      order_by: [asc: w.name]
-    )
-  end
-
-  @doc """
-  Retrieves a list of active Workflows with their jobs and triggers preloaded.
-  """
-  @spec get_active_workflows_for(Project.t()) :: [Workflow.t()]
-  def get_active_workflows_for(%Project{} = project) do
-    get_active_workflows_for_query(project)
-    |> Repo.all()
-  end
-
-  def get_active_workflows_for_query(%Project{} = project) do
-    from(w in Workflow,
-      preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )

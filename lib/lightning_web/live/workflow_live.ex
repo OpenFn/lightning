@@ -6,6 +6,7 @@ defmodule LightningWeb.WorkflowLive do
 
   alias Lightning.Workflows
   import LightningWeb.WorkflowLive.Components
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -211,9 +212,7 @@ defmodule LightningWeb.WorkflowLive do
 
     {:noreply,
      socket
-     |> assign(
-       workflows: Workflows.get_active_workflows_for(socket.assigns.project)
-     )
+     |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
      |> push_patch(
        to:
          Routes.project_workflow_path(
@@ -235,7 +234,7 @@ defmodule LightningWeb.WorkflowLive do
           :noreply,
           socket
           |> assign(
-            workflows: Workflows.get_active_workflows_for(socket.assigns.project)
+            workflows: Workflows.get_workflows_for(socket.assigns.project)
           )
           |> put_flash(:info, "Workflow deleted successfully")
         }
@@ -287,7 +286,7 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
-      workflows: Workflows.get_active_workflows_for(socket.assigns.project)
+      workflows: Workflows.get_workflows_for(socket.assigns.project)
     )
   end
 

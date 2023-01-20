@@ -61,7 +61,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
           :noreply,
           socket
           |> assign(
-            workflows: Workflows.get_active_workflows_for(socket.assigns.project)
+            workflows: Workflows.get_workflows_for(socket.assigns.project)
           )
           |> put_flash(:info, "Workflow deleted successfully")
         }

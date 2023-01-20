@@ -81,23 +81,6 @@ defmodule Lightning.WorkflowsTest do
       end
     end
 
-    test "mark_for_deletion/2 mark delete at request of a workflows and disable all associated jobs" do
-      workflow = WorkflowsFixtures.workflow_fixture()
-
-      assert workflow.deleted_at == nil
-
-      job_1 = JobsFixtures.job_fixture(workflow_id: workflow.id)
-      job_2 = JobsFixtures.job_fixture(workflow_id: workflow.id)
-
-      assert {:ok, _workflow} = Workflows.mark_for_deletion(workflow)
-
-      assert Workflows.get_workflow!(workflow.id).deleted_at != nil
-
-      assert Jobs.get_job!(job_1.id).enabled == false
-
-      assert Jobs.get_job!(job_2.id).enabled == false
-    end
-
     test "change_workflow/1 returns a workflow changeset" do
       workflow = WorkflowsFixtures.workflow_fixture()
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
@@ -160,6 +143,10 @@ defmodule Lightning.WorkflowsTest do
 
       assert length(results) == 2
 
+      assert w1.deleted_at == nil
+
+      assert w2.deleted_at == nil
+
       assert (w1
               |> Repo.preload(
                 jobs: [:credential, :workflow, trigger: [:upstream_job]]
@@ -192,6 +179,32 @@ defmodule Lightning.WorkflowsTest do
       assert project_space["jobs"]
              |> Enum.filter(&match?(%{"workflowId" => ^w2_id}, &1))
              |> length() == 2
+    end
+
+    test "mark_for_deletion/2", %{project: project, w1: w1, w2: w2} do
+      results = Workflows.get_workflows_for(project)
+
+      assert length(results) == 2
+
+      assert w1.deleted_at == nil
+
+      assert w2.deleted_at == nil
+
+      job_1 = JobsFixtures.job_fixture(workflow_id: w1.id)
+      job_2 = JobsFixtures.job_fixture(workflow_id: w1.id)
+
+      # mark delete at request of a workflows and disable all associated jobs
+      assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
+
+      assert Workflows.get_workflow!(w1.id).deleted_at != nil
+
+      assert Workflows.get_workflow!(w2.id).deleted_at == nil
+
+      assert length(Workflows.get_workflows_for(project)) == 1
+
+      assert Jobs.get_job!(job_1.id).enabled == false
+
+      assert Jobs.get_job!(job_2.id).enabled == false
     end
   end
 end
