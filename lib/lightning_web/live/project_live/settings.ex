@@ -10,15 +10,22 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def mount(_params, _session, socket) do
+    can_edit_project =
+      case Bodyguard.permit(
+             Lightning.Projects.Policy,
+             :access_project_settings,
+             socket.assigns.current_user,
+             socket.assigns.project
+           ) do
+        :ok -> true
+        {:error, :unauthorized} -> false
+      end
+
     {:ok,
      socket
      |> assign(
        active_menu_item: :settings,
-       is_user_admin:
-         Projects.get_project_user_role(
-           socket.assigns.current_user,
-           socket.assigns.project
-         ) == :admin,
+       can_edit_project: can_edit_project,
        changeset: Projects.change_project(socket.assigns.project)
      )}
   end
