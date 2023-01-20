@@ -86,6 +86,27 @@ if System.get_env("MAILGUN_API_KEY") do
     domain: System.get_env("MAILGUN_DOMAIN")
 end
 
+# Binding to loopback ipv4 address prevents access from other machines.
+# http: [ip: {0, 0, 0, 0}, port: 4000],
+# Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
+# Note that this may interfere with Docker networking.
+# Enable IPv6 and bind on all interfaces.
+# Set it to {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
+# See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
+# for details about using IPv6 vs IPv4 and loopback vs public addresses.
+listen_address =
+  System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
+  |> String.split(".")
+  |> Enum.map(&String.to_integer/1)
+  |> List.to_tuple()
+
+config :lightning, LightningWeb.Endpoint,
+  http: [
+    ip: listen_address,
+    port: port,
+    compress: true
+  ]
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -125,27 +146,8 @@ if config_env() == :prod do
       str -> String.split(str, ",")
     end
 
-  # Binding to loopback ipv4 address prevents access from other machines.
-  # http: [ip: {0, 0, 0, 0}, port: 4000],
-  # Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
-  # Note that this may interfere with Docker networking.
-  # Enable IPv6 and bind on all interfaces.
-  # Set it to {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
-  # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
-  # for details about using IPv6 vs IPv4 and loopback vs public addresses.
-  listen_address =
-    System.get_env("LIGHTNING_LISTEN_ADDRESS", "127.0.0.1")
-    |> String.split(".")
-    |> Enum.map(&String.to_integer/1)
-    |> List.to_tuple()
-
   config :lightning, LightningWeb.Endpoint,
     url: [host: host, port: url_port, scheme: url_scheme],
-    http: [
-      ip: listen_address,
-      port: port,
-      compress: true
-    ],
     secret_key_base: secret_key_base,
     check_origin: origins,
     server: true
