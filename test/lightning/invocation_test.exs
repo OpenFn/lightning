@@ -540,7 +540,8 @@ defmodule Lightning.InvocationTest do
 
       ### PAGE 1 -----------------------------------------------------------------------
 
-      page_one_result = get_simplified_page(project, 1, [])
+      page_one_result =
+        get_simplified_page(project, %{"page" => 1, "page_size" => 3}, [])
 
       # all work_orders in page_one are ordered by finished_at
 
@@ -554,7 +555,8 @@ defmodule Lightning.InvocationTest do
 
       ### PAGE 2 -----------------------------------------------------------------------
 
-      page_two_result = get_simplified_page(project, 2, [])
+      page_two_result =
+        get_simplified_page(project, %{"page" => 2, "page_size" => 3}, [])
 
       # all work_orders in page_two are ordered by finished_at
       expected_order = [
@@ -567,7 +569,8 @@ defmodule Lightning.InvocationTest do
 
       ### PAGE 3 -----------------------------------------------------------------------
 
-      page_three_result = get_simplified_page(project, 3, [])
+      page_three_result =
+        get_simplified_page(project, %{"page" => 3, "page_size" => 3}, [])
 
       # all work_orders in page_three are ordered by finished_at
       expected_order = [
@@ -589,22 +592,21 @@ defmodule Lightning.InvocationTest do
       scenario = [
         # ---workorder1--- last job succeed on 1st attempt, failed on 2nd attempt
         workflow1: [
-          [0, 0, 0, 1],
-          [0, 0, 1, 0]
+          [:success, :success, :success, :failure],
+          [:success, :success, :failure, :success]
         ]
       ]
 
-      [%Lightning.WorkOrder{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, map, scenario)
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
-               actual_filter_by_status(project, [:failure])
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:failure])
 
       assert [] == actual_filter_by_status(project, [:success])
       assert [] == actual_filter_by_status(project, [:pending])
       assert [] == actual_filter_by_status(project, [:timeout])
       assert [] == actual_filter_by_status(project, [:crash])
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
+      assert [%{id: ^id}] =
                actual_filter_by_status(project, [
                  :success,
                  :failure,
@@ -624,22 +626,21 @@ defmodule Lightning.InvocationTest do
       scenario = [
         # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
         workflow1: [
-          [0, 0, 0, nil],
-          [0, 0, 1, 0]
+          [:success, :success, :success, :pending],
+          [:success, :success, :failure, :success]
         ]
       ]
 
-      [%Lightning.WorkOrder{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, map, scenario)
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
-               actual_filter_by_status(project, [:pending])
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:pending])
 
       assert [] == actual_filter_by_status(project, [:success])
       assert [] == actual_filter_by_status(project, [:timeout])
       assert [] == actual_filter_by_status(project, [:failure])
       assert [] == actual_filter_by_status(project, [:crash])
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
+      assert [%{id: ^id}] =
                actual_filter_by_status(project, [
                  :success,
                  :failure,
@@ -659,22 +660,21 @@ defmodule Lightning.InvocationTest do
       scenario = [
         # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
         workflow1: [
-          [0, 0, 0, 2],
-          [0, 0, 1, 0]
+          [:success, :success, :success, :timeout],
+          [:success, :success, :failure, :success]
         ]
       ]
 
-      [%Lightning.WorkOrder{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, map, scenario)
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
-               actual_filter_by_status(project, [:timeout])
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:timeout])
 
       assert [] == actual_filter_by_status(project, [:success])
       assert [] == actual_filter_by_status(project, [:pending])
       assert [] == actual_filter_by_status(project, [:failure])
       assert [] == actual_filter_by_status(project, [:crash])
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
+      assert [%{id: ^id}] =
                actual_filter_by_status(project, [
                  :success,
                  :failure,
@@ -694,22 +694,21 @@ defmodule Lightning.InvocationTest do
       scenario = [
         # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
         workflow1: [
-          [0, 0, 0, 3],
-          [0, 0, 1, 0]
+          [:success, :success, :success, :crash],
+          [:success, :success, :failure, :success]
         ]
       ]
 
-      [%Lightning.WorkOrder{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, map, scenario)
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
-               actual_filter_by_status(project, [:crash])
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:crash])
 
       assert [] == actual_filter_by_status(project, [:success])
       assert [] == actual_filter_by_status(project, [:pending])
       assert [] == actual_filter_by_status(project, [:failure])
       assert [] == actual_filter_by_status(project, [:timeout])
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
+      assert [%{id: ^id}] =
                actual_filter_by_status(project, [
                  :success,
                  :failure,
@@ -729,31 +728,29 @@ defmodule Lightning.InvocationTest do
       }
 
       scenario = [
-        # ---workorder1--- last job succeed on 1st attempt, timedout next 2jobs and then succeed on last attempt
         workflow1: [
-          [0, 0, 0, 0],
-          [0, 0, 0, nil],
-          [0, 0, nil],
-          [0, 0, 0, 1]
+          [:success, :success, :success, :success],
+          [:success, :success, :success, :pending],
+          [:success, :success, :pending],
+          [:success, :success, :success, :failure]
         ],
         workflow2: [
-          [0, 0, 0, 1],
-          [0, 0, 0, 1]
+          [:success, :success, :success, :failure],
+          [:success, :success, :success, :failure]
         ],
         workflow1: [
-          [0, 0, 0, 1],
-          [0, 0, 0, 1]
+          [:success, :success, :success, :failure],
+          [:success, :success, :success, :failure]
         ],
         workflow3: [
-          [0, 0, 0, 1],
-          [0, 0, 0, 1]
+          [:success, :success, :success, :failure],
+          [:success, :success, :success, :failure]
         ]
       ]
 
-      [%Lightning.WorkOrder{id: id} | _] = apply_scenario(project, map, scenario)
+      [_, _, _, %{id: id}] = apply_scenario(project, map, scenario)
 
-      assert [%Lightning.WorkOrder{id: ^id}] =
-               actual_filter_by_status(project, [:success])
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:success])
 
       refute actual_filter_by_status(project, [:failure])
              |> Enum.any?(fn wo -> wo.id == id end)
@@ -767,7 +764,7 @@ defmodule Lightning.InvocationTest do
       refute actual_filter_by_status(project, [:crash])
              |> Enum.any?(fn wo -> wo.id == id end)
 
-      assert [%Lightning.WorkOrder{id: ^id} | _] =
+      assert [%{id: ^id} | _] =
                actual_filter_by_status(project, [
                  :success,
                  :failure,
@@ -780,7 +777,7 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status complex all" do
       project = project_fixture()
 
-      map = %{
+      workflow_map = %{
         workflow1: build_workflow(project, "workflow1"),
         workflow2: build_workflow(project, "workflow2")
       }
@@ -790,57 +787,71 @@ defmodule Lightning.InvocationTest do
 
       scenario = [
         workflow2: [
-          [0, 0, 0],
-          [0, 0, 1, 0]
+          [:success, :success, :success, :success],
+          [:success, :success, :success, :failure]
         ],
         workflow1: [
-          [0, 0, 2],
-          [0, 0, 1],
-          [0, 0, 1]
+          [:success, :success, :timeout],
+          [:success, :success, :failure],
+          [:success, :success, :failure]
         ],
         workflow2: [
-          [0, 0, 0, nil],
-          [0, 0, 1, 1]
+          [:success, :success, :success, :pending],
+          [:success, :success, :failure, :failure]
         ],
         workflow1: [
-          [0, 3],
-          [0, 0, 1]
+          [:success, :crash],
+          [:success, :success, :failure]
         ],
         workflow2: [
-          [0, 0, 0, 1],
-          [0, 0, 1, 0]
+          [:success, :success, :success, :failure],
+          [:success, :success, :failure, :success]
         ]
       ]
 
       [
-        %{id: id_success},
-        %{id: id_timeout},
-        %{id: id_pending},
+        %{id: id_failure},
         %{id: id_crash},
-        %{id: id_failure}
-      ] = apply_scenario(project, map, scenario)
+        %{id: id_pending},
+        %{id: id_timeout},
+        %{id: id_success}
+      ] = apply_scenario(project, workflow_map, scenario)
 
       assert [%{id: ^id_failure}] = actual_filter_by_status(project, [:failure])
-
       assert [%{id: ^id_success}] = actual_filter_by_status(project, [:success])
       assert [%{id: ^id_pending}] = actual_filter_by_status(project, [:pending])
       assert [%{id: ^id_timeout}] = actual_filter_by_status(project, [:timeout])
       assert [%{id: ^id_crash}] = actual_filter_by_status(project, [:crash])
 
       assert [
+               %{id: ^id_pending},
                %{id: ^id_success},
                %{id: ^id_timeout},
-               %{id: ^id_pending},
                %{id: ^id_crash},
                %{id: ^id_failure}
              ] =
                actual_filter_by_status(project, [
-                 :success,
                  :failure,
+                 :success,
                  :pending,
                  :timeout,
                  :crash
                ])
+
+      get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+        status: [
+          :success,
+          :failure,
+          :pending,
+          :timeout,
+          :crash
+        ],
+        searchfors: [],
+        search_term: "",
+        workflow_id: "",
+        date_after: "",
+        date_before: ""
+      )
     end
   end
 
@@ -859,15 +870,18 @@ defmodule Lightning.InvocationTest do
   end
 
   # a test utility function that creates fixtures based on a pseudo visual (UI) execution scenario
-  # [0, 0, 1] is an attempt resulting in job0 -> exit_code:0, job1 -> exit_code:0, job2 -> exit_code:1
+  # [:success, :success, :failure] is an attempt resulting in job0 -> exit_code::success, job1 -> exit_code::success, job2 -> exit_code:1
   defp apply_scenario(project, workflow_map, scenario) do
-    now = Timex.now()
     seconds = 20
 
     dataclip = dataclip_fixture(project_id: project.id)
 
     scenario
-    |> Enum.map(fn {workflow_name, attempts} ->
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map(fn {{workflow_name, attempts}, workorder_index} ->
+      coeff = workorder_index + 1
+
       [workflow, jobs] = workflow_map[workflow_name]
 
       wo =
@@ -880,22 +894,36 @@ defmodule Lightning.InvocationTest do
       |> Enum.reverse()
       |> Enum.with_index()
       |> Enum.each(fn {run_results, attempt_index} ->
+        coeff = coeff * (attempt_index + 1)
+
         runs =
           run_results
           |> Enum.with_index()
-          |> Enum.map(fn {exit_code, job_index} ->
+          |> Enum.map(fn {exit_result, job_index} ->
+            now = Timex.now()
+            coeff = coeff * (job_index + 1)
             job = Enum.at(jobs, job_index)
 
-            %{
+            finished_at =
+              now
+              |> Timex.shift(seconds: coeff * seconds + 10)
+
+            run = %{
               job_id: job.id,
               started_at:
-                now |> Timex.shift(seconds: attempt_index * job_index * seconds),
-              finished_at:
                 now
-                |> Timex.shift(seconds: attempt_index * job_index * seconds + 10),
-              exit_code: exit_code,
+                |> Timex.shift(seconds: coeff * seconds),
+              finished_at: finished_at,
               input_dataclip_id: dataclip.id
             }
+
+            case exit_result do
+              :success -> Map.merge(run, %{exit_code: 0})
+              :failure -> Map.merge(run, %{exit_code: 1})
+              :timeout -> Map.merge(run, %{exit_code: 2})
+              :crash -> Map.merge(run, %{exit_code: 3})
+              :pending -> Map.merge(run, %{exit_code: nil, finished_at: nil})
+            end
           end)
 
         reason = reason_fixture(dataclip_id: dataclip.id)
@@ -908,7 +936,7 @@ defmodule Lightning.InvocationTest do
         |> Repo.insert()
       end)
 
-      wo |> Repo.preload(attempts: :runs)
+      %{id: wo.id, inserted_at: wo.inserted_at}
     end)
   end
 
@@ -925,12 +953,13 @@ defmodule Lightning.InvocationTest do
         date_after: "",
         date_before: ""
       ],
-      %{}
+      %{"page" => 1, "page_size" => 10}
     ).entries()
-    |> Enum.map(& &1.id)
-    |> Invocation.get_workorders_by_ids()
-    |> Invocation.with_attempts()
-    |> Repo.all()
+
+    # |> Enum.map(& &1.id)
+    # |> Invocation.get_workorders_by_ids()
+    # |> Invocation.with_attempts()
+    # |> Repo.all()
   end
 
   defp create_work_order(project, job, now, seconds) do
@@ -976,7 +1005,7 @@ defmodule Lightning.InvocationTest do
         id: project.id
       },
       filter,
-      %{"page" => page, "page_size" => 3}
+      page
     ).entries()
   end
 end
