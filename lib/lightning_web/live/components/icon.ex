@@ -13,6 +13,8 @@ defmodule LightningWeb.Components.Icon do
 
   def runs(assigns), do: Heroicons.rectangle_stack(assigns)
 
+  def settings(assigns), do: Heroicons.cog_8_tooth(assigns)
+
   def dataclips(assigns), do: Heroicons.cube(assigns)
 
   def left(assigns) do

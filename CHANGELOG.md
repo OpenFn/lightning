@@ -48,6 +48,7 @@ and this project adheres to
 - Remove jobs list page
 - Better error handling in the docs panel
 - Disable credential ownership transfer in dev and prod environments
+- Add project settings page
 
 ### Fixed
 

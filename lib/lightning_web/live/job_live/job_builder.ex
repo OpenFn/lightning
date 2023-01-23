@@ -60,22 +60,44 @@ defmodule LightningWeb.JobLive.JobBuilder do
     >
       <div class="flex flex-col h-full">
         <div class="flex-none">
-          <.tab_bar id={@id} default_hash="setup">
+          <LightningWeb.Components.Common.tab_bar
+            id={@id}
+            orientation="horizontal"
+            default_hash="setup"
+          >
             <!-- The tabs navigation -->
-            <.tab_item hash="setup">Setup</.tab_item>
-            <.tab_item hash="input">Input</.tab_item>
-            <.tab_item hash="editor">
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="setup"
+            >
+              Setup
+            </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="input"
+            >
+              Input
+            </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="editor"
+            >
               Editor
               <.when_invalid changeset={@changeset} field={:body}>
                 <Heroicons.exclamation_circle mini class="ml-1 w-4 h-4 text-red-500" />
               </.when_invalid>
-            </.tab_item>
-            <.tab_item hash="output">Output</.tab_item>
-          </.tab_bar>
+            </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="horizontal"
+              hash="output"
+            >
+              Output
+            </LightningWeb.Components.Common.tab_item>
+          </LightningWeb.Components.Common.tab_bar>
         </div>
         <div class="grow overflow-y-auto p-3">
           <!-- The tabs content -->
-          <.panel_content for_hash="setup">
+          <LightningWeb.Components.Common.panel_content for_hash="setup">
             <.form
               :let={f}
               for={@changeset}
@@ -131,8 +153,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 </div>
               </div>
             </.form>
-          </.panel_content>
-          <.panel_content for_hash="input">
+          </LightningWeb.Components.Common.panel_content>
+          <LightningWeb.Components.Common.panel_content for_hash="input">
             <%= if @is_persisted do %>
               <.live_component
                 module={LightningWeb.JobLive.ManualRunComponent}
@@ -147,8 +169,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% else %>
               <p>Please save your Job first.</p>
             <% end %>
-          </.panel_content>
-          <.panel_content for_hash="editor">
+          </LightningWeb.Components.Common.panel_content>
+          <LightningWeb.Components.Common.panel_content for_hash="editor">
             <div class="flex flex-col h-full">
               <div
                 phx-hook="Editor"
@@ -164,8 +186,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 <.docs_component adaptor={@resolved_job_adaptor} />
               </div>
             </div>
-          </.panel_content>
-          <.panel_content for_hash="output">
+          </LightningWeb.Components.Common.panel_content>
+          <LightningWeb.Components.Common.panel_content for_hash="output">
             <%= if @follow_run_id do %>
               <div class="h-full">
                 <%= live_render(
@@ -194,7 +216,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 </div>
               </div>
             <% end %>
-          </.panel_content>
+          </LightningWeb.Components.Common.panel_content>
         </div>
         <div class="flex-none sticky p-3 border-t">
           <!-- BUTTONS -->

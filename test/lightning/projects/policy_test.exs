@@ -6,6 +6,27 @@ defmodule Lightning.Projects.PolicyTest do
   import Lightning.AccountsFixtures
 
   describe "Projects policy" do
+    test "users can't edit projects they do not have admin level access" do
+      user = user_fixture()
+
+      project =
+        project_fixture(project_users: [%{user_id: user.id, role: :viewer}])
+
+      assert {:error, :unauthorized} =
+               Bodyguard.permit(Lightning.Projects.Policy, :edit, user, project)
+
+      other_project =
+        project_fixture(project_users: [%{user_id: user.id, role: :admin}])
+
+      assert :ok =
+               Bodyguard.permit(
+                 Lightning.Projects.Policy,
+                 :edit,
+                 user,
+                 other_project
+               )
+    end
+
     test "users can't access projects they aren't members of" do
       user = user_fixture()
       project = project_fixture(project_users: [%{user_id: user.id}])
