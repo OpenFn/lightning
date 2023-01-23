@@ -321,17 +321,31 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def filter_run_started_after_where(date_after) do
+  def filter_workorder_insert_after_where(date_after) do
     case date_after do
       d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.started_at >= ^date_after)
+      _ -> dynamic([wo], wo.inserted_at >= ^date_after)
     end
   end
 
-  def filter_run_started_before_where(date_before) do
+  def filter_workorder_insert_before_where(date_before) do
     case date_before do
       d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.started_at <= ^date_before)
+      _ -> dynamic([wo], wo.inserted_at <= ^date_before)
+    end
+  end
+
+  def filter_run_finished_after_where(date_after) do
+    case date_after do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([runs: r], r.finished_at >= ^date_after)
+    end
+  end
+
+  def filter_run_finished_before_where(date_before) do
+    case date_before do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([runs: r], r.finished_at <= ^date_before)
     end
   end
 
@@ -393,7 +407,9 @@ defmodule Lightning.Invocation do
         search_term: search_term,
         workflow_id: workflow_id,
         date_after: date_after,
-        date_before: date_before
+        date_before: date_before,
+        wo_date_after: wo_date_after,
+        wo_date_before: wo_date_before
       ) do
     last_attempts =
       from att in Lightning.Attempt,
@@ -440,11 +456,14 @@ defmodule Lightning.Invocation do
       where: w.project_id == ^project_id,
       where: ^filter_run_status_where(status),
       where: ^filter_workflow_where(workflow_id),
-      where: ^filter_run_started_after_where(date_after),
-      where: ^filter_run_started_before_where(date_before),
+      where: ^filter_workorder_insert_after_where(wo_date_after),
+      where: ^filter_workorder_insert_before_where(wo_date_before),
+      where: ^filter_run_finished_after_where(date_after),
+      where: ^filter_run_finished_before_where(date_before),
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
       select: %{
         id: wo.id,
+        inserted_at: wo.inserted_at,
         last_finished_at:
           fragment(
             "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
@@ -516,7 +535,9 @@ defmodule Lightning.Invocation do
         search_term: "",
         workflow_id: "",
         date_after: "",
-        date_before: ""
+        date_before: "",
+        wo_date_after: "",
+        wo_date_before: ""
       ],
       params
     )
@@ -536,7 +557,9 @@ defmodule Lightning.Invocation do
         search_term: "",
         workflow_id: "",
         date_after: "",
-        date_before: ""
+        date_before: "",
+        wo_date_after: "",
+        wo_date_before: ""
       ],
       %{}
     )

@@ -585,19 +585,16 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status :failure exit_code = 1" do
       project = project_fixture()
 
-      map = %{
-        workflow1: build_workflow(project, "workflow1")
-      }
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
       scenario = [
-        # ---workorder1--- last job succeed on 1st attempt, failed on 2nd attempt
         workflow1: [
           [:success, :success, :success, :failure],
           [:success, :success, :failure, :success]
         ]
       ]
 
-      [%{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
       assert [%{id: ^id}] = actual_filter_by_status(project, [:failure])
 
@@ -619,19 +616,16 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status :pending exit_code = nil" do
       project = project_fixture()
 
-      map = %{
-        workflow1: build_workflow(project, "workflow1")
-      }
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
       scenario = [
-        # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
         workflow1: [
           [:success, :success, :success, :pending],
           [:success, :success, :failure, :success]
         ]
       ]
 
-      [%{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
       assert [%{id: ^id}] = actual_filter_by_status(project, [:pending])
 
@@ -653,9 +647,7 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status :timeout exit_code = 2" do
       project = project_fixture()
 
-      map = %{
-        workflow1: build_workflow(project, "workflow1")
-      }
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
       scenario = [
         # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
@@ -665,7 +657,7 @@ defmodule Lightning.InvocationTest do
         ]
       ]
 
-      [%{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
       assert [%{id: ^id}] = actual_filter_by_status(project, [:timeout])
 
@@ -687,19 +679,16 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status :crash exit_code > 2" do
       project = project_fixture()
 
-      map = %{
-        workflow1: build_workflow(project, "workflow1")
-      }
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
       scenario = [
-        # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
         workflow1: [
           [:success, :success, :success, :crash],
           [:success, :success, :failure, :success]
         ]
       ]
 
-      [%{id: id}] = apply_scenario(project, map, scenario)
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
       assert [%{id: ^id}] = actual_filter_by_status(project, [:crash])
 
@@ -721,11 +710,8 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status :success exit_code = 0" do
       project = project_fixture()
 
-      map = %{
-        workflow1: build_workflow(project, "workflow1"),
-        workflow2: build_workflow(project, "workflow2"),
-        workflow3: build_workflow(project, "workflow3")
-      }
+      workflow_map =
+        build_workflows(project, ["workflow1", "workflow2", "workflow3"])
 
       scenario = [
         workflow1: [
@@ -748,7 +734,7 @@ defmodule Lightning.InvocationTest do
         ]
       ]
 
-      [_, _, _, %{id: id}] = apply_scenario(project, map, scenario)
+      [_, _, _, %{id: id}] = apply_scenario(project, workflow_map, scenario)
 
       assert [%{id: ^id}] = actual_filter_by_status(project, [:success])
 
@@ -777,13 +763,10 @@ defmodule Lightning.InvocationTest do
     test "Filtering by status complex all" do
       project = project_fixture()
 
-      workflow_map = %{
-        workflow1: build_workflow(project, "workflow1"),
-        workflow2: build_workflow(project, "workflow2")
-      }
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
-      # workflow1 = 4 jobs
-      # workflow2 = 4 jobs
+      # workflow1 = [job1, job2, job3, job4]
+      # workflow2 = [job1, job2, job3, job4]
 
       scenario = [
         workflow2: [
@@ -838,35 +821,160 @@ defmodule Lightning.InvocationTest do
                  :crash
                ])
 
-      get_simplified_page(project, %{"page" => 1, "page_size" => 10},
-        status: [
-          :success,
-          :failure,
-          :pending,
-          :timeout,
-          :crash
+      # get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+      #   status: [
+      #     :success,
+      #     :failure,
+      #     :pending,
+      #     :timeout,
+      #     :crash
+      #   ],
+      #   searchfors: [],
+      #   search_term: "",
+      #   workflow_id: "",
+      #   date_after: "",
+      #   date_before: ""
+      # )
+    end
+
+    test "Filtering by workorder inserted_at" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      # workflow1 = [job1, job2, job3, job4]
+      # workflow2 = [job1, job2, job3, job4]
+
+      scenario = [
+        workflow2: [
+          [:success, :success, :success, :success],
+          [:success, :success, :success, :failure]
         ],
-        searchfors: [],
-        search_term: "",
-        workflow_id: "",
-        date_after: "",
-        date_before: ""
-      )
+        workflow1: [
+          [:success, :success, :timeout],
+          [:success, :success, :failure],
+          [:success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :pending],
+          [:success, :success, :failure, :failure]
+        ],
+        workflow1: [
+          [:success, :crash],
+          [:success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [
+        %{id: id_failure},
+        %{id: id_crash},
+        %{id: id_pending},
+        %{id: id_timeout},
+        %{id: id_success}
+      ] =
+        apply_scenario(project, workflow_map, scenario)
+        |> update_insertion_dates([
+          ~N[2022-01-01 00:00:10],
+          ~N[2022-02-01 00:00:10],
+          ~N[2022-03-01 00:00:10],
+          ~N[2022-04-01 00:00:10],
+          ~N[2022-05-01 00:00:10]
+        ])
+
+      # after wo inserted_at
+      assert [%{id: ^id_pending}, %{id: ^id_success}, %{id: ^id_timeout}] =
+               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+                 status: [
+                   :success,
+                   :failure,
+                   :pending,
+                   :timeout,
+                   :crash
+                 ],
+                 searchfors: [],
+                 search_term: "",
+                 workflow_id: "",
+                 date_after: "",
+                 date_before: "",
+                 wo_date_after: ~N[2022-03-01 00:00:10],
+                 wo_date_before: ""
+               )
+
+      # before wo inserted_at
+      assert [%{id: ^id_pending}, %{id: ^id_crash}, %{id: ^id_failure}] =
+               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+                 status: [
+                   :success,
+                   :failure,
+                   :pending,
+                   :timeout,
+                   :crash
+                 ],
+                 searchfors: [],
+                 search_term: "",
+                 workflow_id: "",
+                 date_after: "",
+                 date_before: "",
+                 wo_date_after: "",
+                 wo_date_before: ~N[2022-03-01 00:00:10]
+               )
+
+      # between wo inserted_at
+      assert [%{id: ^id_pending}, %{id: ^id_timeout}, %{id: ^id_crash}] =
+               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+                 status: [
+                   :success,
+                   :failure,
+                   :pending,
+                   :timeout,
+                   :crash
+                 ],
+                 searchfors: [],
+                 search_term: "",
+                 workflow_id: "",
+                 date_after: "",
+                 date_before: "",
+                 wo_date_after: ~N[2022-02-01 00:00:10],
+                 wo_date_before: ~N[2022-04-01 00:00:10]
+               )
     end
   end
 
-  defp build_workflow(project, workflow_name) do
-    workflow = workflow_fixture(project_id: project.id, name: workflow_name)
+  defp build_workflows(project, workflow_names) do
+    workflow_names
+    |> Enum.reduce(%{}, fn workflow_name, acc ->
+      workflow = workflow_fixture(project_id: project.id, name: workflow_name)
 
-    jobs =
-      Enum.map(1..4, fn job_index ->
-        job_fixture(
-          name: "job#{job_index}",
-          project_id: project.id
-        )
-      end)
+      jobs =
+        Enum.map(1..4, fn job_index ->
+          job_fixture(
+            name: "job#{job_index}",
+            project_id: project.id
+          )
+        end)
 
-    [workflow, jobs]
+      Map.put(acc, workflow_name, [workflow, jobs])
+    end)
+  end
+
+  defp update_insertion_dates(work_orders, dates) do
+    work_orders
+    |> Enum.with_index()
+    |> Enum.map(fn {%{id: id}, index} ->
+      inserted_at = Enum.at(dates, index)
+
+      Repo.get!(Lightning.WorkOrder, id)
+      |> Ecto.Changeset.change(inserted_at: inserted_at)
+      |> Repo.update()
+      |> case do
+        {:ok, _} -> %{id: id, inserted_at: inserted_at}
+        _ -> nil
+      end
+    end)
   end
 
   # a test utility function that creates fixtures based on a pseudo visual (UI) execution scenario
@@ -882,7 +990,7 @@ defmodule Lightning.InvocationTest do
     |> Enum.map(fn {{workflow_name, attempts}, workorder_index} ->
       coeff = workorder_index + 1
 
-      [workflow, jobs] = workflow_map[workflow_name]
+      [workflow, jobs] = workflow_map[Atom.to_string(workflow_name)]
 
       wo =
         work_order_fixture(
@@ -951,15 +1059,12 @@ defmodule Lightning.InvocationTest do
         search_term: "",
         workflow_id: "",
         date_after: "",
-        date_before: ""
+        date_before: "",
+        wo_date_after: "",
+        wo_date_before: ""
       ],
       %{"page" => 1, "page_size" => 10}
     ).entries()
-
-    # |> Enum.map(& &1.id)
-    # |> Invocation.get_workorders_by_ids()
-    # |> Invocation.with_attempts()
-    # |> Repo.all()
   end
 
   defp create_work_order(project, job, now, seconds) do
