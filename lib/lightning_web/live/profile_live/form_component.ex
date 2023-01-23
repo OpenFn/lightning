@@ -18,6 +18,36 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event(
+        "save_email",
+        %{"user" => %{"current_password" => current_password, "email" => email}} = user_params,
+        socket
+      ) do
+    changeset =
+      socket.assigns.user
+      |> Accounts.User.validate_current_password(user_params)
+      |> IO.inspect()
+
+    {:noreply, socket}
+    # case Accounts.deliver_update_email_instructions(
+    #        socket.assigns.user,
+    #        current_email,
+    #        &(Routes.user_update_email_url(socket, :edit, &1) |> IO.inspect())
+    #      ) do
+    #   {:ok, user} ->
+    #     {:noreply,
+    #      socket
+    #      |> put_flash(
+    #        :info,
+    #        "You will receive an email with instructions shortly."
+    #      )}
+
+    #   {:error, %Ecto.Changeset{} = changeset} ->
+    #     {:noreply, assign(socket, :email_changeset, changeset)}
+    # end
+  end
+
+  @impl true
+  def handle_event(
         "save_password",
         %{"user" => %{"current_password" => current_password} = user_params},
         socket
