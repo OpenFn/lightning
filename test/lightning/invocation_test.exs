@@ -820,21 +820,6 @@ defmodule Lightning.InvocationTest do
                  :timeout,
                  :crash
                ])
-
-      # get_simplified_page(project, %{"page" => 1, "page_size" => 10},
-      #   status: [
-      #     :success,
-      #     :failure,
-      #     :pending,
-      #     :timeout,
-      #     :crash
-      #   ],
-      #   searchfors: [],
-      #   search_term: "",
-      #   workflow_id: "",
-      #   date_after: "",
-      #   date_before: ""
-      # )
     end
 
     test "Filtering by workorder inserted_at" do
@@ -971,7 +956,7 @@ defmodule Lightning.InvocationTest do
       |> Ecto.Changeset.change(inserted_at: inserted_at)
       |> Repo.update()
       |> case do
-        {:ok, _} -> %{id: id, inserted_at: inserted_at}
+        {:ok, _} -> %{id: id}
         _ -> nil
       end
     end)
@@ -1044,7 +1029,7 @@ defmodule Lightning.InvocationTest do
         |> Repo.insert()
       end)
 
-      %{id: wo.id, inserted_at: wo.inserted_at}
+      %{id: wo.id}
     end)
   end
 

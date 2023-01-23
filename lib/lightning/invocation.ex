@@ -463,7 +463,6 @@ defmodule Lightning.Invocation do
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
       select: %{
         id: wo.id,
-        inserted_at: wo.inserted_at,
         last_finished_at:
           fragment(
             "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",

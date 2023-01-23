@@ -819,7 +819,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute div =~ "workflow 2"
     end
 
-    test "Filter by run started_at", %{
+    test "Filter by run finished_at", %{
       conn: conn,
       project: project
     } do
