@@ -1,4 +1,7 @@
 defmodule Lightning.Policies.UserPolicy do
+  @moduledoc """
+  The Bodyguard Policy module for users roles.
+  """
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
