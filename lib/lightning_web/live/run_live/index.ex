@@ -11,7 +11,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.RunSearchForm
   alias Lightning.RunSearchForm.MultiSelectOption
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(_params, _session, socket) do
@@ -153,7 +153,9 @@ defmodule LightningWeb.RunLive.Index do
           "run_search_form" => %{
             "workflow_id" => workflow_id,
             "date_after" => date_after,
-            "date_before" => date_before
+            "date_before" => date_before,
+            "wo_date_after" => wo_date_after,
+            "wo_date_before" => wo_date_before
           }
         },
         socket
@@ -163,6 +165,8 @@ defmodule LightningWeb.RunLive.Index do
       |> Ecto.Changeset.put_change(:workflow_id, workflow_id)
       |> Ecto.Changeset.put_change(:date_after, date_after)
       |> Ecto.Changeset.put_change(:date_before, date_before)
+      |> Ecto.Changeset.put_change(:wo_date_after, wo_date_after)
+      |> Ecto.Changeset.put_change(:wo_date_before, wo_date_before)
 
     socket =
       socket
@@ -231,7 +235,9 @@ defmodule LightningWeb.RunLive.Index do
       search_term: Ecto.Changeset.fetch_field!(changeset, :search_term),
       workflow_id: Ecto.Changeset.fetch_field!(changeset, :workflow_id),
       date_after: Ecto.Changeset.fetch_field!(changeset, :date_after),
-      date_before: Ecto.Changeset.fetch_field!(changeset, :date_before)
+      date_before: Ecto.Changeset.fetch_field!(changeset, :date_before),
+      wo_date_after: Ecto.Changeset.fetch_field!(changeset, :wo_date_after),
+      wo_date_before: Ecto.Changeset.fetch_field!(changeset, :wo_date_before)
     ]
   end
 end

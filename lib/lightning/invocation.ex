@@ -321,17 +321,31 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def filter_run_started_after_where(date_after) do
+  def filter_workorder_insert_after_where(date_after) do
     case date_after do
       d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.started_at >= ^date_after)
+      _ -> dynamic([wo], wo.inserted_at >= ^date_after)
     end
   end
 
-  def filter_run_started_before_where(date_before) do
+  def filter_workorder_insert_before_where(date_before) do
     case date_before do
       d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.started_at <= ^date_before)
+      _ -> dynamic([wo], wo.inserted_at < ^date_before)
+    end
+  end
+
+  def filter_run_finished_after_where(date_after) do
+    case date_after do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([runs: r], r.finished_at >= ^date_after)
+    end
+  end
+
+  def filter_run_finished_before_where(date_before) do
+    case date_before do
+      d when d in ["", nil] -> dynamic(true)
+      _ -> dynamic([runs: r], r.finished_at < ^date_before)
     end
   end
 
@@ -393,23 +407,59 @@ defmodule Lightning.Invocation do
         search_term: search_term,
         workflow_id: workflow_id,
         date_after: date_after,
-        date_before: date_before
+        date_before: date_before,
+        wo_date_after: wo_date_after,
+        wo_date_before: wo_date_before
       ) do
+    last_attempts =
+      from att in Lightning.Attempt,
+        group_by: att.work_order_id,
+        select: %{
+          work_order_id: att.work_order_id,
+          last_inserted_at:
+            fragment(
+              "max(?)",
+              att.inserted_at
+            )
+        }
+
+    last_runs =
+      from r in Lightning.Invocation.Run,
+        join: att in assoc(r, :attempts),
+        group_by: att.id,
+        select: %{
+          attempt_id: att.id,
+          last_finished_at:
+            fragment(
+              "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
+              r.finished_at
+            )
+        }
+
     from(wo in Lightning.WorkOrder,
       join: wo_re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
       as: :workflow,
       join: att in assoc(wo, :attempts),
+      join: last in subquery(last_attempts),
+      on:
+        last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
       join: r in assoc(att, :runs),
       as: :runs,
+      join: last_run in subquery(last_runs),
+      on:
+        (att.id == last_run.attempt_id and
+           last_run.last_finished_at == r.finished_at) or is_nil(r.finished_at),
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
       where: w.project_id == ^project_id,
-      where: ^filter_workflow_where(workflow_id),
       where: ^filter_run_status_where(status),
-      where: ^filter_run_started_after_where(date_after),
-      where: ^filter_run_started_before_where(date_before),
+      where: ^filter_workflow_where(workflow_id),
+      where: ^filter_workorder_insert_after_where(wo_date_after),
+      where: ^filter_workorder_insert_before_where(wo_date_before),
+      where: ^filter_run_finished_after_where(date_after),
+      where: ^filter_run_finished_before_where(date_before),
       where: ^filter_run_body_and_logs_where(search_term, searchfors),
       select: %{
         id: wo.id,
@@ -421,7 +471,7 @@ defmodule Lightning.Invocation do
           |> selected_as(:last_finished_at)
       },
       group_by: wo.id,
-      order_by: [desc: selected_as(:last_finished_at)]
+      order_by: [desc_nulls_first: selected_as(:last_finished_at)]
     )
   end
 
@@ -484,7 +534,9 @@ defmodule Lightning.Invocation do
         search_term: "",
         workflow_id: "",
         date_after: "",
-        date_before: ""
+        date_before: "",
+        wo_date_after: "",
+        wo_date_before: ""
       ],
       params
     )
@@ -504,7 +556,9 @@ defmodule Lightning.Invocation do
         search_term: "",
         workflow_id: "",
         date_after: "",
-        date_before: ""
+        date_before: "",
+        wo_date_after: "",
+        wo_date_before: ""
       ],
       %{}
     )

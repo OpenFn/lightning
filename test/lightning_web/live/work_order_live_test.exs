@@ -128,7 +128,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> render_click() =~ "attempt-#{attempt_id}"
     end
 
-    test "When the most recent run is finished without exit code, workflow run status is 'Timeout'",
+    test "When the most recent run is finished without exit code, work_order status is 'Timeout'",
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
@@ -177,7 +177,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Timeout"
     end
 
-    test "When the most recent run is not complete, workflow run status is 'Pending'",
+    test "When the most recent run is not complete, work_order status is 'Pending'",
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
@@ -226,7 +226,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Pending"
     end
 
-    test "When run A,B and C are successful, workflow run status is 'Success'",
+    test "When run A,B and C are successful, work_order status is 'Success'",
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
@@ -312,7 +312,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Success"
     end
 
-    test "When run A and B are successful but C fails, workflow run status is 'Failure'",
+    test "When run A and B are successful but C fails, work_order status is 'Failure'",
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
@@ -417,7 +417,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view |> has_element?("div[id^=exit-code]", "0")
     end
 
-    test "When run A and B are successful but C is pending, workflow run status is 'Pending'",
+    test "When run A and B are successful but C is pending, work_order status is 'Pending'",
          %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
@@ -819,7 +819,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute div =~ "workflow 2"
     end
 
-    test "Filter by run started_at", %{
+    test "Filter by run finished_at", %{
       conn: conn,
       project: project
     } do
