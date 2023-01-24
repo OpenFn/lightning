@@ -93,7 +93,10 @@ defmodule Lightning.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:temp, "~> 0.4"},
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      {:phoenix_swoosh, "~> 1.0"},
+      {:hammer_backend_mnesia, "~> 0.6"},
+      {:hammer, "~> 6.0"}
     ]
   end
 

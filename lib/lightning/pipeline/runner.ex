@@ -35,13 +35,18 @@ defmodule Lightning.Pipeline.Runner do
 
       scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
 
-      update_run(run, %{
-        finished_at: DateTime.utc_now(),
-        exit_code: result.exit_code,
-        log: scrubbed_log
-      })
+      {:ok, run} =
+        update_run(run, %{
+          finished_at: DateTime.utc_now(),
+          exit_code: result.exit_code,
+          log: scrubbed_log
+        })
 
-      Runner.create_dataclip_from_result(result, run)
+      dataclip_result = Runner.create_dataclip_from_result(result, run)
+
+      Lightning.FailureAlerter.alert_on_failure(run)
+
+      dataclip_result
     end
   end
 

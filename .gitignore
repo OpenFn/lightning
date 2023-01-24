@@ -44,6 +44,9 @@ npm-debug.log
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
 
+# mnesia
+/Mnesia*
+
 tmp
 priv/openfn
 

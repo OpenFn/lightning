@@ -621,4 +621,16 @@ defmodule Lightning.Accounts do
     from(u in User, select: count(), where: u.role == :superuser)
     |> Repo.one() >= 1
   end
+
+  @doc """
+  Gets all users to alert of workflow failure for a project
+  """
+  def get_users_to_alert_for_project(%{id: project_id}) do
+    from(u in User,
+      join: pu in assoc(u, :project_users),
+      where: pu.project_id == ^project_id,
+      where: pu.failure_alert == true
+    )
+    |> Repo.all()
+  end
 end

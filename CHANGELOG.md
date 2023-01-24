@@ -25,6 +25,7 @@ and this project adheres to
 - Refit all diagram nodes on browser and container resize
 - Enable distributed Erlang, allowing any number of redundant Lightning nodes to
   communicate with each other.
+- Users can set up realtime alerts for a project
 
 ### Changed
 
