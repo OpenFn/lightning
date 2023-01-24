@@ -49,6 +49,8 @@ and this project adheres to
 - Better error handling in the docs panel
 - Disable credential ownership transfer in dev and prod environments
 - Add project settings page
+- Change Workorder filters to apply to the aggregate state of the workorder and
+  not the run directly
 
 ### Fixed
 
