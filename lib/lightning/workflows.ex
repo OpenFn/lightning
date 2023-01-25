@@ -117,7 +117,7 @@ defmodule Lightning.Workflows do
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
-      where: w.project_id == ^project.id,
+      where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
   end
@@ -164,5 +164,30 @@ defmodule Lightning.Workflows do
         workflows
         |> Enum.map(fn w -> %{"id" => w.id, "name" => w.name} end)
     }
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the workflow request_deletion.
+
+  ## Examples
+
+      iex> change_request_deletion(workflow)
+      %Ecto.Changeset{data: %Workflow{}}
+
+  """
+  def mark_for_deletion(workflow, _attrs \\ %{}) do
+    workflow_jobs_query =
+      from(j in Lightning.Jobs.Job,
+        where: j.workflow_id == ^workflow.id
+      )
+
+    Repo.transaction(fn ->
+      Workflow.request_deletion_changeset(workflow, %{
+        "deleted_at" => DateTime.utc_now()
+      })
+      |> Repo.update()
+
+      Repo.update_all(workflow_jobs_query, set: [enabled: false])
+    end)
   end
 end

@@ -224,6 +224,26 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
+  @impl true
+  def handle_event("delete-workflow", %{"id" => id}, socket) do
+    Workflows.get_workflow!(id)
+    |> Workflows.mark_for_deletion()
+    |> case do
+      {:ok, _} ->
+        {
+          :noreply,
+          socket
+          |> assign(
+            workflows: Workflows.get_workflows_for(socket.assigns.project)
+          )
+          |> put_flash(:info, "Workflow deleted successfully")
+        }
+
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+    end
+  end
+
   @doc """
   Update the encoded project space, when a change is broadcasted via pubsub
   """

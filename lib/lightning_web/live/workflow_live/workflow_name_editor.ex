@@ -52,34 +52,76 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
     end
   end
 
+  def handle_event("delete-workflow", %{"id" => id}, socket) do
+    Workflows.get_workflow!(id)
+    |> Workflows.mark_for_deletion()
+    |> case do
+      {:ok, _} ->
+        {
+          :noreply,
+          socket
+          |> assign(
+            workflows: Workflows.get_workflows_for(socket.assigns.project)
+          )
+          |> put_flash(:info, "Workflow deleted successfully")
+        }
+
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={"workflow-#{@workflow.id}"} class="inline-flex items-center px-2 group">
+    <div id={"workflow-#{@workflow.id}"} class="inline-flex items-center px-2">
       <span>/</span>
-      <.form
-        :let={f}
-        for={@changeset}
-        id="workflow-inplace-form"
-        phx-target={@myself}
-        phx-change="validate"
-        phx-submit="save"
-        class="flex items-center gap-2"
-      >
-        <div class="">
-          <%= text_input(
-            f,
-            :name,
-            class:
-              "border-transparent shadow-sm border-secondary-300 rounded-md group-focus-within:border-secondary-300 sm:text-3xl font-bold text-secondary-900 hover:bg-gray-100"
-          ) %>
-        </div>
-        <div class="hidden group-focus-within:inline">
-          <Form.submit_button phx-disable-with="Saving" disabled={!@changeset.valid?}>
-            Save
-          </Form.submit_button>
-        </div>
-      </.form>
+      <div class="group">
+        <.form
+          :let={f}
+          for={@changeset}
+          id="workflow-inplace-form"
+          phx-target={@myself}
+          phx-change="validate"
+          phx-submit="save"
+          class="flex items-center gap-2 ml-1"
+        >
+          <div class="">
+            <%= text_input(
+              f,
+              :name,
+              class:
+                "border-transparent shadow-sm border-secondary-300 rounded-md group-focus-within:border-secondary-300 sm:text-3xl font-bold text-secondary-900 hover:bg-gray-100"
+            ) %>
+          </div>
+          <div class="hidden group-focus-within:inline">
+            <Form.submit_button
+              phx-disable-with="Saving"
+              disabled={!@changeset.valid?}
+            >
+              Save
+            </Form.submit_button>
+          </div>
+        </.form>
+      </div>
+
+      <%= link(
+            to: Routes.project_workflow_path(
+                        @socket,
+                        :index,
+                        @project.id
+                      ),
+            phx_click: "delete-workflow",
+            phx_value_id: @workflow.id,
+            data: [
+            confirm:
+              "Are you sure you'd like to delete this workflow?"
+            ],
+            class: "p-2 ml-1 mt-1"
+
+            ) do %>
+        <Icon.trash class="h-6 w-6 text-black-300 hover:text-rose-700" />
+      <% end %>
     </div>
     """
   end
