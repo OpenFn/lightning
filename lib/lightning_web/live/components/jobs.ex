@@ -10,6 +10,7 @@ defmodule LightningWeb.Components.Jobs do
         credentials:
           assigns.credentials |> Enum.map(&{&1.credential.name, &1.id})
       )
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <.label_field
@@ -25,6 +26,7 @@ defmodule LightningWeb.Components.Jobs do
       id="credentialField"
       prompt=""
       values={@credentials}
+      disabled={@disabled}
     />
     """
   end

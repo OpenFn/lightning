@@ -305,11 +305,12 @@ defmodule LightningWeb.Components.Form do
         error_tag_classes: error_tag_classes,
         label_classes: label_classes
       )
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <div class="flex items-start">
       <div class="flex items-center h-5">
-        <%= checkbox(@form, @id, class: @checkbox_classes) %>
+        <%= checkbox(@form, @id, disabled: @disabled, class: @checkbox_classes) %>
       </div>
       <div class="ml-3 text-sm">
         <%= error_tag(@form, @id, class: @error_tag_classes) %>

@@ -4,10 +4,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
   """
 
   use LightningWeb, :live_component
-  alias Lightning.Accounts.User
+
   alias LightningWeb.Components.Form
   alias Lightning.Jobs
   alias Lightning.Jobs.Job
+  alias Lightning.Policies.Permissions
 
   import LightningWeb.JobLive.JobBuilderComponents
 
@@ -240,7 +241,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-click="delete"
               phx-target={@myself}
               phx-value-id={@job_id}
-              disabled={!@is_deletable}
+              disabled={!@is_deletable or !@can_edit}
               data={[
                 confirm:
                   "This action is irreversible, are you sure you want to continue?"
@@ -448,7 +449,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
        upstream_jobs: upstream_jobs,
        is_deletable: is_deletable,
        can_edit:
-         Lightning.Policies.Utils.can_edit(
+         Permissions.can(
            Lightning.Policies.MemberPolicy,
            :edit_jobs,
            current_user,
