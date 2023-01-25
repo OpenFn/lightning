@@ -35,16 +35,11 @@ defmodule LightningWeb.WorkflowLive.Components do
         <%= @workflow.name %>
 
         <%= link(
-        to: "#",
-        phx_click: "delete-workflow",
-        phx_value_id: @workflow.id,
-        data: [
-        confirm:
-          "Are you sure you'd like to delete this workflow?"
-        ],
-        class: "absolute right-2 bottom-2 p-2"
-
-        ) do %>
+          to: "#",
+          phx_click: "delete-workflow",
+          phx_value_id: @workflow.id,
+          data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
+          class: "absolute right-2 bottom-2 p-2") do %>
           <Icon.trash class="h-6 w-6 text-black-300 hover:text-rose-700" />
         <% end %>
       </.link>
@@ -69,9 +64,9 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:socket, :map, required: true)
-  attr(:project, :map, required: true)
-  attr(:workflow, :map, required: true)
+  attr :socket, :map, required: true
+  attr :project, :map, required: true
+  attr :workflow, :map, required: true
 
   def create_job_panel(assigns) do
     ~H"""
@@ -102,10 +97,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:id, :string, required: true)
-  attr(:encoded_project_space, :string, required: true)
-  attr(:selected_node, :string, default: nil)
-  attr(:base_path, :string, required: true)
+  attr :id, :string, required: true
+  attr :encoded_project_space, :string, required: true
+  attr :selected_node, :string, default: nil
+  attr :base_path, :string, required: true
 
   def workflow_diagram(assigns) do
     ~H"""

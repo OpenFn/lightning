@@ -2,7 +2,7 @@ defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Workflows
   import LightningWeb.WorkflowLive.Components
