@@ -23,6 +23,8 @@ defmodule LightningWeb.ProfileLive.FormComponent do
         %{"user" => %{"email" => email, "current_password" => current_password}} = _user_params,
         socket
       ) do
+    # IO.inspect("We are")
+
     changeset =
       Ecto.Changeset.change(socket.assigns.user)
       |> User.validate_current_password(current_password)
