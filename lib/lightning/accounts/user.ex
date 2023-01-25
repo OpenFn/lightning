@@ -31,9 +31,9 @@ defmodule Lightning.Accounts.User do
     field :disabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
 
-    has_many :credentials, Lightning.Credentials.Credential
-    has_many :project_users, Lightning.Projects.ProjectUser
-    has_many :projects, through: [:project_users, :project]
+    has_many(:credentials, Lightning.Credentials.Credential)
+    has_many(:project_users, Lightning.Projects.ProjectUser)
+    has_many(:projects, through: [:project_users, :project])
 
     timestamps()
   end
@@ -123,9 +123,7 @@ defmodule Lightning.Accounts.User do
   defp validate_email(changeset) do
     changeset
     |> validate_required([:email, :first_name])
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
-    )
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
     |> validate_length(:email, max: 160)
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
@@ -235,6 +233,17 @@ defmodule Lightning.Accounts.User do
     |> validate_password(opts)
   end
 
+  def current_password_changeset(user, attrs) do
+    IO.inspect(user, label: "User")
+    IO.inspect(attrs, label: "Attr")
+
+    user
+    |> cast(attrs, [:password])
+    |> IO.inspect(label: "After cast")
+    |> validate_current_password(attrs)
+    |> IO.inspect(label: "After vcp")
+  end
+
   @doc """
   Confirms the account by setting `confirmed_at`.
   """
@@ -254,11 +263,13 @@ defmodule Lightning.Accounts.User do
         password
       )
       when is_binary(hashed_password) and byte_size(password) > 0 do
+    IO.inspect("Is this one")
     Bcrypt.verify_pass(password, hashed_password)
   end
 
   def valid_password?(_, _) do
     Bcrypt.no_user_verify()
+    IO.inspect("Or is this one")
     false
   end
 
