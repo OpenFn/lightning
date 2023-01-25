@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-D2736A2F.js"></script>
+    <script src="dist/sidebar_items-B4878555.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -142,6 +142,21 @@ A plain text identifier</li></ul>
 
   </div>
 
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#request_deletion_changeset/2" translate="no">request_deletion_changeset(workflow, attrs)</a>
+
+        </div>
+
+      </div>
+
+  </div>
+
   </section>
 
 
@@ -178,6 +193,7 @@ Types
           <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Workflows.Workflow{
   __meta__: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
   attempts: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  deleted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   jobs: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -191,6 +207,41 @@ Types
 }</pre>
 
       </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="request_deletion_changeset/2">
+
+  <div class="detail-header">
+    <a href="#request_deletion_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">request_deletion_changeset(workflow, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/workflow.ex#L56" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
 
 
   </section>
