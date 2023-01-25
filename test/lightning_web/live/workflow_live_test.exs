@@ -368,6 +368,8 @@ defmodule LightningWeb.WorkflowLiveTest do
              |> element("a[phx-click='delete-workflow']")
              |> render_click() =~
                "Workflow deleted successfully"
+
+      refute has_element?(view, "workflow-#{workflow.id}")
     end
 
     test "delete a workflow on edit workflow page",
@@ -391,9 +393,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ workflow.name
 
       assert view
-             |> element("a[phx-click='delete-workflow']")
+             |> element(
+               "#workflow-#{workflow.id} a[phx-click='delete-workflow']"
+             )
              |> render_click() =~
-               "Workflow deleted"
+               "Workflow deleted successfully"
+
+      refute has_element?(view, "workflow-#{workflow.id}")
     end
   end
 
