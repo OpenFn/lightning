@@ -5,46 +5,239 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
-  import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3, get_field: 3]
-  import LightningWeb.Components.Form
-  import LightningWeb.Components.Common
+  import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div id="credential-#{@id}">
+      <.live_component
+        :if={!@type}
+        module={LightningWeb.CredentialLive.TypePicker}
+        id={"#{@id}-type-picker"}
+        on_confirm="type_selected"
+        phx_target={@myself}
+      />
+      <div :if={@type}>
+        <div class="mt-10 sm:mt-0">
+          <div class="md:grid md:grid-cols-3 md:gap-6">
+            <div class="md:col-span-1">
+              <div class="px-4 sm:px-0">
+                <p class="mt-1 text-sm text-gray-600">
+                  Decide which type credential you would like to create.
+                </p>
+              </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <div class="mt-5 md:col-span-2 md:mt-0">
+                <div class="overflow-hidden shadow sm:rounded-md">
+                  <.form
+                    :let={f}
+                    for={@changeset}
+                    id="credential-form"
+                    phx-target={@myself}
+                    phx-change="validate"
+                    phx-submit="save"
+                  >
+                    <.live_component
+                      module={@inner_opts.module}
+                      form={f}
+                      {@inner_opts}
+                    >
+                      <:above>
+                        <fieldset>
+                          <div class="space-y-4">
+                            <div>
+                              <LightningWeb.Components.Form.text_field
+                                form={f}
+                                id={:name}
+                              />
+                            </div>
+                            <div>
+                              <LightningWeb.Components.Form.check_box
+                                form={f}
+                                id={:production}
+                              />
+                            </div>
+                          </div>
+                        </fieldset>
+                      </:above>
+
+                      <:below :if={@show_project_credentials} class="space-y-4">
+                        <div class="hidden sm:block" aria-hidden="true">
+                          <div class="border-t border-secondary-200 mb-6"></div>
+                        </div>
+                        <fieldset>
+                          <legend class="contents text-base font-medium text-gray-900">
+                            Project Access
+                          </legend>
+                          <p class="text-sm text-gray-500">
+                            Control which projects have access to this credentials
+                          </p>
+                          <div class="mt-4">
+                            <.project_credentials
+                              form={f}
+                              projects={@all_projects}
+                              selected={@selected_project}
+                              phx_target={@myself}
+                            />
+                          </div>
+                        </fieldset>
+                      </:below>
+                      <:below
+                        :if={@action == :edit and @allow_credential_transfer}
+                        class="space-y-4"
+                      >
+                        <div class="hidden sm:block" aria-hidden="true">
+                          <div class="border-t border-secondary-200 mb-6"></div>
+                        </div>
+                        <fieldset>
+                          <legend class="contents text-base font-medium text-gray-900">
+                            Transfer Ownership
+                          </legend>
+                          <p class="text-sm text-gray-500">
+                            Assign ownership of this credential to someone else.
+                          </p>
+                          <div class="mt-4">
+                            <%= label(f, :owner,
+                              class: "block text-sm font-medium text-secondary-700"
+                            ) %>
+                            <%= error_tag(f, :user_id) %>
+                            <LightningWeb.Components.Form.select_field
+                              form={f}
+                              name={:user_id}
+                              values={@users}
+                            />
+                          </div>
+                        </fieldset>
+                      </:below>
+
+                      <:button
+                        :let={valid?}
+                        :for={button <- @button}
+                        class={button[:class]}
+                      >
+                        <%= render_slot(button, valid?) %>
+                      </:button>
+                    </.live_component>
+                  </.form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :projects, :list, required: true
+  attr :selected, :map, required: true
+  attr :phx_target, :any, default: nil
+
+  def project_credentials(assigns) do
+    ~H"""
+    <div class="col-span-3">
+      <%= label(@form, :project_credentials, "Project Access",
+        class: "block text-sm font-medium text-secondary-700"
+      ) %>
+
+      <div class="flex w-full items-center gap-2 pb-3 mt-1">
+        <div class="grow">
+          <LightningWeb.Components.Form.select_field
+            form={:selected_project}
+            name={:id}
+            values={@projects}
+            value={@selected}
+            prompt=""
+            phx-change="select_item"
+            phx-target={@phx_target}
+            id="project_list"
+          >
+            <option>Select a project</option>
+            <%= options_for_select(@projects, @selected) %>
+          </LightningWeb.Components.Form.select_field>
+        </div>
+        <div class="grow-0 items-right">
+          <LightningWeb.Components.Common.button
+            text="Add"
+            disabled={@selected == ""}
+            phx-target={@phx_target}
+            phx-value-projectid={@selected}
+            phx-click="add_new_project"
+          />
+        </div>
+      </div>
+
+      <%= for project_form <- inputs_for(@form, :project_credentials) do %>
+        <%= if input_value(project_form, :delete) != true do %>
+          <div class="flex w-full gap-2 items-center pb-2">
+            <div class="grow">
+              <%= @projects
+              |> Enum.find_value(fn {name, id} ->
+                if id == input_value(project_form, :project_id), do: name
+              end) %>
+              <%= error_tag(project_form, :project_id, class: "block text-xs") %>
+            </div>
+            <div class="grow-0 items-right">
+              <LightningWeb.Components.Common.button
+                text="Remove"
+                phx-target={@phx_target}
+                phx-value-index={project_form.index}
+                phx-click="delete_project"
+              />
+            </div>
+          </div>
+        <% end %>
+        <%= hidden_inputs_for(project_form) %>
+        <%= hidden_input(project_form, :project_id) %>
+        <%= hidden_input(project_form, :delete) %>
+      <% end %>
+    </div>
+    """
+  end
 
   @impl true
   def mount(socket) do
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
-
     allow_credential_transfer =
       Application.fetch_env!(:lightning, LightningWeb)
       |> Keyword.get(:allow_credential_transfer)
 
-    schemas_options =
-      Path.wildcard("#{schemas_path}/*.json")
-      |> Enum.map(fn p ->
-        name = p |> Path.basename() |> String.replace(".json", "")
-        {name, name}
-      end)
-
     {:ok,
      socket
      |> assign(
-       schemas_options: [{"Raw", "raw"} | schemas_options],
-       allow_credential_transfer: allow_credential_transfer
+       allow_credential_transfer: allow_credential_transfer,
+       available_projects: [],
+       type: nil,
+       button: []
      )}
   end
 
+  @valid_assigns [
+    :id,
+    :action,
+    :credential,
+    :projects,
+    :on_save,
+    :button,
+    :show_project_credentials,
+    :return_to
+  ]
+
   @impl true
-  def update(%{credential: credential, projects: projects} = assigns, socket) do
-    changeset = Credentials.change_credential(credential)
-
-    all_projects = projects |> Enum.map(&{&1.name, &1.id})
-
+  def update(%{projects: projects} = assigns, socket) do
     {:ok,
      socket
-     |> assign(assigns)
      |> assign(
-       all_projects: all_projects,
-       changeset: nil,
-       available_projects: filter_available_projects(changeset, all_projects),
+       assigns
+       |> Map.filter(&match?({k, _} when k in @valid_assigns, &1))
+     )
+     |> assign_new(:show_project_credentials, fn -> true end)
+     |> assign(
+       changeset: Credentials.change_credential(assigns.credential),
+       all_projects: projects |> Enum.map(&{&1.name, &1.id}),
        selected_project: "",
        users:
          Enum.map(Lightning.Accounts.list_users(), fn user ->
@@ -55,164 +248,73 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          end),
        schema: nil
      )
-     |> assign(
-       :cols_class,
-       if(assigns[:show_project_credentials],
-         do: "grid-cols-6",
-         else: "grid-cols-3"
-       )
-     )
-     |> assign_params_changes()
-     |> assign_valid()
-     |> assign_new(:show_project_credentials, fn -> true end)}
+     |> update(:type, fn _, %{credential: credential} -> credential.schema end)
+     |> update(:available_projects, fn _,
+                                       %{
+                                         all_projects: all_projects,
+                                         changeset: changeset
+                                       } ->
+       filter_available_projects(changeset, all_projects)
+     end)
+     |> assign_inner_opts()}
   end
 
-  defp get_schema(schema_name) do
-    {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
+  defp assign_inner_opts(socket) do
+    inner_opts =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_field(:schema)
+      |> case do
+        nil ->
+          %{}
 
-    File.read!("#{schemas_path}/#{schema_name}.json")
-    |> Jason.decode!()
-    |> Credentials.Schema.new(schema_name)
-  end
+        "raw" ->
+          %{
+            module: LightningWeb.CredentialLive.RawBody,
+            id: "#{socket.assigns.id}-body-form"
+          }
 
-  def schema_input(%Credentials.Schema{} = schema, changeset, field) do
-    properties =
-      schema.root.schema
-      |> Map.get("properties")
-      |> Map.get(field |> to_string())
-
-    text = properties |> Map.get("title")
-
-    type =
-      case properties do
-        %{"format" => "uri"} -> :url_input
-        %{"type" => "string", "writeOnly" => true} -> :password_input
-        %{"type" => "string"} -> :text_input
-        %{"type" => "integer"} -> :text_input
-        %{"type" => "boolean"} -> :text_input
-        %{"anyOf" => [%{"type" => "string"}, %{"type" => "null"}]} -> :text_input
+        schema when is_binary(schema) ->
+          %{
+            module: LightningWeb.CredentialLive.BodyForm,
+            id: "#{socket.assigns.id}-body-form"
+          }
       end
 
-    value = changeset |> get_field(field, nil)
-
-    [
-      label(:body, field, text,
-        class: "block text-sm font-medium text-secondary-700"
-      ),
-      apply(Phoenix.HTML.Form, type, [
-        :body,
-        field,
-        [
-          value: value || "",
-          class: ~w(mt-1 focus:ring-primary-500 focus:border-primary-500 block
-               w-full shadow-sm sm:text-sm border-secondary-300 rounded-md)
-        ]
-      ]),
-      Enum.map(
-        Keyword.get_values(changeset.errors, field) |> Enum.slice(0..0),
-        fn error ->
-          content_tag(:span, translate_error(error),
-            phx_feedback_for: input_id(:body, field),
-            class: "block w-full"
-          )
-        end
-      )
-    ]
-  end
-
-  defp assign_valid(socket) do
-    socket
-    |> assign(
-      valid:
-        case socket.assigns do
-          %{changeset: changeset, schema_changeset: schema_changeset}
-          when not is_nil(schema_changeset) ->
-            changeset.valid? && schema_changeset.valid?
-
-          %{changeset: changeset} ->
-            changeset.valid?
-        end
-    )
-  end
-
-  defp assign_params_changes(socket, params \\ %{}) do
-    socket =
-      assign(socket,
-        changeset:
-          create_changeset(
-            socket.assigns.credential,
-            params |> Map.get("credential", %{})
-          )
-      )
-
-    case fetch_field!(socket.assigns.changeset, :schema) do
-      nil ->
-        socket
-
-      "raw" ->
-        socket |> assign(schema: nil, schema_changeset: nil)
-
-      schema_type ->
-        schema = get_schema(schema_type)
-        schema_changeset = create_schema_changeset(schema, params)
-
-        changeset =
-          create_changeset(
-            socket.assigns.credential,
-            merge_schema_body(params["credential"], schema_changeset)
-          )
-
-        socket
-        |> assign(
-          schema: schema,
-          schema_changeset: schema_changeset,
-          changeset: changeset
-        )
-    end
-  end
-
-  defp merge_schema_body(nil, _schema_changeset), do: %{}
-
-  defp merge_schema_body(params, schema_changeset) do
-    schema_body = Ecto.Changeset.apply_changes(schema_changeset)
-    Map.put(params, "body", schema_body)
-  end
-
-  defp create_schema_changeset(schema, params) do
-    Credentials.SchemaDocument.changeset(%{}, params |> Map.get("body", %{}),
-      schema: schema
-    )
-  end
-
-  defp create_changeset(credential, params) do
-    credential
-    |> Credentials.change_credential(params)
-    |> Map.put(:action, :validate)
+    socket |> assign(inner_opts: inner_opts)
   end
 
   @impl true
-  def handle_event("validate", params, socket) do
+  def handle_event("validate", %{"credential" => credential_params}, socket) do
+    changeset =
+      Credentials.change_credential(
+        socket.assigns.credential,
+        credential_params |> Map.put("schema", socket.assigns.type)
+      )
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign(changeset: changeset)}
+  end
+
+  @impl true
+  def handle_event("type_selected", %{"value" => type}, socket) do
+    changeset =
+      Credentials.change_credential(socket.assigns.credential, %{schema: type})
+
     {:noreply,
-     socket
-     |> assign_params_changes(params)
-     |> assign_valid()}
+     socket |> assign(type: type, changeset: changeset) |> assign_inner_opts()}
   end
 
   @impl true
   def handle_event(
         "select_item",
-        %{"id" => project_id},
+        %{"selected_project" => %{"id" => project_id}},
         socket
       ) do
     {:noreply, socket |> assign(selected_project: project_id)}
   end
 
   @impl true
-  def handle_event(
-        "add_new_project",
-        %{"projectid" => project_id},
-        socket
-      ) do
+  def handle_event("add_new_project", %{"projectid" => project_id}, socket) do
     project_credentials =
       fetch_field!(socket.assigns.changeset, :project_credentials)
 
@@ -281,23 +383,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      |> assign(changeset: changeset, available_projects: available_projects)}
   end
 
-  def handle_event(
-        "save",
-        %{"credential" => credential_params, "body" => body_params},
-        socket
-      ) do
-    save_credential(
-      socket,
-      socket.assigns.action,
-      credential_params |> Map.put("body", body_params)
-    )
-  end
-
-  def handle_event(
-        "save",
-        %{"credential" => credential_params},
-        socket
-      ) do
+  def handle_event("save", %{"credential" => credential_params}, socket) do
     save_credential(
       socket,
       socket.assigns.action,
@@ -324,9 +410,16 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   defp save_credential(socket, :new, credential_params) do
     user_id = Ecto.Changeset.fetch_field!(socket.assigns.changeset, :user_id)
 
+    project_credentials =
+      Ecto.Changeset.fetch_field!(socket.assigns.changeset, :project_credentials)
+      |> Enum.map(fn %{project_id: project_id} ->
+        %{"project_id" => project_id}
+      end)
+
     credential_params
-    # We are adding user_id in credential_params because we don't want to do it in the form
     |> Map.put("user_id", user_id)
+    |> Map.put("schema", socket.assigns.type)
+    |> Map.put("project_credentials", project_credentials)
     |> Credentials.create_credential()
     |> case do
       {:ok, credential} ->
@@ -337,7 +430,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           {:noreply,
            socket
            |> put_flash(:info, "Credential created successfully")
-           |> push_redirect(to: Routes.credential_index_path(socket, :index))}
+           |> push_redirect(to: socket.assigns.return_to)}
         end
 
       {:error, %Ecto.Changeset{} = changeset} ->

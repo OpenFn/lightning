@@ -12,6 +12,48 @@ defmodule LightningWeb.CredentialLive.Edit do
   import LightningWeb.Components.Form
 
   @impl true
+  def render(assigns) do
+    ~H"""
+    <Layout.page_content>
+      <:header>
+        <Layout.header socket={@socket}>
+          <:title><%= @credential.name || @page_title %></:title>
+        </Layout.header>
+      </:header>
+      <Layout.centered>
+        <.live_component
+          module={LightningWeb.CredentialLive.FormComponent}
+          id={@credential.id || :new}
+          title={@page_title}
+          action={@live_action}
+          credential={@credential}
+          projects={@projects}
+          return_to={Routes.credential_index_path(@socket, :index)}
+        >
+          <:button>
+            <.link
+              navigate={Routes.credential_index_path(@socket, :index)}
+              class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
+            >
+              Cancel
+            </.link>
+          </:button>
+
+          <:button :let={valid?} class="text-right grow">
+            <LightningWeb.Components.Form.submit_button
+              phx-disable-with="Saving..."
+              disabled={!valid?}
+            >
+              Save
+            </LightningWeb.Components.Form.submit_button>
+          </:button>
+        </.live_component>
+      </Layout.centered>
+    </Layout.page_content>
+    """
+  end
+
+  @impl true
   def mount(_params, _session, socket) do
     {:ok, socket}
   end

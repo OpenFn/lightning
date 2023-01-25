@@ -15,7 +15,7 @@ defmodule LightningWeb.Components.Jobs do
     ~H"""
     <.label_field
       form={@form}
-      id={:project_credential_id}
+      field={:project_credential_id}
       title="Credential"
       for="credentialField"
     />

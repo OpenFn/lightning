@@ -251,7 +251,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     ~H"""
     <Form.label_field
       form={:cron_component}
-      id={:frequency}
+      field={:frequency}
       title="Frequency"
       for="frequency"
     />
@@ -273,7 +273,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     <div class="col-span-1">
       <Form.label_field
         form={:cron_component}
-        id={:minute}
+        field={:minute}
         title="Minute"
         for="minute"
       />
@@ -294,7 +294,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   def hour_field(assigns) do
     ~H"""
     <div class="col-span-1">
-      <Form.label_field form={:cron_component} id={:hour} title="Hour" for="hour" />
+      <Form.label_field form={:cron_component} field={:hour} title="Hour" for="hour" />
       <Form.select_field
         form={:cron_component}
         name={:hour}
@@ -314,7 +314,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     <div class="col-span-2">
       <Form.label_field
         form={:cron_component}
-        id={:weekday}
+        field={:weekday}
         title="Day"
         for="weekday"
       />
@@ -337,7 +337,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     <div class="col-span-1">
       <Form.label_field
         form={:cron_component}
-        id={:monthday}
+        field={:monthday}
         title="Day"
         for="monthday"
       />

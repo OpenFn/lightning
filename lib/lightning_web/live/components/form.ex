@@ -89,12 +89,6 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  def hidden_input(assigns) do
-    ~H"""
-    <%= textarea(@form, @id, class: "hidden") %>
-    """
-  end
-
   def password_field(assigns) do
     label_classes = ~w[
       block
@@ -224,7 +218,6 @@ defmodule LightningWeb.Components.Form do
     error_classes = ~w[
       block
       w-full
-      rounded-md
       text-sm
       text-secondary-700
     ]
@@ -268,6 +261,30 @@ defmodule LightningWeb.Components.Form do
       @id,
       @opts ++ [class: @input_classes, required: @required, disabled: @disabled]
     ) %>
+    """
+  end
+
+  attr :form, :any, required: true
+  attr :field, :any, required: true
+  attr :opts, :global
+
+  def error(assigns) do
+    error_classes = ~w[
+      block
+      w-full
+      text-sm
+      text-secondary-700
+    ]
+
+    assigns =
+      assigns
+      |> update(:opts, fn opts ->
+        assigns_to_attributes(opts)
+        |> Keyword.put_new(:class, error_classes)
+      end)
+
+    ~H"""
+    <%= error_tag(@form, @field, @opts) %>
     """
   end
 
@@ -324,6 +341,11 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  attr :form, :any, required: true
+  attr :field, :any, required: true
+  attr :title, :string
+  attr :opts, :global, include: ~w(for value)
+
   def label_field(assigns) do
     label_classes = ~w[
       block
@@ -332,13 +354,18 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
-    assigns = assign(assigns, label_classes: label_classes)
+    assigns =
+      assigns
+      |> update(:opts, fn opts ->
+        assigns_to_attributes(opts)
+        |> Keyword.put_new(:class, label_classes)
+      end)
+      |> assign_new(:title, fn %{field: field} ->
+        humanize(field)
+      end)
 
     ~H"""
-    <%= label(@form, @id, @title,
-      for: @for,
-      class: @label_classes
-    ) %>
+    <%= label(@form, @field, @title, @opts) %>
     """
   end
 

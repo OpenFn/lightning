@@ -13,13 +13,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
   @create_attrs %{
     name: "some name",
-    schema: "raw",
     body: Jason.encode!(%{"a" => 1})
   }
 
   @update_attrs %{
     name: "some updated name",
-    schema: "raw",
     body: "{\"a\":\"new_secret\"}"
   }
 
@@ -126,21 +124,18 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
+      new_live |> select_credential_type("raw")
+      new_live |> click_continue()
+
+      assert new_live |> has_element?("#credential-form_body")
+
       new_live
       |> element("#project_list")
-      |> render_hook("select_item", %{"id" => project.id})
+      |> render_change(%{"selected_project" => %{"id" => project.id}})
 
       new_live
       |> element("button", "Add")
       |> render_click()
-
-      refute new_live |> has_element?("#credential-form_body")
-
-      new_live
-      |> form("#credential-form", credential: %{schema: "raw"})
-      |> render_change()
-
-      assert new_live |> has_element?("#credential-form_body")
 
       assert new_live
              |> form("#credential-form", credential: %{name: ""})
@@ -179,15 +174,15 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
-      new_live
-      |> form("#credential-form", credential: %{schema: "dhis2"})
-      |> render_change()
+      # Pick a type
 
-      refute new_live |> has_element?("#credential-form_body")
+      new_live |> select_credential_type("dhis2")
+      new_live |> click_continue()
 
-      assert new_live
-             |> form("#credential-form", body: %{username: ""})
-             |> render_change() =~ "can&#39;t be blank"
+      refute new_live |> has_element?("#credential-type-picker")
+
+      assert new_live |> fill_credential(%{body: %{username: ""}}) =~
+               "can&#39;t be blank"
 
       assert new_live |> submit_disabled()
 
@@ -199,14 +194,16 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert new_live
              |> form("#credential-form",
-               credential: %{name: "My Credential"},
-               body: %{username: "foo", password: "bar", hostUrl: "baz"}
+               credential: %{
+                 name: "My Credential",
+                 body: %{username: "foo", password: "bar", hostUrl: "baz"}
+               }
              )
              |> render_change() =~ "expected to be a URI"
 
       assert new_live
              |> form("#credential-form",
-               body: %{hostUrl: "http://localhost"}
+               credential: %{body: %{hostUrl: "http://localhost"}}
              )
              |> render_change()
 
@@ -240,15 +237,11 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
-      new_live
-      |> form("#credential-form", credential: %{schema: "http"})
-      |> render_change()
-
-      refute new_live |> has_element?("#credential-form_body")
+      new_live |> select_credential_type("http")
+      new_live |> click_continue()
 
       assert new_live
-             |> form("#credential-form", body: %{username: ""})
-             |> render_change() =~ "can&#39;t be blank"
+             |> fill_credential(%{body: %{username: ""}}) =~ "can&#39;t be blank"
 
       assert new_live |> submit_disabled()
 
@@ -259,25 +252,16 @@ defmodule LightningWeb.CredentialLiveTest do
       refute_redirected(new_live, Routes.credential_index_path(conn, :index))
 
       assert new_live
-             |> form("#credential-form",
-               credential: %{name: "My Credential"},
+             |> fill_credential(%{
+               name: "My Credential",
                body: %{username: "foo", password: "bar", baseUrl: "baz"}
-             )
-             |> render_change() =~ "expected to be a URI"
+             }) =~ "expected to be a URI"
 
-      assert new_live
-             |> form("#credential-form",
-               body: %{baseUrl: "http://localhost"}
-             )
-             |> render_change()
+      assert new_live |> fill_credential(%{body: %{baseUrl: "http://localhost"}})
 
       refute new_live |> submit_disabled()
 
-      assert new_live
-             |> form("#credential-form",
-               body: %{baseUrl: ""}
-             )
-             |> render_change()
+      assert new_live |> fill_credential(%{body: %{baseUrl: ""}})
 
       refute new_live |> submit_disabled()
 
@@ -311,13 +295,7 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :edit, credential)
         )
 
-      assert form_live
-             |> form("#credential-form", credential: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      assert form_live
-             |> form("#credential-form", credential: @invalid_attrs)
-             |> render_submit() =~ "can&#39;t be blank"
+      assert form_live |> fill_credential(@invalid_attrs) =~ "can&#39;t be blank"
 
       refute_redirected(form_live, Routes.credential_index_path(conn, :index))
 
@@ -473,7 +451,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # assertions
 
-      assert has_element?(view, "#credential-form")
+      assert has_element?(view, "#credential-type-picker")
+      view |> select_credential_type("http")
+      view |> click_continue()
+
       refute has_element?(view, "#project_list")
     end
 
@@ -499,20 +480,13 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render_click()
 
       # fill the modal and save
-
-      view
-      |> form("#credential-form",
-        credential: %{
-          schema: "raw"
-        }
-      )
-      |> render_change()
+      view |> select_credential_type("raw")
+      view |> click_continue()
 
       view
       |> form("#credential-form",
         credential: %{
           name: "newly created credential",
-          schema: "raw",
           body: Jason.encode!(%{"a" => 1})
         }
       )
@@ -558,19 +532,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # fill the modal and save
 
-      view
-      |> form("#credential-form",
-        credential: %{
-          schema: "raw"
-        }
-      )
-      |> render_change()
+      view |> select_credential_type("raw")
+      view |> click_continue()
 
       view
       |> form("#credential-form",
         credential: %{
           name: "newly created credential",
-          schema: "raw",
           body: Jason.encode!(%{"a" => 1})
         }
       )
@@ -596,5 +564,23 @@ defmodule LightningWeb.CredentialLiveTest do
 
   defp submit_disabled(live) do
     live |> has_element?("button[disabled][type=submit]")
+  end
+
+  defp select_credential_type(live, type) do
+    live
+    |> form("#credential-type-picker", type: %{selected: type})
+    |> render_change()
+  end
+
+  defp click_continue(live) do
+    live
+    |> element("button", "Continue")
+    |> render_click()
+  end
+
+  defp fill_credential(live, params) when is_map(params) do
+    live
+    |> form("#credential-form", credential: params)
+    |> render_change()
   end
 end

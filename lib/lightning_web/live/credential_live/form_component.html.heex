@@ -1,142 +1,199 @@
 <div id={"credential-#{@id}"}>
-  <.form
-    :let={f}
-    for={@changeset}
-    id="credential-form"
-    phx-target={@myself}
-    phx-change="validate"
-    phx-submit="save"
-  >
-    <div class={"grid #{@cols_class} gap-6"}>
-      <div class="col-span-3">
-        <%= label(f, :name, class: "block text-sm font-medium text-secondary-700") %>
-        <%= error_tag(f, :name, class: "block w-full rounded-md") %>
-        <%= text_input(f, :name,
-          class:
-            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-        ) %>
-
-        <div class="mt-2">
-          <%= label(f, :schema,
-            class: "block text-sm font-medium text-secondary-700 mb-1"
-          ) do %>
-            Type
-          <% end %>
-          <.select_field
-            form={f}
-            name={:schema}
-            values={@schemas_options}
-            prompt="Choose a type"
-          />
-        </div>
-
-        <div class="mt-2">
-          <div class="rounded-md border p-4 bg-gray-50">
-            <%= case input_value(f, :schema) do %>
-              <% "raw" -> %>
-                <%= label(f, :body,
-                  class: "block text-sm font-medium text-secondary-700"
-                ) %>
-                <%= error_tag(f, :body, class: "block w-full rounded-md") %>
-                <%= textarea(f, :body,
-                  class:
-                    "rounded-md w-full font-mono bg-slate-800 text-slate-100"
-                ) %>
-              <% s when byte_size(s) > 0 -> %>
-                <%= for {field, _type} <- @schema.types do %>
-                  <%= schema_input(@schema, @schema_changeset, field) %>
-                <% end %>
-              <% _ -> %>
-                <p>Select a credential type</p>
-            <% end %>
+  <%= unless get_field(@changeset, :type, nil) do %>
+    <div class="mt-10 sm:mt-0">
+      <div class="md:grid md:grid-cols-3 md:gap-6">
+        <div class="md:col-span-1">
+          <div class="px-4 sm:px-0">
+            <p class="mt-1 text-sm text-gray-600">
+              Decide which type credential you would like to create.
+            </p>
           </div>
         </div>
-        <%= if @action in [:edit] and @allow_credential_transfer do %>
-          <div class="mt-2">
-            <%= label(f, :owner,
-              class: "block text-sm font-medium text-secondary-700"
-            ) %>
-            <%= error_tag(f, :user_id) %>
-            <LightningWeb.Components.Form.select_field
-              form={f}
-              name={:user_id}
-              values={@users}
-            />
-          </div>
-        <% end %>
-
-        <div class="mt-2">
-          <LightningWeb.Components.Form.check_box form={f} id={:production} />
+        <div class="mt-5 md:col-span-2 md:mt-0">
+          <.form
+            :let={f}
+            for={@changeset}
+            id="credential-form"
+            phx-target={@myself}
+            phx-change="type_changed"
+            phx-submit="confirm_type"
+          >
+            <div class="overflow-hidden shadow sm:rounded-md">
+              <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+                <fieldset>
+                  <legend class="contents text-base font-medium text-gray-900">
+                    Types
+                  </legend>
+                  <p class="text-sm text-gray-500">
+                    These are the different kinds of credentials that can be created.
+                  </p>
+                  <div class="mt-4 space-y-4">
+                    <%= for {name, key} <- @schemas_options do %>
+                      <div class="flex items-center">
+                        <%= radio_button(f, :type, key,
+                          class:
+                            "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        ) %>
+                        <LightningWeb.Components.Form.label_field
+                          form={f}
+                          field={key}
+                          title={name}
+                          class="ml-3 block text-sm font-medium text-gray-700"
+                        />
+                      </div>
+                    <% end %>
+                  </div>
+                </fieldset>
+              </div>
+            </div>
+          </.form>
         </div>
       </div>
-      <%= if @show_project_credentials do %>
+    </div>
+  <% else %>
+    <.form
+      :let={f}
+      for={@changeset}
+      id="credential-form"
+      phx-target={@myself}
+      phx-change="validate"
+      phx-submit="save"
+    >
+      <div class={"grid #{if @show_project_credentials, do: "grid-cols-6", else: "grid-cols-3"} gap-6"}>
         <div class="col-span-3">
-          <%= label(f, :project_credentials, "Project Access",
+          <%= label(f, :name,
             class: "block text-sm font-medium text-secondary-700"
           ) %>
+          <%= error_tag(f, :name, class: "block w-full rounded-md") %>
+          <%= text_input(f, :name,
+            class:
+              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+          ) %>
 
-          <div class="flex w-full items-center gap-2 pb-3 mt-1">
-            <div class="grow">
-              <.select
-                phx-hook="AssocListChange"
-                phx-target={@myself}
-                id="project_list"
-              >
-                <option>Select a project</option>
-                <%= options_for_select(@available_projects, @selected_project) %>
-              </.select>
-            </div>
-            <div class="grow-0 items-right">
-              <.button
-                text="Add"
-                disabled={@selected_project == ""}
-                phx-target={@myself}
-                phx-value-projectid={@selected_project}
-                phx-click="add_new_project"
-              />
-            </div>
+          <div class="mt-2">
+            <%= label(f, :schema,
+            class: "block text-sm font-medium text-secondary-700 mb-1"
+          ) do %>
+              Type
+            <% end %>
+            <.select_field
+              form={f}
+              name={:schema}
+              values={@schemas_options}
+              prompt="Choose a type"
+            />
           </div>
 
-          <%= for project_form <- inputs_for(f, :project_credentials) do %>
-            <%= if input_value(project_form, :delete) != true do %>
-              <div class="flex w-full gap-2 items-center pb-2">
-                <div class="grow">
-                  <%= @all_projects
-                  |> Enum.find_value(fn {name, id} ->
-                    if id == input_value(project_form, :project_id), do: name
-                  end) %>
-                  <%= error_tag(project_form, :project_id, class: "block text-xs") %>
-                </div>
-                <div class="grow-0 items-right">
-                  <.button
-                    text="Remove"
-                    phx-target={@myself}
-                    phx-value-index={project_form.index}
-                    phx-click="delete_project"
-                  />
-                </div>
-              </div>
-            <% end %>
-            <%= hidden_inputs_for(project_form) %>
-            <%= hidden_input(project_form, :project_id) %>
-            <%= hidden_input(project_form, :delete) %>
+          <div class="mt-2">
+            <div class="rounded-md border p-4 bg-gray-50">
+              <%= case input_value(f, :schema) do %>
+                <% "raw" -> %>
+                  <%= label(f, :body,
+                    class: "block text-sm font-medium text-secondary-700"
+                  ) %>
+                  <%= error_tag(f, :body, class: "block w-full rounded-md") %>
+                  <%= textarea(f, :body,
+                    class:
+                      "rounded-md w-full font-mono bg-slate-800 text-slate-100"
+                  ) %>
+                <% s when byte_size(s) > 0 -> %>
+                  <%= for {field, _type} <- @schema.types do %>
+                    <%= schema_input(@schema, @schema_changeset, field) %>
+                  <% end %>
+                <% _ -> %>
+                  <p>Select a credential type</p>
+              <% end %>
+            </div>
+          </div>
+          <%= if @action in [:edit] and @allow_credential_transfer do %>
+            <div class="mt-2">
+              <%= label(f, :owner,
+                class: "block text-sm font-medium text-secondary-700"
+              ) %>
+              <%= error_tag(f, :user_id) %>
+              <LightningWeb.Components.Form.select_field
+                form={f}
+                name={:user_id}
+                values={@users}
+              />
+            </div>
           <% end %>
-        </div>
-      <% else %>
-        <input
-          id="credential-form_project_credentials_0_project_id"
-          name="credential[project_credentials][0][project_id]"
-          type="hidden"
-          value={@project.id}
-        />
-      <% end %>
-    </div>
-    <div class="hidden sm:block" aria-hidden="true">
-      <div class="py-5">
-        <div class="border-t border-secondary-200"></div>
-      </div>
-    </div>
 
-    <%= render_slot(@buttons, @changeset) %>
-  </.form>
+          <div class="mt-2">
+            <LightningWeb.Components.Form.check_box form={f} id={:production} />
+          </div>
+        </div>
+        <%= if @show_project_credentials do %>
+          <div class="col-span-3">
+            <%= label(f, :project_credentials, "Project Access",
+              class: "block text-sm font-medium text-secondary-700"
+            ) %>
+
+            <div class="flex w-full items-center gap-2 pb-3 mt-1">
+              <div class="grow">
+                <.select
+                  phx-hook="AssocListChange"
+                  phx-target={@myself}
+                  id="project_list"
+                >
+                  <option>Select a project</option>
+                  <%= options_for_select(@available_projects, @selected_project) %>
+                </.select>
+              </div>
+              <div class="grow-0 items-right">
+                <.button
+                  text="Add"
+                  disabled={@selected_project == ""}
+                  phx-target={@myself}
+                  phx-value-projectid={@selected_project}
+                  phx-click="add_new_project"
+                />
+              </div>
+            </div>
+
+            <%= for project_form <- inputs_for(f, :project_credentials) do %>
+              <%= if input_value(project_form, :delete) != true do %>
+                <div class="flex w-full gap-2 items-center pb-2">
+                  <div class="grow">
+                    <%= @all_projects
+                    |> Enum.find_value(fn {name, id} ->
+                      if id == input_value(project_form, :project_id), do: name
+                    end) %>
+                    <%= error_tag(project_form, :project_id,
+                      class: "block text-xs"
+                    ) %>
+                  </div>
+                  <div class="grow-0 items-right">
+                    <.button
+                      text="Remove"
+                      phx-target={@myself}
+                      phx-value-index={project_form.index}
+                      phx-click="delete_project"
+                    />
+                  </div>
+                </div>
+              <% end %>
+              <%= hidden_inputs_for(project_form) %>
+              <%= hidden_input(project_form, :project_id) %>
+              <%= hidden_input(project_form, :delete) %>
+            <% end %>
+          </div>
+        <% else %>
+          <input
+            id="credential-form_project_credentials_0_project_id"
+            name="credential[project_credentials][0][project_id]"
+            type="hidden"
+            value={@project.id}
+          />
+        <% end %>
+      </div>
+      <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-5">
+          <div class="border-t border-secondary-200"></div>
+        </div>
+      </div>
+
+      <%= render_slot(@buttons, @changeset) %>
+    </.form>
+  <% end %>
 </div>
