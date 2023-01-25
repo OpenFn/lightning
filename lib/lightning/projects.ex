@@ -236,4 +236,18 @@ defmodule Lightning.Projects do
 
     {:ok, yaml}
   end
+
+  @spec import_project(any) :: {:ok, binary}
+  @doc """
+  Imports a project as map.
+
+  ## Examples
+
+      iex> import_project(:yaml, project_id)
+      {:ok, string}
+
+  """
+  def import_project(data) do
+    nil
+  end
 end
