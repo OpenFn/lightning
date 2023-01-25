@@ -18,7 +18,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       %{workflow: workflow_one} = workflow_job_fixture(project_id: project.id)
       %{workflow: workflow_two} = workflow_job_fixture(project_id: project.id)
 
-      {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
 
@@ -41,7 +42,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
 
@@ -181,7 +183,9 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert has_element?(view, "#job-form")
 
       assert view
-             |> element(~S{#job-form select#upstream-job option[selected=selected]})
+             |> element(
+               ~S{#job-form select#upstream-job option[selected=selected]}
+             )
              |> render() =~ upstream_job.id,
              "Should have the upstream job selected"
 
@@ -355,7 +359,8 @@ defmodule LightningWeb.WorkflowLiveTest do
          } do
       workflow = workflow_fixture(name: "the workflow", project_id: project.id)
 
-      {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ workflow.name
 
