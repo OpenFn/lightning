@@ -84,8 +84,7 @@ type Lib = {
 
 // TODO move into external file
 // TODO do we pull metadata from an endpoint or does it get pushed to us via an event?
-async function loadMetadata(specifier: string, config:  any) {
-  console.log('load metadata', specifier)
+async function loadMetadata(specifier: string, credentialId:  string) {
   if (specifier.match('dhis2')) {
     return metadata_dhis2;
   }
@@ -101,7 +100,7 @@ async function loadMagicDts(name: string) {
     content: dts_es5
   },
   {
-    content: `declare namespace "@openfn/langauge-dhis2" { ${dts_dhis2} }`,
+    content: `declare namespace "@openfn/language-dhis2" { ${dts_dhis2} }`,
     filepath: `${name}/index.d.ts`
   }] as Lib[];
 }
@@ -253,7 +252,7 @@ export default function Editor({
     if (adaptor) {
       setLoading(true);
       setLib([]); // instantly clear intelligence
-      loadMetadata(adaptor, {} /* config */)
+      loadMetadata(adaptor, "credential_id")
         .then((m) => setMetadata(m));
       loadDTS(adaptor)
         .then(l => {
