@@ -39,4 +39,12 @@ defmodule Lightning.Projects.Project do
     |> validate_length(:description, max: 240)
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
   end
+
+  def import_changeset(attrs) do
+    %__MODULE__{}
+    |> changeset(attrs)
+    |> cast_assoc(:workflows,
+      with: &Lightning.Workflows.Workflow.import_changeset/2
+    )
+  end
 end

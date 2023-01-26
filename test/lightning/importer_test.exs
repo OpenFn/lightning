@@ -1,52 +1,62 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Projects
+  alias Lightning.Projects.Project
+
   describe "import project.yaml" do
     test "import_project project and workflows if given valid object map" do
       data = %{
-        name: "",
-        workflows: %{
-          workflow1: %{
-            jobs: %{
-              job1: %{
-                trigger: "webhook",
+        name: "myproject",
+        workflows: [
+          %{
+            name: "workflow1",
+            jobs: [
+              %{
+                name: "job11",
+                trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "credential",
                 body: "> fn(state => state)"
               },
-              job2: %{
-                trigger: "webhook",
+              %{
+                name: "job12",
+                trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "credential",
                 body: "> fn(state => state)"
               }
-            }
+            ]
           },
-          workflow2: %{
-            jobs: %{
-              job1: %{
-                trigger: "webhook",
+          %{
+            name: "workflow2",
+            jobs: [
+              %{
+                name: "job21",
+                trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "credential",
                 body: "> fn(state => state)"
               },
-              job2: %{
-                trigger: "webhook",
+              %{
+                name: "job22",
+                trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "credential",
                 body: "> fn(state => state)"
               }
-            }
+            ]
           }
-        }
+        ]
       }
 
-      # todo
-      Lightning.Projects.import_project(data)
+      {:ok, %Project{}} = Projects.import_project(data)
+
+      # project = Repo.preload(project, [workflows: [jobs: [:trigger]]])
     end
   end
 end

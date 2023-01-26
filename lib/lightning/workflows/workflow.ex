@@ -45,6 +45,22 @@ defmodule Lightning.Workflows.Workflow do
     |> validate()
   end
 
+  def import_changeset(workflow, attrs) do
+    change =
+      workflow
+      |> cast(
+        Map.put(attrs, :id, Ecto.UUID.generate()),
+        [:name, :project_id, :id]
+      )
+
+    workflow_id = change |> get_field(:id)
+
+    change
+    |> cast_assoc(:jobs,
+      with: {Lightning.Jobs.Job, :changeset, [workflow_id]}
+    )
+  end
+
   defp validate(changeset) do
     changeset
     |> assoc_constraint(:project)

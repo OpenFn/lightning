@@ -247,7 +247,9 @@ defmodule Lightning.Projects do
       {:ok, string}
 
   """
-  def import_project(data) do
-    nil
+  def import_project(attrs) do
+    attrs
+    |> Project.import_changeset()
+    |> Repo.insert()
   end
 end
