@@ -17,6 +17,7 @@
     "classcat": "^5.0.4",
     "cronstrue": "^2.14.0",
     "elkjs": "^0.8.2",
+    "jsonpath": "^1.1.1",
     "marked": "^4.2.4",
     "monaco-editor": "^0.34.0",
     "react": "^18.1.0",

@@ -3,8 +3,14 @@ import Monaco from "@monaco-editor/react";
 import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types";
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
+import createCompletionProvider from './magic-completion';
 
-const DEFAULT_TEXT = '// Get started by adding operations from the API reference';
+// TMP static imports for stuff we'll soon want to pull down dynamically
+import dts_es5 from './lib/es5.min.dts';
+import dts_dhis2 from './lib/dhis2.dts';
+import metadata_dhis2 from './metadata/dhis2.js'
+
+const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
 
 type EditorProps = {
   source?: string;
@@ -59,6 +65,12 @@ const defaultOptions: MonacoProps['options'] = {
 
   suggest: {
     showKeywords: false,
+    showModules: false, // hides global this
+    showFiles: false, // This hides property names ??
+    // showProperties: false, // seems to hide consts but show properties??
+    showClasses: false,
+    showInterfaces: false,
+    showConstructors: false,
   }
 };
 
@@ -67,8 +79,34 @@ type Lib = {
   filePath: string;
 }
 
-// TODO this can take a little while to run, we should consider giving some feedback to the user
+// TODO move into external file
+// TODO do we pull metadata from an endpoint or does it get pushed to us via an event?
+async function loadMetadata(specifier: string, config:  any) {
+  console.log('load metadata', specifier)
+  if (specifier.match('dhis2')) {
+    return metadata_dhis2;
+  }
+}
+
+// temporary function that will load the magic dts locally
+// IDK how to share this.
+// a) I publish a specially tagged adaptor version (not that jsdelivvr doesn't support tags)
+// b) I take an env var which points to adaptors and people have to set up their local env
+// Let's just get it working locally for now
+async function loadMagicDts(name: string) {
+  return [{
+    content: dts_es5
+  },
+  {
+    content: `declare namespace "@openfn/langauge-dhis2" { ${dts_dhis2} }`,
+    filepath: `${name}/index.d.ts`
+  }] as Lib[];
+}
+
 async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
+  if (specifier.match('dhis2')) {
+    return loadMagicDts('dhis2')
+  }
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@')
@@ -96,7 +134,9 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
 
 export default function Editor({ source, adaptor, onChange }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
+  const [metadata, setMetadata] = useState();
   const [loading, setLoading] = useState(false);
+  const [completionProvider, setCompletionProvider] = useState();
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
   const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject}>({});
@@ -149,6 +189,18 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   }, []);
 
   useEffect(() => {
+    if (completionProvider) {
+      console.log(' * reset provider')
+      completionProvider.dispose();
+    }
+    if (monaco && metadata) {
+      const newProvider = createCompletionProvider(monaco, metadata);
+      setCompletionProvider(newProvider)
+      monaco.languages.registerCompletionItemProvider('javascript', newProvider);
+    }
+  }, [monaco, metadata]);
+
+  useEffect(() => {
     // Create a node to hold overflow widgets
     // This needs to be at the top level so that tooltips clip over Lightning UIs
     const overflowNode = document.createElement('div');
@@ -173,10 +225,13 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
     if (adaptor) {
       setLoading(true)
       setLib([]); // instantly clear intelligence
-      loadDTS(adaptor).then(l => {
-        setLib(l)
-        setLoading(false)
-      });
+      loadMetadata(adaptor, {} /* config */)
+        .then((m) => setMetadata(m));
+      loadDTS(adaptor)
+        .then(l => {
+          setLib(l)
+          setLoading(false)
+        });
     }
   }, [adaptor])
 
@@ -194,6 +249,7 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
       <Monaco
         defaultLanguage="javascript"
         theme="vs-dark"
+        defaultPath="/job.js"
         value={source || DEFAULT_TEXT}
         options={options}
         onMount={handleEditorDidMount}
