@@ -6,12 +6,11 @@ type DocsProps = {
 }
 
 export default ({ adaptor }: DocsProps) => {
-  // const handleInsert = useCallback((text: string) => {
-  //   const e = new Event('insert-snippet');
-  //   // @ts-ignore
-  //   e.snippet = text;
-  //   document.dispatchEvent(e);
-  // }, []);
-  // return <DocsPanel specifier={adaptor} onInsert={handleInsert} />;
-  return <div>WHelp</div>
+  const handleInsert = useCallback((text: string) => {
+    const e = new Event('insert-snippet');
+    // @ts-ignore
+    e.snippet = text;
+    document.dispatchEvent(e);
+  }, []);
+  return <DocsPanel specifier={adaptor} onInsert={handleInsert} />;
 }
