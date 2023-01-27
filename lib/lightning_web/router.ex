@@ -2,6 +2,7 @@ defmodule LightningWeb.Router do
   use LightningWeb, :router
 
   import LightningWeb.UserAuth
+  alias ProjectLive
   alias JobLive
   alias CredentialLive
   alias UserLive
@@ -94,6 +95,8 @@ defmodule LightningWeb.Router do
     live_session :default, on_mount: LightningWeb.InitAssigns do
       scope "/projects/:project_id", as: :project do
         live "/jobs", JobLive.Index, :index
+
+        live "/settings", ProjectLive.Settings, :index
 
         live "/runs", RunLive.Index, :index
         live "/runs/:id", RunLive.Show, :show

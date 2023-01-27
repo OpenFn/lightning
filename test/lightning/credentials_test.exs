@@ -1,6 +1,7 @@
 defmodule Lightning.CredentialsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Repo
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
 
@@ -48,8 +49,10 @@ defmodule Lightning.CredentialsTest do
       credential =
         credential_fixture(
           user_id: user.id,
+          user: user,
           project_credentials: [%{project_id: project.id}]
         )
+        |> Repo.preload(:user)
 
       assert Credentials.list_credentials(project) == [
                credential |> unload_relation(:project_credentials)
@@ -180,7 +183,9 @@ defmodule Lightning.CredentialsTest do
       # 1 project_credential created
       assert length(
                Lightning.Projects.list_project_credentials(
-                 %Lightning.Projects.Project{id: project_credential.project_id}
+                 %Lightning.Projects.Project{
+                   id: project_credential.project_id
+                 }
                )
              ) == 1
 
@@ -215,7 +220,9 @@ defmodule Lightning.CredentialsTest do
       # no more project_credentials
       assert length(
                Lightning.Projects.list_project_credentials(
-                 %Lightning.Projects.Project{id: project_credential.project_id}
+                 %Lightning.Projects.Project{
+                   id: project_credential.project_id
+                 }
                )
              ) == 0
 

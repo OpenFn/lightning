@@ -43,7 +43,21 @@
           phx-submit="validate"
         >
           <div>
-            <div class="font-semibold my-4">Search</div>
+            <div class="font-semibold mt-4">
+              Search associated runs
+              <Icon.info class="h-5 w-5 mb-2 inline-block" />
+            </div>
+            <div class="text-xs mb-2">
+              <b>N.B.:</b>
+              a search here returns all <b>workorders</b>
+              that <em>contain</em>
+              runs with matching logs or inputs. Once a workorder is expanded,
+              you can still see the runs that took place before or after the
+              matching run itself. (I.e., right now you get the full workorder
+              context; soon we'll introduce the ability to pinpoint just a
+              single run <em>before</em>
+              viewing it in context of its attempt and workorder.)
+            </div>
             <div class="w-full flex items-center">
               <%= text_input(f, :search_term,
                 "phx-change": "validate",
@@ -70,7 +84,30 @@
             />
           </div>
           <div>
-            <div class="font-semibold my-4">Filter runs by date</div>
+            <div class="font-semibold my-4">
+              Filter workorder by date received
+            </div>
+            <div class="flex justify-between">
+              <div>
+                <label>After</label>
+                <%= datetime_local_input(f, :wo_date_after,
+                  class:
+                    "mt-1 block w-44 rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                ) %>
+              </div>
+              <div>
+                <label>Before</label>
+                <%= datetime_local_input(f, :wo_date_before,
+                  class:
+                    "mt-1 block w-44 rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                ) %>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="font-semibold my-4">
+              Filter workorder by last activity date
+            </div>
             <div class="flex justify-between">
               <div>
                 <label>After</label>

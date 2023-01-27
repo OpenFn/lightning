@@ -128,6 +128,23 @@ defmodule Lightning.ProjectsTest do
       assert [project_1] == Projects.get_projects_for_user(other_user)
     end
 
+    test "get_project_user_role/2" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      project =
+        project_fixture(
+          project_users: [
+            %{user_id: user_1.id, role: :admin},
+            %{user_id: user_2.id, role: :editor}
+          ]
+        )
+        |> Repo.reload()
+
+      assert Projects.get_project_user_role(user_1, project) == :admin
+      assert Projects.get_project_user_role(user_2, project) == :editor
+    end
+
     test "export_project/2 as yaml" do
       %{project: project} = full_project_fixture()
       expected_yaml = File.read!("test/fixtures/canonical_project.yaml")

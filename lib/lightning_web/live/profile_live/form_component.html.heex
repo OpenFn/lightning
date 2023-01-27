@@ -27,7 +27,8 @@
         ) %>
         <%= text_input(f, :email,
           class: "block w-full rounded-md",
-          phx_debounce: "blur"
+          phx_debounce: "blur",
+          disabled: true
         ) %>
         <%= error_tag(f, :email,
           class:
@@ -35,6 +36,11 @@
         ) %>
       </div>
     </div>
+    <div class="block mt-2 text-sm font-medium text-secondary-700">
+      <Heroicons.exclamation_triangle class="h-5 w-5 mb-1 inline" />
+      Please contact your adminsitrator to change your email.
+    </div>
+    <!--
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5"></div>
     </div>
@@ -76,6 +82,7 @@
         </button>
       </span>
     </div>
+    -->
     <div class="hidden sm:block" aria-hidden="true">
       <div class="py-5"></div>
     </div>
@@ -153,7 +160,7 @@
     <div>
       <span>
         <.link
-          navigate={Routes.settings_index_path(@socket, :index)}
+          navigate={Routes.dashboard_index_path(@socket, :index)}
           class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500"
         >
           Cancel

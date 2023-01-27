@@ -5,12 +5,17 @@ defmodule Lightning.RunLive.RunStatusComponent do
   use LightningWeb, :live_component
 
   @impl true
-  attr :label, :string
+  attr(:label, :string)
 
   def render(assigns) do
     ~H"""
     <div id={"#{@id}-status_options-container"}>
-      <div class="font-semibold my-4">Filter by workorder status</div>
+      <div class="font-semibold mt-4">Filter by workorder status</div>
+      <div class="text-xs mb-2">
+        Filter workorders based on their composite status—the status of the
+        <em>last</em>
+        run in any attempt for that workorder.
+      </div>
       <%= inputs_for @form, :status_options, fn opt -> %>
         <div class="form-check">
           <div class="selectable-option">

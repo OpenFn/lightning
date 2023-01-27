@@ -146,6 +146,40 @@ defmodule Lightning.Projects do
     |> Repo.all()
   end
 
+  @spec project_user_role_query(user :: User.t(), project :: Project.t()) ::
+          Ecto.Queryable.t()
+  def project_user_role_query(%User{id: user_id}, %Project{id: project_id}) do
+    from(p in Project,
+      join: pu in assoc(p, :project_users),
+      where: p.id == ^project_id and pu.user_id == ^user_id,
+      select: pu.role
+    )
+  end
+
+  @doc """
+  Returns the role of a user in a project.
+  Possible roles are :admin, :viewer, :editor, and :owner
+
+  ## Examples
+
+      iex> get_project_user_role(user, project)
+      :admin
+
+      iex> get_project_user_role(user, project)
+      :viewer
+
+      iex> get_project_user_role(user, project)
+      :editor
+
+      iex> get_project_user_role(user, project)
+      :owner
+
+  """
+  def get_project_user_role(user, project) do
+    project_user_role_query(user, project)
+    |> Repo.one()
+  end
+
   @spec first_project_for_user(user :: User.t()) :: Project.t() | nil
   def first_project_for_user(user) do
     from(p in Project,

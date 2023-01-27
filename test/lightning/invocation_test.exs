@@ -540,7 +540,8 @@ defmodule Lightning.InvocationTest do
 
       ### PAGE 1 -----------------------------------------------------------------------
 
-      page_one_result = get_simplified_page(project, 1, [])
+      page_one_result =
+        get_simplified_page(project, %{"page" => 1, "page_size" => 3}, [])
 
       # all work_orders in page_one are ordered by finished_at
 
@@ -554,7 +555,8 @@ defmodule Lightning.InvocationTest do
 
       ### PAGE 2 -----------------------------------------------------------------------
 
-      page_two_result = get_simplified_page(project, 2, [])
+      page_two_result =
+        get_simplified_page(project, %{"page" => 2, "page_size" => 3}, [])
 
       # all work_orders in page_two are ordered by finished_at
       expected_order = [
@@ -567,7 +569,8 @@ defmodule Lightning.InvocationTest do
 
       ### PAGE 3 -----------------------------------------------------------------------
 
-      page_three_result = get_simplified_page(project, 3, [])
+      page_three_result =
+        get_simplified_page(project, %{"page" => 3, "page_size" => 3}, [])
 
       # all work_orders in page_three are ordered by finished_at
       expected_order = [
@@ -578,6 +581,475 @@ defmodule Lightning.InvocationTest do
 
       assert expected_order == page_three_result
     end
+
+    test "Filtering by status :failure exit_code = 1" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      scenario = [
+        workflow1: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
+
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:failure])
+
+      assert [] == actual_filter_by_status(project, [:success])
+      assert [] == actual_filter_by_status(project, [:pending])
+      assert [] == actual_filter_by_status(project, [:timeout])
+      assert [] == actual_filter_by_status(project, [:crash])
+
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, [
+                 :success,
+                 :failure,
+                 :pending,
+                 :timeout,
+                 :crash
+               ])
+    end
+
+    test "Filtering by status :pending exit_code = nil" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      scenario = [
+        workflow1: [
+          [:success, :success, :success, :pending],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
+
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:pending])
+
+      assert [] == actual_filter_by_status(project, [:success])
+      assert [] == actual_filter_by_status(project, [:timeout])
+      assert [] == actual_filter_by_status(project, [:failure])
+      assert [] == actual_filter_by_status(project, [:crash])
+
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, [
+                 :success,
+                 :failure,
+                 :pending,
+                 :timeout,
+                 :crash
+               ])
+    end
+
+    test "Filtering by status :timeout exit_code = 2" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      scenario = [
+        # ---workorder1--- last job succeed on 1st attempt, timedout on 2nd attempt
+        workflow1: [
+          [:success, :success, :success, :timeout],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
+
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:timeout])
+
+      assert [] == actual_filter_by_status(project, [:success])
+      assert [] == actual_filter_by_status(project, [:pending])
+      assert [] == actual_filter_by_status(project, [:failure])
+      assert [] == actual_filter_by_status(project, [:crash])
+
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, [
+                 :success,
+                 :failure,
+                 :pending,
+                 :timeout,
+                 :crash
+               ])
+    end
+
+    test "Filtering by status :crash exit_code > 2" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      scenario = [
+        workflow1: [
+          [:success, :success, :success, :crash],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [%{id: id}] = apply_scenario(project, workflow_map, scenario)
+
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:crash])
+
+      assert [] == actual_filter_by_status(project, [:success])
+      assert [] == actual_filter_by_status(project, [:pending])
+      assert [] == actual_filter_by_status(project, [:failure])
+      assert [] == actual_filter_by_status(project, [:timeout])
+
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, [
+                 :success,
+                 :failure,
+                 :pending,
+                 :timeout,
+                 :crash
+               ])
+    end
+
+    test "Filtering by status :success exit_code = 0" do
+      project = project_fixture()
+
+      workflow_map =
+        build_workflows(project, ["workflow1", "workflow2", "workflow3"])
+
+      scenario = [
+        workflow1: [
+          [:success, :success, :success, :success],
+          [:success, :success, :success, :pending],
+          [:success, :success, :pending],
+          [:success, :success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :success, :failure]
+        ],
+        workflow1: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :success, :failure]
+        ],
+        workflow3: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :success, :failure]
+        ]
+      ]
+
+      [_, _, _, %{id: id}] = apply_scenario(project, workflow_map, scenario)
+
+      assert [%{id: ^id}] = actual_filter_by_status(project, [:success])
+
+      refute actual_filter_by_status(project, [:failure])
+             |> Enum.any?(fn wo -> wo.id == id end)
+
+      refute actual_filter_by_status(project, [:pending])
+             |> Enum.any?(fn wo -> wo.id == id end)
+
+      refute actual_filter_by_status(project, [:timeout])
+             |> Enum.any?(fn wo -> wo.id == id end)
+
+      refute actual_filter_by_status(project, [:crash])
+             |> Enum.any?(fn wo -> wo.id == id end)
+
+      assert [%{id: ^id} | _] =
+               actual_filter_by_status(project, [
+                 :success,
+                 :failure,
+                 :pending,
+                 :timeout,
+                 :crash
+               ])
+    end
+
+    test "Filtering by status complex all" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      # workflow1 = [job1, job2, job3, job4]
+      # workflow2 = [job1, job2, job3, job4]
+
+      scenario = [
+        workflow2: [
+          [:success, :success, :success, :success],
+          [:success, :success, :success, :failure]
+        ],
+        workflow1: [
+          [:success, :success, :timeout],
+          [:success, :success, :failure],
+          [:success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :pending],
+          [:success, :success, :failure, :failure]
+        ],
+        workflow1: [
+          [:success, :crash],
+          [:success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [
+        %{id: id_failure},
+        %{id: id_crash},
+        %{id: id_pending},
+        %{id: id_timeout},
+        %{id: id_success}
+      ] = apply_scenario(project, workflow_map, scenario)
+
+      assert [%{id: ^id_failure}] = actual_filter_by_status(project, [:failure])
+      assert [%{id: ^id_success}] = actual_filter_by_status(project, [:success])
+      assert [%{id: ^id_pending}] = actual_filter_by_status(project, [:pending])
+      assert [%{id: ^id_timeout}] = actual_filter_by_status(project, [:timeout])
+      assert [%{id: ^id_crash}] = actual_filter_by_status(project, [:crash])
+
+      assert [
+               %{id: ^id_pending},
+               %{id: ^id_success},
+               %{id: ^id_timeout},
+               %{id: ^id_crash},
+               %{id: ^id_failure}
+             ] =
+               actual_filter_by_status(project, [
+                 :failure,
+                 :success,
+                 :pending,
+                 :timeout,
+                 :crash
+               ])
+    end
+
+    test "Filtering by workorder inserted_at" do
+      project = project_fixture()
+
+      workflow_map = build_workflows(project, ["workflow1", "workflow2"])
+
+      # workflow1 = [job1, job2, job3, job4]
+      # workflow2 = [job1, job2, job3, job4]
+
+      scenario = [
+        workflow2: [
+          [:success, :success, :success, :success],
+          [:success, :success, :success, :failure]
+        ],
+        workflow1: [
+          [:success, :success, :timeout],
+          [:success, :success, :failure],
+          [:success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :pending],
+          [:success, :success, :failure, :failure]
+        ],
+        workflow1: [
+          [:success, :crash],
+          [:success, :success, :failure]
+        ],
+        workflow2: [
+          [:success, :success, :success, :failure],
+          [:success, :success, :failure, :success]
+        ]
+      ]
+
+      [
+        %{id: id_failure},
+        %{id: id_crash},
+        %{id: id_pending},
+        %{id: id_timeout},
+        %{id: id_success}
+      ] =
+        apply_scenario(project, workflow_map, scenario)
+        |> update_insertion_dates([
+          ~N[2022-01-01 00:00:10],
+          ~N[2022-02-01 00:00:10],
+          ~N[2022-03-01 00:00:10],
+          ~N[2022-04-01 00:00:10],
+          ~N[2022-05-01 00:00:10]
+        ])
+
+      # after wo inserted_at
+      assert [%{id: ^id_pending}, %{id: ^id_success}, %{id: ^id_timeout}] =
+               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+                 status: [
+                   :success,
+                   :failure,
+                   :pending,
+                   :timeout,
+                   :crash
+                 ],
+                 searchfors: [],
+                 search_term: "",
+                 workflow_id: "",
+                 date_after: "",
+                 date_before: "",
+                 wo_date_after: ~N[2022-03-01 00:00:10],
+                 wo_date_before: ""
+               )
+
+      # before wo inserted_at
+      assert [%{id: ^id_crash}, %{id: ^id_failure}] =
+               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+                 status: [
+                   :success,
+                   :failure,
+                   :pending,
+                   :timeout,
+                   :crash
+                 ],
+                 searchfors: [],
+                 search_term: "",
+                 workflow_id: "",
+                 date_after: "",
+                 date_before: "",
+                 wo_date_after: "",
+                 wo_date_before: ~N[2022-03-01 00:00:10]
+               )
+
+      # between wo inserted_at
+      assert [%{id: ^id_pending}, %{id: ^id_crash}] =
+               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
+                 status: [
+                   :success,
+                   :failure,
+                   :pending,
+                   :timeout,
+                   :crash
+                 ],
+                 searchfors: [],
+                 search_term: "",
+                 workflow_id: "",
+                 date_after: "",
+                 date_before: "",
+                 wo_date_after: ~N[2022-02-01 00:00:10],
+                 wo_date_before: ~N[2022-04-01 00:00:10]
+               )
+    end
+  end
+
+  defp build_workflows(project, workflow_names) do
+    workflow_names
+    |> Enum.reduce(%{}, fn workflow_name, acc ->
+      workflow = workflow_fixture(project_id: project.id, name: workflow_name)
+
+      jobs =
+        Enum.map(1..4, fn job_index ->
+          job_fixture(
+            name: "job#{job_index}",
+            project_id: project.id
+          )
+        end)
+
+      Map.put(acc, workflow_name, [workflow, jobs])
+    end)
+  end
+
+  defp update_insertion_dates(work_orders, dates) do
+    work_orders
+    |> Enum.with_index()
+    |> Enum.map(fn {%{id: id}, index} ->
+      inserted_at = Enum.at(dates, index)
+
+      Repo.get!(Lightning.WorkOrder, id)
+      |> Ecto.Changeset.change(inserted_at: inserted_at)
+      |> Repo.update()
+      |> case do
+        {:ok, _} -> %{id: id}
+        _ -> nil
+      end
+    end)
+  end
+
+  # a test utility function that creates fixtures based on a pseudo visual (UI) execution scenario
+  # [:success, :success, :failure] is an attempt resulting in job0 -> exit_code::success, job1 -> exit_code::success, job2 -> exit_code:1
+  defp apply_scenario(project, workflow_map, scenario) do
+    seconds = 20
+
+    dataclip = dataclip_fixture(project_id: project.id)
+
+    scenario
+    |> Enum.reverse()
+    |> Enum.with_index()
+    |> Enum.map(fn {{workflow_name, attempts}, workorder_index} ->
+      coeff = workorder_index + 1
+
+      [workflow, jobs] = workflow_map[Atom.to_string(workflow_name)]
+
+      wo =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: workflow.id
+        )
+
+      attempts
+      |> Enum.reverse()
+      |> Enum.with_index()
+      |> Enum.each(fn {run_results, attempt_index} ->
+        coeff = coeff * (attempt_index + 1)
+
+        runs =
+          run_results
+          |> Enum.with_index()
+          |> Enum.map(fn {exit_result, job_index} ->
+            now = Timex.now()
+            coeff = coeff * (job_index + 1)
+            job = Enum.at(jobs, job_index)
+
+            finished_at =
+              now
+              |> Timex.shift(seconds: coeff * seconds + 10)
+
+            run = %{
+              job_id: job.id,
+              started_at:
+                now
+                |> Timex.shift(seconds: coeff * seconds),
+              finished_at: finished_at,
+              input_dataclip_id: dataclip.id
+            }
+
+            case exit_result do
+              :success -> Map.merge(run, %{exit_code: 0})
+              :failure -> Map.merge(run, %{exit_code: 1})
+              :timeout -> Map.merge(run, %{exit_code: 2})
+              :crash -> Map.merge(run, %{exit_code: 3})
+              :pending -> Map.merge(run, %{exit_code: nil, finished_at: nil})
+            end
+          end)
+
+        reason = reason_fixture(dataclip_id: dataclip.id)
+
+        Lightning.Attempt.new(%{
+          work_order_id: wo.id,
+          reason_id: reason.id,
+          runs: runs
+        })
+        |> Repo.insert()
+      end)
+
+      %{id: wo.id}
+    end)
+  end
+
+  defp actual_filter_by_status(project, status) do
+    Invocation.list_work_orders_for_project(
+      %Lightning.Projects.Project{
+        id: project.id
+      },
+      [
+        status: status,
+        searchfors: [],
+        search_term: "",
+        workflow_id: "",
+        date_after: "",
+        date_before: "",
+        wo_date_after: "",
+        wo_date_before: ""
+      ],
+      %{"page" => 1, "page_size" => 10}
+    ).entries()
   end
 
   defp create_work_order(project, job, now, seconds) do
@@ -623,7 +1095,7 @@ defmodule Lightning.InvocationTest do
         id: project.id
       },
       filter,
-      %{"page" => page, "page_size" => 3}
+      page
     ).entries()
   end
 end

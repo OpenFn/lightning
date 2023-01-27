@@ -25,6 +25,9 @@ and this project adheres to
 - Allow any user to delete a credential that they own
 - Create any credential through a form except for OAuth
 - Refit all diagram nodes on browser and container resize
+- Enable distributed Erlang, allowing any number of redundant Lightning nodes to
+  communicate with each other.
+- Users can set up realtime alerts for a project
 
 ### Changed
 
@@ -48,12 +51,16 @@ and this project adheres to
 - Remove jobs list page
 - Better error handling in the docs panel
 - Disable credential ownership transfer in dev and prod environments
+- Add project settings page
+- Change Workorder filters to apply to the aggregate state of the workorder and
+  not the run directly
 
 ### Fixed
 
 - Don't consider disabled jobs when calculating subsequent runs
 - Fixed overflow on Job Editor Tooltips
 - Fixed auto-scroll when adding a new snippet in the Job Editor
+- Fixed common operation typings in Job Editor
 
 ## [0.3.1] - 2022-11-22
 

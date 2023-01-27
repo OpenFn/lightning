@@ -16,10 +16,6 @@ config :lightning, Lightning.Repo,
 # watchers to your application. For example, we use it
 # with esbuild to bundle .js and .css sources.
 config :lightning, LightningWeb.Endpoint,
-  # Binding to loopback ipv4 address prevents access from other machines.
-  # Change to `ip: {127, 0, 0, 1}` to block access from other machines.
-  # Note that this may interfere with Docker networking.
-  http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -37,6 +33,11 @@ config :lightning,
 
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="
+
+config :lightning, Lightning.FailureAlerter,
+  # 24h = 86_400_000
+  time_scale: 5 * 60_000,
+  rate_limit: 3
 
 # ## SSL Support
 #

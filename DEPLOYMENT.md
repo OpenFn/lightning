@@ -29,8 +29,8 @@ Note that for secure deployments, it's recommended to use a combination of
 - `PRIMARY_ENCRYPTION_KEY` - a base64 encoded 32 character long string. See
   [Encryption](#encryption).
 - `ADAPTORS_PATH` - where you store your locally installed adaptors
-- `LIGHTNING_LISTEN_ADDRESS`" - the address the web server should bind to,
-  defaults to `0.0.0.0`
+- `LISTEN_ADDRESS`" - the address the web server should bind to,
+  defaults to `127.0.0.1` to block access from other machines.
 - `LOG_LEVEL` - how noisy you want the logs to be (e.g. `debug`, `info`)
 - `MIX_ENV` - your mix env, likely `prod` for deployment
 - `NODE_ENV` - node env, likely `production` for deployment
@@ -42,3 +42,7 @@ Note that for secure deployments, it's recommended to use a combination of
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
 - `MAX_RUN_DURATION` - the maximum time (in milliseconds) that jobs are allowed
   to run (keep this below your termination_grace_period if using kubernetes)
+- `K8S_HEADLESS_SERVICE` - this environment variable is automatically set if
+  you're running on GKE and it is used to establish an Erlang node cluster. Note
+  that if you're _not_ using Kubernetes, the "gossip" strategy is used for
+  establish clusters.

@@ -20,19 +20,30 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def workflow_card(assigns) do
     ~H"""
-    <.link
-      class="w-72 h-44 bg-white rounded-md border shadow flex h-full justify-center items-center font-bold mb-2 hover:bg-gray-50"
-      navigate={
-        Routes.project_workflow_path(
-          LightningWeb.Endpoint,
-          :show,
-          @project.id,
-          @workflow.id
-        )
-      }
-    >
-      <%= @workflow.name %>
-    </.link>
+    <div class="relative">
+      <.link
+        class="w-72 h-44 bg-white rounded-md border shadow flex h-full justify-center items-center font-bold mb-2 hover:bg-gray-50"
+        navigate={
+          Routes.project_workflow_path(
+            LightningWeb.Endpoint,
+            :show,
+            @project.id,
+            @workflow.id
+          )
+        }
+      >
+        <%= @workflow.name %>
+
+        <%= link(
+          to: "#",
+          phx_click: "delete-workflow",
+          phx_value_id: @workflow.id,
+          data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
+          class: "absolute right-2 bottom-2 p-2") do %>
+          <Icon.trash class="h-6 w-6 text-black-300 hover:text-rose-700" />
+        <% end %>
+      </.link>
+    </div>
     """
   end
 

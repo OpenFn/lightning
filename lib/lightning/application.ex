@@ -8,6 +8,13 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    # mnesia startup
+    :mnesia.stop()
+    :mnesia.create_schema([node()])
+    :mnesia.start()
+    Hammer.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])
+    :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
+
     # Only add the Sentry backend if a dsn is provided.
     if Application.get_env(:sentry, :included_environments) |> Enum.any?(),
       do: Logger.add_backend(Sentry.LoggerBackend)
@@ -43,7 +50,24 @@ defmodule Lightning.Application do
 
     :ok = Oban.Telemetry.attach_default_logger(:debug)
 
+    topologies =
+      if System.get_env("K8S_HEADLESS_SERVICE") do
+        [
+          k8s: [
+            strategy: Cluster.Strategy.Kubernetes.DNS,
+            config: [
+              service: System.get_env("K8S_HEADLESS_SERVICE"),
+              application_name: "lightning",
+              polling_interval: 5_000
+            ]
+          ]
+        ]
+      else
+        Application.get_env(:libcluster, :topologies)
+      end
+
     children = [
+      {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
       Lightning.Vault,
       # Start the Ecto repository
       Lightning.Repo,
