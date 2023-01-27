@@ -222,13 +222,11 @@ defmodule Lightning.Accounts.User do
         password
       )
       when is_binary(hashed_password) and byte_size(password) > 0 do
-    IO.inspect("Is this one")
     Bcrypt.verify_pass(password, hashed_password)
   end
 
   def valid_password?(_, _) do
     Bcrypt.no_user_verify()
-    IO.inspect("Or is this one")
     false
   end
 
