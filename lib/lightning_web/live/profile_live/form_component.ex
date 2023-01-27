@@ -4,6 +4,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   """
   use LightningWeb, :live_component
 
+  alias Lightning.Accounts.User
   alias Lightning.Accounts
 
   @impl true
@@ -19,34 +20,49 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   @impl true
   def handle_event(
         "save_email",
-        %{"user" => user} = user_params,
+        %{"user" => %{"email" => email, "current_password" => current_password}} = _user_params,
         socket
       ) do
-    # IO.inspect("We are")
-
     changeset =
-      socket.assigns.user
-      |> Accounts.User.current_password_changeset(user)
-      # |> Accounts.User.validate_current_password(user.password)
-      |> IO.inspect()
+      Ecto.Changeset.change(socket.assigns.user)
+      |> User.validate_current_password(current_password)
 
-    {:noreply, socket}
+    if changeset.valid? do
+      Accounts.deliver_update_email_instructions(
+        socket.assigns.user,
+        email,
+        &Routes.user_confirmation_url(socket, :edit, &1)
+      )
 
-    # case Accounts.deliver_update_email_instructions(
-    #        socket.assigns.user,
-    #        email,
-    #        &(Routes.user_confirmation_url(socket, :edit, &1) |> IO.inspect())
-    #      ) do
-    #   {:ok, user} ->
-    #     {:noreply,
-    #      socket
-    #      |> put_flash(
-    #        :info,
-    #        "You will receive an email with instructions shortly."
-    #      )}
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         "You will receive an email with instructions shortly."
+       )}
+    else
+      {:noreply, assign(socket, :email_changeset, changeset)}
+    end
 
-    #   {:error, %Ecto.Changeset{} = changeset} ->
-    #     {:noreply, assign(socket, :email_changeset, changeset)}
+    # {:noreply, socket}
+
+    # valid_password = Lightning.Accounts.User.valid_password?(socket.assigns.user, password)
+
+    # if valid_password do
+    #   Accounts.deliver_update_email_instructions(
+    #     socket.assigns.user,
+    #     email,
+    #     &(Routes.user_confirmation_url(socket, :edit, &1) |> IO.inspect())
+    #   )
+
+    #   {:noreply,
+    #    socket
+    #    |> put_flash(
+    #      :info,
+    #      "You will receive an email with instructions shortly."
+    #    )}
+    # else
+    #   {:noreply, socket}
     # end
   end
 
