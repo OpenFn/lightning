@@ -10,6 +10,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.{Importer, Project, ProjectCredential}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
+  alias Lightning.Workflows
 
   @doc """
   Returns the list of projects.
