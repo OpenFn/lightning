@@ -4,6 +4,7 @@ defmodule Lightning.Projects do
   """
 
   import Ecto.Query, warn: false
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
   alias Lightning.Projects.{Importer, Project, ProjectCredential}
@@ -40,6 +41,24 @@ defmodule Lightning.Projects do
   def get_project!(id), do: Repo.get!(Project, id)
 
   def get_project(id), do: Repo.get(Project, id)
+
+  @doc """
+  Gets a single project_user.
+
+  Raises `Ecto.NoResultsError` if the ProjectUser does not exist.
+
+  ## Examples
+
+      iex> get_project_user!(123)
+      %ProjectUser{}
+
+      iex> get_project_user!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_project_user!(id), do: Repo.get!(ProjectUser, id)
+
+  def get_project_user(id), do: Repo.get(ProjectUser, id)
 
   @doc """
   Gets a single project with it's members via `project_users`.
@@ -91,6 +110,24 @@ defmodule Lightning.Projects do
   def update_project(%Project{} = project, attrs) do
     project
     |> Project.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Updates a project user.
+
+  ## Examples
+
+      iex> update_project_user(project_user, %{field: new_value})
+      {:ok, %ProjectUser{}}
+
+      iex> update_project_user(projectUser, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_project_user(%ProjectUser{} = project_user, attrs) do
+    project_user
+    |> ProjectUser.changeset(attrs)
     |> Repo.update()
   end
 

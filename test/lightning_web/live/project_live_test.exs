@@ -224,7 +224,7 @@ defmodule LightningWeb.ProjectLiveTest do
                |> Phoenix.HTML.Safe.to_iodata()
                |> to_string()
 
-      assert html =~ project_user.role |> Atom.to_string()
+      assert html =~ project_user.role |> Atom.to_string() |> String.capitalize()
 
       assert html =~
                "#{project_user.user.first_name} #{project_user.user.last_name}"
@@ -376,6 +376,106 @@ defmodule LightningWeb.ProjectLiveTest do
              )
 
       assert view |> has_element?("button[disabled][type=submit]")
+    end
+
+    test "project members can edit their own digest frequency and failure alert settings",
+         %{conn: conn, user: authenticated_user} do
+      unauthenticated_user = user_fixture()
+
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [
+            %{
+              user_id: authenticated_user.id,
+              digest: :never,
+              failure_alert: false
+            },
+            %{
+              user_id: unauthenticated_user.id,
+              digest: :daily,
+              failure_alert: true
+            }
+          ]
+        })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#collaboration"
+        )
+
+      authenticated_user_project_user =
+        project.project_users
+        |> Enum.find(fn pu -> pu.user_id == authenticated_user.id end)
+
+      unauthenticated_user_project_user =
+        project.project_users
+        |> Enum.find(fn pu -> pu.user_id == unauthenticated_user.id end)
+
+      assert view
+             |> element("#project_user-#{unauthenticated_user_project_user.id}")
+             |> render() =~
+               "Enabled"
+
+      assert_raise ArgumentError, fn ->
+        view
+        |> element("#project_user-#{unauthenticated_user_project_user.id}")
+        |> render_click()
+      end
+
+      assert view
+             |> element("#project_user-#{authenticated_user_project_user.id}")
+             |> render() =~
+               "Daily"
+
+      assert view
+             |> element(
+               "#failure-alert-#{authenticated_user_project_user.id} option[selected]"
+             )
+             |> render() =~ "Disabled"
+
+      assert view
+             |> element("#failure-alert-#{authenticated_user_project_user.id}")
+             |> render_change(%{
+               "project_user_id" => authenticated_user_project_user.id,
+               "value" => true
+             }) =~ "Project user updated successfuly"
+
+      assert view
+             |> element(
+               "#failure-alert-#{authenticated_user_project_user.id} option[selected]"
+             )
+             |> render() =~
+               "Enabled"
+
+      assert view
+             |> element(
+               "#digest-#{authenticated_user_project_user.id} option[selected]"
+             )
+             |> render() =~
+               "Never"
+
+      assert view
+             |> element("#digest-#{authenticated_user_project_user.id}")
+             |> render_change(%{
+               "project_user_id" => authenticated_user_project_user.id,
+               "value" => true
+             }) =~ "Never"
+
+      assert view
+             |> element("#digest-#{authenticated_user_project_user.id}")
+             |> render_change(%{
+               "project_user_id" => authenticated_user_project_user.id,
+               "value" => "daily"
+             }) =~ "Project user updated successfuly"
+
+      assert view
+             |> element(
+               "#digest-#{authenticated_user_project_user.id} option[selected]"
+             )
+             |> render() =~ "Daily"
     end
   end
 end

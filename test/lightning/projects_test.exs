@@ -1,6 +1,7 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
 
@@ -56,6 +57,28 @@ defmodule Lightning.ProjectsTest do
       assert Projects.get_project_with_users!(project.id) == project
     end
 
+    test "get_project_user!/1 returns the project_user with given id" do
+      project_user =
+        project_fixture(project_users: [%{user_id: user_fixture().id}]).project_users
+        |> List.first()
+
+      assert Projects.get_project_user!(project_user.id) == project_user
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Projects.get_project_user!(Ecto.UUID.generate())
+      end
+    end
+
+    test "get_project_user/1 returns the project_user with given id" do
+      assert Projects.get_project_user(Ecto.UUID.generate()) == nil
+
+      project_user =
+        project_fixture(project_users: [%{user_id: user_fixture().id}]).project_users
+        |> List.first()
+
+      assert Projects.get_project_user(project_user.id) == project_user
+    end
+
     test "create_project/1 with valid data creates a project" do
       %{id: user_id} = user_fixture()
       valid_attrs = %{name: "some-name", project_users: [%{user_id: user_id}]}
@@ -94,6 +117,54 @@ defmodule Lightning.ProjectsTest do
                Projects.update_project(project, @invalid_attrs)
 
       assert project == Projects.get_project!(project.id)
+    end
+
+    test "update_project_user/2 with valid data updates the project_user" do
+      project =
+        project_fixture(
+          project_users: [
+            %{
+              user_id: user_fixture().id,
+              role: :viewer,
+              digest: :daily,
+              failure_alert: false
+            }
+          ]
+        )
+
+      update_attrs = %{digest: "weekly"}
+
+      assert {:ok, %ProjectUser{} = project_user} =
+               Projects.update_project_user(
+                 project.project_users |> List.first(),
+                 update_attrs
+               )
+
+      assert project_user.digest == :weekly
+      assert project_user.failure_alert == false
+    end
+
+    test "update_project_user/2 with invalid data returns error changeset" do
+      project =
+        project_fixture(
+          project_users: [
+            %{
+              user_id: user_fixture().id,
+              role: :viewer,
+              digest: :monthly,
+              failure_alert: true
+            }
+          ]
+        )
+
+      project_user = project.project_users |> List.first()
+
+      update_attrs = %{digest: "bad_value"}
+
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.update_project_user(project_user, update_attrs)
+
+      assert project_user == Projects.get_project_user!(project_user.id)
     end
 
     test "delete_project/1 deletes the project" do

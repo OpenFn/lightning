@@ -164,11 +164,21 @@ defmodule Lightning.PermissionsTest do
 
       refute ProjectUsers
              |> Permissions.can(:add_project_collaborator, viewer, project)
+
+      viewer_project_user = project.project_users |> Enum.at(0)
+      editor_project_user = project.project_users |> Enum.at(1)
+
+      assert ProjectUsers
+             |> Permissions.can(:edit_project_user, viewer, viewer_project_user)
+
+      refute ProjectUsers
+             |> Permissions.can(:edit_project_user, viewer, editor_project_user)
     end
 
     test "editor permissions", %{project: project, editor: editor} do
       assert ProjectUsers |> Permissions.can(:create_workflow, editor, project)
       assert ProjectUsers |> Permissions.can(:edit_jobs, editor, project)
+
       assert ProjectUsers |> Permissions.can(:create_job, editor, project)
       assert ProjectUsers |> Permissions.can(:delete_job, editor, project)
       assert ProjectUsers |> Permissions.can(:run_job, editor, project)
@@ -220,6 +230,15 @@ defmodule Lightning.PermissionsTest do
 
       refute ProjectUsers
              |> Permissions.can(:add_project_collaborator, editor, project)
+
+      viewer_project_user = project.project_users |> Enum.at(0)
+      editor_project_user = project.project_users |> Enum.at(1)
+
+      assert ProjectUsers
+             |> Permissions.can(:edit_project_user, editor, editor_project_user)
+
+      refute ProjectUsers
+             |> Permissions.can(:edit_project_user, editor, viewer_project_user)
     end
 
     test "admin permissions", %{project: project, admin: admin} do
@@ -276,6 +295,15 @@ defmodule Lightning.PermissionsTest do
 
       assert ProjectUsers
              |> Permissions.can(:add_project_collaborator, admin, project)
+
+      viewer_project_user = project.project_users |> Enum.at(0)
+      admin_project_user = project.project_users |> Enum.at(2)
+
+      assert ProjectUsers
+             |> Permissions.can(:edit_project_user, admin, admin_project_user)
+
+      refute ProjectUsers
+             |> Permissions.can(:edit_project_user, admin, viewer_project_user)
     end
 
     test "owner permissions", %{project: project, owner: owner} do
@@ -332,6 +360,15 @@ defmodule Lightning.PermissionsTest do
 
       assert ProjectUsers
              |> Permissions.can(:add_project_collaborator, owner, project)
+
+      viewer_project_user = project.project_users |> Enum.at(0)
+      owner_project_user = project.project_users |> Enum.at(3)
+
+      assert ProjectUsers
+             |> Permissions.can(:edit_project_user, owner, owner_project_user)
+
+      refute ProjectUsers
+             |> Permissions.can(:edit_project_user, owner, viewer_project_user)
     end
 
     # For things like :view_job we should be able to show that people who do not

@@ -10,6 +10,10 @@ and this project adheres to
 
 ### Added
 
+- Added the ability for users to receive a digest email reporting on a specified
+  project. [#638](https://github.com/OpenFn/Lightning/issues/638)
+  [#585](https://github.com/OpenFn/Lightning/issues/585)
+
 ### Changed
 
 ### Fixed

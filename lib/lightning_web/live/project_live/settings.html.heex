@@ -49,7 +49,7 @@
             </div>
             <.form
               :let={f}
-              for={@changeset}
+              for={@project_changeset}
               id="project-settings-form"
               phx-change="validate"
               phx-submit="save"
@@ -90,7 +90,7 @@
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
                   <LightningWeb.Components.Form.submit_button
-                    disabled={!@changeset.valid? || !@can_edit_project}
+                    disabled={!(@project_changeset.valid? and @can_edit_project)}
                     phx-disable-with="Saving"
                   >
                     Save
@@ -149,14 +149,30 @@
             <.tr>
               <.th>Collaborator</.th>
               <.th>Role</.th>
+              <.th>Failure Alert</.th>
+              <.th>Digest</.th>
             </.tr>
 
             <%= for project_user <- @project_users do %>
               <.tr id={"project_user-#{project_user.id}"}>
                 <.td>
-                  <%= project_user.user.first_name %> <%= project_user.user.last_name %>
+                  <.user project_user={project_user} />
                 </.td>
-                <.td><%= project_user.role %></.td>
+                <.td>
+                  <.role project_user={project_user} />
+                </.td>
+                <.td>
+                  <.failure_alert
+                    current_user={@current_user}
+                    project_user={project_user}
+                  />
+                </.td>
+                <.td>
+                  <.digest
+                    current_user={@current_user}
+                    project_user={project_user}
+                  />
+                </.td>
               </.tr>
             <% end %>
           </.table>
