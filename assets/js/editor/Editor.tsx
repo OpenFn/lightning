@@ -155,7 +155,6 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [metadata, setMetadata] = useState();
   const [loading, setLoading] = useState(false);
-  const [completionProvider, setCompletionProvider] = useState();
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
   const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject}>({});
@@ -208,14 +207,18 @@ export default function Editor({ source, adaptor, onChange }: EditorProps) {
   }, []);
 
   useEffect(() => {
-    if (completionProvider) {
-      console.log(' * reset provider')
-      completionProvider.dispose();
-    }
     if (monaco && metadata) {
-      const newProvider = createCompletionProvider(monaco, metadata);
-      setCompletionProvider(newProvider)
-      monaco.languages.registerCompletionItemProvider('javascript', newProvider);
+      const p = monaco.languages.registerCompletionItemProvider(
+        'javascript',
+        createCompletionProvider(monaco, metadata)
+      );
+      return () => {
+        // Note: For now, whenever the adaptor changes, the editor will be un-mounted and remounted, so this is safe
+        // If and when the adaptor can be seamlessly changed, we'll have to be a bit smarter about how we dispose of the
+        // completion handler. State doesn't work very well, we probably need a ref for this
+        // If metadata is passed as a prop, this becomes a little bit easier to manage
+        p.dispose();
+      }
     }
   }, [monaco, metadata]);
 

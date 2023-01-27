@@ -7,7 +7,7 @@ import jp from 'jsonpath';
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
 
 const createCompletionProvider = (monaco, metadata) => {
-  console.log(metadata);
+  console.log('create provider');
   const query = (jsonPath: string) => ensureArray(jp.query(metadata, jsonPath));
 
   // Run a jsonpath query and return the results
@@ -210,6 +210,7 @@ const createCompletionProvider = (monaco, metadata) => {
   // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ITextModel.html
   return {
     provideCompletionItems: async function (model, position, context) {
+      console.log('** provideCompletionItems');
       const offset = model.getOffsetAt(position);
 
       const workerFactory =
