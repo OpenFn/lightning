@@ -1,13 +1,8 @@
-// import React, { useState, useCallback, useEffect } from 'react';
-// import Monaco from "@monaco-editor/react";
-// import type { EditorProps as MonacoProps } from  "@monaco-editor/react/lib/types";
-
 import jp from 'jsonpath';
 
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
 
 const createCompletionProvider = (monaco, metadata) => {
-  console.log('create provider');
   const query = (jsonPath: string) => ensureArray(jp.query(metadata, jsonPath));
 
   // Run a jsonpath query and return the results
@@ -147,7 +142,6 @@ const createCompletionProvider = (monaco, metadata) => {
           }
         });
         if (lookup) {
-          console.log(lookup);
           // Check all the matching lookups to find the appropriate one
           // This is complicated because we may be inside an object definition with lookup values
           const [_name, ...e] = lookup.text[0].text.split(/\s/);
@@ -210,7 +204,6 @@ const createCompletionProvider = (monaco, metadata) => {
   // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.ITextModel.html
   return {
     provideCompletionItems: async function (model, position, context) {
-      console.log('** provideCompletionItems');
       const offset = model.getOffsetAt(position);
 
       const workerFactory =
