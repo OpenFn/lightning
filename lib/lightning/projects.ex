@@ -4,6 +4,7 @@ defmodule Lightning.Projects do
   """
 
   import Ecto.Query, warn: false
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Repo
 
   alias Lightning.Projects.{Importer, Project, ProjectCredential}

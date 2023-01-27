@@ -95,4 +95,26 @@ defmodule Lightning.Accounts.UserNotifier do
     ==============================
     """)
   end
+
+  defp build_digest(digest) do
+    """
+    #{digest.workflow}:
+    - #{digest.successful_workorders} workorders correctly processed this month/day/week
+    - #{digest.rerun_workorders} failed work orders that were rerun and then processed correctly
+    - #{digest.failed_workorders} work orders that failed/still need addressing
+
+    """
+  end
+
+  @doc """
+  Deliver a digest for a project to a user.
+  """
+  def deliver_project_digest(user, project, digests) do
+    body =
+      digests
+      |> Enum.map(fn digest -> build_digest(digest) end)
+      |> Enum.join("")
+
+    deliver(user.email, "Weekly digest for project #{project.name}", body)
+  end
 end
