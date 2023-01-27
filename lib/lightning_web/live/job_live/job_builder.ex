@@ -228,7 +228,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             to: @return_to
           ) %>
           <Form.submit_button
-            disabled={!@changeset.valid? or !@can_edit}
+            disabled={!(@changeset.valid? and @can_edit)}
             phx-disable-with="Saving"
             form="job-form"
           >
