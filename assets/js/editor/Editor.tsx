@@ -8,7 +8,9 @@ import createCompletionProvider from './magic-completion';
 // TMP static imports for stuff we'll soon want to pull down dynamically
 import dts_es5 from './lib/es5.min.dts';
 import dts_dhis2 from './lib/dhis2.dts';
+import dts_salesforce from './lib/salesforce.dts.js';
 import metadata_dhis2 from './metadata/dhis2.js'
+import metadata_salesforce from './metadata/salesforce.js'
 
 const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
 
@@ -79,14 +81,17 @@ const defaultOptions: MonacoProps['options'] = {
 
 type Lib = {
   content: string;
-  filePath: string;
-};
+  filepath?: string;
+}
 
 // TODO move into external file
 // TODO do we pull metadata from an endpoint or does it get pushed to us via an event?
 async function loadMetadata(specifier: string, credentialId:  string) {
   if (specifier.match('dhis2')) {
     return metadata_dhis2;
+  }
+  if (specifier.match('salesforce')) {
+    return metadata_salesforce;
   }
 }
 
@@ -96,19 +101,34 @@ async function loadMetadata(specifier: string, credentialId:  string) {
 // b) I take an env var which points to adaptors and people have to set up their local env
 // Let's just get it working locally for now
 async function loadMagicDts(name: string) {
-  return [{
+  let content;
+  if (name === 'dhis2') {
+    content = dts_dhis2
+  } else if (name === 'salesforce') {
+    content = dts_salesforce
+  }
+  
+  const result: Lib[] = [{
     content: dts_es5
-  },
-  {
-    content: `declare namespace "@openfn/language-dhis2" { ${dts_dhis2} }`,
-    filepath: `${name}/index.d.ts`
-  }] as Lib[];
+  }];
+
+  if (content) {
+    result.push({
+      content: `declare namespace "@openfn/language-${name}" { ${content} }`,
+      filepath: `${name}/index.d.ts`
+    })
+  }
+
+  return result;
 }
 
 async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
   if (specifier.match('dhis2')) {
     return loadMagicDts('dhis2')
+  } else if (specifier.match('salesforce')) {
+    return loadMagicDts('salesforce')
   }
+
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');

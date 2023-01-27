@@ -7,6 +7,7 @@ import jp from 'jsonpath';
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
 
 const createCompletionProvider = (monaco, metadata) => {
+  console.log(metadata);
   const query = (jsonPath: string) => ensureArray(jp.query(metadata, jsonPath));
 
   // Run a jsonpath query and return the results
@@ -136,7 +137,6 @@ const createCompletionProvider = (monaco, metadata) => {
 
     if (help && help.items.length) {
       const param = help.items[0].parameters[help.argumentIndex];
-      console.log(param);
 
       if (param) {
         // Check the lookup rule for this paramter
@@ -147,6 +147,7 @@ const createCompletionProvider = (monaco, metadata) => {
           }
         });
         if (lookup) {
+          console.log(lookup);
           // Check all the matching lookups to find the appropriate one
           // This is complicated because we may be inside an object definition with lookup values
           const [_name, ...e] = lookup.text[0].text.split(/\s/);
