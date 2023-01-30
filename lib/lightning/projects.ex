@@ -6,7 +6,7 @@ defmodule Lightning.Projects do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Projects.{Project, ProjectCredential}
+  alias Lightning.Projects.{Project, ProjectCredential, ProjectUser}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
 
@@ -237,7 +237,7 @@ defmodule Lightning.Projects do
     {:ok, yaml}
   end
 
-  @spec import_project(any) :: {:ok, binary}
+  @spec import_project(any, any) :: {:ok, binary}
   @doc """
   Imports a project as map.
 
@@ -247,9 +247,43 @@ defmodule Lightning.Projects do
       {:ok, string}
 
   """
-  def import_project(attrs) do
-    attrs
-    |> Project.import_changeset()
-    |> Repo.insert()
+  def import_project(project_data, user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.insert(:project, fn _ ->
+      Project.import_changeset(project_data, user)
+    end)
+    |> Ecto.Multi.insert(:project_user, fn %{project: project} ->
+      %ProjectUser{}
+      |> ProjectUser.changeset(%{project_id: project.id, user_id: user.id})
+    end)
+    |> put_credentials(project_data, user)
+    |> Repo.transaction()
+  end
+
+  defp put_credentials(multi, project_data, user) do
+    credentials = project_data[:credentials]
+
+    credentials
+    |> Enum.reduce(multi, fn credential, m ->
+      Ecto.Multi.insert(m, "credential::#{credential.key}", fn %{
+                                                                 project: project
+                                                               } ->
+        id = Ecto.UUID.generate()
+
+        attrs =
+          credential
+          |> Map.put(:id, id)
+          |> Map.put(:user_id, user.id)
+          |> Map.put(:project_credentials, [
+            %{
+              project_id: project.id,
+              credential_id: id
+            }
+          ])
+
+        %Lightning.Credentials.Credential{}
+        |> Lightning.Credentials.Credential.changeset(attrs)
+      end)
+    end)
   end
 end

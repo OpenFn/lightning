@@ -40,7 +40,7 @@ defmodule Lightning.Projects.Project do
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
   end
 
-  def import_changeset(attrs) do
+  def import_changeset(attrs, %Lightning.Accounts.User{id: user_id}) do
     %__MODULE__{}
     |> changeset(attrs)
     |> cast_assoc(:workflows,

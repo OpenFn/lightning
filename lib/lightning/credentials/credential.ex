@@ -33,9 +33,16 @@ defmodule Lightning.Credentials.Credential do
     credential
     |> cast(attrs, [:name, :body, :production, :user_id, :schema])
     |> cast_assoc(:project_credentials)
-    |> validate_required([:name, :body, :user_id, :schema])
+    |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
     |> validate_transfer_ownership()
+  end
+
+  def import_changeset(credential, attrs, user_id) do
+    attrs = Map.merge(attrs, %{project_credentials: [%{user_id: user_id}]})
+
+    credential
+    |> changeset(attrs)
   end
 
   defp validate_transfer_ownership(changeset) do
