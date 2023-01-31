@@ -12,8 +12,7 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
-config :lightning, :email_addresses,
-  admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
+config :lightning, :email_addresses, admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
 
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
@@ -30,7 +29,10 @@ config :lightning, Oban,
      crontab: [
        {"* * * * *", Lightning.Jobs.Scheduler},
        {"* * * * *", ObanPruner},
-       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}}
+       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+       {"0 10 * * *", Lightning.Projects, args: %{"type" => "daily_project_digest"}},
+       {"0 10 * * MON", Lightning.Accounts, args: %{"type" => "weekly_project_digest"}},
+       {"0 10 1 * *", Lightning.Accounts, args: %{"type" => "monthly_project_digest"}}
      ]}
   ],
   shutdown_grace_period:
@@ -74,8 +76,7 @@ config :lightning,
 config :sentry,
   filter: Lightning.SentryEventFilter,
   environment_name: config_env(),
-  included_environments:
-    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
+  included_environments: if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We

@@ -4,6 +4,7 @@ defmodule Lightning.Projects do
   """
 
   import Ecto.Query, warn: false
+  alias Lightning.Projects.ProjectUser
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Repo
 
@@ -253,4 +254,49 @@ defmodule Lightning.Projects do
     Importer.import_multi_for_project(project_data, user)
     |> Repo.transaction()
   end
+
+  def get_project_digest(project) do
+    workflows = Workflows.get_workflows_for(project) |> IO.inspect(label: "Workflows")
+
+    digest =
+      Enum.map(workflows, fn workflow -> workflow_digest(workflow) end)
+      |> IO.inspect(label: "Digest")
+
+    digest
+  end
+
+  defp get_project_users_by_digest(digest),
+    do:
+      Repo.all(
+        from(pu in ProjectUser,
+          where: pu.digest == ^digest,
+          preload: [:project, :user]
+        )
+      )
+
+  @doc """
+  Perform, when called with %{"type" => "daily_project_digest"} will find project_users with digest set to daily and send a digest email to them everyday at 10am
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "daily_project_digest"}}) do
+    project_users = get_project_users_by_digest(:daily)
+
+    # :ok = Enum.each(users, fn u -> purge_user(u.id) end)
+
+    # {:ok, %{users_deleted: users}}
+  end
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "weekly_project_digest"}}) do
+    _project_users = get_project_users_by_digest(:weekly)
+  end
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "monthly_project_digest"}}) do
+    _project_users = get_project_users_by_digest(:monthly)
+  end
+
+  # def deliver_digest_email(project, user, frequency) do
+  #   UserNotifier.deliver_project_digest(user, project, digests)
+  # end
 end
