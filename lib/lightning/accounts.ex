@@ -310,15 +310,6 @@ defmodule Lightning.Accounts do
     )
   end
 
-  # def another_password_change(user, password) do
-  #   # Create a changeset for the password change
-  #   changeset =
-  #     Ecto.Changeset.change(user)
-  #     |> User.validate_current_password(password)
-
-
-  # end
-
   @doc """
   Deletes a user.
 

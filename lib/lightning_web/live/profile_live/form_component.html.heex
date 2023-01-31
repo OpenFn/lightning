@@ -12,7 +12,7 @@
     :let={f}
     for={@email_changeset}
     phx-change="validate_email"
-    phx-submit="save_email"
+    phx-submit="change_email"
     phx-target={@myself}
     id="email_form"
   >
@@ -41,7 +41,7 @@
     </div>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :current_password, "Password",
+        <%= label(f, :current_password, "Enter password to confirm",
           class: "block text-sm font-medium text-secondary-700"
         ) %>
         <%= password_input(f, :current_password,
