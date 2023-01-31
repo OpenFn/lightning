@@ -88,9 +88,14 @@ defmodule Lightning.SetupUtils do
 
     {:ok, job_1} =
       Jobs.create_job(%{
-        name: "Check if age is over 18 mo",
-        body:
-          "fn(state => state.data.age_in_months > 18 ? state: throw 'Not eligible.');",
+        name: "Job 1 - Check if age is over 18 months",
+        body: ~s[fn(state => {
+            if (state.data.age_in_months > 18) {
+              console.log("Eligible for program.");
+              return state;
+            }
+            else { throw "Error, patient ineligible." }
+          });],
         adaptor: "@openfn/language-http@latest",
         trigger: %{type: "webhook"},
         enabled: true,
@@ -99,9 +104,11 @@ defmodule Lightning.SetupUtils do
 
     {:ok, job_2} =
       Jobs.create_job(%{
-        name: "Convert to OHIE standard",
-        body:
-          "fn(state => ({ name: state.data.age, age: state.data.age_in_months });",
+        name: "Job 2 - Convert data to DHIS2 format",
+        body: ~s[fn(state => {
+          const names = state.data.name.split(" ");
+          return { ...state, names };
+        });],
         adaptor: "@openfn/language-common",
         trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
         enabled: true,
@@ -110,8 +117,21 @@ defmodule Lightning.SetupUtils do
 
     {:ok, job_3} =
       Jobs.create_job(%{
-        name: "Load to DHIS2",
-        body: "fn(state => state);",
+        name: "Job 3 - Upload to DHIS2",
+        body: "create('trackedEntityInstances', {
+          trackedEntityType: 'nEenWmSyUEp', // a person
+          orgUnit: 'DiszpKrYNg8',
+          attributes: [
+            {
+              attribute: 'w75KJ2mc4zz', // attribute id for first name
+              value: state.names[0] // the first name from submission
+            },
+            {
+              attribute: 'zDhUuAYrxNC', // attribute id for last name
+              value: state.names[1] // the last name from submission
+            }
+          ]
+          });",
         adaptor: "@openfn/language-dhis2@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
