@@ -2,6 +2,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type Editor from './Editor';
 
+import metadata_dhis2 from './metadata/dhis2.js'
+import metadata_salesforce from './metadata/salesforce.js'
+
 interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
   destroyed(): void;
@@ -14,6 +17,8 @@ interface EditorEntrypoint {
   observer: MutationObserver | null;
   render(): void;
   setupObserver(): void;
+  loadMetadata(): Promise<object>;
+  metadata: object | undefined;
 }
 
 type AttributeMutationRecord = MutationRecord & {
@@ -23,7 +28,26 @@ type AttributeMutationRecord = MutationRecord & {
 
 let EditorComponent: typeof Editor | undefined;
 
+let metadata: object;
+
 export default {
+  // Temporary loading hook
+  loadMetadata() {
+    const { adaptor } = this.el.dataset;
+    return new Promise(() => {
+      // TODO what if the metadata changes in flight?
+      // May need to double check the adaptor value
+      if (adaptor) {
+        if (adaptor.match('dhis2')) {
+          metadata = metadata_dhis2;
+        }
+        else {
+          metadata = metadata_salesforce;
+        }
+        this.render();
+      } 
+    });
+  },
   mounted(this: EditorEntrypoint) {
     import('./Editor').then(module => {
       EditorComponent = module.default as typeof Editor;
@@ -37,6 +61,7 @@ export default {
       }
       this.setupObserver();
       this.render();
+      this.loadMetadata();
     });
   },
   handleContentChange(content: string) {
@@ -49,6 +74,7 @@ export default {
         <EditorComponent
           adaptor={adaptor}
           source={source}
+          metadata={metadata}
           onChange={src => this.handleContentChange(src)}
         />
       );
