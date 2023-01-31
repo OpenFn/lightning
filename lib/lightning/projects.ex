@@ -256,11 +256,10 @@ defmodule Lightning.Projects do
   end
 
   def get_project_digest(project) do
-    workflows = Workflows.get_workflows_for(project) |> IO.inspect(label: "Workflows")
+    workflows =
+      Workflows.get_workflows_for(project) |> IO.inspect(label: "Workflows")
 
-    digest =
-      Enum.map(workflows, fn workflow -> workflow_digest(workflow) end)
-      |> IO.inspect(label: "Digest")
+    digest = Enum.map(workflows, fn workflow -> workflow_digest(workflow) end)
 
     digest
   end

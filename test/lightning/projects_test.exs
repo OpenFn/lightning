@@ -62,15 +62,18 @@ defmodule Lightning.ProjectsTest do
       %{id: user_id} = user_fixture()
       valid_attrs = %{name: "some-name", project_users: [%{user_id: user_id}]}
 
-      assert {:ok, %Project{id: project_id} = project} = Projects.create_project(valid_attrs)
+      assert {:ok, %Project{id: project_id} = project} =
+               Projects.create_project(valid_attrs)
 
       assert project.name == "some-name"
 
-      assert [%{project_id: ^project_id, user_id: ^user_id}] = project.project_users
+      assert [%{project_id: ^project_id, user_id: ^user_id}] =
+               project.project_users
     end
 
     test "create_project/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = Projects.create_project(@invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.create_project(@invalid_attrs)
 
       assert {:error, %Ecto.Changeset{}} =
                Projects.create_project(%{"name" => "Can't have spaces!"})
@@ -80,7 +83,8 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture()
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, %Project{} = project} = Projects.update_project(project, update_attrs)
+      assert {:ok, %Project{} = project} =
+               Projects.update_project(project, update_attrs)
 
       assert project.name == "some-updated-name"
     end
@@ -88,7 +92,8 @@ defmodule Lightning.ProjectsTest do
     test "update_project/2 with invalid data returns error changeset" do
       project = project_fixture() |> unload_relation(:project_users)
 
-      assert {:error, %Ecto.Changeset{}} = Projects.update_project(project, @invalid_attrs)
+      assert {:error, %Ecto.Changeset{}} =
+               Projects.update_project(project, @invalid_attrs)
 
       assert project == Projects.get_project!(project.id)
     end
@@ -112,7 +117,9 @@ defmodule Lightning.ProjectsTest do
       other_user = user_fixture()
 
       project_1 =
-        project_fixture(project_users: [%{user_id: user.id}, %{user_id: other_user.id}])
+        project_fixture(
+          project_users: [%{user_id: user.id}, %{user_id: other_user.id}]
+        )
         |> Repo.reload()
 
       project_2 =
@@ -183,8 +190,9 @@ defmodule Lightning.ProjectsTest do
       user = user_fixture()
 
       project =
-        full_project_fixture(project_users: [%{user_id: user.id, digest: :daily}])
-        |> IO.inspect()
+        full_project_fixture(
+          project_users: [%{user_id: user.id, digest: :daily}]
+        )
 
       # |> Repo.preload(project_users: [:user])
 
