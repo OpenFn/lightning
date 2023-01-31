@@ -33,7 +33,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        can_edit_project: can_edit_project,
        credentials: credentials,
        project_users: project_users,
-       changeset: Projects.change_project(socket.assigns.project)
+       project_changeset: Projects.change_project(socket.assigns.project)
      )}
   end
 
@@ -53,7 +53,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       |> Projects.change_project(project_params)
       |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
+    {:noreply, assign(socket, :project_changeset, changeset)}
   end
 
   def handle_event("save", %{"project" => project_params} = _params, socket) do
@@ -69,7 +69,7 @@ defmodule LightningWeb.ProjectLive.Settings do
          |> put_flash(:info, "Project updated successfully")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:noreply, assign(socket, :project_changeset, changeset)}
     end
   end
 end
