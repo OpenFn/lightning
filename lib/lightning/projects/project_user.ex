@@ -23,6 +23,12 @@ defmodule Lightning.Projects.ProjectUser do
     :owner
   ])
 
+  defenum(DigestEnum, :digest, [
+    :daily,
+    :weekly,
+    :monthly
+  ])
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "project_users" do
@@ -31,6 +37,7 @@ defmodule Lightning.Projects.ProjectUser do
     field :delete, :boolean, virtual: true
     field :failure_alert, :boolean, default: true
     field :role, RolesEnum, default: :editor
+    field :digest, DigestEnum, default: :weekly
 
     timestamps()
   end
