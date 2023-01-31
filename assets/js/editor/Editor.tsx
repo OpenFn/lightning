@@ -9,14 +9,13 @@ import createCompletionProvider from './magic-completion';
 import dts_es5 from './lib/es5.min.dts';
 import dts_dhis2 from './lib/dhis2.dts';
 import dts_salesforce from './lib/salesforce.dts.js';
-import metadata_dhis2 from './metadata/dhis2.js'
-import metadata_salesforce from './metadata/salesforce.js'
 
 const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
 
 type EditorProps = {
   source?: string;
   adaptor?: string; // fully specified adaptor name - <id>@<version>
+  metadata?: object; // TODO I can actually this very effectively from adaptors...
   onChange?: (newSource: string) => void;
   disabled?: boolean;
 };
@@ -84,20 +83,9 @@ type Lib = {
   filepath?: string;
 }
 
-// TODO move into external file
-// TODO do we pull metadata from an endpoint or does it get pushed to us via an event?
-async function loadMetadata(specifier: string, credentialId:  string) {
-  if (specifier.match('dhis2')) {
-    return metadata_dhis2;
-  }
-  if (specifier.match('salesforce')) {
-    return metadata_salesforce;
-  }
-}
-
 // temporary function that will load the magic dts locally
-// IDK how to share this.
-// a) I publish a specially tagged adaptor version (not that jsdelivvr doesn't support tags)
+// not sure where this lives?
+// a) I publish a specially tagged adaptor version (not that jsdelivr doesn't support tags)
 // b) I take an env var which points to adaptors and people have to set up their local env
 // Let's just get it working locally for now
 async function loadMagicDts(name: string) {
@@ -164,9 +152,9 @@ export default function Editor({
   adaptor,
   onChange,
   disabled,
+  metadata,
 }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
-  const [metadata, setMetadata] = useState();
   const [loading, setLoading] = useState(false);
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
@@ -275,8 +263,6 @@ export default function Editor({
     if (adaptor) {
       setLoading(true);
       setLib([]); // instantly clear intelligence
-      loadMetadata(adaptor, "credential_id")
-        .then((m) => setMetadata(m));
       loadDTS(adaptor)
         .then(l => {
           setLib(l)
