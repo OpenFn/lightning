@@ -32,12 +32,12 @@ defmodule Lightning.Projects.ProjectUser do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "project_users" do
-    belongs_to :user, User
-    belongs_to :project, Project
-    field :delete, :boolean, virtual: true
-    field :failure_alert, :boolean, default: true
-    field :role, RolesEnum, default: :editor
-    field :digest, DigestEnum, default: :weekly
+    belongs_to(:user, User)
+    belongs_to(:project, Project)
+    field(:delete, :boolean, virtual: true)
+    field(:failure_alert, :boolean, default: true)
+    field(:role, RolesEnum, default: :editor)
+    field(:digest, DigestEnum, default: :weekly)
 
     timestamps()
   end
@@ -49,7 +49,7 @@ defmodule Lightning.Projects.ProjectUser do
   @doc false
   def changeset(project_user, attrs) do
     project_user
-    |> cast(attrs, [:user_id, :project_id, :role, :failure_alert])
+    |> cast(attrs, [:user_id, :project_id, :role, :digest, :failure_alert])
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
       message: "User already a member of this project."
