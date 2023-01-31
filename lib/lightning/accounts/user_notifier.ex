@@ -110,11 +110,10 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver a digest for a project to a user.
   """
   def deliver_project_digest(user, project, digests) do
-    body =
-      digests
-      |> Enum.map(fn digest -> build_digest(digest) end)
-      |> Enum.join("")
+    email = user.email
+    title = "Weekly digest for project #{project.name}"
+    body = Enum.map_join(digests, fn digest -> build_digest(digest) end)
 
-    deliver(user.email, "Weekly digest for project #{project.name}", body)
+    deliver(email, title, body)
   end
 end
