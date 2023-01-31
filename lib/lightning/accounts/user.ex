@@ -123,7 +123,9 @@ defmodule Lightning.Accounts.User do
   defp validate_email(changeset) do
     changeset
     |> validate_required([:email, :first_name])
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
+    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
     |> validate_length(:email, max: 160)
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
@@ -234,14 +236,9 @@ defmodule Lightning.Accounts.User do
   end
 
   def current_password_changeset(user, attrs) do
-    IO.inspect(user, label: "User")
-    IO.inspect(attrs, label: "Attr")
-
     user
     |> cast(attrs, [:password])
-    |> IO.inspect(label: "After cast")
     |> validate_current_password(attrs)
-    |> IO.inspect(label: "After vcp")
   end
 
   @doc """

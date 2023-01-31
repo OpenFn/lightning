@@ -19,13 +19,38 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def handle_event(
-        "save_email",
-        %{"user" => %{"email" => email, "current_password" => current_password}} = _user_params,
+        "change_email",
+        %{"user" => %{"email" => email, "current_password" => current_password}} =
+          user_params,
         socket
       ) do
+    # changeset =
+    #   Ecto.Changeset.change(socket.assigns.user)
+    #   |> User.validate_current_password(password)
+
     changeset =
-      Ecto.Changeset.change(socket.assigns.user)
+      socket.assigns.user
+      |> User.password_changeset(user_params)
       |> User.validate_current_password(current_password)
+
+    # case changeset do
+    #   {:ok, _} ->
+    #     Accounts.deliver_update_email_instructions(
+    #       socket.assigns.user,
+    #       email,
+    #       &Routes.user_confirmation_url(socket, :edit, &1)
+    #     )
+
+    #     {:noreply,
+    #      socket
+    #      |> put_flash(
+    #        :info,
+    #        "You will receive an email with instructions shortly."
+    #      )}
+
+    #   {:error, %Ecto.Changeset{} = changeset} ->
+    #     {:noreply, assign(socket, :email_changeset, changeset)}
+    # end
 
     if changeset.valid? do
       Accounts.deliver_update_email_instructions(
@@ -41,29 +66,18 @@ defmodule LightningWeb.ProfileLive.FormComponent do
          "You will receive an email with instructions shortly."
        )}
     else
-      {:noreply, assign(socket, :email_changeset, changeset)}
+      {error_message, _} = changeset.errors[:current_password]
+
+      # {:noreply,
+      #  socket
+      #  |> assign(changeset: changeset, email_changeset: :failed)
+      #  |> put_flash(:error, error_message)}
+
+      {:noreply,
+       socket
+       |> assign(email_changeset: changeset)
+       |> put_flash(:error, error_message)}
     end
-
-    # {:noreply, socket}
-
-    # valid_password = Lightning.Accounts.User.valid_password?(socket.assigns.user, password)
-
-    # if valid_password do
-    #   Accounts.deliver_update_email_instructions(
-    #     socket.assigns.user,
-    #     email,
-    #     &(Routes.user_confirmation_url(socket, :edit, &1) |> IO.inspect())
-    #   )
-
-    #   {:noreply,
-    #    socket
-    #    |> put_flash(
-    #      :info,
-    #      "You will receive an email with instructions shortly."
-    #    )}
-    # else
-    #   {:noreply, socket}
-    # end
   end
 
   @impl true
