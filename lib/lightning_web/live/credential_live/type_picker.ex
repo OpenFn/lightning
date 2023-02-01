@@ -88,7 +88,12 @@ defmodule LightningWeb.CredentialLive.TypePicker do
 
     {:ok,
      socket
-     |> assign(type_options: [{"Raw", "raw"} | schemas_options])}
+     |> assign(
+       type_options: [
+         {"Raw", "raw"},
+         {"Google Sheets", "googlesheets"} | schemas_options
+       ]
+     )}
   end
 
   @impl true
