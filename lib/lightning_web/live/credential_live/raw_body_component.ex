@@ -1,6 +1,9 @@
 defmodule LightningWeb.CredentialLive.RawBodyComponent do
   use LightningWeb, :component
 
+  attr :form, :map, required: true
+  slot :inner_block
+
   def fieldset(assigns) do
     changeset = assigns.form.source
 

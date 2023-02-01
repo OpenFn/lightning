@@ -5,7 +5,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Credentials
-  alias LightningWeb.CredentialLive.{RawBodyComponent, JsonSchemaBodyComponent}
+
+  alias LightningWeb.CredentialLive.{
+    RawBodyComponent,
+    JsonSchemaBodyComponent,
+    GoogleSheetsLive
+  }
+
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   @impl true
@@ -59,9 +65,11 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                             </div>
                           </div>
                         </fieldset>
-                        <div class="hidden sm:block" aria-hidden="true">
-                          <div class="border-t border-secondary-200"></div>
-                          <h1><%= fieldset %></h1>
+                        <div class="space-y-4">
+                          <div class="hidden sm:block" aria-hidden="true">
+                            <div class="border-t border-secondary-200"></div>
+                          </div>
+                          <%= fieldset %>
                         </div>
 
                         <div :if={@show_project_credentials} class="space-y-4">
@@ -119,6 +127,14 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   attr :type, :string, required: true
   attr :form, :map, required: true
   slot :inner_block
+
+  def form_component(%{type: "googlesheets"} = assigns) do
+    ~H"""
+    <GoogleSheetsLive.fieldset :let={l} form={@form}>
+      <%= render_slot(@inner_block, l) %>
+    </GoogleSheetsLive.fieldset>
+    """
+  end
 
   def form_component(%{type: "raw"} = assigns) do
     ~H"""
