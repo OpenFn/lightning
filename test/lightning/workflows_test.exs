@@ -1,6 +1,8 @@
 defmodule Lightning.WorkflowsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.InvocationFixtures
+  alias Lightning.AccountsFixtures
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
   alias Lightning.Jobs
@@ -35,11 +37,9 @@ defmodule Lightning.WorkflowsTest do
       project = ProjectsFixtures.project_fixture()
       valid_attrs = %{name: "some-name", project_id: project.id}
 
-      assert {:ok, %Workflow{} = workflow} =
-               Workflows.create_workflow(valid_attrs)
+      assert {:ok, %Workflow{} = workflow} = Workflows.create_workflow(valid_attrs)
 
-      assert {:error, %Ecto.Changeset{} = changeset} =
-               Workflows.create_workflow(valid_attrs)
+      assert {:error, %Ecto.Changeset{} = changeset} = Workflows.create_workflow(valid_attrs)
 
       assert %{
                name: [
@@ -54,8 +54,7 @@ defmodule Lightning.WorkflowsTest do
       workflow = WorkflowsFixtures.workflow_fixture()
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, %Workflow{} = workflow} =
-               Workflows.update_workflow(workflow, update_attrs)
+      assert {:ok, %Workflow{} = workflow} = Workflows.update_workflow(workflow, update_attrs)
 
       assert workflow.name == "some-updated-name"
     end
@@ -148,14 +147,10 @@ defmodule Lightning.WorkflowsTest do
       assert w2.deleted_at == nil
 
       assert (w1
-              |> Repo.preload(
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+              |> Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])) in results
 
       assert (w2
-              |> Repo.preload(
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+              |> Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])) in results
 
       assert length(results) == 2
     end
@@ -206,5 +201,63 @@ defmodule Lightning.WorkflowsTest do
 
       assert Jobs.get_job!(job_2.id).enabled == false
     end
+  end
+
+  describe "Project digest" do
+    test "Gets daily project digest data and sends email to users" do
+      user = AccountsFixtures.user_fixture()
+
+      project =
+        ProjectsFixtures.project_fixture(project_users: [%{user_id: user.id, digest: :daily}])
+
+      workflow = WorkflowsFixtures.workflow_fixture(project_id: project.id)
+      job = JobsFixtures.job_fixture(project_id: project.id, workflow_id: workflow.id)
+
+      workorder_1 = InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+      _workorder_2 = InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+      reason = InvocationFixtures.reason_fixture(trigger_id: job.trigger.id)
+
+      create_run(workorder_1, reason, %{
+        project_id: project.id,
+        job_id: job.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 0,
+        finished_at: Timex.now()
+      })
+
+      create_run(workorder_1, reason, %{
+        project_id: project.id,
+        job_id: job.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 0,
+        finished_at: Timex.now()
+      })
+
+      create_run(workorder_1, reason, %{
+        project_id: project.id,
+        job_id: job.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 1,
+        finished_at: Timex.now()
+      })
+
+      create_run(workorder_1, reason, %{
+        project_id: project.id,
+        job_id: job.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 1,
+        finished_at: Timex.now()
+      })
+
+      Workflows.get_digest_data(workflow |> Repo.preload(:work_orders), :daily) |> IO.inspect()
+    end
+  end
+
+  defp create_run(workorder, reason, run_params) do
+    Lightning.AttemptService.build_attempt(workorder, reason)
+    |> Ecto.Changeset.put_assoc(:runs, [
+      Lightning.Invocation.Run.changeset(%Lightning.Invocation.Run{}, run_params)
+    ])
+    |> Repo.insert()
   end
 end

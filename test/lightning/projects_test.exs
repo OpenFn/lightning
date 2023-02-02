@@ -5,8 +5,6 @@ defmodule Lightning.ProjectsTest do
   alias Lightning.Projects.Project
 
   import Lightning.ProjectsFixtures
-  # import Lightning.WorkflowsFixtures
-  import Lightning.InvocationFixtures
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
 
@@ -153,52 +151,6 @@ defmodule Lightning.ProjectsTest do
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml == expected_yaml
-    end
-  end
-
-  describe "Project digest" do
-    test "Gets daily project digest data and sends email to users" do
-      # user_to_delete =
-      #   user_fixture(scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10))
-
-      # user_fixture(scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10))
-
-      # count_before = Repo.all(User) |> Enum.count()
-
-      # user_1 = user_fixture()
-      # user_2 = user_fixture()
-      # user_3 = user_fixture()
-
-      # project_1 = project_fixture(project_users: [%{user_id: user_1.id, digest: :daily}])
-      # project_2 = project_fixture(project_users: [%{user_id: user_2.id, digest: :monthly}])
-      # project_3 = project_fixture(project_users: [%{user_id: user_3.id, digest: :weekly}])
-
-      # workflow_1 = workflow_fixture()
-
-      work_order_fixture() |> IO.inspect()
-
-      # {:ok, %{users_deleted: users_deleted}} =
-      Projects.perform(%Oban.Job{args: %{"type" => "daily_project_digest"}})
-
-      # assert count_before - 1 == Repo.all(User) |> Enum.count()
-      # assert 1 == users_deleted |> Enum.count()
-
-      # assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
-    end
-
-    test "get_project_digest/3 returns a digest for a given project" do
-      user = user_fixture()
-
-      project =
-        full_project_fixture(
-          project_users: [%{user_id: user.id, digest: :daily}]
-        )
-
-      # |> Repo.preload(project_users: [:user])
-
-      Projects.get_project_digest(project)
-
-      assert 1 == 1
     end
   end
 end

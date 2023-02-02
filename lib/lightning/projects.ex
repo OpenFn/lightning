@@ -3,6 +3,10 @@ defmodule Lightning.Projects do
   The Projects context.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query, warn: false
   alias Lightning.Projects.ProjectUser
   alias Lightning.Accounts.UserNotifier
@@ -264,8 +268,8 @@ defmodule Lightning.Projects do
     digest
   end
 
-  defp get_project_users_by_digest(digest),
-    do:
+  defp project_digest(digest) do
+    project_users =
       Repo.all(
         from(pu in ProjectUser,
           where: pu.digest == ^digest,
@@ -273,29 +277,40 @@ defmodule Lightning.Projects do
         )
       )
 
+    Enum.each(project_users, fn pu ->
+      digest_data =
+        Workflows.get_workflows_for(pu.project)
+        |> Repo.preload(:work_orders)
+        |> Enum.map(fn workflow ->
+          Workflows.get_digest_data(workflow, digest)
+        end)
+
+      UserNotifier.deliver_project_digest(
+        pu.user,
+        pu.project,
+        digest_data,
+        digest
+      )
+    end)
+
+    {:ok, %{project_users: project_users}}
+  end
+
   @doc """
   Perform, when called with %{"type" => "daily_project_digest"} will find project_users with digest set to daily and send a digest email to them everyday at 10am
   """
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "daily_project_digest"}}) do
-    project_users = get_project_users_by_digest(:daily)
-
-    # :ok = Enum.each(users, fn u -> purge_user(u.id) end)
-
-    # {:ok, %{users_deleted: users}}
+    project_digest(:daily)
   end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "weekly_project_digest"}}) do
-    _project_users = get_project_users_by_digest(:weekly)
+    project_digest(:weekly)
   end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "monthly_project_digest"}}) do
-    _project_users = get_project_users_by_digest(:monthly)
+    project_digest(:monthly)
   end
-
-  # def deliver_digest_email(project, user, frequency) do
-  #   UserNotifier.deliver_project_digest(user, project, digests)
-  # end
 end

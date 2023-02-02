@@ -190,4 +190,56 @@ defmodule Lightning.Workflows do
       Repo.update_all(workflow_jobs_query, set: [enabled: false])
     end)
   end
+
+  defp get_last_run(workorder),
+    do: List.last(List.first(workorder.attempts |> Repo.preload(:runs)).runs)
+
+  def get_digest_data(workflow, digest) do
+    digest_timestamp = %{
+      daily: Timex.now() |> Timex.to_unix(),
+      weekly: Timex.now() |> Timex.shift(days: -7) |> Timex.to_unix(),
+      monthly: Timex.now() |> Timex.shift(months: -1) |> Timex.to_unix()
+    }
+
+    successful_workorders =
+      workflow.work_orders
+      |> Enum.filter(fn workorder ->
+        last_run = get_last_run(workorder |> Repo.preload(:attempts))
+
+        last_run.exit_code == 0 and
+          Timex.to_unix(Timex.now()) - Timex.to_unix(last_run.finished_at) <=
+            digest_timestamp[digest]
+      end)
+      |> length()
+
+    rerun_workorders =
+      workflow.work_orders
+      |> Enum.filter(fn workorder ->
+        attempts = (workorder |> Repo.preload(:attempts)).attempts |> length()
+        last_run = get_last_run(workorder |> Repo.preload(:attempts))
+
+        last_run.exit_code == 0 and attempts > 1 and
+          Timex.to_unix(Timex.now()) - Timex.to_unix(last_run.finished_at) <=
+            digest_timestamp[digest]
+      end)
+      |> length()
+
+    failed_workorders =
+      workflow.work_orders
+      |> Enum.filter(fn workorder ->
+        last_run = get_last_run(workorder |> Repo.preload(:attempts))
+
+        last_run.exit_code > 0 and
+          Timex.to_unix(Timex.now()) - Timex.to_unix(last_run.finished_at) <=
+            digest_timestamp[digest]
+      end)
+      |> length()
+
+    %{
+      workflow_name: workflow.name,
+      successful_workorders: successful_workorders,
+      rerun_workorders: rerun_workorders,
+      failed_workorders: failed_workorders
+    }
+  end
 end
