@@ -44,7 +44,7 @@ defmodule Lightning.Jobs.Job do
     field :body, :string,
       default: "// Get started by adding operations from your adaptor here"
 
-    field :enabled, :boolean, default: false
+    field :enabled, :boolean, default: true
     field :name, :string
     field :adaptor, :string, default: "@openfn/language-common@latest"
     belongs_to :trigger, Trigger

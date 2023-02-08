@@ -55,6 +55,22 @@
                 />
               </div>
 
+              <.check_box
+                form={f}
+                id={:i_acknowledge_that_this_is_lightning_beta}
+              >
+                <br />
+                <span class="text-xs text-secondary-500">
+                  Lightning is still in Beta, therefore
+                  <b>
+                    we strongly advise against building out production workflows
+                  </b>
+                  until the official release of Lightning. <br />
+                  By registering for an account, you’ll be given your own project, which you can use <em> free of charge until further notice</em>.
+                  All credentials, jobs and workflows you create will only be visible to you.
+                </span>
+              </.check_box>
+
               <LightningWeb.Components.Form.submit_button>
                 Register
               </LightningWeb.Components.Form.submit_button>
