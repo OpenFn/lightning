@@ -3,7 +3,7 @@ defmodule Lightning.SetupUtils do
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
 
-  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo}
+  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo, Credentials}
 
   import Ecto.Query
 
@@ -96,7 +96,7 @@ defmodule Lightning.SetupUtils do
             }
             else { throw "Error, patient ineligible." }
           });],
-        adaptor: "@openfn/language-http@latest",
+        adaptor: "@openfn/language-common",
         trigger: %{type: "webhook"},
         enabled: true,
         workflow_id: workflow.id
@@ -113,6 +113,23 @@ defmodule Lightning.SetupUtils do
         trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
         enabled: true,
         workflow_id: workflow.id
+      })
+
+    project_user = List.first(project_users)
+
+    {:ok, credential} =
+      Credentials.create_credential(%{
+        body: %{
+          username: "admin",
+          password: "district",
+          hostUrl: "https://play.dhis2.org/2.38.2.1"
+        },
+        name: "DHIS2 play",
+        user_id: project_user.user_id,
+        schema: "dhis2",
+        project_credentials: [
+          %{project_id: project.id}
+        ]
       })
 
     {:ok, job_3} =
@@ -135,7 +152,8 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-dhis2@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
-        workflow_id: workflow.id
+        workflow_id: workflow.id,
+        project_credential_id: List.first(credential.project_credentials).id
       })
 
     %{
