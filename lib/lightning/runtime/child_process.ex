@@ -68,7 +68,7 @@ defmodule Lightning.Runtime.ChildProcess do
         {"-a", runspec.adaptor},
         {"-s", runspec.state_path},
         {"--no-strict-output", nil},
-        {"-l", "info"},
+        {"-l", "debug"},
         if(runspec.final_state_path, do: {"-o", runspec.final_state_path}),
         {runspec.expression_path, nil}
       ]

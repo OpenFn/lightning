@@ -89,13 +89,13 @@ defmodule Lightning.SetupUtils do
     {:ok, job_1} =
       Jobs.create_job(%{
         name: "Job 1 - Check if age is over 18 months",
-        body: ~s[fn(state => {
-            if (state.data.age_in_months > 18) {
-              console.log("Eligible for program.");
-              return state;
-            }
-            else { throw "Error, patient ineligible." }
-          });],
+        body: "fn(state => {
+  if (state.data.age_in_months > 18) {
+    console.log('Eligible for program.');
+    return state;
+  }
+  else { throw 'Error, patient ineligible.' }
+});",
         adaptor: "@openfn/language-common@latest",
         trigger: %{type: "webhook"},
         enabled: true,
@@ -105,10 +105,10 @@ defmodule Lightning.SetupUtils do
     {:ok, job_2} =
       Jobs.create_job(%{
         name: "Job 2 - Convert data to DHIS2 format",
-        body: ~s[fn(state => {
-          const names = state.data.name.split(" ");
-          return { ...state, names };
-        });],
+        body: "fn(state => {
+  const names = state.data.name.split(' ');
+  return { ...state, names };
+});",
         adaptor: "@openfn/language-common@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
         enabled: true,
@@ -122,7 +122,7 @@ defmodule Lightning.SetupUtils do
         body: %{
           username: "admin",
           password: "district",
-          hostUrl: "https://play.dhis2.org/2.38.2.1"
+          hostUrl: "https://play.dhis2.org/dev"
         },
         name: "DHIS2 play",
         user_id: project_user.user_id,
@@ -136,19 +136,19 @@ defmodule Lightning.SetupUtils do
       Jobs.create_job(%{
         name: "Job 3 - Upload to DHIS2",
         body: "create('trackedEntityInstances', {
-          trackedEntityType: 'nEenWmSyUEp', // a person
-          orgUnit: 'DiszpKrYNg8',
-          attributes: [
-            {
-              attribute: 'w75KJ2mc4zz', // attribute id for first name
-              value: state.names[0] // the first name from submission
-            },
-            {
-              attribute: 'zDhUuAYrxNC', // attribute id for last name
-              value: state.names[1] // the last name from submission
-            }
-          ]
-          });",
+  trackedEntityType: 'nEenWmSyUEp', // a person
+  orgUnit: 'DiszpKrYNg8',
+  attributes: [
+    {
+      attribute: 'w75KJ2mc4zz', // attribute id for first name
+      value: state.names[0] // the first name from submission
+    },
+    {
+      attribute: 'zDhUuAYrxNC', // attribute id for last name
+      value: state.names[1] // the last name from submission
+    }
+  ]
+});",
         adaptor: "@openfn/language-dhis2@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
