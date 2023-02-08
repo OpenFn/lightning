@@ -72,8 +72,6 @@ defmodule Lightning.Jobs.Job do
         :adaptor,
         :project_credential_id,
         :workflow_id,
-        # :project_id,
-        # :user_id,
         :trigger_id
       ])
       |> validate_required([
@@ -88,16 +86,6 @@ defmodule Lightning.Jobs.Job do
     |> cast_assoc(:trigger,
       with: {Trigger, :changeset, [change |> get_field(:workflow_id)]}
     )
-    # |> cast_assoc(:credential,
-    #   with:
-    #     {Credential, :changeset,
-    #      [
-    #        %{
-    #          project_id: change |> get_field(:project_id),
-    #          user_id: change |> get_field(:user_id)
-    #        }
-    #      ]}
-    # )
     |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
     |> validate_length(:name, max: 100)

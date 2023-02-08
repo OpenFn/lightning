@@ -37,27 +37,4 @@ defmodule Lightning.Projects.ProjectCredential do
       message: "Credential already added to this project."
     )
   end
-
-  def import_changeset(project_credential, attrs, %{
-        project_id: project_id,
-        user_id: user_id
-      }) do
-    IO.inspect(project_credential, label: "PROJECT_CREDENTIAL")
-    IO.inspect(attrs, label: "ATTRS")
-
-    # credential_id = Ecto.UUID.generate()
-
-    # change =
-    #   workflow
-    #   |> cast(
-    #     Map.put(attrs, :id, ),
-    #     [:name, :project_id, :id]
-    #   )
-
-    # workflow_id = change |> get_field(:id)
-
-    # project_credential
-    # |> cast(attrs, [:project_id])
-    # |> cast_assoc(:credential, with: &Credential.changeset/2) |> IO.inspect()
-  end
 end

@@ -38,13 +38,6 @@ defmodule Lightning.Credentials.Credential do
     |> validate_transfer_ownership()
   end
 
-  def import_changeset(credential, attrs, user_id) do
-    attrs = Map.merge(attrs, %{project_credentials: [%{user_id: user_id}]})
-
-    credential
-    |> changeset(attrs)
-  end
-
   defp validate_transfer_ownership(changeset) do
     user_id = get_field(changeset, :user_id)
     credential_id = get_field(changeset, :id)

@@ -43,7 +43,7 @@ defmodule Lightning.ProjectsTest do
                 trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
-                credential: %{"foo" => "manchu"},
+                credential: "abc",
                 body: "> fn(state => state)"
               }
             ]
@@ -56,7 +56,7 @@ defmodule Lightning.ProjectsTest do
                 trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
-                credential: %{"foo" => "manchu"},
+                credential: "xyz",
                 body: "> fn(state => state)"
               },
               %{
@@ -64,7 +64,7 @@ defmodule Lightning.ProjectsTest do
                 trigger: %{type: "webhook"},
                 adaptor: "language-fhir",
                 enabled: true,
-                credential: %{"foo" => "manchu"},
+                credential: "xyz",
                 body: "> fn(state => state)"
               }
             ]

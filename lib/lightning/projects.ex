@@ -6,7 +6,7 @@ defmodule Lightning.Projects do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Projects.{Project, ProjectCredential, ProjectUser}
+  alias Lightning.Projects.{Project, ProjectCredential}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
 
@@ -248,26 +248,134 @@ defmodule Lightning.Projects do
 
   """
   def import_project(project_data, user) do
-    Ecto.Multi.new()
-    |> Ecto.Multi.insert(:project, fn _ ->
-      Project.import_changeset(project_data, user)
-    end)
-    |> Ecto.Multi.insert(:project_user, fn %{project: project} ->
-      %ProjectUser{}
-      |> ProjectUser.changeset(%{project_id: project.id, user_id: user.id})
-    end)
-    |> put_credentials(project_data, user)
+    ImportUtils.import_multi_for_project(project_data, user)
     |> Repo.transaction()
   end
+end
+
+defmodule ImportUtils do
+  import Ecto.Changeset
+
+  alias Ecto.Multi
+
+  alias Lightning.Projects.Project
+  alias Lightning.Workflows.Workflow
+  alias Lightning.Credentials.Credential
+  alias Lightning.Jobs.Job
+
+  def import_multi_for_project(project_data, user) do
+    Multi.new()
+    |> put_project(project_data, user)
+    |> put_credentials(project_data, user)
+    # |> put_project_credentials(project_data, user)
+
+    # |> put_workflows(project_data)
+  end
+
+  defp put_project(multi, project_data, user) do
+    multi
+    |> Multi.insert(:project, fn _ ->
+      id = Ecto.UUID.generate()
+
+      attrs =
+        project_data
+        |> Map.put(:id, id)
+        |> Map.put(:project_users, [
+          %{
+            project_id: id,
+            user_id: user.id
+          }
+        ])
+
+      %Project{}
+      |> Project.changeset(attrs)
+    end)
+  end
+
+  def import_workflow_changeset(
+        workflow,
+        %{workflow_id: workflow_id, project_id: project_id},
+        import_transaction
+      ) do
+    workflow =
+      workflow
+      |> Map.put(:id, workflow_id)
+      |> Map.put(:project_id, project_id)
+
+    %Workflow{}
+    |> cast(
+      workflow,
+      [:name, :project_id, :id]
+    )
+    |> cast_assoc(:jobs,
+      with:
+        {ImportUtils, :import_job_changeset, [workflow_id, import_transaction]}
+    )
+  end
+
+  def import_job_changeset(job, attrs, workflow_id, import_transaction) do
+    credential = import_transaction["credential::#{attrs[:credential]}"]
+    %{project_credentials: [%{id: project_credential_id}]} = credential
+    attrs = Map.put(attrs, :project_credential_id, project_credential_id)
+
+    job
+    |> Job.changeset(attrs, workflow_id)
+  end
+
+  defp put_workflows(multi, project_data) do
+    workflows = project_data[:workflows]
+
+    workflows
+    |> Enum.reduce(multi, fn workflow, m ->
+      workflow_id = Ecto.UUID.generate()
+
+      Multi.insert(m, "workflow::#{workflow_id}", fn %{project: project} =
+                                                       import_transaction ->
+        import_workflow_changeset(
+          workflow,
+          %{workflow_id: workflow_id, project_id: project.id},
+          import_transaction
+        )
+      end)
+    end)
+  end
+
+  # defp put_credentials(multi, project_data, user) do
+  #   credentials = project_data[:credentials]
+
+  #   credentials
+  #   |> Enum.reduce(multi, fn credential, m ->
+  #     Multi.insert(m, "credential::#{credential.key}", fn %{
+  #                                                           project: project
+  #                                                         } ->
+  #       id = Ecto.UUID.generate()
+
+  #       attrs =
+  #         credential
+  #         |> Map.put(:id, id)
+  #         |> Map.put(:user_id, user.id)
+  #         |> Map.put(:project_credentials, [
+  #           %{
+  #             project_id: project.id,
+  #             credential_id: id
+  #           }
+  #         ])
+
+  #       %Credential{}
+  #       |> Credential.changeset(attrs)
+  #     end)
+  #   end)
+  # end
 
   defp put_credentials(multi, project_data, user) do
     credentials = project_data[:credentials]
 
-    credentials
-    |> Enum.reduce(multi, fn credential, m ->
-      Ecto.Multi.insert(m, "credential::#{credential.key}", fn %{
-                                                                 project: project
-                                                               } ->
+    multi
+    |> Ecto.Multi.insert_all(:insert_all, Credential, fn %{project: project} ->
+      # Others validations
+
+      credentials
+      |> Enum.map(fn credential ->
         id = Ecto.UUID.generate()
 
         attrs =
@@ -281,9 +389,33 @@ defmodule Lightning.Projects do
             }
           ])
 
-        %Lightning.Credentials.Credential{}
-        |> Lightning.Credentials.Credential.changeset(attrs)
+        %Credential{}
+        |> Credential.changeset(attrs)
+        |> apply_changes()
+        |> IO.inspect()
+        |> Map.from_struct()
+        # or something similar
+        |> Stream.reject(fn
+          {_key, nil} ->
+            true
+
+          {key, %_struct{}} ->
+            # rejects __meta__: #Ecto.Schema.Metadata<:built, "items">
+            # and association: #Ecto.Association.NotLoaded<association :association is not loaded>
+            true
+
+          _other ->
+            false
+        end)
       end)
     end)
   end
+
+
+  # defp put_project_credentials(_multi, project_data, _user) do
+  #   # credentials = project_data[:credentials]
+
+  #   IO.inspect(%{project_data: project_data})
+
+  # end
 end
