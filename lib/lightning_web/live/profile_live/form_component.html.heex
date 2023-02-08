@@ -10,6 +10,7 @@
   <% end %>
   <.form
     :let={f}
+    as="user"
     for={@email_changeset}
     phx-change="validate_email"
     phx-submit="change_email"
@@ -22,13 +23,10 @@
     </div>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :email,
+        <%= label(f, :email, "New email address",
           class: "block text-sm font-medium text-secondary-700"
         ) %>
-        <%= text_input(f, :email,
-          class: "block w-full rounded-md",
-          phx_debounce: "blur"
-        ) %>
+        <%= text_input(f, :email, class: "block w-full rounded-md") %>
         <%= error_tag(f, :email,
           class:
             "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
@@ -46,8 +44,7 @@
         ) %>
         <%= password_input(f, :current_password,
           value: input_value(f, :current_password),
-          class: "block w-full rounded-md",
-          phx_debounce: "blur"
+          class: "block w-full rounded-md"
         ) %>
         <%= error_tag(f, :current_password,
           class:
@@ -68,12 +65,11 @@
         </.link>
       </span>
       <span>
-        <button
-          type="submit"
-          class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-25"
-        >
-          Update email
-        </button>
+        <%= submit("Update email",
+          phx_disable_with: "Sending confirmation...",
+          class:
+            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+        ) %>
       </span>
     </div>
     <div class="hidden sm:block" aria-hidden="true">
