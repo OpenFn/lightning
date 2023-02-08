@@ -8,7 +8,7 @@ and this project adheres to
 
 ## [Unreleased]
 
-## [0.4.0] - 2023-01-18]
+## [0.4.0] - 2023-02-08
 
 ### Added
 
@@ -54,6 +54,9 @@ and this project adheres to
 - Add project settings page
 - Change Workorder filters to apply to the aggregate state of the workorder and
   not the run directly
+- Enable jobs by default
+- Set log level to info
+- Add Beta checkbox to register page
 
 ### Fixed
 
