@@ -299,8 +299,7 @@ defmodule Lightning.Accounts do
         update_email_url_fun
       )
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{current_email}")
+    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
 
     Repo.insert!(user_token)
 
@@ -308,6 +307,37 @@ defmodule Lightning.Accounts do
       user,
       update_email_url_fun.(encoded_token)
     )
+  end
+
+  def validate_change_user_email(user, params) do
+    data = %{email: nil, current_password: nil}
+    types = %{email: :string, current_password: :string}
+
+    changeset =
+      {data, types}
+      |> Ecto.Changeset.cast(params, Map.keys(types))
+      |> Ecto.Changeset.validate_required([:email, :current_password])
+      |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+        message: "must have the @ sign and no spaces"
+      )
+      |> Ecto.Changeset.validate_length(:email, max: 160)
+      |> Ecto.Changeset.validate_change(:email, fn :email, email ->
+        cond do
+          user.email == email ->
+            [email: "Please change your email"]
+
+          Lightning.Repo.exists?(User |> where(email: ^email)) ->
+            [email: "Email already exists"]
+
+          true ->
+            []
+        end
+      end)
+
+    # |> User.validate_current_password(params.current_password)
+
+    # |> Ecto.Changeset.unique_constraint(:email)
+    # |> Ecto.Changeset.apply_action(:validate)
   end
 
   @doc """
@@ -553,8 +583,7 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "reset_password")
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
 
     Repo.insert!(user_token)
 
