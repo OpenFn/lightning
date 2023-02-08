@@ -9,6 +9,8 @@ defmodule LightningWeb.ProfileLive.FormComponent do
 
   @impl true
   def update(%{user: user} = assigns, socket) do
+    # IO.inspect(user, label: "User")
+
     {:ok,
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
@@ -20,63 +22,28 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   @impl true
   def handle_event(
         "change_email",
-        %{"user" => %{"email" => email, "current_password" => current_password}} =
-          user_params,
+        %{"user" => user_params},
         socket
       ) do
-    # changeset =
-    #   Ecto.Changeset.change(socket.assigns.user)
-    #   |> User.validate_current_password(password)
+    Accounts.validate_change_user_email(
+      socket.assigns.user,
+      user_params
+    )
+    |> Ecto.Changeset.apply_action(:validate)
+    |> case do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           "You will receive an email with instructions shortly."
+         )}
 
-    changeset =
-      socket.assigns.user
-      |> User.password_changeset(user_params)
-      |> User.validate_current_password(current_password)
+      # {:error, _} ->
+      #   nil
 
-    # case changeset do
-    #   {:ok, _} ->
-    #     Accounts.deliver_update_email_instructions(
-    #       socket.assigns.user,
-    #       email,
-    #       &Routes.user_confirmation_url(socket, :edit, &1)
-    #     )
-
-    #     {:noreply,
-    #      socket
-    #      |> put_flash(
-    #        :info,
-    #        "You will receive an email with instructions shortly."
-    #      )}
-
-    #   {:error, %Ecto.Changeset{} = changeset} ->
-    #     {:noreply, assign(socket, :email_changeset, changeset)}
-    # end
-
-    if changeset.valid? do
-      Accounts.deliver_update_email_instructions(
-        socket.assigns.user,
-        email,
-        &Routes.user_confirmation_url(socket, :edit, &1)
-      )
-
-      {:noreply,
-       socket
-       |> put_flash(
-         :info,
-         "You will receive an email with instructions shortly."
-       )}
-    else
-      {error_message, _} = changeset.errors[:current_password]
-
-      # {:noreply,
-      #  socket
-      #  |> assign(changeset: changeset, email_changeset: :failed)
-      #  |> put_flash(:error, error_message)}
-
-      {:noreply,
-       socket
-       |> assign(email_changeset: changeset)
-       |> put_flash(:error, error_message)}
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :email_changeset, changeset)}
     end
   end
 
@@ -120,11 +87,15 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
-  def handle_event("validate_email", %{"user" => user_params}, socket) do
+  def handle_event(
+        "validate_email",
+        %{"user" => user_params},
+        socket
+      ) do
     changeset =
       socket.assigns.user
-      |> Accounts.change_user_email(user_params)
-      |> Map.put(:action, :validate_email)
+      |> Accounts.validate_change_user_email(user_params)
+      |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
   end
