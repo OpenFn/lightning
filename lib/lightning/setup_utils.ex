@@ -96,7 +96,7 @@ defmodule Lightning.SetupUtils do
             }
             else { throw "Error, patient ineligible." }
           });],
-        adaptor: "@openfn/language-common",
+        adaptor: "@openfn/language-common@latest",
         trigger: %{type: "webhook"},
         enabled: true,
         workflow_id: workflow.id
@@ -109,7 +109,7 @@ defmodule Lightning.SetupUtils do
           const names = state.data.name.split(" ");
           return { ...state, names };
         });],
-        adaptor: "@openfn/language-common",
+        adaptor: "@openfn/language-common@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
         enabled: true,
         workflow_id: workflow.id
