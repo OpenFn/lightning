@@ -9,6 +9,7 @@
     <div id="register">
       <.form
         :let={f}
+        as="user"
         for={@changeset}
         action={Routes.user_registration_path(@conn, :create)}
       >
@@ -55,22 +56,33 @@
                 />
               </div>
 
-              <.check_box
-                form={f}
-                id={:i_acknowledge_that_this_is_lightning_beta}
-              >
-                <br />
-                <span class="text-xs text-secondary-500">
-                  Lightning is still in Beta, therefore
-                  <b>
-                    we strongly advise against building out production workflows
-                  </b>
-                  until the official release of Lightning. <br />
-                  By registering for an account, you’ll be given your own project, which you can use <em> free of charge until further notice</em>.
-                  All credentials, jobs and workflows you create will only be visible to you.
-                </span>
-              </.check_box>
-
+              <div class="flex items-start">
+                <div class="flex items-center h-5">
+                  <%= checkbox(f, :terms_accepted,
+                    class:
+                      "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded"
+                  ) %>
+                </div>
+                <div class="ml-3 text-sm">
+                  <%= label(f, "Terms and conditions",
+                    class: "font-medium text-secondary-700"
+                  ) %>
+                  <br />
+                  <span class="text-xs text-secondary-500">
+                    Lightning is still in Beta, therefore
+                    <b>
+                      we strongly advise against building out production workflows
+                    </b>
+                    until the official release of Lightning. <br />
+                    By registering for an account, you’ll be given your own project, which you can use <em> free of charge until further notice</em>.
+                    All credentials, jobs and workflows you create will only be visible to you.
+                  </span>
+                </div>
+              </div>
+              <%= error_tag(f, :terms_accepted,
+                class:
+                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm text-sm border-secondary-300 rounded-md"
+              ) %>
               <LightningWeb.Components.Form.submit_button>
                 Register
               </LightningWeb.Components.Form.submit_button>
