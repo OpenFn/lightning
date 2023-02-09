@@ -337,6 +337,8 @@ defmodule Lightning.Accounts do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
+    # IO.inspect(user.password)
+
     changeset =
       {data, types}
       |> Ecto.Changeset.cast(params, Map.keys(types))
@@ -357,8 +359,12 @@ defmodule Lightning.Accounts do
             []
         end
       end)
+      |> IO.inspect()
+      # |> User.validate_current_password(params["current_password"])
 
-    # |> User.validate_current_password(params.current_password)
+      |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
+        [current_password: "Yelo"]
+      end)
 
     # |> Ecto.Changeset.unique_constraint(:email)
     # |> Ecto.Changeset.apply_action(:validate)
