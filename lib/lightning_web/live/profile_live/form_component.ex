@@ -95,6 +95,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     changeset =
       socket.assigns.user
       |> Accounts.validate_change_user_email(user_params)
+      |> IO.inspect(label: "From chaneg")
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
