@@ -176,10 +176,19 @@ defmodule Lightning.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
+  @spec register_user(attrs :: %{optional(binary) => binary}) ::
+          {:ok, User.t()}
+          | {:error, Ecto.Changeset.t(User.t()) | Ecto.Changeset.t()}
   def register_user(attrs) do
-    %User{}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
+    User.registration_changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, data} ->
+        struct(User, data) |> Repo.insert()
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -192,7 +201,7 @@ defmodule Lightning.Accounts do
 
   """
   def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(user, attrs, hash_password: false)
+    User.registration_changeset(attrs, hash_password: false)
   end
 
   def change_user_details(%User{} = user, attrs \\ %{}) do

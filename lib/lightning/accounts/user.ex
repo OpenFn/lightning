@@ -2,10 +2,12 @@ defmodule Lightning.Accounts.User do
   @moduledoc """
   The User model.
   """
+  alias Lightning.Accounts.User
 
   use Ecto.Schema
   import Ecto.Changeset
   import EctoEnum
+  import Ecto.Query
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil
@@ -19,15 +21,15 @@ defmodule Lightning.Accounts.User do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
-    field(:first_name, :string)
-    field(:last_name, :string)
-    field(:email, :string)
-    field(:password, :string, virtual: true, redact: true)
-    field(:hashed_password, :string, redact: true)
-    field(:confirmed_at, :naive_datetime)
-    field(:role, RolesEnum, default: :user)
-    field(:disabled, :boolean, default: false)
-    field(:scheduled_deletion, :utc_datetime)
+    field :first_name, :string
+    field :last_name, :string
+    field :email, :string
+    field :password, :string, virtual: true, redact: true
+    field :hashed_password, :string, redact: true
+    field :confirmed_at, :naive_datetime
+    field :role, RolesEnum, default: :user
+    field :disabled, :boolean, default: false
+    field :scheduled_deletion, :utc_datetime
 
     has_many :credentials, Lightning.Credentials.Credential
     has_many :project_users, Lightning.Projects.ProjectUser
@@ -67,18 +69,33 @@ defmodule Lightning.Accounts.User do
       validations on a LiveView form), this option can be set to `false`.
       Defaults to `true`.
   """
-  def registration_changeset(user, attrs, opts \\ []) do
-    user
+  def registration_changeset(attrs, opts \\ []) do
+    {%{},
+     %{
+       first_name: :string,
+       last_name: :string,
+       email: :string,
+       password: :string,
+       hashed_password: :string,
+       terms_accepted: :boolean
+     }}
     |> cast(attrs, [
       :first_name,
       :last_name,
       :email,
       :password,
-      :disabled,
-      :scheduled_deletion
+      :hashed_password,
+      :terms_accepted
     ])
     |> validate_email()
     |> validate_password(opts)
+    |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
+      if terms_accepted do
+        []
+      else
+        [terms_accepted: "You must accept the terms and conditions"]
+      end
+    end)
   end
 
   defp validate_email(changeset) do
@@ -88,8 +105,13 @@ defmodule Lightning.Accounts.User do
       message: "must have the @ sign and no spaces"
     )
     |> validate_length(:email, max: 160)
-    |> unsafe_validate_unique(:email, Lightning.Repo)
-    |> unique_constraint(:email)
+    |> validate_change(:email, fn :email, email ->
+      if Lightning.Repo.exists?(User |> where(email: ^email)) do
+        [email: "Email exists"]
+      else
+        []
+      end
+    end)
   end
 
   defp validate_password(changeset, opts) do
