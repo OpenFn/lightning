@@ -39,7 +39,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      |> assign(
        can_edit:
          Lightning.Policies.Permissions.can(
-           Lightning.Policies.UserPolicy,
+           Lightning.Policies.Users,
            :create_projects,
            current_user,
            {}

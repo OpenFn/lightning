@@ -9,7 +9,7 @@ defmodule Lightning.Application do
   @impl true
   def start(_type, _args) do
     # mnesia startup
-    :mnesia.stop()
+    # :mnesia.stop()
     :mnesia.create_schema([node()])
     :mnesia.start()
     Hammer.Backend.Mnesia.create_mnesia_table(disc_copies: [node()])

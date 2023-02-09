@@ -241,7 +241,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-click="delete"
               phx-target={@myself}
               phx-value-id={@job_id}
-              disabled={!@is_deletable or !@can_edit}
+              disabled={!(@is_deletable and @can_edit)}
               data={[
                 confirm:
                   "This action is irreversible, are you sure you want to continue?"
@@ -450,7 +450,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
        is_deletable: is_deletable,
        can_edit:
          Permissions.can(
-           Lightning.Policies.MemberPolicy,
+           Lightning.Policies.ProjectUsers,
            :edit_jobs,
            current_user,
            project
