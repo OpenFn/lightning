@@ -9,6 +9,7 @@ defmodule Lightning.PermissionsTest do
   setup do
     superuser = superuser_fixture()
     user = user_fixture()
+    %{superuser: superuser, user: user}
   end
 
   describe "User policies by instance-wide role" do
@@ -25,7 +26,7 @@ defmodule Lightning.PermissionsTest do
     viewer = user_fixture()
     admin = user_fixture()
     owner = user_fixture()
-    thief = user_fixture()
+    editor = user_fixture()
 
     project =
       project_fixture(
@@ -37,7 +38,13 @@ defmodule Lightning.PermissionsTest do
         ]
       )
 
-    %{project: project, viewer: viewer, admin: admin, owner: owner, thief: thief}
+    %{
+      project: project,
+      viewer: viewer,
+      admin: admin,
+      owner: owner,
+      editor: editor
+    }
   end
 
   describe "Project user policies by project user role" do
@@ -49,7 +56,7 @@ defmodule Lightning.PermissionsTest do
       assert ProjectUsers |> Permissions.can(:edit_jobs, editor, project)
     end
 
-    test "admin permissions", %{project: project, viewer: admin} do
+    test "admin permissions", %{project: project, admin: admin} do
       assert ProjectUsers |> Permissions.can(:edit_jobs, admin, project)
     end
 

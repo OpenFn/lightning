@@ -8,6 +8,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
   alias LightningWeb.Components.Form
   alias Lightning.Jobs
   alias Lightning.Jobs.Job
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
 
   import LightningWeb.JobLive.JobBuilderComponents
@@ -449,8 +450,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        upstream_jobs: upstream_jobs,
        is_deletable: is_deletable,
        can_edit:
-         Permissions.can(
-           Lightning.Policies.ProjectUsers,
+         ProjectUsers
+         |> Permissions.can(
            :edit_jobs,
            current_user,
            project

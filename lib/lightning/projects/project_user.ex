@@ -26,11 +26,11 @@ defmodule Lightning.Projects.ProjectUser do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "project_users" do
-    belongs_to(:user, User)
-    belongs_to(:project, Project)
-    field(:delete, :boolean, virtual: true)
-    field(:failure_alert, :boolean, default: true)
-    field(:role, RolesEnum, default: :editor)
+    belongs_to :user, User
+    belongs_to :project, Project
+    field :delete, :boolean, virtual: true
+    field :failure_alert, :boolean, default: true
+    field :role, RolesEnum, default: :editor
 
     timestamps()
   end

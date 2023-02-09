@@ -13,6 +13,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Projects
+  alias Lightning.Policies.Users
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
@@ -38,8 +39,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
      )
      |> assign(
        can_edit:
-         Lightning.Policies.Permissions.can(
-           Lightning.Policies.Users,
+         Users
+         |> Lightning.Policies.Permissions.can(
            :create_projects,
            current_user,
            {}
