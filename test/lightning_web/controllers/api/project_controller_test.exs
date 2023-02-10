@@ -39,6 +39,24 @@ defmodule LightningWeb.API.ProjectControllerTest do
                }
              ]
     end
+
+    test "import project", %{conn: conn, project: project} do
+      # conn = get(conn, Routes.api_project_path(conn, :index))
+      # response = json_response(conn, 200)
+
+      # assert response["data"] == [
+      #          %{
+      #            "attributes" => %{"name" => "a-test-project"},
+      #            "id" => project.id,
+      #            "links" => %{
+      #              "self" => "http://localhost:4002/api/projects/#{project.id}"
+      #            },
+      #            "relationships" => %{},
+      #            "type" => "projects"
+      #          }
+      #        ]
+    end
+
   end
 
   describe "show" do
