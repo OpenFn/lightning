@@ -10,11 +10,16 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   @impl true
   def update(%{user: user} = assigns, socket) do
     # IO.inspect(user, label: "User")
+    IO.inspect("called")
 
     {:ok,
      socket
      |> assign(:password_changeset, Accounts.change_user_password(user))
-     |> assign(:email_changeset, Accounts.change_user_email(user))
+     |> assign(
+       :email_changeset,
+       Map.put(Ecto.Changeset.change(%User{}), :valid?, false)
+     )
+     |> IO.inspect()
      |> assign(:user, user)
      |> assign(assigns)}
   end
@@ -32,6 +37,12 @@ defmodule LightningWeb.ProfileLive.FormComponent do
     |> Ecto.Changeset.apply_action(:validate)
     |> case do
       {:ok, _} ->
+        Accounts.deliver_update_email_instructions(
+          socket.assigns.user,
+          user_params["email"],
+          &Routes.user_confirmation_url(socket, :edit, &1)
+        )
+
         {:noreply,
          socket
          |> put_flash(
@@ -92,11 +103,12 @@ defmodule LightningWeb.ProfileLive.FormComponent do
         %{"user" => user_params},
         socket
       ) do
+    IO.inspect("Am I being called ?")
+
     changeset =
       socket.assigns.user
       |> Accounts.validate_change_user_email(user_params)
-      |> IO.inspect(label: "From chaneg")
-      |> Map.put(:action, :validate)
+      |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}
   end
