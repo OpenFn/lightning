@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.4.0">
 
-    <title>LightningWeb.RouteHelpers — Lightning v0.4.0</title>
+    <title>Lightning.Policies.Users — Lightning v0.4.0</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,19 +101,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/route_helpers.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.RouteHelpers</span> 
+  <span translate="no">Lightning.Policies.Users</span> 
   <small class="app-vsn" translate="no">(Lightning v0.4.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Convenience functions for generating paths.</p>
+<p>The Bodyguard Policy module for users roles.</p>
   </section>
 
 
@@ -126,22 +126,14 @@ Lightning
       Summary
     </h1>
 
-  <div class="summary-functions summary">
+  <div class="summary-types summary">
     <h2>
-      <a href="#functions">Functions</a>
+      <a href="#types">Types</a>
     </h2>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#show_run_path/2" translate="no">show_run_path(project_id, run_id)</a>
-
-        </div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#workflow_edit_job_path/3" translate="no">workflow_edit_job_path(project_id, workflow_id, job_id)</a>
+          <a href="#t:actions/0" translate="no">actions()</a>
 
         </div>
 
@@ -149,8 +141,68 @@ Lightning
 
   </div>
 
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#authorize/3" translate="no">authorize(atom, user, project)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>authorize/3 takes an action, a user, and a project. It checks the user's role
+for this project and returns <code class="inline">true</code> if the user can perform the action and
+false if they cannot.</p></div>
+
+      </div>
+
+  </div>
+
   </section>
 
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Types
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:actions/0">
+
+  <div class="detail-header">
+    <a href="#t:actions/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">actions()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L9" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> actions() :: :create_projects</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -161,16 +213,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="show_run_path/2">
+<section class="detail" id="authorize/3">
 
   <div class="detail-header">
-    <a href="#show_run_path/2" class="detail-link" title="Link to this function">
+    <a href="#authorize/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">show_run_path(project_id, run_id)</h1>
+    <h1 class="signature" translate="no">authorize(atom, user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/route_helpers.ex#L17" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L22" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -180,29 +232,16 @@ Functions
 
   <section class="docstring">
 
+      <div class="specs">
 
-  </section>
-</section>
-<section class="detail" id="workflow_edit_job_path/3">
+          <pre translate="no"><span class="attribute">@spec</span> authorize(<a href="#t:actions/0">actions</a>(), <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
 
-  <div class="detail-header">
-    <a href="#workflow_edit_job_path/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">workflow_edit_job_path(project_id, workflow_id, job_id)</h1>
+      </div>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/route_helpers.ex#L7" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+<p>authorize/3 takes an action, a user, and a project. It checks the user's role
+for this project and returns <code class="inline">true</code> if the user can perform the action and
+false if they cannot.</p><p>Note that permissions are grouped by action.</p><p>We deny by default, so if a user's role is not added to the allow roles list
+for a particular action they are denied.</p>
   </section>
 </section>
 

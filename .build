@@ -50,6 +50,9 @@ Lightning.Pipeline.Runner.Handler.html
 Lightning.Pipeline.Runner.html
 Lightning.Pipeline.StateAssembler.html
 Lightning.Pipeline.html
+Lightning.Policies.Permissions.html
+Lightning.Policies.ProjectUsers.html
+Lightning.Policies.Users.html
 Lightning.Projects.Policy.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
@@ -177,8 +180,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-812D971E.js
-dist/sidebar_items-14BE01C2.js
+dist/search_items-BC01DDBC.js
+dist/sidebar_items-70237528.js
 index.html
 readme.html
 search.html
