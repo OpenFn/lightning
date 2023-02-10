@@ -299,8 +299,10 @@ defmodule Lightning.Accounts do
         update_email_url_fun
       )
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "change:#{current_email}")
 
+    IO.inspect("Was i called")
     Repo.insert!(user_token)
 
     UserNotifier.deliver_update_email_instructions(
@@ -312,8 +314,6 @@ defmodule Lightning.Accounts do
   def validate_change_user_email(user, params) do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
-
-    # IO.inspect(user.password)
 
     changeset =
       {data, types}
@@ -335,11 +335,13 @@ defmodule Lightning.Accounts do
             []
         end
       end)
-      |> IO.inspect()
-      # |> User.validate_current_password(params["current_password"])
-
-      |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
-        [current_password: "Yelo"]
+      |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
+                                                              password ->
+        if Bcrypt.verify_pass(password, user.hashed_password) do
+          []
+        else
+          [current_password: "Password does not match"]
+        end
       end)
 
     # |> Ecto.Changeset.unique_constraint(:email)
@@ -589,7 +591,8 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "reset_password")
 
     Repo.insert!(user_token)
 
