@@ -299,21 +299,23 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
+    opts = assigns_to_attributes(assigns, [:id, :form])
+
     assigns =
       assign(assigns,
-        checkbox_classes: checkbox_classes,
-        error_tag_classes: error_tag_classes,
-        label_classes: label_classes
+        checkbox_opts: opts ++ [class: checkbox_classes],
+        label_opts: opts ++ [class: label_classes],
+        error_tag_opts: opts ++ [class: error_tag_classes]
       )
 
     ~H"""
     <div class="flex items-start">
       <div class="flex items-center h-5">
-        <%= checkbox(@form, @id, class: @checkbox_classes) %>
+        <%= checkbox(@form, @id, @checkbox_opts) %>
       </div>
       <div class="ml-3 text-sm">
-        <%= error_tag(@form, @id, class: @error_tag_classes) %>
-        <%= label(@form, @id, class: @label_classes) %>
+        <%= error_tag(@form, @id, @error_tag_opts) %>
+        <%= label(@form, @id, @label_opts) %>
         <%= if assigns[:inner_block] do %>
           <%= render_slot(@inner_block) %>
         <% end %>

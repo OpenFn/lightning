@@ -40,7 +40,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           phx_value_id: @workflow.id,
           data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
           class: "absolute right-2 bottom-2 p-2") do %>
-          <Icon.trash class="h-6 w-6 text-black-300 hover:text-rose-700" />
+          <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
         <% end %>
       </.link>
     </div>

@@ -13,13 +13,17 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Projects
+  alias Lightning.Policies.Users
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
   @impl true
-  def update(%{project: project, users: users} = assigns, socket) do
+  def update(
+        %{project: project, users: users, current_user: current_user} = assigns,
+        socket
+      ) do
     changeset = Projects.change_project(project)
 
     all_users = users |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
@@ -32,6 +36,15 @@ defmodule LightningWeb.ProjectLive.FormComponent do
        all_users: all_users,
        available_users: filter_available_users(changeset, all_users),
        selected_member: ""
+     )
+     |> assign(
+       can_edit:
+         Users
+         |> Lightning.Policies.Permissions.can(
+           :create_projects,
+           current_user,
+           {}
+         )
      )
      |> assign(
        :name,

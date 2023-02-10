@@ -57,6 +57,7 @@ and this project adheres to
 - Enable jobs by default
 - Set log level to info
 - Add Beta checkbox to register page
+- User roles and permissions
 
 ### Fixed
 
