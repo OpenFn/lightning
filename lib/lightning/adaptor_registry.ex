@@ -139,7 +139,7 @@ defmodule Lightning.AdaptorRegistry do
 
   **Options**
 
-  - `:use_cache` (defaults to true) - stores the last set of results on disk
+  - `:use_cache` (defaults to false) - stores the last set of results on disk
     and uses the cached file for every subsequent start.
     It can either be a boolean, or a string - the latter being a file path
     to set where the cache file is located.
@@ -219,22 +219,31 @@ defmodule Lightning.AdaptorRegistry do
   """
   @spec fetch() :: [map()]
   def fetch() do
-    Npm.user_packages("openfn")
-    |> Enum.map(fn {name, _} -> name end)
-    |> Enum.filter(fn name ->
-      Regex.match?(~r/@openfn\/language-\w+/, name)
-    end)
-    |> Enum.reject(fn name ->
-      name in @excluded_adaptors
-    end)
-    |> Task.async_stream(
-      &fetch_npm_details/1,
-      ordered: false,
-      max_concurrency: 5,
-      timeout: @timeout
-    )
-    |> Stream.map(fn {:ok, detail} -> detail end)
-    |> Enum.to_list()
+    start = DateTime.utc_now()
+    Logger.debug("Fetching adaptors from NPM.")
+
+    result =
+      Npm.user_packages("openfn")
+      |> Enum.map(fn {name, _} -> name end)
+      |> Enum.filter(fn name ->
+        Regex.match?(~r/@openfn\/language-\w+/, name)
+      end)
+      |> Enum.reject(fn name ->
+        name in @excluded_adaptors
+      end)
+      |> Task.async_stream(
+        &fetch_npm_details/1,
+        ordered: false,
+        max_concurrency: 5,
+        timeout: @timeout
+      )
+      |> Stream.map(fn {:ok, detail} -> detail end)
+      |> Enum.to_list()
+
+    diff = DateTime.utc_now() |> DateTime.diff(start, :millisecond)
+    Logger.debug(fn -> "Finished fetching adaptors in #{diff}ms." end)
+
+    result
   end
 
   defp fetch_npm_details(package_name) do
