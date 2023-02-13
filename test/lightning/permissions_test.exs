@@ -27,6 +27,7 @@ defmodule Lightning.PermissionsTest do
     admin = user_fixture()
     owner = user_fixture()
     editor = user_fixture()
+    thief = user_fixture()
 
     project =
       project_fixture(
@@ -43,7 +44,8 @@ defmodule Lightning.PermissionsTest do
       viewer: viewer,
       admin: admin,
       owner: owner,
-      editor: editor
+      editor: editor,
+      thief: thief
     }
   end
 
@@ -62,6 +64,12 @@ defmodule Lightning.PermissionsTest do
 
     test "owner permissions", %{project: project, owner: owner} do
       assert ProjectUsers |> Permissions.can(:edit_jobs, owner, project)
+    end
+
+    # For things like :view_job we should be able to show that people who do not
+    # have access to a project cannot view the jobs in that project.
+    test "thief permissions", %{project: project, thief: thief} do
+      refute ProjectUsers |> Permissions.can(:edit_jobs, thief, project)
     end
   end
 end
