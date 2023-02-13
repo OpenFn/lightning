@@ -49,6 +49,5 @@ defmodule Lightning.Release do
   def load_app do
     Application.ensure_all_started(:ssl)
     Application.ensure_all_started(@repo)
-    # Application.load(@app)
   end
 end

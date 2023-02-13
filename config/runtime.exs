@@ -18,6 +18,11 @@ config :lightning, :email_addresses,
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
+config :lightning,
+  schemas_path:
+    System.get_env("SCHEMAS_PATH") ||
+      Application.get_env(:lightning, :schemas_path) || "./priv"
+
 config :lightning, Oban,
   repo: Lightning.Repo,
   plugins: [
