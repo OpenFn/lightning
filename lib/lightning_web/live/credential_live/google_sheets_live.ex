@@ -26,13 +26,14 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <fieldset>
+    <fieldset id={@id}>
       <legend class="contents text-base font-medium text-gray-900">
         Details
       </legend>
       <p class="text-sm text-gray-500">
         Configuration for this credential.
       </p>
+      <%= hidden_input(@form, :body) %>
       <.authorize_button
         :if={!@authorizing}
         authorize_url={@authorize_url}
@@ -113,7 +114,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   end
 
   @impl true
-  def update(%{form: form} = assigns, socket) do
+  def update(%{form: form, id: id} = assigns, socket) do
     # oauth pubsub module
     # oauth state generator
 
@@ -129,19 +130,40 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
 
     {:ok,
      socket
-     |> assign(form: form)
+     |> assign(form: form, id: id)
      |> assign_new(:authorizing, fn -> false end)
      |> assign_new(:client, &build_client/0)
      |> assign_new(:authorize_url, fn %{client: client} ->
-       OAuth2.Client.authorize_url!(client,
-         state: build_state(socket.id, __MODULE__, assigns.id)
-       )
+       authorize_url(client, build_state(socket.id, __MODULE__, assigns.id))
      end)}
   end
+
+  # TODO: use the introspection url to check on the token
+
+  # NOTE: using oauth2-mock-server for development
+
+  # TODO: error scenarios don't have a code, but have a error & state combo
+  # https://www.oauth.com/oauth2-servers/authorization/the-authorization-response/
+
+  # redirect_uri: Application.get_env(:open_fn, :oauth)[:redirect_uri],
+  # code: code,
+  # grant_type: "authorization_code"
 
   @impl true
   def update(%{code: code}, socket) do
     IO.inspect(code, label: "got a code")
+
+    client = socket.assigns.client
+
+    # NOTE: there can be _no_ refresh token if something went wrong like if the
+    # previous auth didn't receive a refresh_token
+
+    OAuth2.Client.get_token(client, code: code)
+    |> case do
+      {:ok, token} -> token |> IO.inspect(label: "ok")
+      {:error, error} -> error |> IO.inspect()
+    end
+
     {:ok, socket |> assign(authorizing: false)}
   end
 
@@ -161,12 +183,33 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   end
 
   defp build_client() do
+    # TODO: move me out into a google specific module
+    %{client_id: client_id, client_secret: client_secret} =
+      Application.fetch_env!(:lightning, :oauth_clients)
+      |> Keyword.get(:google)
+
     OAuth2.Client.new(
       strategy: OAuth2.Strategy.AuthCode,
-      client_id: "client_id",
-      client_secret: "abc123",
-      site: "http://auth.example.com",
+      authorize_url: "https://accounts.google.com/o/oauth2/auth",
+      token_url: "https://oauth2.googleapis.com/token",
+      client_id: client_id,
+      client_secret: client_secret,
       redirect_uri: "http://localhost:4000/authenticate/callback"
+    )
+    |> OAuth2.Client.put_serializer("application/json", Jason)
+  end
+
+  defp authorize_url(client, state) do
+    scope = ~W[
+      https://www.googleapis.com/auth/spreadsheets
+      https://www.googleapis.com/auth/userinfo.profile
+    ] |> Enum.join(" ")
+
+    # TODO: move me out into a google specific module
+    OAuth2.Client.authorize_url!(client,
+      scope: scope,
+      state: state,
+      access_type: "offline"
     )
   end
 end

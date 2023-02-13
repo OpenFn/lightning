@@ -9,8 +9,6 @@ defmodule LightningWeb.CredentialLive.Edit do
   alias Lightning.Credentials.Credential
   alias Lightning.Projects
 
-  import LightningWeb.Components.Form
-
   @impl true
   def render(assigns) do
     ~H"""

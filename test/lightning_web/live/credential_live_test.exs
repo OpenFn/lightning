@@ -277,6 +277,49 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(new_live)
       assert flash == %{"info" => "Credential created successfully"}
     end
+
+    test "allows the user to define and save a new google sheets credential", %{
+      conn: conn
+    } do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      # Pick a type
+
+      new_live |> select_credential_type("googlesheets")
+      new_live |> click_continue()
+
+      refute new_live |> has_element?("#credential-type-picker")
+
+      new_live
+      |> element("#google-sheets-inner-form")
+      |> render()
+      |> IO.inspect()
+
+      authorize_url = get_authorize_url(new_live)
+
+      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+
+      assert new_live.id == subscription_id
+      assert new_live |> element(component_id)
+
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "1234"
+      )
+
+      assert new_live |> submit_disabled()
+      # emulate a publish?
+    end
   end
 
   describe "Edit" do
@@ -560,6 +603,24 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render() =~ "last typed name",
              "Should have kept the job form state after saving the new credential"
     end
+  end
+
+  defp get_authorize_url(live) do
+    live
+    |> element("#google-sheets-inner-form")
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("a[phx-click=authorize_click]")
+    |> Floki.attribute("href")
+    |> List.first()
+  end
+
+  defp get_decoded_state(url) do
+    %{query: query} = URI.parse(url)
+
+    URI.decode_query(query)
+    |> Map.get("state")
+    |> LightningWeb.OauthCredentialHelper.decode_state()
   end
 
   defp submit_disabled(live) do
