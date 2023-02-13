@@ -11,6 +11,8 @@ defmodule Lightning.InstallSchemasTest do
   @ok_200 {:ok, 200, "headers", :client}
   @ok_400 {:ok, 400, "headers", :client}
 
+  @schemas_path Application.compile_env(:lightning, :schemas_path)
+
   describe "install_schemas mix task" do
     setup do
       stub(:hackney)
@@ -62,8 +64,12 @@ defmodule Lightning.InstallSchemasTest do
       File
       |> expect(:rm_rf, fn _ -> nil end)
       |> expect(:mkdir_p, fn _ -> nil end)
-      |> expect(:open!, fn "priv/schemas/asana.json", [:write] -> nil end)
-      |> expect(:open!, fn "priv/schemas/primero.json", [:write] -> nil end)
+      |> expect(:open!, fn "test/fixtures/schemas/asana.json", [:write] ->
+        nil
+      end)
+      |> expect(:open!, fn "test/fixtures/schemas/primero.json", [:write] ->
+        nil
+      end)
       |> expect(:close, 2, fn _ -> nil end)
 
       IO
@@ -80,7 +86,7 @@ defmodule Lightning.InstallSchemasTest do
       expect(File, :mkdir_p, fn _ -> {:error, "error occured"} end)
 
       assert_raise RuntimeError,
-                   "Couldn't create the schemas directory: priv/schemas/, got :error occured.",
+                   "Couldn't create the schemas directory: test/fixtures/schemas, got :error occured.",
                    fn ->
                      InstallSchemas.run([])
                    end
@@ -101,7 +107,7 @@ defmodule Lightning.InstallSchemasTest do
       end)
 
       assert_raise RuntimeError, "Unable to access @openfn/language-asana", fn ->
-        InstallSchemas.persist_schema("@openfn/language-asana")
+        InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
       end
     end
 
@@ -121,7 +127,7 @@ defmodule Lightning.InstallSchemasTest do
 
       {_result, log} =
         with_log(fn ->
-          InstallSchemas.persist_schema("@openfn/language-asana")
+          InstallSchemas.persist_schema(@schemas_path, "@openfn/language-asana")
         end)
 
       assert log =~

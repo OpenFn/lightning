@@ -10,7 +10,6 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   use HTTPoison.Base
   require Logger
 
-  @schemas_path "priv/schemas/"
   @default_excluded_adaptors [
     "language-common",
     "language-devtools"
@@ -23,11 +22,19 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
   def run(args) do
     HTTPoison.start()
 
-    init_schema_dir()
+    dir = schemas_path()
 
-    args
-    |> parse_excluded()
-    |> fetch_schemas()
+    init_schema_dir(dir)
+
+    result =
+      args
+      |> parse_excluded()
+      |> fetch_schemas(&persist_schema(dir, &1))
+      |> Enum.to_list()
+
+    Mix.shell().info(
+      "Schemas installation has finished. #{length(result)} installed"
+    )
   end
 
   def parse_excluded(args) do
@@ -41,32 +48,38 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     end
   end
 
-  defp init_schema_dir() do
-    File.rm_rf(@schemas_path)
+  defp schemas_path() do
+    Application.get_env(:lightning, :schemas_path)
+  end
 
-    File.mkdir_p(@schemas_path)
+  defp init_schema_dir(dir) do
+    if is_nil(dir), do: raise("Schema directory not provided.")
+    File.rm_rf(dir)
+
+    File.mkdir_p(dir)
     |> case do
       {:error, reason} ->
-        raise "Couldn't create the schemas directory: #{@schemas_path}, got :#{reason}."
+        raise "Couldn't create the schemas directory: #{dir}, got :#{reason}."
 
       _ ->
         nil
     end
   end
 
-  def write_schema(package_name, data) when is_binary(package_name) do
-    file =
-      File.open!(
-        @schemas_path <>
-          String.replace(package_name, "@openfn/language-", "") <> ".json",
-        [:write]
-      )
+  def write_schema(dir, package_name, data) when is_binary(package_name) do
+    path =
+      Path.join([
+        dir,
+        String.replace(package_name, "@openfn/language-", "") <> ".json"
+      ])
+
+    file = File.open!(path, [:write])
 
     IO.binwrite(file, data)
     File.close(file)
   end
 
-  def persist_schema(package_name) do
+  def persist_schema(dir, package_name) do
     get(
       "https://cdn.jsdelivr.net/npm/#{package_name}/configuration-schema.json",
       [],
@@ -78,7 +91,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
         raise "Unable to access #{package_name}"
 
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        write_schema(package_name, body)
+        write_schema(dir, package_name, body)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         Logger.warn(
@@ -87,7 +100,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
     end
   end
 
-  def fetch_schemas(excluded \\ []) do
+  def fetch_schemas(excluded \\ [], fun) do
     get("https://registry.npmjs.org/-/user/openfn/package", [],
       hackney: [pool: :default],
       recv_timeout: 15_000
@@ -99,28 +112,21 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         excluded = excluded |> Enum.map(&"@openfn/#{&1}")
 
-        result =
-          body
-          |> Jason.decode!()
-          |> Enum.map(fn {name, _} -> name end)
-          |> Enum.filter(fn name ->
-            Regex.match?(~r/@openfn\/language-\w+/, name)
-          end)
-          |> Enum.reject(fn name ->
-            name in excluded
-          end)
-          |> Task.async_stream(
-            &persist_schema/1,
-            ordered: false,
-            max_concurrency: 5,
-            timeout: 30_000
-          )
-          |> Stream.map(fn {:ok, detail} -> detail end)
-          |> Enum.to_list()
-
-        Mix.shell().info(
-          "Schemas installation has finished. #{length(result)} installed"
+        body
+        |> Jason.decode!()
+        |> Enum.map(fn {name, _} -> name end)
+        |> Enum.filter(fn name ->
+          Regex.match?(~r/@openfn\/language-\w+/, name)
+        end)
+        |> Enum.reject(fn name ->
+          name in excluded
+        end)
+        |> Task.async_stream(fun,
+          ordered: false,
+          max_concurrency: 5,
+          timeout: 30_000
         )
+        |> Stream.map(fn {:ok, detail} -> detail end)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
         raise "Unable to access openfn user packages. status=#{status_code}"

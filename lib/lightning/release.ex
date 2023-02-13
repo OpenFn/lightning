@@ -1,9 +1,12 @@
 defmodule Lightning.Release do
+  require Logger
+
   @moduledoc """
   Used for executing DB release tasks when run in production without Mix
   installed.
   """
   @app :lightning
+  @repo Lightning.Repo
 
   def migrate do
     load_app()
@@ -11,6 +14,24 @@ defmodule Lightning.Release do
     for repo <- repos() do
       {:ok, _, _} =
         Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))
+    end
+  end
+
+  def create_db do
+    @repo.__adapter__().storage_up(@repo.config)
+    |> case do
+      :ok ->
+        Logger.info("Database created successfully")
+        :ok
+
+      {:error, :already_up} ->
+        Logger.info("Database already up.")
+        :ok
+
+      {:error, e} ->
+        Logger.error("Encountered an error during database creation")
+        Logger.error(e)
+        {:error, e}
     end
   end
 
@@ -27,6 +48,6 @@ defmodule Lightning.Release do
 
   def load_app do
     Application.ensure_all_started(:ssl)
-    Application.load(@app)
+    Application.ensure_all_started(@repo)
   end
 end
