@@ -33,6 +33,14 @@ defmodule LightningWeb.Router do
     get "/users/confirm/:token", UserConfirmationController, :edit
     post "/users/confirm/:token", UserConfirmationController, :update
 
+    get "/profile/confirm_email/:token",
+        UserConfirmationController,
+        :confirm_email
+
+    post "/profile/confirm_email/:token",
+         UserConfirmationController,
+         :update_email
+
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
   end
