@@ -258,12 +258,18 @@ defmodule Lightning.Accounts do
   The confirmed_at date is also updated to the current time.
   """
   def update_user_email(user, token) do
-    context = "change:#{user.email}"
+    current_user =
+      from(u in User,
+        where: u.id == ^user
+      )
+      |> Repo.one()
+
+    context = "change:#{current_user.email}"
 
     with {:ok, query} <-
            UserToken.verify_change_email_token_query(token, context),
          %UserToken{sent_to: email} <- Repo.one(query),
-         {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
+         {:ok, _} <- Repo.transaction(user_email_multi(current_user, email, context)) do
       :ok
     else
       _ -> :error
@@ -299,10 +305,8 @@ defmodule Lightning.Accounts do
         update_email_url_fun
       )
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{current_email}")
+    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
 
-    IO.inspect("Was i called")
     Repo.insert!(user_token)
 
     UserNotifier.deliver_update_email_instructions(
@@ -335,8 +339,7 @@ defmodule Lightning.Accounts do
             []
         end
       end)
-      |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
-                                                              password ->
+      |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
         if Bcrypt.verify_pass(password, user.hashed_password) do
           []
         else
@@ -591,8 +594,7 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "reset_password")
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
 
     Repo.insert!(user_token)
 
