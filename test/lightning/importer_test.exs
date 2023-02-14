@@ -36,7 +36,7 @@ defmodule Lightning.ImportProjectsTest do
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "xyz",
-                body: "> fn(state => state)"
+                body: "fn(state => state)"
               },
               %{
                 name: "job2",
@@ -44,7 +44,7 @@ defmodule Lightning.ImportProjectsTest do
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "abc",
-                body: "> fn(state => state)"
+                body: "fn(state => state)"
               }
             ]
           },
@@ -57,7 +57,7 @@ defmodule Lightning.ImportProjectsTest do
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "xyz",
-                body: "> fn(state => state)"
+                body: "fn(state => state)"
               },
               %{
                 name: "job2",
@@ -65,7 +65,7 @@ defmodule Lightning.ImportProjectsTest do
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "xyz",
-                body: "> fn(state => state)"
+                body: "fn(state => state)"
               }
             ]
           }
@@ -133,7 +133,7 @@ defmodule Lightning.ImportProjectsTest do
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "abc",
-                body: "> fn(state => state)"
+                body: "fn(state => state)"
               }
             ]
           },
@@ -147,7 +147,7 @@ defmodule Lightning.ImportProjectsTest do
                 adaptor: "language-fhir",
                 enabled: true,
                 credential: "abc",
-                body: "> fn(state => state)"
+                body: "fn(state => state)"
               }
             ]
           }
