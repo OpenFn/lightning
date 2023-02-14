@@ -210,8 +210,8 @@ defmodule Lightning.Accounts.UserToken do
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from token in token_and_context_query(hashed_token, context),
-            where: token.inserted_at > ago(@change_email_validity_in_days, "day")
+          from t in Lightning.Accounts.UserToken, where: t.token == ^token and ilike(t.context, "change:%"),
+            where: t.inserted_at > ago(@change_email_validity_in_days, "day")
 
         {:ok, query}
 
