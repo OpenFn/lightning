@@ -93,8 +93,10 @@ defmodule Lightning.Jobs.Job do
   end
 
   def changeset(job, attrs, workflow_id) do
-    changeset(job, attrs)
-    |> put_change(:workflow_id, workflow_id)
+    attrs = Map.put(attrs, :workflow_id, workflow_id)
+
+    job
+    |> changeset(attrs)
     |> validate_required(:workflow_id)
   end
 

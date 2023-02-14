@@ -33,7 +33,7 @@ defmodule Lightning.Credentials.Credential do
     credential
     |> cast(attrs, [:name, :body, :production, :user_id, :schema])
     |> cast_assoc(:project_credentials)
-    |> validate_required([:name, :body, :user_id, :schema])
+    |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)
     |> validate_transfer_ownership()
   end
