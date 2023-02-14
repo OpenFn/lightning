@@ -282,21 +282,24 @@ defmodule Lightning.Accounts do
   The confirmed_at date is also updated to the current time.
   """
   def update_user_email(user, token) do
-    current_user =
-      from(u in User,
-        where: u.id == ^user
-      )
-      |> Repo.one()
-
-    context = "change:#{current_user.email}"
+    # current_user =
+    #   from(u in UserToken,
+    #     where: u.id == ^user
+    #   )
+    #   |> Repo.one()
+    IO.inspect(user)
+    # context = "change:#{user.email}"
+    context = "change:%"
 
     with {:ok, query} <-
            UserToken.verify_change_email_token_query(token, context),
          %UserToken{sent_to: email} <- Repo.one(query),
-         {:ok, _} <- Repo.transaction(user_email_multi(current_user, email, context)) do
+         {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
       :ok
     else
-      _ -> :error
+      e ->
+        IO.inspect(e)
+        # _ -> :error
     end
   end
 
