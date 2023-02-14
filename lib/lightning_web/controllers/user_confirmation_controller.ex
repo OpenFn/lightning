@@ -70,10 +70,6 @@ defmodule LightningWeb.UserConfirmationController do
         |> redirect(to: "/")
 
       :error ->
-        # If there is a current user and the account was already confirmed,
-        # then odds are that the confirmation link was already visited, either
-        # by some automation or by the user themselves, so we redirect without
-        # a warning message.
         case conn.assigns do
           %{user: %{confirmed_at: confirmed_at}}
           when not is_nil(confirmed_at) ->
