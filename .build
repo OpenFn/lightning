@@ -53,6 +53,7 @@ Lightning.Pipeline.html
 Lightning.Policies.Permissions.html
 Lightning.Policies.ProjectUsers.html
 Lightning.Policies.Users.html
+Lightning.Projects.Importer.html
 Lightning.Projects.Policy.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
@@ -180,8 +181,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-E3F7D955.js
-dist/sidebar_items-9037A6CA.js
+dist/search_items-3FD80A1B.js
+dist/sidebar_items-A363ABFB.js
 index.html
 readme.html
 search.html

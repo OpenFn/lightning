@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.0">
     <meta name="project" content="Lightning v0.4.1">
 
-    <title>Lightning.Pipeline.StateAssembler — Lightning v0.4.1</title>
+    <title>Lightning.Projects.Importer — Lightning v0.4.1</title>
     <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
@@ -101,44 +101,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/state_assembler.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L1" title="View Source" class="view-source" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Pipeline.StateAssembler</span> 
+  <span translate="no">Lightning.Projects.Importer</span> 
   <small class="app-vsn" translate="no">(Lightning v0.4.1)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Facilities for building the state for a Run</p><h2 id="module-how-state-is-assembled" class="section-heading">
-  <a href="#module-how-state-is-assembled" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">how-state-is-assembled</p>
-  </a>
-  How state is assembled
-</h2>
-<p>For the most common jobs, an inbound webhook will store an <code class="inline">:http_request</code> type
-dataclip. The reason that is created is associated with the dataclip.</p><p>At runtime, the initial state for a Run will be in the shape of:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="1749742950-1">{</span><span class="w"> </span><span class="ss">&quot;data&quot;</span><span class="p">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">the</span><span class="w"> </span><span class="n">dataclip</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;configuration&quot;</span><span class="p">:</span><span class="w"> </span><span class="o">&lt;</span><span class="n">the</span><span class="w"> </span><span class="n">job</span><span class="err">&#39;</span><span class="n">s</span><span class="w"> </span><span class="n">credential</span><span class="o">&gt;</span><span class="w"> </span><span class="p" data-group-id="1749742950-1">}</span></code></pre><h2 id="module-saved-inputs" class="section-heading">
-  <a href="#module-saved-inputs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">saved-inputs</p>
-  </a>
-  Saved inputs
-</h2>
-<p>Saved custom inputs will only have state.configuration changed, everything else
-will remain as displayed.</p><h3 id="module-flow-jobs" class="section-heading">
-  <a href="#module-flow-jobs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">flow-jobs</p>
-  </a>
-  Flow Jobs
-</h3>
-<p>When a Job is triggered by a previous Jobs success or failure these are the
-rules for constructing that Jobs state:</p><p>For jobs that trigger on it's upstream jobs failure, the event will have
-the previous runs input dataclip as its input dataclip.</p><p>The state will also have the log of the previous run attached on the
-<code class="inline">error</code> key.</p><p>For Jobs triggered by a previous success, the run will have the previous
-runs output dataclip as its input dataclip.</p><p><code class="inline">:run_result</code> dataclips are expected to already have a <code class="inline">data</code> key, and are
-merged into the root.</p>
+<p>Module that expose a function building a multi for importing a project yaml (via a map)</p>
   </section>
 
 
@@ -158,11 +133,25 @@ merged into the root.</p>
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#assemble/1" translate="no">assemble(run)</a>
+          <a href="#import_job_changeset/4" translate="no">import_job_changeset(job, attrs, workflow_id, import_transaction)</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>Assemble state for use in a Run.</p></div>
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#import_multi_for_project/2" translate="no">import_multi_for_project(project_data, user)</a>
+
+        </div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#import_workflow_changeset/3" translate="no">import_workflow_changeset(workflow, map, import_transaction)</a>
+
+        </div>
 
       </div>
 
@@ -180,16 +169,16 @@ merged into the root.</p>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="assemble/1">
+<section class="detail" id="import_job_changeset/4">
 
   <div class="detail-header">
-    <a href="#assemble/1" class="detail-link" title="Link to this function">
+    <a href="#import_job_changeset/4" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">assemble(run)</h1>
+    <h1 class="signature" translate="no">import_job_changeset(job, attrs, workflow_id, import_transaction)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/state_assembler.ex#L48" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L63" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -199,13 +188,51 @@ Functions
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@spec</span> assemble(run :: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>()) :: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()</pre>
+  </section>
+</section>
+<section class="detail" id="import_multi_for_project/2">
 
-      </div>
+  <div class="detail-header">
+    <a href="#import_multi_for_project/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">import_multi_for_project(project_data, user)</h1>
 
-<p>Assemble state for use in a Run.</p>
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L15" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="import_workflow_changeset/3">
+
+  <div class="detail-header">
+    <a href="#import_workflow_changeset/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">import_workflow_changeset(workflow, map, import_transaction)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L42" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 
