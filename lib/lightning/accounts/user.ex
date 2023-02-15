@@ -43,7 +43,9 @@ defmodule Lightning.Accounts.User do
     last_name: :string,
     email: :string,
     password: :string,
-    hashed_password: :string
+    hashed_password: :string,
+    disabled: :boolean,
+    scheduled_deletion: :utc_datetime
   }
 
   @doc """
