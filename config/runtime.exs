@@ -19,10 +19,10 @@ config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
 config :lightning, :oauth_clients,
-  google: %{
+  google: [
     client_id: System.get_env("GOOGLE_CLIENT_ID"),
     client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
-  }
+  ]
 
 config :lightning,
   schemas_path:

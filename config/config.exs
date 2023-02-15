@@ -48,6 +48,14 @@ config :lightning, Lightning.Mailer, adapter: Swoosh.Adapters.Local
 # Swoosh API client is needed for adapters other than SMTP.
 config :swoosh, :api_client, Swoosh.ApiClient.Hackney
 
+# Set OAuth2 to use Hackney for HTTP calls
+config :oauth2, adapter: Tesla.Adapter.Hackney
+
+config :lightning, :oauth_clients,
+  google: [
+    wellknown_url: "https://accounts.google.com/.well-known/openid-configuration"
+  ]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.15.12",
