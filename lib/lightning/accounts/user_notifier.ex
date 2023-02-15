@@ -84,16 +84,36 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver instructions to update a user email.
   """
-  def deliver_update_email_instructions(user, url) do
-    deliver(user.email, "Update email instructions", """
+  def deliver_update_email_instructions(email, url) do
+    deliver(email, "Update email instructions", """
 
     ==============================
 
-    Hi #{user.email},
+    Hi #{email},
 
     You can change your email by visiting the URL below:
 
     #{url}
+
+    If you didn't request this change, please ignore this.
+
+    ==============================
+    """)
+  end
+
+  @doc """
+  Deliver warning to update a user email.
+  """
+  def deliver_update_email_warning(email, new_email) do
+    deliver(email, "Update email warning", """
+
+    ==============================
+
+    Hi #{email},
+
+    You have requested to change your email
+
+    Please visit your inbox (#{new_email}) to activate your account
 
     If you didn't request this change, please ignore this.
 

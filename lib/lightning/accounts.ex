@@ -16,6 +16,8 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
 
+  @hash_algorithm :sha256
+
   @spec purge_user(id :: Ecto.UUID.t()) :: :ok
   def purge_user(id) do
     Logger.debug(fn ->
@@ -257,25 +259,32 @@ defmodule Lightning.Accounts do
   If the token matches, the user email is updated and the token is deleted.
   The confirmed_at date is also updated to the current time.
   """
-  def update_user_email(user, token) do
-    # current_user =
-    #   from(u in UserToken,
-    #     where: u.id == ^user
-    #   )
-    #   |> Repo.one()
-    IO.inspect(user)
-    # context = "change:#{user.email}"
-    context = "change:%"
+  def update_user_email(token) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, decoded_token} ->
+        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
-    with {:ok, query} <-
-           UserToken.verify_change_email_token_query(token, context),
-         %UserToken{sent_to: email} <- Repo.one(query),
-         {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
-      :ok
-    else
-      e ->
-        IO.inspect(e)
-        # _ -> :error
+        user =
+          from(u in UserToken, where: u.token == ^hashed_token, preload: [:user])
+          |> Repo.one()
+
+        context = user.context
+        # IO.inspect(user)
+
+        with {:ok, query} <-
+               UserToken.verify_change_email_token_query(token, context),
+             %UserToken{sent_to: email} <- Repo.one(query),
+             {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
+          :ok
+        else
+          e ->
+            IO.inspect(e, label: "is")
+
+            # _ -> :error
+        end
+
+      :error ->
+        :error
     end
   end
 
@@ -308,12 +317,18 @@ defmodule Lightning.Accounts do
         update_email_url_fun
       )
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "change:#{current_email}")
 
     Repo.insert!(user_token)
 
+    UserNotifier.deliver_update_email_warning(
+      user.email,
+      current_email
+    )
+
     UserNotifier.deliver_update_email_instructions(
-      user,
+      current_email,
       update_email_url_fun.(encoded_token)
     )
   end
@@ -342,7 +357,8 @@ defmodule Lightning.Accounts do
             []
         end
       end)
-      |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
+      |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
+                                                              password ->
         if Bcrypt.verify_pass(password, user.hashed_password) do
           []
         else
@@ -597,7 +613,8 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password")
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "reset_password")
 
     Repo.insert!(user_token)
 

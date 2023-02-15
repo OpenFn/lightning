@@ -29,7 +29,27 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def confirm_email(conn, %{"token" => token}) do
-    render(conn, "confirm_email.html", token: token)
+    case Accounts.update_user_email(token) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "User confirmed successfully.")
+        |> redirect(to: "/")
+
+      :error ->
+        case conn.assigns do
+          %{user: %{confirmed_at: confirmed_at}}
+          when not is_nil(confirmed_at) ->
+            redirect(conn, to: "/")
+
+          %{} ->
+            conn
+            |> put_flash(
+              :error,
+              "User confirmation link is invalid or it has expired."
+            )
+            |> redirect(to: "/")
+        end
+    end
   end
 
   # Do not log in the user after confirmation to avoid a
@@ -48,30 +68,6 @@ defmodule LightningWeb.UserConfirmationController do
         # a warning message.
         case conn.assigns do
           %{current_user: %{confirmed_at: confirmed_at}}
-          when not is_nil(confirmed_at) ->
-            redirect(conn, to: "/")
-
-          %{} ->
-            conn
-            |> put_flash(
-              :error,
-              "User confirmation link is invalid or it has expired."
-            )
-            |> redirect(to: "/")
-        end
-    end
-  end
-
-  def update_email(conn, %{"user" => user, "token" => token}) do
-    case Accounts.update_user_email(user, token) do
-      {:ok, _} ->
-        conn
-        |> put_flash(:info, "User confirmed successfully.")
-        |> redirect(to: "/")
-
-      :error ->
-        case conn.assigns do
-          %{user: %{confirmed_at: confirmed_at}}
           when not is_nil(confirmed_at) ->
             redirect(conn, to: "/")
 
