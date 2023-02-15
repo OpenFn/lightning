@@ -1,6 +1,7 @@
 defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   use LightningWeb, :live_component
 
+  alias Lightning.AuthProviders.Google
   import LightningWeb.OauthCredentialHelper
 
   attr :form, :map, required: true
@@ -134,7 +135,10 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
      |> assign_new(:authorizing, fn -> false end)
      |> assign_new(:client, &build_client/0)
      |> assign_new(:authorize_url, fn %{client: client} ->
-       authorize_url(client, build_state(socket.id, __MODULE__, assigns.id))
+       Google.authorize_url(
+         client,
+         build_state(socket.id, __MODULE__, assigns.id)
+       )
      end)}
   end
 
@@ -158,11 +162,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    OAuth2.Client.get_token(client, code: code)
-    |> case do
-      {:ok, token} -> token |> IO.inspect(label: "ok")
-      {:error, error} -> error |> IO.inspect()
-    end
+    Google.get_token(client, code: code)
 
     {:ok, socket |> assign(authorizing: false)}
   end
@@ -183,33 +183,8 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   end
 
   defp build_client() do
-    # TODO: move me out into a google specific module
-    %{client_id: client_id, client_secret: client_secret} =
-      Application.fetch_env!(:lightning, :oauth_clients)
-      |> Keyword.get(:google)
-
-    OAuth2.Client.new(
-      strategy: OAuth2.Strategy.AuthCode,
-      authorize_url: "https://accounts.google.com/o/oauth2/auth",
-      token_url: "https://oauth2.googleapis.com/token",
-      client_id: client_id,
-      client_secret: client_secret,
-      redirect_uri: "http://localhost:4000/authenticate/callback"
-    )
-    |> OAuth2.Client.put_serializer("application/json", Jason)
-  end
-
-  defp authorize_url(client, state) do
-    scope = ~W[
-      https://www.googleapis.com/auth/spreadsheets
-      https://www.googleapis.com/auth/userinfo.profile
-    ] |> Enum.join(" ")
-
-    # TODO: move me out into a google specific module
-    OAuth2.Client.authorize_url!(client,
-      scope: scope,
-      state: state,
-      access_type: "offline"
+    Google.build_client(
+      callback_url: "http://localhost:4000/authenticate/callback"
     )
   end
 end

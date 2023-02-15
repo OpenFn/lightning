@@ -281,6 +281,33 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new google sheets credential", %{
       conn: conn
     } do
+      bypass = Bypass.open()
+
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown(),
+        """
+        {
+          "access_token": "ya29.a0AVvZ...",
+          "refresh_token": "1//03vpp6Li...",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "id_token": "eyJhbGciO...",
+          "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/spreadsheets"
+        }
+        """
+      )
+
       {:ok, index_live, _html} =
         live(conn, Routes.credential_index_path(conn, :index))
 
@@ -303,7 +330,6 @@ defmodule LightningWeb.CredentialLiveTest do
       new_live
       |> element("#google-sheets-inner-form")
       |> render()
-      |> IO.inspect()
 
       authorize_url = get_authorize_url(new_live)
 
@@ -317,7 +343,9 @@ defmodule LightningWeb.CredentialLiveTest do
         code: "1234"
       )
 
+      new_live |> element("input[name='credential[body]']") |> render() |> IO.inspect()
       assert new_live |> submit_disabled()
+
       # emulate a publish?
     end
   end

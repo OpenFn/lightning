@@ -23,15 +23,16 @@ defmodule Lightning.BypassHelpers do
   @doc """
   Add a token endpoint expectation. Used to test AuthProviders
   """
-  def expect_token(bypass, wellknown) do
+  def expect_token(bypass, wellknown, token \\ nil) do
     path = URI.new!(wellknown.token_endpoint).path
 
     Bypass.expect(bypass, "POST", path, fn conn ->
       Plug.Conn.resp(
         conn,
         200,
-        %{"access_token" => "blah", "refresh_token" => "blerg"}
-        |> Jason.encode!()
+        token ||
+          %{"access_token" => "blah", "refresh_token" => "blerg"}
+          |> Jason.encode!()
       )
     end)
   end
