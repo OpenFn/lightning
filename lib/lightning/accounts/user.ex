@@ -83,7 +83,7 @@ defmodule Lightning.Accounts.User do
       if terms_accepted do
         []
       else
-        [terms_accepted: "You must accept the terms and conditions"]
+        [terms_accepted: "Please accept the terms and conditions to register."]
       end
     end)
   end

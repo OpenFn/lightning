@@ -89,7 +89,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       response = html_response(conn, 200)
       assert response =~ "Register"
-      assert response =~ "You must accept the terms and conditions"
+      assert response =~ "Please accept the terms and conditions to register."
     end
   end
 end
