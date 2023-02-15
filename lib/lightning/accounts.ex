@@ -170,6 +170,10 @@ defmodule Lightning.Accounts do
 
   ## User registration
 
+  @spec register_user(
+          :invalid
+          | %{optional(:__struct__) => none, optional(atom | binary) => any}
+        ) :: any
   @doc """
   Registers a user.
 
@@ -182,9 +186,6 @@ defmodule Lightning.Accounts do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec register_user(attrs :: %{optional(binary) => binary}) ::
-          {:ok, User.t()}
-          | {:error, Ecto.Changeset.t(User.t()) | Ecto.Changeset.t()}
   def register_user(attrs) do
     User.user_registration_changeset(attrs)
     |> Ecto.Changeset.apply_action(:insert)
