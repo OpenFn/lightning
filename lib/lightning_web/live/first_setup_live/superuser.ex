@@ -28,8 +28,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
         socket
       ) do
     changeset =
-      socket.assigns.registration
-      |> Accounts.change_superuser(registration_params)
+      Accounts.change_superuser(registration_params)
       |> Ecto.Changeset.validate_confirmation(:password)
       |> Ecto.Changeset.validate_length(:password, min: 8)
       |> Map.put(:action, :validate)
@@ -72,7 +71,7 @@ defmodule LightningWeb.FirstSetupLive.Superuser do
 
       socket
       |> assign(:registration, registration)
-      |> assign(:changeset, registration |> Accounts.change_superuser())
+      |> assign(:changeset, Accounts.change_superuser())
     end
   end
 end

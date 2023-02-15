@@ -108,27 +108,6 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Registers a superuser.
-
-  ## Examples
-      iex> register_superuser(%{field: value})
-      {:ok, %User{}}
-
-      iex> register_superuser(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-  """
-
-  def register_superuser(attrs) do
-    %User{}
-    |> User.superuser_registration_changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def change_superuser(%User{} = user, attrs \\ %{}) do
-    User.superuser_registration_changeset(user, attrs)
-  end
-
-  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -162,6 +141,33 @@ defmodule Lightning.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  @doc """
+  Registers a superuser.
+
+  ## Examples
+      iex> register_superuser(%{field: value})
+      {:ok, %User{}}
+
+      iex> register_superuser(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+  """
+
+  def register_superuser(attrs) do
+    User.superuser_registration_changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, data} ->
+        struct(User, data) |> Repo.insert()
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  def change_superuser(attrs \\ %{}) do
+    User.superuser_registration_changeset(attrs)
+  end
+
   ## User registration
 
   @doc """
@@ -180,7 +186,7 @@ defmodule Lightning.Accounts do
           {:ok, User.t()}
           | {:error, Ecto.Changeset.t(User.t()) | Ecto.Changeset.t()}
   def register_user(attrs) do
-    User.registration_changeset(attrs)
+    User.user_registration_changeset(attrs)
     |> Ecto.Changeset.apply_action(:insert)
     |> case do
       {:ok, data} ->
@@ -200,8 +206,8 @@ defmodule Lightning.Accounts do
       %Ecto.Changeset{data: %User{}}
 
   """
-  def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(attrs, hash_password: false)
+  def change_user_registration(attrs \\ %{}) do
+    User.user_registration_changeset(attrs, hash_password: false)
   end
 
   def change_user_details(%User{} = user, attrs \\ %{}) do

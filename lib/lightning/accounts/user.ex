@@ -38,19 +38,13 @@ defmodule Lightning.Accounts.User do
     timestamps()
   end
 
-  @doc """
-  A user changeset for registering superusers.
-  """
-  def superuser_registration_changeset(user, attrs) do
-    user
-    |> registration_changeset(attrs)
-    |> prepare_changes(&set_superuser_role/1)
-  end
-
-  defp set_superuser_role(changeset) do
-    changeset
-    |> put_change(:role, :superuser)
-  end
+  @common_registration_props %{
+    first_name: :string,
+    last_name: :string,
+    email: :string,
+    password: :string,
+    hashed_password: :string
+  }
 
   @doc """
   A user changeset for registration.
@@ -69,24 +63,18 @@ defmodule Lightning.Accounts.User do
       validations on a LiveView form), this option can be set to `false`.
       Defaults to `true`.
   """
-  def registration_changeset(attrs, opts \\ []) do
+  def user_registration_changeset(attrs, opts \\ []) do
     {%{},
-     %{
-       first_name: :string,
-       last_name: :string,
-       email: :string,
-       password: :string,
-       hashed_password: :string,
+     Map.merge(@common_registration_props, %{
        terms_accepted: :boolean
-     }}
-    |> cast(attrs, [
-      :first_name,
-      :last_name,
-      :email,
-      :password,
-      :hashed_password,
-      :terms_accepted
-    ])
+     })}
+    |> cast(
+      attrs,
+      Map.keys(@common_registration_props) ++
+        [
+          :terms_accepted
+        ]
+    )
     |> validate_email()
     |> validate_password(opts)
     |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
@@ -98,6 +86,45 @@ defmodule Lightning.Accounts.User do
     end)
   end
 
+  @spec superuser_registration_changeset(
+          :invalid
+          | %{optional(:__struct__) => none, optional(atom | binary) => any},
+          keyword
+        ) :: Ecto.Changeset.t()
+  @doc """
+  A superuser changeset for registration.
+
+  It is important to validate the length of both email and password.
+  Otherwise databases may truncate the email without warnings, which
+  could lead to unpredictable or insecure behaviour. Long passwords may
+  also be very expensive to hash for certain algorithms.
+
+  ## Options
+
+    * `:hash_password` - Hashes the password so it can be stored securely
+      in the database and ensures the password field is cleared to prevent
+      leaks in the logs. If password hashing is not needed and clearing the
+      password field is not desired (like when using this changeset for
+      validations on a LiveView form), this option can be set to `false`.
+      Defaults to `true`.
+  """
+  def superuser_registration_changeset(attrs, opts \\ []) do
+    {%{},
+     Map.merge(@common_registration_props, %{
+       role: :string
+     })}
+    |> cast(
+      attrs,
+      Map.keys(@common_registration_props) ++
+        [
+          :role
+        ]
+    )
+    |> validate_email()
+    |> validate_password(opts)
+    |> put_change(:role, :superuser)
+  end
+
   defp validate_email(changeset) do
     changeset
     |> validate_required([:email, :first_name])
@@ -107,7 +134,7 @@ defmodule Lightning.Accounts.User do
     |> validate_length(:email, max: 160)
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
-        [email: "Email exists"]
+        [email: "has already been taken"]
       else
         []
       end
