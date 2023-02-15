@@ -7,6 +7,7 @@ defmodule Lightning.AuthProviders.Google do
   """
   def build_client(opts \\ []) do
     config = get_config()
+
     if is_nil(config[:client_id]) or is_nil(config[:client_secret]) do
       Logger.error("""
       Please ensure the following ENV variables are set correctly:
@@ -17,6 +18,7 @@ defmodule Lightning.AuthProviders.Google do
 
       raise "Required OAuth client configuration missing"
     end
+
     wellknown = get_wellknown()
 
     OAuth2.Client.new(
@@ -44,10 +46,9 @@ defmodule Lightning.AuthProviders.Google do
   end
 
   def get_token(client, params) do
-    IO.inspect({client, params})
     OAuth2.Client.get_token(client, params)
     |> case do
-      {:ok, token} -> token |> IO.inspect(label: "ok")
+      {:ok, token} -> token
       {:error, error} -> error |> IO.inspect(label: "error")
     end
   end

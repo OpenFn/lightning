@@ -4,20 +4,60 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   alias Lightning.AuthProviders.Google
   import LightningWeb.OauthCredentialHelper
 
+  defmodule TokenBody do
+    @moduledoc false
+
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field :access_token, :string
+      field :refresh_token, :string
+      field :expires_in, :integer
+      field :scope, :string
+    end
+
+    @doc false
+    def changeset(attrs \\ %{}) do
+      %__MODULE__{}
+      |> cast(attrs, [:access_token, :refresh_token, :expires_in, :scope])
+      |> validate_required([:access_token, :refresh_token])
+    end
+  end
+
   attr :form, :map, required: true
+  attr :update_body, :any, required: true
   slot :inner_block
 
   def fieldset(assigns) do
     changeset = assigns.form.source
 
-    assigns = assigns |> assign(valid?: changeset.valid?)
+    parent_valid? = !(changeset.errors |> Keyword.drop([:body]) |> Enum.any?())
+
+    token_body_changeset =
+      TokenBody.changeset(changeset |> Ecto.Changeset.get_field(:body) || %{})
+
+    assigns =
+      assigns
+      |> assign(
+        update_body: assigns.update_body,
+        token_body_changeset: token_body_changeset,
+        valid?: parent_valid? and token_body_changeset.valid?
+      )
 
     ~H"""
     <%= render_slot(
       @inner_block,
       {Phoenix.LiveView.HTMLEngine.component(
          &live_component/1,
-         [module: __MODULE__, form: @form, id: "google-sheets-inner-form"],
+         [
+           module: __MODULE__,
+           form: @form,
+           update_body: @update_body,
+           token_body_changeset: @token_body_changeset,
+           id: "google-sheets-inner-form"
+         ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
        ), @valid?}
     ) %>
@@ -26,6 +66,17 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
 
   @impl true
   def render(assigns) do
+    assigns =
+      assigns
+      |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
+        # Merge in any changes that have been make to the TokenBody changeset
+        # _inside_ this component.
+        %{
+          form
+          | params: Map.put(form.params, "body", token_body_changeset.params)
+        }
+      end)
+
     ~H"""
     <fieldset id={@id}>
       <legend class="contents text-base font-medium text-gray-900">
@@ -34,7 +85,14 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
       <p class="text-sm text-gray-500">
         Configuration for this credential.
       </p>
-      <%= hidden_input(@form, :body) %>
+      <div :for={
+        body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
+      }>
+        <%= hidden_input(body_form, :access_token) %>
+        <%= hidden_input(body_form, :refresh_token) %>
+        <%= hidden_input(body_form, :expires_in) %>
+        <%= hidden_input(body_form, :scope) %>
+      </div>
       <.authorize_button
         :if={!@authorizing}
         authorize_url={@authorize_url}
@@ -107,15 +165,21 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
 
   @impl true
   def mount(socket) do
-    # socket = socket |> assign_new(:id, fn -> Ecto.UUID.generate() end)
-
     subscribe(socket.id)
 
     {:ok, socket}
   end
 
   @impl true
-  def update(%{form: form, id: id} = assigns, socket) do
+  def update(
+        %{
+          form: form,
+          id: id,
+          token_body_changeset: token_body_changeset,
+          update_body: update_body
+        },
+        socket
+      ) do
     # oauth pubsub module
     # oauth state generator
 
@@ -131,14 +195,16 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
 
     {:ok,
      socket
-     |> assign(form: form, id: id)
+     |> assign(
+       form: form,
+       id: id,
+       token_body_changeset: token_body_changeset,
+       update_body: update_body
+     )
      |> assign_new(:authorizing, fn -> false end)
      |> assign_new(:client, &build_client/0)
      |> assign_new(:authorize_url, fn %{client: client} ->
-       Google.authorize_url(
-         client,
-         build_state(socket.id, __MODULE__, assigns.id)
-       )
+       Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
      end)}
   end
 
@@ -155,16 +221,16 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
 
   @impl true
   def update(%{code: code}, socket) do
-    IO.inspect(code, label: "got a code")
-
     client = socket.assigns.client
 
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    Google.get_token(client, code: code)
+    client = Google.get_token(client, code: code)
 
-    {:ok, socket |> assign(authorizing: false)}
+    socket.assigns.update_body.(client.token |> token_to_body())
+
+    {:ok, socket |> assign(authorizing: false, client: client)}
   end
 
   @impl true
@@ -186,5 +252,18 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
     Google.build_client(
       callback_url: "http://localhost:4000/authenticate/callback"
     )
+  end
+
+  defp token_to_body(token) do
+    token
+    |> Map.from_struct()
+    |> Enum.reduce([], fn {k, v}, acc ->
+      if k in [:access_token, :refresh_token, :expires_at, :scope] do
+        [{k |> to_string(), v} | acc]
+      else
+        acc
+      end
+    end)
+    |> Map.new()
   end
 end

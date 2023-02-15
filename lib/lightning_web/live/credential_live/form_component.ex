@@ -14,6 +14,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
+  defp update_body(id, body) do
+    send_update(__MODULE__, id: id, body: body)
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -47,7 +51,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                     phx-change="validate"
                     phx-submit="save"
                   >
-                    <.form_component :let={{fieldset, valid?}} form={f} type={@type}>
+                    <.form_component
+                      :let={{fieldset, valid?}}
+                      form={f}
+                      type={@type}
+                      update_body={&update_body(@id, &1)}
+                    >
                       <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
                         <fieldset>
                           <div class="space-y-4">
@@ -126,11 +135,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   attr :type, :string, required: true
   attr :form, :map, required: true
+  attr :update_body, :any, required: false
   slot :inner_block
 
   def form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
-    <GoogleSheetsLive.fieldset :let={l} form={@form}>
+    <GoogleSheetsLive.fieldset :let={l} form={@form} update_body={@update_body}>
       <%= render_slot(@inner_block, l) %>
     </GoogleSheetsLive.fieldset>
     """
@@ -309,6 +319,18 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          filter_available_projects(changeset, all_projects)
        end
      )}
+  end
+
+  def update(%{body: body}, socket) do
+    {:ok,
+     socket
+     |> update(:changeset, fn changeset, %{credential: credential} ->
+       params =
+         changeset.params
+         |> Map.put("body", body)
+
+       Credentials.change_credential(credential, params)
+     end)}
   end
 
   @impl true

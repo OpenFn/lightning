@@ -331,21 +331,47 @@ defmodule LightningWeb.CredentialLiveTest do
       |> element("#google-sheets-inner-form")
       |> render()
 
-      authorize_url = get_authorize_url(new_live)
+      new_live |> fill_credential(%{name: "My Google Sheets Credential"})
 
-      [subscription_id, mod, component_id] = get_decoded_state(authorize_url)
+      assert new_live |> submit_disabled(),
+             "Submit should be disabled since the `body` hasn't been populated correctly"
+
+      # Get the state from the authorize url in order to fake the calling
+      # off the action in the OidcController
+      [subscription_id, mod, component_id] =
+        new_live
+        |> get_authorize_url()
+        |> get_decoded_state()
 
       assert new_live.id == subscription_id
       assert new_live |> element(component_id)
 
+      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
+      # as a `send_update/3` call to the GoogleSheets component
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
         id: component_id,
         code: "1234"
       )
 
-      new_live |> element("input[name='credential[body]']") |> render() |> IO.inspect()
-      assert new_live |> submit_disabled()
+      # TODO: test that the fields are the same as the token response
+      new_live
+      |> element("input[name='credential[body][refresh_token]']")
+      |> render()
+      |> IO.inspect()
 
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        new_live
+        |> form("#credential-form")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      {_path, flash} = assert_redirect(new_live)
+      assert flash == %{"info" => "Credential created successfully"}
       # emulate a publish?
     end
   end

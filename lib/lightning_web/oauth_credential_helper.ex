@@ -48,6 +48,6 @@ defmodule LightningWeb.OauthCredentialHelper do
   end
 
   defp topic(subscription_id) do
-    "oauth_credential:#{subscription_id}" |> IO.inspect()
+    "oauth_credential:#{subscription_id}"
   end
 end
