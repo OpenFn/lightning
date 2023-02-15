@@ -80,5 +80,16 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       assert response =~ "Register"
       assert response =~ "must have the @ sign and no spaces"
     end
+
+    test "render errors for terms and conditions not accepted", %{conn: conn} do
+      conn =
+        post(conn, Routes.user_registration_path(conn, :create), %{
+          "user" => %{"terms_accepted" => false}
+        })
+
+      response = html_response(conn, 200)
+      assert response =~ "Register"
+      assert response =~ "You must accept the terms and conditions"
+    end
   end
 end
