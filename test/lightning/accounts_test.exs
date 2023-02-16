@@ -114,7 +114,7 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "register_superuser/1" do
-    test "registers users with a hashed password and sets role to :admin" do
+    test "registers users with a hashed password and sets role to :superuser" do
       email = unique_user_email()
 
       {:ok, user} =
@@ -145,6 +145,30 @@ defmodule Lightning.AccountsTest do
 
       changeset =
         Accounts.change_user_registration(
+          valid_user_attributes(email: email, password: password)
+        )
+
+      assert changeset.valid?
+      assert get_change(changeset, :email) == email
+      assert get_change(changeset, :password) == password
+      assert is_nil(get_change(changeset, :hashed_password))
+    end
+  end
+
+  describe "change_superuser_registration/2" do
+    test "returns a changeset" do
+      assert %Ecto.Changeset{} =
+               changeset = Accounts.change_superuser_registration()
+
+      assert changeset.required == [:password, :email, :first_name]
+    end
+
+    test "allows fields to be set" do
+      email = unique_user_email()
+      password = valid_user_password()
+
+      changeset =
+        Accounts.change_superuser_registration(
           valid_user_attributes(email: email, password: password)
         )
 

@@ -164,11 +164,19 @@ defmodule Lightning.Accounts do
     end
   end
 
-  def change_superuser(attrs \\ %{}) do
-    User.superuser_registration_changeset(attrs)
-  end
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking superuser changes.
 
-  ## User registration
+  ## Examples
+
+      iex> change_superuser_registration(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  @spec change_superuser_registration(any) :: Ecto.Changeset.t()
+  def change_superuser_registration(attrs \\ %{}) do
+    User.superuser_registration_changeset(attrs, hash_password: false)
+  end
 
   @spec register_user(
           :invalid
