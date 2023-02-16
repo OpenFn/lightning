@@ -2,7 +2,7 @@ defmodule Lightning.Accounts.User do
   @moduledoc """
   The User model.
   """
-  alias Lightning.Accounts.User
+  alias __MODULE__
 
   use Ecto.Schema
   import Ecto.Changeset
@@ -111,17 +111,10 @@ defmodule Lightning.Accounts.User do
       Defaults to `true`.
   """
   def superuser_registration_changeset(attrs, opts \\ []) do
-    {%{},
-     Map.merge(@common_registration_attrs, %{
-       role: :string
-     })}
-    |> cast(
-      attrs,
-      Map.keys(@common_registration_attrs) ++
-        [
-          :role
-        ]
-    )
+    registration_fields = Map.merge(@common_registration_attrs, %{role: :string})
+
+    {%{}, registration_fields}
+    |> cast(attrs, Map.keys(registration_fields))
     |> validate_email()
     |> validate_password(opts)
     |> put_change(:role, :superuser)
