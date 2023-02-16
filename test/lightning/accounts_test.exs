@@ -114,6 +114,34 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "register_superuser/1" do
+    test "requires email and password to be set" do
+      {:error, changeset} = Accounts.register_superuser(%{})
+
+      assert %{
+               password: ["can't be blank"],
+               email: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
+    test "validates email and password when given" do
+      {:error, changeset} =
+        Accounts.register_superuser(%{email: "not valid", password: "not valid"})
+
+      assert %{
+               email: ["must have the @ sign and no spaces"]
+             } = errors_on(changeset)
+    end
+
+    test "validates maximum values for email and password for security" do
+      too_long = String.duplicate("db@db.sn", 100)
+
+      {:error, changeset} =
+        Accounts.register_superuser(%{email: too_long, password: too_long})
+
+      assert "should be at most 160 character(s)" in errors_on(changeset).email
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
+    end
+
     test "registers users with a hashed password and sets role to :superuser" do
       email = unique_user_email()
 
