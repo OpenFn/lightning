@@ -28,4 +28,12 @@ defmodule Lightning.Accounts.UserTest do
       assert errors[:scheduled_deletion_email] == nil
     end
   end
+
+  describe "superuser_registration_changeset/1" do
+    test "puts role change in changeset" do
+      assert User.superuser_registration_changeset(%{})
+             |> Ecto.Changeset.get_change(:role) ==
+               :superuser
+    end
+  end
 end

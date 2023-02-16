@@ -108,27 +108,6 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Registers a superuser.
-
-  ## Examples
-      iex> register_superuser(%{field: value})
-      {:ok, %User{}}
-
-      iex> register_superuser(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-  """
-
-  def register_superuser(attrs) do
-    %User{}
-    |> User.superuser_registration_changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def change_superuser(%User{} = user, attrs \\ %{}) do
-    User.superuser_registration_changeset(user, attrs)
-  end
-
-  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -162,8 +141,47 @@ defmodule Lightning.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
-  ## User registration
+  @doc """
+  Registers a superuser.
 
+  ## Examples
+      iex> register_superuser(%{field: value})
+      {:ok, %User{}}
+
+      iex> register_superuser(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+  """
+
+  def register_superuser(attrs) do
+    User.superuser_registration_changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, data} ->
+        struct(User, data) |> Repo.insert()
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking superuser changes.
+
+  ## Examples
+
+      iex> change_superuser_registration(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  @spec change_superuser_registration(any) :: Ecto.Changeset.t()
+  def change_superuser_registration(attrs \\ %{}) do
+    User.superuser_registration_changeset(attrs, hash_password: false)
+  end
+
+  @spec register_user(
+          :invalid
+          | %{optional(:__struct__) => none, optional(atom | binary) => any}
+        ) :: any
   @doc """
   Registers a user.
 
@@ -177,9 +195,15 @@ defmodule Lightning.Accounts do
 
   """
   def register_user(attrs) do
-    %User{}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
+    User.user_registration_changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, data} ->
+        struct(User, data) |> Repo.insert()
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -191,8 +215,8 @@ defmodule Lightning.Accounts do
       %Ecto.Changeset{data: %User{}}
 
   """
-  def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(user, attrs, hash_password: false)
+  def change_user_registration(attrs \\ %{}) do
+    User.user_registration_changeset(attrs, hash_password: false)
   end
 
   def change_user_details(%User{} = user, attrs \\ %{}) do

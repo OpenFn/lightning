@@ -2,11 +2,10 @@ defmodule LightningWeb.UserRegistrationController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
-  alias Lightning.Accounts.User
   alias LightningWeb.UserAuth
 
   def new(conn, _params) do
-    changeset = Accounts.change_user_registration(%User{})
+    changeset = Accounts.change_user_registration()
     render(conn, "new.html", changeset: changeset)
   end
 

@@ -71,6 +71,20 @@ defmodule Lightning.AccountsTest do
              } = errors_on(changeset)
     end
 
+    test "requires terms and conditions to be accepted" do
+      {:error, changeset} = Accounts.register_user(%{terms_accepted: false})
+
+      assert %{
+               terms_accepted: [
+                 "Please accept the terms and conditions to register."
+               ]
+             } = errors_on(changeset)
+
+      {:error, changeset} = Accounts.register_user(%{terms_accepted: true})
+
+      assert %{} = errors_on(changeset)
+    end
+
     test "validates email and password when given" do
       {:error, changeset} =
         Accounts.register_user(%{email: "not valid", password: "not valid"})
@@ -114,7 +128,35 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "register_superuser/1" do
-    test "registers users with a hashed password and sets role to :admin" do
+    test "requires email and password to be set" do
+      {:error, changeset} = Accounts.register_superuser(%{})
+
+      assert %{
+               password: ["can't be blank"],
+               email: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
+    test "validates email and password when given" do
+      {:error, changeset} =
+        Accounts.register_superuser(%{email: "not valid", password: "not valid"})
+
+      assert %{
+               email: ["must have the @ sign and no spaces"]
+             } = errors_on(changeset)
+    end
+
+    test "validates maximum values for email and password for security" do
+      too_long = String.duplicate("db@db.sn", 100)
+
+      {:error, changeset} =
+        Accounts.register_superuser(%{email: too_long, password: too_long})
+
+      assert "should be at most 160 character(s)" in errors_on(changeset).email
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
+    end
+
+    test "registers users with a hashed password and sets role to :superuser" do
       email = unique_user_email()
 
       {:ok, user} =
@@ -134,8 +176,7 @@ defmodule Lightning.AccountsTest do
 
   describe "change_user_registration/2" do
     test "returns a changeset" do
-      assert %Ecto.Changeset{} =
-               changeset = Accounts.change_user_registration(%User{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration()
 
       assert changeset.required == [:password, :email, :first_name]
     end
@@ -146,7 +187,30 @@ defmodule Lightning.AccountsTest do
 
       changeset =
         Accounts.change_user_registration(
-          %User{},
+          valid_user_attributes(email: email, password: password)
+        )
+
+      assert changeset.valid?
+      assert get_change(changeset, :email) == email
+      assert get_change(changeset, :password) == password
+      assert is_nil(get_change(changeset, :hashed_password))
+    end
+  end
+
+  describe "change_superuser_registration/2" do
+    test "returns a changeset" do
+      assert %Ecto.Changeset{} =
+               changeset = Accounts.change_superuser_registration()
+
+      assert changeset.required == [:password, :email, :first_name]
+    end
+
+    test "allows fields to be set" do
+      email = unique_user_email()
+      password = valid_user_password()
+
+      changeset =
+        Accounts.change_superuser_registration(
           valid_user_attributes(email: email, password: password)
         )
 

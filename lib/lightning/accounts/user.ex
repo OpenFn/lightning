@@ -2,10 +2,12 @@ defmodule Lightning.Accounts.User do
   @moduledoc """
   The User model.
   """
+  alias __MODULE__
 
   use Ecto.Schema
   import Ecto.Changeset
   import EctoEnum
+  import Ecto.Query
 
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil
@@ -19,15 +21,15 @@ defmodule Lightning.Accounts.User do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
-    field(:first_name, :string)
-    field(:last_name, :string)
-    field(:email, :string)
-    field(:password, :string, virtual: true, redact: true)
-    field(:hashed_password, :string, redact: true)
-    field(:confirmed_at, :naive_datetime)
-    field(:role, RolesEnum, default: :user)
-    field(:disabled, :boolean, default: false)
-    field(:scheduled_deletion, :utc_datetime)
+    field :first_name, :string
+    field :last_name, :string
+    field :email, :string
+    field :password, :string, virtual: true, redact: true
+    field :hashed_password, :string, redact: true
+    field :confirmed_at, :naive_datetime
+    field :role, RolesEnum, default: :user
+    field :disabled, :boolean, default: false
+    field :scheduled_deletion, :utc_datetime
 
     has_many :credentials, Lightning.Credentials.Credential
     has_many :project_users, Lightning.Projects.ProjectUser
@@ -36,19 +38,15 @@ defmodule Lightning.Accounts.User do
     timestamps()
   end
 
-  @doc """
-  A user changeset for registering superusers.
-  """
-  def superuser_registration_changeset(user, attrs) do
-    user
-    |> registration_changeset(attrs)
-    |> prepare_changes(&set_superuser_role/1)
-  end
-
-  defp set_superuser_role(changeset) do
-    changeset
-    |> put_change(:role, :superuser)
-  end
+  @common_registration_attrs %{
+    first_name: :string,
+    last_name: :string,
+    email: :string,
+    password: :string,
+    hashed_password: :string,
+    disabled: :boolean,
+    scheduled_deletion: :utc_datetime
+  }
 
   @doc """
   A user changeset for registration.
@@ -67,18 +65,59 @@ defmodule Lightning.Accounts.User do
       validations on a LiveView form), this option can be set to `false`.
       Defaults to `true`.
   """
-  def registration_changeset(user, attrs, opts \\ []) do
-    user
-    |> cast(attrs, [
-      :first_name,
-      :last_name,
-      :email,
-      :password,
-      :disabled,
-      :scheduled_deletion
-    ])
+  def user_registration_changeset(attrs, opts \\ []) do
+    {%{},
+     Map.merge(@common_registration_attrs, %{
+       terms_accepted: :boolean
+     })}
+    |> cast(
+      attrs,
+      Map.keys(@common_registration_attrs) ++
+        [
+          :terms_accepted
+        ]
+    )
     |> validate_email()
     |> validate_password(opts)
+    |> validate_change(:terms_accepted, fn :terms_accepted, terms_accepted ->
+      if terms_accepted do
+        []
+      else
+        [terms_accepted: "Please accept the terms and conditions to register."]
+      end
+    end)
+  end
+
+  @spec superuser_registration_changeset(
+          :invalid
+          | %{optional(:__struct__) => none, optional(atom | binary) => any},
+          keyword
+        ) :: Ecto.Changeset.t()
+  @doc """
+  A superuser changeset for registration.
+
+  It is important to validate the length of both email and password.
+  Otherwise databases may truncate the email without warnings, which
+  could lead to unpredictable or insecure behaviour. Long passwords may
+  also be very expensive to hash for certain algorithms.
+
+  ## Options
+
+    * `:hash_password` - Hashes the password so it can be stored securely
+      in the database and ensures the password field is cleared to prevent
+      leaks in the logs. If password hashing is not needed and clearing the
+      password field is not desired (like when using this changeset for
+      validations on a LiveView form), this option can be set to `false`.
+      Defaults to `true`.
+  """
+  def superuser_registration_changeset(attrs, opts \\ []) do
+    registration_fields = Map.merge(@common_registration_attrs, %{role: :string})
+
+    {%{}, registration_fields}
+    |> cast(attrs, Map.keys(registration_fields))
+    |> validate_email()
+    |> validate_password(opts)
+    |> put_change(:role, :superuser)
   end
 
   defp validate_email(changeset) do
@@ -88,17 +127,19 @@ defmodule Lightning.Accounts.User do
       message: "must have the @ sign and no spaces"
     )
     |> validate_length(:email, max: 160)
-    |> unsafe_validate_unique(:email, Lightning.Repo)
-    |> unique_constraint(:email)
+    |> validate_change(:email, fn :email, email ->
+      if Lightning.Repo.exists?(User |> where(email: ^email)) do
+        [email: "has already been taken"]
+      else
+        []
+      end
+    end)
   end
 
   defp validate_password(changeset, opts) do
     changeset
     |> validate_required([:password])
     |> validate_length(:password, min: 8, max: 72)
-    # |> validate_format(:password, ~r/[a-z]/, message: "at least one lower case character")
-    # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
-    # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
     |> maybe_hash_password(opts)
   end
 
