@@ -12,7 +12,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-A363ABFB.js"></script>
+    <script src="dist/sidebar_items-BADFBC40.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -188,16 +188,6 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#registration_changeset/3" translate="no">registration_changeset(user, attrs, opts \\ [])</a>
-
-        </div>
-
-          <div class="summary-synopsis"><p>A user changeset for registration.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
           <a href="#scheduled_deletion_changeset/2" translate="no">scheduled_deletion_changeset(user, attrs)</a>
 
         </div>
@@ -208,11 +198,21 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#superuser_registration_changeset/2" translate="no">superuser_registration_changeset(user, attrs)</a>
+          <a href="#superuser_registration_changeset/2" translate="no">superuser_registration_changeset(attrs, opts \\ [])</a>
 
         </div>
 
-          <div class="summary-synopsis"><p>A user changeset for registering superusers.</p></div>
+          <div class="summary-synopsis"><p>A superuser changeset for registration.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#user_registration_changeset/2" translate="no">user_registration_changeset(attrs, opts \\ [])</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>A user changeset for registration.</p></div>
 
       </div>
 
@@ -259,7 +259,7 @@ Types
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L10" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L12" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -317,7 +317,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">confirm_changeset(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L200" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L241" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -339,7 +339,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">details_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L138" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L179" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -361,7 +361,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">email_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L158" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L199" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -385,7 +385,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">password_changeset(user, attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L190" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L231" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -409,44 +409,6 @@ validations on a LiveView form), this option can be set to <code class="inline">
 Defaults to <code class="inline">true</code>.</li></ul>
   </section>
 </section>
-<section class="detail" id="registration_changeset/3">
-
-    <span id="registration_changeset/2"></span>
-
-  <div class="detail-header">
-    <a href="#registration_changeset/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">registration_changeset(user, attrs, opts \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L70" class="view-source" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>A user changeset for registration.</p><p>It is important to validate the length of both email and password.
-Otherwise databases may truncate the email without warnings, which
-could lead to unpredictable or insecure behaviour. Long passwords may
-also be very expensive to hash for certain algorithms.</p><h2 id="registration_changeset/3-options" class="section-heading">
-  <a href="#registration_changeset/3-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">options</p>
-  </a>
-  Options
-</h2>
-<ul><li><code class="inline">:hash_password</code> - Hashes the password so it can be stored securely
-in the database and ensures the password field is cleared to prevent
-leaks in the logs. If password hashing is not needed and clearing the
-password field is not desired (like when using this changeset for
-validations on a LiveView form), this option can be set to <code class="inline">false</code>.
-Defaults to <code class="inline">true</code>.</li></ul>
-  </section>
-</section>
 <section class="detail" id="scheduled_deletion_changeset/2">
 
   <div class="detail-header">
@@ -456,7 +418,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">scheduled_deletion_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L171" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L212" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -471,14 +433,16 @@ Defaults to <code class="inline">true</code>.</li></ul>
 </section>
 <section class="detail" id="superuser_registration_changeset/2">
 
+    <span id="superuser_registration_changeset/1"></span>
+
   <div class="detail-header">
     <a href="#superuser_registration_changeset/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">superuser_registration_changeset(user, attrs)</h1>
+    <h1 class="signature" translate="no">superuser_registration_changeset(attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L42" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L113" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -488,7 +452,69 @@ Defaults to <code class="inline">true</code>.</li></ul>
 
   <section class="docstring">
 
-<p>A user changeset for registering superusers.</p>
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> superuser_registration_changeset(
+  :invalid
+  | %{optional(:__struct__) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">none</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()},
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: <a href="https://hexdocs.pm/ecto/3.9.1/Ecto.Changeset.html#t:t/0">Ecto.Changeset.t</a>()</pre>
+
+      </div>
+
+<p>A superuser changeset for registration.</p><p>It is important to validate the length of both email and password.
+Otherwise databases may truncate the email without warnings, which
+could lead to unpredictable or insecure behaviour. Long passwords may
+also be very expensive to hash for certain algorithms.</p><h2 id="superuser_registration_changeset/2-options" class="section-heading">
+  <a href="#superuser_registration_changeset/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">options</p>
+  </a>
+  Options
+</h2>
+<ul><li><code class="inline">:hash_password</code> - Hashes the password so it can be stored securely
+in the database and ensures the password field is cleared to prevent
+leaks in the logs. If password hashing is not needed and clearing the
+password field is not desired (like when using this changeset for
+validations on a LiveView form), this option can be set to <code class="inline">false</code>.
+Defaults to <code class="inline">true</code>.</li></ul>
+  </section>
+</section>
+<section class="detail" id="user_registration_changeset/2">
+
+    <span id="user_registration_changeset/1"></span>
+
+  <div class="detail-header">
+    <a href="#user_registration_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">user_registration_changeset(attrs, opts \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L68" class="view-source" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>A user changeset for registration.</p><p>It is important to validate the length of both email and password.
+Otherwise databases may truncate the email without warnings, which
+could lead to unpredictable or insecure behaviour. Long passwords may
+also be very expensive to hash for certain algorithms.</p><h2 id="user_registration_changeset/2-options" class="section-heading">
+  <a href="#user_registration_changeset/2-options" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">options</p>
+  </a>
+  Options
+</h2>
+<ul><li><code class="inline">:hash_password</code> - Hashes the password so it can be stored securely
+in the database and ensures the password field is cleared to prevent
+leaks in the logs. If password hashing is not needed and clearing the
+password field is not desired (like when using this changeset for
+validations on a LiveView form), this option can be set to <code class="inline">false</code>.
+Defaults to <code class="inline">true</code>.</li></ul>
   </section>
 </section>
 <section class="detail" id="valid_password?/2">
@@ -500,7 +526,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">valid_password?(arg1, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L211" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L252" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -523,7 +549,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">validate_current_password(changeset, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L227" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L268" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
