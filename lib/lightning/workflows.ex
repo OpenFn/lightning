@@ -191,8 +191,17 @@ defmodule Lightning.Workflows do
     end)
   end
 
-  defp get_last_run(workorder),
-    do: List.last(List.first(workorder.attempts |> Repo.preload(:runs)).runs)
+  defp get_last_run(workorder) do
+    List.last(List.first(workorder.attempts |> Repo.preload(:runs)).runs)
+  end
+
+  defp has_failed_run?(workorder) do
+    workorder.attempts
+    |> Repo.preload(:runs)
+    |> Enum.map(fn attempt -> attempt.runs end)
+    |> List.flatten()
+    |> Enum.any?(fn run -> run.exit_code > 0 end)
+  end
 
   def get_digest_data(workflow, digest) do
     digest_timestamp = %{
@@ -218,7 +227,9 @@ defmodule Lightning.Workflows do
         attempts = (workorder |> Repo.preload(:attempts)).attempts |> length()
         last_run = get_last_run(workorder |> Repo.preload(:attempts))
 
-        last_run.exit_code == 0 and attempts > 1 and
+        last_run.exit_code == 0 and
+          has_failed_run?(workorder |> Repo.preload(:attempts)) and
+          attempts > 1 and
           Timex.to_unix(Timex.now()) - Timex.to_unix(last_run.finished_at) <=
             digest_timestamp[digest]
       end)

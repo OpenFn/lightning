@@ -211,7 +211,7 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "Project digest" do
-    test "Gets daily project digest data and sends email to users" do
+    test "Gets project digest data" do
       user = AccountsFixtures.user_fixture()
 
       project =
@@ -230,7 +230,7 @@ defmodule Lightning.WorkflowsTest do
       workorder_1 =
         InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
 
-      _workorder_2 =
+      workorder_2 =
         InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
 
       reason = InvocationFixtures.reason_fixture(trigger_id: job.trigger.id)
@@ -243,6 +243,33 @@ defmodule Lightning.WorkflowsTest do
         finished_at: Timex.now()
       })
 
+      create_run(workorder_2, reason, %{
+        project_id: project.id,
+        job_id: job.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 0,
+        finished_at: Timex.now()
+      })
+
+      assert Workflows.get_digest_data(
+               workflow |> Repo.preload(:work_orders),
+               :daily
+             ) == %{
+               failed_workorders: 0,
+               rerun_workorders: 0,
+               successful_workorders: 2,
+               workflow_name: workflow.name
+             }
+
+      workorder_1 =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+
+      workorder_2 =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+
+      workorder_3 =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+
       create_run(workorder_1, reason, %{
         project_id: project.id,
         job_id: job.id,
@@ -251,7 +278,7 @@ defmodule Lightning.WorkflowsTest do
         finished_at: Timex.now()
       })
 
-      create_run(workorder_1, reason, %{
+      create_run(workorder_2, reason, %{
         project_id: project.id,
         job_id: job.id,
         input_dataclip_id: reason.dataclip_id,
@@ -259,7 +286,7 @@ defmodule Lightning.WorkflowsTest do
         finished_at: Timex.now()
       })
 
-      create_run(workorder_1, reason, %{
+      create_run(workorder_3, reason, %{
         project_id: project.id,
         job_id: job.id,
         input_dataclip_id: reason.dataclip_id,
@@ -267,8 +294,15 @@ defmodule Lightning.WorkflowsTest do
         finished_at: Timex.now()
       })
 
-      Workflows.get_digest_data(workflow |> Repo.preload(:work_orders), :daily)
-      |> IO.inspect()
+      assert Workflows.get_digest_data(
+               workflow |> Repo.preload(:work_orders),
+               :daily
+             ) == %{
+               failed_workorders: 2,
+               rerun_workorders: 0,
+               successful_workorders: 3,
+               workflow_name: workflow.name
+             }
     end
   end
 
