@@ -97,7 +97,7 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   defp build_email_body(data, digest) do
-    digest_lookup = %{daily: "day", monthly: "monthly", weekly: "week"}
+    digest_lookup = %{daily: "day", monthly: "month", weekly: "week"}
 
     """
     #{data.workflow_name}:
