@@ -37,9 +37,11 @@ defmodule Lightning.WorkflowsTest do
       project = ProjectsFixtures.project_fixture()
       valid_attrs = %{name: "some-name", project_id: project.id}
 
-      assert {:ok, %Workflow{} = workflow} = Workflows.create_workflow(valid_attrs)
+      assert {:ok, %Workflow{} = workflow} =
+               Workflows.create_workflow(valid_attrs)
 
-      assert {:error, %Ecto.Changeset{} = changeset} = Workflows.create_workflow(valid_attrs)
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Workflows.create_workflow(valid_attrs)
 
       assert %{
                name: [
@@ -54,7 +56,8 @@ defmodule Lightning.WorkflowsTest do
       workflow = WorkflowsFixtures.workflow_fixture()
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, %Workflow{} = workflow} = Workflows.update_workflow(workflow, update_attrs)
+      assert {:ok, %Workflow{} = workflow} =
+               Workflows.update_workflow(workflow, update_attrs)
 
       assert workflow.name == "some-updated-name"
     end
@@ -147,10 +150,14 @@ defmodule Lightning.WorkflowsTest do
       assert w2.deleted_at == nil
 
       assert (w1
-              |> Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])) in results
+              |> Repo.preload(
+                jobs: [:credential, :workflow, trigger: [:upstream_job]]
+              )) in results
 
       assert (w2
-              |> Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])) in results
+              |> Repo.preload(
+                jobs: [:credential, :workflow, trigger: [:upstream_job]]
+              )) in results
 
       assert length(results) == 2
     end
@@ -208,13 +215,24 @@ defmodule Lightning.WorkflowsTest do
       user = AccountsFixtures.user_fixture()
 
       project =
-        ProjectsFixtures.project_fixture(project_users: [%{user_id: user.id, digest: :daily}])
+        ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user.id, digest: :daily}]
+        )
 
       workflow = WorkflowsFixtures.workflow_fixture(project_id: project.id)
-      job = JobsFixtures.job_fixture(project_id: project.id, workflow_id: workflow.id)
 
-      workorder_1 = InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
-      _workorder_2 = InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+      job =
+        JobsFixtures.job_fixture(
+          project_id: project.id,
+          workflow_id: workflow.id
+        )
+
+      workorder_1 =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+
+      _workorder_2 =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+
       reason = InvocationFixtures.reason_fixture(trigger_id: job.trigger.id)
 
       create_run(workorder_1, reason, %{
@@ -249,7 +267,8 @@ defmodule Lightning.WorkflowsTest do
         finished_at: Timex.now()
       })
 
-      Workflows.get_digest_data(workflow |> Repo.preload(:work_orders), :daily) |> IO.inspect()
+      Workflows.get_digest_data(workflow |> Repo.preload(:work_orders), :daily)
+      |> IO.inspect()
     end
   end
 
