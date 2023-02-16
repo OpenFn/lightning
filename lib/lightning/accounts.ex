@@ -260,37 +260,46 @@ defmodule Lightning.Accounts do
   The confirmed_at date is also updated to the current time.
   """
   def update_user_email(token) do
-    case Base.url_decode64(token, padding: false) do
-      {:ok, decoded_token} ->
-        hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
+    # case Base.url_decode64(token, padding: false) do
+    #   {:ok, decoded_token} ->
+    #     hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
-        user =
-          from(u in UserToken, where: u.token == ^hashed_token, preload: [:user])
-          |> Repo.one()
+    #     user =
+    #       from(u in UserToken, where: u.token == ^hashed_token, preload: [:user])
+    #       |> Repo.one()
 
-        context = user.context
-        # IO.inspect(user)
+    #     # context = user.context
+    #     # IO.inspect(user.context, label: "contenxt")
 
-        with {:ok, query} <-
-               UserToken.verify_change_email_token_query(token, context),
-             %UserToken{sent_to: email} <- Repo.one(query),
-             {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
-          :ok
-        else
-          e ->
-            IO.inspect(e, label: "is")
+    #     with {:ok, query} <-
+    #            UserToken.verify_change_email_token_query(token),
+    #          %UserToken{context: context, sent_to: email, user_id: user_id} <- Repo.one(query),
+    #          {:ok, _} <-
+    #            Repo.transaction(user_email_multi(user_id, email, context)) do
+    #       {:ok, user}
+    #     else
+    #       _ -> :error
+    #     end
 
-            # _ -> :error
-        end
-
-      :error ->
-        :error
+    #   :error ->
+    #     :error
+    # end
+    with {:ok, query} <-
+           UserToken.verify_change_email_token_query(token, "change:"),
+         %UserToken{context: context, sent_to: email, user_id: user_id} <-
+           Repo.one(query),
+         {:ok, %{user: user}} <-
+           Repo.transaction(user_email_multi(user_id, email, context)) do
+      {:ok, user}
+    else
+      _ -> :error
     end
   end
 
   defp user_email_multi(user, email, context) do
     changeset =
-      user
+      from(u in User, where: u.id == ^user)
+      |> Repo.one()
       |> User.email_changeset(%{email: email})
       |> User.confirm_changeset()
 
@@ -318,7 +327,7 @@ defmodule Lightning.Accounts do
       )
       when is_function(update_email_url_fun, 1) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{current_email}")
+      UserToken.build_email_token(user, "change:#{current_email}", current_email)
 
     Repo.insert!(user_token)
 
@@ -562,7 +571,9 @@ defmodule Lightning.Accounts do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
+      {encoded_token, user_token} =
+        UserToken.build_email_token(user, "confirm", user.email)
+
       Repo.insert!(user_token)
 
       UserNotifier.deliver_confirmation_instructions(
@@ -614,7 +625,7 @@ defmodule Lightning.Accounts do
       )
       when is_function(reset_password_url_fun, 1) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "reset_password")
+      UserToken.build_email_token(user, "reset_password", user.email)
 
     Repo.insert!(user_token)
 

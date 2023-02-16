@@ -139,11 +139,7 @@ defmodule Lightning.Accounts.UserToken do
   Users can easily adapt the existing code to provide other types of delivery methods,
   for example, by phone numbers.
   """
-  def build_email_token(user, context) do
-    build_hashed_token(user, context, user.email)
-  end
-
-  defp build_hashed_token(user, context, sent_to) do
+  def build_email_token(user, context, sent_to) do
     token = :crypto.strong_rand_bytes(@rand_size)
     hashed_token = :crypto.hash(@hash_algorithm, token)
 
@@ -214,8 +210,8 @@ defmodule Lightning.Accounts.UserToken do
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from(t in token_and_context_query(hashed_token, context),
-            where: t.token == ^token,
+          from(t in Lightning.Accounts.UserToken,
+            where: t.token == ^hashed_token,
             where: t.inserted_at > ago(@change_email_validity_in_days, "day")
           )
 
