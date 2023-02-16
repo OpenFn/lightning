@@ -33,6 +33,7 @@ and this project adheres to
 - Enable distributed Erlang, allowing any number of redundant Lightning nodes to
   communicate with each other.
 - Users can set up realtime alerts for a project
+- Users receives emails for project digest frequently
 
 ### Changed
 
