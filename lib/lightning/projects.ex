@@ -259,15 +259,6 @@ defmodule Lightning.Projects do
     |> Repo.transaction()
   end
 
-  def get_project_digest(project) do
-    workflows =
-      Workflows.get_workflows_for(project) |> IO.inspect(label: "Workflows")
-
-    digest = Enum.map(workflows, fn workflow -> workflow_digest(workflow) end)
-
-    digest
-  end
-
   defp project_digest(digest) do
     project_users =
       Repo.all(
