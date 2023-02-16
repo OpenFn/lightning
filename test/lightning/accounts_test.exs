@@ -71,6 +71,20 @@ defmodule Lightning.AccountsTest do
              } = errors_on(changeset)
     end
 
+    test "requires terms and conditions to be accepted" do
+      {:error, changeset} = Accounts.register_user(%{terms_accepted: false})
+
+      assert %{
+               terms_accepted: [
+                 "Please accept the terms and conditions to register."
+               ]
+             } = errors_on(changeset)
+
+      {:error, changeset} = Accounts.register_user(%{terms_accepted: true})
+
+      assert %{} = errors_on(changeset)
+    end
+
     test "validates email and password when given" do
       {:error, changeset} =
         Accounts.register_user(%{email: "not valid", password: "not valid"})
