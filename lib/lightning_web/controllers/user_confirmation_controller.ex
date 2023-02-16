@@ -32,7 +32,7 @@ defmodule LightningWeb.UserConfirmationController do
     case Accounts.update_user_email(token) do
       {:ok, _} ->
         conn
-        |> put_flash(:info, "User confirmed successfully.")
+        |> put_flash(:info, "Email changed successfully.")
         |> redirect(to: "/")
 
       :error ->
@@ -45,7 +45,7 @@ defmodule LightningWeb.UserConfirmationController do
             conn
             |> put_flash(
               :error,
-              "User confirmation link is invalid or it has expired."
+              "Email change link is invalid or it has expired."
             )
             |> redirect(to: "/")
         end
