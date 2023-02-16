@@ -2,6 +2,32 @@ defmodule Lightning.AuthProviders.Google do
   alias Lightning.AuthProviders.WellKnown
   require Logger
 
+  defmodule TokenBody do
+    @moduledoc false
+
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field :access_token, :string
+      field :refresh_token, :string
+      field :expires_at, :integer
+      field :scope, :string
+    end
+
+    def new(attrs) do
+      changeset(attrs) |> apply_changes()
+    end
+
+    @doc false
+    def changeset(attrs \\ %{}) do
+      %__MODULE__{}
+      |> cast(attrs, [:access_token, :refresh_token, :expires_at, :scope])
+      |> validate_required([:access_token, :refresh_token])
+    end
+  end
+
   @doc """
   Builds a new client
   """

@@ -4,28 +4,6 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
   alias Lightning.AuthProviders.Google
   import LightningWeb.OauthCredentialHelper
 
-  defmodule TokenBody do
-    @moduledoc false
-
-    use Ecto.Schema
-    import Ecto.Changeset
-
-    @primary_key false
-    embedded_schema do
-      field :access_token, :string
-      field :refresh_token, :string
-      field :expires_in, :integer
-      field :scope, :string
-    end
-
-    @doc false
-    def changeset(attrs \\ %{}) do
-      %__MODULE__{}
-      |> cast(attrs, [:access_token, :refresh_token, :expires_in, :scope])
-      |> validate_required([:access_token, :refresh_token])
-    end
-  end
-
   attr :form, :map, required: true
   attr :update_body, :any, required: true
   slot :inner_block
@@ -36,7 +14,9 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
     parent_valid? = !(changeset.errors |> Keyword.drop([:body]) |> Enum.any?())
 
     token_body_changeset =
-      TokenBody.changeset(changeset |> Ecto.Changeset.get_field(:body) || %{})
+      Google.TokenBody.changeset(
+        changeset |> Ecto.Changeset.get_field(:body) || %{}
+      )
 
     assigns =
       assigns
@@ -90,7 +70,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
       }>
         <%= hidden_input(body_form, :access_token) %>
         <%= hidden_input(body_form, :refresh_token) %>
-        <%= hidden_input(body_form, :expires_in) %>
+        <%= hidden_input(body_form, :expires_at) %>
         <%= hidden_input(body_form, :scope) %>
       </div>
       <.authorize_button
@@ -228,7 +208,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
 
     client = Google.get_token(client, code: code)
 
-    socket.assigns.update_body.(client.token |> token_to_body())
+    socket.assigns.update_body.(client.token |> token_to_params())
 
     {:ok, socket |> assign(authorizing: false, client: client)}
   end
@@ -254,14 +234,19 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
     )
   end
 
-  defp token_to_body(token) do
+  defp token_to_params(%OAuth2.AccessToken{} = token) do
     token
     |> Map.from_struct()
     |> Enum.reduce([], fn {k, v}, acc ->
-      if k in [:access_token, :refresh_token, :expires_at, :scope] do
-        [{k |> to_string(), v} | acc]
-      else
-        acc
+      case k do
+        _ when k in [:access_token, :refresh_token, :scope, :expires_at] ->
+          [{k |> to_string(), v} | acc]
+
+        :other_params ->
+          Enum.concat(Map.to_list(v), acc)
+
+        _ ->
+          acc
       end
     end)
     |> Map.new()

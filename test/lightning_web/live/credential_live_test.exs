@@ -279,7 +279,8 @@ defmodule LightningWeb.CredentialLiveTest do
     end
 
     test "allows the user to define and save a new google sheets credential", %{
-      conn: conn
+      conn: conn,
+      user: user
     } do
       bypass = Bypass.open()
 
@@ -353,11 +354,8 @@ defmodule LightningWeb.CredentialLiveTest do
         code: "1234"
       )
 
-      # TODO: test that the fields are the same as the token response
-      new_live
-      |> element("input[name='credential[body][refresh_token]']")
-      |> render()
-      |> IO.inspect()
+      # Rerender as the broadcast above has altered the LiveView state
+      new_live |> render()
 
       refute new_live |> submit_disabled()
 
@@ -372,7 +370,20 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {_path, flash} = assert_redirect(new_live)
       assert flash == %{"info" => "Credential created successfully"}
-      # emulate a publish?
+
+      new_credential =
+        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+
+      token = Lightning.AuthProviders.Google.TokenBody.new(new_credential.body)
+      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      assert %{
+               access_token: "ya29.a0AVvZ...",
+               refresh_token: "1//03vpp6Li...",
+               expires_at: ^expected_expiry,
+               scope:
+                 "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/spreadsheets"
+             } = token
     end
   end
 
