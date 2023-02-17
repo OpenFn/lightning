@@ -16,8 +16,6 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
 
-  @hash_algorithm :sha256
-
   @spec purge_user(id :: Ecto.UUID.t()) :: :ok
   def purge_user(id) do
     Logger.debug(fn ->
@@ -260,30 +258,6 @@ defmodule Lightning.Accounts do
   The confirmed_at date is also updated to the current time.
   """
   def update_user_email(token) do
-    # case Base.url_decode64(token, padding: false) do
-    #   {:ok, decoded_token} ->
-    #     hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
-
-    #     user =
-    #       from(u in UserToken, where: u.token == ^hashed_token, preload: [:user])
-    #       |> Repo.one()
-
-    #     # context = user.context
-    #     # IO.inspect(user.context, label: "contenxt")
-
-    #     with {:ok, query} <-
-    #            UserToken.verify_change_email_token_query(token),
-    #          %UserToken{context: context, sent_to: email, user_id: user_id} <- Repo.one(query),
-    #          {:ok, _} <-
-    #            Repo.transaction(user_email_multi(user_id, email, context)) do
-    #       {:ok, user}
-    #     else
-    #       _ -> :error
-    #     end
-
-    #   :error ->
-    #     :error
-    # end
     with {:ok, query} <-
            UserToken.verify_change_email_token_query(token, "change:"),
          %UserToken{context: context, sent_to: email, user_id: user_id} <-
@@ -296,10 +270,13 @@ defmodule Lightning.Accounts do
     end
   end
 
-  defp user_email_multi(user, email, context) do
-    changeset =
-      from(u in User, where: u.id == ^user)
+  defp user_email_multi(user_id, email, context) do
+    user =
+      from(u in User, where: u.id == ^user_id)
       |> Repo.one()
+
+    changeset =
+      user
       |> User.email_changeset(%{email: email})
       |> User.confirm_changeset()
 
@@ -327,7 +304,7 @@ defmodule Lightning.Accounts do
       )
       when is_function(update_email_url_fun, 1) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{current_email}", current_email)
+      UserToken.build_email_token(user, "change:#{user.email}", current_email)
 
     Repo.insert!(user_token)
 
