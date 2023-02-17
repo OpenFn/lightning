@@ -143,11 +143,13 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       refute Accounts.get_user_by_email(user.email)
       assert Accounts.get_user_by_email(email)
 
-      # conn = get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
-      # assert redirected_to(conn) == "/"
+      conn =
+        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
 
-      # assert get_flash(conn, :error) =~
-      #          "Email change link is invalid or it has expired."
+      assert redirected_to(conn) == "/"
+
+      assert get_flash(conn, :error) =~
+               "Email change link is invalid or it has expired."
     end
 
     test "does not update email with invalid token", %{conn: conn, user: user} do
