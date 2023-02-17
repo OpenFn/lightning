@@ -49,8 +49,7 @@ defmodule Lightning.SafetyString do
   def encode(list) when is_list(list) do
     [nil | list]
     |> Enum.join("|")
-    |> @vault.encrypt!()
-    |> Base.url_encode64(padding: false)
+    |> encode()
   end
 
   def encode(data) when is_binary(data) do
