@@ -1,4 +1,4 @@
-defmodule LightningWeb.CredentialLive.GoogleSheetsLive do
+defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   use LightningWeb, :live_component
 
   alias Lightning.AuthProviders.Google

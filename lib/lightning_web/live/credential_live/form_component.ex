@@ -9,7 +9,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   alias LightningWeb.CredentialLive.{
     RawBodyComponent,
     JsonSchemaBodyComponent,
-    GoogleSheetsLive
+    GoogleSheetsComponent
   }
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
@@ -140,9 +140,9 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   def form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
-    <GoogleSheetsLive.fieldset :let={l} form={@form} update_body={@update_body}>
+    <GoogleSheetsComponent.fieldset :let={l} form={@form} update_body={@update_body}>
       <%= render_slot(@inner_block, l) %>
-    </GoogleSheetsLive.fieldset>
+    </GoogleSheetsComponent.fieldset>
     """
   end
 
