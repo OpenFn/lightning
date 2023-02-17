@@ -73,10 +73,12 @@ defmodule Lightning.AuthProviders.Google do
 
   def get_token(client, params) do
     OAuth2.Client.get_token(client, params)
-    |> case do
-      {:ok, token} -> token
-      {:error, error} -> error |> IO.inspect(label: "error")
-    end
+  end
+
+  def get_userinfo(client, token) do
+    wellknown = get_wellknown()
+
+    OAuth2.Client.get(%{client | token: token}, wellknown.userinfo_endpoint)
   end
 
   def get_wellknown() do

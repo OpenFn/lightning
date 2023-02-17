@@ -277,114 +277,6 @@ defmodule LightningWeb.CredentialLiveTest do
       {_path, flash} = assert_redirect(new_live)
       assert flash == %{"info" => "Credential created successfully"}
     end
-
-    test "allows the user to define and save a new google sheets credential", %{
-      conn: conn,
-      user: user
-    } do
-      bypass = Bypass.open()
-
-      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
-        google: [
-          client_id: "foo",
-          client_secret: "bar",
-          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
-        ]
-      )
-
-      Lightning.BypassHelpers.expect_wellknown(bypass)
-
-      Lightning.BypassHelpers.expect_token(
-        bypass,
-        Lightning.AuthProviders.Google.get_wellknown(),
-        """
-        {
-          "access_token": "ya29.a0AVvZ...",
-          "refresh_token": "1//03vpp6Li...",
-          "expires_in": 3600,
-          "token_type": "Bearer",
-          "id_token": "eyJhbGciO...",
-          "scope": "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/spreadsheets"
-        }
-        """
-      )
-
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
-
-      {:ok, new_live, _html} =
-        index_live
-        |> element("a", "New Credential")
-        |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :new)
-        )
-
-      # Pick a type
-
-      new_live |> select_credential_type("googlesheets")
-      new_live |> click_continue()
-
-      refute new_live |> has_element?("#credential-type-picker")
-
-      new_live
-      |> element("#google-sheets-inner-form")
-      |> render()
-
-      new_live |> fill_credential(%{name: "My Google Sheets Credential"})
-
-      assert new_live |> submit_disabled(),
-             "Submit should be disabled since the `body` hasn't been populated correctly"
-
-      # Get the state from the authorize url in order to fake the calling
-      # off the action in the OidcController
-      [subscription_id, mod, component_id] =
-        new_live
-        |> get_authorize_url()
-        |> get_decoded_state()
-
-      assert new_live.id == subscription_id
-      assert new_live |> element(component_id)
-
-      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
-      # as a `send_update/3` call to the GoogleSheets component
-      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
-        id: component_id,
-        code: "1234"
-      )
-
-      # Rerender as the broadcast above has altered the LiveView state
-      new_live |> render()
-
-      refute new_live |> submit_disabled()
-
-      {:ok, _index_live, _html} =
-        new_live
-        |> form("#credential-form")
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.credential_index_path(conn, :index)
-        )
-
-      {_path, flash} = assert_redirect(new_live)
-      assert flash == %{"info" => "Credential created successfully"}
-
-      new_credential =
-        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
-
-      token = Lightning.AuthProviders.Google.TokenBody.new(new_credential.body)
-      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
-
-      assert %{
-               access_token: "ya29.a0AVvZ...",
-               refresh_token: "1//03vpp6Li...",
-               expires_at: ^expected_expiry,
-               scope:
-                 "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/spreadsheets"
-             } = token
-    end
   end
 
   describe "Edit" do
@@ -667,6 +559,123 @@ defmodule LightningWeb.CredentialLiveTest do
              |> element(~S{#job-form input#job-form_name})
              |> render() =~ "last typed name",
              "Should have kept the job form state after saving the new credential"
+    end
+  end
+
+  describe "googlesheets credential" do
+    test "allows the user to define and save a new google sheets credential", %{
+      conn: conn,
+      user: user
+    } do
+      bypass = Bypass.open()
+
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown(),
+        """
+        {
+          "access_token": "ya29.a0AVvZ...",
+          "refresh_token": "1//03vpp6Li...",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "id_token": "eyJhbGciO...",
+          "scope": "scope1 scope2"
+        }
+        """
+      )
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown(),
+        """
+        {}
+        """
+      )
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      # Pick a type
+
+      new_live |> select_credential_type("googlesheets")
+      new_live |> click_continue()
+
+      refute new_live |> has_element?("#credential-type-picker")
+
+      new_live
+      |> element("#google-sheets-inner-form")
+      |> render()
+
+      new_live |> fill_credential(%{name: "My Google Sheets Credential"})
+
+      assert new_live |> submit_disabled(),
+             "Submit should be disabled since the `body` hasn't been populated correctly"
+
+      # Get the state from the authorize url in order to fake the calling
+      # off the action in the OidcController
+      [subscription_id, mod, component_id] =
+        new_live
+        |> get_authorize_url()
+        |> get_decoded_state()
+
+      assert new_live.id == subscription_id
+      assert new_live |> element(component_id)
+
+      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
+      # as a `send_update/3` call to the GoogleSheets component
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "1234"
+      )
+
+      # Rerender as the broadcast above has altered the LiveView state
+      new_live |> render()
+
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        new_live
+        |> form("#credential-form")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      {_path, flash} = assert_redirect(new_live)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+
+      token = Lightning.AuthProviders.Google.TokenBody.new(credential.body)
+      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      assert %{
+               access_token: "ya29.a0AVvZ...",
+               refresh_token: "1//03vpp6Li...",
+               expires_at: ^expected_expiry,
+               scope: "scope1 scope2"
+             } = token
     end
   end
 

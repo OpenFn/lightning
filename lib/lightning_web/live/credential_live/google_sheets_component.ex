@@ -1,5 +1,6 @@
 defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   use LightningWeb, :live_component
+  require Logger
 
   alias Lightning.AuthProviders.Google
   import LightningWeb.OauthCredentialHelper
@@ -22,8 +23,8 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
       assigns
       |> assign(
         update_body: assigns.update_body,
-        token_body_changeset: token_body_changeset,
-        valid?: parent_valid? and token_body_changeset.valid?
+        valid?: parent_valid? and token_body_changeset.valid?,
+        token_body_changeset: token_body_changeset
       )
 
     ~H"""
@@ -34,8 +35,8 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
          [
            module: __MODULE__,
            form: @form,
-           update_body: @update_body,
            token_body_changeset: @token_body_changeset,
+           update_body: @update_body,
            id: "google-sheets-inner-form"
          ],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
@@ -62,6 +63,16 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
       <legend class="contents text-base font-medium text-gray-900">
         Details
       </legend>
+      <div :if={@userinfo}>
+        <div class="flex">
+          <div class="flex-none">
+            <img src={@userinfo["picture"]} class="h-12 w-12 rounded-full" />
+          </div>
+          <div class="flex grow items-end mb-1 ml-2">
+            <span class="font-medium text-gray-700"><%= @userinfo["name"] %></span>
+          </div>
+        </div>
+      </div>
       <p class="text-sm text-gray-500">
         Configuration for this credential.
       </p>
@@ -79,7 +90,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         socket={@socket}
         myself={@myself}
       />
-      <.in_progress_feedback :if={!@authorizing} socket={@socket} myself={@myself} />
+      <.in_progress_feedback :if={@authorizing} socket={@socket} myself={@myself} />
     </fieldset>
     """
   end
@@ -147,7 +158,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   def mount(socket) do
     subscribe(socket.id)
 
-    {:ok, socket}
+    {:ok, socket |> assign(userinfo: nil)}
   end
 
   @impl true
@@ -173,19 +184,77 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     # module for send_update
     # + the code? (i.e. we want to handle the token exchange in here)
 
-    {:ok,
-     socket
-     |> assign(
-       form: form,
-       id: id,
-       token_body_changeset: token_body_changeset,
-       update_body: update_body
-     )
-     |> assign_new(:authorizing, fn -> false end)
-     |> assign_new(:client, &build_client/0)
-     |> assign_new(:authorize_url, fn %{client: client} ->
-       Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
-     end)}
+    # Token is not valid
+    #
+
+    token =
+      params_to_token(
+        token_body_changeset
+        |> Ecto.Changeset.apply_changes()
+      )
+
+    socket =
+      socket
+      |> assign_new(:token, fn -> nil end)
+      |> assign_new(:userinfo, fn -> nil end)
+      |> assign_new(:authorizing, fn -> false end)
+      |> assign_new(:client, fn -> nil end)
+      |> assign(
+        form: form,
+        id: id,
+        token_body_changeset: token_body_changeset,
+        token: token,
+        update_body: update_body
+      )
+      |> update(:client, fn client, %{token: token} ->
+        if !client do
+          build_client() |> Map.put(:token, token)
+        else
+          client
+        end
+      end)
+      |> assign_new(:authorize_url, fn %{client: client} ->
+        Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
+      end)
+
+    if socket |> changed?(:token) do
+      if token_body_changeset.valid? do
+        if not OAuth2.AccessToken.expired?(token) do
+          IO.inspect("calling for userinfo")
+          Logger.debug("Retrieving userinfo")
+          pid = self()
+
+          Task.start(fn ->
+            {:ok, resp} = Google.get_userinfo(socket.assigns.client, token)
+            resp |> IO.inspect()
+
+            send_update(pid, __MODULE__,
+              id: socket.assigns.id,
+              userinfo: resp.body
+            )
+          end)
+        else
+          Task.start(fn ->
+            OAuth2.AccessToken.expired?(token)
+            |> IO.inspect(label: "token valid but expired")
+
+            Logger.debug("Refreshing expired token")
+
+            OAuth2.Client.refresh_token(socket.assigns.client)
+            |> case do
+              {:ok, client} ->
+                IO.inspect(client, label: "client after refresh token")
+                socket.assigns.update_body.(client.token |> token_to_params())
+
+                # Commented out to trigger errors
+                # {:error, response} ->
+            end
+          end)
+        end
+      end
+    end
+
+    {:ok, socket}
   end
 
   # TODO: use the introspection url to check on the token
@@ -206,16 +275,21 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     # NOTE: there can be _no_ refresh token if something went wrong like if the
     # previous auth didn't receive a refresh_token
 
-    client = Google.get_token(client, code: code)
+    {:ok, client} = Google.get_token(client, code: code)
 
     socket.assigns.update_body.(client.token |> token_to_params())
+
+    # Google.get_userinfo(client) |> IO.inspect()
 
     {:ok, socket |> assign(authorizing: false, client: client)}
   end
 
-  @impl true
   def update(%{authorizing: authorizing}, socket) do
     {:ok, socket |> assign(authorizing: authorizing)}
+  end
+
+  def update(%{userinfo: userinfo}, socket) do
+    {:ok, socket |> assign(userinfo: userinfo)}
   end
 
   @impl true
@@ -250,5 +324,16 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
       end
     end)
     |> Map.new()
+  end
+
+  defp params_to_token(%Google.TokenBody{} = token) do
+    struct!(
+      OAuth2.AccessToken,
+      token
+      |> Map.from_struct()
+      |> Map.filter(fn {k, _v} ->
+        k in [:access_token, :refresh_token, :expires_at]
+      end)
+    )
   end
 end
