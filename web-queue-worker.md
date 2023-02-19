@@ -20,6 +20,10 @@ autonumber
     R->>L: Notify {:running, uuid}
     end
     R->>L: Notify {:done | :crashed, uuid, stats}
+    loop every 30s
+    L->>R: Check status of runs with no heartbeat
+    L->>L: Mark orphaned runs as {:crashed, uuid}
+    end
 ```
 
 ## Lightning
