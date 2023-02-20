@@ -8,20 +8,24 @@ autonumber
     participant L as Lightning (Elixir)
     participant Q as Queue (RabbitMQ)
     participant R as RTM (NodeJs)
-    L->>Q: Enqueue run
-    Q->>L: Respond with {:enqued, uuid}
-    R->>Q: Take oldest run
-    R->>L: Notify {:accepted, uuid}
-    R->>L: Fetch artifacts {state, expression}
-    R->>L: Notify {:started, uuid}
-    R->>L: Stream logs {:uuid, log_line}
+    L->>Q: Enqueue attempt
+    Q->>L: Respond with {:attempt_enqued, uuid}
+    R->>Q: Take oldest attempt
+    R->>L: Notify {:attempt_accepted, uuid}
+    loop for each run in attempt
+    Note over L,R: by allowing the same worker to take a whole "attempt" <br> we guarantee order of execution _and_ may find efficiencies <br> by maintaining the same NodeVM for all runs <br> inside an attempt, passing state between runs, etc.
+    R->>L: Fetch artifacts for run {state, expression}
+    R->>L: Notify {:run_started, uuid} for run
+    R->>L: Stream logs {:log_line_emitted, run_uuid, log_line}
+    R->>L: Notify {:run_finished | :run_crashed, uuid, stats}
+    end
     loop every 10s
     Note over R,L: Heartbeat so Lightning knows if an RTM crashes?
-    R->>L: Notify {:running, uuid}
+    R->>L: Notify {:attempt_heartbeat, uuid}
     end
-    R->>L: Notify {:done | :crashed, uuid, stats}
+    R->>L: Notify {:attempt_finished, uuid}
     loop every 30s
-    L->>R: Check status of runs with no heartbeat
+    L->>R: Check status of attempts with no heartbeat
     L->>L: Mark orphaned runs as {:crashed, uuid}
     end
 ```
@@ -40,5 +44,8 @@ autonumber
 2. The number of RTMs (subscribers) should be scaled up and down based on utilization.
 
 ### APIs 
+
+Should this be a Koa app with some APIs? (Healthcheck? Status of attempt X?)
+
 1. Is there an API for RTM application health?
 2. And another for the status of a particular run? (Useful to call if the heartbeat fails?)
