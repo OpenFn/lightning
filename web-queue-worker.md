@@ -7,7 +7,7 @@ sequenceDiagram
 autonumber
     participant L as Lightning (Elixir)
     participant Q as Queue (RabbitMQ)
-    participant R as RTM (Koa)
+    participant R as RTM (NodeJs)
     L->>Q: Enqueue run
     Q->>L: Respond with {:enqued, uuid}
     R->>Q: Take oldest run
