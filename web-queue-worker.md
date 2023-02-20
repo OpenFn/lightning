@@ -1,6 +1,6 @@
 # Sequence Diagram Job Execution via "Web Queue Worker" Architecture.
 
-Draft. Note that this architecture is only for the final `:runs` queue, not for fairness or limiting.
+Draft. Note that this architecture is only for the final `:attempts` queue, not for fairness or limiting.
 
 ```mermaid
 sequenceDiagram
