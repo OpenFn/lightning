@@ -657,6 +657,8 @@ defmodule LightningWeb.CredentialLiveTest do
         code: "1234"
       )
 
+      # Wait for the userinfo endpoint to be called
+      assert_receive {:plug_conn, :sent}
       # Rerender as the broadcast above has altered the LiveView state
       _ = :sys.get_state(new_live.pid)
       new_live |> render()
@@ -785,6 +787,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:plug_conn, :sent}
       assert_receive {:phoenix, :send_update, _}
 
+      _ = :sys.get_state(edit_live.pid)
       edit_live |> render()
 
       assert edit_live |> has_element?("span", "Test User")
