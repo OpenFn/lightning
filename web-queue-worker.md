@@ -2,6 +2,11 @@
 
 Draft. Note that this architecture is only for the final `:attempts` queue, not for fairness or limiting.
 
+Remember that:
+1. A workflow is
+2. An attempt is
+3. A run is
+
 ```mermaid
 sequenceDiagram
 autonumber
@@ -18,6 +23,9 @@ autonumber
     R->>L: Notify {:run_started, uuid} for run
     R->>L: Stream logs {:log_line_emitted, run_uuid, log_line}
     R->>L: Notify {:run_finished | :run_crashed, uuid, stats}
+    R->>L: Send final dataclip
+    R->>L: Get downstream jobs (determine downstream runs)
+    Note over R,L: we don't have to have the full attempt plan if we get downstream synchronously
     end
     loop every 10s
     Note over R,L: Heartbeat so Lightning knows if an RTM crashes?
