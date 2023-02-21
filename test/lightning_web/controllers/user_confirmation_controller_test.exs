@@ -163,8 +163,8 @@ defmodule LightningWeb.UserConfirmationControllerTest do
           )
         )
 
-      # assert redirected_to(conn) == Routes.user_confirmation_path(conn, :edit)
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == Routes.user_confirmation_path(conn, :edit)
+      # assert redirected_to(conn) == "/"
 
       assert get_flash(conn, :error) =~
                "Email change link is invalid or it has expired"
