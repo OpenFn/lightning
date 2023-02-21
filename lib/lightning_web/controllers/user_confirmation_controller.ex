@@ -2,7 +2,6 @@ defmodule LightningWeb.UserConfirmationController do
   use LightningWeb, :controller
 
   alias Lightning.Accounts
-  alias LightningWeb.UserAuth
 
   def new(conn, _params) do
     render(conn, "new.html")
