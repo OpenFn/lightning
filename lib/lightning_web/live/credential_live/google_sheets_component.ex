@@ -1,4 +1,29 @@
 defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
+  @moduledoc """
+  Form component to setup a Google Sheets component.
+
+  This component has several moving parts:
+
+  - Subscribes to a PubSub topic specially link to the component id
+    See: `LightningWeb.OauthCredentialHelper`.
+  - Uses the `Lightning.Google` module to set up an OAuth client for generating
+    urls, exchanging the code and requesting a new `access_token`.
+
+  The flow for creating a new token is:
+
+  - Generate an authorization link which contains:
+    - The authorization url from the Google client with the applications callback_url
+    - A state string that is an encrypted set of data with the components module and
+      id in it
+  - Once the user authorizes the client the callback is requested with a code
+  - The `LightningWeb.OidcController` decodes the state returned to it and does
+    a 'broadcast_forward' which is simply a message expected to be received by a
+    LiveView and applied to `Phoenix.LiveView.send_update/3`.
+  - The component receives the code and requests a token.
+  - Any changes to the token (Credential body) are still handled by the parent
+    component and so a `update_body` function is passed in to send params changes
+    back up to update the form.
+  """
   use LightningWeb, :live_component
   require Logger
 
@@ -46,11 +71,26 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   end
 
   @impl true
+  def render(%{client: nil} = assigns) do
+    ~H"""
+    <div id={@id} class="flex items-center place-content-center pt-2">
+      <div class="text-center">
+        <div class="text-base font-medium text-gray-900">
+          No Client Configured
+        </div>
+        <span class="text-sm">
+          Google Authorization has not been set up on this instance.
+        </span>
+      </div>
+    </div>
+    """
+  end
+
   def render(assigns) do
     assigns =
       assigns
       |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
-        # Merge in any changes that have been make to the TokenBody changeset
+        # Merge in any changes that have been made to the TokenBody changeset
         # _inside_ this component.
         %{
           form
@@ -172,21 +212,6 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         },
         socket
       ) do
-    # oauth pubsub module
-    # oauth state generator
-
-    # subscribe to oauth channel
-    # handle_info should call back to this component
-
-    # id for the channel - use the socket id
-
-    # state
-    # id for send_update - must be what was passed to the live_component
-    # module for send_update
-    # + the code? (i.e. we want to handle the token exchange in here)
-
-    # Token is not valid
-    #
     token =
       params_to_token(
         token_body_changeset
@@ -205,58 +230,63 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         update_body: update_body
       )
       |> assign_new(:client, fn %{token: token} ->
-        build_client() |> Map.put(:token, token)
+        case build_client() do
+          {:ok, client} -> client |> Map.put(:token, token)
+          {:error, _} -> nil
+        end
       end)
       |> assign_new(:authorize_url, fn %{client: client} ->
-        Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
+        if client do
+          Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
+        end
       end)
 
     if socket |> changed?(:token) do
-      if token_body_changeset.valid? do
-        if not OAuth2.AccessToken.expired?(token) do
-          Logger.debug("Retrieving userinfo")
-          pid = self()
-
-          Task.start(fn ->
-            # TODO: handle 500
-            {:ok, resp} = Google.get_userinfo(socket.assigns.client, token)
-
-            send_update(pid, __MODULE__,
-              id: socket.assigns.id,
-              userinfo: resp.body
-            )
-          end)
-        else
-          Logger.debug("Refreshing expired token")
-
-          Task.start(fn ->
-            Google.refresh_token(socket.assigns.client, token)
-            |> case do
-              {:ok, token} ->
-                socket.assigns.update_body.(token |> token_to_params())
-
-              {:error, reason} ->
-                # TODO: handle error
-                IO.inspect(reason, label: "error on refresh")
-            end
-          end)
-        end
-      end
+      maybe_fetch_userinfo(socket)
     end
 
     {:ok, socket}
   end
 
-  # TODO: use the introspection url to check on the token
+  defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
+    socket
+  end
 
-  # NOTE: using oauth2-mock-server for development
+  defp maybe_fetch_userinfo(socket) do
+    %{token_body_changeset: token_body_changeset, token: token, client: client} =
+      socket.assigns
 
-  # TODO: error scenarios don't have a code, but have a error & state combo
-  # https://www.oauth.com/oauth2-servers/authorization/the-authorization-response/
+    if token_body_changeset.valid? do
+      if OAuth2.AccessToken.expired?(token) do
+        Logger.debug("Refreshing expired token")
 
-  # redirect_uri: Application.get_env(:open_fn, :oauth)[:redirect_uri],
-  # code: code,
-  # grant_type: "authorization_code"
+        Task.start(fn ->
+          Google.refresh_token(client, token)
+          |> case do
+            {:ok, token} ->
+              socket.assigns.update_body.(token |> token_to_params())
+
+            {:error, reason} ->
+              # TODO: handle error
+              Logger.error("Failed refreshing valid token: #{reason}")
+          end
+        end)
+      else
+        Logger.debug("Retrieving userinfo")
+        pid = self()
+
+        Task.start(fn ->
+          # TODO: handle 500
+          {:ok, resp} = Google.get_userinfo(client, token)
+
+          send_update(pid, __MODULE__,
+            id: socket.assigns.id,
+            userinfo: resp.body
+          )
+        end)
+      end
+    end
+  end
 
   @impl true
   def update(%{code: code}, socket) do
@@ -292,7 +322,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
 
   defp build_client() do
     Google.build_client(
-      callback_url: "http://localhost:4000/authenticate/callback"
+      callback_url: LightningWeb.RouteHelpers.oidc_callback_url()
     )
   end
 

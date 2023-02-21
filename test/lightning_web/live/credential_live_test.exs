@@ -790,6 +790,31 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "googlesheets credential (when client is not available)" do
+    @tag :capture_log
+    test "shows a warning that Google Sheets isn't available", %{conn: conn} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      new_live |> select_credential_type("googlesheets")
+      new_live |> click_continue()
+
+      refute new_live |> has_element?("#credential-type-picker")
+
+      assert new_live
+             |> has_element?("#google-sheets-inner-form", "No Client Configured")
+    end
+  end
+
   defp get_authorize_url(live) do
     live
     |> element("#google-sheets-inner-form")

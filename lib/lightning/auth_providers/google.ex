@@ -42,20 +42,23 @@ defmodule Lightning.AuthProviders.Google do
       - GOOGLE_CLIENT_SECRET
       """)
 
-      raise "Required OAuth client configuration missing"
+      {:error, :invalid_config}
+    else
+      {:ok, wellknown} = get_wellknown()
+
+      client =
+        OAuth2.Client.new(
+          strategy: OAuth2.Strategy.AuthCode,
+          authorize_url: wellknown.authorization_endpoint,
+          token_url: wellknown.token_endpoint,
+          client_id: config[:client_id],
+          client_secret: config[:client_secret],
+          redirect_uri: opts[:callback_url]
+        )
+        |> OAuth2.Client.put_serializer("application/json", Jason)
+
+      {:ok, client}
     end
-
-    {:ok, wellknown} = get_wellknown()
-
-    OAuth2.Client.new(
-      strategy: OAuth2.Strategy.AuthCode,
-      authorize_url: wellknown.authorization_endpoint,
-      token_url: wellknown.token_endpoint,
-      client_id: config[:client_id],
-      client_secret: config[:client_secret],
-      redirect_uri: opts[:callback_url]
-    )
-    |> OAuth2.Client.put_serializer("application/json", Jason)
   end
 
   def authorize_url(client, state) do
