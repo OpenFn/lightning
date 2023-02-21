@@ -51,8 +51,16 @@ defmodule Lightning.BypassHelpers do
   def expect_userinfo(bypass, wellknown, userinfo) do
     path = URI.new!(wellknown.userinfo_endpoint).path
 
-    Bypass.expect_once(bypass, "GET", path, fn conn ->
-      Plug.Conn.resp(conn, 200, userinfo |> Jason.encode!())
+    body =
+      unless is_binary(userinfo) do
+        Jason.encode!(userinfo)
+      else
+        userinfo
+      end
+
+    Bypass.expect(bypass, "GET", path, fn conn ->
+      Plug.Conn.put_resp_header(conn, "content-type", "application/json")
+      |> Plug.Conn.resp(200, body)
     end)
   end
 

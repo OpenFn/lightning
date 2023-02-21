@@ -563,10 +563,7 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   describe "googlesheets credential" do
-    test "allows the user to define and save a new google sheets credential", %{
-      conn: conn,
-      user: user
-    } do
+    setup do
       bypass = Bypass.open()
 
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
@@ -577,11 +574,19 @@ defmodule LightningWeb.CredentialLiveTest do
         ]
       )
 
+      %{bypass: bypass}
+    end
+
+    test "allows the user to define and save a new google sheets credential", %{
+      bypass: bypass,
+      conn: conn,
+      user: user
+    } do
       Lightning.BypassHelpers.expect_wellknown(bypass)
 
       Lightning.BypassHelpers.expect_token(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown(),
+        Lightning.AuthProviders.Google.get_wellknown!(),
         """
         {
           "access_token": "ya29.a0AVvZ...",
@@ -596,9 +601,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       Lightning.BypassHelpers.expect_userinfo(
         bypass,
-        Lightning.AuthProviders.Google.get_wellknown(),
+        Lightning.AuthProviders.Google.get_wellknown!(),
         """
-        {}
+        {"picture": "image.png", "name": "Test User"}
         """
       )
 
@@ -621,9 +626,9 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute new_live |> has_element?("#credential-type-picker")
 
-      new_live
-      |> element("#google-sheets-inner-form")
-      |> render()
+      # new_live
+      # |> element("#google-sheets-inner-form")
+      # |> render()
 
       new_live |> fill_credential(%{name: "My Google Sheets Credential"})
 
@@ -640,6 +645,15 @@ defmodule LightningWeb.CredentialLiveTest do
       assert new_live.id == subscription_id
       assert new_live |> element(component_id)
 
+      # Click on the 'Authorize with Google button
+      new_live
+      |> element("#google-sheets-inner-form #authorize-button")
+      |> render_click()
+
+      # Once authorizing the button isn't available
+      refute new_live
+             |> has_element?("#google-sheets-inner-form #authorize-button")
+
       # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
       # as a `send_update/3` call to the GoogleSheets component
       LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
@@ -648,7 +662,10 @@ defmodule LightningWeb.CredentialLiveTest do
       )
 
       # Rerender as the broadcast above has altered the LiveView state
+      _ = :sys.get_state(new_live.pid)
       new_live |> render()
+
+      assert new_live |> has_element?("span", "Test User")
 
       refute new_live |> submit_disabled()
 
@@ -676,6 +693,100 @@ defmodule LightningWeb.CredentialLiveTest do
                expires_at: ^expected_expiry,
                scope: "scope1 scope2"
              } = token
+    end
+
+    test "correctly renders a valid existing token", %{
+      conn: conn,
+      user: user,
+      bypass: bypass
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      _ = :sys.get_state(edit_live.pid)
+
+      edit_live
+      |> element("#google-sheets-inner-form")
+      |> render()
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    test "renewing an expired but valid token", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {
+          "access_token": "ya29.a0AVvZ...",
+          "refresh_token": "1//03vpp6Li...",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "id_token": "eyJhbGciO...",
+          "scope": "scope1 scope2"
+        }
+        """
+      )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      _ = :sys.get_state(edit_live.pid)
+      edit_live |> render()
+
+      assert edit_live |> has_element?("span", "Test User")
     end
   end
 

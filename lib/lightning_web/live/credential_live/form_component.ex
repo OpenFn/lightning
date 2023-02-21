@@ -14,8 +14,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 
-  defp update_body(id, body) do
-    send_update(__MODULE__, id: id, body: body)
+  # NOTE: this function is sometimes called from inside a Task and therefore
+  # requires a `pid`
+  defp update_body(pid, id, body) do
+    send_update(pid, __MODULE__, id: id, body: body)
   end
 
   @impl true
@@ -55,7 +57,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                       :let={{fieldset, valid?}}
                       form={f}
                       type={@type}
-                      update_body={&update_body(@id, &1)}
+                      update_body={@update_body}
                     >
                       <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
                         <fieldset>
@@ -287,7 +289,21 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   ]
 
   @impl true
+  def update(%{body: body}, socket) do
+    {:ok,
+     socket
+     |> update(:changeset, fn changeset, %{credential: credential} ->
+       params =
+         changeset.params
+         |> Map.put("body", body)
+
+       Credentials.change_credential(credential, params)
+     end)}
+  end
+
   def update(%{projects: projects} = assigns, socket) do
+    pid = self()
+
     {:ok,
      socket
      |> assign(
@@ -306,9 +322,14 @@ defmodule LightningWeb.CredentialLive.FormComponent do
              value: user.id
            ]
          end),
-       schema: nil
+       schema: nil,
+       update_body: fn body ->
+         update_body(pid, assigns.id, body)
+       end
      )
-     |> update(:type, fn _, %{credential: credential} -> credential.schema end)
+     |> update(:type, fn _, %{changeset: changeset} ->
+       changeset |> Ecto.Changeset.fetch_field!(:schema)
+     end)
      |> update(
        :available_projects,
        fn _,
@@ -319,18 +340,6 @@ defmodule LightningWeb.CredentialLive.FormComponent do
          filter_available_projects(changeset, all_projects)
        end
      )}
-  end
-
-  def update(%{body: body}, socket) do
-    {:ok,
-     socket
-     |> update(:changeset, fn changeset, %{credential: credential} ->
-       params =
-         changeset.params
-         |> Map.put("body", body)
-
-       Credentials.change_credential(credential, params)
-     end)}
   end
 
   @impl true

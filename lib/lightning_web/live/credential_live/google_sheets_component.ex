@@ -5,9 +5,9 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   alias Lightning.AuthProviders.Google
   import LightningWeb.OauthCredentialHelper
 
-  attr :form, :map, required: true
-  attr :update_body, :any, required: true
-  slot :inner_block
+  attr(:form, :map, required: true)
+  attr(:update_body, :any, required: true)
+  slot(:inner_block)
 
   def fieldset(assigns) do
     changeset = assigns.form.source
@@ -99,6 +99,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     ~H"""
     <.link
       href={@authorize_url}
+      id="authorize-button"
       target="_blank"
       class="google-authorize group disabled"
       phx-click="authorize_click"
@@ -186,7 +187,6 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
 
     # Token is not valid
     #
-
     token =
       params_to_token(
         token_body_changeset
@@ -195,10 +195,8 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
 
     socket =
       socket
-      |> assign_new(:token, fn -> nil end)
       |> assign_new(:userinfo, fn -> nil end)
       |> assign_new(:authorizing, fn -> false end)
-      |> assign_new(:client, fn -> nil end)
       |> assign(
         form: form,
         id: id,
@@ -206,12 +204,8 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         token: token,
         update_body: update_body
       )
-      |> update(:client, fn client, %{token: token} ->
-        if !client do
-          build_client() |> Map.put(:token, token)
-        else
-          client
-        end
+      |> assign_new(:client, fn %{token: token} ->
+        build_client() |> Map.put(:token, token)
       end)
       |> assign_new(:authorize_url, fn %{client: client} ->
         Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
@@ -220,13 +214,12 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     if socket |> changed?(:token) do
       if token_body_changeset.valid? do
         if not OAuth2.AccessToken.expired?(token) do
-          IO.inspect("calling for userinfo")
           Logger.debug("Retrieving userinfo")
           pid = self()
 
           Task.start(fn ->
+            # TODO: handle 500
             {:ok, resp} = Google.get_userinfo(socket.assigns.client, token)
-            resp |> IO.inspect()
 
             send_update(pid, __MODULE__,
               id: socket.assigns.id,
@@ -234,20 +227,17 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
             )
           end)
         else
+          Logger.debug("Refreshing expired token")
+
           Task.start(fn ->
-            OAuth2.AccessToken.expired?(token)
-            |> IO.inspect(label: "token valid but expired")
-
-            Logger.debug("Refreshing expired token")
-
-            OAuth2.Client.refresh_token(socket.assigns.client)
+            Google.refresh_token(socket.assigns.client, token)
             |> case do
-              {:ok, client} ->
-                IO.inspect(client, label: "client after refresh token")
-                socket.assigns.update_body.(client.token |> token_to_params())
+              {:ok, token} ->
+                socket.assigns.update_body.(token |> token_to_params())
 
-                # Commented out to trigger errors
-                # {:error, response} ->
+              {:error, reason} ->
+                # TODO: handle error
+                IO.inspect(reason, label: "error on refresh")
             end
           end)
         end
@@ -278,8 +268,6 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     {:ok, client} = Google.get_token(client, code: code)
 
     socket.assigns.update_body.(client.token |> token_to_params())
-
-    # Google.get_userinfo(client) |> IO.inspect()
 
     {:ok, socket |> assign(authorizing: false, client: client)}
   end

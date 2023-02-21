@@ -45,7 +45,7 @@ defmodule Lightning.AuthProviders.Google do
       raise "Required OAuth client configuration missing"
     end
 
-    wellknown = get_wellknown()
+    {:ok, wellknown} = get_wellknown()
 
     OAuth2.Client.new(
       strategy: OAuth2.Strategy.AuthCode,
@@ -75,18 +75,44 @@ defmodule Lightning.AuthProviders.Google do
     OAuth2.Client.get_token(client, params)
   end
 
+  def refresh_token(client, token) do
+    OAuth2.Client.refresh_token(%{client | token: token})
+    |> case do
+      {:ok, %{token: token}} ->
+        {:ok, token}
+
+      {:error, %{reason: reason}} ->
+        {:error, reason}
+    end
+  end
+
   def get_userinfo(client, token) do
-    wellknown = get_wellknown()
+    {:ok, wellknown} = get_wellknown()
 
     OAuth2.Client.get(%{client | token: token}, wellknown.userinfo_endpoint)
   end
 
   def get_wellknown() do
     config = get_config()
+    wellknown_url = config[:wellknown_url]
     # TODO pass this onto a caching mechanism
-    with {:ok, response} <- Tesla.get(config[:wellknown_url]),
-         body <- Jason.decode!(response.body) do
-      WellKnown.new(body)
+    case Tesla.get(wellknown_url) do
+      {:ok, %{status: status, body: body}} when status in 200..202 ->
+        {:ok, Jason.decode!(body) |> WellKnown.new()}
+
+      {:ok, %{status: status}} when status >= 500 ->
+        {:error, "Received #{status} from #{wellknown_url}"}
+    end
+  end
+
+  def get_wellknown!() do
+    get_wellknown()
+    |> case do
+      {:ok, wellknown} ->
+        wellknown
+
+      {:error, reason} ->
+        raise reason
     end
   end
 
