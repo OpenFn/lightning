@@ -5,8 +5,17 @@ defmodule LightningWeb.UserConfirmationControllerTest do
   alias Lightning.Repo
   import Lightning.AccountsFixtures
 
-  setup do
-    %{user: user_fixture()}
+  setup %{conn: conn} do
+    conn =
+      conn
+      |> Map.replace!(
+        :secret_key_base,
+        LightningWeb.Endpoint.config(:secret_key_base)
+      )
+      |> init_test_session(%{})
+      |> Phoenix.Controller.accepts(["html", "json"])
+
+    %{user: user_fixture(), conn: conn}
   end
 
   describe "GET /users/confirm" do
@@ -135,16 +144,15 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       token: token,
       email: email
     } do
-      conn =
-        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+      # IO.inspect(conn.assigns.current_user)
+      conn = get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
 
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "Email changed successfully."
       refute Accounts.get_user_by_email(user.email)
       assert Accounts.get_user_by_email(email)
 
-      conn =
-        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+      conn = get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
 
       assert redirected_to(conn) == "/"
 
@@ -153,6 +161,8 @@ defmodule LightningWeb.UserConfirmationControllerTest do
     end
 
     test "does not update email with invalid token", %{conn: conn, user: user} do
+      # IO.inspect(conn.assigns.current_user, label: "line 170")
+
       conn =
         get(
           conn,
@@ -163,8 +173,8 @@ defmodule LightningWeb.UserConfirmationControllerTest do
           )
         )
 
-      assert redirected_to(conn) == Routes.user_confirmation_path(conn, :edit)
-      # assert redirected_to(conn) == "/"
+      # assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+      assert redirected_to(conn) == "/"
 
       assert get_flash(conn, :error) =~
                "Email change link is invalid or it has expired"
@@ -175,8 +185,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
     test "redirects if user is not logged in", %{token: token} do
       conn = build_conn()
 
-      conn =
-        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+      conn = get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
 
       assert redirected_to(conn) == Routes.user_session_path(conn, :new)
     end
