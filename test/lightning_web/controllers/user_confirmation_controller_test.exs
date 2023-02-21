@@ -172,10 +172,13 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       assert Accounts.get_user_by_email(user.email)
     end
 
-    #   test "redirects if user is not logged in", %{token: token} do
-    #     conn = build_conn()
-    #     conn = get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
-    #     assert redirected_to(conn) == Routes.user_session_path(conn, :new)
-    #   end
+    test "redirects if user is not logged in", %{token: token} do
+      conn = build_conn()
+
+      conn =
+        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
   end
 end
