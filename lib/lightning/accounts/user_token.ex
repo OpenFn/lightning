@@ -212,6 +212,7 @@ defmodule Lightning.Accounts.UserToken do
         query =
           from(t in Lightning.Accounts.UserToken,
             where: t.token == ^hashed_token,
+            where: t.context == ^context,
             where: t.inserted_at > ago(@change_email_validity_in_days, "day")
           )
 

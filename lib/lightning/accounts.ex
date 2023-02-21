@@ -281,9 +281,11 @@ defmodule Lightning.Accounts do
   If the token matches, the user email is updated and the token is deleted.
   The confirmed_at date is also updated to the current time.
   """
-  def update_user_email(token) do
+  def update_user_email(user, token) do
+    context = "change:#{user.email}"
+
     with {:ok, query} <-
-           UserToken.verify_change_email_token_query(token, "change:"),
+           UserToken.verify_change_email_token_query(token, context),
          %UserToken{context: context, sent_to: email, user_id: user_id} <-
            Repo.one(query),
          {:ok, %{user: user}} <-
