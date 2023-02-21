@@ -248,6 +248,38 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     {:ok, socket}
   end
 
+  @impl true
+  def update(%{code: code}, socket) do
+    client = socket.assigns.client
+
+    # NOTE: there can be _no_ refresh token if something went wrong like if the
+    # previous auth didn't receive a refresh_token
+
+    {:ok, client} = Google.get_token(client, code: code)
+
+    socket.assigns.update_body.(client.token |> token_to_params())
+
+    {:ok, socket |> assign(authorizing: false, client: client)}
+  end
+
+  def update(%{authorizing: authorizing}, socket) do
+    {:ok, socket |> assign(authorizing: authorizing)}
+  end
+
+  def update(%{userinfo: userinfo}, socket) do
+    {:ok, socket |> assign(userinfo: userinfo)}
+  end
+
+  @impl true
+  def handle_event("authorize_click", _, socket) do
+    {:noreply, socket |> assign(authorizing: true)}
+  end
+
+  @impl true
+  def handle_event("cancel", _, socket) do
+    {:noreply, socket |> assign(authorizing: false)}
+  end
+
   defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
     socket
   end
@@ -286,38 +318,6 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         end)
       end
     end
-  end
-
-  @impl true
-  def update(%{code: code}, socket) do
-    client = socket.assigns.client
-
-    # NOTE: there can be _no_ refresh token if something went wrong like if the
-    # previous auth didn't receive a refresh_token
-
-    {:ok, client} = Google.get_token(client, code: code)
-
-    socket.assigns.update_body.(client.token |> token_to_params())
-
-    {:ok, socket |> assign(authorizing: false, client: client)}
-  end
-
-  def update(%{authorizing: authorizing}, socket) do
-    {:ok, socket |> assign(authorizing: authorizing)}
-  end
-
-  def update(%{userinfo: userinfo}, socket) do
-    {:ok, socket |> assign(userinfo: userinfo)}
-  end
-
-  @impl true
-  def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(authorizing: true)}
-  end
-
-  @impl true
-  def handle_event("cancel", _, socket) do
-    {:noreply, socket |> assign(authorizing: false)}
   end
 
   defp build_client() do

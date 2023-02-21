@@ -574,7 +574,7 @@ defmodule LightningWeb.CredentialLiveTest do
         ]
       )
 
-      %{bypass: bypass}
+      {:ok, bypass: bypass}
     end
 
     test "allows the user to define and save a new google sheets credential", %{
@@ -625,10 +625,6 @@ defmodule LightningWeb.CredentialLiveTest do
       new_live |> click_continue()
 
       refute new_live |> has_element?("#credential-type-picker")
-
-      # new_live
-      # |> element("#google-sheets-inner-form")
-      # |> render()
 
       new_live |> fill_credential(%{name: "My Google Sheets Credential"})
 
@@ -727,7 +723,9 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, edit_live, _html} =
         live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
 
-      _ = :sys.get_state(edit_live.pid)
+      # Wait for next `send_update` triggered by the token Task calls
+      assert_receive {:plug_conn, :sent}
+      assert_receive {:phoenix, :send_update, _}
 
       edit_live
       |> element("#google-sheets-inner-form")
@@ -783,7 +781,10 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, edit_live, _html} =
         live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
 
-      _ = :sys.get_state(edit_live.pid)
+      # Wait for next `send_update` triggered by the token Task calls
+      assert_receive {:plug_conn, :sent}
+      assert_receive {:phoenix, :send_update, _}
+
       edit_live |> render()
 
       assert edit_live |> has_element?("span", "Test User")
