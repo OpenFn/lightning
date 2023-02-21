@@ -391,11 +391,11 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  describe "update_user_email/1" do
+  describe "update_user_email/2" do
     setup do
       user = user_fixture()
-      email = "current@example.com"
-      # email = unique_user_email()
+      # email = "current@example.com"
+      email = unique_user_email()
       now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
       token =
@@ -416,7 +416,7 @@ defmodule Lightning.AccountsTest do
       email: email,
       now: now
     } do
-      assert Accounts.update_user_email(token) ==
+      assert Accounts.update_user_email(user, token) ==
                {:ok, %{user | email: email, confirmed_at: now}}
 
       changed_user = Repo.get!(User, user.id)
@@ -428,7 +428,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not update email with invalid token", %{user: user} do
-      assert Accounts.update_user_email("oops") == :error
+      assert Accounts.update_user_email(user, "oops") == :error
       assert Repo.get!(User, user.id).email == user.email
       assert Repo.get_by(UserToken, user_id: user.id)
     end
@@ -439,20 +439,20 @@ defmodule Lightning.AccountsTest do
       email: email,
       now: now
     } do
-      assert Accounts.update_user_email(token) ==
+      assert Accounts.update_user_email(user, token) ==
                {:ok, %{user | email: email, confirmed_at: now}}
 
-      assert Accounts.update_user_email(token) == :error
+      assert Accounts.update_user_email(user, token) == :error
 
       assert Repo.get!(User, user.id).email == email
-      # assert Repo.get_by(UserToken, user_id: user.id)
+      assert Repo.get_by(UserToken, user_id: user.id) == nil
     end
 
     test "does not update email if token expired", %{user: user, token: token} do
       {1, nil} =
         Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
 
-      assert Accounts.update_user_email(token) == :error
+      assert Accounts.update_user_email(user, token) == :error
       assert Repo.get!(User, user.id).email == user.email
       assert Repo.get_by(UserToken, user_id: user.id)
     end
