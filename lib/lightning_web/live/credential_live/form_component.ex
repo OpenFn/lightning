@@ -23,7 +23,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="credential-#{@id}">
+    <div id="credential-#{@id}" class="@container">
       <.live_component
         :if={!@type}
         module={LightningWeb.CredentialLive.TypePicker}
@@ -31,97 +31,95 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         on_confirm="type_selected"
         phx_target={@myself}
       />
-      <div :if={@type}>
-        <div class="mt-10 sm:mt-0">
-          <div class="md:grid md:grid-cols-3 md:gap-6">
-            <div class="md:col-span-1">
-              <div class="px-4 sm:px-0">
-                <p class="mt-1 text-sm text-gray-600">
-                  Decide which type credential you would like to create.
-                </p>
-              </div>
+      <div :if={@type} class="mt-10 sm:mt-0">
+        <div class="lg:grid md:grid-cols-3 md:gap-6">
+          <div class="md:col-span-1 hidden @2xl:block">
+            <div class="px-4 sm:px-0">
+              <p class="mt-1 text-sm text-gray-600">
+                Configure your credential
+              </p>
             </div>
+          </div>
 
-            <div class="md:col-span-2">
-              <div class="mt-5 md:col-span-2 md:mt-0">
-                <div class="overflow-hidden shadow sm:rounded-md">
-                  <.form
-                    :let={f}
-                    for={@changeset}
-                    id="credential-form"
-                    phx-target={@myself}
-                    phx-change="validate"
-                    phx-submit="save"
+          <div class="md:col-span-2">
+            <div class="mt-5 md:col-span-2 md:mt-0">
+              <div class="overflow-hidden shadow sm:rounded-md">
+                <.form
+                  :let={f}
+                  for={@changeset}
+                  id="credential-form"
+                  phx-target={@myself}
+                  phx-change="validate"
+                  phx-submit="save"
+                >
+                  <.form_component
+                    :let={{fieldset, valid?}}
+                    form={f}
+                    type={@type}
+                    update_body={@update_body}
                   >
-                    <.form_component
-                      :let={{fieldset, valid?}}
-                      form={f}
-                      type={@type}
-                      update_body={@update_body}
-                    >
-                      <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+                    <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
+                      <fieldset>
+                        <div class="space-y-4">
+                          <div>
+                            <LightningWeb.Components.Form.text_field
+                              form={f}
+                              id={:name}
+                            />
+                          </div>
+                          <div>
+                            <LightningWeb.Components.Form.check_box
+                              form={f}
+                              id={:production}
+                            />
+                          </div>
+                        </div>
+                      </fieldset>
+                      <div class="space-y-4">
+                        <div class="hidden sm:block" aria-hidden="true">
+                          <div class="border-t border-secondary-200"></div>
+                        </div>
+                        <%= fieldset %>
+                      </div>
+
+                      <div :if={@show_project_credentials} class="space-y-4">
+                        <div class="hidden sm:block" aria-hidden="true">
+                          <div class="border-t border-secondary-200 mb-6"></div>
+                        </div>
                         <fieldset>
-                          <div class="space-y-4">
-                            <div>
-                              <LightningWeb.Components.Form.text_field
-                                form={f}
-                                id={:name}
-                              />
-                            </div>
-                            <div>
-                              <LightningWeb.Components.Form.check_box
-                                form={f}
-                                id={:production}
-                              />
-                            </div>
+                          <legend class="contents text-base font-medium text-gray-900">
+                            Project Access
+                          </legend>
+                          <p class="text-sm text-gray-500">
+                            Control which projects have access to this credentials
+                          </p>
+                          <div class="mt-4">
+                            <.project_credentials
+                              form={f}
+                              projects={@all_projects}
+                              selected={@selected_project}
+                              phx_target={@myself}
+                            />
                           </div>
                         </fieldset>
-                        <div class="space-y-4">
-                          <div class="hidden sm:block" aria-hidden="true">
-                            <div class="border-t border-secondary-200"></div>
-                          </div>
-                          <%= fieldset %>
-                        </div>
+                      </div>
+                      <div
+                        :if={@action == :edit and @allow_credential_transfer}
+                        class="space-y-4"
+                      >
+                        <.credential_transfer form={f} users={@users} />
+                      </div>
+                    </div>
 
-                        <div :if={@show_project_credentials} class="space-y-4">
-                          <div class="hidden sm:block" aria-hidden="true">
-                            <div class="border-t border-secondary-200 mb-6"></div>
-                          </div>
-                          <fieldset>
-                            <legend class="contents text-base font-medium text-gray-900">
-                              Project Access
-                            </legend>
-                            <p class="text-sm text-gray-500">
-                              Control which projects have access to this credentials
-                            </p>
-                            <div class="mt-4">
-                              <.project_credentials
-                                form={f}
-                                projects={@all_projects}
-                                selected={@selected_project}
-                                phx_target={@myself}
-                              />
-                            </div>
-                          </fieldset>
-                        </div>
-                        <div
-                          :if={@action == :edit and @allow_credential_transfer}
-                          class="space-y-4"
-                        >
-                          <.credential_transfer form={f} users={@users} />
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6">
+                      <div class="flex flex-rows">
+                        <div :for={button <- @button} class={button[:class]}>
+                          <%= render_slot(button, valid?) %>
                         </div>
                       </div>
-
-                      <div class="bg-gray-50 px-4 py-3 sm:px-6">
-                        <div class="flex flex-rows">
-                          <div :for={button <- @button} class={button[:class]}>
-                            <%= render_slot(button, valid?) %>
-                          </div>
-                        </div>
-                      </div>
-                    </.form_component>
-                  </.form>
-                </div>
+                    </div>
+                  </.form_component>
+                </.form>
               </div>
             </div>
           </div>

@@ -736,6 +736,40 @@ defmodule LightningWeb.CredentialLiveTest do
       assert edit_live |> has_element?("span", "Test User")
     end
 
+    test "renders an error when a token has no refresh token", %{
+      conn: conn,
+      user: user,
+      bypass: bypass
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      # Wait for next `send_update` triggered by the token Task calls
+      assert_receive {:plug_conn, :sent}
+
+      edit_live
+      |> element("#google-sheets-inner-form")
+      |> render()
+
+      assert edit_live |> has_element?("p", "The token is missing it's")
+    end
+
     test "renewing an expired but valid token", %{
       user: user,
       bypass: bypass,

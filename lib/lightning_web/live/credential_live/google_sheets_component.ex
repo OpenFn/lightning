@@ -89,33 +89,13 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   def render(assigns) do
     assigns =
       assigns
-      |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
-        # Merge in any changes that have been made to the TokenBody changeset
-        # _inside_ this component.
-        %{
-          form
-          | params: Map.put(form.params, "body", token_body_changeset.params)
-        }
-      end)
+      |> assign(
+        show_authorize:
+          !(assigns.authorizing || assigns.error || assigns.userinfo)
+      )
 
     ~H"""
     <fieldset id={@id}>
-      <legend class="contents text-base font-medium text-gray-900">
-        Details
-      </legend>
-      <div :if={@userinfo}>
-        <div class="flex">
-          <div class="flex-none">
-            <img src={@userinfo["picture"]} class="h-12 w-12 rounded-full" />
-          </div>
-          <div class="flex grow items-end mb-1 ml-2">
-            <span class="font-medium text-gray-700"><%= @userinfo["name"] %></span>
-          </div>
-        </div>
-      </div>
-      <p class="text-sm text-gray-500">
-        Configuration for this credential.
-      </p>
       <div :for={
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
@@ -124,13 +104,22 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         <%= hidden_input(body_form, :expires_at) %>
         <%= hidden_input(body_form, :scope) %>
       </div>
-      <.authorize_button
-        :if={!@authorizing}
-        authorize_url={@authorize_url}
-        socket={@socket}
-        myself={@myself}
-      />
-      <.in_progress_feedback :if={@authorizing} socket={@socket} myself={@myself} />
+      <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col">
+        <.authorize_button
+          :if={@show_authorize}
+          authorize_url={@authorize_url}
+          socket={@socket}
+          myself={@myself}
+        />
+        <.disabled_authorize_button
+          :if={!@show_authorize}
+          socket={@socket}
+          myself={@myself}
+        />
+
+        <.error_block :if={@error} type={@error} />
+        <.userinfo :if={@userinfo} userinfo={@userinfo} />
+      </div>
     </fieldset>
     """
   end
@@ -153,7 +142,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
           )
         }
         alt="Authorize with Google"
-        class="w-72 group-hover:hidden"
+        class="group-hover:hidden"
       />
       <img
         src={
@@ -163,35 +152,86 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
           )
         }
         alt="Authorize with Google"
-        class="w-72 hidden group-hover:block"
+        class="hidden group-hover:block"
       />
     </.link>
     """
   end
 
-  def in_progress_feedback(assigns) do
+  def disabled_authorize_button(assigns) do
     ~H"""
-    <img
-      src={
-        Routes.static_path(
-          @socket,
-          "/images/btn_google_signin_dark_disabled_web@2x.png"
-        )
-      }
-      alt="Authorizing..."
-      class="w-72"
-    />
-    <span class="text-sm">
-      Not working?
-      <.link
-        href="#"
-        phx-target={@myself}
-        phx-click="cancel"
-        class="hover:underline text-primary-900"
-      >
-        Try again.
-      </.link>
-    </span>
+    <div class="mx-auto">
+      <img
+        src={
+          Routes.static_path(
+            @socket,
+            "/images/btn_google_signin_dark_disabled_web@2x.png"
+          )
+        }
+        alt="Authorizing..."
+        class="mx-auto"
+      />
+      <div class="text-sm ml-1">
+        Not working?
+        <.link
+          href="#"
+          phx-target={@myself}
+          phx-click="cancel"
+          class="hover:underline text-primary-900"
+        >
+          Try again.
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  def error_block(%{type: :no_refresh_token} = assigns) do
+    ~H"""
+    <div class="mx-auto pt-2 max-w-md">
+      <div class="text-center">
+        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
+        <div class="text-base font-medium text-gray-900">
+          Something went wrong.
+        </div>
+        <p class="text-sm mt-2">
+          The token is missing it's
+          <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
+          value.
+        </p>
+        <p class="text-sm mt-2">
+          Please try again.
+        </p>
+        <p class="text-sm mt-2">
+          If the issue persists, please follow the "Remove third-party account access"
+          instructions on the
+          <a
+            class="text-indigo-600 underline"
+            href="https://support.google.com/accounts/answer/3466521"
+            target="_blank"
+          >
+            Manage third-party apps & services with access to your account
+          </a>
+          <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
+          page.
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  def userinfo(assigns) do
+    ~H"""
+    <div class="flex flex-col items-center self-center">
+      <div class="flex-none">
+        <img src={@userinfo["picture"]} class="h-12 w-12 rounded-full" />
+      </div>
+      <div class="flex mb-1 ml-2">
+        <span class="font-medium text-lg text-gray-700">
+          <%= @userinfo["name"] %>
+        </span>
+      </div>
+    </div>
     """
   end
 
@@ -227,6 +267,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         id: id,
         token_body_changeset: token_body_changeset,
         token: token,
+        error: token_error(token),
         update_body: update_body
       )
       |> assign_new(:client, fn %{token: token} ->
@@ -240,10 +281,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
           Google.authorize_url(client, build_state(socket.id, __MODULE__, id))
         end
       end)
-
-    if socket |> changed?(:token) do
-      maybe_fetch_userinfo(socket)
-    end
+      |> maybe_fetch_userinfo()
 
     {:ok, socket}
   end
@@ -267,7 +305,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   end
 
   def update(%{userinfo: userinfo}, socket) do
-    {:ok, socket |> assign(userinfo: userinfo)}
+    {:ok, socket |> assign(userinfo: userinfo, authorizing: false)}
   end
 
   @impl true
@@ -277,7 +315,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
 
   @impl true
   def handle_event("cancel", _, socket) do
-    {:noreply, socket |> assign(authorizing: false)}
+    {:noreply, socket |> assign(authorizing: false, error: nil, userinfo: nil)}
   end
 
   defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
@@ -288,7 +326,9 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     %{token_body_changeset: token_body_changeset, token: token, client: client} =
       socket.assigns
 
-    if token_body_changeset.valid? do
+    if socket |> changed?(:token) and token_body_changeset.valid? do
+      pid = self()
+
       if OAuth2.AccessToken.expired?(token) do
         Logger.debug("Refreshing expired token")
 
@@ -300,23 +340,43 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
 
             {:error, reason} ->
               # TODO: handle error
+              send_update(pid, __MODULE__,
+                id: socket.assigns.id,
+                error: :refresh_failed
+              )
+
               Logger.error("Failed refreshing valid token: #{reason}")
           end
         end)
+
+        socket |> assign(authorizing: true)
       else
         Logger.debug("Retrieving userinfo")
-        pid = self()
 
         Task.start(fn ->
           # TODO: handle 500
-          {:ok, resp} = Google.get_userinfo(client, token)
+          Google.get_userinfo(client, token)
+          |> case do
+            {:ok, resp} ->
+              send_update(pid, __MODULE__,
+                id: socket.assigns.id,
+                userinfo: resp.body
+              )
 
-          send_update(pid, __MODULE__,
-            id: socket.assigns.id,
-            userinfo: resp.body
-          )
+            {:error, resp} ->
+              Logger.error("Failed retrieving userinfo with:\n#{inspect(resp)}")
+
+              send_update(pid, __MODULE__,
+                id: socket.assigns.id,
+                error: :userinfo_failed
+              )
+          end
         end)
+
+        socket |> assign(authorizing: true)
       end
+    else
+      socket
     end
   end
 
@@ -353,5 +413,15 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         k in [:access_token, :refresh_token, :expires_at]
       end)
     )
+  end
+
+  defp token_error(token) do
+    cond do
+      is_nil(token.refresh_token) and token.access_token ->
+        :no_refresh_token
+
+      true ->
+        nil
+    end
   end
 end

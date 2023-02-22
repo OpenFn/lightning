@@ -7,8 +7,8 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   def render(assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
-      <div class="md:grid md:grid-cols-3 md:gap-6">
-        <div class="md:col-span-1">
+      <div class="lg:grid md:grid-cols-3 md:gap-6">
+        <div class="md:col-span-1 hidden @2xl:block">
           <div class="px-4 sm:px-0">
             <p class="mt-1 text-sm text-gray-600">
               Decide which type credential you would like to create.
