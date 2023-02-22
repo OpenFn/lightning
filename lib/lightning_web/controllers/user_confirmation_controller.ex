@@ -36,19 +36,12 @@ defmodule LightningWeb.UserConfirmationController do
         |> redirect(to: "/")
 
       :error ->
-        case conn.assigns do
-          %{user: %{confirmed_at: confirmed_at}}
-          when not is_nil(confirmed_at) ->
-            redirect(conn, to: "/")
-
-          %{} ->
-            conn
-            |> put_flash(
-              :error,
-              "Email change link is invalid or it has expired."
-            )
-            |> redirect(to: "/")
-        end
+        conn
+        |> put_flash(
+          :error,
+          "Email change link is invalid or it has expired."
+        )
+        |> redirect(to: "/")
     end
   end
 
