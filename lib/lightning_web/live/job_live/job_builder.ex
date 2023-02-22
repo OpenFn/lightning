@@ -49,8 +49,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
     )
   end
 
-  attr :return_to, :string, required: true
-  attr :params, :map, default: %{}
+  attr(:return_to, :string, required: true)
+  attr(:params, :map, default: %{})
 
   @impl true
   def render(assigns) do
@@ -452,7 +452,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
        can_edit:
          ProjectUsers
          |> Permissions.can(
-           :edit_jobs,
+           :edit_job,
            current_user,
            project
          )

@@ -8,7 +8,21 @@ defmodule Lightning.Policies.ProjectUsers do
   alias Lightning.Projects.Project
   alias Lightning.Accounts.User
 
-  @type actions :: :edit_jobs
+  @type actions ::
+          :create_workflow
+          | :edit_job
+          | :create_job
+          | :delete_job
+          | :run_job
+          | :rerun_job
+          | :view_last_job_inputs
+          | :view_workorder_input
+          | :view_workorder_run
+          | :view_workorder_history
+          | :view_project_name
+          | :view_project_description
+          | :view_project_credentials
+          | :view_project_collaborators
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -25,7 +39,28 @@ defmodule Lightning.Policies.ProjectUsers do
           Lightning.Accounts.User.t(),
           Lightning.Projects.Project.t()
         ) :: boolean
-  def authorize(:edit_jobs, %User{} = user, %Project{} = project) do
-    Projects.get_project_user_role(user, project) in [:admin, :editor, :owner]
+  def authorize(action, %User{} = user, %Project{} = project)
+      when action in [
+             :create_workflow,
+             :edit_job,
+             :create_job,
+             :delete_job,
+             :run_job,
+             :rerun_job
+           ] do
+    Projects.get_project_user_role(user, project) in [:owner, :admin, :editor]
   end
+
+  def authorize(action, %User{} = user, %Project{} = project)
+      when action in [
+             :view_last_job_inputs,
+             :view_workorder_input,
+             :view_workorder_run,
+             :view_workorder_history,
+             :view_project_name,
+             :view_project_description,
+             :view_project_credentials,
+             :view_project_collaborators
+           ],
+      do: true
 end
