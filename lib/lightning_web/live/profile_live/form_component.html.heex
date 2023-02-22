@@ -10,7 +10,7 @@
   <% end %>
   <.form
     :let={f}
-    as="user"
+    as={:user}
     for={@email_changeset}
     phx-change="validate_email"
     phx-submit="change_email"
