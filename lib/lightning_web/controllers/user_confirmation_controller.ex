@@ -29,46 +29,26 @@ defmodule LightningWeb.UserConfirmationController do
   end
 
   def confirm_email(conn, %{"token" => token}) do
-    if conn.assigns[:current_user] do
-      case Accounts.update_user_email(conn.assigns.current_user, token) do
-        {:ok, _} ->
-          conn
-          |> put_flash(:info, "Email changed successfully.")
-          |> redirect(to: "/")
+    case Accounts.update_user_email(conn.assigns.current_user, token) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Email changed successfully.")
+        |> redirect(to: "/")
 
-        :error ->
-          case conn.assigns do
-            %{user: %{confirmed_at: confirmed_at}}
-            when not is_nil(confirmed_at) ->
-              redirect(conn, to: "/")
+      :error ->
+        case conn.assigns do
+          %{user: %{confirmed_at: confirmed_at}}
+          when not is_nil(confirmed_at) ->
+            redirect(conn, to: "/")
 
-            %{} ->
-              conn
-              |> put_flash(
-                :error,
-                "Email change link is invalid or it has expired."
-              )
-              |> redirect(to: "/")
-          end
-      end
-    else
-      conn
-      |> get_format()
-      |> case do
-        "json" ->
-          conn
-          |> put_status(:unauthorized)
-          |> put_view(LightningWeb.ErrorView)
-          |> render(:"401")
-          |> halt()
-
-        _ ->
-          conn
-          |> put_flash(:error, "You must log in to access this page.")
-          # |> maybe_store_return_to()
-          |> redirect(to: Routes.user_session_path(conn, :new))
-          |> halt()
-      end
+          %{} ->
+            conn
+            |> put_flash(
+              :error,
+              "Email change link is invalid or it has expired."
+            )
+            |> redirect(to: "/")
+        end
     end
   end
 
