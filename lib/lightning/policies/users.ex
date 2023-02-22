@@ -6,7 +6,18 @@ defmodule Lightning.Policies.Users do
 
   alias Lightning.Accounts.User
 
-  @type actions :: :create_projects
+  @type actions :: [
+          :create_projects,
+          :view_projects,
+          :edit_projects,
+          :create_projects,
+          :view_users,
+          :edit_users,
+          :delete_users,
+          :disable_users,
+          :configure_external_auth_provider,
+          :view_credentials_audit_trail
+        ]
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -19,7 +30,18 @@ defmodule Lightning.Policies.Users do
   for a particular action they are denied.
   """
   @spec authorize(actions(), Lightning.Accounts.User.t(), any) :: boolean
-  def authorize(:create_projects, %User{role: role}, _project) do
+  def authorize(action, %User{role: role}, _project)
+      when action in [
+             :view_projects,
+             :edit_projects,
+             :create_projects,
+             :view_users,
+             :edit_users,
+             :delete_users,
+             :disable_users,
+             :configure_external_auth_provider,
+             :view_credentials_audit_trail
+           ] do
     role in [:superuser]
   end
 end
