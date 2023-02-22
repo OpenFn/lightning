@@ -6,18 +6,17 @@ defmodule Lightning.Policies.Users do
 
   alias Lightning.Accounts.User
 
-  @type actions :: [
-          :create_projects,
-          :view_projects,
-          :edit_projects,
-          :create_projects,
-          :view_users,
-          :edit_users,
-          :delete_users,
-          :disable_users,
-          :configure_external_auth_provider,
-          :view_credentials_audit_trail
-        ]
+  @type actions ::
+          :create_projects
+          | :view_projects
+          | :edit_projects
+          | :create_projects
+          | :view_users
+          | :edit_users
+          | :delete_users
+          | :disable_users
+          | :configure_external_auth_provider
+          | :view_credentials_audit_trail
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
