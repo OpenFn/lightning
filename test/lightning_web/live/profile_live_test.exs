@@ -45,14 +45,16 @@ defmodule LightningWeb.ProfileLiveTest do
     setup :register_and_log_in_user
 
     test "load edit page", %{conn: conn} do
-      {:ok, _profile_live, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, _profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Change email"
       assert html =~ "Change password"
     end
 
     test "save password", %{conn: conn} do
-      {:ok, profile_live, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
              |> form("#password_form", user: @invalid_empty_password_attrs)
@@ -95,7 +97,8 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "validate email", %{conn: conn, user: user} do
-      {:ok, profile_live, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
              |> form("#email_form", user: %{email: user.email})
@@ -103,7 +106,8 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "a user can change their email address", %{conn: conn} do
-      {:ok, profile_live, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, _html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
              |> form("#email_form", user: @invalid_email_update_attrs)
@@ -137,7 +141,8 @@ defmodule LightningWeb.ProfileLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, profile_live, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Delete my account"
 
@@ -176,7 +181,8 @@ defmodule LightningWeb.ProfileLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, profile_live, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, html} =
+        live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Delete my account"
 
