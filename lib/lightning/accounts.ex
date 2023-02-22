@@ -286,21 +286,17 @@ defmodule Lightning.Accounts do
 
     with {:ok, query} <-
            UserToken.verify_change_email_token_query(token, context),
-         %UserToken{context: context, sent_to: email, user_id: user_id} <-
+         %UserToken{context: context, sent_to: email} <-
            Repo.one(query),
          {:ok, %{user: user}} <-
-           Repo.transaction(user_email_multi(user_id, email, context)) do
+           Repo.transaction(user_email_multi(user, email, context)) do
       {:ok, user}
     else
       _ -> :error
     end
   end
 
-  defp user_email_multi(user_id, email, context) do
-    user =
-      from(u in User, where: u.id == ^user_id)
-      |> Repo.one()
-
+  defp user_email_multi(user, email, context) do
     changeset =
       user
       |> User.email_changeset(%{email: email})
@@ -349,37 +345,33 @@ defmodule Lightning.Accounts do
     data = %{email: nil, current_password: nil}
     types = %{email: :string, current_password: :string}
 
-    changeset =
-      {data, types}
-      |> Ecto.Changeset.cast(params, Map.keys(types))
-      |> Ecto.Changeset.validate_required([:email, :current_password])
-      |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-        message: "must have the @ sign and no spaces"
-      )
-      |> Ecto.Changeset.validate_length(:email, max: 160)
-      |> Ecto.Changeset.validate_change(:email, fn :email, email ->
-        cond do
-          user.email == email ->
-            [email: "Please change your email"]
+    {data, types}
+    |> Ecto.Changeset.cast(params, Map.keys(types))
+    |> Ecto.Changeset.validate_required([:email, :current_password])
+    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
+    |> Ecto.Changeset.validate_length(:email, max: 160)
+    |> Ecto.Changeset.validate_change(:email, fn :email, email ->
+      cond do
+        user.email == email ->
+          [email: "Please change your email"]
 
-          Lightning.Repo.exists?(User |> where(email: ^email)) ->
-            [email: "Email already exists"]
+        Lightning.Repo.exists?(User |> where(email: ^email)) ->
+          [email: "Email already exists"]
 
-          true ->
-            []
-        end
-      end)
-      |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
-                                                              password ->
-        if Bcrypt.verify_pass(password, user.hashed_password) do
+        true ->
           []
-        else
-          [current_password: "Password does not match"]
-        end
-      end)
-
-    # |> Ecto.Changeset.unique_constraint(:email)
-    # |> Ecto.Changeset.apply_action(:validate)
+      end
+    end)
+    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
+                                                            password ->
+      if Bcrypt.verify_pass(password, user.hashed_password) do
+        []
+      else
+        [current_password: "Password does not match"]
+      end
+    end)
   end
 
   @doc """

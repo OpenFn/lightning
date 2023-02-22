@@ -143,6 +143,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
 
       assert redirected_to(conn) == "/"
       assert get_flash(conn, :info) =~ "Email changed successfully."
+      assert Accounts.get_user!(user.id).confirmed_at
       refute Accounts.get_user_by_email(user.email)
       assert Accounts.get_user_by_email(email)
 
@@ -171,6 +172,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       assert get_flash(conn, :error) =~
                "Email change link is invalid or it has expired"
 
+      refute Accounts.get_user!(user.id).confirmed_at
       assert Accounts.get_user_by_email(user.email)
     end
 

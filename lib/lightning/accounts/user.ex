@@ -21,15 +21,15 @@ defmodule Lightning.Accounts.User do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "users" do
-    field :first_name, :string
-    field :last_name, :string
-    field :email, :string
-    field :password, :string, virtual: true, redact: true
-    field :hashed_password, :string, redact: true
-    field :confirmed_at, :naive_datetime
-    field :role, RolesEnum, default: :user
-    field :disabled, :boolean, default: false
-    field :scheduled_deletion, :utc_datetime
+    field(:first_name, :string)
+    field(:last_name, :string)
+    field(:email, :string)
+    field(:password, :string, virtual: true, redact: true)
+    field(:hashed_password, :string, redact: true)
+    field(:confirmed_at, :naive_datetime)
+    field(:role, RolesEnum, default: :user)
+    field(:disabled, :boolean, default: false)
+    field(:scheduled_deletion, :utc_datetime)
 
     has_many(:credentials, Lightning.Credentials.Credential)
     has_many(:project_users, Lightning.Projects.ProjectUser)
@@ -233,12 +233,6 @@ defmodule Lightning.Accounts.User do
     |> cast(attrs, [:password])
     |> validate_confirmation(:password, message: "does not match password")
     |> validate_password(opts)
-  end
-
-  def current_password_changeset(user, attrs) do
-    user
-    |> cast(attrs, [:password])
-    |> validate_current_password(attrs)
   end
 
   @doc """
