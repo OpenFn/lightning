@@ -17,6 +17,11 @@ defmodule Lightning.Policies.Users do
           | :disable_users
           | :configure_external_auth_provider
           | :view_credentials_audit_trail
+          | :change_password
+          | :delete_account
+          | :view_credentials
+          | :edit_credentials
+          | :delete_credential
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -42,5 +47,16 @@ defmodule Lightning.Policies.Users do
              :view_credentials_audit_trail
            ] do
     role in [:superuser]
+  end
+
+  def authorize(action, %User{} = requesting_user, %User{} = authenticated_user)
+      when action in [
+             :change_password,
+             :delete_account,
+             :view_credentials,
+             :edit_credentials,
+             :delete_credential
+           ] do
+    requesting_user.id == authenticated_user.id
   end
 end
