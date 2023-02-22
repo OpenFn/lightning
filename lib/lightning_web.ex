@@ -16,18 +16,35 @@ defmodule LightningWeb do
   below. Instead, define any helper function in modules
   and import those modules here.
   """
+  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+
+  def router do
+    quote do
+      # , helpers: false
+      use Phoenix.Router
+
+      import Plug.Conn
+      import Phoenix.Controller
+      import Phoenix.LiveView.Router
+    end
+  end
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: LightningWeb
+      use Phoenix.Controller,
+        formats: [:html, :json],
+        layouts: [html: LightningWeb.Layouts]
 
       import Plug.Conn
       import LightningWeb.Gettext
       import LightningWeb.UserAuth, only: [fetch_current_user: 2]
       alias LightningWeb.Router.Helpers, as: Routes
+
+      unquote(verified_routes())
     end
   end
 
+  # This is deprecated, once the mailers have been moved to Layouts, remove this
   def view do
     quote do
       use Phoenix.View,
@@ -36,22 +53,22 @@ defmodule LightningWeb do
 
       # Import convenience functions from controllers
       import Phoenix.Controller,
-        only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
+        only: [view_module: 1, view_template: 1]
 
       # Include shared imports and aliases for views
-      unquote(view_helpers())
+      unquote(html_helpers())
     end
   end
 
   def live_view(opts \\ []) do
     quote do
       @opts Keyword.merge(
-              [layout: {LightningWeb.LayoutView, :live}],
+              [layout: {LightningWeb.Layouts, :live}],
               unquote(opts)
             )
       use Phoenix.LiveView, @opts
 
-      unquote(view_helpers())
+      unquote(html_helpers())
     end
   end
 
@@ -59,7 +76,7 @@ defmodule LightningWeb do
     quote do
       use Phoenix.LiveComponent
 
-      unquote(view_helpers())
+      unquote(html_helpers())
     end
   end
 
@@ -67,17 +84,7 @@ defmodule LightningWeb do
     quote do
       use Phoenix.Component
 
-      unquote(view_helpers())
-    end
-  end
-
-  def router do
-    quote do
-      use Phoenix.Router
-
-      import Plug.Conn
-      import Phoenix.Controller
-      import Phoenix.LiveView.Router
+      unquote(html_helpers())
     end
   end
 
@@ -88,14 +95,16 @@ defmodule LightningWeb do
     end
   end
 
-  defp view_helpers do
+  defp html_helpers do
     quote do
       # Use all HTML functionality (forms, tags, etc)
       use Phoenix.HTML
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
-      import Phoenix.Component
+      use Phoenix.Component
       import LightningWeb.LiveHelpers
+      import LightningWeb.CoreComponents
+      alias LightningWeb.LayoutComponents
 
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
@@ -118,6 +127,30 @@ defmodule LightningWeb do
       alias Components.Settings
       alias Components.Common
       alias Components.Icon
+
+      unquote(verified_routes())
+    end
+  end
+
+  def html do
+    quote do
+      use Phoenix.Component
+
+      # Import convenience functions from controllers
+      import Phoenix.Controller,
+        only: [get_csrf_token: 0, view_module: 1, view_template: 1]
+
+      # Include general helpers for rendering HTML
+      unquote(html_helpers())
+    end
+  end
+
+  def verified_routes do
+    quote do
+      use Phoenix.VerifiedRoutes,
+        endpoint: LightningWeb.Endpoint,
+        router: LightningWeb.Router,
+        statics: LightningWeb.static_paths()
     end
   end
 

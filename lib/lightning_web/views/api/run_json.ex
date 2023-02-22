@@ -1,8 +1,10 @@
-defmodule LightningWeb.API.ProjectView do
-  use LightningWeb, :view
+defmodule LightningWeb.API.RunJSON do
+  @moduledoc false
+
+  alias LightningWeb.Router.Helpers, as: Routes
   import LightningWeb.API.Helpers
 
-  @fields ~w(name)a
+  @fields ~w(exit_code started_at finished_at log)a
 
   def render("index.json", %{page: page, conn: conn}) do
     %{
@@ -16,9 +18,9 @@ defmodule LightningWeb.API.ProjectView do
     }
   end
 
-  def render("show.json", %{project: project, conn: conn}) do
+  def render("show.json", %{run: run, conn: conn}) do
     %{
-      data: resource(conn, project),
+      data: resource(conn, run),
       included: [],
       links: %{
         self: url_for(conn)
@@ -26,13 +28,13 @@ defmodule LightningWeb.API.ProjectView do
     }
   end
 
-  defp resource(conn, project) do
+  defp resource(conn, run) do
     %{
-      type: "projects",
+      type: "runs",
       relationships: %{},
-      links: %{self: Routes.api_project_url(conn, :show, project)},
-      id: project.id,
-      attributes: Map.take(project, @fields)
+      links: %{self: Routes.api_run_url(conn, :show, run)},
+      id: run.id,
+      attributes: Map.take(run, @fields)
     }
   end
 end

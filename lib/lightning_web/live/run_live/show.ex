@@ -40,19 +40,19 @@ defmodule LightningWeb.RunLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layout.page_content>
+    <LayoutComponents.page_content>
       <:header>
-        <Layout.header socket={@socket}>
+        <LayoutComponents.header socket={@socket}>
           <:title><%= @page_title %></:title>
-        </Layout.header>
+        </LayoutComponents.header>
       </:header>
-      <Layout.centered>
+      <LayoutComponents.centered>
         <LightningWeb.RunLive.Components.run_viewer
           run={@run}
           show_input_dataclip={true}
         />
-      </Layout.centered>
-    </Layout.page_content>
+      </LayoutComponents.centered>
+    </LayoutComponents.page_content>
     """
   end
 end

@@ -1,5 +1,6 @@
-defmodule LightningWeb.API.JobView do
-  use LightningWeb, :view
+defmodule LightningWeb.API.JobJSON do
+  @moduledoc false
+  alias LightningWeb.Router.Helpers, as: Routes
   import LightningWeb.API.Helpers
 
   @fields ~w(name)a

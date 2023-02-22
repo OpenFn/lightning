@@ -8,8 +8,6 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
   import Lightning.CredentialsFixtures
   import Lightning.InvocationFixtures
 
-  alias LightningWeb.RouteHelpers
-
   alias Lightning.Attempt
 
   setup :register_and_log_in_user
@@ -42,7 +40,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(
         conn,
-        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
       )
 
     assert view |> enter_dataclip_id("") =~ html_escape("can't be blank")
@@ -109,7 +107,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(
         conn,
-        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
       )
 
     assert view
@@ -130,7 +128,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(
         conn,
-        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
       )
 
     assert view
@@ -156,7 +154,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(
         conn,
-        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
       )
 
     refute view
@@ -227,7 +225,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     {:ok, view, _html} =
       live(
         conn,
-        RouteHelpers.workflow_edit_job_path(project.id, job.workflow_id, job.id)
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
       )
 
     refute view

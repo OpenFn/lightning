@@ -8,7 +8,6 @@ defmodule LightningWeb.CredentialLiveTest do
     CredentialsFixtures
   }
 
-  alias LightningWeb.RouteHelpers
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -432,14 +431,7 @@ defmodule LightningWeb.CredentialLiveTest do
       job: job
     } do
       {:ok, view, _html} =
-        live(
-          conn,
-          RouteHelpers.workflow_edit_job_path(
-            project.id,
-            job.workflow_id,
-            job.id
-          )
-        )
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}")
 
       assert has_element?(view, "#builder-#{job.id}")
 
@@ -464,14 +456,7 @@ defmodule LightningWeb.CredentialLiveTest do
       job: job
     } do
       {:ok, view, _html} =
-        live(
-          conn,
-          RouteHelpers.workflow_edit_job_path(
-            project.id,
-            job.workflow_id,
-            job.id
-          )
-        )
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}")
 
       # open the new credential modal
 
@@ -510,14 +495,7 @@ defmodule LightningWeb.CredentialLiveTest do
       job: job
     } do
       {:ok, view, _html} =
-        live(
-          conn,
-          RouteHelpers.workflow_edit_job_path(
-            project.id,
-            job.workflow_id,
-            job.id
-          )
-        )
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}")
 
       # change the job name so we can assert that the form state had been
       # kept after saving the new credential
