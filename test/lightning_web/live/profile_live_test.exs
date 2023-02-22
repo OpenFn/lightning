@@ -33,20 +33,26 @@ defmodule LightningWeb.ProfileLiveTest do
     password_confirmation: "password2"
   }
 
+  @invalid_email_update_attrs %{
+    email: ""
+  }
+
+  @update_email_attrs %{
+    email: "new@example.com"
+  }
+
   describe "Edit user profile" do
     setup :register_and_log_in_user
 
     test "load edit page", %{conn: conn} do
-      {:ok, _profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, _profile_live, html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Change email"
       assert html =~ "Change password"
     end
 
     test "save password", %{conn: conn} do
-      {:ok, profile_live, _html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert profile_live
              |> form("#password_form", user: @invalid_empty_password_attrs)
@@ -88,22 +94,50 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "Projects"
     end
 
-    # TODO: @Mtuchi, when emails can be changed again, this comes back.
-    # test "validate email", %{conn: conn, user: user} do
-    #   {:ok, profile_live, _html} =
-    #     live(conn, Routes.profile_edit_path(conn, :edit))
+    test "validate email", %{conn: conn, user: user} do
+      {:ok, profile_live, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
-    #   assert profile_live
-    #          |> form("#email_form", user: %{email: user.email})
-    #          |> render_change() =~ "did not change"
-    # end
+      assert profile_live
+             |> form("#email_form", user: %{email: user.email})
+             |> render_change() =~ "Please change your email"
+    end
+
+    test "a user can change their email address", %{conn: conn} do
+      {:ok, profile_live, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+
+      assert profile_live
+             |> form("#email_form", user: @invalid_email_update_attrs)
+             |> render_change() =~ "can&#39;t be blank"
+
+      assert profile_live
+             |> form("#email_form", user: %{email: "oops email"})
+             |> render_change() =~ "must have the @ sign and no spaces"
+
+      # {:ok, conn} =
+      #   profile_live
+      #   |> form("#email_form", user: @update_email_attrs)
+      #   |> render_submit()
+      #   |> follow_redirect(conn)
+
+      # assert "/" = redirected_path = redirected_to(conn, 302)
+
+      # html =
+      #   get(recycle(conn), redirected_path)
+      #   |> html_response(200)
+
+      # assert html =~ "Email changed successfully."
+      # assert html =~ "Projects"
+
+      assert profile_live
+             |> form("#email_form", user: @update_email_attrs)
+             |> render_submit() =~ "Sending confirmation email..."
+    end
 
     test "allows a user to schedule their own account for deletion", %{
       conn: conn,
       user: user
     } do
-      {:ok, profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Delete my account"
 
@@ -142,8 +176,7 @@ defmodule LightningWeb.ProfileLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, profile_live, html} =
-        live(conn, Routes.profile_edit_path(conn, :edit))
+      {:ok, profile_live, html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
       assert html =~ "Delete my account"
 
