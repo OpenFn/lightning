@@ -658,9 +658,8 @@ defmodule LightningWeb.CredentialLiveTest do
       )
 
       # Wait for the userinfo endpoint to be called
-      assert_receive {:plug_conn, :sent}
+      wait_for_userinfo(new_live)
       # Rerender as the broadcast above has altered the LiveView state
-      _ = :sys.get_state(new_live.pid)
       new_live |> render()
 
       assert new_live |> has_element?("span", "Test User")
@@ -725,13 +724,12 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, edit_live, _html} =
         live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
 
-      # Wait for next `send_update` triggered by the token Task calls
-      assert_receive {:plug_conn, :sent}
       assert_receive {:phoenix, :send_update, _}
 
-      edit_live
-      |> element("#google-sheets-inner-form")
-      |> render()
+      # Wait for the userinfo endpoint to be called
+      wait_for_userinfo(edit_live)
+
+      edit_live |> render()
 
       assert edit_live |> has_element?("span", "Test User")
     end
@@ -851,6 +849,24 @@ defmodule LightningWeb.CredentialLiveTest do
       assert new_live
              |> has_element?("#google-sheets-inner-form", "No Client Configured")
     end
+  end
+
+  defp wait_for_userinfo(live) do
+    assert Enum.reduce_while(1..5, nil, fn n, _ ->
+             {_mod, assigns} =
+               Lightning.LiveViewHelpers.get_component_assigns_by(
+                 live,
+                 id: "google-sheets-inner-form"
+               )
+
+             if assigns.userinfo do
+               {:halt, true}
+             else
+               Process.sleep(n * 10)
+               {:cont, nil}
+             end
+           end),
+           ":userinfo has not been set yet."
   end
 
   defp get_authorize_url(live) do

@@ -416,12 +416,10 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   end
 
   defp token_error(token) do
-    cond do
-      is_nil(token.refresh_token) and token.access_token ->
-        :no_refresh_token
-
-      true ->
-        nil
+    if is_nil(token.refresh_token) and token.access_token do
+      :no_refresh_token
+    else
+      nil
     end
   end
 end
