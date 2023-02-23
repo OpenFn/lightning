@@ -15,7 +15,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :delete_job
           | :run_job
           | :rerun_job
-          | :view_last_job_input
+          | :view_last_job_inputs
           | :view_workorder_input
           | :view_workorder_run
           | :view_workorder_history
@@ -78,7 +78,7 @@ defmodule Lightning.Policies.ProjectUsers do
            ],
       do: Projects.get_project_user_role(user, project) in [:owner, :admin]
 
-  def authorize(action, %User{} = _user, %Project{} = _project)
+  def authorize(action, %User{} = user, %Project{} = project)
       when action in [
              :view_last_job_inputs,
              :view_workorder_input,
@@ -89,5 +89,5 @@ defmodule Lightning.Policies.ProjectUsers do
              :view_project_credentials,
              :view_project_collaborators
            ],
-      do: true
+      do: Projects.is_member_of?(project, user)
 end
