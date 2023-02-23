@@ -10,7 +10,6 @@ defmodule Lightning.Policies.Users do
           :create_projects
           | :view_projects
           | :edit_projects
-          | :create_projects
           | :view_users
           | :edit_users
           | :delete_users
