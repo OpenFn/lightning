@@ -15,7 +15,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :delete_job
           | :run_job
           | :rerun_job
-          | :view_last_job_inputs
+          | :view_last_job_input
           | :view_workorder_input
           | :view_workorder_run
           | :view_workorder_history
