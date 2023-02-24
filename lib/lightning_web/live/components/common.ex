@@ -4,6 +4,46 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  def tooltip(assigns) do
+    ~H"""
+    <style>
+      div.tooltip[data-title]:hover::after {
+      content: attr(data-title) ;
+      position: absolute ;
+      top: 1.1em ;
+      left: 1em ;
+      min-width: 200px ;
+      border-radius: 0.25rem;
+      padding: 8px ;
+      color: #fff ;
+      background-color: rgb(30 41 59);
+      z-index: 1 ;
+      }
+    </style>
+    <div class="relative flex flex-row">
+      <%= if assigns[:inner_block], do: render_slot(@inner_block), else: @text %>
+      <div
+        class="bg-red-50 flex flex-col items-center group ml-1 cursor-pointer tooltip"
+        id={"tooltip-#{@id}"}
+        data-title={@title}
+      >
+        <svg
+          class="w-5 h-5"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </div>
+    </div>
+    """
+  end
+
   def button(assigns) do
     class =
       button_classes(
@@ -219,10 +259,10 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :id, :string, required: true
-  attr :default_hash, :string, required: true
-  attr :orientation, :string, required: true
-  slot :inner_block, required: true
+  attr(:id, :string, required: true)
+  attr(:default_hash, :string, required: true)
+  attr(:orientation, :string, required: true)
+  slot(:inner_block, required: true)
 
   def tab_bar(assigns) do
     horizontal_classes = ~w[
@@ -262,8 +302,8 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :for_hash, :string, required: true
-  slot :inner_block, required: true
+  attr(:for_hash, :string, required: true)
+  slot(:inner_block, required: true)
 
   def panel_content(assigns) do
     ~H"""
@@ -278,9 +318,9 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :hash, :string, required: true
-  attr :orientation, :string, required: true
-  slot :inner_block, required: true
+  attr(:hash, :string, required: true)
+  attr(:orientation, :string, required: true)
+  slot(:inner_block, required: true)
 
   def tab_item(assigns) do
     vertical_classes = ~w[

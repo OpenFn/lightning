@@ -14,9 +14,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     "On Job Failure": "on_job_failure"
   ]
 
-  attr :form, :map, required: true
-  attr :upstream_jobs, :list, required: true
-  attr :on_cron_change, :any, required: true
+  attr(:form, :map, required: true)
+  attr(:upstream_jobs, :list, required: true)
+  attr(:on_cron_change, :any, required: true)
 
   def trigger_picker(assigns) do
     trigger_type_options =
@@ -41,9 +41,14 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     <div class="md:grid md:grid-cols-2 md:gap-4">
       <%= hidden_inputs_for(@form) %>
       <%= label @form, :type, class: "block" do %>
-        <span class="block text-sm font-medium text-secondary-700">
-          Trigger
-        </span>
+        <Common.tooltip
+          id="someid"
+          title="When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+        >
+          <span class="block text-sm font-medium text-secondary-700">
+            Trigger
+          </span>
+        </Common.tooltip>
         <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
         <Form.select_field
           form={@form}
@@ -100,9 +105,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     end
   end
 
-  attr :changeset, :map, required: true
-  attr :field, :atom, required: true
-  slot :inner_block, required: true
+  attr(:changeset, :map, required: true)
+  attr(:field, :atom, required: true)
+  slot(:inner_block, required: true)
 
   def when_invalid(assigns) do
     has_error =
@@ -119,7 +124,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     """
   end
 
-  attr :adaptor, :string, required: true
+  attr(:adaptor, :string, required: true)
 
   def docs_component(assigns) do
     ~H"""

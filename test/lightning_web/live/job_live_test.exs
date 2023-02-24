@@ -58,6 +58,18 @@ defmodule LightningWeb.JobLiveTest do
              |> parse()
              |> xpath(~x"option[@selected]/text()"l)
              |> to_string() == "latest (≥ 1.6.2)"
+
+      assert view |> element("#tooltip-adaptor_name") |> has_element?()
+
+      # TODO @Mtuchi fix test for tooltip
+      assert view
+             |> element("#tooltip-adaptor_name")
+             |> render()
+             |> parse()
+             #  |> IO.inspect()
+             |> xpath(
+               ~x"div[data-title='What system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from.']"l
+             )
     end
   end
 

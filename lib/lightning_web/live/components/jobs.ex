@@ -18,6 +18,7 @@ defmodule LightningWeb.Components.Jobs do
       field={:project_credential_id}
       title="Credential"
       for="credentialField"
+      tooltip="How to connect. The credentials you need for authentication in the selected system."
     />
     <%= error_tag(@form, :project_credential_id, class: "block w-full rounded-md") %>
     <.select_field
