@@ -10,11 +10,33 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.4.2] - 2023-02-24
+
+### Added
+
+- A user can change their own email
+  [#247](https://github.com/OpenFn/Lightning/issues/247)
 - Added a `SCHEMAS_PATH` environment variable to override the default folder
   location for credential schemas
   [#604](https://github.com/OpenFn/Lightning/issues/604)
 - Added the ability to configure Google Sheets credentials
   [#536](https://github.com/OpenFn/Lightning/issues/536)
+- Function to import a project
+  [#574](https://github.com/OpenFn/Lightning/issues/574)
+
+### Changed
+
+- Users cannot register if they have not selected the terms and conditions
+  [#531](https://github.com/OpenFn/Lightning/issues/531)
+
+### Fixed
+
+- Jobs panel slow for first open after restart
+  [#567](https://github.com/OpenFn/Lightning/issues/567)
 
 ## [0.4.0] - 2023-02-08
 
