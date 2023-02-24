@@ -59,5 +59,9 @@ config :junit_formatter,
 
 config :lightning, Oban, testing: :inline
 
-# Enables / Displays the credential transfer feature for LightningWeb.CredentialLiveTest
 config :lightning, LightningWeb, allow_credential_transfer: true
+
+# Enables / Displays the credential features for LightningWeb.CredentialLiveTest
+config :lightning, LightningWeb,
+  allow_credential_transfer: true,
+  enable_google_credential: true

@@ -79,6 +79,10 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   def mount(socket) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
+    enable_google_credential =
+      Application.get_env(:lightning, LightningWeb, [])
+      |> Keyword.get(:enable_google_credential)
+
     schemas_options =
       Path.wildcard("#{schemas_path}/*.json")
       |> Enum.map(fn p ->
@@ -86,14 +90,22 @@ defmodule LightningWeb.CredentialLive.TypePicker do
         {name |> Phoenix.HTML.Form.humanize(), name}
       end)
 
-    {:ok,
-     socket
-     |> assign(
-       type_options: [
-         {"Raw", "raw"},
-         {"Google Sheets", "googlesheets"} | schemas_options
-       ]
-     )}
+    type_options =
+      [
+        {"Raw", "raw"},
+        {"Google Sheets", "googlesheets"} | schemas_options
+      ]
+      |> Enum.filter(fn {_, key} ->
+        case key do
+          "googlesheets" ->
+            enable_google_credential
+
+          _ ->
+            true
+        end
+      end)
+
+    {:ok, socket |> assign(type_options: type_options)}
   end
 
   @impl true

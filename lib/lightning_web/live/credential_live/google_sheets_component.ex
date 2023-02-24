@@ -89,6 +89,14 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   def render(assigns) do
     assigns =
       assigns
+      |> update(:form, fn form, %{token_body_changeset: token_body_changeset} ->
+        # Merge in any changes that have been made to the TokenBody changeset
+        # _inside_ this component.
+        %{
+          form
+          | params: Map.put(form.params, "body", token_body_changeset.params)
+        }
+      end)
       |> assign(
         show_authorize:
           !(assigns.authorizing || assigns.error || assigns.userinfo)
@@ -201,7 +209,12 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         </p>
         <p class="text-sm mt-2">
           Please
-          <a href="#" phx-click="try_userinfo_again" phx-target={@myself}>
+          <a
+            href="#"
+            phx-click="try_userinfo_again"
+            phx-target={@myself}
+            class="hover:underline text-primary-900"
+          >
             try again.
           </a>
         </p>
