@@ -11,7 +11,10 @@ and this project adheres to
 ### Added
 
 - Added a `SCHEMAS_PATH` environment variable to override the default folder
-  location for credential schemas [#604](https://github.com/OpenFn/Lightning/issues/604)
+  location for credential schemas
+  [#604](https://github.com/OpenFn/Lightning/issues/604)
+- Added the ability to configure Google Sheets credentials
+  [#536](https://github.com/OpenFn/Lightning/issues/536)
 
 ## [0.4.0] - 2023-02-08
 
