@@ -32,7 +32,6 @@ defmodule LightningWeb.Router do
     post "/users/confirm", UserConfirmationController, :create
     get "/users/confirm/:token", UserConfirmationController, :edit
     post "/users/confirm/:token", UserConfirmationController, :update
-
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
   end
@@ -73,6 +72,10 @@ defmodule LightningWeb.Router do
 
   scope "/", LightningWeb do
     pipe_through [:browser, :require_authenticated_user]
+
+    get "/profile/confirm_email/:token",
+        UserConfirmationController,
+        :confirm_email
 
     live_session :settings, on_mount: LightningWeb.InitAssigns do
       live "/settings", SettingsLive.Index, :index

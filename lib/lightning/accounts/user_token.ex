@@ -44,7 +44,7 @@ defmodule Lightning.Accounts.UserToken do
     field :sent_to, :string
     belongs_to :user, User
 
-    timestamps(updated_at: false)
+    timestamps updated_at: false
   end
 
   def token_config do
@@ -96,29 +96,32 @@ defmodule Lightning.Accounts.UserToken do
   """
   def verify_token_query(token, "auth" = context) do
     query =
-      from token in token_and_context_query(token, context),
+      from(token in token_and_context_query(token, context),
         join: user in assoc(token, :user),
         where: token.inserted_at > ago(@auth_validity_in_seconds, "second"),
         select: user
+      )
 
     {:ok, query}
   end
 
   def verify_token_query(token, "api" = context) do
     query =
-      from token in token_and_context_query(token, context),
+      from(token in token_and_context_query(token, context),
         join: user in assoc(token, :user),
         select: user
+      )
 
     {:ok, query}
   end
 
   def verify_token_query(token, "session" = context) do
     query =
-      from token in token_and_context_query(token, context),
+      from(token in token_and_context_query(token, context),
         join: user in assoc(token, :user),
         where: token.inserted_at > ago(@session_validity_in_days, "day"),
         select: user
+      )
 
     {:ok, query}
   end
@@ -136,11 +139,7 @@ defmodule Lightning.Accounts.UserToken do
   Users can easily adapt the existing code to provide other types of delivery methods,
   for example, by phone numbers.
   """
-  def build_email_token(user, context) do
-    build_hashed_token(user, context, user.email)
-  end
-
-  defp build_hashed_token(user, context, sent_to) do
+  def build_email_token(user, context, sent_to) do
     token = :crypto.strong_rand_bytes(@rand_size)
     hashed_token = :crypto.hash(@hash_algorithm, token)
 
@@ -173,12 +172,13 @@ defmodule Lightning.Accounts.UserToken do
         days = days_for_context(context)
 
         query =
-          from token in token_and_context_query(hashed_token, context),
+          from(token in token_and_context_query(hashed_token, context),
             join: user in assoc(token, :user),
             where:
               token.inserted_at > ago(^days, "day") and
                 token.sent_to == user.email,
             select: user
+          )
 
         {:ok, query}
 
@@ -210,8 +210,11 @@ defmodule Lightning.Accounts.UserToken do
         hashed_token = :crypto.hash(@hash_algorithm, decoded_token)
 
         query =
-          from token in token_and_context_query(hashed_token, context),
-            where: token.inserted_at > ago(@change_email_validity_in_days, "day")
+          from(t in Lightning.Accounts.UserToken,
+            where: t.token == ^hashed_token,
+            where: t.context == ^context,
+            where: t.inserted_at > ago(@change_email_validity_in_days, "day")
+          )
 
         {:ok, query}
 
@@ -224,18 +227,19 @@ defmodule Lightning.Accounts.UserToken do
   Returns the token struct for the given token value and context.
   """
   def token_and_context_query(token, context) do
-    from Lightning.Accounts.UserToken, where: [token: ^token, context: ^context]
+    from(Lightning.Accounts.UserToken, where: [token: ^token, context: ^context])
   end
 
   @doc """
   Gets all tokens for the given user for the given contexts.
   """
   def user_and_contexts_query(user, :all) do
-    from t in Lightning.Accounts.UserToken, where: t.user_id == ^user.id
+    from(t in Lightning.Accounts.UserToken, where: t.user_id == ^user.id)
   end
 
   def user_and_contexts_query(user, [_ | _] = contexts) do
-    from t in Lightning.Accounts.UserToken,
+    from(t in Lightning.Accounts.UserToken,
       where: t.user_id == ^user.id and t.context in ^contexts
+    )
   end
 end

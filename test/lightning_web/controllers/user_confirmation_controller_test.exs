@@ -112,4 +112,77 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       refute Accounts.get_user!(user.id).confirmed_at
     end
   end
+
+  describe "GET /profile/confirm_email/:token" do
+    setup %{user: user} do
+      email = unique_user_email()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_update_email_instructions(
+            user,
+            "#{email}",
+            url
+          )
+        end)
+
+      %{token: token, email: email}
+    end
+
+    test "updates the user email once", %{
+      conn: conn,
+      user: user,
+      token: token,
+      email: email
+    } do
+      conn =
+        get(
+          conn |> log_in_user(user),
+          Routes.user_confirmation_path(conn, :confirm_email, token)
+        )
+
+      assert redirected_to(conn) == "/"
+      assert get_flash(conn, :info) =~ "Email changed successfully."
+      assert Accounts.get_user!(user.id).confirmed_at
+      refute Accounts.get_user_by_email(user.email)
+      assert Accounts.get_user_by_email(email)
+
+      conn =
+        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+
+      assert redirected_to(conn) == "/"
+
+      assert get_flash(conn, :error) =~
+               "Email change link is invalid or it has expired."
+    end
+
+    test "does not update email with invalid token", %{conn: conn, user: user} do
+      conn =
+        get(
+          conn |> log_in_user(user),
+          Routes.user_confirmation_path(
+            conn,
+            :confirm_email,
+            "oops"
+          )
+        )
+
+      assert redirected_to(conn) == "/"
+
+      assert get_flash(conn, :error) =~
+               "Email change link is invalid or it has expired"
+
+      refute Accounts.get_user!(user.id).confirmed_at
+      assert Accounts.get_user_by_email(user.email)
+    end
+
+    test "redirects if user is not logged in", %{token: token} do
+      conn = build_conn()
+
+      conn =
+        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
+    end
+  end
 end

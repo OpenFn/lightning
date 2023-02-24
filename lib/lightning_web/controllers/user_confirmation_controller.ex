@@ -28,6 +28,23 @@ defmodule LightningWeb.UserConfirmationController do
     render(conn, "edit.html", token: token)
   end
 
+  def confirm_email(conn, %{"token" => token}) do
+    case Accounts.update_user_email(conn.assigns.current_user, token) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Email changed successfully.")
+        |> redirect(to: "/")
+
+      :error ->
+        conn
+        |> put_flash(
+          :error,
+          "Email change link is invalid or it has expired."
+        )
+        |> redirect(to: "/")
+    end
+  end
+
   # Do not log in the user after confirmation to avoid a
   # leaked token giving the user access to the account.
   def update(conn, %{"token" => token}) do
