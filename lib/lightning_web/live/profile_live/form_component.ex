@@ -4,32 +4,23 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.Accounts.User
   alias Lightning.Accounts
 
   @impl true
-  def update(%{user: user} = assigns, socket) do
+  def update(%{user: user, action: action}, socket) do
     {:ok,
      socket
-     |> assign(:password_changeset, Accounts.change_user_password(user))
      |> assign(
-       :email_changeset,
-       Map.put(Ecto.Changeset.change(%User{}), :valid?, false)
-     )
-     |> assign(:user, user)
-     |> assign(assigns)}
+       password_changeset: Accounts.change_user_password(user),
+       email_changeset: user |> Accounts.validate_change_user_email(%{}),
+       user: user,
+       action: action
+     )}
   end
 
   @impl true
-  def handle_event(
-        "change_email",
-        %{"user" => user_params},
-        socket
-      ) do
-    Accounts.validate_change_user_email(
-      socket.assigns.user,
-      user_params
-    )
+  def handle_event("change_email", %{"user" => user_params}, socket) do
+    Accounts.validate_change_user_email(socket.assigns.user, user_params)
     |> Ecto.Changeset.apply_action(:validate)
     |> case do
       {:ok, _} ->
@@ -91,11 +82,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   end
 
   @impl true
-  def handle_event(
-        "validate_email",
-        %{"user" => user_params},
-        socket
-      ) do
+  def handle_event("validate_email", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
       |> Accounts.validate_change_user_email(user_params)

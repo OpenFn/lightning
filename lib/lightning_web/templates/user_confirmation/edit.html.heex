@@ -8,7 +8,7 @@
   <Layout.centered>
     <div id="reset-password">
       <.form
-        :let={_fo}
+        :let={_f}
         for={:user}
         action={Routes.user_confirmation_path(@conn, :update, @token)}
       >

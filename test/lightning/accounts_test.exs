@@ -396,7 +396,6 @@ defmodule Lightning.AccountsTest do
       user = user_fixture()
       # email = "current@example.com"
       email = unique_user_email()
-      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
       token =
         extract_user_token(fn url ->
@@ -407,45 +406,35 @@ defmodule Lightning.AccountsTest do
           )
         end)
 
-      %{user: user, token: token, email: email, now: now}
+      %{user: user, token: token, email: email}
     end
 
     test "updates the email with a valid token", %{
       user: user,
       token: token,
-      email: email,
-      now: now
+      email: email
     } do
-      assert Accounts.update_user_email(user, token) ==
-               {:ok, %{user | email: email, confirmed_at: now}}
+      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
-      changed_user = Repo.get!(User, user.id)
+      assert {:ok, changed_user} = Accounts.update_user_email(user, token)
+
       assert changed_user.email != user.email
       assert changed_user.email == email
       assert changed_user.confirmed_at
+      assert changed_user.confirmed_at >= now
       assert changed_user.confirmed_at != user.confirmed_at
-      refute Repo.get_by(UserToken, user_id: user.id)
+
+      assert Accounts.update_user_email(user, token) == :error,
+             "Attempting to reuse the same token should return :error"
+
+      refute Repo.get_by(UserToken, user_id: user.id),
+             "The token should not exist after using it"
     end
 
     test "does not update email with invalid token", %{user: user} do
       assert Accounts.update_user_email(user, "oops") == :error
       assert Repo.get!(User, user.id).email == user.email
       assert Repo.get_by(UserToken, user_id: user.id)
-    end
-
-    test "does not update email if user email changed", %{
-      user: user,
-      token: token,
-      email: email,
-      now: now
-    } do
-      assert Accounts.update_user_email(user, token) ==
-               {:ok, %{user | email: email, confirmed_at: now}}
-
-      assert Accounts.update_user_email(user, token) == :error
-
-      assert Repo.get!(User, user.id).email == email
-      assert Repo.get_by(UserToken, user_id: user.id) == nil
     end
 
     test "does not update email if token expired", %{user: user, token: token} do
