@@ -276,6 +276,13 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
+  # A generic handler for forwarding updates from PubSub
+  @impl true
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}

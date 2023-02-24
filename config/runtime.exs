@@ -18,6 +18,12 @@ config :lightning, :email_addresses,
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
 
+config :lightning, :oauth_clients,
+  google: [
+    client_id: System.get_env("GOOGLE_CLIENT_ID"),
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+  ]
+
 config :lightning,
   schemas_path:
     System.get_env("SCHEMAS_PATH") ||
@@ -194,4 +200,11 @@ if config_env() == :prod do
   #
   # Then you can assemble a release by calling `mix release`.
   # See `mix help release` for more information.
+end
+
+if config_env() == :test do
+  # When running tests, set the number of database connections to the number
+  # of cores available.
+  config :lightning, Lightning.Repo,
+    pool_size: :erlang.system_info(:logical_processors_available)
 end

@@ -51,3 +51,17 @@ Note that for secure deployments, it's recommended to use a combination of
 - `URL_HOST` - the host, used for writing urls (e.g., `demo.openfn.org`)
 - `URL_PORT` - the port, usually `443` for production
 - `URL_SCHEME` - the scheme for writing urls, (e.g., `https`)
+
+### Google
+
+Using your Google Cloud account, provision a new OAuth 2.0 Client with the 'Web
+application' type.
+
+Set the callback url to: `https://<ENDPOINT DOMAIN>/authenticate/callback`.
+Replacing `ENDPOINT DOMAIN` with the host name of your instance.
+
+Once the client has been created, get/download the OAuth client JSON and set the
+following environment variables:
+
+- `GOOGLE_CLIENT_ID` - Which is `client_id` from the client details.
+- `GOOGLE_CLIENT_SECRET` - `client_secret` from the client details.

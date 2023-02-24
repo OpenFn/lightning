@@ -45,6 +45,20 @@ defmodule Lightning.Credentials.Schema do
     end
   end
 
+  def properties(schema, field) do
+    schema.root.schema
+    |> Map.get("properties")
+    |> Map.get(field |> to_string())
+  end
+
+  def required?(schema, field) do
+    field = to_string(field)
+
+    schema.root.schema
+    |> Map.get("required", [])
+    |> Enum.any?(fn required_field -> field == required_field end)
+  end
+
   defp error_to_changeset(%{path: path, error: error}, changeset) do
     field = String.slice(path, 2..-1) |> String.to_existing_atom()
 

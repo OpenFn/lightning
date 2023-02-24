@@ -13,13 +13,11 @@ defmodule LightningWeb.CredentialLiveTest do
 
   @create_attrs %{
     name: "some name",
-    schema: "raw",
     body: Jason.encode!(%{"a" => 1})
   }
 
   @update_attrs %{
     name: "some updated name",
-    schema: "raw",
     body: "{\"a\":\"new_secret\"}"
   }
 
@@ -126,21 +124,18 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
+      new_live |> select_credential_type("raw")
+      new_live |> click_continue()
+
+      assert new_live |> has_element?("#credential-form_body")
+
       new_live
       |> element("#project_list")
-      |> render_hook("select_item", %{"id" => project.id})
+      |> render_change(%{"selected_project" => %{"id" => project.id}})
 
       new_live
       |> element("button", "Add")
       |> render_click()
-
-      refute new_live |> has_element?("#credential-form_body")
-
-      new_live
-      |> form("#credential-form", credential: %{schema: "raw"})
-      |> render_change()
-
-      assert new_live |> has_element?("#credential-form_body")
 
       assert new_live
              |> form("#credential-form", credential: %{name: ""})
@@ -179,15 +174,15 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
-      new_live
-      |> form("#credential-form", credential: %{schema: "dhis2"})
-      |> render_change()
+      # Pick a type
 
-      refute new_live |> has_element?("#credential-form_body")
+      new_live |> select_credential_type("dhis2")
+      new_live |> click_continue()
 
-      assert new_live
-             |> form("#credential-form", body: %{username: ""})
-             |> render_change() =~ "can&#39;t be blank"
+      refute new_live |> has_element?("#credential-type-picker")
+
+      assert new_live |> fill_credential(%{body: %{username: ""}}) =~
+               "can&#39;t be blank"
 
       assert new_live |> submit_disabled()
 
@@ -199,14 +194,16 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert new_live
              |> form("#credential-form",
-               credential: %{name: "My Credential"},
-               body: %{username: "foo", password: "bar", hostUrl: "baz"}
+               credential: %{
+                 name: "My Credential",
+                 body: %{username: "foo", password: "bar", hostUrl: "baz"}
+               }
              )
              |> render_change() =~ "expected to be a URI"
 
       assert new_live
              |> form("#credential-form",
-               body: %{hostUrl: "http://localhost"}
+               credential: %{body: %{hostUrl: "http://localhost"}}
              )
              |> render_change()
 
@@ -240,15 +237,11 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :new)
         )
 
-      new_live
-      |> form("#credential-form", credential: %{schema: "http"})
-      |> render_change()
-
-      refute new_live |> has_element?("#credential-form_body")
+      new_live |> select_credential_type("http")
+      new_live |> click_continue()
 
       assert new_live
-             |> form("#credential-form", body: %{username: ""})
-             |> render_change() =~ "can&#39;t be blank"
+             |> fill_credential(%{body: %{username: ""}}) =~ "can&#39;t be blank"
 
       assert new_live |> submit_disabled()
 
@@ -259,25 +252,16 @@ defmodule LightningWeb.CredentialLiveTest do
       refute_redirected(new_live, Routes.credential_index_path(conn, :index))
 
       assert new_live
-             |> form("#credential-form",
-               credential: %{name: "My Credential"},
+             |> fill_credential(%{
+               name: "My Credential",
                body: %{username: "foo", password: "bar", baseUrl: "baz"}
-             )
-             |> render_change() =~ "expected to be a URI"
+             }) =~ "expected to be a URI"
 
-      assert new_live
-             |> form("#credential-form",
-               body: %{baseUrl: "http://localhost"}
-             )
-             |> render_change()
+      assert new_live |> fill_credential(%{body: %{baseUrl: "http://localhost"}})
 
       refute new_live |> submit_disabled()
 
-      assert new_live
-             |> form("#credential-form",
-               body: %{baseUrl: ""}
-             )
-             |> render_change()
+      assert new_live |> fill_credential(%{body: %{baseUrl: ""}})
 
       refute new_live |> submit_disabled()
 
@@ -311,13 +295,7 @@ defmodule LightningWeb.CredentialLiveTest do
           Routes.credential_edit_path(conn, :edit, credential)
         )
 
-      assert form_live
-             |> form("#credential-form", credential: @invalid_attrs)
-             |> render_change() =~ "can&#39;t be blank"
-
-      assert form_live
-             |> form("#credential-form", credential: @invalid_attrs)
-             |> render_submit() =~ "can&#39;t be blank"
+      assert form_live |> fill_credential(@invalid_attrs) =~ "can&#39;t be blank"
 
       refute_redirected(form_live, Routes.credential_index_path(conn, :index))
 
@@ -473,7 +451,10 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # assertions
 
-      assert has_element?(view, "#credential-form")
+      assert has_element?(view, "#credential-type-picker")
+      view |> select_credential_type("http")
+      view |> click_continue()
+
       refute has_element?(view, "#project_list")
     end
 
@@ -499,20 +480,13 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render_click()
 
       # fill the modal and save
-
-      view
-      |> form("#credential-form",
-        credential: %{
-          schema: "raw"
-        }
-      )
-      |> render_change()
+      view |> select_credential_type("raw")
+      view |> click_continue()
 
       view
       |> form("#credential-form",
         credential: %{
           name: "newly created credential",
-          schema: "raw",
           body: Jason.encode!(%{"a" => 1})
         }
       )
@@ -558,19 +532,13 @@ defmodule LightningWeb.CredentialLiveTest do
 
       # fill the modal and save
 
-      view
-      |> form("#credential-form",
-        credential: %{
-          schema: "raw"
-        }
-      )
-      |> render_change()
+      view |> select_credential_type("raw")
+      view |> click_continue()
 
       view
       |> form("#credential-form",
         credential: %{
           name: "newly created credential",
-          schema: "raw",
           body: Jason.encode!(%{"a" => 1})
         }
       )
@@ -594,7 +562,455 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
+  describe "googlesheets credential" do
+    setup do
+      bypass = Bypass.open()
+
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      {:ok, bypass: bypass}
+    end
+
+    test "allows the user to define and save a new google sheets credential", %{
+      bypass: bypass,
+      conn: conn,
+      user: user
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {
+          "access_token": "ya29.a0AVvZ...",
+          "refresh_token": "1//03vpp6Li...",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "id_token": "eyJhbGciO...",
+          "scope": "scope1 scope2"
+        }
+        """
+      )
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      # Pick a type
+
+      new_live |> select_credential_type("googlesheets")
+      new_live |> click_continue()
+
+      refute new_live |> has_element?("#credential-type-picker")
+
+      new_live |> fill_credential(%{name: "My Google Sheets Credential"})
+
+      assert new_live |> submit_disabled(),
+             "Submit should be disabled since the `body` hasn't been populated correctly"
+
+      # Get the state from the authorize url in order to fake the calling
+      # off the action in the OidcController
+      [subscription_id, mod, component_id] =
+        new_live
+        |> get_authorize_url()
+        |> get_decoded_state()
+
+      assert new_live.id == subscription_id
+      assert new_live |> element(component_id)
+
+      # Click on the 'Authorize with Google button
+      new_live
+      |> element("#google-sheets-inner-form #authorize-button")
+      |> render_click()
+
+      # Once authorizing the button isn't available
+      refute new_live
+             |> has_element?("#google-sheets-inner-form #authorize-button")
+
+      # `handle_info/2` in LightingWeb.CredentialLive.Edit forwards the data
+      # as a `send_update/3` call to the GoogleSheets component
+      LightningWeb.OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+        id: component_id,
+        code: "1234"
+      )
+
+      # Wait for the userinfo endpoint to be called
+      assert wait_for_assigns(new_live, :userinfo),
+             ":userinfo has not been set yet."
+
+      # Rerender as the broadcast above has altered the LiveView state
+      new_live |> render()
+
+      assert new_live |> has_element?("span", "Test User")
+
+      refute new_live |> submit_disabled()
+
+      {:ok, _index_live, _html} =
+        new_live
+        |> form("#credential-form")
+        |> render_submit()
+        |> follow_redirect(
+          conn,
+          Routes.credential_index_path(conn, :index)
+        )
+
+      {_path, flash} = assert_redirect(new_live)
+      assert flash == %{"info" => "Credential created successfully"}
+
+      credential =
+        Lightning.Credentials.list_credentials_for_user(user.id) |> List.first()
+
+      token = Lightning.AuthProviders.Google.TokenBody.new(credential.body)
+      expected_expiry = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      assert %{
+               access_token: "ya29.a0AVvZ...",
+               refresh_token: "1//03vpp6Li...",
+               expires_at: ^expected_expiry,
+               scope: "scope1 scope2"
+             } = token
+    end
+
+    test "correctly renders a valid existing token", %{
+      conn: conn,
+      user: user,
+      bypass: bypass
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      assert_receive {:phoenix, :send_update, _}
+
+      # Wait for the userinfo endpoint to be called
+      assert wait_for_assigns(edit_live, :userinfo),
+             ":userinfo has not been set yet."
+
+      edit_live |> render()
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    test "renders an error when a token has no refresh token", %{
+      conn: conn,
+      user: user,
+      bypass: bypass
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      # Wait for next `send_update` triggered by the token Task calls
+      assert_receive {:plug_conn, :sent}
+
+      edit_live
+      |> element("#google-sheets-inner-form")
+      |> render()
+
+      assert edit_live |> has_element?("p", "The token is missing it's")
+    end
+
+    test "renewing an expired but valid token", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {
+          "access_token": "ya29.a0AVvZ...",
+          "refresh_token": "1//03vpp6Li...",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "id_token": "eyJhbGciO...",
+          "scope": "scope1 scope2"
+        }
+        """
+      )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      assert wait_for_assigns(edit_live, :userinfo),
+             ":userinfo has not been set yet."
+
+      edit_live |> render()
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    @tag :capture_log
+    test "failing to retrieve userinfo", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        {400,
+         """
+         {
+           "error": "access_denied",
+           "error_description": "You're not from around these parts are ya?"
+         }
+         """}
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      assert wait_for_assigns(edit_live, :error)
+
+      edit_live |> render()
+
+      assert edit_live
+             |> has_element?("p", "Failed retrieving your information.")
+
+      # Now respond with success
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      edit_live |> element("a", "try again.") |> render_click()
+
+      assert wait_for_assigns(edit_live, :userinfo)
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    @tag :capture_log
+    test "renewing an expired but invalid token", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        {400,
+         """
+         {
+           "error": "access_denied",
+           "error_description": "You're not from around these parts are ya?"
+         }
+         """}
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      assert wait_for_assigns(edit_live, :error)
+
+      edit_live |> render()
+
+      assert edit_live
+             |> has_element?("p", "Failed renewing your access token.")
+    end
+  end
+
+  describe "googlesheets credential (when client is not available)" do
+    @tag :capture_log
+    test "shows a warning that Google Sheets isn't available", %{conn: conn} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.credential_index_path(conn, :index))
+
+      {:ok, new_live, _html} =
+        index_live
+        |> element("a", "New Credential")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.credential_edit_path(conn, :new)
+        )
+
+      new_live |> select_credential_type("googlesheets")
+      new_live |> click_continue()
+
+      refute new_live |> has_element?("#credential-type-picker")
+
+      assert new_live
+             |> has_element?("#google-sheets-inner-form", "No Client Configured")
+    end
+  end
+
+  defp wait_for_assigns(live, key) do
+    Enum.reduce_while(1..5, nil, fn n, _ ->
+      {_mod, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(
+          live,
+          id: "google-sheets-inner-form"
+        )
+
+      if val = assigns[key] do
+        {:halt, val}
+      else
+        Process.sleep(n * 10)
+        {:cont, nil}
+      end
+    end)
+  end
+
+  defp get_authorize_url(live) do
+    live
+    |> element("#google-sheets-inner-form")
+    |> render()
+    |> Floki.parse_fragment!()
+    |> Floki.find("a[phx-click=authorize_click]")
+    |> Floki.attribute("href")
+    |> List.first()
+  end
+
+  defp get_decoded_state(url) do
+    %{query: query} = URI.parse(url)
+
+    URI.decode_query(query)
+    |> Map.get("state")
+    |> LightningWeb.OauthCredentialHelper.decode_state()
+  end
+
   defp submit_disabled(live) do
     live |> has_element?("button[disabled][type=submit]")
+  end
+
+  defp select_credential_type(live, type) do
+    live
+    |> form("#credential-type-picker", type: %{selected: type})
+    |> render_change()
+  end
+
+  defp click_continue(live) do
+    live
+    |> element("button", "Continue")
+    |> render_click()
+  end
+
+  defp fill_credential(live, params) when is_map(params) do
+    live
+    |> form("#credential-form", credential: params)
+    |> render_change()
   end
 end

@@ -234,7 +234,7 @@ defmodule Lightning.AdaptorRegistry do
       |> Task.async_stream(
         &fetch_npm_details/1,
         ordered: false,
-        max_concurrency: 5,
+        max_concurrency: 10,
         timeout: @timeout
       )
       |> Stream.map(fn {:ok, detail} -> detail end)

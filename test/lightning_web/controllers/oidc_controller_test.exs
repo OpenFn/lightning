@@ -5,7 +5,7 @@ defmodule LightningWeb.OidcControllerTest do
   import Lightning.AccountsFixtures
   alias Lightning.AuthProviders
 
-  setup do
+  def setup_handler(_) do
     bypass = Bypass.open()
 
     wellknown = %AuthProviders.WellKnown{
@@ -32,6 +32,8 @@ defmodule LightningWeb.OidcControllerTest do
   end
 
   describe "GET /authenticate/:provider" do
+    setup :setup_handler
+
     test "redirects to provider authorize_url", %{conn: conn, handler: handler} do
       conn = conn |> get(Routes.oidc_path(conn, :show, handler.name))
 
@@ -59,6 +61,8 @@ defmodule LightningWeb.OidcControllerTest do
   end
 
   describe "GET /authenticate/:provider/callback" do
+    setup :setup_handler
+
     test "logs the given person in", %{
       conn: conn,
       bypass: bypass,
@@ -110,10 +114,16 @@ defmodule LightningWeb.OidcControllerTest do
       handler: handler,
       bypass: bypass
     } do
-      expect_token_failure(bypass, handler.wellknown, %{
-        "error" => "invalid_client",
-        "error_description" => "No client credentials found."
-      })
+      expect_token(
+        bypass,
+        handler.wellknown,
+        {401,
+         %{
+           "error" => "invalid_client",
+           "error_description" => "No client credentials found."
+         }
+         |> Jason.encode!()}
+      )
 
       response =
         conn
@@ -124,6 +134,39 @@ defmodule LightningWeb.OidcControllerTest do
       assert response.resp_body =~ "invalid_client"
       assert response.resp_body =~ "No client credentials found"
       assert response.status == 401
+    end
+  end
+
+  describe "GET /authenticate/callback" do
+    test "correctly broadcasts the code", %{conn: conn} do
+      subscription_id =
+        :crypto.strong_rand_bytes(4) |> Base.encode64(padding: false)
+
+      component_id =
+        :crypto.strong_rand_bytes(4) |> Base.encode64(padding: false)
+
+      state =
+        LightningWeb.OauthCredentialHelper.build_state(
+          subscription_id,
+          __MODULE__,
+          component_id
+        )
+
+      LightningWeb.OauthCredentialHelper.subscribe(subscription_id)
+
+      response =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, %{
+            "code" => "callback_code",
+            "state" => state
+          })
+        )
+
+      assert_receive {:forward, LightningWeb.OidcControllerTest,
+                      [id: ^component_id, code: "callback_code"]}
+
+      assert response.resp_body =~ "You may close this window"
     end
   end
 end

@@ -3,7 +3,6 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
   use LightningWeb, :live_component
 
   alias Lightning.Credentials.Credential
-  import LightningWeb.Components.Form
 
   @impl true
   def update(%{project: _project} = assigns, socket) do
@@ -18,18 +17,31 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
         module={LightningWeb.CredentialLive.FormComponent}
         id={:new}
         action={:new}
-        credential={%Credential{user_id: assigns.current_user.id}}
+        credential={
+          %Credential{
+            user_id: assigns.current_user.id,
+            project_credentials: [
+              %Lightning.Projects.ProjectCredential{project_id: @project.id}
+            ]
+          }
+        }
         projects={[]}
         project={@project}
         on_save={@on_save}
         show_project_credentials={false}
       >
-        <:buttons :let={changeset}>
+        <:button>
           <%= render_slot(@cancel) %>
-          <.submit_button phx-disable-with="Saving..." disabled={!changeset.valid?}>
+        </:button>
+
+        <:button :let={valid?} class="text-right grow">
+          <LightningWeb.Components.Form.submit_button
+            phx-disable-with="Saving..."
+            disabled={!valid?}
+          >
             Save
-          </.submit_button>
-        </:buttons>
+          </LightningWeb.Components.Form.submit_button>
+        </:button>
       </.live_component>
     </div>
     """
