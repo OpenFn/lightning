@@ -16,6 +16,7 @@ Lightning.Auditing.Policy.html
 Lightning.Auditing.html
 Lightning.AuthProviders.AuthConfig.html
 Lightning.AuthProviders.CacheWarmer.html
+Lightning.AuthProviders.Google.html
 Lightning.AuthProviders.Handler.html
 Lightning.AuthProviders.Policy.html
 Lightning.AuthProviders.Store.html
@@ -72,6 +73,7 @@ Lightning.Runtime.LogAgent.StringBuffer.html
 Lightning.Runtime.LogAgent.html
 Lightning.Runtime.Result.html
 Lightning.Runtime.RunSpec.html
+Lightning.SafetyString.html
 Lightning.Scrubber.html
 Lightning.SetupUtils.html
 Lightning.Vault.html
@@ -94,7 +96,11 @@ LightningWeb.AuthProvidersLive.Index.html
 LightningWeb.ChangesetView.html
 LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
+LightningWeb.CredentialLive.GoogleSheetsComponent.html
 LightningWeb.CredentialLive.Index.html
+LightningWeb.CredentialLive.JsonSchemaBodyComponent.html
+LightningWeb.CredentialLive.RawBodyComponent.html
+LightningWeb.CredentialLive.TypePicker.html
 LightningWeb.DataclipLive.Edit.html
 LightningWeb.DataclipLive.FormComponent.html
 LightningWeb.DataclipLive.Index.html
@@ -116,6 +122,7 @@ LightningWeb.JobLive.ManualRunComponent.html
 LightningWeb.LayoutView.html
 LightningWeb.LiveHelpers.html
 LightningWeb.ModalPortal.html
+LightningWeb.OauthCredentialHelper.html
 LightningWeb.OidcController.html
 LightningWeb.PageView.html
 LightningWeb.Pagination.html
@@ -181,8 +188,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-E5UFLALU.woff2
-dist/search_items-02915A3A.js
-dist/sidebar_items-4884E8ED.js
+dist/search_items-79BED415.js
+dist/sidebar_items-2CA74B03.js
 index.html
 readme.html
 search.html
