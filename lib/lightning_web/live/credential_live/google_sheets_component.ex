@@ -113,11 +113,12 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         />
         <.disabled_authorize_button
           :if={!@show_authorize}
+          authorize_url={@authorize_url}
           socket={@socket}
           myself={@myself}
         />
 
-        <.error_block :if={@error} type={@error} />
+        <.error_block :if={@error} type={@error} myself={@myself} />
         <.userinfo :if={@userinfo} userinfo={@userinfo} />
       </div>
     </fieldset>
@@ -174,13 +175,49 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
       <div class="text-sm ml-1">
         Not working?
         <.link
-          href="#"
+          href={@authorize_url}
+          target="_blank"
           phx-target={@myself}
-          phx-click="cancel"
+          phx-click="authorize_click"
           class="hover:underline text-primary-900"
         >
-          Try again.
+          Reauthorize.
         </.link>
+      </div>
+    </div>
+    """
+  end
+
+  def error_block(%{type: :userinfo_failed} = assigns) do
+    ~H"""
+    <div class="mx-auto pt-2 max-w-md">
+      <div class="text-center">
+        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
+        <div class="text-base font-medium text-gray-900">
+          Something went wrong.
+        </div>
+        <p class="text-sm mt-2">
+          Failed retrieving your information.
+        </p>
+        <p class="text-sm mt-2">
+          Please
+          <a href="#" phx-click="try_userinfo_again" phx-target={@myself}>
+            try again.
+          </a>
+        </p>
+        <p class="text-sm mt-2">
+          If the issue persists, please follow the "Remove third-party account access"
+          instructions on the
+          <a
+            class="text-indigo-600 underline"
+            href="https://support.google.com/accounts/answer/3466521"
+            target="_blank"
+          >
+            Manage third-party apps & services with access to your account
+          </a>
+          <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
+          page.
+        </p>
       </div>
     </div>
     """
@@ -198,6 +235,38 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
           The token is missing it's
           <code class="bg-gray-200 rounded-md p-1">refresh_token</code>
           value.
+        </p>
+        <p class="text-sm mt-2">
+          Please reauthorize.
+        </p>
+        <p class="text-sm mt-2">
+          If the issue persists, please follow the "Remove third-party account access"
+          instructions on the
+          <a
+            class="text-indigo-600 underline"
+            href="https://support.google.com/accounts/answer/3466521"
+            target="_blank"
+          >
+            Manage third-party apps & services with access to your account
+          </a>
+          <Heroicons.arrow_top_right_on_square class="h-4 w-4 text-indigo-600 inline-block" />
+          page.
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  def error_block(%{type: :refresh_failed} = assigns) do
+    ~H"""
+    <div class="mx-auto pt-2 max-w-md">
+      <div class="text-center">
+        <Heroicons.exclamation_triangle class="h-6 w-6 text-red-600 inline-block" />
+        <div class="text-base font-medium text-gray-900">
+          Something went wrong.
+        </div>
+        <p class="text-sm mt-2">
+          Failed renewing your access token.
         </p>
         <p class="text-sm mt-2">
           Please try again.
@@ -300,22 +369,26 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     {:ok, socket |> assign(authorizing: false, client: client)}
   end
 
-  def update(%{authorizing: authorizing}, socket) do
-    {:ok, socket |> assign(authorizing: authorizing)}
+  def update(%{error: error}, socket) do
+    {:ok, socket |> assign(error: error, authorizing: false)}
   end
 
   def update(%{userinfo: userinfo}, socket) do
-    {:ok, socket |> assign(userinfo: userinfo, authorizing: false)}
+    {:ok, socket |> assign(userinfo: userinfo, authorizing: false, error: nil)}
   end
 
   @impl true
   def handle_event("authorize_click", _, socket) do
-    {:noreply, socket |> assign(authorizing: true)}
+    {:noreply, socket |> assign(authorizing: true, userinfo: nil, error: nil)}
   end
 
   @impl true
-  def handle_event("cancel", _, socket) do
-    {:noreply, socket |> assign(authorizing: false, error: nil, userinfo: nil)}
+  def handle_event("try_userinfo_again", _, socket) do
+    Logger.debug("Attempting to retrieve userinfo again...")
+
+    pid = self()
+    Task.start(fn -> get_userinfo(pid, socket) end)
+    {:noreply, socket |> assign(authorizing: true, error: nil, userinfo: nil)}
   end
 
   defp maybe_fetch_userinfo(%{assigns: %{client: nil}} = socket) do
@@ -323,8 +396,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   end
 
   defp maybe_fetch_userinfo(socket) do
-    %{token_body_changeset: token_body_changeset, token: token, client: client} =
-      socket.assigns
+    %{token_body_changeset: token_body_changeset, token: token} = socket.assigns
 
     if socket |> changed?(:token) and token_body_changeset.valid? do
       pid = self()
@@ -332,51 +404,47 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
       if OAuth2.AccessToken.expired?(token) do
         Logger.debug("Refreshing expired token")
 
-        Task.start(fn ->
-          Google.refresh_token(client, token)
-          |> case do
-            {:ok, token} ->
-              socket.assigns.update_body.(token |> token_to_params())
-
-            {:error, reason} ->
-              # TODO: handle error
-              send_update(pid, __MODULE__,
-                id: socket.assigns.id,
-                error: :refresh_failed
-              )
-
-              Logger.error("Failed refreshing valid token: #{reason}")
-          end
-        end)
-
-        socket |> assign(authorizing: true)
+        Task.start(fn -> refresh_token(pid, socket) end)
       else
         Logger.debug("Retrieving userinfo")
 
-        Task.start(fn ->
-          # TODO: handle 500
-          Google.get_userinfo(client, token)
-          |> case do
-            {:ok, resp} ->
-              send_update(pid, __MODULE__,
-                id: socket.assigns.id,
-                userinfo: resp.body
-              )
-
-            {:error, resp} ->
-              Logger.error("Failed retrieving userinfo with:\n#{inspect(resp)}")
-
-              send_update(pid, __MODULE__,
-                id: socket.assigns.id,
-                error: :userinfo_failed
-              )
-          end
-        end)
-
-        socket |> assign(authorizing: true)
+        Task.start(fn -> get_userinfo(pid, socket) end)
       end
+
+      socket |> assign(authorizing: true)
     else
       socket
+    end
+  end
+
+  defp get_userinfo(pid, socket) do
+    %{id: id, client: client, token: token} = socket.assigns
+
+    Google.get_userinfo(client, token)
+    |> case do
+      {:ok, resp} ->
+        send_update(pid, __MODULE__, id: id, userinfo: resp.body)
+
+      {:error, resp} ->
+        Logger.error("Failed retrieving userinfo with:\n#{inspect(resp)}")
+
+        send_update(pid, __MODULE__, id: id, error: :userinfo_failed)
+    end
+  end
+
+  defp refresh_token(pid, socket) do
+    %{id: id, client: client, update_body: update_body, token: token} =
+      socket.assigns
+
+    Google.refresh_token(client, token)
+    |> case do
+      {:ok, token} ->
+        update_body.(token |> token_to_params())
+
+      {:error, reason} ->
+        Logger.error("Failed refreshing valid token: #{inspect(reason)}")
+
+        send_update(pid, __MODULE__, id: id, error: :refresh_failed)
     end
   end
 

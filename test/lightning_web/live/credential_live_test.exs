@@ -658,7 +658,9 @@ defmodule LightningWeb.CredentialLiveTest do
       )
 
       # Wait for the userinfo endpoint to be called
-      wait_for_userinfo(new_live)
+      assert wait_for_assigns(new_live, :userinfo),
+             ":userinfo has not been set yet."
+
       # Rerender as the broadcast above has altered the LiveView state
       new_live |> render()
 
@@ -727,7 +729,8 @@ defmodule LightningWeb.CredentialLiveTest do
       assert_receive {:phoenix, :send_update, _}
 
       # Wait for the userinfo endpoint to be called
-      wait_for_userinfo(edit_live)
+      assert wait_for_assigns(edit_live, :userinfo),
+             ":userinfo has not been set yet."
 
       edit_live |> render()
 
@@ -815,14 +818,117 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, edit_live, _html} =
         live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
 
-      # Wait for next `send_update` triggered by the token Task calls
-      assert_receive {:plug_conn, :sent}
-      assert_receive {:phoenix, :send_update, _}
+      assert wait_for_assigns(edit_live, :userinfo),
+             ":userinfo has not been set yet."
 
-      _ = :sys.get_state(edit_live.pid)
       edit_live |> render()
 
       assert edit_live |> has_element?("span", "Test User")
+    end
+
+    @tag :capture_log
+    test "failing to retrieve userinfo", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        {400,
+         """
+         {
+           "error": "access_denied",
+           "error_description": "You're not from around these parts are ya?"
+         }
+         """}
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 3600
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      assert wait_for_assigns(edit_live, :error)
+
+      edit_live |> render()
+
+      assert edit_live
+             |> has_element?("p", "Failed retrieving your information.")
+
+      # Now respond with success
+      Lightning.BypassHelpers.expect_userinfo(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        """
+        {"picture": "image.png", "name": "Test User"}
+        """
+      )
+
+      edit_live |> element("a", "try again.") |> render_click()
+
+      assert wait_for_assigns(edit_live, :userinfo)
+
+      assert edit_live |> has_element?("span", "Test User")
+    end
+
+    @tag :capture_log
+    test "renewing an expired but invalid token", %{
+      user: user,
+      bypass: bypass,
+      conn: conn
+    } do
+      Lightning.BypassHelpers.expect_wellknown(bypass)
+
+      Lightning.BypassHelpers.expect_token(
+        bypass,
+        Lightning.AuthProviders.Google.get_wellknown!(),
+        {400,
+         """
+         {
+           "error": "access_denied",
+           "error_description": "You're not from around these parts are ya?"
+         }
+         """}
+      )
+
+      expires_at = DateTime.to_unix(DateTime.utc_now()) - 50
+
+      credential =
+        credential_fixture(
+          user_id: user.id,
+          schema: "googlesheets",
+          body: %{
+            access_token: "ya29.a0AVvZ...",
+            refresh_token: "1//03vpp6Li...",
+            expires_at: expires_at,
+            scope: "scope1 scope2"
+          }
+        )
+
+      {:ok, edit_live, _html} =
+        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+
+      assert wait_for_assigns(edit_live, :error)
+
+      edit_live |> render()
+
+      assert edit_live
+             |> has_element?("p", "Failed renewing your access token.")
     end
   end
 
@@ -851,22 +957,21 @@ defmodule LightningWeb.CredentialLiveTest do
     end
   end
 
-  defp wait_for_userinfo(live) do
-    assert Enum.reduce_while(1..5, nil, fn n, _ ->
-             {_mod, assigns} =
-               Lightning.LiveViewHelpers.get_component_assigns_by(
-                 live,
-                 id: "google-sheets-inner-form"
-               )
+  defp wait_for_assigns(live, key) do
+    Enum.reduce_while(1..5, nil, fn n, _ ->
+      {_mod, assigns} =
+        Lightning.LiveViewHelpers.get_component_assigns_by(
+          live,
+          id: "google-sheets-inner-form"
+        )
 
-             if assigns.userinfo do
-               {:halt, true}
-             else
-               Process.sleep(n * 10)
-               {:cont, nil}
-             end
-           end),
-           ":userinfo has not been set yet."
+      if val = assigns[key] do
+        {:halt, val}
+      else
+        Process.sleep(n * 10)
+        {:cont, nil}
+      end
+    end)
   end
 
   defp get_authorize_url(live) do

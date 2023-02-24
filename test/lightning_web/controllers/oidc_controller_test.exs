@@ -114,10 +114,16 @@ defmodule LightningWeb.OidcControllerTest do
       handler: handler,
       bypass: bypass
     } do
-      expect_token_failure(bypass, handler.wellknown, %{
-        "error" => "invalid_client",
-        "error_description" => "No client credentials found."
-      })
+      expect_token(
+        bypass,
+        handler.wellknown,
+        {401,
+         %{
+           "error" => "invalid_client",
+           "error_description" => "No client credentials found."
+         }
+         |> Jason.encode!()}
+      )
 
       response =
         conn

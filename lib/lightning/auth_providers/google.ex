@@ -84,6 +84,9 @@ defmodule Lightning.AuthProviders.Google do
       {:ok, %{token: token}} ->
         {:ok, token}
 
+      {:error, %OAuth2.Response{status_code: code, body: body}} ->
+        {:error, %{code: code, body: body}}
+
       {:error, %{reason: reason}} ->
         {:error, reason}
     end
