@@ -4,31 +4,30 @@ defmodule LightningWeb.AuditLive.Index do
   """
   use LightningWeb, :live_view
   alias Lightning.Auditing
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def mount(_params, _session, socket) do
-    case Bodyguard.permit(
-           Lightning.Auditing.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         socket
-         |> assign(
-           active_menu_item: :audit,
-           pagination_path:
-             &Routes.audit_index_path(
-               socket,
-               :index,
-               &1
-             )
-         ), layout: {LightningWeb.Layouts, :settings}}
+    can_access_admin_space =
+      Users
+      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
 
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
+    if can_access_admin_space do
+      {:ok,
+       socket
+       |> assign(
+         active_menu_item: :audit,
+         pagination_path:
+           &Routes.audit_index_path(
+             socket,
+             :index,
+             &1
+           )
+       ), layout: {LightningWeb.Layouts, :settings}}
+    else
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
     end
   end
 

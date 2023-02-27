@@ -19,10 +19,12 @@ defmodule Lightning.PermissionsTest do
       refute Users |> Permissions.can(:create_projects, user, {})
       refute Users |> Permissions.can(:view_projects, user, {})
       refute Users |> Permissions.can(:edit_projects, user, {})
+      refute Users |> Permissions.can(:create_users, user, {})
       refute Users |> Permissions.can(:view_users, user, {})
       refute Users |> Permissions.can(:edit_users, user, {})
       refute Users |> Permissions.can(:delete_users, user, {})
       refute Users |> Permissions.can(:disable_users, user, {})
+      refute Users |> Permissions.can(:access_admin_space, user, {})
 
       refute Users
              |> Permissions.can(:configure_external_auth_provider, user, {})
@@ -52,10 +54,12 @@ defmodule Lightning.PermissionsTest do
       assert Users |> Permissions.can(:create_projects, superuser, {})
       assert Users |> Permissions.can(:view_projects, superuser, {})
       assert Users |> Permissions.can(:edit_projects, superuser, {})
+      assert Users |> Permissions.can(:create_users, superuser, {})
       assert Users |> Permissions.can(:view_users, superuser, {})
       assert Users |> Permissions.can(:edit_users, superuser, {})
       assert Users |> Permissions.can(:delete_users, superuser, {})
       assert Users |> Permissions.can(:disable_users, superuser, {})
+      assert Users |> Permissions.can(:access_admin_space, superuser, {})
 
       assert Users
              |> Permissions.can(:configure_external_auth_provider, superuser, {})

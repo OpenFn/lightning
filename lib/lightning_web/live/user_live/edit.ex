@@ -5,26 +5,25 @@ defmodule LightningWeb.UserLive.Edit do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Accounts
   alias Lightning.Accounts.User
 
   @impl true
   def mount(_params, _session, socket) do
-    case Bodyguard.permit(
-           Lightning.Accounts.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         socket
-         |> assign(active_menu_item: :users),
-         layout: {LightningWeb.Layouts, :settings}}
+    can_access_admin_space =
+      Users
+      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
 
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
+    if can_access_admin_space do
+      {:ok,
+       socket
+       |> assign(active_menu_item: :users),
+       layout: {LightningWeb.Layouts, :settings}}
+    else
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
     end
   end
 
