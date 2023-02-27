@@ -6,7 +6,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="w-full">
       <div class="w-full flex flex-wrap gap-4">
-        <.create_workflow_card />
+        <.create_workflow_card can_create_workflow={@can_create_workflow} />
         <%= for workflow <- @workflows do %>
           <.workflow_card
             workflow={%{workflow | name: workflow.name || "Untitled"}}
@@ -53,12 +53,12 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="font-bold mb-2">Create a new workflow</div>
       <div class="">Create a new workflow for your organisation</div>
       <div>
-        <button
+        <LightningWeb.Components.Common.button
           phx-click="create-workflow"
-          class="focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2"
+          disabled={!@can_create_workflow}
         >
           Create a workflow
-        </button>
+        </LightningWeb.Components.Common.button>
       </div>
     </div>
     """
