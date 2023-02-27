@@ -36,7 +36,7 @@ and this project adheres to
 ### Fixed
 
 - Jobs panel slow for first open after restart
-  [#567](https://github.com/OpenFn/Lightning/issues/567)
+  [#567](https://github.com/OpenFn/Lightning/issues/567) =======
 
 ## [0.4.0] - 2023-02-08
 
@@ -58,6 +58,9 @@ and this project adheres to
 - Enable distributed Erlang, allowing any number of redundant Lightning nodes to
   communicate with each other.
 - Users can set up realtime alerts for a project
+- Authorization for Lightning superusers and users, and project roles
+  viewer/editor/admin/owner. See
+  [link to test file](test/lightning/permissions_test.exs) for more details.
 
 ### Changed
 
