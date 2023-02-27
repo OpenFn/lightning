@@ -47,10 +47,40 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ "Create a workflow"
 
+      assert Floki.find(
+               html,
+               "button[disabled='disabled'][phx-click='create-workflow']"
+             )
+             |> length() == 0
+
       assert view
              |> element("button[phx-click='create-workflow']")
              |> render_click() =~
                "Create job"
+    end
+
+    test "Project viewers can't create workflows", %{
+      conn: conn,
+      project: project
+    } do
+      conn =
+        setup_project_user(conn, project, :viewer)
+        |> get(Routes.project_workflow_path(conn, :index, project.id))
+
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "Create a workflow"
+
+      assert Floki.find(
+               html,
+               "button[disabled='disabled'][phx-click='create-workflow']"
+             )
+             |> length() == 1
+
+      assert view
+             |> render_click("create-workflow", %{}) =~
+               "You are not authorized to perform this action."
     end
   end
 

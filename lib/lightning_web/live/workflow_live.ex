@@ -4,6 +4,8 @@ defmodule LightningWeb.WorkflowLive do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
   import LightningWeb.WorkflowLive.Components
 
@@ -44,7 +46,11 @@ defmodule LightningWeb.WorkflowLive do
         <%= case @live_action do %>
           <% :index -> %>
             <LayoutComponents.centered>
-              <.workflow_list workflows={@workflows} project={@project} />
+              <.workflow_list
+                can_create_workflow={@can_create_workflow}
+                workflows={@workflows}
+                project={@project}
+              />
             </LayoutComponents.centered>
           <% :new_job -> %>
             <div class="grow">
@@ -189,24 +195,25 @@ defmodule LightningWeb.WorkflowLive do
     project = socket.assigns.project
     LightningWeb.Endpoint.subscribe("project_space:#{project.id}")
 
+    can_create_workflow =
+      ProjectUsers
+      |> Permissions.can(
+        :create_workflow,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
     {:ok,
      socket
      |> assign(
+       can_create_workflow: can_create_workflow,
        active_menu_item: :projects,
        new_credential: false,
        builder_state: %{}
      )}
   end
 
-  @impl true
-  def handle_event("copied-to-clipboard", _, socket) do
-    {:noreply,
-     socket
-     |> put_flash(:info, "Copied webhook URL to clipboard")}
-  end
-
-  @impl true
-  def handle_event("create-workflow", _, socket) do
+  defp create_workflow(socket) do
     {:ok, %Workflows.Workflow{id: workflow_id}} =
       Workflows.create_workflow(%{project_id: socket.assigns.project.id})
 
@@ -222,6 +229,24 @@ defmodule LightningWeb.WorkflowLive do
            workflow_id
          )
      )}
+  end
+
+  @impl true
+  def handle_event("copied-to-clipboard", _, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Copied webhook URL to clipboard")}
+  end
+
+  @impl true
+  def handle_event("create-workflow", _, socket) do
+    if socket.assigns.can_create_workflow do
+      create_workflow(socket)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
   end
 
   @impl true
