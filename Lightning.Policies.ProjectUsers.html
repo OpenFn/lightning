@@ -148,7 +148,7 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#authorize/3" translate="no">authorize(atom, user, project)</a>
+          <a href="#authorize/3" translate="no">authorize(action, user, project)</a>
 
         </div>
 
@@ -193,7 +193,26 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> actions() :: :edit_jobs</pre>
+          <pre translate="no"><span class="attribute">@type</span> actions() ::
+  :create_workflow
+  | :edit_jobs
+  | :create_job
+  | :delete_job
+  | :run_job
+  | :rerun_job
+  | :view_last_job_inputs
+  | :view_workorder_input
+  | :view_workorder_run
+  | :view_workorder_history
+  | :view_project_name
+  | :view_project_description
+  | :view_project_credentials
+  | :view_project_collaborators
+  | :delete_project
+  | :edit_digest_alerts
+  | :edit_project_name
+  | :edit_project_description
+  | :add_project_collaborator</pre>
 
       </div>
 
@@ -220,9 +239,9 @@ Functions
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">authorize(atom, user, project)</h1>
+    <h1 class="signature" translate="no">authorize(action, user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L28" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L47" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

@@ -148,7 +148,7 @@ Lightning
 
       <div class="summary-row">
         <div class="summary-signature">
-          <a href="#authorize/3" translate="no">authorize(atom, user, project)</a>
+          <a href="#authorize/3" translate="no">authorize(action, requesting_user, authenticated_user)</a>
 
         </div>
 
@@ -193,7 +193,21 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> actions() :: :create_projects</pre>
+          <pre translate="no"><span class="attribute">@type</span> actions() ::
+  :create_projects
+  | :view_projects
+  | :edit_projects
+  | :view_users
+  | :edit_users
+  | :delete_users
+  | :disable_users
+  | :configure_external_auth_provider
+  | :view_credentials_audit_trail
+  | :change_password
+  | :delete_account
+  | :view_credentials
+  | :edit_credentials
+  | :delete_credential</pre>
 
       </div>
 
@@ -220,9 +234,9 @@ Functions
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">authorize(atom, user, project)</h1>
+    <h1 class="signature" translate="no">authorize(action, requesting_user, authenticated_user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L22" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L36" class="view-source" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
