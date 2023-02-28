@@ -212,4 +212,45 @@ defmodule LightningWeb.JobLiveTest do
              )
     end
   end
+
+  describe "Show tooltip" do
+    def tooltip_text(element) do
+      element
+      |> render()
+      |> parse()
+      |> xpath(~x"@aria-label"l)
+      |> to_string()
+    end
+
+    test "should display tooltip", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :new_job, project.id, workflow.id)
+        )
+
+      # Trigger tooltip
+      assert view
+             |> element("#trigger-tooltip")
+             |> tooltip_text() ==
+               "When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+
+      # Adaptor tooltip
+      assert view
+             |> element("#adaptor_name-tooltip")
+             |> tooltip_text() ==
+               "Which system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from."
+
+      # Credential tooltip
+      assert view
+             |> element("#project_credential_id-tooltip")
+             |> tooltip_text() ==
+               "How to connect. The credentials you need for authentication in the selected system."
+    end
+  end
 end

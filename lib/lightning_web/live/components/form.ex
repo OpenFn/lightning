@@ -344,6 +344,7 @@ defmodule LightningWeb.Components.Form do
   attr :form, :any, required: true
   attr :field, :any, required: true
   attr :title, :string
+  attr :tooltip, :string
   attr :opts, :global, include: ~w(for value)
 
   def label_field(assigns) do
@@ -365,7 +366,17 @@ defmodule LightningWeb.Components.Form do
       end)
 
     ~H"""
-    <%= label(@form, @field, @title, @opts) %>
+    <%= if assigns[:tooltip] do %>
+      <div class="flex flex-row">
+        <%= label(@form, @field, @title, @opts) %>
+        <LightningWeb.Components.Common.tooltip
+          id={"#{@field}-tooltip"}
+          title={@tooltip}
+        />
+      </div>
+    <% else %>
+      <%= label(@form, @field, @title, @opts) %>
+    <% end %>
     """
   end
 
