@@ -40,15 +40,17 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     ~H"""
     <div class="md:grid md:grid-cols-2 md:gap-4">
       <%= hidden_inputs_for(@form) %>
-      <%= label @form, :type, class: "block" do %>
-        <Common.tooltip
-          id="trigger"
-          title="When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
-        >
-          <span class="block text-sm font-medium text-secondary-700">
+      <%= label @form, :type, class: "" do %>
+        <div class="flex flex-row">
+          <span class="text-sm font-medium text-secondary-700">
             Trigger
           </span>
-        </Common.tooltip>
+          <Common.tooltip
+            id="trigger-tooltip"
+            title="When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+            class="inline-block"
+          />
+        </div>
         <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
         <Form.select_field
           form={@form}

@@ -214,6 +214,14 @@ defmodule LightningWeb.JobLiveTest do
   end
 
   describe "Show tooltip" do
+    def tooltip_text(element) do
+      element
+      |> render()
+      |> parse()
+      |> xpath(~x"@aria-label"l)
+      |> to_string()
+    end
+
     test "should display tooltip", %{
       conn: conn,
       project: project
@@ -227,36 +235,21 @@ defmodule LightningWeb.JobLiveTest do
         )
 
       # Trigger tooltip
-      assert view |> element("#tooltip-trigger") |> has_element?()
-
       assert view
-             |> element("#tooltip-trigger")
-             |> render()
-             |> parse()
-             |> xpath(~x"@data-title"l)
-             |> to_string() ==
+             |> element("#trigger-tooltip")
+             |> tooltip_text() ==
                "When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
 
       # Adaptor tooltip
-      assert view |> element("#tooltip-Adaptor") |> has_element?()
-
       assert view
-             |> element("#tooltip-Adaptor")
-             |> render()
-             |> parse()
-             |> xpath(~x"@data-title"l)
-             |> to_string() ==
+             |> element("#adaptor_name-tooltip")
+             |> tooltip_text() ==
                "Which system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from."
 
       # Credential tooltip
-      assert view |> element("#tooltip-Credential") |> has_element?()
-
       assert view
-             |> element("#tooltip-Credential")
-             |> render()
-             |> parse()
-             |> xpath(~x"@data-title"l)
-             |> to_string() ==
+             |> element("#project_credential_id-tooltip")
+             |> tooltip_text() ==
                "How to connect. The credentials you need for authentication in the selected system."
     end
   end

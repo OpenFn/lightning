@@ -369,8 +369,10 @@ defmodule LightningWeb.Components.Form do
     <%= if assigns[:tooltip] do %>
       <div class="flex flex-row">
         <%= label(@form, @field, @title, @opts) %>
-        <LightningWeb.Components.Common.tooltip id={@title} title={@tooltip}>
-        </LightningWeb.Components.Common.tooltip>
+        <LightningWeb.Components.Common.tooltip
+          id={"#{@field}-tooltip"}
+          title={@tooltip}
+        />
       </div>
     <% else %>
       <%= label(@form, @field, @title, @opts) %>
