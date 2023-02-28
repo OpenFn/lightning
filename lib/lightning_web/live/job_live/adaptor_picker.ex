@@ -7,8 +7,8 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   alias LightningWeb.Components.Form
 
-  attr(:form, :map, required: true)
-  attr(:on_change, :any, required: true)
+  attr :form, :map, required: true
+  attr :on_change, :any, required: true
 
   @impl true
   def render(assigns) do

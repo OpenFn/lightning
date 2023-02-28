@@ -58,18 +58,6 @@ defmodule LightningWeb.JobLiveTest do
              |> parse()
              |> xpath(~x"option[@selected]/text()"l)
              |> to_string() == "latest (≥ 1.6.2)"
-
-      assert view |> element("#tooltip-adaptor_name") |> has_element?()
-
-      # TODO @Mtuchi fix test for tooltip
-      assert view
-             |> element("#tooltip-adaptor_name")
-             |> render()
-             |> parse()
-             #  |> IO.inspect()
-             |> xpath(
-               ~x"div[data-title='What system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from.']"l
-             )
     end
   end
 
@@ -222,6 +210,54 @@ defmodule LightningWeb.JobLiveTest do
                view,
                "select#triggerType option[value=cron]"
              )
+    end
+  end
+
+  describe "Show tooltip" do
+    test "should display tooltip", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_workflow_path(conn, :new_job, project.id, workflow.id)
+        )
+
+      # Trigger tooltip
+      assert view |> element("#tooltip-trigger") |> has_element?()
+
+      assert view
+             |> element("#tooltip-trigger")
+             |> render()
+             |> parse()
+             |> xpath(~x"@data-title"l)
+             |> to_string() ==
+               "When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+
+      # Adaptor tooltip
+      assert view |> element("#tooltip-Adaptor") |> has_element?()
+
+      assert view
+             |> element("#tooltip-Adaptor")
+             |> render()
+             |> parse()
+             |> xpath(~x"@data-title"l)
+             |> to_string() ==
+               "Which system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from."
+
+      # Credential tooltip
+      assert view |> element("#tooltip-Credential") |> has_element?()
+
+      assert view
+             |> element("#tooltip-Credential")
+             |> render()
+             |> parse()
+             |> xpath(~x"@data-title"l)
+             |> to_string() ==
+               "How to connect. The credentials you need for authentication in the selected system."
     end
   end
 end

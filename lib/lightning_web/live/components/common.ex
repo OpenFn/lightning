@@ -24,7 +24,7 @@ defmodule LightningWeb.Components.Common do
       <%= if assigns[:inner_block], do: render_slot(@inner_block), else: @text %>
       <div
         class="flex flex-col items-center group ml-1 cursor-pointer tooltip"
-        id={"tooltip-#{@title}"}
+        id={"tooltip-#{@id}"}
         data-title={@title}
       >
         <svg

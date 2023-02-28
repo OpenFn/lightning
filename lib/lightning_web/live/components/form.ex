@@ -2,9 +2,9 @@ defmodule LightningWeb.Components.Form do
   @moduledoc false
   use LightningWeb, :component
 
-  slot(:inner_block, required: true)
-  attr(:changeset, :map)
-  attr(:rest, :global, include: ~w(form disabled))
+  slot :inner_block, required: true
+  attr :changeset, :map
+  attr :rest, :global, include: ~w(form disabled)
 
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
   def submit_button(assigns) do
@@ -369,7 +369,7 @@ defmodule LightningWeb.Components.Form do
     <%= if assigns[:tooltip] do %>
       <div class="flex flex-row">
         <%= label(@form, @field, @title, @opts) %>
-        <LightningWeb.Components.Common.tooltip title={@tooltip}>
+        <LightningWeb.Components.Common.tooltip id={@title} title={@tooltip}>
         </LightningWeb.Components.Common.tooltip>
       </div>
     <% else %>
