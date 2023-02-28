@@ -113,10 +113,15 @@ defmodule LightningWeb.JobLive.JobBuilder do
             >
               <div class="md:grid md:grid-cols-4 md:gap-4 @container">
                 <div class="md:col-span-2">
-                  <Form.text_field form={f} label="Job Name" id={:name} />
+                  <Form.text_field
+                    form={f}
+                    label="Job Name"
+                    id={:name}
+                    disabled={!@can_edit_job}
+                  />
                 </div>
                 <div class="md:col-span-2">
-                  <Form.check_box form={f} id={:enabled} />
+                  <Form.check_box form={f} id={:enabled} disabled={!@can_edit_job} />
                 </div>
                 <div class="md:col-span-4">
                   <%= for t <- inputs_for(f, :trigger) do %>
@@ -128,6 +133,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                           update_cron_expression(@job_id, cron_expression)
                         end
                       }
+                      can_edit_job={@can_edit_job}
                     />
                   <% end %>
                 </div>
@@ -137,12 +143,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     module={LightningWeb.JobLive.AdaptorPicker}
                     on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
                     form={f}
+                    can_edit_job={@can_edit_job}
                   />
                 </div>
                 <div class="md:col-span-2">
                   <Components.Jobs.credential_select
                     form={f}
                     credentials={@credentials}
+                    disabled={!@can_edit_job}
                   />
                   <button
                     id="new-credential-launcher"
@@ -184,6 +192,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 data-source={@job_body}
                 data-change-event="job_body_changed"
                 phx-target={@myself}
+                data-disabled={"#{!@can_edit_job}"}
               />
               <div class="flex-1 overflow-auto">
                 <.docs_component adaptor={@resolved_job_adaptor} />
@@ -229,7 +238,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             to: @return_to
           ) %>
           <Form.submit_button
-            disabled={!(@changeset.valid? and @can_edit)}
+            disabled={!(@changeset.valid? and @can_edit_job)}
             phx-disable-with="Saving"
             form="job-form"
           >
@@ -242,7 +251,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-click="delete"
               phx-target={@myself}
               phx-value-id={@job_id}
-              disabled={!(@is_deletable and @can_edit)}
+              disabled={!(@is_deletable and @can_edit_job)}
               data={[
                 confirm:
                   "This action is irreversible, are you sure you want to continue?"
@@ -324,26 +333,34 @@ defmodule LightningWeb.JobLive.JobBuilder do
   end
 
   def handle_event("save", %{"job_form" => params}, socket) do
-    params = merge_params(socket.assigns.params, params)
+    if socket.assigns.can_edit_job do
+      params = merge_params(socket.assigns.params, params)
 
-    %{job: job, workflow: workflow, is_persisted: is_persisted} = socket.assigns
+      %{job: job, workflow: workflow, is_persisted: is_persisted} =
+        socket.assigns
 
-    changeset =
-      build_changeset(job, params, workflow)
-      |> Map.put(:action, if(is_persisted, do: :update, else: :insert))
+      changeset =
+        build_changeset(job, params, workflow)
+        |> Map.put(:action, if(is_persisted, do: :update, else: :insert))
 
-    socket =
-      changeset
-      |> Lightning.Repo.insert_or_update()
-      |> case do
-        {:ok, _job} ->
-          on_save_success(socket)
+      socket =
+        changeset
+        |> Lightning.Repo.insert_or_update()
+        |> case do
+          {:ok, _job} ->
+            on_save_success(socket)
 
-        {:error, %Ecto.Changeset{} = changeset} ->
-          assign(socket, changeset: changeset, params: params)
-      end
+          {:error, %Ecto.Changeset{} = changeset} ->
+            assign(socket, changeset: changeset, params: params)
+        end
 
-    {:noreply, socket}
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(to: socket.assigns.return_to)}
+    end
   end
 
   defp on_save_success(socket) do
@@ -429,8 +446,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
         |> Ecto.Changeset.apply_changes()
       )
 
-    is_deletable = is_deletable(job)
-
     {:ok,
      socket
      |> assign(
@@ -448,8 +463,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        credentials: credentials,
        builder_state: builder_state,
        upstream_jobs: upstream_jobs,
-       is_deletable: is_deletable,
-       can_edit:
+       is_deletable: is_deletable(job),
+       can_edit_job:
          ProjectUsers
          |> Permissions.can(
            :edit_jobs,

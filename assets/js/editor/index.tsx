@@ -43,13 +43,14 @@ export default {
     this.pushEventTo(this.el, this.changeEvent, { source: content });
   },
   render() {
-    const { adaptor, source } = this.el.dataset;
+    const { adaptor, source, disabled } = this.el.dataset;
     if (EditorComponent) {
       this.componentRoot?.render(
         <EditorComponent
           adaptor={adaptor}
           source={source}
           onChange={src => this.handleContentChange(src)}
+          disabled={disabled}
         />
       );
     }

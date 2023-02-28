@@ -30,6 +30,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           values={@adaptors}
           phx-change="adaptor_name_change"
           phx-target={@myself}
+          disabled={!@can_edit_job}
         />
       </div>
 
@@ -52,6 +53,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           values={@versions}
           phx-change="adaptor_version_change"
           phx-target={@myself}
+          disabled={!@can_edit_job}
         />
       </div>
     </div>
@@ -59,7 +61,10 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   end
 
   @impl true
-  def update(%{form: form, on_change: on_change}, socket) do
+  def update(
+        %{form: form, on_change: on_change, can_edit_job: can_edit_job},
+        socket
+      ) do
     {adaptor_name, version, adaptors, versions} =
       get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
@@ -70,7 +75,8 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
      |> assign(:adaptors, adaptors)
      |> assign(:versions, versions)
      |> assign(:on_change, on_change)
-     |> assign(:form, form)}
+     |> assign(:form, form)
+     |> assign(:can_edit_job, can_edit_job)}
   end
 
   @doc """

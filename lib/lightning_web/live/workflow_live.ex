@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  alias Phoenix.Socket
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
@@ -213,7 +214,21 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
-  defp create_workflow(socket) do
+  defp create_workflow(%{assigns: %{can_create_workflow: false}} = socket) do
+    {:noreply,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action.")
+     |> push_patch(
+       to:
+         Routes.project_workflow_path(
+           socket,
+           :index,
+           socket.assigns.project.id
+         )
+     )}
+  end
+
+  defp create_workflow(%{assigns: %{can_create_workflow: true}} = socket) do
     {:ok, %Workflows.Workflow{id: workflow_id}} =
       Workflows.create_workflow(%{project_id: socket.assigns.project.id})
 
@@ -240,13 +255,7 @@ defmodule LightningWeb.WorkflowLive do
 
   @impl true
   def handle_event("create-workflow", _, socket) do
-    if socket.assigns.can_create_workflow do
-      create_workflow(socket)
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
-    end
+    create_workflow(socket)
   end
 
   @impl true
