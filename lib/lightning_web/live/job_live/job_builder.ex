@@ -273,28 +273,35 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    job = Jobs.get_job!(id)
+    if socket.assigns.can_edit_job do
+      job = Jobs.get_job!(id)
 
-    case Jobs.delete_job(job) do
-      {:ok, _} ->
-        LightningWeb.Endpoint.broadcast!(
-          "project_space:#{socket.assigns.project.id}",
-          "update",
-          %{workflow_id: job.workflow_id}
-        )
+      case Jobs.delete_job(job) do
+        {:ok, _} ->
+          LightningWeb.Endpoint.broadcast!(
+            "project_space:#{socket.assigns.project.id}",
+            "update",
+            %{workflow_id: job.workflow_id}
+          )
 
-        {:noreply,
-         socket
-         |> put_flash(:info, "Job deleted successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+          {:noreply,
+           socket
+           |> put_flash(:info, "Job deleted successfully")
+           |> push_patch(to: socket.assigns.return_to)}
 
-      {:error, _} ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Unable to delete this job because it has downstream jobs"
-         )}
+        {:error, _} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :error,
+             "Unable to delete this job because it has downstream jobs"
+           )}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(to: socket.assigns.return_to)}
     end
   end
 
