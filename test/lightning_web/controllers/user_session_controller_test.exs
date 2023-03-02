@@ -216,14 +216,18 @@ defmodule LightningWeb.UserSessionControllerTest do
 
       assert redirected_to(conn) == "/"
       refute get_session(conn, :user_token)
-      assert get_flash(conn, :info) =~ "Logged out successfully"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "Logged out successfully"
     end
 
     test "succeeds even if the user is not logged in", %{conn: conn} do
       conn = get(conn, Routes.user_session_path(conn, :delete))
       assert redirected_to(conn) == "/"
       refute get_session(conn, :user_token)
-      assert get_flash(conn, :info) =~ "Logged out successfully"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "Logged out successfully"
     end
   end
 end

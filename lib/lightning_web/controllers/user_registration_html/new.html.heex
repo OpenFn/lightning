@@ -1,26 +1,26 @@
-<Layout.nav conn={@conn} />
-<Layout.page_content>
+<LayoutComponents.nav conn={@conn} />
+<LayoutComponents.page_content>
   <:header>
-    <Layout.header>
+    <LayoutComponents.header>
       <:title>Register</:title>
-    </Layout.header>
+    </LayoutComponents.header>
   </:header>
-  <Layout.centered>
+  <LayoutComponents.centered>
     <div id="register">
       <.form
         :let={f}
-        as="user"
+        as={:user}
         for={@changeset}
         action={Routes.user_registration_path(@conn, :create)}
       >
         <div class="grid grid-cols-6 gap-6">
           <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
-            <%= if error = get_flash(@conn, :error) do %>
+            <%= if error = Phoenix.Flash.get(@flash, :error) do %>
               <div class="alert alert-danger" role="alert">
                 <%= error %>
               </div>
             <% end %>
-            <%= if info = get_flash(@conn, :info) do %>
+            <%= if info = Phoenix.Flash.get(@flash, :info) do %>
               <p class="alert alert-info" role="alert">
                 <%= info %>
               </p>
@@ -111,5 +111,5 @@
         <div class="col-span-3"></div>
       </div>
     </div>
-  </Layout.centered>
-</Layout.page_content>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

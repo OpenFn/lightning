@@ -1,10 +1,10 @@
-<Layout.page_content>
+<LayoutComponents.page_content>
   <:header>
-    <Layout.header socket={@socket}>
+    <LayoutComponents.header socket={@socket}>
       <:title><%= @page_title %></:title>
-    </Layout.header>
+    </LayoutComponents.header>
   </:header>
-  <Layout.centered>
+  <LayoutComponents.centered>
     <div class="bg-gray-100 dark:bg-gray-700 relative flex">
       <div
         data-entity="work_order_index"
@@ -142,5 +142,5 @@
         </.form>
       </div>
     </div>
-  </Layout.centered>
-</Layout.page_content>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

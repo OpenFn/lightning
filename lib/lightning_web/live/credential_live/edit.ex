@@ -12,13 +12,13 @@ defmodule LightningWeb.CredentialLive.Edit do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layout.page_content>
+    <LayoutComponents.page_content>
       <:header>
-        <Layout.header socket={@socket}>
+        <LayoutComponents.header socket={@socket}>
           <:title><%= @credential.name || @page_title %></:title>
-        </Layout.header>
+        </LayoutComponents.header>
       </:header>
-      <Layout.centered>
+      <LayoutComponents.centered>
         <.live_component
           module={LightningWeb.CredentialLive.FormComponent}
           id={@credential.id || :new}
@@ -49,8 +49,8 @@ defmodule LightningWeb.CredentialLive.Edit do
             </LightningWeb.Components.Form.submit_button>
           </:button>
         </.live_component>
-      </Layout.centered>
-    </Layout.page_content>
+      </LayoutComponents.centered>
+    </LayoutComponents.page_content>
     """
   end
 

@@ -39,16 +39,16 @@ defmodule LightningWeb.DashboardLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layout.page_content>
+    <LayoutComponents.page_content>
       <:header>
-        <Layout.header socket={@socket}>
+        <LayoutComponents.header socket={@socket}>
           <:title><%= @page_title %></:title>
-        </Layout.header>
+        </LayoutComponents.header>
       </:header>
       <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         No projects found. If this seems odd, contact your instance administrator.
       </div>
-    </Layout.page_content>
+    </LayoutComponents.page_content>
     """
   end
 end

@@ -1,10 +1,10 @@
-<Layout.page_content>
+<LayoutComponents.page_content>
   <:header>
-    <Layout.header socket={@socket}>
+    <LayoutComponents.header socket={@socket}>
       <:title><%= @dataclip.id || @page_title %></:title>
-    </Layout.header>
+    </LayoutComponents.header>
   </:header>
-  <Layout.centered>
+  <LayoutComponents.centered>
     <.live_component
       module={LightningWeb.DataclipLive.FormComponent}
       id={@dataclip.id || :new}
@@ -15,5 +15,5 @@
         Routes.project_dataclip_index_path(@socket, :index, @project.id)
       }
     />
-  </Layout.centered>
-</Layout.page_content>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

@@ -9,7 +9,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="//" />
-    <%= csrf_meta_tag() %>
+    <meta name="csrf-token" content={get_csrf_token()} />
     <.live_title suffix=" · OpenFn Lightning">
       <%= assigns[:page_title] || "Lightning" %>
     </.live_title>

@@ -99,30 +99,26 @@ defmodule LightningWeb.ProjectLiveTest do
         })
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_workflow_path(
-            conn,
-            :index,
-            Lightning.Projects.first_project_for_user(user)
-          )
-        )
+        live(conn, Routes.project_workflow_path(conn, :index, project_1))
 
-      assert view
+      refute view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_1.id)}']"
+               ~s{a[href="#{~p"/projects/#{project_1.id}/w"}"]},
+               ~r/project-1/
              )
              |> has_element?()
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_2.id)}']"
+               ~s{a[href="#{~p"/projects/#{project_2.id}/w"}"]},
+               ~r/project-2/
              )
              |> has_element?()
 
       refute view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_3.id)}']"
+               ~s{a[href="#{~p"/projects/#{project_3.id}/w"}"]},
+               ~r/project-3/
              )
              |> has_element?()
 

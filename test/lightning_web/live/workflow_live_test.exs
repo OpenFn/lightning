@@ -64,7 +64,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, _view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :show, project.id, workflow.id)
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       assert html =~ project.name
@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(
           conn,
-          Routes.project_workflow_path(conn, :show, project.id, workflow.id)
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
         )
 
       assert html =~ project.name
@@ -268,7 +268,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_workflow_path(conn, :show, project.id, workflow.id)
+        ~p"/projects/#{project.id}/w/#{workflow.id}"
       )
 
       view |> encoded_project_space_matches(workflow)

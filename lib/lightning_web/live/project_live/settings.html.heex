@@ -1,10 +1,10 @@
-<Layout.page_content>
+<LayoutComponents.page_content>
   <:header>
-    <Layout.header socket={@socket}>
+    <LayoutComponents.header socket={@socket}>
       <:title><%= @page_title %></:title>
-    </Layout.header>
+    </LayoutComponents.header>
   </:header>
-  <Layout.centered>
+  <LayoutComponents.centered>
     <div class=" relative flex">
       <div class="pr-4 pt-0 sticky top-0 self-start rounded-md">
         <div class="flex-none">
@@ -163,5 +163,5 @@
         </LightningWeb.Components.Common.panel_content>
       </div>
     </div>
-  </Layout.centered>
-</Layout.page_content>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

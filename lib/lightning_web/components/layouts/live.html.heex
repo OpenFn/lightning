@@ -21,7 +21,7 @@
           </.link>
         </div>
         <%= unless assigns[:is_first_setup] do %>
-          <%= render("menu_items.html", assigns) %>
+          <LayoutComponents.menu_items {assigns} />
           <div class="grow"></div>
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>

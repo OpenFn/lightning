@@ -23,7 +23,7 @@ defmodule LightningWeb.AuditLive.Index do
                :index,
                &1
              )
-         ), layout: {LightningWeb.LayoutView, :settings}}
+         ), layout: {LightningWeb.Layouts, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

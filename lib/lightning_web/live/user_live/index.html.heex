@@ -1,6 +1,6 @@
-<Layout.page_content>
+<LayoutComponents.page_content>
   <:header>
-    <Layout.header socket={@socket}>
+    <LayoutComponents.header socket={@socket}>
       <:title>Users</:title>
       <.link navigate={Routes.user_edit_path(@socket, :new)}>
         <Common.button>
@@ -10,9 +10,9 @@
           </div>
         </Common.button>
       </.link>
-    </Layout.header>
+    </LayoutComponents.header>
   </:header>
-  <Layout.centered>
+  <LayoutComponents.centered>
     <%= if @live_action == :delete do %>
       <.live_component
         module={LightningWeb.Components.UserDeletionModal}
@@ -67,5 +67,5 @@
       day-to-day user management (adding and removing collaborators) will be
       done by project "admins" via the forthcoming project settings page.
     </.p>
-  </Layout.centered>
-</Layout.page_content>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

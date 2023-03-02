@@ -12,6 +12,8 @@ and this project adheres to
 
 ### Changed
 
+- Upgraded to Phoenix 1.7 (3945856)
+
 ### Fixed
 
 ## [0.4.2] - 2023-02-24
