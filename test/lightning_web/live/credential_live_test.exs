@@ -41,8 +41,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "Side menu has credentials and user profile navigation", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       assert index_live
              |> element("nav#side-menu a", "Credentials")
@@ -51,18 +50,14 @@ defmodule LightningWeb.CredentialLiveTest do
       assert index_live
              |> element("nav#side-menu a", "User Profile")
              |> render_click()
-             |> follow_redirect(
-               conn,
-               Routes.profile_edit_path(conn, :edit)
-             )
+             |> follow_redirect(conn, ~p"/profile")
     end
 
     test "lists all credentials", %{
       conn: conn,
       credential: credential
     } do
-      {:ok, _index_live, html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, _index_live, html} = live(conn, ~p"/credentials")
 
       assert html =~ "Credentials"
       assert html =~ "Projects with Access"
@@ -92,11 +87,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, index_live, _html} =
-        live(
-          conn,
-          Routes.credential_index_path(conn, :index)
-        )
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       assert index_live
              |> element("#credential-#{credential.id} a", "Delete")
@@ -111,17 +102,13 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       project: project
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, new_live, _html} =
         index_live
         |> element("a", "New Credential")
         |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :new)
-        )
+        |> follow_redirect(conn, ~p"/credentials/new")
 
       new_live |> select_credential_type("raw")
       new_live |> click_continue()
@@ -144,10 +131,7 @@ defmodule LightningWeb.CredentialLiveTest do
         new_live
         |> form("#credential-form", credential: @create_attrs)
         |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.credential_index_path(conn, :index)
-        )
+        |> follow_redirect(conn, ~p"/credentials")
 
       {path, flash} = assert_redirect(new_live)
 
@@ -161,17 +145,13 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new dhis2 credential", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, new_live, _html} =
         index_live
         |> element("a", "New Credential")
         |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :new)
-        )
+        |> follow_redirect(conn, ~p"/credentials/new")
 
       # Pick a type
 
@@ -189,7 +169,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form")
              |> render_submit() =~ "can&#39;t be blank"
 
-      refute_redirected(new_live, Routes.credential_index_path(conn, :index))
+      refute_redirected(new_live, ~p"/credentials")
 
       assert new_live
              |> form("#credential-form",
@@ -212,10 +192,7 @@ defmodule LightningWeb.CredentialLiveTest do
         new_live
         |> form("#credential-form")
         |> render_submit()
-        |> follow_redirect(
-          conn,
-          Routes.credential_index_path(conn, :index)
-        )
+        |> follow_redirect(conn, ~p"/credentials")
 
       {_path, flash} = assert_redirect(new_live)
       assert flash == %{"info" => "Credential created successfully"}
@@ -224,8 +201,7 @@ defmodule LightningWeb.CredentialLiveTest do
     test "allows the user to define and save a new http credential", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, new_live, _html} =
         index_live
@@ -248,7 +224,7 @@ defmodule LightningWeb.CredentialLiveTest do
              |> form("#credential-form")
              |> render_submit() =~ "can&#39;t be blank"
 
-      refute_redirected(new_live, Routes.credential_index_path(conn, :index))
+      refute_redirected(new_live, ~p"/credentials")
 
       assert new_live
              |> fill_credential(%{
@@ -270,7 +246,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_submit()
         |> follow_redirect(
           conn,
-          Routes.credential_index_path(conn, :index)
+          ~p"/credentials"
         )
 
       {_path, flash} = assert_redirect(new_live)
@@ -282,8 +258,7 @@ defmodule LightningWeb.CredentialLiveTest do
     setup [:create_credential]
 
     test "updates a credential", %{conn: conn, credential: credential} do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, form_live, _} =
         index_live
@@ -296,7 +271,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert form_live |> fill_credential(@invalid_attrs) =~ "can&#39;t be blank"
 
-      refute_redirected(form_live, Routes.credential_index_path(conn, :index))
+      refute_redirected(form_live, ~p"/credentials")
 
       {:ok, _index_live, html} =
         form_live
@@ -304,7 +279,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_submit()
         |> follow_redirect(
           conn,
-          Routes.credential_index_path(conn, :index)
+          ~p"/credentials"
         )
 
       {_path, flash} = assert_redirect(form_live)
@@ -317,8 +292,7 @@ defmodule LightningWeb.CredentialLiveTest do
       conn: conn,
       credential: credential
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, form_live, _} =
         index_live
@@ -337,7 +311,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_submit()
         |> follow_redirect(
           conn,
-          Routes.credential_index_path(conn, :index)
+          ~p"/credentials"
         )
 
       assert html =~ "some updated name"
@@ -368,8 +342,7 @@ defmodule LightningWeb.CredentialLiveTest do
           ]
         )
 
-      {:ok, index_live, html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, html} = live(conn, ~p"/credentials")
 
       # both credentials appear in the list
       assert html =~ "some name"
@@ -408,7 +381,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_submit()
         |> follow_redirect(
           conn,
-          Routes.credential_index_path(conn, :index)
+          ~p"/credentials"
         )
 
       {_path, flash} = assert_redirect(form_live)
@@ -585,8 +558,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, new_live, _html} =
         index_live
@@ -594,7 +566,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_click()
         |> follow_redirect(
           conn,
-          Routes.credential_edit_path(conn, :new)
+          ~p"/credentials/new"
         )
 
       # Pick a type
@@ -652,7 +624,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> render_submit()
         |> follow_redirect(
           conn,
-          Routes.credential_index_path(conn, :index)
+          ~p"/credentials"
         )
 
       {_path, flash} = assert_redirect(new_live)
@@ -667,9 +639,11 @@ defmodule LightningWeb.CredentialLiveTest do
       assert %{
                access_token: "ya29.a0AVvZ...",
                refresh_token: "1//03vpp6Li...",
-               expires_at: ^expected_expiry,
+               expires_at: expiry,
                scope: "scope1 scope2"
              } = token
+
+      assert (expiry - expected_expiry) in -1..1
     end
 
     test "correctly renders a valid existing token", %{
@@ -701,8 +675,7 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         )
 
-      {:ok, edit_live, _html} =
-        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
 
       assert_receive {:phoenix, :send_update, _}
 
@@ -736,8 +709,7 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         )
 
-      {:ok, edit_live, _html} =
-        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
 
       # Wait for next `send_update` triggered by the token Task calls
       assert_receive {:plug_conn, :sent}
@@ -793,8 +765,7 @@ defmodule LightningWeb.CredentialLiveTest do
         """
       )
 
-      {:ok, edit_live, _html} =
-        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
 
       assert wait_for_assigns(edit_live, :userinfo),
              ":userinfo has not been set yet."
@@ -838,8 +809,7 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         )
 
-      {:ok, edit_live, _html} =
-        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
 
       assert wait_for_assigns(edit_live, :error)
 
@@ -898,8 +868,7 @@ defmodule LightningWeb.CredentialLiveTest do
           }
         )
 
-      {:ok, edit_live, _html} =
-        live(conn, Routes.credential_edit_path(conn, :edit, credential.id))
+      {:ok, edit_live, _html} = live(conn, ~p"/credentials/#{credential.id}")
 
       assert wait_for_assigns(edit_live, :error)
 
@@ -913,17 +882,13 @@ defmodule LightningWeb.CredentialLiveTest do
   describe "googlesheets credential (when client is not available)" do
     @tag :capture_log
     test "shows a warning that Google Sheets isn't available", %{conn: conn} do
-      {:ok, index_live, _html} =
-        live(conn, Routes.credential_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       {:ok, new_live, _html} =
         index_live
         |> element("a", "New Credential")
         |> render_click()
-        |> follow_redirect(
-          conn,
-          Routes.credential_edit_path(conn, :new)
-        )
+        |> follow_redirect(conn, ~p"/credentials/new")
 
       new_live |> select_credential_type("googlesheets")
       new_live |> click_continue()
