@@ -75,7 +75,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         <div class="mt-2">
           <Common.button
             text="Run"
-            disabled={!@changeset.valid?}
+            disabled={!(@changeset.valid? and @can_edit_job)}
             phx-click="confirm"
             phx-target={@myself}
           />
@@ -103,7 +103,9 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           job_id: job_id,
           job: job,
           project: project,
-          on_run: on_run
+          on_run: on_run,
+          can_edit_job: can_edit_job,
+          return_to: return_to
         },
         socket
       ) do
@@ -155,7 +157,9 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        dataclips: dataclips,
        dataclips_options: dataclips_options,
        on_run: on_run,
-       selected_dataclip: selected_dataclip |> format()
+       selected_dataclip: selected_dataclip |> format(),
+       can_edit_job: can_edit_job,
+       return_to: return_to
      )
      |> assign_new(:custom_input?, fn ->
        is_nil(selected_dataclip) && job.trigger.type in [:webhook, :cron]
@@ -165,24 +169,31 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   @impl true
   def handle_event("confirm", _params, socket) do
-    socket.assigns.changeset
-    |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
-    |> create_manual_workorder()
-    |> case do
-      {:ok, %{attempt_run: attempt_run}} ->
-        socket.assigns.on_run.(attempt_run)
+    if socket.assigns.can_edit_job do
+      socket.assigns.changeset
+      |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
+      |> create_manual_workorder()
+      |> case do
+        {:ok, %{attempt_run: attempt_run}} ->
+          socket.assigns.on_run.(attempt_run)
 
-        {:noreply,
-         socket
-         |> push_event("push-hash", %{hash: "output"})}
+          {:noreply,
+           socket
+           |> push_event("push-hash", %{hash: "output"})}
 
-      {:error, changeset} ->
-        {:noreply,
-         socket
-         |> assign(
-           changeset: changeset,
-           form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
-         )}
+        {:error, changeset} ->
+          {:noreply,
+           socket
+           |> assign(
+             changeset: changeset,
+             form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
+           )}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(to: socket.assigns.return_to)}
     end
   end
 
