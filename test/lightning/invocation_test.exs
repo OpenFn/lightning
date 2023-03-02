@@ -223,7 +223,7 @@ defmodule Lightning.InvocationTest do
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
 
-    test "list_work_orders_for_project/1 returns work orders ordered by last run finished at desc, with nulls first" do
+    test "list_work_orders_for_project/1 returns workorders ordered by last run finished at desc, with nulls first" do
       job = workflow_job_fixture(workflow_name: "chw-help")
 
       dataclip = dataclip_fixture()
@@ -448,7 +448,7 @@ defmodule Lightning.InvocationTest do
       assert actual_last_run.id == run_three.id
     end
 
-    test "list_work_orders_for_project/3 returns paginated work orders" do
+    test "list_work_orders_for_project/3 returns paginated workorders" do
       project = project_fixture()
       now = Timex.now()
 
@@ -474,7 +474,7 @@ defmodule Lightning.InvocationTest do
       assert length(wos) == 3
     end
 
-    test "list_work_orders_for_project/3 returns paginated work orders with ordering" do
+    test "list_work_orders_for_project/3 returns paginated workorders with ordering" do
       #  we set a page size of 3
 
       # from now we set

@@ -16,6 +16,8 @@ defmodule Lightning.RunLive.RunSearchForComponent do
             <%= checkbox(opt, :selected,
               value: opt.data.selected,
               phx_change: "checked",
+              class:
+                "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500",
               phx_target: @myself
             ) %>
             <%= label(opt, :label, opt.data.label) %>

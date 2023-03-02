@@ -45,18 +45,16 @@
           <div>
             <div class="font-semibold mt-4">
               Search associated runs
-              <Icon.info class="h-5 w-5 mb-2 inline-block" />
-            </div>
-            <div class="text-xs mb-2">
-              <b>N.B.:</b>
-              a search here returns all <b>workorders</b>
-              that <em>contain</em>
-              runs with matching logs or inputs. Once a workorder is expanded,
-              you can still see the runs that took place before or after the
-              matching run itself. (I.e., right now you get the full workorder
-              context; soon we'll introduce the ability to pinpoint just a
-              single run <em>before</em>
-              viewing it in context of its attempt and workorder.)
+              <Common.tooltip
+                id="trigger-tooltip"
+                title="This search returns all workorders that contain runs with
+                matching logs or inputs. Once a workorder is expanded, you can
+                still see the runs that took place before or after the matching
+                run itself. (I.e., right now you get the full workorder context;
+                soon we'll introduce the ability to pinpoint just a single run
+                before viewing it in context of its attempt and workorder."
+                class="inline-block"
+              />
             </div>
             <div class="w-full flex items-center">
               <%= text_input(f, :search_term,
@@ -83,9 +81,13 @@
               }
             />
           </div>
+          <Lightning.RunLive.Components.workflow_select
+            form={f}
+            values={@workflows}
+          />
           <div>
             <div class="font-semibold my-4">
-              Filter workorder by date received
+              Filter workorders by date received
             </div>
             <div class="flex justify-between">
               <div>
@@ -106,7 +108,7 @@
           </div>
           <div>
             <div class="font-semibold my-4">
-              Filter workorder by last activity date
+              Filter workorders by last run date
             </div>
             <div class="flex justify-between">
               <div>
@@ -125,11 +127,6 @@
               </div>
             </div>
           </div>
-
-          <Lightning.RunLive.Components.workflow_select
-            form={f}
-            values={@workflows}
-          />
           <.live_component
             id="run-status-select"
             module={Lightning.RunLive.RunStatusComponent}

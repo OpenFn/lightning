@@ -10,11 +10,14 @@ defmodule Lightning.RunLive.RunStatusComponent do
   def render(assigns) do
     ~H"""
     <div id={"#{@id}-status_options-container"}>
-      <div class="font-semibold mt-4">Filter by workorder status</div>
-      <div class="text-xs mb-2">
-        Filter workorders based on their composite status—the status of the
-        <em>last</em>
-        run in any attempt for that workorder.
+      <div class="font-semibold mt-4">
+        Filter by workorder status
+        <Common.tooltip
+          id="trigger-tooltip"
+          title="Filter workorders based on their status. (I.e., the status of
+            the last run in any attempt for that workorder.)"
+          class="inline-block"
+        />
       </div>
       <%= inputs_for @form, :status_options, fn opt -> %>
         <div class="form-check">
@@ -22,6 +25,8 @@ defmodule Lightning.RunLive.RunStatusComponent do
             <%= checkbox(opt, :selected,
               value: opt.data.selected,
               phx_change: "checked",
+              class:
+                "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500",
               phx_target: @myself
             ) %>
             <%= label(opt, :label, opt.data.label) %>
