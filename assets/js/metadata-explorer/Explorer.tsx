@@ -1,23 +1,57 @@
 import React, { useState, useCallback, useEffect } from 'react';
 
-const Group = ({ data, level }) => {
-  return (<ul className="list-inside list-disc">{
-    data.children.map((e) => <Entity data={e} key={e.name} level={level}  />
-  )}
-  </ul>)
+const hasChildren = ({ children } = {}) => {
+  if (children) {
+    if (Array.isArray(children)) {
+      return children.length > 0;
+    } else {
+      return Object.keys(children).length > 0;
+    }
+  }
+  return false;
+}
+
+// map over a list of children
+const map = (children: any, fn: (child: any, index: any) => any) => {
+  if (Array.isArray(children)) {
+    return children.map(fn);
+  }
+  // if an object type, treat each key as an entity
+  return Object.keys(children).map((key) => fn({
+    name: key,
+    // type: 'group',
+    children: children[key],
+  }));
 }
 
 const Entity = ({ data, level }) => {
-  const indent = `ml-${level * 2}`;
-  return <li className={`text-sm text-secondary-700 mt-1 ${indent}`}>
-    <span>
-      {data.name}
-      {data.datatype && <i>({data.datatype})</i>}
-    </span>
-    {data.children && 
-      <Group data={data} level={level + 1} />
+  if (hasChildren(data)) {
+    let label = data.label || data.name;
+    if (data.type) {
+      label += ` (${data.type})`;
     }
-  </li>
+    return (
+      <details>
+        <summary className="cursor-pointer">
+          {label}
+        </summary>
+        <ul className="list-disc ml-4">
+          {map(data.children, (e) => <Entity data={e} key={e.name} level={level + 1}  />)}
+        </ul>
+      </details>
+    );
+  }
+
+  const indent = `ml-${level * 2}`;
+  if (typeof data === 'string') {
+    return (<li className={`text-sm text-secondary-700 ${indent}`}>
+      "{data}"
+  </li>)
+  }
+  // TODO how do we drive formatting rules for adaptor specific types?
+  return (<li className={`text-sm text-secondary-700 ${indent}`}>
+    {data.name} {data.datatype && <i>({data.datatype})</i>} - {data.label}
+  </li>)
 }
 
 type MetadataExplorerProps = {
@@ -30,14 +64,15 @@ export default ({ metadata }: MetadataExplorerProps) => {
   const [data, setData] = useState({ children: [] });
 
   const update = useCallback(() => {
-    const filtered = metadata.children.filter((e) => {
-      // if (filter.hideSystem) {
-      //   return !e.meta.system;
-      // }
-      return true;
-    })
-    console.log(filtered)
-    setData({ ...metadata, children: filtered });
+    // const filtered = metadata.children.filter((e) => {
+    //   // if (filter.hideSystem) {
+    //   //   return !e.meta.system;
+    //   // }
+    //   return true;
+    // })
+    // console.log(filtered)
+    // setData({ ...metadata, children: filtered });
+    setData(metadata)
   }, [/*filter*/]);
 
   // This is SF specific so need to think about how we might drive this
@@ -56,7 +91,7 @@ export default ({ metadata }: MetadataExplorerProps) => {
         Show system children
       </p>
       <p>{data.children.length} children:</p> */}
-      <Group level={0} data={data} />
+      {map(data.children, data => <Entity level={0} data={data} />)}
     </>
   )
 }
