@@ -2,9 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type Explorer from './Explorer';
 
-// TODO try a single central metadata hook which shares information between components
-import metadata_dhis2 from '../editor/metadata/dhis2.js'
-import metadata_salesforce from '../editor/metadata/salesforce.js'
+import loadMetadata from '../metadata-loader/metadata';
 
 interface ExplorerEntryPoint {
   componentRoot: ReturnType<typeof createRoot> | null;
@@ -18,7 +16,6 @@ interface ExplorerEntryPoint {
   observer: MutationObserver | null;
   render(): void;
   setupObserver(): void;
-  loadMetadata(): Promise<object>;
   metadata: object | undefined;
 }
 
@@ -29,33 +26,13 @@ type AttributeMutationRecord = MutationRecord & {
 
 let ExplorerComponent: typeof Explorer | undefined;
 
-let metadata: object;
-
 export default {
-  // Temporary loading hook
-  loadMetadata() {
-    const { adaptor } = this.el.dataset;
-    console.log(adaptor)
-    return new Promise(() => {
-      // TODO what if the metadata changes in flight?
-      // May need to double check the adaptor value
-      if (adaptor) {
-        if (adaptor.match('dhis2')) {
-          metadata = metadata_dhis2;
-        }
-        else {
-          metadata = metadata_salesforce;
-        }
-        this.render();
-      } 
-    });
-  },
   mounted(this: ExplorerEntryPoint) {
     import('./Explorer').then(module => {
       ExplorerComponent = module.default as typeof Explorer;
       this.componentRoot = createRoot(this.el);
 
-      const { changeEvent } = this.el.dataset;
+      const { changeEvent, adaptor } = this.el.dataset;
       if (changeEvent) {
         this.changeEvent = changeEvent;
       } else {
@@ -63,7 +40,10 @@ export default {
       }
       this.setupObserver();
       this.render();
-      this.loadMetadata();
+      loadMetadata(adaptor).then((m) => {
+        this.metadata = m;
+        this.render();
+      });
     });
   },
   handleContentChange(content: string) {
@@ -73,7 +53,7 @@ export default {
     if (ExplorerComponent) {
       this.componentRoot?.render(
         <ExplorerComponent
-          metadata={metadata}
+          metadata={this.metadata}
         />
       );
     }
@@ -84,7 +64,14 @@ export default {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
         if (oldValue !== newValue) {
-          this.render();
+          if (attributeName === 'adaptor') {
+            loadMetadata(newValue!).then((m) => {
+              this.metadata = m;
+              this.render();
+            });
+          } else {
+            this.render();
+          }
         }
       });
     });

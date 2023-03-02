@@ -2,9 +2,6 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type Editor from './Editor';
 
-import metadata_dhis2 from './metadata/dhis2.js'
-import metadata_salesforce from './metadata/salesforce.js'
-
 interface EditorEntrypoint {
   componentRoot: ReturnType<typeof createRoot> | null;
   destroyed(): void;
