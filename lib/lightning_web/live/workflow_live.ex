@@ -4,7 +4,6 @@ defmodule LightningWeb.WorkflowLive do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
-  alias Phoenix.Socket
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
@@ -151,6 +150,7 @@ defmodule LightningWeb.WorkflowLive do
                   socket={@socket}
                   project={@project}
                   workflow={@current_workflow}
+                  can_create_job={@can_create_job}
                 />
               <% end %>
             </div>
@@ -204,10 +204,19 @@ defmodule LightningWeb.WorkflowLive do
         socket.assigns.project
       )
 
+    can_create_job =
+      ProjectUsers
+      |> Permissions.can(
+        :create_job,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
     {:ok,
      socket
      |> assign(
        can_create_workflow: can_create_workflow,
+       can_create_job: can_create_job,
        active_menu_item: :projects,
        new_credential: false,
        builder_state: %{}
@@ -251,6 +260,35 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply,
      socket
      |> put_flash(:info, "Copied webhook URL to clipboard")}
+  end
+
+  @impl true
+  def handle_event(
+        "create-job",
+        _,
+        %{assigns: %{can_create_job: true}} = socket
+      ) do
+    {:noreply,
+     socket
+     |> push_patch(
+       to:
+         Routes.project_workflow_path(
+           socket,
+           :new_job,
+           socket.assigns.project.id,
+           socket.assigns.current_workflow.id
+         )
+     )}
+  end
+
+  def handle_event(
+        "create-job",
+        _,
+        %{assigns: %{can_create_job: false}} = socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action.")}
   end
 
   @impl true
