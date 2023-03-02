@@ -51,6 +51,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
+  attr :can_edit_job, :boolean, required: true
 
   @impl true
   def render(assigns) do

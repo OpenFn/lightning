@@ -275,7 +275,15 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              job: job,
              current_user: user,
              on_run: nil,
-             builder_state: %{job_id: job.id, dataclip: d3}
+             builder_state: %{job_id: job.id, dataclip: d3},
+             can_edit_job: true,
+             return_to:
+               Routes.project_workflow_path(
+                 conn,
+                 :show,
+                 project.id,
+                 job.workflow_id
+               )
            ) =~ "<option selected value=\"#{d3.id}\">#{d3.id}</option>"
 
     assert render_component(LightningWeb.JobLive.ManualRunComponent,
@@ -285,7 +293,15 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              job: job,
              current_user: user,
              on_run: nil,
-             builder_state: %{job_id: job.id, dataclip: d4}
+             builder_state: %{job_id: job.id, dataclip: d4},
+             can_edit_job: true,
+             return_to:
+               Routes.project_workflow_path(
+                 conn,
+                 :show,
+                 project.id,
+                 job.workflow_id
+               )
            ) =~ "<option selected value=\"#{d4.id}\">#{d4.id}</option>"
   end
 end

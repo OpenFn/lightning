@@ -4,6 +4,8 @@ defmodule LightningWeb.RunLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrderService
   alias Lightning.{AttemptService, Invocation, RunSearchForm}
   alias Lightning.Invocation.Run
@@ -141,10 +143,21 @@ defmodule LightningWeb.RunLive.Index do
         %{"attempt_id" => attempt_id, "run_id" => run_id},
         socket
       ) do
-    AttemptService.get_for_rerun(attempt_id, run_id)
-    |> WorkOrderService.retry_attempt_run(socket.assigns.current_user)
+    if ProjectUsers
+       |> Permissions.can(
+         :rerun_job,
+         socket.assigns.current_user,
+         socket.assigns.project
+       ) do
+      AttemptService.get_for_rerun(attempt_id, run_id)
+      |> WorkOrderService.retry_attempt_run(socket.assigns.current_user)
 
-    {:noreply, socket}
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
   end
 
   def handle_event(

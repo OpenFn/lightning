@@ -26,13 +26,15 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     first_run = attempt.runs |> List.first()
     second_run = attempt.runs |> Enum.at(1)
     third_run = attempt.runs |> List.last()
+
     project_id = first_run.job.workflow.project_id
 
     html =
       render_component(&Components.run_list_item/1,
         run: first_run,
         attempt: attempt,
-        project_id: project_id
+        project_id: project_id,
+        can_rerun_job: true
       )
       |> Floki.parse_fragment!()
 
@@ -52,7 +54,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.run_list_item/1,
         run: second_run,
         attempt: attempt,
-        project_id: project_id
+        project_id: project_id,
+        can_rerun_job: true
       )
       |> Floki.parse_fragment!()
 
@@ -72,7 +75,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.run_list_item/1,
         run: third_run,
         attempt: attempt,
-        project_id: project_id
+        project_id: project_id,
+        can_rerun_job: true
       )
       |> Floki.parse_fragment!()
 
@@ -86,6 +90,52 @@ defmodule LightningWeb.RunLive.ComponentsTest do
            |> Floki.find(
              ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, third_run.id)}"]}
            )
+           |> Enum.any?()
+  end
+
+  test "no rerun button is displayed when user can't rerun a job" do
+    reason = insert(:reason, type: :webhook)
+
+    attempt =
+      build(:attempt,
+        work_order: build(:workorder, reason: reason),
+        runs: [
+          build(:run),
+          build(:run, finished_at: Timex.now(), exit_code: 0),
+          build(:run, finished_at: Timex.now())
+        ],
+        reason: reason
+      )
+      |> insert()
+
+    run = attempt.runs |> List.first()
+
+    project_id = run.job.workflow.project_id
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: run,
+        attempt: attempt,
+        project_id: project_id,
+        can_rerun_job: true
+      )
+      |> Floki.parse_fragment!()
+
+    assert html
+           |> Floki.find(~s{span[title="Rerun workflow from here"]})
+           |> Enum.any?()
+
+    html =
+      render_component(&Components.run_list_item/1,
+        run: run,
+        attempt: attempt,
+        project_id: project_id,
+        can_rerun_job: false
+      )
+      |> Floki.parse_fragment!()
+
+    refute html
+           |> Floki.find(~s{span[title="Rerun workflow from here"]})
            |> Enum.any?()
   end
 

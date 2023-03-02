@@ -6,6 +6,7 @@ defmodule LightningWeb.RunLive.Components do
 
   attr :project, :map, required: true
   attr :attempt, :map, required: true
+  attr :can_rerun_job, :boolean, required: true
 
   def attempt_item(%{attempt: attempt} = assigns) do
     runs = attempt.runs
@@ -59,7 +60,12 @@ defmodule LightningWeb.RunLive.Components do
           </span>
           <ol class="mt-2 list-none space-y-4">
             <%= for run <- @run_list do %>
-              <.run_list_item project_id={@project.id} attempt={@attempt} run={run} />
+              <.run_list_item
+                can_rerun_job={@can_rerun_job}
+                project_id={@project.id}
+                attempt={@attempt}
+                run={run}
+              />
             <% end %>
           </ol>
         </li>
@@ -71,6 +77,7 @@ defmodule LightningWeb.RunLive.Components do
   attr :run, :map, required: true
   attr :attempt, :map, required: true
   attr :project_id, :string, required: true
+  attr :can_rerun_job, :boolean, required: true
 
   def run_list_item(assigns) do
     ~H"""
@@ -111,15 +118,17 @@ defmodule LightningWeb.RunLive.Components do
               run at <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
             </span>
           </.link>
-          <span
-            class="pl-2 text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-            phx-click="rerun"
-            phx-value-attempt_id={@attempt.id}
-            phx-value-run_id={@run.id}
-            title="Rerun workflow from here"
-          >
-            rerun
-          </span>
+          <%= if @can_rerun_job do %>
+            <span
+              class="pl-2 text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+              phx-click="rerun"
+              phx-value-attempt_id={@attempt.id}
+              phx-value-run_id={@run.id}
+              title="Rerun workflow from here"
+            >
+              rerun
+            </span>
+          <% end %>
         </span>
       </span>
     </li>
