@@ -44,7 +44,7 @@ defmodule Lightning.Jobs.Job do
     field :body, :string,
       default: "// Get started by adding operations from your adaptor here"
 
-    field :enabled, :boolean, default: false
+    field :enabled, :boolean, default: true
     field :name, :string
     field :adaptor, :string, default: "@openfn/language-common@latest"
     belongs_to :trigger, Trigger
@@ -93,8 +93,10 @@ defmodule Lightning.Jobs.Job do
   end
 
   def changeset(job, attrs, workflow_id) do
-    changeset(job, attrs)
-    |> put_change(:workflow_id, workflow_id)
+    attrs = Map.put(attrs, :workflow_id, workflow_id)
+
+    job
+    |> changeset(attrs)
     |> validate_required(:workflow_id)
   end
 

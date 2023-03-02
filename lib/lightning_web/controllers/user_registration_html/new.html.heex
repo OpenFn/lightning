@@ -1,0 +1,115 @@
+<LayoutComponents.nav conn={@conn} />
+<LayoutComponents.page_content>
+  <:header>
+    <LayoutComponents.header>
+      <:title>Register</:title>
+    </LayoutComponents.header>
+  </:header>
+  <LayoutComponents.centered>
+    <div id="register">
+      <.form
+        :let={f}
+        as={:user}
+        for={@changeset}
+        action={Routes.user_registration_path(@conn, :create)}
+      >
+        <div class="grid grid-cols-6 gap-6">
+          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
+            <%= if error = Phoenix.Flash.get(@flash, :error) do %>
+              <div class="alert alert-danger" role="alert">
+                <%= error %>
+              </div>
+            <% end %>
+            <%= if info = Phoenix.Flash.get(@flash, :info) do %>
+              <p class="alert alert-info" role="alert">
+                <%= info %>
+              </p>
+            <% end %>
+
+            <div class="grid grid-flow-row gap-4 auto-rows-max">
+              <div>
+                <LightningWeb.Components.Form.text_field
+                  form={f}
+                  id={:first_name}
+                  required={true}
+                />
+              </div>
+              <div>
+                <LightningWeb.Components.Form.text_field
+                  form={f}
+                  id={:last_name}
+                  required={true}
+                />
+              </div>
+              <div>
+                <LightningWeb.Components.Form.email_field
+                  form={f}
+                  id={:email}
+                  required={true}
+                />
+              </div>
+              <div>
+                <LightningWeb.Components.Form.password_field
+                  form={f}
+                  id={:password}
+                  required={true}
+                />
+              </div>
+
+              <div class="flex items-start">
+                <div class="flex items-center h-5">
+                  <%= checkbox(f, :terms_accepted,
+                    class:
+                      "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded"
+                  ) %>
+                </div>
+                <div class="ml-3 text-sm">
+                  <%= label(f, "Terms and conditions",
+                    class: "font-medium text-secondary-700"
+                  ) %>
+                  <br />
+                  <span class="text-xs text-secondary-500">
+                    Lightning is still in Beta, therefore
+                    <b>
+                      we strongly advise against building out production workflows
+                    </b>
+                    until the official release of Lightning. <br />
+                    By registering for an account, you’ll be given your own project, which you can use <em> free of charge until further notice</em>.
+                    All credentials, jobs and workflows you create will only be visible to you.
+                  </span>
+                </div>
+              </div>
+              <%= error_tag(f, :terms_accepted,
+                class:
+                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm text-sm border-secondary-300 rounded-md"
+              ) %>
+              <LightningWeb.Components.Form.submit_button>
+                Register
+              </LightningWeb.Components.Form.submit_button>
+            </div>
+
+            <LightningWeb.Components.Form.divider />
+            <div class="text-xs text-secondary-700">
+              <div class="flex">
+                <dix class="flex-none">
+                  <%= link("Log in", to: Routes.user_session_path(@conn, :new)) %>
+                </dix>
+                <div class="grow"></div>
+
+                <div class="flex-none">
+                  <%= link(
+                    "Forgot your password?",
+                    to: Routes.user_reset_password_path(@conn, :new)
+                  ) %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </.form>
+      <div class="grid grid-cols-6 gap-6">
+        <div class="col-span-3"></div>
+      </div>
+    </div>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

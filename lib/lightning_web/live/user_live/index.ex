@@ -17,7 +17,7 @@ defmodule LightningWeb.UserLive.Index do
         {:ok,
          assign(socket, :users, list_users())
          |> assign(:active_menu_item, :users),
-         layout: {LightningWeb.LayoutView, :settings}}
+         layout: {LightningWeb.Layouts, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

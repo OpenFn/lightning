@@ -29,17 +29,14 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_confirmation_instructions(user, url) do
     deliver(user.email, "Confirmation instructions", """
 
-    ==============================
+    Hi #{user.first_name},
 
-    Hi #{user.email},
+    You've just registered for an account on Lightning Beta. Please confirm your account by visiting the URL below:
 
-    You can confirm your account by visiting the URL below:
-
-    #{url}
+    #{url}.
 
     If you didn't create an account with us, please ignore this.
 
-    ==============================
     """)
   end
 
@@ -49,7 +46,6 @@ defmodule Lightning.Accounts.UserNotifier do
   def send_deletion_notification_email(user) do
     deliver(user.email, "Lightning Account Deletion", """
 
-    ==============================
 
     Hi #{user.first_name},
 
@@ -57,7 +53,6 @@ defmodule Lightning.Accounts.UserNotifier do
 
     If you don't want this to happen, please contact #{admin()} as soon as possible.
 
-    ==============================
     """)
   end
 
@@ -84,16 +79,36 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver instructions to update a user email.
   """
-  def deliver_update_email_instructions(user, url) do
-    deliver(user.email, "Update email instructions", """
+  def deliver_update_email_instructions(email, url) do
+    deliver(email, "Update email instructions", """
 
     ==============================
 
-    Hi #{user.email},
+    Hi #{email},
 
     You can change your email by visiting the URL below:
 
     #{url}
+
+    If you didn't request this change, please ignore this.
+
+    ==============================
+    """)
+  end
+
+  @doc """
+  Deliver warning to update a user email.
+  """
+  def deliver_update_email_warning(email, new_email) do
+    deliver(email, "Update email warning", """
+
+    ==============================
+
+    Hi #{email},
+
+    You have requested to change your email
+
+    Please visit your inbox (#{new_email}) to activate your account
 
     If you didn't request this change, please ignore this.
 

@@ -14,8 +14,11 @@ defmodule LightningWeb.ProjectLive.Index do
            socket.assigns.current_user
          ) do
       :ok ->
-        {:ok, socket |> assign(:active_menu_item, :projects),
-         layout: {LightningWeb.LayoutView, :settings}}
+        {:ok,
+         socket
+         |> assign(:active_menu_item, :projects)
+         |> assign(current_user: socket.assigns.current_user),
+         layout: {LightningWeb.Layouts, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

@@ -120,7 +120,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
             class: "p-2 ml-1 mt-1"
 
             ) do %>
-        <Icon.trash class="h-6 w-6 text-black-300 hover:text-rose-700" />
+        <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
       <% end %>
     </div>
     """

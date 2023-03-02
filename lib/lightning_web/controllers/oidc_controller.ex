@@ -4,12 +4,15 @@ defmodule LightningWeb.OidcController do
   alias Lightning.AuthProviders
   alias Lightning.AuthProviders.Handler
   alias Lightning.Accounts
-  alias LightningWeb.UserAuth
+  alias LightningWeb.{UserAuth, OauthCredentialHelper}
 
   action_fallback LightningWeb.FallbackController
 
   plug :fetch_current_user
 
+  @doc """
+  Given a known provider, redirect them to the authorize url on the provider
+  """
   def show(conn, %{"provider" => provider}) do
     with {:ok, handler} <- AuthProviders.get_handler(provider) do
       if conn.assigns.current_user do
@@ -21,6 +24,10 @@ defmodule LightningWeb.OidcController do
     end
   end
 
+  @doc """
+  Once the user has completed the authorization flow from above, they are
+  returned here, and the authorization code is used to log them in.
+  """
   def new(conn, %{"provider" => provider, "code" => code}) do
     with {:ok, handler} <- AuthProviders.get_handler(provider),
          {:ok, token} <- Handler.get_token(handler, code) do
@@ -37,5 +44,17 @@ defmodule LightningWeb.OidcController do
           conn |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
       end
     end
+  end
+
+  def new(conn, %{"state" => state, "code" => code}) do
+    [subscription_id, mod, component_id] =
+      OauthCredentialHelper.decode_state(state)
+
+    OauthCredentialHelper.broadcast_forward(subscription_id, mod,
+      id: component_id,
+      code: code
+    )
+
+    html(conn, "<html><body>You may close this window</body></html>")
   end
 end

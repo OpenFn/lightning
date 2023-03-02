@@ -16,7 +16,7 @@ defmodule Lightning.Application do
     :mnesia.wait_for_tables([:__hammer_backend_mnesia], 60_000)
 
     # Only add the Sentry backend if a dsn is provided.
-    if Application.get_env(:sentry, :included_environments) |> Enum.any?(),
+    if Application.get_env(:sentry, :included_environments, []) |> Enum.any?(),
       do: Logger.add_backend(Sentry.LoggerBackend)
 
     adaptor_registry_childspec =
@@ -26,7 +26,7 @@ defmodule Lightning.Application do
     adaptor_service_childspec =
       {Lightning.AdaptorService,
        [name: :adaptor_service]
-       |> Keyword.merge(Application.get_env(:lightning, :adaptor_service))}
+       |> Keyword.merge(Application.get_env(:lightning, :adaptor_service, []))}
 
     auth_providers_cache_childspec =
       {Cachex,
@@ -68,11 +68,11 @@ defmodule Lightning.Application do
 
     children = [
       {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
-      Lightning.Vault,
+      {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])},
       # Start the Ecto repository
       Lightning.Repo,
       # Start Oban,
-      {Oban, Application.fetch_env!(:lightning, Oban)},
+      {Oban, oban_opts()},
       # Start the Telemetry supervisor
       LightningWeb.Telemetry,
       # Start the PubSub system
@@ -98,5 +98,9 @@ defmodule Lightning.Application do
   def config_change(changed, _new, removed) do
     LightningWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  def oban_opts() do
+    Application.get_env(:lightning, Oban)
   end
 end

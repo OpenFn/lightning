@@ -26,7 +26,9 @@ defmodule LightningWeb.UserConfirmationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "If your email is in our system"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If your email is in our system"
 
       assert Repo.get_by!(Accounts.UserToken, user_id: user.id).context ==
                "confirm"
@@ -44,7 +46,10 @@ defmodule LightningWeb.UserConfirmationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "If your email is in our system"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If your email is in our system"
+
       refute Repo.get_by(Accounts.UserToken, user_id: user.id)
     end
 
@@ -55,7 +60,10 @@ defmodule LightningWeb.UserConfirmationControllerTest do
         })
 
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "If your email is in our system"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "If your email is in our system"
+
       assert Repo.all(Accounts.UserToken) == []
     end
   end
@@ -80,7 +88,10 @@ defmodule LightningWeb.UserConfirmationControllerTest do
 
       conn = post(conn, Routes.user_confirmation_path(conn, :update, token))
       assert redirected_to(conn) == "/"
-      assert get_flash(conn, :info) =~ "User confirmed successfully"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "User confirmed successfully"
+
       assert Accounts.get_user!(user.id).confirmed_at
       refute get_session(conn, :user_token)
       assert Repo.all(Accounts.UserToken) == []
@@ -89,7 +100,7 @@ defmodule LightningWeb.UserConfirmationControllerTest do
       conn = post(conn, Routes.user_confirmation_path(conn, :update, token))
       assert redirected_to(conn) == "/"
 
-      assert get_flash(conn, :error) =~
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "User confirmation link is invalid or it has expired"
 
       # When logged in
@@ -99,17 +110,93 @@ defmodule LightningWeb.UserConfirmationControllerTest do
         |> post(Routes.user_confirmation_path(conn, :update, token))
 
       assert redirected_to(conn) == "/"
-      refute get_flash(conn, :error)
+      refute Phoenix.Flash.get(conn.assigns.flash, :error)
     end
 
     test "does not confirm email with invalid token", %{conn: conn, user: user} do
       conn = post(conn, Routes.user_confirmation_path(conn, :update, "oops"))
       assert redirected_to(conn) == "/"
 
-      assert get_flash(conn, :error) =~
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
                "User confirmation link is invalid or it has expired"
 
       refute Accounts.get_user!(user.id).confirmed_at
+    end
+  end
+
+  describe "GET /profile/confirm_email/:token" do
+    setup %{user: user} do
+      email = unique_user_email()
+
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_update_email_instructions(
+            user,
+            "#{email}",
+            url
+          )
+        end)
+
+      %{token: token, email: email}
+    end
+
+    test "updates the user email once", %{
+      conn: conn,
+      user: user,
+      token: token,
+      email: email
+    } do
+      conn =
+        get(
+          conn |> log_in_user(user),
+          Routes.user_confirmation_path(conn, :confirm_email, token)
+        )
+
+      assert redirected_to(conn) == "/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :info) =~
+               "Email changed successfully."
+
+      assert Accounts.get_user!(user.id).confirmed_at
+      refute Accounts.get_user_by_email(user.email)
+      assert Accounts.get_user_by_email(email)
+
+      conn =
+        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+
+      assert redirected_to(conn) == "/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Email change link is invalid or it has expired."
+    end
+
+    test "does not update email with invalid token", %{conn: conn, user: user} do
+      conn =
+        get(
+          conn |> log_in_user(user),
+          Routes.user_confirmation_path(
+            conn,
+            :confirm_email,
+            "oops"
+          )
+        )
+
+      assert redirected_to(conn) == "/"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
+               "Email change link is invalid or it has expired"
+
+      refute Accounts.get_user!(user.id).confirmed_at
+      assert Accounts.get_user_by_email(user.email)
+    end
+
+    test "redirects if user is not logged in", %{token: token} do
+      conn = build_conn()
+
+      conn =
+        get(conn, Routes.user_confirmation_path(conn, :confirm_email, token))
+
+      assert redirected_to(conn) == Routes.user_session_path(conn, :new)
     end
   end
 end

@@ -1,6 +1,6 @@
-<Layout.page_content>
+<LayoutComponents.page_content>
   <:header>
-    <Layout.header socket={@socket}>
+    <LayoutComponents.header socket={@socket}>
       <:title>Projects</:title>
       <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
         <Common.button>
@@ -10,9 +10,9 @@
           </div>
         </Common.button>
       <% end %>
-    </Layout.header>
+    </LayoutComponents.header>
   </:header>
-  <Layout.centered>
+  <LayoutComponents.centered>
     <%= if @live_action in [:new, :edit] do %>
       <.live_component
         module={LightningWeb.ProjectLive.FormComponent}
@@ -21,6 +21,7 @@
         action={@live_action}
         project={@project}
         users={@users}
+        current_user={@current_user}
         return_to={Routes.project_index_path(@socket, :index)}
       />
     <% else %>
@@ -47,5 +48,5 @@
         </Common.item_bar>
       <% end %>
     <% end %>
-  </Layout.centered>
-</Layout.page_content>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

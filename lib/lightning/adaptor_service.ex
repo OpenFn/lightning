@@ -75,6 +75,7 @@ defmodule Lightning.AdaptorService do
 
   defmodule Repo do
     @moduledoc false
+    require Logger
 
     @callback list_local(path :: String.t()) :: list(Adaptor.t())
     def list_local(path, _depth \\ 4) when is_binary(path) do
@@ -96,6 +97,14 @@ defmodule Lightning.AdaptorService do
           end)
 
         {_, 254} ->
+          Logger.error("""
+          Ensure the adaptors path is correct or run:
+
+          mix lightning.install_runtime
+
+          To create the initial folder structure.
+          """)
+
           raise "No such directory: #{path}"
 
         {stdout, _} ->

@@ -14,7 +14,7 @@ defmodule LightningWeb.AuthProvidersLive.Index do
          ) do
       :ok ->
         {:ok, socket |> assign(:active_menu_item, :authentication),
-         layout: {LightningWeb.LayoutView, :settings}}
+         layout: {LightningWeb.Layouts, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,
@@ -57,13 +57,13 @@ defmodule LightningWeb.AuthProvidersLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layout.page_content>
+    <LayoutComponents.page_content>
       <:header>
-        <Layout.header socket={@socket}>
+        <LayoutComponents.header socket={@socket}>
           <:title>Authentication</:title>
-        </Layout.header>
+        </LayoutComponents.header>
       </:header>
-      <Layout.centered>
+      <LayoutComponents.centered>
         <.live_component
           module={LightningWeb.AuthProvidersLive.FormComponent}
           id={@auth_provider.id || :new}
@@ -71,8 +71,8 @@ defmodule LightningWeb.AuthProvidersLive.Index do
           redirect_host={@redirect_host}
           parent={self()}
         />
-      </Layout.centered>
-    </Layout.page_content>
+      </LayoutComponents.centered>
+    </LayoutComponents.page_content>
     """
   end
 end

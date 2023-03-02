@@ -19,6 +19,11 @@ defmodule LightningWeb.ConnCase do
 
   using do
     quote do
+      # The default endpoint for testing
+      @endpoint LightningWeb.Endpoint
+
+      use LightningWeb, :verified_routes
+
       # Import conveniences for testing with connections
       import Plug.Conn
       import Phoenix.ConnTest
@@ -28,9 +33,6 @@ defmodule LightningWeb.ConnCase do
 
       import Lightning.ModelHelpers
       import Plug.HTML
-
-      # The default endpoint for testing
-      @endpoint LightningWeb.Endpoint
     end
   end
 

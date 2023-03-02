@@ -7,13 +7,39 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   alias Lightning.Accounts
 
   @impl true
-  def update(%{user: user} = assigns, socket) do
+  def update(%{user: user, action: action}, socket) do
     {:ok,
      socket
-     |> assign(:password_changeset, Accounts.change_user_password(user))
-     |> assign(:email_changeset, Accounts.change_user_email(user))
-     |> assign(:user, user)
-     |> assign(assigns)}
+     |> assign(
+       password_changeset: Accounts.change_user_password(user),
+       email_changeset: user |> Accounts.validate_change_user_email(%{}),
+       user: user,
+       action: action
+     )}
+  end
+
+  @impl true
+  def handle_event("change_email", %{"user" => user_params}, socket) do
+    Accounts.validate_change_user_email(socket.assigns.user, user_params)
+    |> Ecto.Changeset.apply_action(:validate)
+    |> case do
+      {:ok, _} ->
+        Accounts.deliver_update_email_instructions(
+          socket.assigns.user,
+          user_params["email"],
+          &Routes.user_confirmation_url(socket, :confirm_email, &1)
+        )
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           "You will receive an email with instructions shortly."
+         )}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :email_changeset, changeset)}
+    end
   end
 
   @impl true
@@ -59,7 +85,7 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   def handle_event("validate_email", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
-      |> Accounts.change_user_email(user_params)
+      |> Accounts.validate_change_user_email(user_params)
       |> Map.put(:action, :validate_email)
 
     {:noreply, assign(socket, :email_changeset, changeset)}

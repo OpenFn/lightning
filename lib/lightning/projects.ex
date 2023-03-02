@@ -6,7 +6,7 @@ defmodule Lightning.Projects do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Projects.{Project, ProjectCredential}
+  alias Lightning.Projects.{Importer, Project, ProjectCredential}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
 
@@ -221,7 +221,6 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  @spec export_project(:yaml, any) :: {:ok, binary}
   @doc """
   Exports a project as yaml.
 
@@ -231,9 +230,25 @@ defmodule Lightning.Projects do
       {:ok, string}
 
   """
+  @spec export_project(:yaml, any) :: {:ok, binary}
   def export_project(:yaml, project_id) do
     {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
 
     {:ok, yaml}
+  end
+
+  @spec import_project(any, any) :: {:ok, binary}
+  @doc """
+  Imports a project as map.
+
+  ## Examples
+
+      iex> import_project(:yaml, project_id)
+      {:ok, string}
+
+  """
+  def import_project(project_data, user) do
+    Importer.import_multi_for_project(project_data, user)
+    |> Repo.transaction()
   end
 end

@@ -89,12 +89,6 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  def hidden_input(assigns) do
-    ~H"""
-    <%= textarea(@form, @id, class: "hidden") %>
-    """
-  end
-
   def password_field(assigns) do
     label_classes = ~w[
       block
@@ -224,7 +218,6 @@ defmodule LightningWeb.Components.Form do
     error_classes = ~w[
       block
       w-full
-      rounded-md
       text-sm
       text-secondary-700
     ]
@@ -271,6 +264,30 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  attr :form, :any, required: true
+  attr :field, :any, required: true
+  attr :opts, :global
+
+  def error(assigns) do
+    error_classes = ~w[
+      block
+      w-full
+      text-sm
+      text-secondary-700
+    ]
+
+    assigns =
+      assigns
+      |> update(:opts, fn opts ->
+        assigns_to_attributes(opts)
+        |> Keyword.put_new(:class, error_classes)
+      end)
+
+    ~H"""
+    <%= error_tag(@form, @field, @opts) %>
+    """
+  end
+
   def check_box(assigns) do
     checkbox_classes = ~w[
       "focus:ring-primary-500
@@ -299,21 +316,23 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
+    opts = assigns_to_attributes(assigns, [:id, :form])
+
     assigns =
       assign(assigns,
-        checkbox_classes: checkbox_classes,
-        error_tag_classes: error_tag_classes,
-        label_classes: label_classes
+        checkbox_opts: opts ++ [class: checkbox_classes],
+        label_opts: opts ++ [class: label_classes],
+        error_tag_opts: opts ++ [class: error_tag_classes]
       )
 
     ~H"""
     <div class="flex items-start">
       <div class="flex items-center h-5">
-        <%= checkbox(@form, @id, class: @checkbox_classes) %>
+        <%= checkbox(@form, @id, @checkbox_opts) %>
       </div>
       <div class="ml-3 text-sm">
-        <%= error_tag(@form, @id, class: @error_tag_classes) %>
-        <%= label(@form, @id, class: @label_classes) %>
+        <%= error_tag(@form, @id, @error_tag_opts) %>
+        <%= label(@form, @id, @label_opts) %>
         <%= if assigns[:inner_block] do %>
           <%= render_slot(@inner_block) %>
         <% end %>
@@ -321,6 +340,12 @@ defmodule LightningWeb.Components.Form do
     </div>
     """
   end
+
+  attr :form, :any, required: true
+  attr :field, :any, required: true
+  attr :title, :string
+  attr :tooltip, :string
+  attr :opts, :global, include: ~w(for value)
 
   def label_field(assigns) do
     label_classes = ~w[
@@ -330,13 +355,28 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
-    assigns = assign(assigns, label_classes: label_classes)
+    assigns =
+      assigns
+      |> update(:opts, fn opts ->
+        assigns_to_attributes(opts)
+        |> Keyword.put_new(:class, label_classes)
+      end)
+      |> assign_new(:title, fn %{field: field} ->
+        humanize(field)
+      end)
 
     ~H"""
-    <%= label(@form, @id, @title,
-      for: @for,
-      class: @label_classes
-    ) %>
+    <%= if assigns[:tooltip] do %>
+      <div class="flex flex-row">
+        <%= label(@form, @field, @title, @opts) %>
+        <LightningWeb.Components.Common.tooltip
+          id={"#{@field}-tooltip"}
+          title={@tooltip}
+        />
+      </div>
+    <% else %>
+      <%= label(@form, @field, @title, @opts) %>
+    <% end %>
     """
   end
 

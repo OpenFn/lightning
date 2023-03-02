@@ -4,6 +4,39 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :class, :string, default: ""
+
+  def tooltip(assigns) do
+    classes = ~w"
+      relative ml-1 cursor-pointer tooltip
+      hover:after:content-[attr(aria-label)]
+      hover:after:absolute
+      hover:after:top-3
+      hover:after:left-3
+      hover:after:min-w-[12rem]
+      hover:after:max-w-fit
+      hover:after:rounded-md
+      hover:after:px-3
+      hover:after:p-2
+      hover:after:z-10
+      hover:after:bg-slate-900
+      hover:after:text-slate-100
+    "
+
+    assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
+
+    ~H"""
+    <span class={@class} id={@id} aria-label={@title}>
+      <Heroicons.information_circle
+        solid
+        class="w-4 h-4 text-primary-600 opacity-50"
+      />
+    </span>
+    """
+  end
+
   def button(assigns) do
     class =
       button_classes(
@@ -219,10 +252,10 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :id, :string, required: true
-  attr :default_hash, :string, required: true
-  attr :orientation, :string, required: true
-  slot :inner_block, required: true
+  attr(:id, :string, required: true)
+  attr(:default_hash, :string, required: true)
+  attr(:orientation, :string, required: true)
+  slot(:inner_block, required: true)
 
   def tab_bar(assigns) do
     horizontal_classes = ~w[
@@ -262,8 +295,8 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :for_hash, :string, required: true
-  slot :inner_block, required: true
+  attr(:for_hash, :string, required: true)
+  slot(:inner_block, required: true)
 
   def panel_content(assigns) do
     ~H"""
@@ -278,9 +311,9 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :hash, :string, required: true
-  attr :orientation, :string, required: true
-  slot :inner_block, required: true
+  attr(:hash, :string, required: true)
+  attr(:orientation, :string, required: true)
+  slot(:inner_block, required: true)
 
   def tab_item(assigns) do
     vertical_classes = ~w[

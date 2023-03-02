@@ -17,9 +17,10 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
       <div class="md:col-span-3">
         <Form.label_field
           form={:adaptor_picker}
-          id={:adaptor_name}
+          field={:adaptor_name}
           title="Adaptor"
           for="adaptor-name"
+          tooltip="Which system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from."
         />
         <Form.select_field
           form={:adaptor_picker}
@@ -35,7 +36,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
       <div class="md:col-span-1">
         <Form.label_field
           form={@form}
-          id={:adaptor_version}
+          field={:adaptor_version}
           title="Version"
           for="adaptor-version"
         />

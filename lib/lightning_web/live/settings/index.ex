@@ -13,7 +13,7 @@ defmodule LightningWeb.SettingsLive.Index do
          ) do
       :ok ->
         {:ok, socket |> assign(:active_menu_item, :settings),
-         layout: {LightningWeb.LayoutView, :settings}}
+         layout: {LightningWeb.Layouts, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,

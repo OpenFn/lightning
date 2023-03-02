@@ -3,7 +3,7 @@ defmodule Lightning.SetupUtils do
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
 
-  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo}
+  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo, Credentials}
 
   import Ecto.Query
 
@@ -88,10 +88,15 @@ defmodule Lightning.SetupUtils do
 
     {:ok, job_1} =
       Jobs.create_job(%{
-        name: "Check if age is over 18 mo",
-        body:
-          "fn(state => state.data.age_in_months > 18 ? state: throw 'Not eligible.');",
-        adaptor: "@openfn/language-http@latest",
+        name: "Job 1 - Check if age is over 18 months",
+        body: "fn(state => {
+  if (state.data.age_in_months > 18) {
+    console.log('Eligible for program.');
+    return state;
+  }
+  else { throw 'Error, patient ineligible.' }
+});",
+        adaptor: "@openfn/language-common@latest",
         trigger: %{type: "webhook"},
         enabled: true,
         workflow_id: workflow.id
@@ -99,23 +104,56 @@ defmodule Lightning.SetupUtils do
 
     {:ok, job_2} =
       Jobs.create_job(%{
-        name: "Convert to OHIE standard",
-        body:
-          "fn(state => ({ name: state.data.age, age: state.data.age_in_months });",
-        adaptor: "@openfn/language-common",
+        name: "Job 2 - Convert data to DHIS2 format",
+        body: "fn(state => {
+  const names = state.data.name.split(' ');
+  return { ...state, names };
+});",
+        adaptor: "@openfn/language-common@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
         enabled: true,
         workflow_id: workflow.id
       })
 
+    project_user = List.first(project_users)
+
+    {:ok, credential} =
+      Credentials.create_credential(%{
+        body: %{
+          username: "admin",
+          password: "district",
+          hostUrl: "https://play.dhis2.org/dev"
+        },
+        name: "DHIS2 play",
+        user_id: project_user.user_id,
+        schema: "dhis2",
+        project_credentials: [
+          %{project_id: project.id}
+        ]
+      })
+
     {:ok, job_3} =
       Jobs.create_job(%{
-        name: "Load to DHIS2",
-        body: "fn(state => state);",
+        name: "Job 3 - Upload to DHIS2",
+        body: "create('trackedEntityInstances', {
+  trackedEntityType: 'nEenWmSyUEp', // a person
+  orgUnit: 'DiszpKrYNg8',
+  attributes: [
+    {
+      attribute: 'w75KJ2mc4zz', // attribute id for first name
+      value: state.names[0] // the first name from submission
+    },
+    {
+      attribute: 'zDhUuAYrxNC', // attribute id for last name
+      value: state.names[1] // the last name from submission
+    }
+  ]
+});",
         adaptor: "@openfn/language-dhis2@latest",
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
-        workflow_id: workflow.id
+        workflow_id: workflow.id,
+        project_credential_id: List.first(credential.project_credentials).id
       })
 
     %{

@@ -113,4 +113,6 @@ COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 
 USER lightning
 
+ENV SCHEMAS_PATH="/app/priv/schemas"
+
 CMD /app/bin/server

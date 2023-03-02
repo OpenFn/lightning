@@ -12,7 +12,7 @@ defmodule LightningWeb.DashboardLiveTest do
     test "User is assigned no project", %{
       conn: conn
     } do
-      {:ok, _view, html} = live(conn, Routes.dashboard_index_path(conn, :index))
+      {:ok, _view, html} = live(conn, ~p"/")
 
       assert html =~
                "No projects found. If this seems odd, contact your instance administrator."
@@ -24,25 +24,18 @@ defmodule LightningWeb.DashboardLiveTest do
     test "Side menu has credentials and user profile navigation", %{
       conn: conn
     } do
-      {:ok, index_live, _html} =
-        live(conn, Routes.dashboard_index_path(conn, :index))
+      {:ok, index_live, _html} = live(conn, ~p"/")
 
       assert {:ok, profile_live, _html} =
                index_live
                |> element("nav#side-menu a", "User Profile")
                |> render_click()
-               |> follow_redirect(
-                 conn,
-                 Routes.profile_edit_path(conn, :edit)
-               )
+               |> follow_redirect(conn, ~p"/profile")
 
       assert profile_live
              |> element("nav#side-menu a", "Credentials")
              |> render_click()
-             |> follow_redirect(
-               conn,
-               Routes.credential_index_path(conn, :index)
-             )
+             |> follow_redirect(conn, ~p"/credentials")
     end
   end
 
@@ -55,11 +48,8 @@ defmodule LightningWeb.DashboardLiveTest do
       project: project
     } do
       {:ok, _view, html} =
-        live(conn, Routes.dashboard_index_path(conn, :index))
-        |> follow_redirect(
-          conn,
-          Routes.project_workflow_path(conn, :index, project.id)
-        )
+        live(conn, ~p"/")
+        |> follow_redirect(conn, ~p"/projects/#{project.id}/w")
 
       assert html =~ "Create a workflow"
     end

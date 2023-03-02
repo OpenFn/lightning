@@ -71,6 +71,20 @@ defmodule Lightning.AccountsTest do
              } = errors_on(changeset)
     end
 
+    test "requires terms and conditions to be accepted" do
+      {:error, changeset} = Accounts.register_user(%{terms_accepted: false})
+
+      assert %{
+               terms_accepted: [
+                 "Please accept the terms and conditions to register."
+               ]
+             } = errors_on(changeset)
+
+      {:error, changeset} = Accounts.register_user(%{terms_accepted: true})
+
+      assert %{} = errors_on(changeset)
+    end
+
     test "validates email and password when given" do
       {:error, changeset} =
         Accounts.register_user(%{email: "not valid", password: "not valid"})
@@ -114,7 +128,35 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "register_superuser/1" do
-    test "registers users with a hashed password and sets role to :admin" do
+    test "requires email and password to be set" do
+      {:error, changeset} = Accounts.register_superuser(%{})
+
+      assert %{
+               password: ["can't be blank"],
+               email: ["can't be blank"]
+             } = errors_on(changeset)
+    end
+
+    test "validates email and password when given" do
+      {:error, changeset} =
+        Accounts.register_superuser(%{email: "not valid", password: "not valid"})
+
+      assert %{
+               email: ["must have the @ sign and no spaces"]
+             } = errors_on(changeset)
+    end
+
+    test "validates maximum values for email and password for security" do
+      too_long = String.duplicate("db@db.sn", 100)
+
+      {:error, changeset} =
+        Accounts.register_superuser(%{email: too_long, password: too_long})
+
+      assert "should be at most 160 character(s)" in errors_on(changeset).email
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
+    end
+
+    test "registers users with a hashed password and sets role to :superuser" do
       email = unique_user_email()
 
       {:ok, user} =
@@ -134,8 +176,7 @@ defmodule Lightning.AccountsTest do
 
   describe "change_user_registration/2" do
     test "returns a changeset" do
-      assert %Ecto.Changeset{} =
-               changeset = Accounts.change_user_registration(%User{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration()
 
       assert changeset.required == [:password, :email, :first_name]
     end
@@ -146,7 +187,30 @@ defmodule Lightning.AccountsTest do
 
       changeset =
         Accounts.change_user_registration(
-          %User{},
+          valid_user_attributes(email: email, password: password)
+        )
+
+      assert changeset.valid?
+      assert get_change(changeset, :email) == email
+      assert get_change(changeset, :password) == password
+      assert is_nil(get_change(changeset, :hashed_password))
+    end
+  end
+
+  describe "change_superuser_registration/2" do
+    test "returns a changeset" do
+      assert %Ecto.Changeset{} =
+               changeset = Accounts.change_superuser_registration()
+
+      assert changeset.required == [:password, :email, :first_name]
+    end
+
+    test "allows fields to be set" do
+      email = unique_user_email()
+      password = valid_user_password()
+
+      changeset =
+        Accounts.change_superuser_registration(
           valid_user_attributes(email: email, password: password)
         )
 
@@ -322,21 +386,22 @@ defmodule Lightning.AccountsTest do
                Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
-      assert user_token.sent_to == user.email
-      assert user_token.context == "change:current@example.com"
+      assert user_token.sent_to == "current@example.com"
+      assert user_token.context == "change:#{user.email}"
     end
   end
 
   describe "update_user_email/2" do
     setup do
       user = user_fixture()
+      # email = "current@example.com"
       email = unique_user_email()
 
       token =
         extract_user_token(fn url ->
           Accounts.deliver_update_email_instructions(
-            %{user | email: email},
-            user.email,
+            user,
+            email,
             url
           )
         end)
@@ -349,30 +414,25 @@ defmodule Lightning.AccountsTest do
       token: token,
       email: email
     } do
-      assert Accounts.update_user_email(user, token) == :ok
-      changed_user = Repo.get!(User, user.id)
+      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+      assert {:ok, changed_user} = Accounts.update_user_email(user, token)
+
       assert changed_user.email != user.email
       assert changed_user.email == email
       assert changed_user.confirmed_at
+      assert changed_user.confirmed_at >= now
       assert changed_user.confirmed_at != user.confirmed_at
-      refute Repo.get_by(UserToken, user_id: user.id)
+
+      assert Accounts.update_user_email(user, token) == :error,
+             "Attempting to reuse the same token should return :error"
+
+      refute Repo.get_by(UserToken, user_id: user.id),
+             "The token should not exist after using it"
     end
 
     test "does not update email with invalid token", %{user: user} do
       assert Accounts.update_user_email(user, "oops") == :error
-      assert Repo.get!(User, user.id).email == user.email
-      assert Repo.get_by(UserToken, user_id: user.id)
-    end
-
-    test "does not update email if user email changed", %{
-      user: user,
-      token: token
-    } do
-      assert Accounts.update_user_email(
-               %{user | email: "current@example.com"},
-               token
-             ) == :error
-
       assert Repo.get!(User, user.id).email == user.email
       assert Repo.get_by(UserToken, user_id: user.id)
     end

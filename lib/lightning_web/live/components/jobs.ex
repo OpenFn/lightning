@@ -10,13 +10,15 @@ defmodule LightningWeb.Components.Jobs do
         credentials:
           assigns.credentials |> Enum.map(&{&1.credential.name, &1.id})
       )
+      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <.label_field
       form={@form}
-      id={:project_credential_id}
+      field={:project_credential_id}
       title="Credential"
       for="credentialField"
+      tooltip="How to connect. The credentials you need for authentication in the selected system."
     />
     <%= error_tag(@form, :project_credential_id, class: "block w-full rounded-md") %>
     <.select_field
@@ -25,6 +27,7 @@ defmodule LightningWeb.Components.Jobs do
       id="credentialField"
       prompt=""
       values={@credentials}
+      disabled={@disabled}
     />
     """
   end

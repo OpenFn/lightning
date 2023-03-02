@@ -108,27 +108,6 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
-  Registers a superuser.
-
-  ## Examples
-      iex> register_superuser(%{field: value})
-      {:ok, %User{}}
-
-      iex> register_superuser(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-  """
-
-  def register_superuser(attrs) do
-    %User{}
-    |> User.superuser_registration_changeset(attrs)
-    |> Repo.insert()
-  end
-
-  def change_superuser(%User{} = user, attrs \\ %{}) do
-    User.superuser_registration_changeset(user, attrs)
-  end
-
-  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -162,8 +141,47 @@ defmodule Lightning.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
-  ## User registration
+  @doc """
+  Registers a superuser.
 
+  ## Examples
+      iex> register_superuser(%{field: value})
+      {:ok, %User{}}
+
+      iex> register_superuser(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+  """
+
+  def register_superuser(attrs) do
+    User.superuser_registration_changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, data} ->
+        struct(User, data) |> Repo.insert()
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking superuser changes.
+
+  ## Examples
+
+      iex> change_superuser_registration(user)
+      %Ecto.Changeset{data: %User{}}
+
+  """
+  @spec change_superuser_registration(any) :: Ecto.Changeset.t()
+  def change_superuser_registration(attrs \\ %{}) do
+    User.superuser_registration_changeset(attrs, hash_password: false)
+  end
+
+  @spec register_user(
+          :invalid
+          | %{optional(:__struct__) => none, optional(atom | binary) => any}
+        ) :: any
   @doc """
   Registers a user.
 
@@ -177,9 +195,15 @@ defmodule Lightning.Accounts do
 
   """
   def register_user(attrs) do
-    %User{}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
+    User.user_registration_changeset(attrs)
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, data} ->
+        struct(User, data) |> Repo.insert()
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -191,8 +215,8 @@ defmodule Lightning.Accounts do
       %Ecto.Changeset{data: %User{}}
 
   """
-  def change_user_registration(%User{} = user, attrs \\ %{}) do
-    User.registration_changeset(user, attrs, hash_password: false)
+  def change_user_registration(attrs \\ %{}) do
+    User.user_registration_changeset(attrs, hash_password: false)
   end
 
   def change_user_details(%User{} = user, attrs \\ %{}) do
@@ -262,9 +286,11 @@ defmodule Lightning.Accounts do
 
     with {:ok, query} <-
            UserToken.verify_change_email_token_query(token, context),
-         %UserToken{sent_to: email} <- Repo.one(query),
-         {:ok, _} <- Repo.transaction(user_email_multi(user, email, context)) do
-      :ok
+         %UserToken{context: context, sent_to: email} <-
+           Repo.one(query),
+         {:ok, %{user: user}} <-
+           Repo.transaction(user_email_multi(user, email, context)) do
+      {:ok, user}
     else
       _ -> :error
     end
@@ -300,14 +326,52 @@ defmodule Lightning.Accounts do
       )
       when is_function(update_email_url_fun, 1) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "change:#{current_email}")
+      UserToken.build_email_token(user, "change:#{user.email}", current_email)
 
     Repo.insert!(user_token)
 
+    UserNotifier.deliver_update_email_warning(
+      user.email,
+      current_email
+    )
+
     UserNotifier.deliver_update_email_instructions(
-      user,
+      current_email,
       update_email_url_fun.(encoded_token)
     )
+  end
+
+  def validate_change_user_email(user, params) do
+    data = %{email: nil, current_password: nil}
+    types = %{email: :string, current_password: :string}
+
+    {data, types}
+    |> Ecto.Changeset.cast(params, Map.keys(types))
+    |> Ecto.Changeset.validate_required([:email, :current_password])
+    |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
+      message: "must have the @ sign and no spaces"
+    )
+    |> Ecto.Changeset.validate_length(:email, max: 160)
+    |> Ecto.Changeset.validate_change(:email, fn :email, email ->
+      cond do
+        user.email == email ->
+          [email: "Please change your email"]
+
+        Lightning.Repo.exists?(User |> where(email: ^email)) ->
+          [email: "Email already exists"]
+
+        true ->
+          []
+      end
+    end)
+    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
+                                                            password ->
+      if Bcrypt.verify_pass(password, user.hashed_password) do
+        []
+      else
+        [current_password: "Password does not match"]
+      end
+    end)
   end
 
   @doc """
@@ -502,7 +566,9 @@ defmodule Lightning.Accounts do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
+      {encoded_token, user_token} =
+        UserToken.build_email_token(user, "confirm", user.email)
+
       Repo.insert!(user_token)
 
       UserNotifier.deliver_confirmation_instructions(
@@ -554,7 +620,7 @@ defmodule Lightning.Accounts do
       )
       when is_function(reset_password_url_fun, 1) do
     {encoded_token, user_token} =
-      UserToken.build_email_token(user, "reset_password")
+      UserToken.build_email_token(user, "reset_password", user.email)
 
     Repo.insert!(user_token)
 

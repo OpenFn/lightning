@@ -10,9 +10,9 @@ defmodule LightningWeb.WorkflowLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layout.page_content>
+    <LayoutComponents.page_content>
       <:header>
-        <Layout.header socket={@socket}>
+        <LayoutComponents.header socket={@socket}>
           <:title>
             <%= @page_title %>
             <%= case @live_action do %>
@@ -38,14 +38,14 @@ defmodule LightningWeb.WorkflowLive do
                 </div>
             <% end %>
           </:title>
-        </Layout.header>
+        </LayoutComponents.header>
       </:header>
       <div class="relative h-full flex">
         <%= case @live_action do %>
           <% :index -> %>
-            <Layout.centered>
+            <LayoutComponents.centered>
               <.workflow_list workflows={@workflows} project={@project} />
-            </Layout.centered>
+            </LayoutComponents.centered>
           <% :new_job -> %>
             <div class="grow">
               <.workflow_diagram
@@ -169,7 +169,7 @@ defmodule LightningWeb.WorkflowLive do
           <% _ -> %>
         <% end %>
       </div>
-    </Layout.page_content>
+    </LayoutComponents.page_content>
     """
   end
 
@@ -274,6 +274,13 @@ defmodule LightningWeb.WorkflowLive do
          socket.assigns.builder_state
          |> Map.merge(%{dataclip: dataclip, job_id: job_id})
      )}
+  end
+
+  # A generic handler for forwarding updates from PubSub
+  @impl true
+  def handle_info({:forward, mod, opts}, socket) do
+    send_update(mod, opts)
+    {:noreply, socket}
   end
 
   @impl true

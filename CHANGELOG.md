@@ -10,6 +10,40 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+- Upgraded to Phoenix 1.7 (3945856)
+
+### Fixed
+
+## [0.4.2] - 2023-02-24
+
+### Added
+
+- A user can change their own email
+  [#247](https://github.com/OpenFn/Lightning/issues/247)
+- Added a `SCHEMAS_PATH` environment variable to override the default folder
+  location for credential schemas
+  [#604](https://github.com/OpenFn/Lightning/issues/604)
+- Added the ability to configure Google Sheets credentials
+  [#536](https://github.com/OpenFn/Lightning/issues/536)
+- Function to import a project
+  [#574](https://github.com/OpenFn/Lightning/issues/574)
+
+### Changed
+
+- Users cannot register if they have not selected the terms and conditions
+  [#531](https://github.com/OpenFn/Lightning/issues/531)
+
+### Fixed
+
+- Jobs panel slow for first open after restart
+  [#567](https://github.com/OpenFn/Lightning/issues/567) =======
+
+## [0.4.0] - 2023-02-08
+
+### Added
+
 - Added a Delete job button in Inspector
 - Filter workflow runs by text/value in run logs or input body
 - Drop "configuration" key from Run output dataclips after completion
@@ -52,6 +86,10 @@ and this project adheres to
 - Add project settings page
 - Change Workorder filters to apply to the aggregate state of the workorder and
   not the run directly
+- Enable jobs by default
+- Set log level to info
+- Add Beta checkbox to register page
+- User roles and permissions
 
 ### Fixed
 
