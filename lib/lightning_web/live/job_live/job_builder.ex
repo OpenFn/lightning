@@ -186,7 +186,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 phx-target={@myself}
               />
               <div class="flex-1 overflow-auto">
-                <.docs_component adaptor={@resolved_job_adaptor} />
+                <%!-- <.docs_component adaptor={@resolved_job_adaptor} /> --%>
+                <.explorer_component adaptor={@resolved_job_adaptor} />
               </div>
             </div>
           </LightningWeb.Components.Common.panel_content>
