@@ -4,15 +4,16 @@
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="ExDoc v0.29.0">
+    <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.4.2">
 
     <title>LightningWeb.ModalPortal — Lightning v0.4.2</title>
-    <link rel="stylesheet" href="dist/html-elixir-2YOS5DIE.css" />
+    <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
+
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
-    <script src="dist/handlebars.templates-X7YVL3G2.js"></script>
-    <script src="dist/sidebar_items-8D4F24FD.js"></script>
+    <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
+    <script src="dist/sidebar_items-8ED163DB.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -51,7 +52,7 @@
     </button>
     <label class="search-label">
       <p class="sr-only">Search</p>
-      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
     </label>
   </form>
 
@@ -95,13 +96,13 @@ Lightning
     <div id="content" class="content-inner">
 
 <h1>
-<button class="settings display-settings">
+<button class="icon-action display-settings">
   <i class="ri-settings-3-line"></i>
   <span class="sr-only">Settings</span>
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L1" title="View Source" class="view-source" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
@@ -125,59 +126,58 @@ Lightning
       </a>
       Summary
     </h1>
+<div class="summary-functions summary">
+  <h2>
+    <a href="#functions">Functions</a>
+  </h2>
 
-  <div class="summary-functions summary">
-    <h2>
-      <a href="#functions">Functions</a>
-    </h2>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#close_modal/0" translate="no">close_modal()</a>
-
-        </div>
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#close_modal/0" translate="no">close_modal()</a>
 
       </div>
 
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#handle_event/3" translate="no">handle_event(binary, _, socket)</a>
+    </div>
 
-        </div>
-
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveComponent.html#c:handle_event/3"><code class="inline">Phoenix.LiveComponent.handle_event/3</code></a>.</p></div>
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#handle_event/3" translate="no">handle_event(binary, _, socket)</a>
 
       </div>
 
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#render/1" translate="no">render(assigns)</a>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.16/Phoenix.LiveComponent.html#c:handle_event/3"><code class="inline">Phoenix.LiveComponent.handle_event/3</code></a>.</p></div>
 
-        </div>
+    </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p></div>
-
-      </div>
-
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#show_modal/2" translate="no">show_modal(module, attrs)</a>
-
-        </div>
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#render/1" translate="no">render(assigns)</a>
 
       </div>
 
-      <div class="summary-row">
-        <div class="summary-signature">
-          <a href="#update/2" translate="no">update(assigns, socket)</a>
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.16/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p></div>
 
-        </div>
+    </div>
 
-          <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveComponent.html#c:update/2"><code class="inline">Phoenix.LiveComponent.update/2</code></a>.</p></div>
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#show_modal/2" translate="no">show_modal(module, attrs)</a>
 
       </div>
 
-  </div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#update/2" translate="no">update(assigns, socket)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.16/Phoenix.LiveComponent.html#c:update/2"><code class="inline">Phoenix.LiveComponent.update/2</code></a>.</p></div>
+
+    </div>
+
+</div>
 
   </section>
 
@@ -200,7 +200,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">close_modal()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L14" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L14" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -222,7 +222,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">handle_event(binary, _, socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L40" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L40" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -232,7 +232,7 @@ Functions
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveComponent.html#c:handle_event/3"><code class="inline">Phoenix.LiveComponent.handle_event/3</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.16/Phoenix.LiveComponent.html#c:handle_event/3"><code class="inline">Phoenix.LiveComponent.handle_event/3</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="render/1">
@@ -244,7 +244,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">render(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L18" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L18" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -254,7 +254,7 @@ Functions
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.16/Phoenix.LiveComponent.html#c:render/1"><code class="inline">Phoenix.LiveComponent.render/1</code></a>.</p>
   </section>
 </section>
 <section class="detail" id="show_modal/2">
@@ -266,7 +266,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">show_modal(module, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L7" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L7" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -288,7 +288,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">update(assigns, socket)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L44" class="view-source" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/modal_portal.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -298,7 +298,7 @@ Functions
 
   <section class="docstring">
 
-<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.3/Phoenix.LiveComponent.html#c:update/2"><code class="inline">Phoenix.LiveComponent.update/2</code></a>.</p>
+<p>Callback implementation for <a href="https://hexdocs.pm/phoenix_live_view/0.18.16/Phoenix.LiveComponent.html#c:update/2"><code class="inline">Phoenix.LiveComponent.update/2</code></a>.</p>
   </section>
 </section>
 
@@ -306,10 +306,23 @@ Functions
   </section>
 
       <footer class="footer">
-
         <p>
+
+          <span class="line">
+            <button class="a-main footer-button display-quick-switch" title="Search HexDocs packages">
+              Search HexDocs
+            </button>
+
+              <a href="Lightning.epub" title="ePub version">
+                Download ePub version
+              </a>
+
+          </span>
+        </p>
+
+        <p class="built-using">
           Built using
-          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.0) for the
+          <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.29.1) for the
 
             <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>
 
