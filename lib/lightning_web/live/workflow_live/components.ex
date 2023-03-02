@@ -74,25 +74,17 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="text-sm font-semibold text-gray-500 pb-4">
         Create your first job to get started.
       </div>
-      <div class="text-xs text-gray-400">
-        <.link patch={
-          Routes.project_workflow_path(
-            @socket,
-            :new_job,
-            @project.id,
-            @workflow.id
-          )
-        }>
-          <Common.button>
-            <div class="h-full">
-              <Heroicons.plus class="h-4 w-4 inline-block" />
-              <span class="inline-block align-middle">
-                Create job
-              </span>
-            </div>
-          </Common.button>
-        </.link>
-      </div>
+      <LightningWeb.Components.Common.button
+        phx-click="create-job"
+        disabled={!@can_create_job}
+      >
+        <div class="h-full">
+          <Heroicons.plus class="h-4 w-4 inline-block" />
+          <span class="inline-block align-middle">
+            Create job
+          </span>
+        </div>
+      </LightningWeb.Components.Common.button>
     </div>
     """
   end
