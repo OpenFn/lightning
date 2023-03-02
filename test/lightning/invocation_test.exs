@@ -880,7 +880,7 @@ defmodule Lightning.InvocationTest do
                    :timeout,
                    :crash
                  ],
-                 searchfors: [],
+                 search_fields: [],
                  search_term: "",
                  workflow_id: "",
                  date_after: "",
@@ -899,7 +899,7 @@ defmodule Lightning.InvocationTest do
                    :timeout,
                    :crash
                  ],
-                 searchfors: [],
+                 search_fields: [],
                  search_term: "",
                  workflow_id: "",
                  date_after: "",
@@ -918,7 +918,7 @@ defmodule Lightning.InvocationTest do
                    :timeout,
                    :crash
                  ],
-                 searchfors: [],
+                 search_fields: [],
                  search_term: "",
                  workflow_id: "",
                  date_after: "",
@@ -1040,7 +1040,7 @@ defmodule Lightning.InvocationTest do
       },
       [
         status: status,
-        searchfors: [],
+        search_fields: [],
         search_term: "",
         workflow_id: "",
         date_after: "",

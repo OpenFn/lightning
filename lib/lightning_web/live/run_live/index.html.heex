@@ -72,12 +72,14 @@
               </button>
             </div>
             <.live_component
-              id="run-searchfor-select"
+              id="run-search-field-select"
               module={Lightning.RunLive.RunSearchForComponent}
-              searchfor_options={@searchfor_options}
+              search_field_options={@search_field_options}
               form={f}
               selected={
-                fn options -> send(self(), {:selected_searchfors, options}) end
+                fn options ->
+                  send(self(), {:selected_search_fields, options})
+                end
               }
             />
           </div>

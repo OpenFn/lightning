@@ -13,7 +13,7 @@ defmodule Lightning.RunSearchForm do
     field :workflow_id, :string
     embeds_one :workflow, Lightning.Workflows.Workflow
     embeds_many :status_options, Lightning.RunSearchForm.MultiSelectOption
-    embeds_many :searchfor_options, Lightning.RunSearchForm.MultiSelectOption
+    embeds_many :search_field_options, Lightning.RunSearchForm.MultiSelectOption
   end
 
   defmodule MultiSelectOption do

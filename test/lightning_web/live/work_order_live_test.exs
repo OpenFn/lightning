@@ -592,13 +592,13 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "input#run-search-form_searchfor_options_0_selected[checked]"
+               "input#run-search-form_search_field_options_0_selected[checked]"
              )
              |> has_element?()
 
       assert view
              |> element(
-               "input#run-search-form_searchfor_options_1_selected[checked]"
+               "input#run-search-form_search_field_options_1_selected[checked]"
              )
              |> has_element?()
     end
@@ -1194,9 +1194,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       checked = type in types
 
       view
-      |> element("input#run-search-form_searchfor_options_#{index}_selected")
+      |> element("input#run-search-form_search_field_options_#{index}_selected")
       |> render_change(%{
-        "run_search_form[searchfor_options][#{index}][selected]" => checked
+        "run_search_form[search_field_options][#{index}][selected]" => checked
       })
     end
 

@@ -372,14 +372,14 @@ defmodule Lightning.Invocation do
     end)
   end
 
-  def filter_run_body_and_logs_where(search_term, searchfors)
-      when search_term in ["", nil] or searchfors == [] do
+  def filter_run_body_and_logs_where(search_term, search_fields)
+      when search_term in ["", nil] or search_fields == [] do
     dynamic(true)
   end
 
-  def filter_run_body_and_logs_where(search_term, searchfors)
-      when searchfors != [] do
-    Enum.reduce(searchfors, dynamic(false), fn
+  def filter_run_body_and_logs_where(search_term, search_fields)
+      when search_fields != [] do
+    Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
         dynamic(
           [runs: r],
@@ -403,7 +403,7 @@ defmodule Lightning.Invocation do
   def list_work_orders_for_project_query(
         %Project{id: project_id},
         status: status,
-        searchfors: searchfors,
+        search_fields: search_fields,
         search_term: search_term,
         workflow_id: workflow_id,
         date_after: date_after,
@@ -460,7 +460,7 @@ defmodule Lightning.Invocation do
       where: ^filter_workorder_insert_before_where(wo_date_before),
       where: ^filter_run_finished_after_where(date_after),
       where: ^filter_run_finished_before_where(date_before),
-      where: ^filter_run_body_and_logs_where(search_term, searchfors),
+      where: ^filter_run_body_and_logs_where(search_term, search_fields),
       select: %{
         id: wo.id,
         last_finished_at:
@@ -530,7 +530,7 @@ defmodule Lightning.Invocation do
       project,
       [
         status: [:success, :failure, :timeout, :crash, :pending],
-        searchfors: [],
+        search_fields: [],
         search_term: "",
         workflow_id: "",
         date_after: "",
@@ -552,7 +552,7 @@ defmodule Lightning.Invocation do
       project,
       [
         status: [:success, :failure, :timeout, :crash, :pending],
-        searchfors: [],
+        search_fields: [],
         search_term: "",
         workflow_id: "",
         date_after: "",

@@ -9,8 +9,8 @@ defmodule Lightning.RunLive.RunSearchForComponent do
 
   def render(assigns) do
     ~H"""
-    <div class="my-4" id={"#{@id}-searchfor_options-container"}>
-      <%= inputs_for @form, :searchfor_options, fn opt -> %>
+    <div class="my-4" id={"#{@id}-search_field_options-container"}>
+      <%= inputs_for @form, :search_field_options, fn opt -> %>
         <div class="form-check">
           <div class="selectable-option">
             <%= checkbox(opt, :selected,
@@ -31,7 +31,7 @@ defmodule Lightning.RunLive.RunSearchForComponent do
   @impl true
   def update(assigns, socket) do
     %{
-      searchfor_options: searchfor_options,
+      search_field_options: search_field_options,
       form: form,
       id: id,
       selected: selected
@@ -42,7 +42,7 @@ defmodule Lightning.RunLive.RunSearchForComponent do
       |> assign(:id, id)
       |> assign(:form, form)
       |> assign(:selected, selected)
-      |> assign(:searchfor_options, searchfor_options)
+      |> assign(:search_field_options, search_field_options)
 
     {:ok, socket}
   end
@@ -50,16 +50,16 @@ defmodule Lightning.RunLive.RunSearchForComponent do
   @impl true
   def handle_event(
         "checked",
-        %{"run_search_form" => %{"searchfor_options" => values}},
+        %{"run_search_form" => %{"search_field_options" => values}},
         socket
       ) do
     [{index, %{"selected" => selected?}}] = Map.to_list(values)
     index = String.to_integer(index)
-    current_option = Enum.at(socket.assigns.searchfor_options, index)
+    current_option = Enum.at(socket.assigns.search_field_options, index)
 
     selected_statuses =
       List.replace_at(
-        socket.assigns.searchfor_options,
+        socket.assigns.search_field_options,
         index,
         %{current_option | selected: selected?}
       )
