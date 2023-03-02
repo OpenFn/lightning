@@ -176,6 +176,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
+                can_edit_job={@can_edit_job}
+                return_to={@return_to}
               />
             <% else %>
               <p>Please save your Job first.</p>
