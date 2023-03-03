@@ -8,13 +8,17 @@ config :bcrypt_elixir, :log_rounds, 1
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
+#
+# On certain machines we get db queue timeouts, so we raise `queue_target`
+# from 50 to 100 to give the DBConnection some room to respond.
 config :lightning, Lightning.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
   database: "lightning_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 15
+  pool_size: 15,
+  queue_target: 100
 
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="

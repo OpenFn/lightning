@@ -47,7 +47,12 @@ config :lightning, Oban,
     scheduler: 1,
     workflow_failures: 1,
     background: 1,
-    runs: System.get_env("GLOBAL_RUNS_CONCURRENCY", "1") |> String.to_integer()
+    runs:
+      System.get_env(
+        "GLOBAL_RUNS_CONCURRENCY",
+        :erlang.system_info(:logical_processors_available) |> to_string()
+      )
+      |> String.to_integer()
   ]
 
 # https://plausible.io/ is an open-source, privacy-friendly alternative to
@@ -206,5 +211,5 @@ if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
   config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:logical_processors_available)
+    pool_size: :erlang.system_info(:logical_processors_available) + 2
 end
