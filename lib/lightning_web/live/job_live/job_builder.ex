@@ -193,7 +193,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 phx-hook="Editor"
                 phx-update="ignore"
                 id={"job-editor-#{@job_id}"}
-                class=" rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
+                class="rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
                 data-adaptor={@resolved_job_adaptor}
                 data-source={@job_body}
                 data-change-event="job_body_changed"

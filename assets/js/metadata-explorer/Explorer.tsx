@@ -55,11 +55,10 @@ const Entity = ({ data, level }) => {
 }
 
 type MetadataExplorerProps = {
-  metadata: any;
+  metadata?: any;
 }
 
 export default ({ metadata }: MetadataExplorerProps) => {
-  console.log(metadata)
   // const [filter, setFilter] = useState({ hideSystem: true });
   const [data, setData] = useState({ children: [] });
 
@@ -82,6 +81,11 @@ export default ({ metadata }: MetadataExplorerProps) => {
   // });
 
   useEffect(() => update(), [/*filter*/])
+
+
+  if (!metadata) {
+    return <div>No metadata found</div>
+  }
   
   return (
     <>
