@@ -259,12 +259,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 confirm:
                   "This action is irreversible, are you sure you want to continue?"
               ]}
-              title={
-                if @is_deletable,
-                  do: "Delete this job",
-                  else:
-                    "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
-              }
+              title={delete_title(@is_deletable, @can_edit_job)}
               color="red"
             />
           <% end %>
@@ -272,6 +267,19 @@ defmodule LightningWeb.JobLive.JobBuilder do
       </div>
     </div>
     """
+  end
+
+  def delete_title(is_deletable, can_delete_job) do
+    case {is_deletable, can_delete_job} do
+      {true, true} ->
+        "Delete this job"
+
+      {false, true} ->
+        "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
+
+      {_, false} ->
+        "You are not authorized to perform this action."
+    end
   end
 
   @impl true
@@ -456,6 +464,22 @@ defmodule LightningWeb.JobLive.JobBuilder do
         |> Ecto.Changeset.apply_changes()
       )
 
+    can_edit_job =
+      ProjectUsers
+      |> Permissions.can(
+        :edit_job,
+        current_user,
+        project
+      )
+
+    can_delete_job =
+      ProjectUsers
+      |> Permissions.can(
+        :delete_job,
+        current_user,
+        project
+      )
+
     {:ok,
      socket
      |> assign(
@@ -474,13 +498,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        builder_state: builder_state,
        upstream_jobs: upstream_jobs,
        is_deletable: is_deletable(job),
-       can_edit_job:
-         ProjectUsers
-         |> Permissions.can(
-           :edit_jobs,
-           current_user,
-           project
-         )
+       can_edit_job: can_edit_job,
+       can_delete_job: can_delete_job
      )
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)

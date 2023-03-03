@@ -10,6 +10,7 @@ defmodule LightningWeb.DashboardLive.Index do
     {:ok, socket |> assign(active_menu_item: :projects)}
   end
 
+  # used on mounted and on pushstate loosely equivalent to update/2
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,

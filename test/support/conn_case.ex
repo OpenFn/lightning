@@ -124,7 +124,7 @@ defmodule LightningWeb.ConnCase do
       |> Ecto.Changeset.put_assoc(:project_users, project_users)
       |> Lightning.Repo.update()
 
-    log_in_user(conn, user)
+    {log_in_user(conn, user), user}
   end
 
   @doc """

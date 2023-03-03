@@ -302,4 +302,35 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
                )
            ) =~ "<option selected value=\"#{d4.id}\">#{d4.id}</option>"
   end
+
+  test "project viewers can't run a job from the inspector", %{
+    conn: conn,
+    project: project
+  } do
+    {conn, _user} = setup_project_user(conn, project, :viewer)
+
+    job =
+      workflow_job_fixture(
+        project_id: project.id,
+        body: ~s[fn(state => { return {...state, extra: "data"} })]
+      )
+
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
+      )
+
+    assert view
+           |> element("button[phx-click='confirm'][disabled]")
+           |> has_element?()
+
+    # TODO: test the LightningWeb.JobLive.ManualRunComponent.handle_event("confirm", params, socket)
+    """
+    The following code is the pattern we use to test the `handle_event/3` functions. But for reasons related to the `phx-target`, I couldn't succeed testing this one.
+    I have tried using the `with_target/2` function but it didn't succeed.
+
+    `assert view |> render_click("confirm", %{_target: "id?"}) =~ "You are not authorized to perform this action."`
+    """
+  end
 end

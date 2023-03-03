@@ -168,33 +168,41 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   @impl true
-  def handle_event("confirm", _params, socket) do
-    if socket.assigns.can_edit_job do
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
-      |> create_manual_workorder()
-      |> case do
-        {:ok, %{attempt_run: attempt_run}} ->
-          socket.assigns.on_run.(attempt_run)
+  def handle_event(
+        "confirm",
+        _params,
+        %{assigns: %{can_edit_job: true}} = socket
+      ) do
+    socket.assigns.changeset
+    |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
+    |> create_manual_workorder()
+    |> case do
+      {:ok, %{attempt_run: attempt_run}} ->
+        socket.assigns.on_run.(attempt_run)
 
-          {:noreply,
-           socket
-           |> push_event("push-hash", %{hash: "output"})}
+        {:noreply,
+         socket
+         |> push_event("push-hash", %{hash: "output"})}
 
-        {:error, changeset} ->
-          {:noreply,
-           socket
-           |> assign(
-             changeset: changeset,
-             form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
-           )}
-      end
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_patch(to: socket.assigns.return_to)}
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> assign(
+           changeset: changeset,
+           form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
+         )}
     end
+  end
+
+  def handle_event(
+        "confirm",
+        _params,
+        %{assigns: %{can_edit_job: false}} = socket
+      ) do
+    {:noreply,
+     socket
+     |> put_flash(:error, "You are not authorized to perform this action.")
+     |> push_patch(to: socket.assigns.return_to)}
   end
 
   def handle_event(

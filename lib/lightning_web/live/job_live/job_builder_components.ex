@@ -17,6 +17,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   attr :form, :map, required: true
   attr :upstream_jobs, :list, required: true
   attr :on_cron_change, :any, required: true
+  attr :can_edit_job, :boolean, required: true
 
   def trigger_picker(assigns) do
     trigger_type_options =
