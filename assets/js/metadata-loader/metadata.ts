@@ -45,6 +45,7 @@ const loadMetadata = (adaptor?: string) =>
         metadata = sortDeep(metadata_salesforce);
       }
     }
+    console.log(metadata);
     resolve(metadata);
   });
 
