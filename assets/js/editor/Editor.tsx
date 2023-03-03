@@ -59,7 +59,8 @@ const defaultOptions: MonacoProps['options'] = {
   },
   scrollBeyondLastLine: false,
   showFoldingControls: 'always',
-
+  // automaticLayout: true, // TODO this may impact performance as it polls
+  
   // Hide the right-hand "overview" ruler
   overviewRulerLanes: 0,
   overviewRulerBorder: false,
@@ -158,9 +159,7 @@ export default function Editor({
   const [loading, setLoading] = useState(false);
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
-  const listeners = useRef<{
-    insertSnippet?: EventListenerOrEventListenerObject;
-  }>({});
+  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject, updateLayout?: any;}>({});
 
   const handleSourceChange = useCallback(
     (newSource: string) => {
@@ -210,13 +209,27 @@ export default function Editor({
         editor.focus();
       };
 
-      document.addEventListener(
-        'insert-snippet',
-        listeners.current.insertSnippet
-      );
-    },
-    []
-  );
+      // Ensure the snippet is fully visible
+      const newLastLine = model.getLineCount();
+      editor.revealLines(lastLine + 1, newLastLine, 0) // 0 = smooth scroll
+
+      // Set the selection to the start of the snippet
+      editor.setSelection(new monaco.Range(lastLine+1, 0, lastLine+1, 0));
+      
+      // ensure the editor has focus
+      editor.focus();
+    };
+    
+    // This is a temporary (and poor) solution to make the editor respond to resizing
+    listeners.current.updateLayout = (e: Event) => {
+      editor.layout({ width: 0, height: 0});
+      setTimeout(
+      editor.layout, 1)
+    }
+
+    document.addEventListener('insert-snippet', listeners.current.insertSnippet);
+    document.addEventListener('update-layout', listeners.current.updateLayout);
+  }, []);
 
   useEffect(() => {
     if (monaco && metadata) {

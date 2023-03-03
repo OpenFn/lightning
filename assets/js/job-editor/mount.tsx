@@ -27,7 +27,6 @@ let JobEditorComponent: typeof JobEditor | undefined;
 export default {
 
   mounted(this: JobEditorEntrypoint) {
-    console.log(' **** mount ****')
     import('./JobEditor').then(module => {
       JobEditorComponent = module.default as typeof JobEditor;
       this.componentRoot = createRoot(this.el);
@@ -49,7 +48,7 @@ export default {
     const { adaptor, source } = this.el.dataset;
     if (JobEditorComponent) {
       this.componentRoot?.render(
-        <JobEditorComponent
+        <JobEditorComponent adaptor={adaptor} source={source}
         />
       );
     }

@@ -10,6 +10,7 @@
   "author": "",
   "license": "LGPLv3",
   "dependencies": {
+    "@heroicons/react": "^2.0.16",
     "@monaco-editor/react": "^4.4.5",
     "@openfn/describe-package": "^0.0.13",
     "@tailwindcss/container-queries": "^0.1.0",

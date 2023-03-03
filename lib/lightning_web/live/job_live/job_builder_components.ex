@@ -135,6 +135,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     ~H"""
     <div
       data-adaptor={@adaptor}
+      data-source={@source}
       phx-hook="JobEditor"
       phx-update="ignore"
       id="job-editor-component"
