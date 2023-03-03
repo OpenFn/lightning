@@ -97,6 +97,11 @@ config :phoenix, :json_library, Jason
 
 config :lightning, Lightning.Vault, json_library: Jason
 
+config :lightning, Lightning.FailureAlerter,
+  # 24h = 86_400_000
+  time_scale: 5 * 60_000,
+  rate_limit: 3
+
 # Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
 config :lightning, LightningWeb,
   allow_credential_transfer: false,
