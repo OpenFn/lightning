@@ -174,7 +174,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="editor">
-                <.job_editor_component adaptor={@resolved_job_adaptor} />
+                <.job_editor_component
+                    adaptor={@resolved_job_adaptor}
+                    source={@job_body}
+                    change-event="job_body_changed"
+                />
               <%!-- <div
                 phx-hook="Editor"
                 phx-update="ignore"

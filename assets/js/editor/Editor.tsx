@@ -56,6 +56,7 @@ const defaultOptions: MonacoProps['options'] = {
   },
   scrollBeyondLastLine: false,
   showFoldingControls: 'always',
+  // automaticLayout: true, // TODO this may impact performance as it polls
   
   // Hide the right-hand "overview" ruler
   overviewRulerLanes: 0,
@@ -144,7 +145,7 @@ export default function Editor({ source, adaptor, onChange, metadata }: EditorPr
   const [loading, setLoading] = useState(false);
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
-  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject}>({});
+  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject, updateLayout?: any;}>({});
 
   const handleSourceChange = useCallback((newSource: string) => {
     if (onChange) {
@@ -189,8 +190,16 @@ export default function Editor({ source, adaptor, onChange, metadata }: EditorPr
       // ensure the editor has focus
       editor.focus();
     };
+    
+    // This is a temporary (and poor) solution to make the editor respond to resizing
+    listeners.current.updateLayout = (e: Event) => {
+      editor.layout({ width: 0, height: 0});
+      setTimeout(
+      editor.layout, 1)
+    }
 
     document.addEventListener('insert-snippet', listeners.current.insertSnippet);
+    document.addEventListener('update-layout', listeners.current.updateLayout);
   }, []);
 
   useEffect(() => {
