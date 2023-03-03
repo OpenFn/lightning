@@ -25,6 +25,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
+import JobEditor from './job-editor';
 import WorkflowDiagram from './workflow-diagram';
 import AdaptorDocs from './adaptor-docs';
 import MetadataExplorer from './metadata-explorer';
@@ -37,6 +38,7 @@ let Hooks = {
   Editor,
   TabSelector,
   MetadataExplorer,
+  JobEditor,
 };
 
 Hooks.Flash = {

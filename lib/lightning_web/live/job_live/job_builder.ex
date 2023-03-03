@@ -174,8 +174,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="editor">
-            <div class="flex flex-col h-full">
-              <div
+                <.job_editor_component adaptor={@resolved_job_adaptor} />
+              <%!-- <div
                 phx-hook="Editor"
                 phx-update="ignore"
                 id={"job-editor-#{@job_id}"}
@@ -186,10 +186,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 phx-target={@myself}
               />
               <div class="flex-1 overflow-auto">
-                <%!-- <.docs_component adaptor={@resolved_job_adaptor} /> --%>
                 <.explorer_component adaptor={@resolved_job_adaptor} />
-              </div>
-            </div>
+              </div> --%>
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="output">
             <%= if @follow_run_id do %>
