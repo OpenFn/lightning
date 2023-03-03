@@ -89,7 +89,6 @@ export default ({ metadata }: MetadataExplorerProps) => {
   
   return (
     <>
-      <h1>Metadata Explorer</h1>
       {/* <p>
         <input type="checkbox" onChange={toggleSystem} />
         Show system children
