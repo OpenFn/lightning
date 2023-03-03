@@ -5,16 +5,26 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def update(%{user: user, action: action}, socket) do
+    IO.inspect(user, label: "user")
+    IO.inspect(socket.assigns, label: "user2")
     {:ok,
      socket
      |> assign(
        password_changeset: Accounts.change_user_password(user),
        email_changeset: user |> Accounts.validate_change_user_email(%{}),
        user: user,
-       action: action
+       action: action,
+       can_delete_account:
+         Users
+         |> Permissions.can(
+           :delete_account,
+           user,
+           {}
+         )
      )}
   end
 
