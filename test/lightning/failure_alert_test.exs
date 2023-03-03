@@ -112,20 +112,32 @@ defmodule Lightning.FailureAlertTest do
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
-      assert_email_sent(fn email ->
-        assert email.subject ==
-                 "1th failure for workflow specific-workflow"
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "1th failure for workflow specific-workflow",
+                        html_body: html_body
+                      }}
 
-        assert email.html_body =~ "specific-workflow"
-        assert email.html_body =~ work_order.id
+      assert html_body =~ "specific-workflow"
+      assert html_body =~ work_order.id
 
-        assert email.html_body =~
-                 "/projects/#{project.id}/runs/#{attempt_run.run_id}"
-      end)
+      assert html_body =~
+               "/projects/#{project.id}/runs/#{attempt_run.run_id}"
 
-      assert_email_sent(subject: "2th failure for workflow specific-workflow")
-      assert_email_sent(subject: "3th failure for workflow specific-workflow")
-      refute_email_sent(subject: "4th failure for workflow specific-workflow")
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "2th failure for workflow specific-workflow"
+                      }}
+
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "3th failure for workflow specific-workflow"
+                      }}
+
+      refute_receive {:email,
+                      %Swoosh.Email{
+                        subject: "4th failure for workflow specific-workflow"
+                      }}
     end
 
     test "failing workflow sends email even if another workflow hits rate limit within the same time scale",
@@ -137,10 +149,25 @@ defmodule Lightning.FailureAlertTest do
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
-      assert_email_sent(subject: "1th failure for workflow specific-workflow")
-      assert_email_sent(subject: "2th failure for workflow specific-workflow")
-      assert_email_sent(subject: "3th failure for workflow specific-workflow")
-      assert_email_sent(subject: "1th failure for workflow another-workflow")
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "1th failure for workflow specific-workflow"
+                      }}
+
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "2th failure for workflow specific-workflow"
+                      }}
+
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "3th failure for workflow specific-workflow"
+                      }}
+
+      assert_receive {:email,
+                      %Swoosh.Email{
+                        subject: "1th failure for workflow another-workflow"
+                      }}
     end
 
     test "failing workflow does not send failure email to user having failure_alert to false" do
