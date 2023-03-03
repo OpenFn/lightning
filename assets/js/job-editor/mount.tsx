@@ -45,10 +45,14 @@ export default {
     this.pushEventTo(this.el, this.changeEvent, { source: content });
   },
   render() {
-    const { adaptor, source } = this.el.dataset;
+    const { adaptor, source, disabled } = this.el.dataset;
     if (JobEditorComponent) {
       this.componentRoot?.render(
-        <JobEditorComponent adaptor={adaptor} source={source}
+        <JobEditorComponent
+          adaptor={adaptor}
+          source={source}
+          disabled={Boolean(disabled)}
+          onSourceChanged={src => this.handleContentChange(src)}
         />
       );
     }
