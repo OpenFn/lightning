@@ -14,7 +14,6 @@ interface TabSelector {
 
 export default {
   mounted(this: TabSelector) {
-    console.log('TabSelector mounted');
     this.tabItems = this.el.querySelectorAll('[id^=tab-item]');
     this.contentItems = document.querySelectorAll('[data-panel-hash]');
 

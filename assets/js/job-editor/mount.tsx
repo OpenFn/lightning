@@ -42,13 +42,17 @@ export default {
     });
   },
   handleContentChange(content: string) {
+    console.log(' > ', content)
     this.pushEventTo(this.el, this.changeEvent, { source: content });
   },
   render() {
     const { adaptor, source } = this.el.dataset;
     if (JobEditorComponent) {
       this.componentRoot?.render(
-        <JobEditorComponent adaptor={adaptor} source={source}
+        <JobEditorComponent
+          adaptor={adaptor}
+          source={source}
+          onSourceChanged={src => this.handleContentChange(src)}
         />
       );
     }

@@ -174,24 +174,12 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="editor">
-                <.job_editor_component
-                    adaptor={@resolved_job_adaptor}
-                    source={@job_body}
-                    change-event="job_body_changed"
-                />
-              <%!-- <div
-                phx-hook="Editor"
-                phx-update="ignore"
+            <.job_editor_component
+                adaptor={@resolved_job_adaptor}
+                source={@job_body}
                 id={"job-editor-#{@job_id}"}
-                class="rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
-                data-adaptor={@resolved_job_adaptor}
-                data-source={@job_body}
-                data-change-event="job_body_changed"
-                phx-target={@myself}
-              />
-              <div class="flex-1 overflow-auto">
-                <.explorer_component adaptor={@resolved_job_adaptor} />
-              </div> --%>
+                target={@myself}
+            />
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="output">
             <%= if @follow_run_id do %>

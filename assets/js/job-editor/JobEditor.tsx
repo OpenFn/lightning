@@ -35,7 +35,13 @@ const Tabs = ({ options, onSelectionChange, verticalCollapse }: { options: strin
   )
 }
 
-export default ({ adaptor, source }) => {
+type JobEditorProps = {
+  adaptor?: string;
+  source?: string;
+  onSourceChanged?: (src: string) => void;
+}
+
+export default ({ adaptor, source, onSourceChanged }: JobEditorProps) => {
   const [vertical, setVertical] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
   const [selectedTab, setSelectedTab] = useState('Docs');
@@ -85,7 +91,7 @@ export default ({ adaptor, source }) => {
   </div>
   <div className={`flex h-full v-full flex-${vertical ? 'col' : 'row'}`}>
     <div className="flex flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark">
-      <Editor source={source} adaptor={adaptor} metadata={metadata} />
+      <Editor source={source} adaptor={adaptor} metadata={metadata} onChange={onSourceChanged} />
     </div>
     <div className={`${showPanel ? 'flex flex-col flex-1' : ''} bg-white ${vertical && 'overflow-auto'}`}>
       <div className={`flex flex-${!vertical && !showPanel ? 'col-reverse items-center' : 'row'} w-full justify-items-end sticky`}>
@@ -95,7 +101,6 @@ export default ({ adaptor, source }) => {
       </div>
       {showPanel && 
         <div className={`h-full v-full ${!vertical && 'overflow-auto' || ''} px-2`}>
-          {/* TODO ideally we wouldn't re-render the component from scratch? */}
           {selectedTab === 'Docs' && <Docs adaptor={adaptor} />}
           {selectedTab === 'Metadata' && <Metadata metadata={metadata} />}
         </div>
