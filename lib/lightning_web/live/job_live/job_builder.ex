@@ -251,8 +251,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <Common.button
               id="delete-job"
               text="Delete"
-              phx-click="delete"
-              phx-target={@myself}
+              phx-click="delete-job"
               phx-value-id={@job_id}
               disabled={!(@is_deletable and @can_edit_job)}
               data={[
@@ -279,40 +278,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
       {_, false} ->
         "You are not authorized to perform this action."
-    end
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    if socket.assigns.can_edit_job do
-      job = Jobs.get_job!(id)
-
-      case Jobs.delete_job(job) do
-        {:ok, _} ->
-          LightningWeb.Endpoint.broadcast!(
-            "project_space:#{socket.assigns.project.id}",
-            "update",
-            %{workflow_id: job.workflow_id}
-          )
-
-          {:noreply,
-           socket
-           |> put_flash(:info, "Job deleted successfully")
-           |> push_patch(to: socket.assigns.return_to)}
-
-        {:error, _} ->
-          {:noreply,
-           socket
-           |> put_flash(
-             :error,
-             "Unable to delete this job because it has downstream jobs"
-           )}
-      end
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_patch(to: socket.assigns.return_to)}
     end
   end
 
@@ -448,6 +413,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
           project: project,
           current_user: current_user,
           return_to: return_to,
+          can_edit_job: can_edit_job,
+          can_delete_job: can_delete_job,
           builder_state: builder_state
         } = assigns,
         socket
@@ -462,22 +429,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
       Lightning.Jobs.get_upstream_jobs_for(
         changeset
         |> Ecto.Changeset.apply_changes()
-      )
-
-    can_edit_job =
-      ProjectUsers
-      |> Permissions.can(
-        :edit_job,
-        current_user,
-        project
-      )
-
-    can_delete_job =
-      ProjectUsers
-      |> Permissions.can(
-        :delete_job,
-        current_user,
-        project
       )
 
     {:ok,

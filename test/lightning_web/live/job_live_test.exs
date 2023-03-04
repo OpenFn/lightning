@@ -120,6 +120,9 @@ defmodule LightningWeb.JobLiveTest do
                view,
                "button#delete-job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
              )
+
+      assert view |> render_click("delete-job", %{"id" => job.id}) =~
+               "Unable to delete this job because it has downstream jobs"
     end
 
     test "project viewers can't delete jobs", %{
@@ -145,23 +148,16 @@ defmodule LightningWeb.JobLiveTest do
 
       assert has_element?(
                view,
-               "button[phx-click='delete'][title='You are not authorized to perform this action.'][disabled='disabled']"
+               "button[phx-click='delete-job'][title='You are not authorized to perform this action.'][disabled='disabled']"
              )
 
-      # TODO: test the LightningWeb.JobLive.JobBuilder.handle_event("delete", params, socket)
-      """
-      The following code is the pattern we use to test the `handle_event/3` functions. But for reasons related to the `phx-target`, I couldn't succeed testing this one.
-      I have tried using the `with_target/2` function but it didn't succeed.
+      assert view |> render_click("delete-job", %{"id" => job.id}) =~
+               "You are not authorized to perform this action."
 
-      `assert view |> render_click("delete", %{}) =~ "You are not authorized to perform this action."`
-      """
-
-      # view |> render_click("delete", %{}) =~ "You are not authorized to perform this action."
-
-      # assert_patch(
-      #   view,
-      #   Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
-      # )
+      assert_patch(
+        view,
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
+      )
     end
   end
 

@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive do
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
+  alias Lightning.Jobs
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Workflows
@@ -88,6 +89,8 @@ defmodule LightningWeb.WorkflowLive do
                         @current_workflow.id
                       )
                     }
+                    can_delete_job={@can_delete_job}
+                    can_edit_job={@can_edit_job}
                   />
                 </div>
               </div>
@@ -126,6 +129,8 @@ defmodule LightningWeb.WorkflowLive do
                         @current_workflow.id
                       )
                     }
+                    can_delete_job={@can_delete_job}
+                    can_edit_job={@can_edit_job}
                   />
                 </div>
               </div>
@@ -212,11 +217,29 @@ defmodule LightningWeb.WorkflowLive do
         socket.assigns.project
       )
 
+    can_edit_job =
+      ProjectUsers
+      |> Permissions.can(
+        :edit_job,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
+    can_delete_job =
+      ProjectUsers
+      |> Permissions.can(
+        :delete_job,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
     {:ok,
      socket
      |> assign(
        can_create_workflow: can_create_workflow,
        can_create_job: can_create_job,
+       can_edit_job: can_edit_job,
+       can_delete_job: can_create_job,
        active_menu_item: :projects,
        new_credential: false,
        builder_state: %{}
@@ -253,6 +276,56 @@ defmodule LightningWeb.WorkflowLive do
            workflow_id
          )
      )}
+  end
+
+  @impl true
+  def handle_event("delete-job", %{"id" => id}, socket) do
+    if socket.assigns.can_edit_job do
+      job = Jobs.get_job!(id)
+
+      case Jobs.delete_job(job) do
+        {:ok, _} ->
+          LightningWeb.Endpoint.broadcast!(
+            "project_space:#{socket.assigns.project.id}",
+            "update",
+            %{workflow_id: job.workflow_id}
+          )
+
+          {:noreply,
+           socket
+           |> put_flash(:info, "Job deleted successfully")
+           |> push_patch(
+             to:
+               Routes.project_workflow_path(
+                 socket,
+                 :show,
+                 socket.assigns.project.id,
+                 socket.assigns.current_workflow.id
+               )
+           )}
+
+        {:error, _} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :error,
+             "Unable to delete this job because it has downstream jobs"
+           )}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(
+         to:
+           Routes.project_workflow_path(
+             socket,
+             :show,
+             socket.assigns.project.id,
+             socket.assigns.current_workflow.id
+           )
+       )}
+    end
   end
 
   @impl true
