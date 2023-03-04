@@ -67,6 +67,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :socket, :map, required: true
   attr :project, :map, required: true
   attr :workflow, :map, required: true
+  attr :can_create_job, :boolean, required: true
 
   def create_job_panel(assigns) do
     ~H"""

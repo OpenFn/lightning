@@ -74,6 +74,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         <% end %>
         <div class="mt-2">
           <Common.button
+            id="run-job"
             text="Run"
             disabled={!(@changeset.valid? and @can_edit_job)}
             phx-click="confirm"

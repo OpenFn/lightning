@@ -13,7 +13,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.RunSearchForm
   alias Lightning.RunSearchForm.MultiSelectOption
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
