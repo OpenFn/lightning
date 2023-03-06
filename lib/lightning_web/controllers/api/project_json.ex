@@ -28,6 +28,16 @@ defmodule LightningWeb.API.ProjectJSON do
     }
   end
 
+  def render("create.json", %{project: project, conn: conn}) do
+    %{
+      data: project,
+      included: [],
+      links: %{
+        self: url_for(conn)
+      }
+    }
+  end
+
   defp resource(conn, project) do
     %{
       type: "projects",

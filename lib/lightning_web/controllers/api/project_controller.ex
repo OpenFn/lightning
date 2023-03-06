@@ -4,7 +4,7 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Projects
   # alias Lightning.Jobs.Job
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback(LightningWeb.FallbackController)
 
   def index(conn, params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
@@ -27,5 +27,15 @@ defmodule LightningWeb.API.ProjectController do
            ) do
       render(conn, "show.json", project: project, conn: conn)
     end
+  end
+
+  def create(conn, %{"data" => project_data}) do
+    IO.inspect(project_data, label: "PROJECTDATA")
+
+    {:ok, %{project: project}} =
+      Lightning.Projects.import_project(project_data, conn.assigns.current_user)
+
+    # IO.inspect(project, label: "PROJECT")
+    # render(conn, "create.json", project: %{}, conn: conn)
   end
 end
