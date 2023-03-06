@@ -6,10 +6,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
   use LightningWeb, :live_component
 
   alias LightningWeb.Components.Form
-  alias Lightning.Jobs
   alias Lightning.Jobs.Job
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Policies.Permissions
 
   import LightningWeb.JobLive.JobBuilderComponents
 

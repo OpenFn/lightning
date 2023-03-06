@@ -185,10 +185,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             phx-change="select_item"
             phx-target={@phx_target}
             id="project_list"
-          >
-            <option>Select a project</option>
-            <%= options_for_select(@projects, @selected) %>
-          </LightningWeb.Components.Form.select_field>
+          />
         </div>
         <div class="grow-0 items-right">
           <LightningWeb.Components.Common.button
