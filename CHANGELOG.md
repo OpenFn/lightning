@@ -12,9 +12,22 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [0.4.3] - 2023-03-06
+
+### Added
+
+- Added help tooltips on Job Builder panel
+  [#650](https://github.com/OpenFn/Lightning/issues/650)
+
+### Changed
+
 - Upgraded to Phoenix 1.7 (3945856)
 
 ### Fixed
+
+- Issue with FailureAlerter configuration missing in `prod` mode.
 
 ## [0.4.2] - 2023-02-24
 
@@ -38,7 +51,7 @@ and this project adheres to
 ### Fixed
 
 - Jobs panel slow for first open after restart
-  [#567](https://github.com/OpenFn/Lightning/issues/567) =======
+  [#567](https://github.com/OpenFn/Lightning/issues/567)
 
 ## [0.4.0] - 2023-02-08
 
