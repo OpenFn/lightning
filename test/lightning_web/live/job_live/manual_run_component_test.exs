@@ -325,12 +325,9 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            |> element("button[phx-click='confirm'][disabled]")
            |> has_element?()
 
-    # TODO: test the LightningWeb.JobLive.ManualRunComponent.handle_event("confirm", params, socket)
-    """
-    The following code is the pattern we use to test the `handle_event/3` functions. But for reasons related to the `phx-target`, I couldn't succeed testing this one.
-    I have tried using the `with_target/2` function but it didn't succeed.
-
-    `assert view |> render_click("confirm", %{_target: "id?"}) =~ "You are not authorized to perform this action."`
-    """
+    view
+    |> with_target("#manual-job-#{job.id}")
+    |> render_click("confirm", %{}) =~
+      "You are not authorized to perform this action."
   end
 end
