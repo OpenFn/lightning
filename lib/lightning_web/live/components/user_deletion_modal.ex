@@ -42,15 +42,22 @@ defmodule LightningWeb.Components.UserDeletionModal do
         } = _user_params,
         socket
       ) do
-    case Accounts.schedule_user_deletion(socket.assigns.user, email) do
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "User scheduled for deletion")
-         |> logout_after_deletion()}
+    if @can_delete_account do
+      case Accounts.schedule_user_deletion(socket.assigns.user, email) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "User scheduled for deletion")
+           |> logout_after_deletion()}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       #  |> push_redirect(socket, to: socket.assigns.return_to)
+       |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
@@ -112,12 +119,13 @@ defmodule LightningWeb.Components.UserDeletionModal do
               label="Cancel"
               phx-click={PetalComponents.Modal.hide_modal(@myself)}
             />
-
-            <%= submit("Delete account",
-              phx_disable_with: "Deleting...",
-              class:
-                "inline-flex justify-center mx-2 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
-            ) %>
+            <%= if @can_delete_account do %>
+              <%= submit("Delete account",
+                phx_disable_with: "Deleting...",
+                class:
+                  "inline-flex justify-center mx-2 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+              ) %>
+            <% end %>
           </div>
         </.form>
       </PetalComponents.Modal.modal>

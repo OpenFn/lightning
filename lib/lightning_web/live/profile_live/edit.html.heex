@@ -11,6 +11,8 @@
       title={@page_title}
       action={@live_action}
       user={@user}
+      can_delete_account={@can_delete_account}
+      can_change_password={@can_change_password}
       return_to={Routes.profile_edit_path(@socket, :edit)}
     />
   </Layout.centered>

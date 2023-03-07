@@ -5,12 +5,17 @@ defmodule LightningWeb.ProfileLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Accounts
-  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
-  def update(%{user: user, action: action}, socket) do
-    IO.inspect(user, label: "user")
-    IO.inspect(socket.assigns, label: "user2")
+  def update(
+        %{
+          user: user,
+          action: action,
+          can_delete_account: can_delete_account,
+          can_change_password: can_change_password
+        },
+        socket
+      ) do
     {:ok,
      socket
      |> assign(
@@ -18,13 +23,8 @@ defmodule LightningWeb.ProfileLive.FormComponent do
        email_changeset: user |> Accounts.validate_change_user_email(%{}),
        user: user,
        action: action,
-       can_delete_account:
-         Users
-         |> Permissions.can(
-           :delete_account,
-           user,
-           {}
-         )
+       can_delete_account: can_delete_account,
+       can_change_password: can_change_password
      )}
   end
 
@@ -58,26 +58,32 @@ defmodule LightningWeb.ProfileLive.FormComponent do
         %{"user" => %{"current_password" => current_password} = user_params},
         socket
       ) do
-    case Accounts.update_user_password(
-           socket.assigns.user,
-           current_password,
-           user_params
-         ) do
-      {:ok, user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Password changed successfully.")
-         |> redirect(
-           to:
-             Routes.user_session_path(
-               socket,
-               :exchange_token,
-               Accounts.generate_auth_token(user) |> Base.url_encode64()
-             )
-         )}
+    if socket.assigns.can_change_password do
+      case Accounts.update_user_password(
+             socket.assigns.user,
+             current_password,
+             user_params
+           ) do
+        {:ok, user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Password changed successfully.")
+           |> redirect(
+             to:
+               Routes.user_session_path(
+                 socket,
+                 :exchange_token,
+                 Accounts.generate_auth_token(user) |> Base.url_encode64()
+               )
+           )}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :password_changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :password_changeset, changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
