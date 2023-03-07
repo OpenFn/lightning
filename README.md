@@ -1,10 +1,25 @@
 # OpenFn/Lightning (alpha) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
-Lightning extends the existing [OpenFn](https://www.openfn.org) Digital Public
-Good, providing a web UI to visually manage and execute complex workflow
-automation and data integration projects. Learn more about the entire free and
-open source OpenFn Integration Toolkit toolkit at
-[docs.openfn.org](https://docs.openfn.org).
+OpenFn Lightning is an open source workflow automation platform which helps
+automate complex processes across systems or deliver integration projects. The
+platform allows you to visually build, execute and manage workflows - leveraging
+adaptors to speed up the development process and promote best practices for
+integration patterns.
+
+It is the next generation of [OpenFn](https://www.openfn.org)'s workflow
+automation plaftorm. It is fully open source, and recognised as a Digital Public
+Good by the [DPGA](https://digitalpublicgoods.net/).
+
+![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
+
+Explore our [demo app](https://demo.openfn.org/). Log in with username:
+`demo@openfn.org`, password: `welcome123`.
+
+## Table of contents
+
+- [Getting started](#getting-started)
+
+## Features
 
 ## Getting Started
 
@@ -252,3 +267,12 @@ docker compose build --no-cache web && \
 docker compose run --rm web mix ecto.migrate
 docker compose up
 ```
+
+## Resources
+
+- Roadmap
+- Community
+- Report a vulnerability
+- Report a bug
+- Quick-start
+- Office hours
