@@ -36,7 +36,13 @@ config :lightning, Oban,
      crontab: [
        {"* * * * *", Lightning.Jobs.Scheduler},
        {"* * * * *", ObanPruner},
-       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}}
+       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+       {"0 10 * * *", Lightning.DigestEmailWorker,
+        args: %{"type" => "daily_project_digest"}},
+       {"0 10 * * MON", Lightning.DigestEmailWorker,
+        args: %{"type" => "weekly_project_digest"}},
+       {"0 10 1 * *", Lightning.DigestEmailWorker,
+        args: %{"type" => "monthly_project_digest"}}
      ]}
   ],
   shutdown_grace_period:

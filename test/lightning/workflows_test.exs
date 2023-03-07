@@ -1,13 +1,13 @@
 defmodule Lightning.WorkflowsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Workflows
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Jobs
-
-  alias Lightning.WorkflowsFixtures
-  alias Lightning.JobsFixtures
-  alias Lightning.ProjectsFixtures
+  alias Lightning.{
+    Workflows,
+    Jobs,
+    WorkflowsFixtures,
+    JobsFixtures,
+    ProjectsFixtures
+  }
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
@@ -35,8 +35,7 @@ defmodule Lightning.WorkflowsTest do
       project = ProjectsFixtures.project_fixture()
       valid_attrs = %{name: "some-name", project_id: project.id}
 
-      assert {:ok, %Workflow{} = workflow} =
-               Workflows.create_workflow(valid_attrs)
+      assert {:ok, workflow} = Workflows.create_workflow(valid_attrs)
 
       assert {:error, %Ecto.Changeset{} = changeset} =
                Workflows.create_workflow(valid_attrs)
@@ -54,8 +53,7 @@ defmodule Lightning.WorkflowsTest do
       workflow = WorkflowsFixtures.workflow_fixture()
       update_attrs = %{name: "some-updated-name"}
 
-      assert {:ok, %Workflow{} = workflow} =
-               Workflows.update_workflow(workflow, update_attrs)
+      assert {:ok, workflow} = Workflows.update_workflow(workflow, update_attrs)
 
       assert workflow.name == "some-updated-name"
     end
@@ -66,7 +64,7 @@ defmodule Lightning.WorkflowsTest do
       job_1 = JobsFixtures.job_fixture(workflow_id: workflow.id)
       job_2 = JobsFixtures.job_fixture(workflow_id: workflow.id)
 
-      assert {:ok, %Workflow{}} = Workflows.delete_workflow(workflow)
+      assert {:ok, %Workflows.Workflow{}} = Workflows.delete_workflow(workflow)
 
       assert_raise Ecto.NoResultsError, fn ->
         Workflows.get_workflow!(workflow.id)
