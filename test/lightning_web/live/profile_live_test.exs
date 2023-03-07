@@ -56,18 +56,6 @@ defmodule LightningWeb.ProfileLiveTest do
       {:ok, profile_live, _html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
 
-      IO.inspect(conn, label: "conn")
-      # html =
-      #   render_component(LightningWeb.ProfileLive.FormComponent,
-      #     id: run,
-      #     title: "User Profile",
-      #     action: :edit,
-      #     user: false,
-      #     can_delete_account: true,
-      #     can_change_password: true
-      #   )
-      #   |> Floki.parse_fragment!()
-
       assert profile_live
              |> form("#password_form", user: @invalid_empty_password_attrs)
              |> render_change() =~ "can&#39;t be blank"

@@ -5,16 +5,46 @@ defmodule LightningWeb.CredentialLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def mount(_params, _session, socket) do
+    can_view_credentials =
+      Users
+      |> Permissions.can(
+        :view_credentials,
+        socket.assigns.current_user,
+        socket.assigns.current_user
+      )
+
+    can_edit_credentials =
+      Users
+      |> Permissions.can(
+        :edit_credentials,
+        socket.assigns.current_user,
+        socket.assigns.current_user
+      )
+
+    can_delete_credential =
+      Users
+      |> Permissions.can(
+        :delete_credential,
+        socket.assigns.current_user,
+        socket.assigns.current_user
+      )
+
     {:ok,
      assign(
        socket,
        :credentials,
        list_credentials(socket.assigns.current_user.id)
      )
-     |> assign(:active_menu_item, :credentials)}
+     |> assign(:active_menu_item, :credentials)
+     |> assign(
+       can_view_credentials: can_view_credentials,
+       can_edit_credentials: can_edit_credentials,
+       can_delete_credential: can_delete_credential
+     )}
   end
 
   @impl true
@@ -30,21 +60,27 @@ defmodule LightningWeb.CredentialLive.Index do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    credential = Credentials.get_credential!(id)
+    if socket.assigns.can_delete_credential do
+      credential = Credentials.get_credential!(id)
 
-    Credentials.delete_credential(credential)
-    |> case do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(
-           :credentials,
-           list_credentials(socket.assigns.current_user.id)
-         )
-         |> put_flash(:info, "Credential deleted successfully")}
+      Credentials.delete_credential(credential)
+      |> case do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(
+             :credentials,
+             list_credentials(socket.assigns.current_user.id)
+           )
+           |> put_flash(:info, "Credential deleted successfully")}
 
-      {:error, _changeset} ->
-        {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+        {:error, _changeset} ->
+          {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 

@@ -37,23 +37,27 @@
           </.td>
           <.td>
             <span>
-              <.link navigate={
-                Routes.credential_edit_path(@socket, :edit, credential)
-              }>
-                Edit
-              </.link>
+              <%= if @can_edit_credentials do %>
+                <.link navigate={
+                  Routes.credential_edit_path(@socket, :edit, credential)
+                }>
+                  Edit
+                </.link>
+              <% end %>
             </span>
             |
             <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: credential.id,
-                data: [
-                  confirm:
-                    "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?"
-                ]
-              ) %>
+              <%= if @can_delete_credential do %>
+                <%= link("Delete",
+                  to: "#",
+                  phx_click: "delete",
+                  phx_value_id: credential.id,
+                  data: [
+                    confirm:
+                      "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?"
+                  ]
+                ) %>
+              <% end %>
             </span>
           </.td>
         </.tr>
