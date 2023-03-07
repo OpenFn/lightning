@@ -23,7 +23,7 @@ defmodule LightningWeb.RunLive.Index do
       %MultiSelectOption{id: :pending, label: "Pending", selected: true}
     ]
 
-    searchfors = [
+    search_fields = [
       %MultiSelectOption{id: :body, label: "Input body", selected: true},
       %MultiSelectOption{id: :log, label: "Logs", selected: true}
     ]
@@ -49,7 +49,7 @@ defmodule LightningWeb.RunLive.Index do
      )
      |> init_search_form(
        statuses: statuses,
-       searchfors: searchfors,
+       search_fields: search_fields,
        workflows: workflows
      )}
   end
@@ -71,8 +71,8 @@ defmodule LightningWeb.RunLive.Index do
     socket
     |> assign(
       status_options: Ecto.Changeset.fetch_field!(changeset, :status_options),
-      searchfor_options:
-        Ecto.Changeset.fetch_field!(changeset, :searchfor_options),
+      search_field_options:
+        Ecto.Changeset.fetch_field!(changeset, :search_field_options),
       page:
         Invocation.list_work_orders_for_project(
           socket.assigns.project,
@@ -100,15 +100,15 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  def handle_info({:selected_searchfors, searchfors}, socket) do
+  def handle_info({:selected_search_fields, search_fields}, socket) do
     changeset =
       socket.assigns.changeset
-      |> Ecto.Changeset.put_embed(:searchfor_options, searchfors)
+      |> Ecto.Changeset.put_embed(:search_field_options, search_fields)
 
     socket =
       socket
       |> assign(:changeset, changeset)
-      |> assign(:searchfor_options, searchfors)
+      |> assign(:search_field_options, search_fields)
 
     {:noreply, socket}
   end
@@ -203,14 +203,14 @@ defmodule LightningWeb.RunLive.Index do
 
   defp init_search_form(socket,
          statuses: statuses,
-         searchfors: searchfors,
+         search_fields: search_fields,
          workflows: workflows
        ) do
     changeset =
       %RunSearchForm{}
       |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_embed(:status_options, statuses)
-      |> Ecto.Changeset.put_embed(:searchfor_options, searchfors)
+      |> Ecto.Changeset.put_embed(:search_field_options, search_fields)
 
     socket
     |> assign(:changeset, changeset)
@@ -224,14 +224,14 @@ defmodule LightningWeb.RunLive.Index do
       |> Enum.filter(&(&1.selected in [true, "true"]))
       |> Enum.map(& &1.id)
 
-    searchfors =
-      Ecto.Changeset.fetch_field!(changeset, :searchfor_options)
+    search_fields =
+      Ecto.Changeset.fetch_field!(changeset, :search_field_options)
       |> Enum.filter(&(&1.selected in [true, "true"]))
       |> Enum.map(& &1.id)
 
     [
       status: status,
-      searchfors: searchfors,
+      search_fields: search_fields,
       search_term: Ecto.Changeset.fetch_field!(changeset, :search_term),
       workflow_id: Ecto.Changeset.fetch_field!(changeset, :workflow_id),
       date_after: Ecto.Changeset.fetch_field!(changeset, :date_after),

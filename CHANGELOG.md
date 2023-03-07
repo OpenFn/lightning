@@ -116,8 +116,8 @@ and this project adheres to
 ### Fixed
 
 - Fixed bug that attempted to execute HTML scripts in dataclips
-- Fixed bug that prevented work orders from displaying in the order of their
-  last run, descending.
+- Fixed bug that prevented workorders from displaying in the order of their last
+  run, descending.
 - Remove alerts after set timeout or close
 
 ## [0.3.0] - 2022-11-21
@@ -127,7 +127,7 @@ and this project adheres to
 - Add seed data for demo site
 - Create adaptor credentials through a form
 - Configure cron expressions through a form
-- View runs grouped by work orders and attempts
+- View runs grouped by workorders and attempts
 - Run an existing Job with any dataclip uuid from the Job form
 
 ### Changed
