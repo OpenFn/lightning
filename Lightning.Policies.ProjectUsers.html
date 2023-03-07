@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-2AFCF5FF.js"></script>
+    <script src="dist/sidebar_items-3441C764.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -193,25 +193,26 @@ Types
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> actions() ::
-  :create_workflow
-  | :edit_jobs
+  :add_project_collaborator
   | :create_job
+  | :create_workflow
   | :delete_job
-  | :run_job
-  | :rerun_job
-  | :view_last_job_inputs
-  | :view_workorder_input
-  | :view_workorder_run
-  | :view_workorder_history
-  | :view_project_name
-  | :view_project_description
-  | :view_project_credentials
-  | :view_project_collaborators
   | :delete_project
   | :edit_digest_alerts
-  | :edit_project_name
+  | :edit_jobs
   | :edit_project_description
-  | :add_project_collaborator</pre>
+  | :edit_project_name
+  | :edit_project_user
+  | :rerun_job
+  | :run_job
+  | :view_last_job_inputs
+  | :view_project_collaborators
+  | :view_project_credentials
+  | :view_project_description
+  | :view_project_name
+  | :view_workorder_history
+  | :view_workorder_input
+  | :view_workorder_run</pre>
 
       </div>
 
@@ -240,7 +241,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">authorize(action, user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L47" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/project_users.ex#L48" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
