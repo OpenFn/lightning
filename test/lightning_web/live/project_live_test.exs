@@ -414,68 +414,48 @@ defmodule LightningWeb.ProjectLiveTest do
         project.project_users
         |> Enum.find(fn pu -> pu.user_id == unauthenticated_user.id end)
 
-      assert view
-             |> element("#project_user-#{unauthenticated_user_project_user.id}")
-             |> render() =~
-               "Enabled"
-
       assert_raise ArgumentError, fn ->
         view
         |> element("#project_user-#{unauthenticated_user_project_user.id}")
         |> render_click()
       end
 
-      assert view
-             |> element("#project_user-#{authenticated_user_project_user.id}")
-             |> render() =~
-               "Daily"
+      form_id = "#failure-alert-#{authenticated_user_project_user.id}"
+
+      assert view |> has_element?("#{form_id} option[selected]", "Disabled")
+
+      refute view
+             |> form(form_id, %{"failure_alert" => "false"})
+             |> render_change() =~ "Project user updated successfuly"
 
       assert view
-             |> element(
-               "#failure-alert-#{authenticated_user_project_user.id} option[selected]"
-             )
-             |> render() =~ "Disabled"
+             |> form(form_id, %{"failure_alert" => "true"})
+             |> render_change() =~ "Project user updated successfuly"
 
       assert view
-             |> element("#failure-alert-#{authenticated_user_project_user.id}")
-             |> render_change(%{
-               "project_user_id" => authenticated_user_project_user.id,
-               "value" => true
-             }) =~ "Project user updated successfuly"
-
-      assert view
-             |> element(
-               "#failure-alert-#{authenticated_user_project_user.id} option[selected]"
-             )
-             |> render() =~
+             |> has_element?(
+               "#failure-alert-#{authenticated_user_project_user.id} option[selected]",
                "Enabled"
-
-      assert view
-             |> element(
-               "#digest-#{authenticated_user_project_user.id} option[selected]"
              )
-             |> render() =~
-               "Never"
+
+      view
+      |> element("#flash")
+      |> render_hook("lv:clear-flash")
+
+      form_id = "#digest-#{authenticated_user_project_user.id}"
+
+      assert view |> has_element?("#{form_id} option[selected]", "Never")
+
+      refute view
+             |> element(form_id)
+             |> render_change(%{"digest" => "never"}) =~
+               "Project user updated successfuly"
 
       assert view
-             |> element("#digest-#{authenticated_user_project_user.id}")
-             |> render_change(%{
-               "project_user_id" => authenticated_user_project_user.id,
-               "value" => true
-             }) =~ "Never"
+             |> form(form_id, %{"digest" => "daily"})
+             |> render_change() =~ "Project user updated successfuly"
 
-      assert view
-             |> element("#digest-#{authenticated_user_project_user.id}")
-             |> render_change(%{
-               "project_user_id" => authenticated_user_project_user.id,
-               "value" => "daily"
-             }) =~ "Project user updated successfuly"
-
-      assert view
-             |> element(
-               "#digest-#{authenticated_user_project_user.id} option[selected]"
-             )
-             |> render() =~ "Daily"
+      assert view |> has_element?("#{form_id} option[selected]", "Daily")
     end
   end
 end

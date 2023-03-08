@@ -10,7 +10,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Projects.ProjectUser
   alias Lightning.{Projects, Credentials}
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -60,7 +60,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   @impl true
-  def handle_event("validate", %{"project" => project_params} = _params, socket) do
+  def handle_event("validate", %{"project" => project_params}, socket) do
     changeset =
       socket.assigns.project
       |> Projects.change_project(project_params)
@@ -69,7 +69,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, assign(socket, :project_changeset, changeset)}
   end
 
-  def handle_event("save", %{"project" => project_params} = _params, socket) do
+  def handle_event("save", %{"project" => project_params}, socket) do
     save_project(socket, project_params)
   end
 
@@ -77,15 +77,15 @@ defmodule LightningWeb.ProjectLive.Settings do
         "set_failure_alert",
         %{
           "project_user_id" => project_user_id,
-          "value" => value
-        } = _params,
+          "failure_alert" => failure_alert
+        },
         socket
       ) do
     project_user = Projects.get_project_user!(project_user_id)
 
     changeset =
       {%{failure_alert: project_user.failure_alert}, %{failure_alert: :boolean}}
-      |> Ecto.Changeset.cast(%{failure_alert: value}, [:failure_alert])
+      |> Ecto.Changeset.cast(%{failure_alert: failure_alert}, [:failure_alert])
 
     case Ecto.Changeset.get_change(changeset, :failure_alert) do
       nil ->
@@ -99,14 +99,14 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def handle_event(
         "set_digest",
-        %{"project_user_id" => project_user_id, "value" => value},
+        %{"project_user_id" => project_user_id, "digest" => digest},
         socket
       ) do
     project_user = Projects.get_project_user!(project_user_id)
 
     changeset =
-      {%{digest: project_user.digest |> Atom.to_string()}, %{digest: :string}}
-      |> Ecto.Changeset.cast(%{digest: value}, [:digest])
+      {%{digest: project_user.digest |> to_string()}, %{digest: :string}}
+      |> Ecto.Changeset.cast(%{digest: digest}, [:digest])
 
     case Ecto.Changeset.get_change(changeset, :digest) do
       nil ->
@@ -139,17 +139,20 @@ defmodule LightningWeb.ProjectLive.Settings do
   def failure_alert(assigns) do
     ~H"""
     <%= if can_edit_project_user(@current_user, @project_user) do %>
-      <select
-        id={"failure-alert-#{@project_user.id}"}
+      <.form
+        :let={form}
+        for={%{}}
         phx-change="set_failure_alert"
-        phx-value-project_user_id={@project_user.id}
-        class="mt-1 block w-full rounded-md border-secondary-300 shadow-sm text-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+        id={"failure-alert-#{@project_user.id}"}
       >
-        <%= options_for_select(
-          [Disabled: "false", Enabled: "true"],
-          @project_user.failure_alert
-        ) %>
-      </select>
+        <%= hidden_input(form, :project_user_id, value: @project_user.id) %>
+        <LightningWeb.Components.Form.select_field
+          form={form}
+          name="failure_alert"
+          values={[Disabled: "false", Enabled: "true"]}
+          value={@project_user.failure_alert}
+        />
+      </.form>
     <% else %>
       <%= if @project_user.failure_alert,
         do: "Enabled",
@@ -159,8 +162,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def digest(assigns) do
-    # you will get a form
-    # assigns.form.source.project_user
     assigns =
       assigns
       |> assign(
@@ -170,17 +171,25 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     ~H"""
     <%= if @can_edit_project_user do %>
-      <select
-        id={"digest-#{@project_user.id}"}
+      <.form
+        :let={form}
+        for={%{}}
         phx-change="set_digest"
-        phx-value-project_user_id={@project_user.id}
-        class="mt-1 block w-full rounded-md border-secondary-300 shadow-sm text-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+        id={"digest-#{@project_user.id}"}
       >
-        <%= options_for_select(
-          [Never: "never", Daily: "daily", Weekly: "weekly", Monthly: "monthly"],
-          @project_user.digest
-        ) %>
-      </select>
+        <%= hidden_input(form, :project_user_id, value: @project_user.id) %>
+        <LightningWeb.Components.Form.select_field
+          form={form}
+          name="digest"
+          values={[
+            Never: "never",
+            Daily: "daily",
+            Weekly: "weekly",
+            Monthly: "monthly"
+          ]}
+          value={@project_user.digest}
+        />
+      </.form>
     <% else %>
       <%= @project_user.digest
       |> Atom.to_string()
@@ -191,9 +200,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def role(assigns) do
     ~H"""
-    <%= @project_user.role
-    |> Atom.to_string()
-    |> String.capitalize() %>
+    <%= @project_user.role |> Atom.to_string() |> String.capitalize() %>
     """
   end
 
