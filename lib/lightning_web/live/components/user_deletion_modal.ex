@@ -42,15 +42,22 @@ defmodule LightningWeb.Components.UserDeletionModal do
         } = _user_params,
         socket
       ) do
-    case Accounts.schedule_user_deletion(socket.assigns.user, email) do
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "User scheduled for deletion")
-         |> logout_after_deletion()}
+    if socket.assigns.can_delete_users do
+      case Accounts.schedule_user_deletion(socket.assigns.user, email) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "User scheduled for deletion")
+           |> logout_after_deletion()}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_redirect(to: socket.assigns.return_to)}
     end
   end
 

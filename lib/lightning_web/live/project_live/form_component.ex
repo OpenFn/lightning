@@ -146,14 +146,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    if socket.assigns.can_edit_projects and socket.assigns.can_create_projects do
-      save_project(socket, socket.assigns.action, project_params)
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_patch(to: socket.assigns.return_to)}
-    end
+    save_project(socket, socket.assigns.action, project_params)
   end
 
   defp filter_available_users(changeset, all_users) do
@@ -166,28 +159,42 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :edit, project_params) do
-    case Projects.update_project(socket.assigns.project, project_params) do
-      {:ok, _project} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Project updated successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+    if socket.assigns.can_edit_projects do
+      case Projects.update_project(socket.assigns.project, project_params) do
+        {:ok, _project} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Project updated successfully")
+           |> push_patch(to: socket.assigns.return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(to: socket.assigns.return_to)}
     end
   end
 
   defp save_project(socket, :new, project_params) do
-    case Projects.create_project(project_params) do
-      {:ok, _project} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Project created successfully")
-         |> push_patch(to: socket.assigns.return_to)}
+    if socket.assigns.can_create_projects do
+      case Projects.create_project(project_params) do
+        {:ok, _project} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Project created successfully")
+           |> push_patch(to: socket.assigns.return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, changeset: changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(to: socket.assigns.return_to)}
     end
   end
 
