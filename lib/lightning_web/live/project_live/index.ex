@@ -4,10 +4,37 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Projects
 
   @impl true
   def mount(_params, _session, socket) do
+    can_view_projects =
+      Users |> Permissions.can(:view_projects, socket.assigns.current_user, {})
+
+    can_edit_projects =
+      Users |> Permissions.can(:edit_projects, socket.assigns.current_user, {})
+
+    can_create_projects =
+      Users |> Permissions.can(:create_projects, socket.assigns.current_user, {})
+
+    # if can_view_projects do
+    #   {:ok,
+    #    socket
+    #    |> assign(:active_menu_item, :projects)
+    #    |> assign(
+    #      can_view_projects: can_view_projects,
+    #      can_edit_projects: can_edit_projects,
+    #      can_create_projects: can_create_projects
+    #    )
+    #    |> assign(current_user: socket.assigns.current_user),
+    #    layout: {LightningWeb.LayoutView, :settings}}
+    # else
+    #   {:ok,
+    #    put_flash(socket, :error, "You can't access that page")
+    #    |> push_redirect(to: "/")}
+    # end
+
     case Bodyguard.permit(
            Lightning.Projects.Policy,
            :index,
@@ -17,6 +44,11 @@ defmodule LightningWeb.ProjectLive.Index do
         {:ok,
          socket
          |> assign(:active_menu_item, :projects)
+         |> assign(
+           can_view_projects: can_view_projects,
+           can_edit_projects: can_edit_projects,
+           can_create_projects: can_create_projects
+         )
          |> assign(current_user: socket.assigns.current_user),
          layout: {LightningWeb.LayoutView, :settings}}
 

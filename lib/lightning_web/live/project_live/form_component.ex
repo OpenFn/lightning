@@ -146,7 +146,14 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    save_project(socket, socket.assigns.action, project_params)
+    if socket.assigns.can_edit_projects and socket.assigns.can_create_projects do
+      save_project(socket, socket.assigns.action, project_params)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_patch(to: socket.assigns.return_to)}
+    end
   end
 
   defp filter_available_users(changeset, all_users) do

@@ -4,10 +4,17 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Accounts
 
   @impl true
   def mount(_params, _session, socket) do
+    can_view_users =
+      Users |> Permissions.can(:view_users, socket.assigns.current_user, {})
+
+    can_delete_users =
+      Users |> Permissions.can(:delete_users, socket.assigns.current_user, {})
+
     case Bodyguard.permit(
            Lightning.Accounts.Policy,
            :index,
@@ -16,6 +23,10 @@ defmodule LightningWeb.UserLive.Index do
       :ok ->
         {:ok,
          assign(socket, :users, list_users())
+         |> assign(
+           can_view_users: can_view_users,
+           can_delete_users: can_delete_users
+         )
          |> assign(:active_menu_item, :users),
          layout: {LightningWeb.LayoutView, :settings}}
 

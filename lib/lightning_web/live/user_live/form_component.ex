@@ -27,7 +27,14 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   def handle_event("save", %{"user" => user_params}, socket) do
-    save_user(socket, socket.assigns.action, user_params)
+    if socket.assigns.can_edit_users do
+      save_user(socket, socket.assigns.action, user_params)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_redirect(to: socket.assigns.return_to)}
+    end
   end
 
   defp save_user(socket, :edit, user_params) do

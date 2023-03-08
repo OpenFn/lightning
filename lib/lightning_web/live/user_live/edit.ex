@@ -5,11 +5,18 @@ defmodule LightningWeb.UserLive.Edit do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Accounts
   alias Lightning.Accounts.User
 
   @impl true
   def mount(_params, _session, socket) do
+    can_edit_users =
+      Users |> Permissions.can(:edit_users, socket.assigns.current_user, {})
+
+    can_disable_users =
+      Users |> Permissions.can(:disable_users, socket.assigns.current_user, {})
+
     case Bodyguard.permit(
            Lightning.Accounts.Policy,
            :index,
@@ -18,8 +25,11 @@ defmodule LightningWeb.UserLive.Edit do
       :ok ->
         {:ok,
          socket
-         |> assign(active_menu_item: :users),
-         layout: {LightningWeb.LayoutView, :settings}}
+         |> assign(active_menu_item: :users)
+         |> assign(
+           can_disable_users: can_disable_users,
+           can_edit_users: can_edit_users
+         ), layout: {LightningWeb.LayoutView, :settings}}
 
       {:error, :unauthorized} ->
         {:ok,
