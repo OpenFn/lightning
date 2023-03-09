@@ -56,9 +56,15 @@ const Entity = ({ data, level }) => {
 
 type MetadataExplorerProps = {
   metadata?: any;
+  adaptor?: string;
 }
 
-export default ({ metadata }: MetadataExplorerProps) => {
+const Empty = ({ adaptor }: { adaptor: string }) => (<div>
+  <p className="text-sm mb-4">{`No metadata found for ${adaptor}`}</p>
+  <p  className="text-sm mb-4">This adaptor does not support magic functions yet.</p>
+</div>)
+
+export default ({ metadata, adaptor }: MetadataExplorerProps) => {
   // const [filter, setFilter] = useState({ hideSystem: true });
   const [data, setData] = useState({ children: [] });
 
@@ -84,7 +90,7 @@ export default ({ metadata }: MetadataExplorerProps) => {
 
 
   if (!metadata) {
-    return <div>No metadata found</div>
+    return <Empty adaptor={adaptor} />
   }
   
   return (

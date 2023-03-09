@@ -130,7 +130,7 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
       {showPanel && 
         <div className={`flex-1 ${!vertical && 'overflow-auto' || ''} px-2`}>
           {selectedTab === 'Docs' && <Docs adaptor={adaptor} />}
-          {selectedTab === 'Metadata' && <Metadata metadata={metadata} />}
+          {selectedTab === 'Metadata' && <Metadata adaptor={adaptor} metadata={metadata} />}
         </div>
       }
     </div>
