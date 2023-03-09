@@ -131,7 +131,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                           update_cron_expression(@job_id, cron_expression)
                         end
                       }
-                      can_edit_job={@can_edit_job}
+                      disabled={!@can_edit_job}
                     />
                   <% end %>
                 </div>
@@ -141,7 +141,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     module={LightningWeb.JobLive.AdaptorPicker}
                     on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
                     form={f}
-                    can_edit_job={@can_edit_job}
+                    disabled={!@can_edit_job}
                   />
                 </div>
                 <div class="md:col-span-2">

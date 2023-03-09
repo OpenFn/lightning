@@ -9,6 +9,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   attr :form, :map, required: true
   attr :on_change, :any, required: true
+  attr :disabled, :boolean, required: true
 
   @impl true
   def render(assigns) do
@@ -30,7 +31,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           values={@adaptors}
           phx-change="adaptor_name_change"
           phx-target={@myself}
-          disabled={!@can_edit_job}
+          disabled={@disabled}
         />
       </div>
 
@@ -53,7 +54,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           values={@versions}
           phx-change="adaptor_version_change"
           phx-target={@myself}
-          disabled={!@can_edit_job}
+          disabled={@disabled}
         />
       </div>
     </div>
@@ -62,7 +63,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
 
   @impl true
   def update(
-        %{form: form, on_change: on_change, can_edit_job: can_edit_job},
+        %{form: form, on_change: on_change, disabled: disabled},
         socket
       ) do
     {adaptor_name, version, adaptors, versions} =
@@ -76,7 +77,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
      |> assign(:versions, versions)
      |> assign(:on_change, on_change)
      |> assign(:form, form)
-     |> assign(:can_edit_job, can_edit_job)}
+     |> assign(:disabled, disabled)}
   end
 
   @doc """
