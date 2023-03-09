@@ -1,6 +1,7 @@
 export default {
   type: 'model',
   name: 'dhis2',
+  created: '2023-03-09T12:26:08.607Z',
   children: {
     orgUnits: [
       {

@@ -1,4 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { ClockIcon, KeyIcon } from '@heroicons/react/24/outline'
+
+const iconStyle = "h-4 w-4 text-grey-400 mr-1"
 
 const hasChildren = ({ children } = {}) => {
   if (children) {
@@ -32,7 +35,7 @@ const Entity = ({ data, level }) => {
     }
     return (
       <details>
-        <summary className="cursor-pointer">
+        <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
           {label}
         </summary>
         <ul className="list-disc ml-4">
@@ -65,42 +68,24 @@ const Empty = ({ adaptor }: { adaptor: string }) => (<div>
 </div>)
 
 export default ({ metadata, adaptor }: MetadataExplorerProps) => {
-  // const [filter, setFilter] = useState({ hideSystem: true });
-  const [data, setData] = useState({ children: [] });
-
-  const update = useCallback(() => {
-    // const filtered = metadata.children.filter((e) => {
-    //   // if (filter.hideSystem) {
-    //   //   return !e.meta.system;
-    //   // }
-    //   return true;
-    // })
-    // console.log(filtered)
-    // setData({ ...metadata, children: filtered });
-    setData(metadata)
-  }, [/*filter*/]);
-
-  // This is SF specific so need to think about how we might drive this
-  // const toggleSystem = useCallback((evt) => {
-  //   const { checked } = evt.target;
-  //   setFilter({ hideSystem: !checked });
-  // });
-
-  useEffect(() => update(), [/*filter*/])
-
-
   if (!metadata) {
     return <Empty adaptor={adaptor} />
   }
   
   return (
-    <>
-      {/* <p>
-        <input type="checkbox" onChange={toggleSystem} />
-        Show system children
+    <div className="block m-2">
+      <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential</p>
+      <p className="flex flex-row cursor-default" title={`This metadata was generated at ${metadata.created}`}>
+        <ClockIcon className={iconStyle} />
+        <span className="text-xs mb-1">{metadata.created}</span>
       </p>
-      <p>{data.children.length} children:</p> */}
-      {map(data.children, data => <Entity level={0} data={data} />)}
-    </>
+      <p className="flex flex-row cursor-default" title="The credential used to generate metadata">
+        <KeyIcon className={iconStyle} />
+        <span className="text-xs mb-1">credential</span>
+      </p>
+      <div className="mt-2">
+        {map(metadata.children, data => <Entity level={0} data={data} />)}
+      </div>
+    </div>
   )
 }

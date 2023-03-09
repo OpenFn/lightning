@@ -77,8 +77,8 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
 const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
   return (
     <details>
-      <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
-        <span className="relative top-px">{getSignature(fn)}</span>
+      <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm whitespace-nowrap">
+        {getSignature(fn)}
       </summary>
       <div className="block mb-4 pl-4">
         <p className="block text-sm" dangerouslySetInnerHTML={{ __html: marked.parse(fn.description)}}></p>
