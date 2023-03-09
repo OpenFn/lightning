@@ -26,8 +26,16 @@ const doCopy = async (text: string) => {
 
 const getSignature = (fn: FunctionDescription) => {
   const paramList: string[] = fn.parameters.map(({ name }) => name);
-
-  return `${fn.name}(${paramList.join(', ')})`
+  
+return <span>
+    {fn.magic ? <span style={{ float: 'left', marginLeft: '-25px' }}>✨</span>: ''}
+    {[
+      fn.name,
+      '(',
+      paramList.join(', '),
+      ')'
+    ].join('')}
+  </span>
 }
 
 const PreButton = ({ label, onClick, tooltip }: PreButtonFunctionProps) => 
@@ -76,7 +84,7 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
 
 const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
   return (
-    <details>
+    <details className="ml-4">
       <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm whitespace-nowrap">
         {getSignature(fn)}
       </summary>
