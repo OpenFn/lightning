@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { ViewColumnsIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { ViewColumnsIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, ListBulletIcon, SparklesIcon } from '@heroicons/react/24/outline'
 
 import Docs from '../adaptor-docs/Docs';
 import Editor from '../editor/Editor';
@@ -9,20 +9,24 @@ import loadMetadata from '../metadata-loader/metadata';
 enum SettingsKeys {
   ORIENTATION = 'lightning.job-editor.orientation',
   SHOW_PANEL = 'lightning.job-editor.showPanel',
+  ACTIVE_TAB = 'lightning.job-editor.activeTab',
 };
 
 const persistedSettings = localStorage.getItem('lightning.job-editor.settings')
 const settings = persistedSettings ? JSON.parse(persistedSettings) : {
   [SettingsKeys.ORIENTATION]: 'h',
   [SettingsKeys.SHOW_PANEL]: true,
+  [SettingsKeys.ACTIVE_TAB]: 'Docs',
 };
 
 const persistSettings = () => localStorage.setItem('lightning.job-editor.settings', JSON.stringify(settings))
 
 const iconStyle = "cursor-pointer h-6 w-6"
 
-const Tabs = ({ options, onSelectionChange, verticalCollapse }: { options: string[], onSelectionChange?: (newName: string) => void, verticalCollapse: boolean }) => {
-  const [selected, setSelected ] = useState(options[0]);
+type TabsProps = { options: string[], onSelectionChange?: (newName: string) => void, verticalCollapse: boolean, initialSelection?: String };
+
+const Tabs = ({ options, onSelectionChange, verticalCollapse, initialSelection }: TabsProps) => {
+  const [selected, setSelected ] = useState(initialSelection);
 
   const handleSelectionChange = (name: string) => {
     if (name !== selected) {
@@ -38,6 +42,7 @@ const Tabs = ({ options, onSelectionChange, verticalCollapse }: { options: strin
 
   return (
     <nav className={`flex space-${verticalCollapse?'y':'x'}-2 w-full`} aria-label="Tabs" style={style}>
+       {/* TODO need to support more information in each tab */}
        {options.map((name) => {
           const style = name === selected ? 
             'bg-gray-100 text-gray-700' : 'text-gray-500 hover:text-gray-700'
@@ -58,7 +63,7 @@ type JobEditorProps = {
 export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) => {
   const [vertical, setVertical] = useState(() => settings[SettingsKeys.ORIENTATION] === 'v');
   const [showPanel, setShowPanel] = useState(() => settings[SettingsKeys.SHOW_PANEL]);
-  const [selectedTab, setSelectedTab] = useState('Docs');
+  const [selectedTab, setSelectedTab] = useState(() => settings[SettingsKeys.ACTIVE_TAB]);
   const [metadata, setMetadata] = useState<any>();
 
   useEffect(() => {
@@ -71,28 +76,29 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
     setVertical(!vertical)
     resize();
     settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
-    persistSettings()
-  }, [vertical])
+    persistSettings();
+  }, [vertical]);
 
   const toggleShowPanel = useCallback(() => {
-    setShowPanel(!showPanel)
+    setShowPanel(!showPanel);
     resize();
     settings[SettingsKeys.SHOW_PANEL] =! showPanel;
     persistSettings()
-  }, [showPanel])
+  }, [showPanel]);
 
   const handleSelectionChange = (newSelection: string) => {
     setSelectedTab(newSelection);
+    settings[SettingsKeys.ACTIVE_TAB] = newSelection;
+    persistSettings();
     if (!showPanel) {
-      toggleShowPanel()
+      toggleShowPanel();
     }
-  }
+  };
 
   const resize = () => {
     // terrible solution to resizing the editor
-    const e = new Event('update-layout');
-    document.dispatchEvent(e)
-  }
+    document.dispatchEvent(new Event('update-layout'));
+  };
 
   const CollapseIcon = useMemo(() => {
     if (vertical) {
@@ -120,7 +126,8 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
         vertical ? 'pt-2' : 'pl-2'
       ].join(' ')}>
         <Tabs
-          options={['Docs', 'Metadata']}
+          options={['Docs', (metadata ? ' ✨' : '') + ' Metadata']}
+          initialSelection={selectedTab}
           onSelectionChange={handleSelectionChange}
           verticalCollapse={!vertical && !showPanel}
         />
@@ -130,7 +137,7 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
       {showPanel && 
         <div className={`flex-1 ${!vertical && 'overflow-auto' || ''} px-2`}>
           {selectedTab === 'Docs' && <Docs adaptor={adaptor} />}
-          {selectedTab === 'Metadata' && <Metadata adaptor={adaptor} metadata={metadata} />}
+          {selectedTab.endsWith('Metadata') && <Metadata adaptor={adaptor} metadata={metadata} />}
         </div>
       }
     </div>
