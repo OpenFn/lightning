@@ -11,7 +11,7 @@ type EditorProps = {
   source?: string;
   adaptor?: string; // fully specified adaptor name - <id>@<version>
   onChange?: (newSource: string) => void;
-  disabled?: string;
+  disabled?: boolean;
 };
 
 const spinner = (
@@ -187,7 +187,7 @@ export default function Editor({
       ...defaultOptions,
       overflowWidgetsDomNode: overflowNode,
       fixedOverflowWidgets: true,
-      readOnly: disabled === 'true',
+      readOnly: disabled,
     });
 
     return () => {
