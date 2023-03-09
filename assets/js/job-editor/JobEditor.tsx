@@ -135,7 +135,7 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
         <CollapseIcon className={iconStyle} onClick={toggleShowPanel} />
       </div>
       {showPanel && 
-        <div className={`flex-1 ${!vertical && 'overflow-auto' || ''} px-2`}>
+        <div className={`flex flex-1 ${vertical ? 'overflow-auto' : 'overflow-hidden'} px-2`}>
           {selectedTab === 'Docs' && <Docs adaptor={adaptor} />}
           {selectedTab.endsWith('Metadata') && <Metadata adaptor={adaptor} metadata={metadata} />}
         </div>
