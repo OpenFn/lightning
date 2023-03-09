@@ -12,6 +12,9 @@ defmodule LightningWeb.UserLive.Index do
     can_view_users =
       Users |> Permissions.can(:view_users, socket.assigns.current_user, {})
 
+    can_create_users =
+      Users |> Permissions.can(:create_users, socket.assigns.current_user, {})
+
     can_delete_users =
       Users |> Permissions.can(:delete_users, socket.assigns.current_user, {})
 
@@ -25,7 +28,8 @@ defmodule LightningWeb.UserLive.Index do
          assign(socket, :users, list_users())
          |> assign(
            can_view_users: can_view_users,
-           can_delete_users: can_delete_users
+           can_delete_users: can_delete_users,
+           can_create_users: can_create_users
          )
          |> assign(:active_menu_item, :users),
          layout: {LightningWeb.LayoutView, :settings}}

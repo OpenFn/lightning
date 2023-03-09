@@ -38,6 +38,7 @@ defmodule Lightning.Policies.Users do
              :view_projects,
              :edit_projects,
              :create_projects,
+             :create_users,
              :view_users,
              :edit_users,
              :delete_users,

@@ -27,8 +27,21 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   def handle_event("save", %{"user" => user_params}, socket) do
+    save_user(socket, socket.assigns.action, user_params)
+  end
+
+  defp save_user(socket, :edit, user_params) do
     if socket.assigns.can_edit_users do
-      save_user(socket, socket.assigns.action, user_params)
+      case Accounts.update_user_details(socket.assigns.user, user_params) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "User updated successfully")
+           |> push_redirect(to: socket.assigns.return_to)}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
+      end
     else
       {:noreply,
        socket
@@ -37,29 +50,23 @@ defmodule LightningWeb.UserLive.FormComponent do
     end
   end
 
-  defp save_user(socket, :edit, user_params) do
-    case Accounts.update_user_details(socket.assigns.user, user_params) do
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "User updated successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
-    end
-  end
-
   defp save_user(socket, :new, user_params) do
-    case Accounts.register_user(user_params) do
-      {:ok, _user} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "User created successfully")
-         |> push_redirect(to: socket.assigns.return_to)}
+    if socket.assigns.can_create_users do
+      case Accounts.register_user(user_params) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "User created successfully")
+           |> push_redirect(to: socket.assigns.return_to)}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, changeset: changeset)}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")
+       |> push_redirect(to: socket.assigns.return_to)}
     end
   end
 end

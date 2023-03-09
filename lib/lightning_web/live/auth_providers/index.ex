@@ -4,16 +4,30 @@ defmodule LightningWeb.AuthProvidersLive.Index do
   """
   use LightningWeb, :live_view
   alias Lightning.AuthProviders
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def mount(_params, _session, socket) do
+    can_configure_external_auth_provider = false
+    # Users
+    # |> Permissions.can(
+    #   :configure_external_auth_provider,
+    #   socket.assigns.current_user
+    # )
+
     case Bodyguard.permit(
            Lightning.AuthProviders.Policy,
            :index,
            socket.assigns.current_user
          ) do
       :ok ->
-        {:ok, socket |> assign(:active_menu_item, :authentication),
+        {:ok,
+         socket
+         |> assign(
+           can_configure_external_auth_provider:
+             can_configure_external_auth_provider
+         )
+         |> assign(:active_menu_item, :authentication),
          layout: {LightningWeb.LayoutView, :settings}}
 
       {:error, :unauthorized} ->
@@ -70,6 +84,9 @@ defmodule LightningWeb.AuthProvidersLive.Index do
           auth_provider={@auth_provider}
           redirect_host={@redirect_host}
           parent={self()}
+          can_configure_external_auth_provider={
+            @can_configure_external_auth_provider
+          }
         />
       </Layout.centered>
     </Layout.page_content>

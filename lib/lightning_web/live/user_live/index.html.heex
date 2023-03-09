@@ -2,14 +2,16 @@
   <:header>
     <Layout.header socket={@socket}>
       <:title>Users</:title>
-      <.link navigate={Routes.user_edit_path(@socket, :new)}>
-        <Common.button>
-          <div class="h-full">
-            <Heroicons.plus solid class="h-4 w-4 inline-block" />
-            <span class="inline-block align-middle">New User</span>
-          </div>
-        </Common.button>
-      </.link>
+      <%= if @can_create_users do %>
+        <.link navigate={Routes.user_edit_path(@socket, :new)}>
+          <Common.button>
+            <div class="h-full">
+              <Heroicons.plus solid class="h-4 w-4 inline-block" />
+              <span class="inline-block align-middle">New User</span>
+            </div>
+          </Common.button>
+        </.link>
+      <% end %>
     </Layout.header>
   </:header>
   <Layout.centered>
