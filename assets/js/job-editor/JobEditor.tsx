@@ -84,8 +84,7 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
   const handleSelectionChange = (newSelection: string) => {
     setSelectedTab(newSelection);
     if (!showPanel) {
-      setShowPanel(true);
-      resize();
+      toggleShowPanel()
     }
   }
 
@@ -111,14 +110,25 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
     <div className="flex flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark">
       <Editor source={source} adaptor={adaptor} metadata={metadata} disabled={disabled} onChange={onSourceChanged} />
     </div>
-    <div className={`${showPanel ? 'flex flex-col flex-1' : ''} bg-white ${vertical && 'overflow-auto'}`}>
-      <div className={`flex flex-${!vertical && !showPanel ? 'col-reverse items-center' : 'row'} w-full justify-items-end sticky`}>
-        <Tabs options={['Docs', 'Metadata']} onSelectionChange={handleSelectionChange} verticalCollapse={!vertical && !showPanel} />
+    <div className={`${showPanel ? 'flex flex-col flex-1 overflow-auto' : ''} bg-white`}>
+      <div className={
+        ['flex',
+        `flex-${!vertical && !showPanel ? 'col-reverse items-center' : 'row'}`,
+        'w-full',
+        'justify-items-end',
+        'sticky',
+        vertical ? 'pt-2' : 'pl-2'
+      ].join(' ')}>
+        <Tabs
+          options={['Docs', 'Metadata']}
+          onSelectionChange={handleSelectionChange}
+          verticalCollapse={!vertical && !showPanel}
+        />
         <ViewColumnsIcon className={iconStyle} onClick={toggleOrientiation} />
         <CollapseIcon className={iconStyle} onClick={toggleShowPanel} />
       </div>
       {showPanel && 
-        <div className={`h-full v-full ${!vertical && 'overflow-auto' || ''} px-2`}>
+        <div className={`flex-1 ${!vertical && 'overflow-auto' || ''} px-2`}>
           {selectedTab === 'Docs' && <Docs adaptor={adaptor} />}
           {selectedTab === 'Metadata' && <Metadata metadata={metadata} />}
         </div>
