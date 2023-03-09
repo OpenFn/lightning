@@ -73,19 +73,21 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
   }
   
   return (
-    <div className="block m-2">
-      <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential</p>
-      <p className="flex flex-row cursor-default" title={`This metadata was generated at ${metadata.created}`}>
-        <ClockIcon className={iconStyle} />
-        <span className="text-xs mb-1">{metadata.created}</span>
-      </p>
-      <p className="flex flex-row cursor-default" title="The credential used to generate metadata">
-        <KeyIcon className={iconStyle} />
-        <span className="text-xs mb-1">credential</span>
-      </p>
-      <div className="mt-2">
+    <div className="block flex-1 flex flex-col overflow-y-hidden">
+      <div className="mt-2 flex-1 overflow-y-auto">
         {map(metadata.children, data => <Entity level={0} data={data} />)}
       </div>
+      <div className="pt-4">
+        <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential</p>
+        <p className="flex flex-row cursor-default" title={`This metadata was generated at ${metadata.created}`}>
+          <ClockIcon className={iconStyle} />
+          <span className="text-xs mb-1">{metadata.created}</span>
+        </p>
+        <p className="flex flex-row cursor-default" title="The credential used to generate metadata">
+          <KeyIcon className={iconStyle} />
+          <span className="text-xs mb-1">credential</span>
+        </p>
+        </div>
     </div>
   )
 }
