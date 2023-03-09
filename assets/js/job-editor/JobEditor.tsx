@@ -6,6 +6,19 @@ import Editor from '../editor/Editor';
 import Metadata from '../metadata-explorer/Explorer';
 import loadMetadata from '../metadata-loader/metadata';
 
+enum SettingsKeys {
+  ORIENTATION = 'lightning.job-editor.orientation',
+  SHOW_PANEL = 'lightning.job-editor.showPanel',
+};
+
+const persistedSettings = localStorage.getItem('lightning.job-editor.settings')
+const settings = persistedSettings ? JSON.parse(persistedSettings) : {
+  [SettingsKeys.ORIENTATION]: 'h',
+  [SettingsKeys.SHOW_PANEL]: true,
+};
+
+const persistSettings = () => localStorage.setItem('lightning.job-editor.settings', JSON.stringify(settings))
+
 const iconStyle = "cursor-pointer h-6 w-6"
 
 const Tabs = ({ options, onSelectionChange, verticalCollapse }: { options: string[], onSelectionChange?: (newName: string) => void, verticalCollapse: boolean }) => {
@@ -43,8 +56,8 @@ type JobEditorProps = {
 }
 
 export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) => {
-  const [vertical, setVertical] = useState(false);
-  const [showPanel, setShowPanel] = useState(true);
+  const [vertical, setVertical] = useState(() => settings[SettingsKeys.ORIENTATION] === 'v');
+  const [showPanel, setShowPanel] = useState(() => settings[SettingsKeys.SHOW_PANEL]);
   const [selectedTab, setSelectedTab] = useState('Docs');
   const [metadata, setMetadata] = useState<any>();
 
@@ -57,11 +70,15 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical)
     resize();
+    settings[SettingsKeys.ORIENTATION] = vertical ? 'h' : 'v';
+    persistSettings()
   }, [vertical])
 
   const toggleShowPanel = useCallback(() => {
     setShowPanel(!showPanel)
     resize();
+    settings[SettingsKeys.SHOW_PANEL] =! showPanel;
+    persistSettings()
   }, [showPanel])
 
   const handleSelectionChange = (newSelection: string) => {
