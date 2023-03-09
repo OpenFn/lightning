@@ -1,18 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { describePackage, PackageDescription } from '@openfn/describe-package';
 
+// Describe package is slow right now even if data is available
+// This in-mamory cache will help when switching tabs etc
+const cache: Record<string, PackageDescription | null | false> = {}
+
 const useDocs = (specifier: string) => {
-  // null if loading, false  if failed
   const [docs, setDocs] = useState<PackageDescription | null | false>(null);
 
   useEffect(() => {
-    setDocs(null); // Reset docs when the specifier changes
-    describePackage(specifier, {}).then((result) => {
-      setDocs(result);
-    }).catch((err) => {
-      console.error(err)
-      setDocs(false)
-    });
+    if (cache.hasOwnProperty(specifier)) {
+      // TODO if the cache is null, it's loading docs
+      // To avoid loading twice, we need to register a callback
+      setDocs(cache[specifier]);
+    } else {
+      cache[specifier] = null;
+      describePackage(specifier, {}).then((result) => {
+        cache[specifier] = result;
+        setDocs(result);
+      }).catch((err) => {
+        cache[specifier] = false;
+        setDocs(false)
+      });  
+    }
   }, [specifier])
 
   return docs;
