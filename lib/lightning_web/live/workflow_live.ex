@@ -239,7 +239,7 @@ defmodule LightningWeb.WorkflowLive do
        can_create_workflow: can_create_workflow,
        can_create_job: can_create_job,
        can_edit_job: can_edit_job,
-       can_delete_job: can_create_job,
+       can_delete_job: can_delete_job,
        active_menu_item: :projects,
        new_credential: false,
        builder_state: %{}
@@ -339,29 +339,25 @@ defmodule LightningWeb.WorkflowLive do
   def handle_event(
         "create-job",
         _,
-        %{assigns: %{can_create_job: true}} = socket
+        socket
       ) do
-    {:noreply,
-     socket
-     |> push_patch(
-       to:
-         Routes.project_workflow_path(
-           socket,
-           :new_job,
-           socket.assigns.project.id,
-           socket.assigns.current_workflow.id
-         )
-     )}
-  end
-
-  def handle_event(
-        "create-job",
-        _,
-        %{assigns: %{can_create_job: false}} = socket
-      ) do
-    {:noreply,
-     socket
-     |> put_flash(:error, "You are not authorized to perform this action.")}
+    if socket.assigns.can_create_job do
+      {:noreply,
+       socket
+       |> push_patch(
+         to:
+           Routes.project_workflow_path(
+             socket,
+             :new_job,
+             socket.assigns.project.id,
+             socket.assigns.current_workflow.id
+           )
+       )}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
   end
 
   @impl true
