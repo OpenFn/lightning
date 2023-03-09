@@ -35,13 +35,13 @@ const sortDeep = (model: any) => {
 
 const loadMetadata = (adaptor?: string) =>
   new Promise<object>(resolve => {
-    let metadata;
+    let metadata = null;
     // TODO what if the metadata changes in flight?
     // May need to double check the adaptor value
     if (adaptor) {
       if (adaptor.match('dhis2')) {
         metadata = sortDeep(metadata_dhis2);
-      } else {
+      } else if (adaptor.match('salesforce')) {
         metadata = sortDeep(metadata_salesforce);
       }
     }
