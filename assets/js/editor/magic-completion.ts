@@ -137,7 +137,7 @@ const createCompletionProvider = (monaco, metadata) => {
         // Check the lookup rule for this paramter
         const nameRe = new RegExp(`^${param.name}`);
         const lookup = help.items[0].tags.find(({ name, text }) => {
-          if (name.toLowerCase() == 'paramlookup') {
+          if (name.toLowerCase() == 'magic') {
             return nameRe.test(text[0].text);
           }
         });
@@ -175,7 +175,7 @@ const createCompletionProvider = (monaco, metadata) => {
     if (pos) {
       const info = await worker.getQuickInfoAtPosition('file:///job.js', pos);
       if (info?.kind === 'property' && info.tags) {
-        const lookup = info.tags.find(({ name }) => name === 'lookup');
+        const lookup = info.tags.find(({ name }) => name === 'magic');
         if (lookup) {
           const path = lookup.text[0].text;
           // TODO - swap out placeholders
