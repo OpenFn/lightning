@@ -154,12 +154,12 @@ export const createIf: any;
 * })
 * @function
 * @param {String} sObject - API name of the sObject.
-* @paramlookup sObject $.children[?(!@.meta.system)].name
+* @magic sObject $.children[?(!@.meta.system)].name
 * @param {String} externalId - ID.
-* @paramlookup externalId $.children[?(@.name=="{{args.sObject}}")].children[?(@.meta.externalId)].name
+* @magic externalId $.children[?(@.name=="{{args.sObject}}")].children[?(@.meta.externalId)].name
 * @param {Object} attrs - Field attributes for the new object.
 * @param {State} state - Runtime state.
-* @paramlookup attrs $.children[?(@.name=="{{args.sObject}}")].children[?(!@.meta.externalId)]
+* @magic attrs $.children[?(@.name=="{{args.sObject}}")].children[?(!@.meta.externalId)]
 * @returns {Operation}
 */
 export function upsert(sObject: string, externalId: string, attrs?: object, state?: any): Operation;
