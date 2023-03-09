@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Added roles and permissions to workflows and history page
+
 ### Added
 
 ### Changed
@@ -87,7 +89,6 @@ and this project adheres to
 - Enable distributed Erlang, allowing any number of redundant Lightning nodes to
   communicate with each other.
 - Users can set up realtime alerts for a project
-- Added roles and permissions to workflows and history page
 
 ### Changed
 
