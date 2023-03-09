@@ -49,11 +49,11 @@ export type Dhis2Data = {
  */
 export function execute(...operations: Operations): Operation;
 /**
- * Create a record
+ * Create a record!!!
  * @public
  * @function
  * @param {string} resourceType - Type of resource to create. E.g. \`trackedEntityInstances\`, \`programs\`, \`events\`, ...
- * @magic resourceType $.children.resourceTypes[*]
+ * @magic resourceType - $.children.resourceTypes[*]
  * @param {Dhis2Data} data - Data that will be used to create a given instance of resource. To create a single instance of a resource, \`data\` must be a javascript object, and to create multiple instances of a resources, \`data\` must be an array of javascript objects.
  * @param {Object} [options] - Optional \`options\` to define URL parameters via params (E.g. \`filter\`, \`dimension\` and other import parameters), request config (E.g. \`auth\`) and the DHIS2 apiVersion.
  * @param {function} [callback] - Optional callback to handle the response
