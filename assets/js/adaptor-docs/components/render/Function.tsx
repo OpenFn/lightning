@@ -85,7 +85,7 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
 const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
   return (
     <details className="ml-4">
-      <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm whitespace-nowrap">
+      <summary className="text-sm text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm whitespace-nowrap">
         {getSignature(fn)}
       </summary>
       <div className="block mb-4 pl-4">
