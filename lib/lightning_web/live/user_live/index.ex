@@ -4,26 +4,15 @@ defmodule LightningWeb.UserLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.{Users, Permissions}
   alias Lightning.Accounts
 
   @impl true
   def mount(_params, _session, socket) do
-    case Bodyguard.permit(
-           Lightning.Accounts.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         assign(socket, :users, list_users())
-         |> assign(:active_menu_item, :users),
-         layout: {LightningWeb.LayoutView, :settings}}
-
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
-    end
+    {:ok,
+     assign(socket, :users, list_users())
+     |> assign(:active_menu_item, :users),
+     layout: {LightningWeb.LayoutView, :settings}}
   end
 
   @impl true
@@ -32,15 +21,38 @@ defmodule LightningWeb.UserLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(:page_title, "Users")
-    |> assign(:user, nil)
+    can_view_users =
+      Users |> Permissions.can(:view_users, socket.assigns.current_user)
+
+    if can_view_users do
+      socket
+      |> assign(:page_title, "Users")
+      |> assign(:user, nil)
+    else
+      redirect(socket, to: "/") |> put_flash(:nav, :no_access)
+    end
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Users")
-    |> assign(:user, Accounts.get_user!(id))
+    can_delete_users =
+      Users |> Permissions.can(:delete_users, socket.assigns.current_user)
+
+    can_delete_account =
+      Users
+      |> Permissions.can(
+        :delete_account,
+        socket.assigns.current_user,
+        socket.assigns.current_user
+      )
+
+    if can_delete_users do
+      socket
+      |> assign(:page_title, "Users")
+      |> assign(can_delete_account: can_delete_account)
+      |> assign(:user, Accounts.get_user!(id))
+    else
+      redirect(socket, to: "/") |> put_flash(:nav, :no_access)
+    end
   end
 
   defp list_users do

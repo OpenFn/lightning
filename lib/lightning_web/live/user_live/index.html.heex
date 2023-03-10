@@ -19,6 +19,7 @@
         id={@user.id}
         user={@user}
         logout={false}
+        can_delete_account={@can_delete_account}
         return_to={Routes.user_index_path(@socket, :index)}
       />
     <% end %>
