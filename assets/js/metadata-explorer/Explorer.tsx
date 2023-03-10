@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { ClockIcon, KeyIcon } from '@heroicons/react/24/outline'
+import React from 'react';
+import { ClockIcon, KeyIcon} from '@heroicons/react/24/outline';
+import { InformationCircleIcon} from '@heroicons/react/24/solid';
 
 const iconStyle = "h-4 w-4 text-grey-400 mr-1"
 
@@ -81,7 +82,7 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
         {map(metadata.children, data => <Entity level={0} data={data} />)}
       </div>
       <div className="pt-4">
-        <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential</p>
+        {/* TODO: make the icons break horizontally in large windows */}
         <p className="flex flex-row cursor-default" title={`This metadata was generated at ${metadata.created}`}>
           <ClockIcon className={iconStyle} />
           <span className="text-xs mb-1">{metadata.created}</span>
@@ -90,6 +91,16 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
           <KeyIcon className={iconStyle} />
           <span className="text-xs mb-1">credential</span>
         </p>
+        <details open>
+          <summary className="block cursor-pointer text-sm">
+            <InformationCircleIcon className={iconStyle + " inline"}/>
+            <span className="font-bold">Help & Tips</span>
+          </summary>
+          <div className="border-slate-200 border-l-2 ml-2 pl-2" style={{ borderLeftWidth: '2px' }}>
+            <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential.</p>
+            <p className="text-sm mb-2">Press <pre className="inline text-xs">ctrl + space</pre> in the code editor for suggestions while writing code.</p>
+          </div>
+        </details>
         </div>
     </div>
   )
