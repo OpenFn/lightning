@@ -53,9 +53,13 @@ defmodule LightningWeb.CredentialLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(:page_title, "Credentials")
-    |> assign(:credential, nil)
+    if socket.assigns.can_view_credentials do
+      socket
+      |> assign(:page_title, "Credentials")
+      |> assign(:credential, nil)
+    else
+      redirect(socket, to: "/") |> put_flash(:nav, :no_access)
+    end
   end
 
   @impl true
@@ -78,9 +82,7 @@ defmodule LightningWeb.CredentialLive.Index do
           {:noreply, socket |> put_flash(:error, "Can't delete credential")}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+      redirect(socket, to: "/") |> put_flash(:nav, :no_access)
     end
   end
 

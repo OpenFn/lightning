@@ -9,15 +9,12 @@ defmodule LightningWeb.ProfileLive.Edit do
 
   @impl true
   def mount(_params, session, socket) do
-    authenticated_user =
-      Accounts.get_user_by_session_token(session["user_token"])
-
     can_delete_account =
       Users
       |> Permissions.can(
         :delete_account,
         socket.assigns.current_user,
-        authenticated_user
+        socket.assigns.current_user
       )
 
     can_change_password =
@@ -25,7 +22,7 @@ defmodule LightningWeb.ProfileLive.Edit do
       |> Permissions.can(
         :change_password,
         socket.assigns.current_user,
-        authenticated_user
+        socket.assigns.current_user
       )
 
     {:ok,
@@ -47,9 +44,13 @@ defmodule LightningWeb.ProfileLive.Edit do
   end
 
   defp apply_action(socket, :edit, params) do
-    socket
-    |> assign(:page_title, "User Profile")
-    |> assign(:user, params)
+    if socket.assigns.can_change_password do
+      socket
+      |> assign(:page_title, "User Profile")
+      |> assign(:user, params)
+    else
+      redirect(socket, to: "/") |> put_flash(:nav, :no_access)
+    end
   end
 
   defp apply_action(socket, :delete, user) do
@@ -58,10 +59,7 @@ defmodule LightningWeb.ProfileLive.Edit do
       |> assign(:page_title, "User Profile")
       |> assign(:user, user)
     else
-      socket
-      |> assign(:page_title, "User Profile")
-      |> assign(:user, socket.assigns.current_user)
-      |> put_flash(:error, "You are not authorized to perform this action.")
+      redirect(socket, to: "/") |> put_flash(:nav, :no_access)
     end
   end
 end
