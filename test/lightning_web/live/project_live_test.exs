@@ -18,9 +18,25 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "Index as a regular user" do
     setup :register_and_log_in_user
 
-    test "cannot access the users page", %{conn: conn} do
+    test "cannot access the index page", %{conn: conn} do
       {:ok, _index_live, html} =
         live(conn, Routes.project_index_path(conn, :index))
+        |> follow_redirect(conn, "/")
+
+      assert html =~ "You can&#39;t access that page"
+    end
+
+    test "cannot access the new page", %{conn: conn} do
+      {:ok, _index_live, html} =
+        live(conn, Routes.project_index_path(conn, :new))
+        |> follow_redirect(conn, "/")
+
+      assert html =~ "You can&#39;t access that page"
+    end
+
+    test "cannot access the edit page", %{conn: conn} do
+      {:ok, _index_live, html} =
+        live(conn, Routes.project_index_path(conn, :edit))
         |> follow_redirect(conn, "/")
 
       assert html =~ "You can&#39;t access that page"

@@ -13,7 +13,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Projects
-  alias Lightning.Policies.Users
+  alias Lightning.Policies.{Users, Permissions}
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
@@ -38,12 +38,19 @@ defmodule LightningWeb.ProjectLive.FormComponent do
        selected_member: ""
      )
      |> assign(
-       can_edit:
+       can_edit_projects:
          Users
-         |> Lightning.Policies.Permissions.can(
+         |> Permissions.can(
+           :edit_projects,
+           current_user,
+           project
+         ),
+       can_create_projects:
+         Users
+         |> Permissions.can(
            :create_projects,
            current_user,
-           {}
+           project
          )
      )
      |> assign(
@@ -171,10 +178,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
           {:noreply, assign(socket, :changeset, changeset)}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_patch(to: socket.assigns.return_to)}
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
     end
   end
 
@@ -191,10 +196,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
           {:noreply, assign(socket, changeset: changeset)}
       end
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_patch(to: socket.assigns.return_to)}
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
     end
   end
 

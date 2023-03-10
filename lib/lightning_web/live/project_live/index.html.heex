@@ -5,10 +5,8 @@
       <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
         <Common.button>
           <div class="h-full">
-            <%= if @can_create_projects do %>
-              <Icon.plus class="h-4 w-4 inline-block" />
-              <span class="inline-block align-middle">New Project</span>
-            <% end %>
+            <Icon.plus class="h-4 w-4 inline-block" />
+            <span class="inline-block align-middle">New Project</span>
           </div>
         </Common.button>
       <% end %>
@@ -24,9 +22,6 @@
         project={@project}
         users={@users}
         current_user={@current_user}
-        can_edit_projects={@can_edit_projects}
-        can_create_projects={@can_create_projects}
-        can_view_projects={@can_view_projects}
         return_to={Routes.project_index_path(@socket, :index)}
       />
     <% else %>

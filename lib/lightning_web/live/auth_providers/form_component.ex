@@ -18,13 +18,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
 
   @impl true
   def update(
-        %{
-          auth_provider: auth_provider,
-          id: id,
-          redirect_host: redirect_host,
-          can_configure_external_auth_provider:
-            can_configure_external_auth_provider
-        },
+        %{auth_provider: auth_provider, id: id, redirect_host: redirect_host},
         socket
       ) do
     form_model = %{
@@ -42,8 +36,6 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
      |> assign(
        auth_provider: auth_provider,
        form_model: form_model,
-       can_configure_external_auth_provider:
-         can_configure_external_auth_provider,
        changeset: changeset,
        id: id,
        test_state: if(changeset.valid?, do: :unknown, else: nil)
@@ -70,47 +62,40 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
 
   @impl true
   def handle_event("save", %{"auth_provider" => auth_provider_params}, socket) do
-    if socket.assigns.can_configure_external_auth_provider do
-      attrs =
-        AuthConfigForm.change(socket.assigns.form_model, auth_provider_params)
-        |> Ecto.Changeset.apply_changes()
-        |> Map.from_struct()
+    attrs =
+      AuthConfigForm.change(socket.assigns.form_model, auth_provider_params)
+      |> Ecto.Changeset.apply_changes()
+      |> Map.from_struct()
 
-      case socket.assigns.id do
-        :new ->
-          AuthProviders.create(attrs)
-          |> case do
-            {:ok, model} ->
-              {:noreply,
-               socket
-               |> assign(auth_provider: model)
-               |> put_flash(:info, "Authentication Provider created.")
-               |> push_redirect(
-                 to: Routes.auth_providers_index_path(socket, :edit)
-               )}
+    case socket.assigns.id do
+      :new ->
+        AuthProviders.create(attrs)
+        |> case do
+          {:ok, model} ->
+            {:noreply,
+             socket
+             |> assign(auth_provider: model)
+             |> put_flash(:info, "Authentication Provider created.")
+             |> push_redirect(
+               to: Routes.auth_providers_index_path(socket, :edit)
+             )}
 
-            {:error, %Ecto.Changeset{}} ->
-              {:noreply, socket |> put_flash(:error, "Something went wrong.")}
-          end
+          {:error, %Ecto.Changeset{}} ->
+            {:noreply, socket |> put_flash(:error, "Something went wrong.")}
+        end
 
-        _ ->
-          AuthProviders.update(socket.assigns.auth_provider, attrs)
-          |> case do
-            {:ok, model} ->
-              {:noreply,
-               socket
-               |> assign(auth_provider: model)
-               |> put_flash(:info, "Authentication Provider updated.")}
+      _ ->
+        AuthProviders.update(socket.assigns.auth_provider, attrs)
+        |> case do
+          {:ok, model} ->
+            {:noreply,
+             socket
+             |> assign(auth_provider: model)
+             |> put_flash(:info, "Authentication Provider updated.")}
 
-            {:error, %Ecto.Changeset{}} ->
-              {:noreply, socket |> put_flash(:error, "Something went wrong.")}
-          end
-      end
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_redirect(to: Routes.auth_providers_index_path(socket, :edit))}
+          {:error, %Ecto.Changeset{}} ->
+            {:noreply, socket |> put_flash(:error, "Something went wrong.")}
+        end
     end
   end
 
@@ -197,12 +182,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
             <div class="mt-4">
               <div class="flex">
                 <div class="flex-none">
-                  <.submit_button
-                    phx-disable-with="Saving"
-                    disabled={
-                      !@changeset.valid? and !@can_configure_external_auth_provider
-                    }
-                  >
+                  <.submit_button phx-disable-with="Saving">
                     Save
                   </.submit_button>
                 </div>

@@ -8,33 +8,10 @@ defmodule LightningWeb.AuthProvidersLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    can_configure_external_auth_provider = false
-    # Users
-    # |> Permissions.can(
-    #   :configure_external_auth_provider,
-    #   socket.assigns.current_user
-    # )
-
-    case Bodyguard.permit(
-           Lightning.AuthProviders.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         socket
-         |> assign(
-           can_configure_external_auth_provider:
-             can_configure_external_auth_provider
-         )
-         |> assign(:active_menu_item, :authentication),
-         layout: {LightningWeb.LayoutView, :settings}}
-
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
-    end
+    {:ok,
+     socket
+     |> assign(:active_menu_item, :authentication),
+     layout: {LightningWeb.LayoutView, :settings}}
   end
 
   @impl true
@@ -61,11 +38,23 @@ defmodule LightningWeb.AuthProvidersLive.Index do
   end
 
   defp apply_action(socket, :new, _params) do
-    socket
-    |> assign(
-      auth_provider: AuthProviders.new(),
-      redirect_host: LightningWeb.Endpoint.struct_url() |> URI.to_string()
-    )
+    can_configure_external_auth_provider =
+      Users
+      |> Permissions.can(
+        :configure_external_auth_provider,
+        socket.assigns.current_user
+      )
+
+    if can_configure_external_auth_provider do
+      socket
+      |> assign(
+        auth_provider: AuthProviders.new(),
+        redirect_host: LightningWeb.Endpoint.struct_url() |> URI.to_string()
+      )
+    else
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
+    end
   end
 
   @impl true
@@ -84,9 +73,6 @@ defmodule LightningWeb.AuthProvidersLive.Index do
           auth_provider={@auth_provider}
           redirect_host={@redirect_host}
           parent={self()}
-          can_configure_external_auth_provider={
-            @can_configure_external_auth_provider
-          }
         />
       </Layout.centered>
     </Layout.page_content>

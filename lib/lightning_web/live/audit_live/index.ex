@@ -4,32 +4,21 @@ defmodule LightningWeb.AuditLive.Index do
   """
   use LightningWeb, :live_view
   alias Lightning.Auditing
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def mount(_params, _session, socket) do
-    case Bodyguard.permit(
-           Lightning.Auditing.Policy,
+    {:ok,
+     socket
+     |> assign(
+       active_menu_item: :audit,
+       pagination_path:
+         &Routes.audit_index_path(
+           socket,
            :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         socket
-         |> assign(
-           active_menu_item: :audit,
-           pagination_path:
-             &Routes.audit_index_path(
-               socket,
-               :index,
-               &1
-             )
-         ), layout: {LightningWeb.LayoutView, :settings}}
-
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
-    end
+           &1
+         )
+     ), layout: {LightningWeb.LayoutView, :settings}}
   end
 
   @impl true
@@ -38,9 +27,21 @@ defmodule LightningWeb.AuditLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
-    socket
-    |> assign(:page_title, "Audit")
-    |> assign(:page, Auditing.list_all(params))
+    can_view_credentials_audit_trail =
+      Users
+      |> Permissions.can(
+        :view_credentials_audit_trail,
+        socket.assigns.current_user
+      )
+
+    if can_view_credentials_audit_trail do
+      socket
+      |> assign(:page_title, "Audit")
+      |> assign(:page, Auditing.list_all(params))
+    else
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
+    end
   end
 
   def diff(assigns) do

@@ -9,7 +9,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
   describe "index for superuser" do
     setup :register_and_log_in_superuser
 
-    test "a regular user cannot access the auth providers page", %{
+    test "a super user can access the auth providers page", %{
       conn: conn
     } do
       {:ok, _index_live, html} =

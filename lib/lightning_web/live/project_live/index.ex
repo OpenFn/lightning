@@ -9,37 +9,7 @@ defmodule LightningWeb.ProjectLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    can_view_projects =
-      Users |> Permissions.can(:view_projects, socket.assigns.current_user, {})
-
-    can_edit_projects =
-      Users |> Permissions.can(:edit_projects, socket.assigns.current_user, {})
-
-    can_create_projects =
-      Users |> Permissions.can(:create_projects, socket.assigns.current_user, {})
-
-    case Bodyguard.permit(
-           Lightning.Projects.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         socket
-         |> assign(:active_menu_item, :projects)
-         |> assign(
-           can_view_projects: can_view_projects,
-           can_edit_projects: can_edit_projects,
-           can_create_projects: can_create_projects
-         )
-         |> assign(current_user: socket.assigns.current_user),
-         layout: {LightningWeb.LayoutView, :settings}}
-
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
-    end
+    {:ok, socket, layout: {LightningWeb.LayoutView, :settings}}
   end
 
   @impl true
@@ -48,22 +18,53 @@ defmodule LightningWeb.ProjectLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(:projects, Projects.list_projects())
-    |> assign(:page_title, "Projects")
+    can_view_projects =
+      Users
+      |> Permissions.can(:view_projects, socket.assigns.current_user)
+
+    if can_view_projects do
+      socket
+      |> assign(
+        active_menu_item: :projects,
+        can_view_projects: can_view_projects,
+        projects: Projects.list_projects(),
+        page_title: "Projects"
+      )
+    else
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
+    end
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "New Project")
-    |> assign(:project, Projects.get_project_with_users!(id))
-    |> assign(:users, Lightning.Accounts.list_users())
+    can_edit_projects =
+      Users |> Permissions.can(:edit_projects, socket.assigns.current_user, {})
+
+    if can_edit_projects do
+      socket
+      |> assign(:page_title, "New Project")
+      |> assign(active_menu_item: :settings)
+      |> assign(:project, Projects.get_project_with_users!(id))
+      |> assign(:users, Lightning.Accounts.list_users())
+    else
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
+    end
   end
 
   defp apply_action(socket, :new, _params) do
-    socket
-    |> assign(:page_title, "New Project")
-    |> assign(:project, %Lightning.Projects.Project{})
-    |> assign(:users, Lightning.Accounts.list_users())
+    can_create_projects =
+      Users |> Permissions.can(:create_projects, socket.assigns.current_user, {})
+
+    if can_create_projects do
+      socket
+      |> assign(:page_title, "New Project")
+      |> assign(active_menu_item: :settings)
+      |> assign(:project, %Lightning.Projects.Project{})
+      |> assign(:users, Lightning.Accounts.list_users())
+    else
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
+    end
   end
 end
