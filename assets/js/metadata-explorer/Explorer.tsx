@@ -35,7 +35,7 @@ const Entity = ({ data, level }) => {
     }
     return (
       <details>
-        <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
+        <summary className="text-sm text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
           {label}
         </summary>
         <ul className="list-disc ml-4">
