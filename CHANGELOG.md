@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.4.4] - 2023-03-10
+
+### Added
+
 - Added the ability for users to receive a digest email reporting on a specified
   project. [#638](https://github.com/OpenFn/Lightning/issues/638)
   [#585](https://github.com/OpenFn/Lightning/issues/585)
@@ -17,6 +25,8 @@ and this project adheres to
 ### Changed
 
 ### Fixed
+
+- A bug with new credential creation has been fixed.
 
 ## [0.4.3] - 2023-03-06
 
