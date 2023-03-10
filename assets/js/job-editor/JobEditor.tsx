@@ -54,7 +54,7 @@ const Tabs = ({ options, onSelectionChange, verticalCollapse, initialSelection }
             'bg-gray-100 text-gray-700' : 'text-gray-500 hover:text-gray-700'
           return <div
             onClick={() => handleSelectionChange(id)}
-            className={`${style} select-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer flex-row whitespace-nowrap`}
+            className={`${style} select-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer flex-row`}
             >
               {React.createElement(icon, { className: iconStyle })}
               <span className="align-bottom">{label}</span>
