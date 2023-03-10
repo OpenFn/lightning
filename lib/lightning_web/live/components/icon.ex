@@ -9,7 +9,7 @@ defmodule LightningWeb.Components.Icon do
 
   use LightningWeb, :component
 
-  def workflows(assigns), do: Heroicons.cpu_chip(assigns)
+  def workflows(assigns), do: Heroicons.square_3_stack_3d(assigns)
 
   def runs(assigns), do: Heroicons.rectangle_stack(assigns)
 
