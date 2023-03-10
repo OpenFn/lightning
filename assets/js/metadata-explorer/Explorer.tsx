@@ -27,16 +27,19 @@ const map = (children: any, fn: (child: any, index: any) => any) => {
   }));
 }
 
+const Label = ({ data }) => (<>
+    <span className="inline-block align-bottom">{data.label || data.name}</span>
+    {data.type && <span className="inline-block ml-4 mr-4 rounded-md border-secondary-300 text-slate-500 bg-sky-100/75 px-1 py-px cursor-default">{data.type}</span>}
+</>)
+
 const Entity = ({ data, level }) => {
+  // TODO how do we render a description?
   if (hasChildren(data)) {
-    let label = data.label || data.name;
-    if (data.type) {
-      label += ` (${data.type})`;
-    }
+    // Best layout I can find for now - I'd really like the pills to be right-aligned
     return (
       <details>
-        <summary className="text-sm text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
-          {label}
+        <summary className="text-sm text-secondary-700 mb-2 cursor-pointer marker:text-slate-600 marker:text-sm select-none whitespace-nowrap hover:bg-sky-50/50 pv-1">
+          <Label data={data}/>
         </summary>
         <ul className="list-disc ml-4">
           {map(data.children, (e) => <Entity data={e} key={e.name} level={level + 1}  />)}
@@ -53,7 +56,7 @@ const Entity = ({ data, level }) => {
   }
   // TODO how do we drive formatting rules for adaptor specific types?
   return (<li className={`text-sm text-secondary-700 ${indent}`}>
-    {data.name} {data.datatype && <i>({data.datatype})</i>} - {data.label}
+    <Label data={data}/>
   </li>)
 }
 
