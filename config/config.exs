@@ -98,7 +98,6 @@ config :phoenix, :json_library, Jason
 config :lightning, Lightning.Vault, json_library: Jason
 
 config :lightning, Lightning.FailureAlerter,
-  # 24h = 86_400_000
   time_scale: 5 * 60_000,
   rate_limit: 3
 

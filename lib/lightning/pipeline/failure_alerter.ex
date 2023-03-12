@@ -62,6 +62,8 @@ defmodule Lightning.FailureAlerter do
         Lightning.FailureEmail.deliver_failure_email(recipient.email, %{
           work_order_id: work_order_id,
           count: count,
+          time_scale: time_scale,
+          rate_limit: rate_limit,
           run: run,
           workflow_name: workflow_name,
           workflow_id: workflow_id,
