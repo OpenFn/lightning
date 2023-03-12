@@ -213,7 +213,7 @@ defmodule LightningWeb.RunLive.Components do
 
     ran_for =
       cond do
-        run.finished_at ->
+        run.started_at != nil and run.finished_at != nil ->
           "#{DateTime.diff(run.finished_at, run.started_at, :millisecond)} ms"
 
         run.started_at ->
