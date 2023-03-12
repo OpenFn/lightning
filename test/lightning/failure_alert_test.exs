@@ -114,7 +114,7 @@ defmodule Lightning.FailureAlertTest do
 
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "1th failure for workflow specific-workflow",
+                        subject: "specific-workflow failed.",
                         html_body: html_body
                       }}
 
@@ -126,17 +126,20 @@ defmodule Lightning.FailureAlertTest do
 
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "2th failure for workflow specific-workflow"
+                        subject:
+                          "specific-workflow has failed 2 times in the last 24 hours."
                       }}
 
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "3th failure for workflow specific-workflow"
+                        subject:
+                          "specific-workflow has failed 3 times in the last 24 hours."
                       }}
 
       refute_receive {:email,
                       %Swoosh.Email{
-                        subject: "4th failure for workflow specific-workflow"
+                        subject:
+                          "specific-workflow has failed 4 times in the last 24 hours."
                       }}
     end
 
@@ -150,24 +153,21 @@ defmodule Lightning.FailureAlertTest do
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
       assert_receive {:email,
+                      %Swoosh.Email{subject: "specific-workflow failed."}}
+
+      assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "1th failure for workflow specific-workflow"
+                        subject:
+                          "specific-workflow has failed 2 times in the last 24 hours."
                       }}
 
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "2th failure for workflow specific-workflow"
+                        subject:
+                          "specific-workflow has failed 3 times in the last 24 hours."
                       }}
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "3th failure for workflow specific-workflow"
-                      }}
-
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "1th failure for workflow another-workflow"
-                      }}
+      assert_receive {:email, %Swoosh.Email{subject: "another-workflow failed."}}
     end
 
     test "failing workflow does not send failure email to user having failure_alert to false" do
@@ -215,7 +215,7 @@ defmodule Lightning.FailureAlertTest do
 
       Pipeline.process(attempt_run)
 
-      refute_email_sent(subject: "1th failure for workflow specific-workflow")
+      refute_email_sent(subject: "specific-workflow failed.")
     end
 
     test "not delivered email does not change the remaining count",
@@ -228,7 +228,7 @@ defmodule Lightning.FailureAlertTest do
       {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(work_order.workflow_id, time_scale, rate_limit)
 
-      assert_email_sent(subject: "1th failure for workflow specific-workflow")
+      assert_email_sent(subject: "specific-workflow failed.")
 
       stub(Lightning.FailureEmail, :deliver_failure_email, fn _, _ ->
         {:error}
@@ -236,7 +236,7 @@ defmodule Lightning.FailureAlertTest do
 
       Pipeline.process(attempt_run)
 
-      refute_email_sent(subject: "1th failure for workflow specific-workflow")
+      refute_email_sent(subject: "specific-workflow failed.")
 
       # nothing changed
       {:ok, {0, ^rate_limit, _, _, _}} =

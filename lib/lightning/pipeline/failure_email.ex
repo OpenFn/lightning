@@ -5,7 +5,11 @@ defmodule Lightning.FailureEmail do
   alias Lightning.Mailer
 
   defp failure_subject(%{name: name}, failure_count) do
-    "#{failure_count}th failure for workflow #{name}"
+    if failure_count < 2 do
+      "#{name} failed."
+    else
+      "#{name} has failed #{failure_count} times in the last 24 hours."
+    end
   end
 
   def deliver_failure_email(email, body_data) do
