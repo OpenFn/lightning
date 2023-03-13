@@ -376,6 +376,9 @@ defmodule LightningWeb.ProjectLiveTest do
              )
 
       assert view |> has_element?("button[disabled][type=submit]")
+
+      assert view |> render_click("save", %{"project" => %{}}) =~
+               "You are not authorized to perform this action."
     end
 
     test "project members can edit their own digest frequency and failure alert settings",
