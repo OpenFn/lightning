@@ -150,7 +150,7 @@ defmodule LightningWeb.ProjectLive.Settings do
           form={form}
           name="failure_alert"
           values={[Disabled: "false", Enabled: "true"]}
-          value={@project_user.failure_alert}
+          selected={@project_user.failure_alert}
         />
       </.form>
     <% else %>
@@ -187,7 +187,7 @@ defmodule LightningWeb.ProjectLive.Settings do
             Weekly: "weekly",
             Monthly: "monthly"
           ]}
-          value={@project_user.digest}
+          selected={@project_user.digest}
         />
       </.form>
     <% else %>
