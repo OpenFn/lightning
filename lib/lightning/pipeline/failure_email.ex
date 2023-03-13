@@ -18,7 +18,9 @@ defmodule Lightning.FailureEmail do
     email =
       new()
       |> to(email)
-      |> from({"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]})
+      |> from(
+        {"Lightning", Application.get_env(:lightning, :email_addresses)[:admin]}
+      )
       |> subject(
         failure_subject(
           %{name: body_data[:workflow_name]},
