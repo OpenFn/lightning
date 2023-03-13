@@ -54,7 +54,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        ),
        do:
          ProjectUsers
-         |> Permissions.can(:edit_project_user, current_user, project_user)
+         |> Permissions.can(:edit_digest_alerts, current_user, project_user)
 
   defp can_edit_project(socket),
     do:
@@ -154,8 +154,15 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def failure_alert(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        can_edit_project_user:
+          can_edit_project_user(assigns.current_user, assigns.project_user)
+      )
+
     ~H"""
-    <%= if can_edit_project_user(@current_user, @project_user) do %>
+    <%= if @can_edit_project_user do %>
       <.form
         :let={form}
         for={%{}}
