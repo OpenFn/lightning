@@ -8,9 +8,9 @@ defmodule Lightning.FailureEmail do
 
   defp failure_subject(%{name: name}, failure_count, time_scale) do
     if failure_count < 2 do
-      "#{name} failed."
+      "\"#{name}\" failed."
     else
-      "#{name} has failed #{failure_count} times in the last #{ms_to_human(time_scale)}."
+      "\"#{name}\" has failed #{failure_count} times in the last #{ms_to_human(time_scale)}."
     end
   end
 
@@ -30,7 +30,11 @@ defmodule Lightning.FailureEmail do
       )
       |> render_body(
         "failure_alert.html",
-        Map.put(body_data, :duration, ms_to_human(body_data[:time_scale]))
+        Map.put(
+          body_data,
+          :duration,
+          ms_to_human(body_data[:time_scale])
+        )
       )
 
     Mailer.deliver(email)

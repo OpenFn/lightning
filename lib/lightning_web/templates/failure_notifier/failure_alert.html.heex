@@ -1,7 +1,8 @@
 <div>
   <p>Hi <%= @recipient.first_name %>,</p>
   <p>
-    Word order <%= @work_order_id %> failed for workflow "<%= @workflow_name %>" with the following logs:
+    Word order <code><%= @work_order_id %></code>
+    failed for workflow "<%= @workflow_name %>" with the following logs:
   </p>
   <div style="background-color: #ededed; padding: 16px; margin: 8px 0">
     <%= @run.log %>
@@ -13,8 +14,7 @@
     <p>
       Note that attempts for this workflow have failed <%= @count %> times in
       the last <%= @duration %>. We will only send <%= @rate_limit %> failure
-      alerts for <em>this</em>
-      workflow every <%= @duration %> to avoid cluttering your inbox.
+      alerts for this workflow ("<%= @workflow_name %>") at most every <%= @duration %> to avoid cluttering your inbox.
     </p>
   <% end %>
 </div>

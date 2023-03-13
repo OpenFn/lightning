@@ -126,7 +126,7 @@ defmodule Lightning.FailureAlertTest do
 
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "workflow-a failed.",
+                        subject: "\"workflow-a\" failed.",
                         html_body: html_body
                       }}
 
@@ -136,13 +136,13 @@ defmodule Lightning.FailureAlertTest do
       assert html_body =~
                "/projects/#{project.id}/runs/#{attempt_run.run_id}"
 
-      s2 = "workflow-a has failed 2 times in the last #{period}."
+      s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s2}}
 
-      s3 = "workflow-a has failed 3 times in the last #{period}."
+      s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s3}}
 
-      s4 = "workflow-a has failed 4 times in the last #{period}."
+      s4 = "\"workflow-a\" has failed 4 times in the last #{period}."
       refute_receive {:email, %Swoosh.Email{subject: ^s4}}
     end
 
@@ -156,15 +156,15 @@ defmodule Lightning.FailureAlertTest do
       Oban.drain_queue(Oban, queue: :workflow_failures)
       Process.sleep(100)
 
-      assert_receive {:email, %Swoosh.Email{subject: "workflow-a failed."}}
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}}
 
-      s2 = "workflow-a has failed 2 times in the last #{period}."
+      s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s2}}
 
-      s3 = "workflow-a has failed 3 times in the last #{period}."
+      s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
       assert_receive {:email, %Swoosh.Email{subject: ^s3}}
 
-      assert_receive {:email, %Swoosh.Email{subject: "workflow-b failed."}}
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}}
     end
 
     test "does not send failure emails to users who have unsubscribed" do
@@ -212,7 +212,7 @@ defmodule Lightning.FailureAlertTest do
 
       Pipeline.process(attempt_run)
 
-      refute_email_sent(subject: "workflow-a failed.")
+      refute_email_sent(subject: "\"workflow-a\" failed.")
     end
 
     test "does not increment the rate-limiter counter when an email is not delivered.",
@@ -225,7 +225,7 @@ defmodule Lightning.FailureAlertTest do
       {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(work_order.workflow_id, time_scale, rate_limit)
 
-      assert_email_sent(subject: "workflow-a failed.")
+      assert_email_sent(subject: "\"workflow-a\" failed.")
 
       stub(Lightning.FailureEmail, :deliver_failure_email, fn _, _ ->
         {:error}
@@ -233,7 +233,7 @@ defmodule Lightning.FailureAlertTest do
 
       Pipeline.process(attempt_run)
 
-      refute_email_sent(subject: "workflow-a failed.")
+      refute_email_sent(subject: "\"workflow-a\" failed.")
 
       # nothing changed
       {:ok, {0, ^rate_limit, _, _, _}} =
