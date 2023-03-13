@@ -117,4 +117,22 @@ defmodule LightningWeb.ConnCase do
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
   end
+
+  @doc """
+  Setup helper that creates a user adds them as project user with a given role and logs them them in
+  """
+  def setup_project_user(conn, project, user, role) do
+    project_users =
+      project.project_users
+      |> Enum.concat([
+        %Lightning.Projects.ProjectUser{user_id: user.id, role: role}
+      ])
+
+    {:ok, _project} =
+      Lightning.Projects.Project.changeset(project, %{})
+      |> Ecto.Changeset.put_assoc(:project_users, project_users)
+      |> Lightning.Repo.update()
+
+    log_in_user(conn, user)
+  end
 end
