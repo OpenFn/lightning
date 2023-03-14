@@ -7,33 +7,73 @@ defmodule Lightning.Vault do
 
   @impl GenServer
   def init(config) do
-    key =
-      System.get_env("PRIMARY_ENCRYPTION_KEY", config[:primary_encryption_key])
+    key = get_and_check_key(config)
 
-    if !key do
+    config =
+      Keyword.put(config, :ciphers,
+        default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: key}
+      )
+
+    {:ok, config}
+  end
+
+  defp get_and_check_key(config) do
+    case config[:primary_encryption_key] do
+      nil ->
+        Logger.error("""
+        An encryption key must be provided via an env variable:
+
+        PRIMARY_ENCRYPTION_KEY=...
+
+        or via application config using:
+
+        config :lightning, Lightning.Vault,
+          primary_encryption_key: "..."
+
+        You can use `mix lightning.gen_encryption_key` to generate one.
+        """)
+
+        raise "Primary encryption key not found."
+
+      encoded ->
+        encoded
+        |> decode_key!()
+        |> validate_key_length!()
+    end
+  end
+
+  defp decode_key!(encoded) do
+    encoded
+    |> Base.decode64()
+    |> case do
+      {:ok, decoded} ->
+        decoded
+
+      :error ->
+        Logger.error("""
+        An encryption key must be Base64 encoded.
+
+        Please note that Base64 URL alphabets are not currently supported.
+
+        You can use `mix lightning.gen_encryption_key` to generate a valid key.
+        """)
+
+        raise "Encountered an error when decoding the primary encryption key."
+    end
+  end
+
+  defp validate_key_length!(key) do
+    if bit_size(key) != 256 do
       Logger.error("""
-      An encryption key must be provided via an env variable:
-
-      PRIMARY_ENCRYPTION_KEY=...
-
-      or via application config using:
-
-      config :lightning, Lightning.Vaul,
-        primary_encryption_key: "..."
+      The primary encryption key must be exactly 256 bits.
 
       You can use `mix lightning.gen_encryption_key` to generate one.
       """)
 
-      raise "Primary encryption key not found."
+      raise "Primary encryption key is invalid."
+    else
+      key
     end
-
-    config =
-      Keyword.put(config, :ciphers,
-        default:
-          {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: Base.decode64!(key)}
-      )
-
-    {:ok, config}
   end
 end
 

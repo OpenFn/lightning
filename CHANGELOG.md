@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Improved errors when decoding encryption keys for use with Cloak.
+  [#684](https://github.com/OpenFn/Lightning/issues/684)
+
 ### Fixed
 
 ## [0.4.4] - 2023-03-10
@@ -25,8 +28,6 @@ and this project adheres to
 ### Changed
 
 ### Fixed
-
-- A bug with new credential creation has been fixed.
 
 ## [0.4.3] - 2023-03-06
 
