@@ -57,7 +57,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
         }
         class="mt-4 space-y-4"
       >
-        <div :for={{field, _type} <- @schema.types} class="grid grid-cols-2">
+        <div :for={field <- @schema.fields} class="grid grid-cols-2">
           <.schema_input form={body_form} schema={@schema} field={field} />
         </div>
       </div>
@@ -68,9 +68,14 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
   defp get_schema(schema_name) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 
-    File.read!("#{schemas_path}/#{schema_name}.json")
-    |> Jason.decode!()
-    |> Credentials.Schema.new(schema_name)
+    File.read("#{schemas_path}/#{schema_name}.json")
+    |> case do
+      {:ok, raw_json} ->
+        Credentials.Schema.new(raw_json, schema_name)
+
+      {:error, reason} ->
+        raise "Error reading credential schema. Got: #{reason |> inspect()}"
+    end
   end
 
   defp create_schema_changeset(schema, params) do

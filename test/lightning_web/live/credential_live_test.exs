@@ -171,6 +171,24 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute_redirected(new_live, ~p"/credentials")
 
+      # Check that the fields are rendered in the same order as the JSON schema
+      inputs_in_position =
+        new_live
+        |> element("#credential-form")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.attribute("input", "name")
+
+      assert inputs_in_position == ~w(
+               credential[name]
+               credential[production]
+               credential[production]
+               credential[body][username]
+               credential[body][password]
+               credential[body][hostUrl]
+               credential[body][apiVersion]
+             )
+
       assert new_live
              |> form("#credential-form",
                credential: %{
@@ -901,7 +919,7 @@ defmodule LightningWeb.CredentialLiveTest do
   end
 
   defp wait_for_assigns(live, key) do
-    Enum.reduce_while(1..5, nil, fn n, _ ->
+    Enum.reduce_while(1..10, nil, fn n, _ ->
       {_mod, assigns} =
         Lightning.LiveViewHelpers.get_component_assigns_by(
           live,
