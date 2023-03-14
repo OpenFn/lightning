@@ -121,6 +121,15 @@ port =
     p when is_integer(p) -> p
   end
 
+# Use the `PRIMARY_ENCRYPTION_KEY` env variable if available, else fall back
+# to defaults.
+# Defaults are set for `dev` and `test` modes.
+config :lightning, Lightning.Vault,
+  primary_encryption_key:
+    System.get_env("PRIMARY_ENCRYPTION_KEY") ||
+      Application.get_env(:lightning, Lightning.Vault, [])
+      |> Keyword.get(:primary_encryption_key, nil)
+
 # Binding to loopback ipv4 address prevents access from other machines.
 # http: [ip: {0, 0, 0, 0}, port: 4000],
 # Set `http.ip` to {127, 0, 0, 1} to block access from other machines.
