@@ -122,13 +122,13 @@ defmodule Lightning.FailureAlertTest do
       Pipeline.process(attempt_run)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
-      Process.sleep(100)
 
       assert_receive {:email,
                       %Swoosh.Email{
                         subject: "\"workflow-a\" failed.",
                         html_body: html_body
-                      }}
+                      }},
+                     1000
 
       assert html_body =~ "workflow-a"
       assert html_body =~ work_order.id
@@ -137,13 +137,13 @@ defmodule Lightning.FailureAlertTest do
                "/projects/#{project.id}/runs/#{attempt_run.run_id}"
 
       s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s2}}
+      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1000
 
       s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s3}}
+      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1000
 
       s4 = "\"workflow-a\" has failed 4 times in the last #{period}."
-      refute_receive {:email, %Swoosh.Email{subject: ^s4}}
+      refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 100
     end
 
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
@@ -154,17 +154,18 @@ defmodule Lightning.FailureAlertTest do
       Pipeline.process(attempt_run2)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
-      Process.sleep(100)
 
-      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}}
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}},
+                     1000
 
       s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s2}}
+      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1000
 
       s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s3}}
+      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1000
 
-      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}}
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}},
+                     1000
     end
 
     test "does not send failure emails to users who have unsubscribed" do
