@@ -8,14 +8,11 @@ defmodule LightningWeb.AuditLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    can_view_credentials_audit_trail =
+    can_access_admin_space =
       Users
-      |> Permissions.can(
-        :view_credentials_audit_trail,
-        socket.assigns.current_user
-      )
+      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
 
-    if can_view_credentials_audit_trail do
+    if can_access_admin_space do
       {:ok,
        socket
        |> assign(
@@ -28,8 +25,9 @@ defmodule LightningWeb.AuditLive.Index do
            )
        ), layout: {LightningWeb.LayoutView, :settings}}
     else
-      put_flash(socket, :error, "You can't access that page")
-      |> push_redirect(to: "/")
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
     end
   end
 

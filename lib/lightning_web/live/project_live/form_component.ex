@@ -13,7 +13,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Projects
-  alias Lightning.Policies.{Users, Permissions}
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
@@ -21,7 +20,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   @impl true
   def update(
-        %{project: project, users: users, current_user: current_user} = assigns,
+        %{project: project, users: users} = assigns,
         socket
       ) do
     changeset = Projects.change_project(project)
@@ -36,22 +35,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
        all_users: all_users,
        available_users: filter_available_users(changeset, all_users),
        selected_member: ""
-     )
-     |> assign(
-       can_edit_projects:
-         Users
-         |> Permissions.can(
-           :edit_projects,
-           current_user,
-           project
-         ),
-       can_create_projects:
-         Users
-         |> Permissions.can(
-           :create_projects,
-           current_user,
-           project
-         )
      )
      |> assign(
        :name,
@@ -166,38 +149,28 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :edit, project_params) do
-    if socket.assigns.can_edit_projects do
-      case Projects.update_project(socket.assigns.project, project_params) do
-        {:ok, _project} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Project updated successfully")
-           |> push_patch(to: socket.assigns.return_to)}
+    case Projects.update_project(socket.assigns.project, project_params) do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Project updated successfully")
+         |> push_patch(to: socket.assigns.return_to)}
 
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, :changeset, changeset)}
-      end
-    else
-      put_flash(socket, :error, "You can't access that page")
-      |> push_redirect(to: "/")
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :changeset, changeset)}
     end
   end
 
   defp save_project(socket, :new, project_params) do
-    if socket.assigns.can_create_projects do
-      case Projects.create_project(project_params) do
-        {:ok, _project} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Project created successfully")
-           |> push_patch(to: socket.assigns.return_to)}
+    case Projects.create_project(project_params) do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Project created successfully")
+         |> push_patch(to: socket.assigns.return_to)}
 
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, changeset: changeset)}
-      end
-    else
-      put_flash(socket, :error, "You can't access that page")
-      |> push_redirect(to: "/")
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, changeset: changeset)}
     end
   end
 

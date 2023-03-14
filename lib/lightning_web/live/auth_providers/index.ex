@@ -8,10 +8,20 @@ defmodule LightningWeb.AuthProvidersLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(:active_menu_item, :authentication),
-     layout: {LightningWeb.LayoutView, :settings}}
+    can_access_admin_space =
+      Users
+      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
+
+    if can_access_admin_space do
+      {:ok,
+       socket
+       |> assign(:active_menu_item, :authentication),
+       layout: {LightningWeb.LayoutView, :settings}}
+    else
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
+    end
   end
 
   @impl true
@@ -38,23 +48,11 @@ defmodule LightningWeb.AuthProvidersLive.Index do
   end
 
   defp apply_action(socket, :new, _params) do
-    can_configure_external_auth_provider =
-      Users
-      |> Permissions.can(
-        :configure_external_auth_provider,
-        socket.assigns.current_user
-      )
-
-    if can_configure_external_auth_provider do
-      socket
-      |> assign(
-        auth_provider: AuthProviders.new(),
-        redirect_host: LightningWeb.Endpoint.struct_url() |> URI.to_string()
-      )
-    else
-      put_flash(socket, :error, "You can't access that page")
-      |> push_redirect(to: "/")
-    end
+    socket
+    |> assign(
+      auth_provider: AuthProviders.new(),
+      redirect_host: LightningWeb.Endpoint.struct_url() |> URI.to_string()
+    )
   end
 
   @impl true

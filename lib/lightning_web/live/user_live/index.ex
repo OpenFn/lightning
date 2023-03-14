@@ -9,35 +9,19 @@ defmodule LightningWeb.UserLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    can_view_users =
-      Users |> Permissions.can(:view_users, socket.assigns.current_user, {})
+    can_access_admin_space =
+      Users
+      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
 
-    can_create_users =
-      Users |> Permissions.can(:create_users, socket.assigns.current_user, {})
-
-    can_delete_users =
-      Users |> Permissions.can(:delete_users, socket.assigns.current_user, {})
-
-    case Bodyguard.permit(
-           Lightning.Accounts.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok,
-         assign(socket, :users, list_users())
-         |> assign(
-           can_view_users: can_view_users,
-           can_delete_users: can_delete_users,
-           can_create_users: can_create_users
-         )
-         |> assign(:active_menu_item, :users),
-         layout: {LightningWeb.LayoutView, :settings}}
-
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
+    if can_access_admin_space do
+      {:ok,
+       assign(socket, :users, list_users())
+       |> assign(:active_menu_item, :users),
+       layout: {LightningWeb.LayoutView, :settings}}
+    else
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
     end
   end
 
