@@ -8,25 +8,6 @@ defmodule LightningWeb.AuditLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     socket
-     |> assign(
-       active_menu_item: :audit,
-       pagination_path:
-         &Routes.audit_index_path(
-           socket,
-           :index,
-           &1
-         )
-     ), layout: {LightningWeb.LayoutView, :settings}}
-  end
-
-  @impl true
-  def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
-
-  defp apply_action(socket, :index, params) do
     can_view_credentials_audit_trail =
       Users
       |> Permissions.can(
@@ -35,13 +16,32 @@ defmodule LightningWeb.AuditLive.Index do
       )
 
     if can_view_credentials_audit_trail do
-      socket
-      |> assign(:page_title, "Audit")
-      |> assign(:page, Auditing.list_all(params))
+      {:ok,
+       socket
+       |> assign(
+         active_menu_item: :audit,
+         pagination_path:
+           &Routes.audit_index_path(
+             socket,
+             :index,
+             &1
+           )
+       ), layout: {LightningWeb.LayoutView, :settings}}
     else
       put_flash(socket, :error, "You can't access that page")
       |> push_redirect(to: "/")
     end
+  end
+
+  @impl true
+  def handle_params(params, _url, socket) do
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  defp apply_action(socket, :index, params) do
+    socket
+    |> assign(:page_title, "Audit")
+    |> assign(:page, Auditing.list_all(params))
   end
 
   def diff(assigns) do
