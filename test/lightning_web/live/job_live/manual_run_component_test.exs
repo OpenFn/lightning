@@ -274,7 +274,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              current_user: user,
              on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d3},
-             can_edit_job: true,
+             can_run_job: true,
              return_to:
                Routes.project_workflow_path(
                  conn,
@@ -292,7 +292,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              current_user: user,
              on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d4},
-             can_edit_job: true,
+             can_run_job: true,
              return_to:
                Routes.project_workflow_path(
                  conn,

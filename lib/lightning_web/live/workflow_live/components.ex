@@ -36,7 +36,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
         <%= link(
           to: "#",
-          phx_click: "delete-workflow",
+          phx_click: "delete_workflow",
           phx_value_id: @workflow.id,
           data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
           class: "absolute right-2 bottom-2 p-2") do %>
@@ -54,7 +54,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="">Create a new workflow for your organisation</div>
       <div>
         <LightningWeb.Components.Common.button
-          phx-click="create-workflow"
+          phx-click="create_workflow"
           disabled={!@can_create_workflow}
         >
           Create a workflow
@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         Create your first job to get started.
       </div>
       <LightningWeb.Components.Common.button
-        phx-click="create-job"
+        phx-click="create_job"
         disabled={!@can_create_job}
       >
         <div class="h-full">

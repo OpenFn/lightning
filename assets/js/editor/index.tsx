@@ -50,7 +50,7 @@ export default {
           adaptor={adaptor}
           source={source}
           onChange={src => this.handleContentChange(src)}
-          disabled={disabled}
+          disabled={disabled == "true"}
         />
       );
     }

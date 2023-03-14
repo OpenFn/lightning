@@ -30,12 +30,7 @@ defmodule LightningWeb.WorkflowLive do
                     workflow={@current_workflow}
                     project={@project}
                     return_to={
-                      Routes.project_workflow_path(
-                        @socket,
-                        :show,
-                        @project.id,
-                        @current_workflow.id
-                      )
+                      ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
                     }
                   />
                 </div>
@@ -56,14 +51,7 @@ defmodule LightningWeb.WorkflowLive do
           <% :new_job -> %>
             <div class="grow">
               <.workflow_diagram
-                base_path={
-                  Routes.project_workflow_path(
-                    @socket,
-                    :show,
-                    @project.id,
-                    @current_workflow.id
-                  )
-                }
+                base_path={~p"/projects/#{@project.id}/w/#{@current_workflow.id}"}
                 id={@current_workflow.id}
                 selected_node={@selected_node_id}
                 encoded_project_space={@encoded_project_space}
@@ -82,12 +70,7 @@ defmodule LightningWeb.WorkflowLive do
                     current_user={@current_user}
                     builder_state={@builder_state}
                     return_to={
-                      Routes.project_workflow_path(
-                        @socket,
-                        :show,
-                        @project.id,
-                        @current_workflow.id
-                      )
+                      ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
                     }
                     can_delete_job={@can_delete_job}
                     can_edit_job={@can_edit_job}
@@ -98,14 +81,7 @@ defmodule LightningWeb.WorkflowLive do
           <% :edit_job -> %>
             <div class="grow">
               <.workflow_diagram
-                base_path={
-                  Routes.project_workflow_path(
-                    @socket,
-                    :show,
-                    @project.id,
-                    @current_workflow.id
-                  )
-                }
+                base_path={~p"/projects/#{@project.id}/w/#{@current_workflow.id}"}
                 id={@current_workflow.id}
                 selected_node={@job.id}
                 encoded_project_space={@encoded_project_space}
@@ -122,12 +98,7 @@ defmodule LightningWeb.WorkflowLive do
                     current_user={@current_user}
                     builder_state={@builder_state}
                     return_to={
-                      Routes.project_workflow_path(
-                        @socket,
-                        :show,
-                        @project.id,
-                        @current_workflow.id
-                      )
+                      ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
                     }
                     can_delete_job={@can_delete_job}
                     can_edit_job={@can_edit_job}
@@ -139,14 +110,7 @@ defmodule LightningWeb.WorkflowLive do
             <div class="grow">
               <%= if Enum.any?(@current_workflow.jobs) do %>
                 <.workflow_diagram
-                  base_path={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id,
-                      @current_workflow.id
-                    )
-                  }
+                  base_path={~p"/projects/#{@project.id}/w/#{@current_workflow.id}"}
                   id={@current_workflow.id}
                   encoded_project_space={@encoded_project_space}
                 />
@@ -167,14 +131,7 @@ defmodule LightningWeb.WorkflowLive do
                   id={@current_workflow.id}
                   workflow={@current_workflow}
                   project={@project}
-                  return_to={
-                    Routes.project_workflow_path(
-                      @socket,
-                      :show,
-                      @project.id,
-                      @current_workflow.id
-                    )
-                  }
+                  return_to={~p"/projects/#{@project.id}/w/#{@current_workflow.id}"}
                 />
               </div>
             </div>
@@ -250,14 +207,7 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply,
      socket
      |> put_flash(:error, "You are not authorized to perform this action.")
-     |> push_patch(
-       to:
-         Routes.project_workflow_path(
-           socket,
-           :index,
-           socket.assigns.project.id
-         )
-     )}
+     |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/w")}
   end
 
   defp create_workflow(%{assigns: %{can_create_workflow: true}} = socket) do
@@ -268,18 +218,12 @@ defmodule LightningWeb.WorkflowLive do
      socket
      |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
      |> push_patch(
-       to:
-         Routes.project_workflow_path(
-           socket,
-           :show,
-           socket.assigns.project.id,
-           workflow_id
-         )
+       to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}"
      )}
   end
 
   @impl true
-  def handle_event("delete-job", %{"id" => id}, socket) do
+  def handle_event("delete_job", %{"id" => id}, socket) do
     if socket.assigns.can_edit_job do
       job = Jobs.get_job!(id)
 
@@ -296,12 +240,7 @@ defmodule LightningWeb.WorkflowLive do
            |> put_flash(:info, "Job deleted successfully")
            |> push_patch(
              to:
-               Routes.project_workflow_path(
-                 socket,
-                 :show,
-                 socket.assigns.project.id,
-                 socket.assigns.current_workflow.id
-               )
+               ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
            )}
 
         {:error, _} ->
@@ -318,40 +257,26 @@ defmodule LightningWeb.WorkflowLive do
        |> put_flash(:error, "You are not authorized to perform this action.")
        |> push_patch(
          to:
-           Routes.project_workflow_path(
-             socket,
-             :show,
-             socket.assigns.project.id,
-             socket.assigns.current_workflow.id
-           )
+           ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
        )}
     end
   end
 
   @impl true
-  def handle_event("copied-to-clipboard", _, socket) do
+  def handle_event("copied_to_clipboard", _, socket) do
     {:noreply,
      socket
      |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
   @impl true
-  def handle_event(
-        "create-job",
-        _,
-        socket
-      ) do
+  def handle_event("create_job", _, socket) do
     if socket.assigns.can_create_job do
       {:noreply,
        socket
        |> push_patch(
          to:
-           Routes.project_workflow_path(
-             socket,
-             :new_job,
-             socket.assigns.project.id,
-             socket.assigns.current_workflow.id
-           )
+           ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}/j/new"
        )}
     else
       {:noreply,
@@ -361,12 +286,12 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   @impl true
-  def handle_event("create-workflow", _, socket) do
+  def handle_event("create_workflow", _, socket) do
     create_workflow(socket)
   end
 
   @impl true
-  def handle_event("delete-workflow", %{"id" => id}, socket) do
+  def handle_event("delete_workflow", %{"id" => id}, socket) do
     Workflows.get_workflow!(id)
     |> Workflows.mark_for_deletion()
     |> case do

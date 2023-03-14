@@ -8,9 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Added roles and permissions to workflows and history page
-
 ### Added
+
+- Added roles and permissions to workflows and history page
+  [#645](https://github.com/OpenFn/Lightning/issues/645)
 
 ### Changed
 

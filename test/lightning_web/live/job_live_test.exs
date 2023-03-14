@@ -81,10 +81,10 @@ defmodule LightningWeb.JobLiveTest do
 
       assert html =~ project.name
 
-      assert has_element?(view, "#delete-job")
+      assert has_element?(view, "#delete_job")
 
       view
-      |> element("#delete-job")
+      |> element("#delete_job")
       |> render_click()
 
       assert_patch(
@@ -118,10 +118,10 @@ defmodule LightningWeb.JobLiveTest do
 
       assert has_element?(
                view,
-               "button#delete-job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
+               "button#delete_job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
              )
 
-      assert view |> render_click("delete-job", %{"id" => job.id}) =~
+      assert view |> render_click("delete_job", %{"id" => job.id}) =~
                "Unable to delete this job because it has downstream jobs"
     end
 
@@ -148,10 +148,10 @@ defmodule LightningWeb.JobLiveTest do
 
       assert has_element?(
                view,
-               "button[phx-click='delete-job'][title='You are not authorized to perform this action.'][disabled='disabled']"
+               "button[phx-click='delete_job'][title='You are not authorized to perform this action.'][disabled='disabled']"
              )
 
-      assert view |> render_click("delete-job", %{"id" => job.id}) =~
+      assert view |> render_click("delete_job", %{"id" => job.id}) =~
                "You are not authorized to perform this action."
 
       assert_patch(

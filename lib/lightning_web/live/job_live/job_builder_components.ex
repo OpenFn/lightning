@@ -68,7 +68,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
           onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
           target="_blank"
-          phx-click="copied-to-clipboard"
+          phx-click="copied_to_clipboard"
         >
           Copy webhook url
         </a>

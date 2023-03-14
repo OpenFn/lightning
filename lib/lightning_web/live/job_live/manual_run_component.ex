@@ -11,7 +11,11 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   attr :project, Lightning.Projects.Project
 
   @impl true
-  def render(assigns) do
+  def render(%{changeset: changeset, can_run_job: can_run_job} = assigns) do
+    assigns =
+      assigns
+      |> assign(run_button_disabled: !(changeset.valid? and can_run_job))
+
     ~H"""
     <div id={@id} class="h-full">
       <.form
@@ -76,7 +80,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           <Common.button
             id="run-job"
             text="Run"
-            disabled={!(@changeset.valid? and @can_edit_job)}
+            disabled={@run_button_disabled}
             phx-click="confirm"
             phx-target={@myself}
           />
@@ -105,7 +109,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           job: job,
           project: project,
           on_run: on_run,
-          can_edit_job: can_edit_job,
+          can_run_job: can_run_job,
           return_to: return_to
         },
         socket
@@ -159,7 +163,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        dataclips_options: dataclips_options,
        on_run: on_run,
        selected_dataclip: selected_dataclip |> format(),
-       can_edit_job: can_edit_job,
+       can_run_job: can_run_job,
        return_to: return_to
      )
      |> assign_new(:custom_input?, fn ->
@@ -172,7 +176,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   def handle_event(
         "confirm",
         _params,
-        %{assigns: %{can_edit_job: true}} = socket
+        %{assigns: %{can_run_job: true}} = socket
       ) do
     socket.assigns.changeset
     |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
@@ -198,7 +202,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   def handle_event(
         "confirm",
         _params,
-        %{assigns: %{can_edit_job: false}} = socket
+        %{assigns: %{can_run_job: false}} = socket
       ) do
     {:noreply,
      socket

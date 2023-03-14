@@ -202,6 +202,7 @@ defmodule LightningWeb.RunLive.Index do
   # https://github.com/phoenixframework/phoenix_live_view/issues/2333
   # We have changed the event name to "validate" since that is what
   # the form recovery event will use.
+  # TODO: see if this is still relevant.
   def handle_event(
         "validate",
         %{"run_search_form" => %{"search_term" => search_term}},

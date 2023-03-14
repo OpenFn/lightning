@@ -29,8 +29,6 @@ defmodule LightningWeb.ConnCase do
       import Phoenix.ConnTest
       import LightningWeb.ConnCase
 
-      alias Lightning.Projects.ProjectUser
-      alias Lightning.Projects.ProjectUser
       alias LightningWeb.Router.Helpers, as: Routes
 
       import Lightning.ModelHelpers

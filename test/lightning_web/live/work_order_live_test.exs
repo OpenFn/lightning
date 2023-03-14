@@ -117,13 +117,13 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "attempt-#{attempt_id}"
 
       refute view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "attempt-#{attempt_id}"
     end
@@ -393,7 +393,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "Failure"
 
@@ -502,7 +502,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "Pending"
     end

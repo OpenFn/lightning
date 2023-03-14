@@ -174,7 +174,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
-                can_edit_job={@can_edit_job}
+                can_run_job={@can_edit_job}
                 return_to={@return_to}
               />
             <% else %>
@@ -246,9 +246,9 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </Form.submit_button>
           <%= if @job_id != "new" do %>
             <Common.button
-              id="delete-job"
+              id="delete_job"
               text="Delete"
-              phx-click="delete-job"
+              phx-click="delete_job"
               phx-value-id={@job_id}
               disabled={!(@is_deletable and @can_edit_job)}
               data={[

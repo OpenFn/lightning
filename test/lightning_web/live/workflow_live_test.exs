@@ -49,12 +49,12 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       refute view
              |> element(
-               "button[disabled='disabled'][phx-click='create-workflow']"
+               "button[disabled='disabled'][phx-click='create_workflow']"
              )
              |> has_element?()
 
       assert view
-             |> element("button[phx-click='create-workflow']")
+             |> element("button[phx-click='create_workflow']")
              |> render_click() =~
                "Create job"
     end
@@ -74,12 +74,12 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> element(
-               "button[disabled='disabled'][phx-click='create-workflow']"
+               "button[disabled='disabled'][phx-click='create_workflow']"
              )
              |> has_element?()
 
       assert view
-             |> render_click("create-workflow", %{}) =~
+             |> render_click("create_workflow", %{}) =~
                "You are not authorized to perform this action."
 
       assert_patched(
@@ -139,7 +139,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ project.name
 
-      assert view |> render_click("copied-to-clipboard", %{}) =~
+      assert view |> render_click("copied_to_clipboard", %{}) =~
                "Copied webhook URL to clipboard"
     end
   end
@@ -403,7 +403,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ project.name
       assert html =~ "Create job"
 
-      assert view |> render_click("create-job", %{})
+      assert view |> render_click("create_job", %{})
 
       assert_patched(
         view,
@@ -429,10 +429,10 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ "Create job"
 
       assert view
-             |> element("button[phx-click='create-job'][disabled]")
+             |> element("button[phx-click='create_job'][disabled]")
              |> has_element?()
 
-      assert view |> render_click("create-job", %{}) =~
+      assert view |> render_click("create_job", %{}) =~
                "You are not authorized to perform this action."
     end
   end
@@ -513,7 +513,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     # TODO test that the current job is not visible in upstream jobs
   end
 
-  describe "delete-workflow" do
+  describe "delete_workflow" do
     test "delete a workflow on project index page",
          %{
            conn: conn,
@@ -527,7 +527,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ workflow.name
 
       assert view
-             |> element("a[phx-click='delete-workflow']")
+             |> element("a[phx-click='delete_workflow']")
              |> render_click() =~
                "Workflow deleted successfully"
 
@@ -556,7 +556,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> element(
-               "#workflow-#{workflow.id} a[phx-click='delete-workflow']"
+               "#workflow-#{workflow.id} a[phx-click='delete_workflow']"
              )
              |> render_click() =~
                "Workflow deleted successfully"
