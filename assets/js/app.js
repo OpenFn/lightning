@@ -29,6 +29,9 @@ import JobEditor from './job-editor';
 import WorkflowDiagram from './workflow-diagram';
 import TabSelector from './tab-selector';
 
+let dragEndListener;
+let dragListener;
+
 let Hooks = {
   WorkflowDiagram,
   TabSelector,
@@ -106,20 +109,27 @@ window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {
     topBarScheduled = setTimeout(() => topbar.show(), 120);
   }
+  disconnectWorkflowResizer();
 });
 
 window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
-  connectResizer();
+  connectWorkflowResizer();
 });
 
-const connectResizer = () => {
+const disconnectWorkflowResizer = () => {
   const el = document.getElementById('resizer');
-  if (el && !el.connected) {
-    el.connected = true;
+  if (el) {
+    el.removeEventListener('dragend', dragEndListener);
+    el.removeEventListener('drag', dragListener);
+  }
+};
 
+const connectWorkflowResizer = () => {
+  const el = document.getElementById('resizer');
+  if (el) {
     const savedWidth = localStorage.getItem('lightning.job-editor.width');
     if (savedWidth) {
       el.parentNode.style.width = `${savedWidth}%`;
@@ -134,10 +144,14 @@ const connectResizer = () => {
       const parentWidth = parent.getBoundingClientRect().width;
       const parentLeft = parent.getBoundingClientRect().left;
       let width;
-      el.addEventListener('dragend', e => {
+
+      dragEndListener = () => {
         localStorage.setItem('lightning.job-editor.width', width);
-      });
-      el.addEventListener('drag', e => {
+        document.dispatchEvent(new Event('update-layout'));
+      };
+      el.addEventListener('dragend', dragEndListener);
+
+      dragListener = e => {
         if (e.screenX !== 0) {
           const relativePosition = Math.max(
             0,
@@ -146,7 +160,8 @@ const connectResizer = () => {
           width = (1 - relativePosition) * 100;
           el.parentNode.style.width = `${width}%`;
         }
-      });
+      };
+      el.addEventListener('drag', dragListener);
     }
   }
 };
