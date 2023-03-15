@@ -5,16 +5,31 @@ defmodule LightningWeb.CredentialLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Credentials
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok,
-     assign(
-       socket,
-       :credentials,
-       list_credentials(socket.assigns.current_user.id)
-     )
-     |> assign(:active_menu_item, :credentials)}
+    can_access_own_credentials =
+      Users
+      |> Permissions.can(
+        :access_own_credentials,
+        socket.assigns.current_user,
+        socket.assigns.current_user
+      )
+
+    if can_access_own_credentials do
+      {:ok,
+       assign(
+         socket,
+         :credentials,
+         list_credentials(socket.assigns.current_user.id)
+       )
+       |> assign(:active_menu_item, :credentials)}
+    else
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
+    end
   end
 
   @impl true
