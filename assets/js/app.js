@@ -112,7 +112,44 @@ window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
+  connectResizer();
 });
+
+const connectResizer = () => {
+  const el = document.getElementById('resizer');
+  if (el && !el.connected) {
+    el.connected = true;
+
+    const savedWidth = localStorage.getItem('lightning.job-editor.width');
+    if (savedWidth) {
+      el.parentNode.style.width = `${savedWidth}%`;
+    }
+
+    // find the parent h-full element, which we'll size against
+    let parent = el.parentNode;
+    while (parent && !parent.className.match('h-full')) {
+      parent = parent.parentNode;
+    }
+    if (parent) {
+      const parentWidth = parent.getBoundingClientRect().width;
+      const parentLeft = parent.getBoundingClientRect().left;
+      let width;
+      el.addEventListener('dragend', e => {
+        localStorage.setItem('lightning.job-editor.width', width);
+      });
+      el.addEventListener('drag', e => {
+        if (e.screenX !== 0) {
+          const relativePosition = Math.max(
+            0,
+            Math.min((e.clientX - parentLeft) / parentWidth)
+          );
+          width = (1 - relativePosition) * 100;
+          el.parentNode.style.width = `${width}%`;
+        }
+      });
+    }
+  }
+};
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();
