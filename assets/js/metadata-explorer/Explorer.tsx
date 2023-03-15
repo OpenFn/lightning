@@ -51,12 +51,12 @@ const Entity = ({ data, level }) => {
 
   const indent = `ml-${level * 2}`;
   if (typeof data === 'string') {
-    return (<li className={`text-sm text-secondary-700 ${indent}`}>
+    return (<li className={`text-sm text-secondary-700 whitespace-nowrap ${indent}`}>
       "{data}"
   </li>)
   }
   // TODO how do we drive formatting rules for adaptor specific types?
-  return (<li className={`text-sm text-secondary-700 ${indent}`}>
+  return (<li className={`text-sm text-secondary-700 whitespace-nowrap ${indent}`}>
     <Label data={data}/>
   </li>)
 }
@@ -91,6 +91,7 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
           <KeyIcon className={iconStyle} />
           <span className="text-xs mb-1">credential</span>
         </p>
+        {/* TODO persist open state */}
         <details open>
           <summary className="block cursor-pointer text-sm">
             <InformationCircleIcon className={iconStyle + " inline"}/>

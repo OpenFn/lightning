@@ -12,6 +12,7 @@ enum SettingsKeys {
   ACTIVE_TAB = 'lightning.job-editor.activeTab',
 };
 
+// TODO maybe a usePersist() hook which takes defaults as an argument and returns a) the persisted values and b) a setter (shallow merge)
 const persistedSettings = localStorage.getItem('lightning.job-editor.settings')
 const settings = persistedSettings ? JSON.parse(persistedSettings) : {
   [SettingsKeys.ORIENTATION]: 'h',
