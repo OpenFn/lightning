@@ -10,11 +10,14 @@ const PERSIST_KEY = 'lightning.metadata-explorer.settings';
 const iconStyle = "h-4 w-4 text-grey-400 mr-1"
 
 type MetadataExplorerProps = {
-  metadata?: any;
+  metadata?: true | null | any;
   adaptor: string;
 }
 
 export default ({ metadata, adaptor }: MetadataExplorerProps) => {
+  if (metadata === true) {
+    return <div className="block m-2">Loading metadata...</div>
+  }
   if (!metadata) {
     return <Empty adaptor={adaptor} />
   }

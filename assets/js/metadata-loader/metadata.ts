@@ -34,6 +34,7 @@ const sortDeep = (model: any) => {
 };
 
 const loadMetadata = (adaptor?: string) =>
+  // Temporary fake metadata loader
   new Promise<object>(resolve => {
     let metadata = null;
     // TODO what if the metadata changes in flight?
@@ -45,8 +46,9 @@ const loadMetadata = (adaptor?: string) =>
         metadata = sortDeep(metadata_salesforce);
       }
     }
-    console.log(metadata);
-    resolve(metadata);
+    setTimeout(() => {
+      resolve(metadata);
+    }, 1000 * 5);
   });
 
 export default loadMetadata;
