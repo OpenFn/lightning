@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ClockIcon, KeyIcon} from '@heroicons/react/24/outline';
 import { InformationCircleIcon} from '@heroicons/react/24/solid';
 import Entity from './Entity';
 import Empty from './Empty';
 import mapChildren from './map-children';
+
+const PERSIST_KEY = 'lightning.metadata-explorer.settings';
 
 const iconStyle = "h-4 w-4 text-grey-400 mr-1"
 
@@ -16,6 +18,19 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
   if (!metadata) {
     return <Empty adaptor={adaptor} />
   }
+
+  const [initialShowHelp] = useState(() => {
+    const settings = localStorage.getItem(PERSIST_KEY);
+    if (settings) {
+      return JSON.parse(settings).showHelp;
+    }
+    return true;
+  });
+
+  const handleToggleHelp = (evt: any) => {
+    const settings = { showHelp: evt.target.open };
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(settings))
+  };
   
   const dateString = new Date(metadata.created).toLocaleString();
 
@@ -34,8 +49,7 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
           <KeyIcon className={iconStyle} />
           <span className="text-xs mb-1">&lt;credential-id&gt;</span>
         </p>
-        {/* TODO persist open state */}
-        <details open>
+        <details open={initialShowHelp} onToggle={handleToggleHelp}>
           <summary className="block cursor-pointer text-sm">
             <InformationCircleIcon className={iconStyle + " inline"}/>
             <span className="font-bold">Help & Tips</span>
