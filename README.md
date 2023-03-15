@@ -1,26 +1,56 @@
 # OpenFn/Lightning (alpha) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
-OpenFn Lightning is an open source workflow automation platform which helps
-automate complex business processes and data integration across systems. The
-platform allows you to visually build, execute and manage workflows - leveraging
-adaptors to speed up the development process and promote best practices for
-integration patterns.
+A tool to help governments and social-sector organizations automate key business
+processes and integrate critical systems, so they spend less time managing data
+and more time focusing on their work.
 
-The next generation of [OpenFn](https://www.openfn.org)'s workflow automation
-plaftorm | Fully open source | Recognised as a Digital Public Good by the
-[DPGA](https://digitalpublicgoods.net/).
+Use OpenFn Lightning to visually build, execute and manage workflows.
 
-![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
+- Technology that's been tried and tested by NGOs in over 40 countries
+- Developed by a team with over xx years of combined experience consulting with
+  NGOs to help them integrate their systems
+- Fully open source (no premium features or community edition, you get the same
+  product whether using SaaS and self-hosted)
+- Recognised as a Digital Public Good by the
+  [DPGA](https://digitalpublicgoods.net/) and a Global Good for Health by
+  [Digital Square](https://digitalsquare.org/digital-health-global-goods)
+
+![Screenshot 2023-03-15 at 13 01 13](https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png)
 
 Explore our [demo app](https://demo.openfn.org/) with username:
-`demo@openfn.org`, password: `welcome123`.
+`demo@openfn.org`, password: `welcome123`, or read through the
+[features](#features) section to view screenshots of the app.
 
 ## Table of contents
 
+- [Features](#features)
 - [Getting started](#getting-started)
-- [Run Lightning on your own server](#run-via-docker)
+  - [Run Lightning via Docker](#run-via-docker)
+  - [Deploy Lightning on Docker or Kubernetes](#deploy-on-external-infrastructure)
+  - [Run Lightning on your local machine](#contribute-to-this-project)
+- [Security and standards](#security-and-standards)
 
 ## Features
+
+### Plan and build
+
+- Plan workflows using Lightning's visual interface to quickly define when,
+  where and what you want your automation to do
+  ![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
+  (choose the when, where and what, then leave the more complexe work to your IT
+  engineers)
+-
+- Let your engineers use Lightning's projects-as-code and CLI to write any
+  complexe logic from the comfort of their own code editor
+- Don't waste time looking
+
+### Monitor/Audit
+
+- Filter and search runs to identify issues that need addressing and follow how
+  a specific request has been processed
+- Configure alerts to be notified on run failures
+- Receive a project digest for a daily/weekly/monthly summary of your project
+  activity
 
 ## Getting Started
 
