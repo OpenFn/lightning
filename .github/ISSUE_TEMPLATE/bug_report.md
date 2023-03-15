@@ -8,6 +8,13 @@ assignees: ''
 
 **Describe the bug** A clear and concise description of what the bug is.
 
+**Version number** The version of Lightning you have seen the bug on.
+
+I have reproduced this locally on main:
+
+- [ ] Yes
+- [ ] No
+
 **To Reproduce** Steps to reproduce the behavior:
 
 1. Go to '...'
