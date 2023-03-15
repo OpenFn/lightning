@@ -11,18 +11,24 @@ defmodule Lightning.FailureAlertTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
 
+  import Lightning.Helpers, only: [ms_to_human: 1]
+
   import Swoosh.TestAssertions
 
-  # for test purpose we'll config to 3 emails within 1mn
-
-  describe "failure_alert" do
+  describe "FailureAlert" do
     setup do
       user = user_fixture()
       project = project_fixture(project_users: [%{user_id: user.id}])
 
+      # for test purpose we'll config to 3 emails within 1mn
+      period =
+        Application.get_env(:lightning, Lightning.FailureAlerter)
+        |> Keyword.get(:time_scale)
+        |> ms_to_human()
+
       job =
         workflow_job_fixture(
-          workflow_name: "specific-workflow",
+          workflow_name: "workflow-a",
           project_id: project.id,
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
@@ -57,9 +63,9 @@ defmodule Lightning.FailureAlertTest do
 
       job2 =
         workflow_job_fixture(
-          workflow_name: "another-workflow",
+          workflow_name: "workflow-b",
           project_id: project.id,
-          body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
+          body: ~s[fn(state => { throw new Error("I also fail.") })]
         )
 
       work_order2 = work_order_fixture(workflow_id: job2.workflow_id)
@@ -91,6 +97,7 @@ defmodule Lightning.FailureAlertTest do
         |> Repo.insert()
 
       %{
+        period: period,
         user: user,
         project: project,
         attempt_run: attempt_run,
@@ -99,49 +106,48 @@ defmodule Lightning.FailureAlertTest do
       }
     end
 
-    test "failing workflow sends failure email to user having failure_alert to true",
-         %{project: project, attempt_run: attempt_run, work_order: work_order} do
-      # 1/3 within 1mn
+    test "sends a limited number of failure alert emails to a subscribed user.",
+         %{
+           project: project,
+           attempt_run: attempt_run,
+           work_order: work_order,
+           period: period
+         } do
+      # The first three failed runs for this workflow will trigger emails.
       Pipeline.process(attempt_run)
-      # 2/3 within 1mn
       Pipeline.process(attempt_run)
-      # 3/3 within 1mn
       Pipeline.process(attempt_run)
-      # rate limit reached -> won't send email
+
+      # And the 4th, when the rate limit is reached, will NOT trigger a 4th email.
       Pipeline.process(attempt_run)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
       assert_receive {:email,
                       %Swoosh.Email{
-                        subject: "1th failure for workflow specific-workflow",
+                        subject: "\"workflow-a\" failed.",
                         html_body: html_body
-                      }}
+                      }},
+                     1000
 
-      assert html_body =~ "specific-workflow"
+      assert html_body =~ "workflow-a"
       assert html_body =~ work_order.id
 
       assert html_body =~
                "/projects/#{project.id}/runs/#{attempt_run.run_id}"
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "2th failure for workflow specific-workflow"
-                      }}
+      s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
+      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1000
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "3th failure for workflow specific-workflow"
-                      }}
+      s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
+      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1000
 
-      refute_receive {:email,
-                      %Swoosh.Email{
-                        subject: "4th failure for workflow specific-workflow"
-                      }}
+      s4 = "\"workflow-a\" has failed 4 times in the last #{period}."
+      refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 100
     end
 
-    test "failing workflow sends email even if another workflow hits rate limit within the same time scale",
-         %{attempt_run: attempt_run, attempt_run2: attempt_run2} do
+    test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
+         %{attempt_run: attempt_run, attempt_run2: attempt_run2, period: period} do
       Pipeline.process(attempt_run)
       Pipeline.process(attempt_run)
       Pipeline.process(attempt_run)
@@ -149,28 +155,20 @@ defmodule Lightning.FailureAlertTest do
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "1th failure for workflow specific-workflow"
-                      }}
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}},
+                     1000
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "2th failure for workflow specific-workflow"
-                      }}
+      s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
+      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1000
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "3th failure for workflow specific-workflow"
-                      }}
+      s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
+      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1000
 
-      assert_receive {:email,
-                      %Swoosh.Email{
-                        subject: "1th failure for workflow another-workflow"
-                      }}
+      assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}},
+                     1000
     end
 
-    test "failing workflow does not send failure email to user having failure_alert to false" do
+    test "does not send failure emails to users who have unsubscribed" do
       user = user_fixture()
 
       project =
@@ -180,7 +178,7 @@ defmodule Lightning.FailureAlertTest do
 
       job =
         workflow_job_fixture(
-          workflow_name: "specific-workflow",
+          workflow_name: "workflow-a",
           project_id: project.id,
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
@@ -215,10 +213,10 @@ defmodule Lightning.FailureAlertTest do
 
       Pipeline.process(attempt_run)
 
-      refute_email_sent(subject: "1th failure for workflow specific-workflow")
+      refute_email_sent(subject: "\"workflow-a\" failed.")
     end
 
-    test "not delivered email does not change the remaining count",
+    test "does not increment the rate-limiter counter when an email is not delivered.",
          %{attempt_run: attempt_run, work_order: work_order} do
       [time_scale: time_scale, rate_limit: rate_limit] =
         Application.fetch_env!(:lightning, Lightning.FailureAlerter)
@@ -228,7 +226,7 @@ defmodule Lightning.FailureAlertTest do
       {:ok, {0, ^rate_limit, _, _, _}} =
         Hammer.inspect_bucket(work_order.workflow_id, time_scale, rate_limit)
 
-      assert_email_sent(subject: "1th failure for workflow specific-workflow")
+      assert_email_sent(subject: "\"workflow-a\" failed.")
 
       stub(Lightning.FailureEmail, :deliver_failure_email, fn _, _ ->
         {:error}
@@ -236,7 +234,7 @@ defmodule Lightning.FailureAlertTest do
 
       Pipeline.process(attempt_run)
 
-      refute_email_sent(subject: "1th failure for workflow specific-workflow")
+      refute_email_sent(subject: "\"workflow-a\" failed.")
 
       # nothing changed
       {:ok, {0, ^rate_limit, _, _, _}} =

@@ -32,4 +32,16 @@ defmodule Lightning.Helpers do
       {:ok, body_map} -> body_map
     end
   end
+
+  @doc """
+  Converts milliseconds (integer) to a human duration, such as "1 minute" or
+  "45 years, 6 months, 5 days, 21 hours, 12 minutes, 34 seconds" using
+  `Timex.Format.Duration.Formatters.Humanized.format()`.
+  """
+  @spec ms_to_human(integer) :: String.t() | {:error, :invalid_duration}
+  def ms_to_human(milliseconds) do
+    milliseconds
+    |> Timex.Duration.from_milliseconds()
+    |> Timex.Format.Duration.Formatters.Humanized.format()
+  end
 end
