@@ -40,15 +40,16 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
         {mapChildren(metadata, data => <Entity level={0} data={data} />)}
       </div>
       <div className="pt-4">
-        {/* TODO: make the icons break horizontally in large windows */}
-        <p className="flex flex-row cursor-default" title={`This metadata was generated at ${dateString}`}>
-          <ClockIcon className={iconStyle} />
-          <span className="text-xs mb-1">{dateString}</span>
-        </p>
-        <p className="flex flex-row cursor-default" title="The credential used to generate metadata">
-          <KeyIcon className={iconStyle} />
-          <span className="text-xs mb-1">&lt;credential-id&gt;</span>
-        </p>
+        <div className="flex flex-row flex-wrap">
+          <p className="flex flex-row cursor-default mr-2 whitespace-nowrap" title={`This metadata was generated at ${dateString}`}>
+            <ClockIcon className={iconStyle} />
+            <span className="text-xs mb-1">{dateString}</span>
+          </p>
+          <p className="flex flex-row cursor-default mr-2 whitespace-nowrap" title="The credential used to generate metadata">
+            <KeyIcon className={iconStyle} />
+            <span className="text-xs mb-1">&lt;credential-id&gt;</span>
+          </p>
+        </div>
         <details open={initialShowHelp} onToggle={handleToggleHelp}>
           <summary className="block cursor-pointer text-sm">
             <InformationCircleIcon className={iconStyle + " inline"}/>
