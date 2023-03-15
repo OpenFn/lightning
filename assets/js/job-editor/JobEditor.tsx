@@ -76,7 +76,7 @@ export default ({ adaptor, source, onSourceChanged }: JobEditorProps) => {
   const [vertical, setVertical] = useState(() => settings[SettingsKeys.ORIENTATION] === 'v');
   const [showPanel, setShowPanel] = useState(() => settings[SettingsKeys.SHOW_PANEL]);
   const [selectedTab, setSelectedTab] = useState(() => settings[SettingsKeys.ACTIVE_TAB]);
-  const [metadata, setMetadata] = useState<any>();
+  const [metadata, setMetadata] = useState<any>(true);
 
   useEffect(() => {
     loadMetadata(adaptor).then((m) => {
