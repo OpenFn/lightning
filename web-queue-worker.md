@@ -1,17 +1,20 @@
 # Sequence Diagram Job Execution via "Web Queue Worker" Architecture.
 
-Draft. Note that this architecture is only for the final `:attempts` queue, not for fairness or limiting.
+Draft. Note that this architecture is only for the final `:attempts` queue, not
+for fairness or limiting.
 
 Remember that:
-1. A workflow is
-2. An attempt is
-3. A run is
+
+1. A workflow is a series of jobs that need to be performed one after another.
+2. An attempt is an instance of executing a workflow: so... all the jobs in that
+   workflow.
+3. A run is the execution of a single job in a workflow.
 
 ```mermaid
 sequenceDiagram
 autonumber
     participant L as Lightning (Elixir)
-    participant Q as Queue (RabbitMQ)
+    participant Q as Queue (Postgres)
     participant R as RTM (NodeJs)
     L->>Q: Enqueue attempt
     Q->>L: Respond with {:attempt_enqued, uuid}
@@ -42,18 +45,23 @@ autonumber
 
 ### APIs
 
-1. `GET` for job-run artifacts (state, expression) which can be accessed by the subscriber RTM.
+1. `GET` for job-run artifacts (state, expression) which can be accessed by the
+   subscriber RTM.
 2. `POST` for streaming logs for a given run.
-3. `POST` for status update (`{:accepted, :started, :running, :done, :crashed}`) for a given run.
+3. `POST` for status update (`{:accepted, :started, :running, :done, :crashed}`)
+   for a given run.
 
 ## RTM
 
-1. The RTM should take `N` number of runs at any given time, probably related to how many cores/threads it has access to?
-2. The number of RTMs (subscribers) should be scaled up and down based on utilization.
+1. The RTM should take `N` number of runs at any given time, probably related to
+   how many cores/threads it has access to?
+2. The number of RTMs (subscribers) should be scaled up and down based on
+   utilization.
 
-### APIs 
+### APIs
 
 Should this be a Koa app with some APIs? (Healthcheck? Status of attempt X?)
 
 1. Is there an API for RTM application health?
-2. And another for the status of a particular run? (Useful to call if the heartbeat fails?)
+2. And another for the status of a particular run? (Useful to call if the
+   heartbeat fails?)
