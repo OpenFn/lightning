@@ -150,15 +150,17 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     credentials={@credentials}
                     disabled={!@can_edit_job}
                   />
-                  <button
-                    id="new-credential-launcher"
-                    type="button"
-                    class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
-                    phx-click="open_new_credential"
-                    phx-target={@myself}
-                  >
-                    New credential
-                  </button>
+                  <%= if @can_edit_job do %>
+                    <button
+                      id="new-credential-launcher"
+                      type="button"
+                      class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
+                      phx-click="open_new_credential"
+                      phx-target={@myself}
+                    >
+                      New credential
+                    </button>
+                  <% end %>
                 </div>
               </div>
             </.form>
