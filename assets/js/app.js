@@ -176,7 +176,7 @@ const connectWorkflowResizer = () => {
             el.parentNode.style.width = `${width}%`;
           }
         };
-        document.addEventListener('mousemove', dragListener);
+        document.addEventListener('pointermove', dragListener);
       });
 
       document.addEventListener('pointerup', () => {
@@ -185,7 +185,7 @@ const connectWorkflowResizer = () => {
           mask.parentNode.removeChild(mask);
           localStorage.setItem('lightning.job-editor.width', width);
           document.dispatchEvent(new Event('update-layout'));
-          document.removeEventListener('mousemove', dragListener);
+          document.removeEventListener('pointermove', dragListener);
           dragListener = null;
         }
       });
