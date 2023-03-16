@@ -151,6 +151,7 @@ Mix.Tasks.Lightning.GenEncryptionKey.html
 Mix.Tasks.Lightning.InstallRuntime.html
 Mix.Tasks.Lightning.InstallSchemas.html
 ObanPruner.html
+Storybook.Root.html
 api-reference.html
 assets/logo.png
 changelog.html
@@ -180,8 +181,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-2DF3D9ED.js
-dist/sidebar_items-C8A3F579.js
+dist/search_items-9BD13C41.js
+dist/sidebar_items-B429561C.js
 index.html
 readme.html
 search.html
