@@ -7,22 +7,23 @@ defmodule Lightning.Policies.Users do
   alias Lightning.Accounts.User
 
   @type actions ::
-          :create_projects
-          | :view_projects
-          | :edit_projects
+          :access_admin_space
+          | :access_own_credentials
+          | :access_own_profile
+          | :change_email
+          | :change_password
+          | :configure_external_auth_provider
+          | :create_projects
           | :create_users
-          | :view_users
-          | :edit_users
+          | :delete_account
+          | :delete_credential
           | :delete_users
           | :disable_users
-          | :configure_external_auth_provider
+          | :edit_projects
+          | :edit_users
           | :view_credentials_audit_trail
-          | :change_password
-          | :delete_account
-          | :view_credentials
-          | :edit_credentials
-          | :delete_credential
-          | :access_admin_space
+          | :view_projects
+          | :view_users
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -37,28 +38,31 @@ defmodule Lightning.Policies.Users do
   @spec authorize(actions(), Lightning.Accounts.User.t(), any) :: boolean
   def authorize(action, %User{role: role}, _project)
       when action in [
-             :view_projects,
-             :edit_projects,
+             :access_admin_space,
+             :configure_external_auth_provider,
              :create_projects,
              :create_users,
-             :view_users,
-             :edit_users,
              :delete_users,
              :disable_users,
-             :configure_external_auth_provider,
+             :edit_projects,
+             :edit_users,
              :view_credentials_audit_trail,
-             :access_admin_space
+             :view_projects,
+             :view_users
            ] do
     role in [:superuser]
   end
 
   def authorize(action, %User{} = requesting_user, %User{} = authenticated_user)
       when action in [
+             :access_own_credentials,
+             :access_own_profile,
+             :change_email,
              :change_password,
              :delete_account,
-             :view_credentials,
+             :delete_credential,
              :edit_credentials,
-             :delete_credential
+             :view_credentials
            ] do
     requesting_user.id == authenticated_user.id
   end

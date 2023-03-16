@@ -31,6 +31,19 @@ defmodule Lightning.PermissionsTest do
 
       refute Users |> Permissions.can(:view_credentials_audit_trail, user, {})
 
+      refute Users
+             |> Permissions.can(:access_own_profile, user, another_user)
+
+      assert Users |> Permissions.can(:access_own_profile, user, user)
+
+      refute Users
+             |> Permissions.can(:access_own_credentials, user, another_user)
+
+      assert Users |> Permissions.can(:access_own_credentials, user, user)
+
+      refute Users |> Permissions.can(:change_email, user, another_user)
+      assert Users |> Permissions.can(:change_email, user, user)
+
       refute Users |> Permissions.can(:change_password, user, another_user)
       assert Users |> Permissions.can(:change_password, user, user)
 
@@ -66,6 +79,20 @@ defmodule Lightning.PermissionsTest do
 
       assert Users
              |> Permissions.can(:view_credentials_audit_trail, superuser, {})
+
+      refute Users
+             |> Permissions.can(:access_own_profile, superuser, another_user)
+
+      assert Users |> Permissions.can(:access_own_profile, superuser, superuser)
+
+      refute Users
+             |> Permissions.can(:access_own_credentials, superuser, another_user)
+
+      assert Users
+             |> Permissions.can(:access_own_credentials, superuser, superuser)
+
+      refute Users |> Permissions.can(:change_email, superuser, another_user)
+      assert Users |> Permissions.can(:change_email, superuser, superuser)
 
       refute Users |> Permissions.can(:change_password, superuser, another_user)
       assert Users |> Permissions.can(:change_password, superuser, superuser)

@@ -134,7 +134,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                           update_cron_expression(@job_id, cron_expression)
                         end
                       }
-                      can_edit_job={@can_edit_job}
+                      disabled={!@can_edit_job}
                     />
                   <% end %>
                 </div>
