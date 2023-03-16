@@ -72,6 +72,35 @@ defmodule LightningWeb.ProjectLiveTest do
       assert_patch(index_live, Routes.project_index_path(conn, :index))
       assert render(index_live) =~ "Project created successfully"
     end
+
+    test "Only project owners can delete projects", %{
+      conn: conn,
+      project: project
+    } do
+      delete_button = "#delete-#{project.id}"
+
+      conn =
+        setup_project_user(
+          conn,
+          project,
+          Lightning.AccountsFixtures.superuser_fixture(),
+          :editor
+        )
+
+      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+      refute view |> element(delete_button) |> has_element?()
+
+      conn =
+        setup_project_user(
+          conn,
+          project,
+          Lightning.AccountsFixtures.superuser_fixture(),
+          :owner
+        )
+
+      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+      assert view |> element(delete_button) |> has_element?()
+    end
   end
 
   describe "projects picker dropdown" do
@@ -376,6 +405,9 @@ defmodule LightningWeb.ProjectLiveTest do
              )
 
       assert view |> has_element?("button[disabled][type=submit]")
+
+      assert view |> render_click("save", %{"project" => %{}}) =~
+               "You are not authorized to perform this action."
     end
 
     test "project members can edit their own digest frequency and failure alert settings",

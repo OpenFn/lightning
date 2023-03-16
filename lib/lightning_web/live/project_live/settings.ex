@@ -4,51 +4,62 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.Permissions
-  alias Lightning.Accounts.User
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.ProjectUser
+  alias Lightning.Policies.Permissions
+  alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
-    can_edit_project =
-      case Bodyguard.permit(
-             Lightning.Projects.Policy,
-             :edit,
-             socket.assigns.current_user,
-             socket.assigns.project
-           ) do
-        :ok -> true
-        {:error, :unauthorized} -> false
-      end
-
     project_users =
       Projects.get_project_with_users!(socket.assigns.project.id).project_users
 
     credentials = Credentials.list_credentials(socket.assigns.project)
 
+    can_edit_project_name =
+      ProjectUsers
+      |> Permissions.can(
+        :edit_project_name,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
+    can_edit_project_description =
+      ProjectUsers
+      |> Permissions.can(
+        :edit_project_description,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
     {:ok,
      socket
      |> assign(
        active_menu_item: :settings,
-       can_edit_project: can_edit_project,
        credentials: credentials,
        project_users: project_users,
        current_user: socket.assigns.current_user,
-       project_changeset: Projects.change_project(socket.assigns.project)
+       project_changeset: Projects.change_project(socket.assigns.project),
+       can_edit_project_name: can_edit_project_name,
+       can_edit_project_description: can_edit_project_description
      )}
   end
 
-  def can_edit_project_user(
-        %User{} = current_user,
-        %ProjectUser{} = project_user
-      ) do
-    ProjectUsers
-    |> Permissions.can(:edit_project_user, current_user, project_user)
-  end
+  defp can_edit_project_user(
+         %User{} = current_user,
+         %ProjectUser{} = project_user
+       ),
+       do:
+         ProjectUsers
+         |> Permissions.can(:edit_digest_alerts, current_user, project_user)
+
+  defp can_edit_project(socket),
+    do:
+      socket.assigns.can_edit_project_name and
+        socket.assigns.can_edit_project_description
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -70,7 +81,13 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    save_project(socket, project_params)
+    if can_edit_project(socket) do
+      save_project(socket, project_params)
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
   end
 
   def handle_event(
@@ -137,8 +154,15 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def failure_alert(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        can_edit_project_user:
+          can_edit_project_user(assigns.current_user, assigns.project_user)
+      )
+
     ~H"""
-    <%= if can_edit_project_user(@current_user, @project_user) do %>
+    <%= if @can_edit_project_user do %>
       <.form
         :let={form}
         for={%{}}
