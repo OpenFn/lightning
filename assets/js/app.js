@@ -137,8 +137,7 @@ const addDragMask = () => {
 const disconnectWorkflowResizer = () => {
   const el = document.getElementById('resizer');
   if (el) {
-    // el.removeEventListener('dragend', dragEndListener);
-    // el.removeEventListener('drag', dragListener);
+    el.removeEventListener('pointerdown', pointerDownListner);
   }
 };
 
@@ -161,7 +160,7 @@ const connectWorkflowResizer = () => {
       const parentLeft = parentBounds.left;
       let width;
 
-      el.addEventListener('pointerdown', () => {
+      const pointerDownListener = () => {
         addDragMask();
         dragListener = e => {
           if (e.screenX !== 0) {
@@ -177,7 +176,8 @@ const connectWorkflowResizer = () => {
           }
         };
         document.addEventListener('pointermove', dragListener);
-      });
+      };
+      el.addEventListener('pointerdown', pointerDownListener);
 
       document.addEventListener('pointerup', () => {
         if (dragListener) {
