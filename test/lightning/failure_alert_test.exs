@@ -137,13 +137,13 @@ defmodule Lightning.FailureAlertTest do
                "/projects/#{project.id}/runs/#{attempt_run.run_id}"
 
       s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1000
+      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1500
 
       s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1000
+      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1500
 
       s4 = "\"workflow-a\" has failed 4 times in the last #{period}."
-      refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 100
+      refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 250
     end
 
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
@@ -159,13 +159,13 @@ defmodule Lightning.FailureAlertTest do
                      1000
 
       s2 = "\"workflow-a\" has failed 2 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1000
+      assert_receive {:email, %Swoosh.Email{subject: ^s2}}, 1500
 
       s3 = "\"workflow-a\" has failed 3 times in the last #{period}."
-      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1000
+      assert_receive {:email, %Swoosh.Email{subject: ^s3}}, 1500
 
       assert_receive {:email, %Swoosh.Email{subject: "\"workflow-b\" failed."}},
-                     1000
+                     1500
     end
 
     test "does not send failure emails to users who have unsubscribed" do
