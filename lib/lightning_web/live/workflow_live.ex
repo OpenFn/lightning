@@ -150,7 +150,7 @@ defmodule LightningWeb.WorkflowLive do
                   socket={@socket}
                   project={@project}
                   workflow={@current_workflow}
-                  can_create_job={@can_create_job}
+                  disabled={!@can_create_job}
                 />
               <% end %>
             </div>

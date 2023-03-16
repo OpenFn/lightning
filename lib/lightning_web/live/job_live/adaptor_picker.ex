@@ -46,7 +46,6 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         ) %>
         <Form.select_field
           form={:adaptor_picker}
-          disabled={!@adaptor_name}
           name={:adaptor_version}
           selected={@adaptor_version}
           id="adaptor-version"
