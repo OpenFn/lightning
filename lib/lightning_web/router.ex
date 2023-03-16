@@ -169,7 +169,7 @@ defmodule LightningWeb.Router do
     scope "/" do
       pipe_through :browser
 
-      live_storybook "/storybook", backend_module: LightningWeb.Storybook
+      live_storybook("/storybook", backend_module: LightningWeb.Storybook)
     end
 
     scope "/dev" do

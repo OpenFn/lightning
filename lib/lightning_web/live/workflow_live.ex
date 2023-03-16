@@ -292,7 +292,7 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   @impl true
-  def handle_event("create-workflow", _, socket) do
+  def handle_event("create_workflow", _, socket) do
     create_workflow(socket)
   end
 
