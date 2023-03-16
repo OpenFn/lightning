@@ -4,22 +4,23 @@ defmodule LightningWeb.AuthProvidersLive.Index do
   """
   use LightningWeb, :live_view
   alias Lightning.AuthProviders
+  alias Lightning.Policies.{Users, Permissions}
 
   @impl true
   def mount(_params, _session, socket) do
-    case Bodyguard.permit(
-           Lightning.AuthProviders.Policy,
-           :index,
-           socket.assigns.current_user
-         ) do
-      :ok ->
-        {:ok, socket |> assign(:active_menu_item, :authentication),
-         layout: {LightningWeb.Layouts, :settings}}
+    can_access_admin_space =
+      Users
+      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
 
-      {:error, :unauthorized} ->
-        {:ok,
-         put_flash(socket, :error, "You can't access that page")
-         |> push_redirect(to: "/")}
+    if can_access_admin_space do
+      {:ok,
+       socket
+       |> assign(:active_menu_item, :authentication),
+       layout: {LightningWeb.Layouts, :settings}}
+    else
+      {:ok,
+       put_flash(socket, :error, "You can't access that page")
+       |> push_redirect(to: "/")}
     end
   end
 

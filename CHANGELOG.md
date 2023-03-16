@@ -220,6 +220,8 @@ and this project adheres to
 - Create credentials via a form interface\*
 - Show "projects with access" in credentials list view.
 - Show job in runs list and run view.
+- Added roles and permissions to workflows and history page
+  [#645](https://github.com/OpenFn/Lightning/issues/645)
 
 \*The form is defined by a JSON schema provided by an adaptor, in most cases:
 e.g., `language-dhis2` provides a single schema which defines the required

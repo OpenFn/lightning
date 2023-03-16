@@ -10,6 +10,7 @@ defmodule Lightning.Policies.Users do
           :create_projects
           | :view_projects
           | :edit_projects
+          | :create_users
           | :view_users
           | :edit_users
           | :delete_users
@@ -21,6 +22,7 @@ defmodule Lightning.Policies.Users do
           | :view_credentials
           | :edit_credentials
           | :delete_credential
+          | :access_admin_space
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -38,12 +40,14 @@ defmodule Lightning.Policies.Users do
              :view_projects,
              :edit_projects,
              :create_projects,
+             :create_users,
              :view_users,
              :edit_users,
              :delete_users,
              :disable_users,
              :configure_external_auth_provider,
-             :view_credentials_audit_trail
+             :view_credentials_audit_trail,
+             :access_admin_space
            ] do
     role in [:superuser]
   end

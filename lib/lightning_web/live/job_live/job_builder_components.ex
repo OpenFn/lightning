@@ -57,6 +57,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           name={:type}
           id="triggerType"
           values={@trigger_type_options}
+          disabled={!@can_edit_job}
         />
       <% end %>
       <%= if @webhook_url do %>
@@ -83,6 +84,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
             prompt=""
             id="upstream-job"
             values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
+            disabled={!@can_edit_job}
           />
         <% end %>
       <% end %>

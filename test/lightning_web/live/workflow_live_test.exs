@@ -47,10 +47,45 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ "Create a workflow"
 
+      refute view
+             |> element(
+               "button[disabled='disabled'][phx-click='create-workflow']"
+             )
+             |> has_element?()
+
       assert view
              |> element("button[phx-click='create-workflow']")
              |> render_click() =~
                "Create job"
+    end
+
+    test "Project viewers can't create workflows", %{
+      conn: conn,
+      project: project
+    } do
+      conn =
+        setup_project_user(conn, project, :viewer)
+        |> get(Routes.project_workflow_path(conn, :index, project.id))
+
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "Create a workflow"
+
+      assert view
+             |> element(
+               "button[disabled='disabled'][phx-click='create-workflow']"
+             )
+             |> has_element?()
+
+      assert view
+             |> render_click("create-workflow", %{}) =~
+               "You are not authorized to perform this action."
+
+      assert_patched(
+        view,
+        Routes.project_workflow_path(conn, :index, project.id)
+      )
     end
   end
 
@@ -99,6 +134,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       project: project,
       job: job
     } do
+      conn = setup_project_user(conn, project, :editor)
+
       {:ok, view, html} =
         live(
           conn,
@@ -157,6 +194,61 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view |> has_expected_version?("3.1.10")
     end
+
+    test "project viewers can't edit jobs", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(view, "#builder-#{job.id}")
+
+      assert has_element?(view, "input[id='job-form_name'][disabled='disabled']")
+
+      assert has_element?(
+               view,
+               "input[name='job_form[enabled]'][disabled='disabled']"
+             )
+
+      assert has_element?(view, "select[id='triggerType'][disabled='disabled']")
+      assert has_element?(view, "select[id='adaptor-name'][disabled='disabled']")
+
+      assert has_element?(
+               view,
+               "select[id='adaptor-version'][disabled='disabled']"
+             )
+
+      assert has_element?(
+               view,
+               "select[id='credentialField'][disabled='disabled']"
+             )
+
+      assert has_element?(view, "button[type='submit'][disabled='disabled']")
+
+      view |> element("#job-form") |> render_submit()
+
+      assert_patch(
+        view,
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
+      )
+
+      assert render(view) =~ " You are not authorized to perform this action."
+    end
   end
 
   describe "new_job" do
@@ -164,6 +256,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
+      conn = setup_project_user(conn, project, :editor)
+
       upstream_job = workflow_job_fixture(project_id: project.id)
 
       {:ok, view, html} =
