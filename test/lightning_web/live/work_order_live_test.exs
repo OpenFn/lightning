@@ -1223,7 +1223,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   describe "rerun" do
     test "Project editors can rerun runs",
          %{conn: conn, project: project} do
-      {conn, _} = setup_project_user(conn, project, :editor)
+      conn = setup_project_user(conn, project, :editor)
 
       job_a =
         workflow_job_fixture(
@@ -1285,7 +1285,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "Project viewers can't rerun runs",
          %{conn: conn, project: project} do
-      {conn, _} = setup_project_user(conn, project, :viewer)
+      conn = setup_project_user(conn, project, :viewer)
 
       job_a =
         workflow_job_fixture(

@@ -412,7 +412,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      {conn, _} = setup_project_user(conn, project, :viewer)
+      conn = setup_project_user(conn, project, :viewer)
 
       workflow = workflow_fixture(name: "the workflow", project_id: project.id)
 
