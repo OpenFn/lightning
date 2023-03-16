@@ -67,6 +67,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :socket, :map, required: true
   attr :project, :map, required: true
   attr :workflow, :map, required: true
+  attr :disabled, :boolean, default: true
 
   def create_job_panel(assigns) do
     ~H"""
@@ -76,7 +77,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
       <LightningWeb.Components.Common.button
         phx-click="create-job"
-        disabled={!@can_create_job}
+        disabled={@disabled}
       >
         <div class="h-full">
           <Heroicons.plus class="h-4 w-4 inline-block" />
