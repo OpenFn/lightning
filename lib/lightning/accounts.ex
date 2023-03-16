@@ -364,8 +364,7 @@ defmodule Lightning.Accounts do
           []
       end
     end)
-    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
-                                                            password ->
+    |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
@@ -545,6 +544,21 @@ defmodule Lightning.Accounts do
     Repo.one(query)
   end
 
+  @doc """
+  Deletes the signed token with the api context.
+  """
+  def delete_api_token(token) do
+    Repo.delete_all(UserToken.token_and_context_query(token, "api"))
+    :ok
+  end
+
+  @doc """
+  Lists all user tokens
+  """
+  def list_api_tokens(user) do
+    UserToken.user_and_contexts_query(user, ["api"]) |> Repo.all()
+  end
+
   ## Confirmation
 
   defp build_email_token(user) do
@@ -645,8 +659,7 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "reset_password", user.email)
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password", user.email)
 
     Repo.insert!(user_token)
 

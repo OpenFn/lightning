@@ -1,0 +1,43 @@
+<LayoutComponents.page_content>
+  <:header>
+    <LayoutComponents.header socket={@socket}>
+      <:title><%= @page_title %></:title>
+      <.link navigate={~p"/settings/tokens/new"}>
+        <Common.button>
+          <div class="h-full">
+            <Icon.plus class="h-4 w-4 inline-block" />
+            <span class="inline-block align-middle">Generate New Token</span>
+          </div>
+        </Common.button>
+      </.link>
+    </LayoutComponents.header>
+  </:header>
+  <LayoutComponents.centered>
+    <.table id="tokens">
+      <.tr>
+        <.th>Token</.th>
+        
+        <.th>Actions</.th>
+      </.tr>
+
+      <%= for token <- @tokens do %>
+        <.tr id={"token-#{token.id}"}>
+          <.td><%= token.token %></.td>
+          <.td>
+            <span>
+              <%= link("Delete",
+                to: "#",
+                phx_click: "delete",
+                phx_value_id: token.id,
+                data: [
+                  confirm:
+                    "Deleting this token will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the token?"
+                ]
+              ) %>
+            </span>
+          </.td>
+        </.tr>
+      <% end %>
+    </.table>
+  </LayoutComponents.centered>
+</LayoutComponents.page_content>

@@ -39,12 +39,12 @@ defmodule Lightning.Accounts.UserToken do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "user_tokens" do
-    field :token, :binary
-    field :context, :string
-    field :sent_to, :string
-    belongs_to :user, User
+    field(:token, :binary)
+    field(:context, :string)
+    field(:sent_to, :string)
+    belongs_to(:user, User)
 
-    timestamps updated_at: false
+    timestamps(updated_at: false)
   end
 
   def token_config do
@@ -69,15 +69,13 @@ defmodule Lightning.Accounts.UserToken do
         "user_id" => user.id
       })
 
-    {token,
-     changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
+    {token, changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
   end
 
   def build_token(user, context) do
     token = :crypto.strong_rand_bytes(@rand_size)
 
-    {token,
-     changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
+    {token, changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
   end
 
   def changeset(user_token, attrs) do
@@ -241,5 +239,13 @@ defmodule Lightning.Accounts.UserToken do
     from(t in Lightning.Accounts.UserToken,
       where: t.user_id == ^user.id and t.context in ^contexts
     )
+  end
+
+  @doc """
+  Returns the list of tokens for a given user.
+
+  """
+  def user_tokens_query(user_id) do
+    from(c in Lightning.Accounts.UserToken, where: c.user_id == ^user_id)
   end
 end
