@@ -61,7 +61,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
                 disabled={!@selected}
                 phx-click={@on_confirm}
                 phx-target={@phx_target || @myself}
-                value={@selected}
+                phx-value-selected={@selected}
               >
                 <div class="h-full">
                   <span class="inline-block align-middle">Continue</span>

@@ -49,12 +49,12 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       refute view
              |> element(
-               "button[disabled='disabled'][phx-click='create-workflow']"
+               "button[disabled='disabled'][phx-click='create_workflow']"
              )
              |> has_element?()
 
       assert view
-             |> element("button[phx-click='create-workflow']")
+             |> element("button[phx-click='create_workflow']")
              |> render_click() =~
                "Create job"
     end
@@ -73,13 +73,10 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ "Create a workflow"
 
       assert view
-             |> element(
-               "button[disabled='disabled'][phx-click='create-workflow']"
-             )
-             |> has_element?()
+             |> has_element?("button[disabled][phx-click='create_workflow']")
 
       assert view
-             |> render_click("create-workflow", %{}) =~
+             |> render_click("create_workflow", %{}) =~
                "You are not authorized to perform this action."
 
       assert_patched(

@@ -18,6 +18,7 @@ and this project adheres to
   (`https://<<HOST_URL>>/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a`) for starting
   the OpenHIE demo workflow
   [448](https://github.com/OpenFn/Lightning/issues/448)
+- Added Phoenix Storybook for improved component development
 
 ### Changed
 

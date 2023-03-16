@@ -54,7 +54,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       <div class="">Create a new workflow for your organisation</div>
       <div>
         <LightningWeb.Components.Common.button
-          phx-click="create-workflow"
+          phx-click="create_workflow"
           disabled={!@can_create_workflow}
         >
           Create a workflow
