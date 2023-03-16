@@ -353,7 +353,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   end
 
   @impl true
-  def handle_event("type_selected", %{"value" => type}, socket) do
+  def handle_event("type_selected", %{"selected" => type}, socket) do
     changeset =
       Credentials.change_credential(socket.assigns.credential, %{schema: type})
 

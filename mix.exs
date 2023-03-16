@@ -85,6 +85,7 @@ defmodule Lightning.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:rambo, "~> 0.3.4"},
       {:scrivener_ecto, "~> 2.7"},
+      {:phoenix_storybook, "~> 0.5.0"},
       {:sentry, "~> 8.0"},
       {:sobelow, "~> 0.11.1", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},

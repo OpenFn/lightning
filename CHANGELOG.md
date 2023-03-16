@@ -14,6 +14,7 @@ and this project adheres to
   [#645](https://github.com/OpenFn/Lightning/issues/645)
 - Added roles and permissions to profile and credentials page
   [#645](https://github.com/OpenFn/Lightning/issues/645)
+- Added Phoenix Storybook for improved component development
 
 ### Changed
 

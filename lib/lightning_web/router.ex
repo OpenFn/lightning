@@ -139,7 +139,10 @@ defmodule LightningWeb.Router do
   #   pipe_through :api
   # end
 
-  # Enables LiveDashboard only for development
+  # Enables the Swoosh mailbox preview and LiveDashboard in development.
+  #
+  # Note that preview only shows emails that were sent by the same
+  # node running the Phoenix server.
   #
   # If you want to use the LiveDashboard in production, you should put
   # it behind authentication and allow only admins to access it.
@@ -156,11 +159,19 @@ defmodule LightningWeb.Router do
     end
   end
 
-  # Enables the Swoosh mailbox preview in development.
-  #
-  # Note that preview only shows emails that were sent by the same
-  # node running the Phoenix server.
   if Mix.env() == :dev do
+    import PhoenixStorybook.Router
+
+    scope "/" do
+      storybook_assets()
+    end
+
+    scope "/" do
+      pipe_through :browser
+
+      live_storybook("/storybook", backend_module: LightningWeb.Storybook)
+    end
+
     scope "/dev" do
       pipe_through :browser
 
