@@ -119,11 +119,26 @@ window.addEventListener('phx:page-loading-stop', () => {
   connectWorkflowResizer();
 });
 
+// The drag mask stops the cursor interacting with the page while dragging
+const addDragMask = () => {
+  const dragMask = document.createElement('div');
+  dragMask.id = 'drag-mask';
+  dragMask.style.position = 'absolute';
+  dragMask.style.left = 0;
+  dragMask.style.right = 0;
+  dragMask.style.top = 0;
+  dragMask.style.bottom = 0;
+  dragMask.style.userSelect = 'none';
+  dragMask.style.zIndex = 999;
+  dragMask.style.cursor = 'ew-resize';
+  document.body.appendChild(dragMask);
+};
+
 const disconnectWorkflowResizer = () => {
   const el = document.getElementById('resizer');
   if (el) {
-    el.removeEventListener('dragend', dragEndListener);
-    el.removeEventListener('drag', dragListener);
+    // el.removeEventListener('dragend', dragEndListener);
+    // el.removeEventListener('drag', dragListener);
   }
 };
 
@@ -141,27 +156,39 @@ const connectWorkflowResizer = () => {
       parent = parent.parentNode;
     }
     if (parent) {
-      const parentWidth = parent.getBoundingClientRect().width;
-      const parentLeft = parent.getBoundingClientRect().left;
+      const parentBounds = parent.getBoundingClientRect();
+      const parentWidth = parentBounds.width;
+      const parentLeft = parentBounds.left;
       let width;
 
-      dragEndListener = () => {
-        localStorage.setItem('lightning.job-editor.width', width);
-        document.dispatchEvent(new Event('update-layout'));
-      };
-      el.addEventListener('dragend', dragEndListener);
+      el.addEventListener('pointerdown', () => {
+        addDragMask();
+        dragListener = e => {
+          if (e.screenX !== 0) {
+            // Work out the mouse position relative to the parent
+            const relativePosition = Math.max(
+              0,
+              Math.min((e.clientX - parentLeft) / parentWidth)
+            );
+            // Invert the postion
+            width = (1 - relativePosition) * 100;
+            // Update the width
+            el.parentNode.style.width = `${width}%`;
+          }
+        };
+        document.addEventListener('mousemove', dragListener);
+      });
 
-      dragListener = e => {
-        if (e.screenX !== 0) {
-          const relativePosition = Math.max(
-            0,
-            Math.min((e.clientX - parentLeft) / parentWidth)
-          );
-          width = (1 - relativePosition) * 100;
-          el.parentNode.style.width = `${width}%`;
+      document.addEventListener('pointerup', () => {
+        if (dragListener) {
+          const mask = document.getElementById('drag-mask');
+          mask.parentNode.removeChild(mask);
+          localStorage.setItem('lightning.job-editor.width', width);
+          document.dispatchEvent(new Event('update-layout'));
+          document.removeEventListener('mousemove', dragListener);
+          dragListener = null;
         }
-      };
-      el.addEventListener('drag', dragListener);
+      });
     }
   }
 };
