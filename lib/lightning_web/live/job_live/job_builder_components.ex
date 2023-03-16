@@ -17,6 +17,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   attr :form, :map, required: true
   attr :upstream_jobs, :list, required: true
   attr :on_cron_change, :any, required: true
+  attr :disabled, :boolean, default: true
 
   def trigger_picker(assigns) do
     trigger_type_options =
@@ -57,7 +58,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           name={:type}
           id="triggerType"
           values={@trigger_type_options}
-          disabled={!@can_edit_job}
+          disabled={@disabled}
         />
       <% end %>
       <%= if @webhook_url do %>
@@ -84,7 +85,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
             prompt=""
             id="upstream-job"
             values={Enum.map(@upstream_jobs, &{&1.name, &1.id})}
-            disabled={!@can_edit_job}
+            disabled={@disabled}
           />
         <% end %>
       <% end %>
