@@ -54,6 +54,9 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(:users, Lightning.Accounts.list_users())
   end
 
+  # TODO: this results in n+1 queries, we need to precalculate the permissions
+  # and have zipped list of projects and the permissions so when we iterate
+  # over them in the templace we don't generate n number of queries
   def can_delete_project(current_user, project),
     do: ProjectUsers |> Permissions.can(:delete_project, current_user, project)
 end
