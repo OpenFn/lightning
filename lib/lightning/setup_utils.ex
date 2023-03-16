@@ -182,7 +182,7 @@ defmodule Lightning.SetupUtils do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
-        trigger: %{type: "webhook"},
+        trigger: %{type: "webhook", id: "cae544ab-03dc-4ccc-a09c-fb4edb255d7a"},
         workflow_id: openhie_workflow.id
       })
 

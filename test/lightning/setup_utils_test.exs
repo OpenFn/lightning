@@ -62,6 +62,9 @@ defmodule Lightning.SetupUtilsTest do
 
       assert fhir_standard_data.trigger.type == :webhook
 
+      assert fhir_standard_data.trigger.id ==
+               "cae544ab-03dc-4ccc-a09c-fb4edb255d7a"
+
       assert send_to_openhim.trigger.type == :on_job_success
       assert send_to_openhim.trigger.upstream_job_id == fhir_standard_data.id
 
