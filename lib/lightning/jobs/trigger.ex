@@ -47,6 +47,7 @@ defmodule Lightning.Jobs.Trigger do
     changeset =
       trigger
       |> cast(attrs, [
+        :id,
         :comment,
         :custom_path,
         :type,
