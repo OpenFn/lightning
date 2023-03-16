@@ -337,7 +337,8 @@ owner</li><li>Users only have the following roles: user, superuser</li></ul><h2 
   </a>
   Added
 </h3>
-<ul><li>Transfer credential ownership to another user.</li><li>Create credentials via a form interface*</li><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li></ul><p>*The form is defined by a JSON schema provided by an adaptor, in most cases:
+<ul><li>Transfer credential ownership to another user.</li><li>Create credentials via a form interface*</li><li>Show &quot;projects with access&quot; in credentials list view.</li><li>Show job in runs list and run view.</li><li>Added roles and permissions to workflows and history page
+<a href="https://github.com/OpenFn/Lightning/issues/645">#645</a></li></ul><p>*The form is defined by a JSON schema provided by an adaptor, in most cases:
 e.g., <code class="inline">language-dhis2</code> provides a single schema which defines the required
 attributes for <code class="inline">state.configuration</code>, while <code class="inline">language-common</code> provides multiple
 credential schemas like &quot;oauth&quot; or &quot;basic auth&quot; which define attributes for

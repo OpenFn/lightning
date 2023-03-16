@@ -196,6 +196,7 @@ Types
   :create_projects
   | :view_projects
   | :edit_projects
+  | :create_users
   | :view_users
   | :edit_users
   | :delete_users
@@ -206,7 +207,8 @@ Types
   | :delete_account
   | :view_credentials
   | :edit_credentials
-  | :delete_credential</pre>
+  | :delete_credential
+  | :access_admin_space</pre>
 
       </div>
 
@@ -235,7 +237,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">authorize(action, requesting_user, authenticated_user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L36" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L38" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
