@@ -193,22 +193,23 @@ Types
       <div class="specs">
 
           <pre translate="no"><span class="attribute">@type</span> actions() ::
-  :create_projects
-  | :view_projects
-  | :edit_projects
+  :access_admin_space
+  | :access_own_credentials
+  | :access_own_profile
+  | :change_email
+  | :change_password
+  | :configure_external_auth_provider
+  | :create_projects
   | :create_users
-  | :view_users
-  | :edit_users
+  | :delete_account
+  | :delete_credential
   | :delete_users
   | :disable_users
-  | :configure_external_auth_provider
+  | :edit_projects
+  | :edit_users
   | :view_credentials_audit_trail
-  | :change_password
-  | :delete_account
-  | :view_credentials
-  | :edit_credentials
-  | :delete_credential
-  | :access_admin_space</pre>
+  | :view_projects
+  | :view_users</pre>
 
       </div>
 
@@ -237,7 +238,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">authorize(action, requesting_user, authenticated_user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L38" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/users.ex#L39" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
