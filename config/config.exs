@@ -62,6 +62,7 @@ config :esbuild,
   default: [
     args:
       ~w(js/app.js
+         js/storybook.js
          js/workflow-diagram/component.tsx
          js/adaptor-docs/index.tsx
          js/editor/Editor.tsx
@@ -85,6 +86,14 @@ config :tailwind,
       --output=../priv/static/assets/app.css
     ),
     cd: Path.expand("../assets", __DIR__)
+  ],
+  storybook: [
+    args: ~w(
+      --config=tailwind.config.js
+      --input=css/storybook.css
+      --output=../priv/static/assets/storybook.css
+    ),
+    cd: Path.expand("../assets", __DIR__)
   ]
 
 # Configures Elixir's Logger
@@ -98,7 +107,6 @@ config :phoenix, :json_library, Jason
 config :lightning, Lightning.Vault, json_library: Jason
 
 config :lightning, Lightning.FailureAlerter,
-  # 24h = 86_400_000
   time_scale: 5 * 60_000,
   rate_limit: 3
 

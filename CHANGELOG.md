@@ -12,8 +12,16 @@ and this project adheres to
 
 - Added roles and permissions to workflows and history page
   [#645](https://github.com/OpenFn/Lightning/issues/645)
+- Added roles and permissions to project settings page
+  [#645](https://github.com/OpenFn/Lightning/issues/645)
+- Added roles and permissions to profile and credentials page
+  [#645](https://github.com/OpenFn/Lightning/issues/645)
+- Added Phoenix Storybook for improved component development
 
 ### Changed
+
+- Improved errors when decoding encryption keys for use with Cloak.
+  [#684](https://github.com/OpenFn/Lightning/issues/684)
 
 ### Fixed
 
@@ -28,8 +36,6 @@ and this project adheres to
 ### Changed
 
 ### Fixed
-
-- A bug with new credential creation has been fixed.
 
 ## [0.4.3] - 2023-03-06
 
@@ -219,6 +225,8 @@ and this project adheres to
 - Create credentials via a form interface\*
 - Show "projects with access" in credentials list view.
 - Show job in runs list and run view.
+- Added roles and permissions to workflows and history page
+  [#645](https://github.com/OpenFn/Lightning/issues/645)
 
 \*The form is defined by a JSON schema provided by an adaptor, in most cases:
 e.g., `language-dhis2` provides a single schema which defines the required

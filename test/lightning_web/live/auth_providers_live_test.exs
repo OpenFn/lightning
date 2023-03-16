@@ -9,12 +9,12 @@ defmodule LightningWeb.AuthProvidersLiveTest do
   describe "index for superuser" do
     setup :register_and_log_in_superuser
 
-    test "a regular user cannot access the auth providers page", %{
+    test "super users can access the auth providers page", %{
       conn: conn
     } do
       {:ok, _index_live, html} =
-        live(conn, Routes.auth_providers_index_path(conn, :edit))
-        |> follow_redirect(conn, Routes.auth_providers_index_path(conn, :new))
+        live(conn, ~p"/settings/authentication")
+        |> follow_redirect(conn, ~p"/settings/authentication/new")
 
       assert html =~ "Users"
       assert html =~ "Back"
@@ -28,7 +28,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       conn: conn
     } do
       {:ok, _index_live, html} =
-        live(conn, Routes.auth_providers_index_path(conn, :edit))
+        live(conn, ~p"/settings/authentication")
         |> follow_redirect(conn, "/")
 
       assert html =~ "You can&#39;t access that page"

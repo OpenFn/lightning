@@ -21,7 +21,7 @@
         ) %>
         <br />
         <div class="inline-block pl-2">
-          <%= if @changeset.valid? do %>
+          <%= if (@changeset.valid?) do %>
             Your project will be named <span class="font-mono border rounded-md p-1 bg-yellow-100 border-slate-300">
           <%= @name %></span>.
           <% end %>
@@ -105,10 +105,7 @@
         </.link>
       </span>
       <div class="inline-block">
-        <.submit_button
-          phx-disable-with="Saving"
-          disabled={!(@changeset.valid? and @can_edit)}
-        >
+        <.submit_button phx-disable-with="Saving" disabled={!@changeset.valid?}>
           Save
         </.submit_button>
       </div>

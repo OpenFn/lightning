@@ -37,32 +37,31 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
+  attr :text, :string, required: false
+  slot :inner_block, required: false
+  attr :disabled, :boolean, default: false
+  attr :color, :string, default: "primary", values: ["primary", "red", "green"]
+  attr :rest, :global
+
   def button(assigns) do
     class =
       button_classes(
-        state: if(assigns[:disabled], do: :inactive, else: :active),
-        color: assigns[:color] || "primary"
+        state: if(assigns.disabled, do: :inactive, else: :active),
+        color: assigns.color
       )
 
-    extra = assigns_to_attributes(assigns, [:disabled, :text])
-
     assigns =
-      assign_new(assigns, :disabled, fn -> false end)
-      |> assign_new(:onclick, fn -> nil end)
-      |> assign_new(:title, fn -> nil end)
+      assigns
       |> assign(:class, class)
-      |> assign(:extra, extra)
+      |> update(:rest, fn rest, %{disabled: disabled} ->
+        Map.merge(rest, %{disabled: disabled})
+      end)
 
     ~H"""
-    <button
-      type="button"
-      class={@class}
-      disabled={@disabled}
-      onclick={@onclick}
-      title={@title}
-      {@extra}
-    >
-      <%= if assigns[:inner_block], do: render_slot(@inner_block), else: @text %>
+    <button type="button" class={@class} {@rest}>
+      <%= if assigns.inner_block |> Enum.any?(),
+        do: render_slot(@inner_block),
+        else: @text %>
     </button>
     """
   end

@@ -18,9 +18,16 @@ defmodule LightningWeb.ProjectLiveTest do
   describe "Index as a regular user" do
     setup :register_and_log_in_user
 
-    test "cannot access the users page", %{conn: conn} do
+    test "cannot access the index page", %{conn: conn} do
       {:ok, _index_live, html} =
-        live(conn, Routes.project_index_path(conn, :index))
+        live(conn, ~p"/settings/projects") |> follow_redirect(conn, "/")
+
+      assert html =~ "You can&#39;t access that page"
+    end
+
+    test "cannot access the new page", %{conn: conn} do
+      {:ok, _index_live, html} =
+        live(conn, ~p"/settings/projects/new")
         |> follow_redirect(conn, "/")
 
       assert html =~ "You can&#39;t access that page"
@@ -71,6 +78,57 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert_patch(index_live, Routes.project_index_path(conn, :index))
       assert render(index_live) =~ "Project created successfully"
+    end
+
+    test "Only project owners can delete projects", %{
+      conn: conn,
+      project: project
+    } do
+      delete_button = "#delete-#{project.id}"
+
+      conn =
+        setup_project_user(
+          conn,
+          project,
+          Lightning.AccountsFixtures.superuser_fixture(),
+          :editor
+        )
+
+      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+      refute view |> element(delete_button) |> has_element?()
+
+      conn =
+        setup_project_user(
+          conn,
+          project,
+          Lightning.AccountsFixtures.superuser_fixture(),
+          :owner
+        )
+
+      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+      assert view |> element(delete_button) |> has_element?()
+    end
+
+    test "Edits a project", %{conn: conn} do
+      user = user_fixture()
+      project = project_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/settings/projects/#{project.id}")
+
+      view
+      |> element("#member_list")
+      |> render_hook("select_item", %{"id" => user.id})
+
+      assert view
+             |> element("button", "Add")
+             |> render_click() =~ "editor"
+
+      view
+      |> form("#project-form")
+      |> render_submit()
+
+      assert_patch(view, ~p"/settings/projects")
+      assert render(view) =~ "Project updated successfully"
     end
   end
 
@@ -376,6 +434,9 @@ defmodule LightningWeb.ProjectLiveTest do
              )
 
       assert view |> has_element?("button[disabled][type=submit]")
+
+      assert view |> render_click("save", %{"project" => %{}}) =~
+               "You are not authorized to perform this action."
     end
 
     test "project members can edit their own digest frequency and failure alert settings",

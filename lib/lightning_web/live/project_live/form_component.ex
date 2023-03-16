@@ -13,7 +13,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   use LightningWeb, :live_component
 
   alias Lightning.Projects
-  alias Lightning.Policies.Users
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
 
@@ -21,7 +20,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   @impl true
   def update(
-        %{project: project, users: users, current_user: current_user} = assigns,
+        %{project: project, users: users} = assigns,
         socket
       ) do
     changeset = Projects.change_project(project)
@@ -36,15 +35,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
        all_users: all_users,
        available_users: filter_available_users(changeset, all_users),
        selected_member: ""
-     )
-     |> assign(
-       can_edit:
-         Users
-         |> Lightning.Policies.Permissions.can(
-           :create_projects,
-           current_user,
-           {}
-         )
      )
      |> assign(
        :name,

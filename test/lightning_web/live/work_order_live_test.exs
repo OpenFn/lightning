@@ -382,14 +382,11 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
 
-      div =
-        view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child"
-        )
-        |> render()
-
-      assert div =~ "Failure"
+      assert view
+             |> has_element?(
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child > div:last-child",
+               "Failure"
+             )
 
       assert view
              |> element(

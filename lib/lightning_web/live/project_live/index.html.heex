@@ -21,7 +21,6 @@
         action={@live_action}
         project={@project}
         users={@users}
-        current_user={@current_user}
         return_to={Routes.project_index_path(@socket, :index)}
       />
     <% else %>
@@ -32,19 +31,22 @@
             class: "p-4 h-14 flex w-64 text-primary-500"
           ) %>
           <div class="grow h-14 border-r border-slate-100"></div>
-          <div class="flex h-14 w-12 items-center justify-center">
-            <div class="h-14 inline-block"></div>
-            <%= link(
+          <%= if can_delete_project(@current_user, project) do %>
+            <div class="flex h-14 w-12 items-center justify-center">
+              <div class="h-14 inline-block"></div>
+              <%= link(
                   to: "#",
+                  id: "delete-#{project.id}",
                   phx_click: "delete",
                   phx_value_id: project.id,
                   data: [confirm: "Are you sure?"],
                   class: "inline-block align-middle"
 
                 ) do %>
-              <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
-            <% end %>
-          </div>
+                <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
+              <% end %>
+            </div>
+          <% end %>
         </Common.item_bar>
       <% end %>
     <% end %>
