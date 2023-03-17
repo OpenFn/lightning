@@ -307,7 +307,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     conn: conn,
     project: project
   } do
-    conn = setup_project_user(conn, project, :viewer)
+    {conn, _user} = setup_project_user(conn, project, :viewer)
 
     job =
       workflow_job_fixture(

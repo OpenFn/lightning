@@ -63,9 +63,9 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      conn =
-        setup_project_user(conn, project, :viewer)
-        |> get(Routes.project_workflow_path(conn, :index, project.id))
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      conn = get(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       {:ok, view, html} =
         live(conn, Routes.project_workflow_path(conn, :index, project.id))
@@ -151,7 +151,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       project: project,
       job: job
     } do
-      conn = setup_project_user(conn, project, :editor)
+      {conn, _user} = setup_project_user(conn, project, :editor)
 
       {:ok, view, html} =
         live(
@@ -217,7 +217,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       project: project,
       job: job
     } do
-      conn = setup_project_user(conn, project, :viewer)
+      {conn, _user} = setup_project_user(conn, project, :viewer)
 
       {:ok, view, html} =
         live(
@@ -273,7 +273,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      conn = setup_project_user(conn, project, :editor)
+      {conn, _user} = setup_project_user(conn, project, :editor)
 
       upstream_job = workflow_job_fixture(project_id: project.id)
 
@@ -412,7 +412,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      conn = setup_project_user(conn, project, :viewer)
+      {conn, _user} = setup_project_user(conn, project, :viewer)
 
       workflow = workflow_fixture(name: "the workflow", project_id: project.id)
 

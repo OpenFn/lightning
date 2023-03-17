@@ -253,10 +253,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-click="delete_job"
               phx-value-id={@job_id}
               disabled={!(@is_deletable and @can_edit_job)}
-              data={[
-                confirm:
-                  "This action is irreversible, are you sure you want to continue?"
-              ]}
+              data-confirm="This action is irreversible, are you sure you want to continue?"
               title={delete_title(@is_deletable, @can_edit_job)}
               color="red"
             />

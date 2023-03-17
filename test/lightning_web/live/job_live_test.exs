@@ -130,7 +130,7 @@ defmodule LightningWeb.JobLiveTest do
       project: project,
       job: job
     } do
-      conn = setup_project_user(conn, project, :viewer)
+      {conn, _user} = setup_project_user(conn, project, :viewer)
 
       {:ok, view, html} =
         live(
