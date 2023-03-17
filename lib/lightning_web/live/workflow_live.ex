@@ -87,7 +87,7 @@ defmodule LightningWeb.WorkflowLive do
               />
             </div>
             <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
-              <.resize_component />
+              <.resize_component id={"resizer-#{@job.id}"} />
               <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
                 <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
                   <.live_component
