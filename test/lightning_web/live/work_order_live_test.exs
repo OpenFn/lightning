@@ -117,13 +117,13 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "attempt-#{attempt_id}"
 
       refute view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "attempt-#{attempt_id}"
     end
@@ -390,7 +390,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "Failure"
 
@@ -499,7 +499,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element(
-               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle-details']"
+               "section#inner_content div[data-entity='work_order_list'] > div:first-child button[phx-click='toggle_details']"
              )
              |> render_click() =~ "Pending"
     end
@@ -1217,6 +1217,133 @@ defmodule LightningWeb.RunWorkOrderTest do
       elem |> render() =~ name
     else
       false
+    end
+  end
+
+  describe "rerun" do
+    test "Project editors can rerun runs",
+         %{conn: conn, project: project} do
+      conn = setup_project_user(conn, project, :editor)
+
+      job_a =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_a.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_a.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      attempt =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_a.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -20),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      run =
+        Map.get(attempt, :runs)
+        |> List.first()
+
+      Lightning.Invocation.list_work_orders_for_project(project).entries()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+
+      assert view
+             |> render_click("rerun", %{
+               "attempt_id" => attempt.id,
+               "run_id" => run.id
+             })
+    end
+
+    test "Project viewers can't rerun runs",
+         %{conn: conn, project: project} do
+      conn = setup_project_user(conn, project, :viewer)
+
+      job_a =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_a.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_a.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      attempt =
+        Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: reason.id,
+          runs: [
+            %{
+              job_id: job_a.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: now |> Timex.shift(seconds: -20),
+              exit_code: 0,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        })
+        |> Lightning.Repo.insert!()
+
+      run =
+        Map.get(attempt, :runs)
+        |> List.first()
+
+      Lightning.Invocation.list_work_orders_for_project(project).entries()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+
+      assert view
+             |> render_click("rerun", %{
+               "attempt_id" => attempt.id,
+               "run_id" => run.id
+             }) =~
+               "You are not authorized to perform this action."
     end
   end
 end

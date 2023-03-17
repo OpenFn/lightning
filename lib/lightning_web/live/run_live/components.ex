@@ -120,6 +120,7 @@ defmodule LightningWeb.RunLive.Components do
           </.link>
           <%= if @can_rerun_job do %>
             <span
+              id={@run.id}
               class="pl-2 text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
               phx-click="rerun"
               phx-value-attempt_id={@attempt.id}

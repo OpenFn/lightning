@@ -50,7 +50,7 @@ export default {
           adaptor={adaptor}
           source={source}
           onChange={src => this.handleContentChange(src)}
-          disabled={disabled}
+          disabled={disabled == "true"}
         />
       );
     }
@@ -67,7 +67,7 @@ export default {
     });
 
     this.observer.observe(this.el, {
-      attributeFilter: ['data-adaptor', 'data-change-event'],
+      attributeFilter: ['data-adaptor', 'data-change-event', 'data-disabled'],
       attributeOldValue: true,
     });
   },

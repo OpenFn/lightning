@@ -6,10 +6,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
   use LightningWeb, :live_component
 
   alias LightningWeb.Components.Form
-  alias Lightning.Jobs
   alias Lightning.Jobs.Job
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Policies.Permissions
 
   import LightningWeb.JobLive.JobBuilderComponents
 
@@ -144,7 +141,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     module={LightningWeb.JobLive.AdaptorPicker}
                     on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
                     form={f}
-                    can_edit_job={@can_edit_job}
+                    disabled={!@can_edit_job}
                   />
                 </div>
                 <div class="md:col-span-2">
@@ -153,15 +150,17 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     credentials={@credentials}
                     disabled={!@can_edit_job}
                   />
-                  <button
-                    id="new-credential-launcher"
-                    type="button"
-                    class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
-                    phx-click="open_new_credential"
-                    phx-target={@myself}
-                  >
-                    New credential
-                  </button>
+                  <%= if @can_edit_job do %>
+                    <button
+                      id="new-credential-launcher"
+                      type="button"
+                      class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
+                      phx-click="open_new_credential"
+                      phx-target={@myself}
+                    >
+                      New credential
+                    </button>
+                  <% end %>
                 </div>
               </div>
             </.form>
@@ -177,7 +176,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
-                can_edit_job={@can_edit_job}
+                can_run_job={@can_edit_job}
                 return_to={@return_to}
               />
             <% else %>
@@ -249,19 +248,16 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </Form.submit_button>
           <%= if @job_id != "new" do %>
             <Common.button
-              id="delete-job"
+              id="delete_job"
               text="Delete"
-              phx-click="delete"
-              phx-target={@myself}
+              phx-click="delete_job"
               phx-value-id={@job_id}
               disabled={!(@is_deletable and @can_edit_job)}
-              data-confirm="This action is irreversible, are you sure you want to continue?"
-              title={
-                if @is_deletable,
-                  do: "Delete this job",
-                  else:
-                    "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
-              }
+              data={[
+                confirm:
+                  "This action is irreversible, are you sure you want to continue?"
+              ]}
+              title={delete_title(@is_deletable, @can_edit_job)}
               color="red"
             />
           <% end %>
@@ -271,37 +267,16 @@ defmodule LightningWeb.JobLive.JobBuilder do
     """
   end
 
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    if socket.assigns.can_edit_job do
-      job = Jobs.get_job!(id)
+  def delete_title(is_deletable, can_delete_job) do
+    case {is_deletable, can_delete_job} do
+      {true, true} ->
+        "Delete this job"
 
-      case Jobs.delete_job(job) do
-        {:ok, _} ->
-          LightningWeb.Endpoint.broadcast!(
-            "project_space:#{socket.assigns.project.id}",
-            "update",
-            %{workflow_id: job.workflow_id}
-          )
+      {false, true} ->
+        "Impossible to delete upstream jobs. Please delete all associated downstream jobs first."
 
-          {:noreply,
-           socket
-           |> put_flash(:info, "Job deleted successfully")
-           |> push_patch(to: socket.assigns.return_to)}
-
-        {:error, _} ->
-          {:noreply,
-           socket
-           |> put_flash(
-             :error,
-             "Unable to delete this job because it has downstream jobs"
-           )}
-      end
-    else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")
-       |> push_patch(to: socket.assigns.return_to)}
+      {_, false} ->
+        "You are not authorized to perform this action."
     end
   end
 
@@ -437,6 +412,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
           project: project,
           current_user: current_user,
           return_to: return_to,
+          can_edit_job: can_edit_job,
+          can_delete_job: can_delete_job,
           builder_state: builder_state
         } = assigns,
         socket
@@ -471,13 +448,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
        builder_state: builder_state,
        upstream_jobs: upstream_jobs,
        is_deletable: is_deletable(job),
-       can_edit_job:
-         ProjectUsers
-         |> Permissions.can(
-           :edit_jobs,
-           current_user,
-           project
-         )
+       can_edit_job: can_edit_job,
+       can_delete_job: can_delete_job
      )
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)

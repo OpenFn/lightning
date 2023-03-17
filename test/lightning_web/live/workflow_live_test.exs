@@ -121,6 +121,26 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  describe "copy webhook url" do
+    test "click on webhook job node to copy webhook url to clipboard", %{
+      conn: conn,
+      project: project
+    } do
+      %{workflow: workflow} = workflow_job_fixture(project_id: project.id)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert html =~ project.name
+
+      assert view |> render_click("copied_to_clipboard", %{}) =~
+               "Copied webhook URL to clipboard"
+    end
+  end
+
   describe "edit_job" do
     setup %{project: project} do
       %{job: workflow_job_fixture(project_id: project.id)}
@@ -364,6 +384,54 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> encoded_project_space_matches(workflow)
     end
+
+    test "other project members can create a new job in a workflow", %{
+      conn: conn,
+      project: project
+    } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert html =~ project.name
+      assert html =~ "Create job"
+
+      assert view |> render_click("create_job", %{})
+
+      assert_patched(
+        view,
+        ~p"/projects/#{project.id}/w/#{workflow.id}/j/new"
+      )
+    end
+
+    test "project viewers can't create a new job in a workflow", %{
+      conn: conn,
+      project: project
+    } do
+      conn = setup_project_user(conn, project, :viewer)
+
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w/#{workflow.id}"
+        )
+
+      assert html =~ project.name
+      assert html =~ "Create job"
+
+      assert view
+             |> element("button[phx-click='create_job'][disabled]")
+             |> has_element?()
+
+      assert view |> render_click("create_job", %{}) =~
+               "You are not authorized to perform this action."
+    end
   end
 
   describe "edit_workflow" do
@@ -442,7 +510,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     # TODO test that the current job is not visible in upstream jobs
   end
 
-  describe "delete-workflow" do
+  describe "delete_workflow" do
     test "delete a workflow on project index page",
          %{
            conn: conn,
@@ -456,7 +524,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ workflow.name
 
       assert view
-             |> element("a[phx-click='delete-workflow']")
+             |> element("a[phx-click='delete_workflow']")
              |> render_click() =~
                "Workflow deleted successfully"
 
@@ -485,7 +553,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> element(
-               "#workflow-#{workflow.id} a[phx-click='delete-workflow']"
+               "#workflow-#{workflow.id} a[phx-click='delete_workflow']"
              )
              |> render_click() =~
                "Workflow deleted successfully"

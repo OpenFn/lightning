@@ -380,6 +380,12 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
+  attr :form, :any
+  attr :name, :any
+  attr :values, :list
+  attr :value, :any, required: false
+  attr :rest, :global, include: ~w(selected disabled prompt)
+
   def select_field(assigns) do
     select_classes = ~w[
       mt-1
@@ -395,14 +401,14 @@ defmodule LightningWeb.Components.Form do
       focus:ring-opacity-50
     ]
 
-    opts =
-      assigns_to_attributes(assigns, [:form, :name, :values]) ++
+    rest =
+      assigns_to_attributes(assigns.rest, [:class, :form, :name, :values]) ++
         [class: select_classes]
 
-    assigns = assign(assigns, opts: opts)
+    assigns = assign(assigns, rest: rest)
 
     ~H"""
-    <%= select(@form, @name, @values, @opts) %>
+    <%= select(@form, @name, @values, @rest) %>
     """
   end
 

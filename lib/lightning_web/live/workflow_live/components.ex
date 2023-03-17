@@ -36,7 +36,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
         <%= link(
           to: "#",
-          phx_click: "delete-workflow",
+          phx_click: "delete_workflow",
           phx_value_id: @workflow.id,
           data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
           class: "absolute right-2 bottom-2 p-2") do %>
@@ -67,7 +67,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :socket, :map, required: true
   attr :project, :map, required: true
   attr :workflow, :map, required: true
-  attr :disabled, :boolean, default: true
+  attr :can_create_job, :boolean, required: true
 
   def create_job_panel(assigns) do
     ~H"""
@@ -76,8 +76,8 @@ defmodule LightningWeb.WorkflowLive.Components do
         Create your first job to get started.
       </div>
       <LightningWeb.Components.Common.button
-        phx-click="create-job"
-        disabled={@disabled}
+        phx-click="create_job"
+        disabled={!@can_create_job}
       >
         <div class="h-full">
           <Heroicons.plus class="h-4 w-4 inline-block" />

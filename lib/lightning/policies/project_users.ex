@@ -10,6 +10,7 @@ defmodule Lightning.Policies.ProjectUsers do
 
   @type actions ::
           :add_project_collaborator
+          | :edit_job
           | :create_job
           | :create_workflow
           | :delete_job
@@ -58,7 +59,7 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(action, %User{} = user, %Project{} = project)
       when action in [
              :create_workflow,
-             :edit_jobs,
+             :edit_job,
              :create_job,
              :delete_job,
              :run_job,

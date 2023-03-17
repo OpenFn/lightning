@@ -143,7 +143,7 @@ defmodule Lightning.PermissionsTest do
   describe "Project user policies by project user role" do
     test ":viewer permissions", %{project: project, viewer: viewer} do
       refute ProjectUsers |> Permissions.can(:create_workflow, viewer, project)
-      refute ProjectUsers |> Permissions.can(:edit_jobs, viewer, project)
+      refute ProjectUsers |> Permissions.can(:edit_job, viewer, project)
       refute ProjectUsers |> Permissions.can(:create_job, viewer, project)
       refute ProjectUsers |> Permissions.can(:delete_job, viewer, project)
       refute ProjectUsers |> Permissions.can(:run_job, viewer, project)
@@ -208,8 +208,7 @@ defmodule Lightning.PermissionsTest do
 
     test "editor permissions", %{project: project, editor: editor} do
       assert ProjectUsers |> Permissions.can(:create_workflow, editor, project)
-      assert ProjectUsers |> Permissions.can(:edit_jobs, editor, project)
-
+      assert ProjectUsers |> Permissions.can(:edit_job, editor, project)
       assert ProjectUsers |> Permissions.can(:create_job, editor, project)
       assert ProjectUsers |> Permissions.can(:delete_job, editor, project)
       assert ProjectUsers |> Permissions.can(:run_job, editor, project)
@@ -274,7 +273,7 @@ defmodule Lightning.PermissionsTest do
 
     test "admin permissions", %{project: project, admin: admin} do
       assert ProjectUsers |> Permissions.can(:create_workflow, admin, project)
-      assert ProjectUsers |> Permissions.can(:edit_jobs, admin, project)
+      assert ProjectUsers |> Permissions.can(:edit_job, admin, project)
       assert ProjectUsers |> Permissions.can(:create_job, admin, project)
       assert ProjectUsers |> Permissions.can(:delete_job, admin, project)
       assert ProjectUsers |> Permissions.can(:run_job, admin, project)
@@ -339,7 +338,7 @@ defmodule Lightning.PermissionsTest do
 
     test "owner permissions", %{project: project, owner: owner} do
       assert ProjectUsers |> Permissions.can(:create_workflow, owner, project)
-      assert ProjectUsers |> Permissions.can(:edit_jobs, owner, project)
+      assert ProjectUsers |> Permissions.can(:edit_job, owner, project)
       assert ProjectUsers |> Permissions.can(:create_job, owner, project)
       assert ProjectUsers |> Permissions.can(:delete_job, owner, project)
       assert ProjectUsers |> Permissions.can(:run_job, owner, project)
@@ -408,7 +407,7 @@ defmodule Lightning.PermissionsTest do
       refute ProjectUsers |> Permissions.can(:create_workflow, thief, project)
       refute ProjectUsers |> Permissions.can(:create_job, thief, project)
       refute ProjectUsers |> Permissions.can(:delete_job, thief, project)
-      refute ProjectUsers |> Permissions.can(:edit_jobs, thief, project)
+      refute ProjectUsers |> Permissions.can(:edit_job, thief, project)
       refute ProjectUsers |> Permissions.can(:run_job, thief, project)
       refute ProjectUsers |> Permissions.can(:rerun_job, thief, project)
 

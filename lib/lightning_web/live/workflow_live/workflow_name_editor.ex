@@ -52,7 +52,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
     end
   end
 
-  def handle_event("delete-workflow", %{"id" => id}, socket) do
+  def handle_event("delete_workflow", %{"id" => id}, socket) do
     Workflows.get_workflow!(id)
     |> Workflows.mark_for_deletion()
     |> case do
@@ -111,7 +111,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
                         :index,
                         @project.id
                       ),
-            phx_click: "delete-workflow",
+            phx_click: "delete_workflow",
             phx_value_id: @workflow.id,
             data: [
             confirm:

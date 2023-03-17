@@ -51,7 +51,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   @impl true
-  def handle_event("toggle-details", %{}, socket) do
+  def handle_event("toggle_details", %{}, socket) do
     {:noreply, assign(socket, :show_details, !socket.assigns[:show_details])}
   end
 
@@ -118,7 +118,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
 
           <button
             class="w-auto rounded-full bg-gray-50 p-3 hover:bg-gray-100"
-            phx-click="toggle-details"
+            phx-click="toggle_details"
             phx-target={@myself}
           >
             <%= if @show_details do %>

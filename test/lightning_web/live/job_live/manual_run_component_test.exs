@@ -274,7 +274,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              current_user: user,
              on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d3},
-             can_edit_job: true,
+             can_run_job: true,
              return_to:
                Routes.project_workflow_path(
                  conn,
@@ -292,7 +292,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              current_user: user,
              on_run: nil,
              builder_state: %{job_id: job.id, dataclip: d4},
-             can_edit_job: true,
+             can_run_job: true,
              return_to:
                Routes.project_workflow_path(
                  conn,
@@ -301,5 +301,33 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
                  job.workflow_id
                )
            ) =~ "<option selected value=\"#{d4.id}\">#{d4.id}</option>"
+  end
+
+  test "project viewers can't run a job from the inspector", %{
+    conn: conn,
+    project: project
+  } do
+    conn = setup_project_user(conn, project, :viewer)
+
+    job =
+      workflow_job_fixture(
+        project_id: project.id,
+        body: ~s[fn(state => { return {...state, extra: "data"} })]
+      )
+
+    {:ok, view, _html} =
+      live(
+        conn,
+        ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
+      )
+
+    assert view
+           |> element("button[phx-click='confirm'][disabled]")
+           |> has_element?()
+
+    view
+    |> with_target("#manual-job-#{job.id}")
+    |> render_click("confirm", %{}) =~
+      "You are not authorized to perform this action."
   end
 end

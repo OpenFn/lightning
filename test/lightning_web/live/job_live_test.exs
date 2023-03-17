@@ -81,10 +81,10 @@ defmodule LightningWeb.JobLiveTest do
 
       assert html =~ project.name
 
-      assert has_element?(view, "#delete-job")
+      assert has_element?(view, "#delete_job")
 
       view
-      |> element("#delete-job")
+      |> element("#delete_job")
       |> render_click()
 
       assert_patch(
@@ -118,8 +118,46 @@ defmodule LightningWeb.JobLiveTest do
 
       assert has_element?(
                view,
-               "button#delete-job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
+               "button#delete_job[disabled, title='Impossible to delete upstream jobs. Please delete all associated downstream jobs first.']"
              )
+
+      assert view |> render_click("delete_job", %{"id" => job.id}) =~
+               "Unable to delete this job because it has downstream jobs"
+    end
+
+    test "project viewers can't delete jobs", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      conn = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_workflow_path(
+            conn,
+            :edit_job,
+            project.id,
+            job.workflow_id,
+            job.id
+          )
+        )
+
+      assert html =~ project.name
+
+      assert has_element?(
+               view,
+               "button[phx-click='delete_job'][title='You are not authorized to perform this action.'][disabled='disabled']"
+             )
+
+      assert view |> render_click("delete_job", %{"id" => job.id}) =~
+               "You are not authorized to perform this action."
+
+      assert_patch(
+        view,
+        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
+      )
     end
   end
 

@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Added roles and permissions to workflows and history page
+  [#645](https://github.com/OpenFn/Lightning/issues/645)
 - Added roles and permissions to project settings page
   [#645](https://github.com/OpenFn/Lightning/issues/645)
 - Added roles and permissions to profile and credentials page

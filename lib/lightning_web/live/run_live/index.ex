@@ -13,7 +13,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.RunSearchForm
   alias Lightning.RunSearchForm.MultiSelectOption
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -36,11 +36,20 @@ defmodule LightningWeb.RunLive.Index do
       Lightning.Workflows.get_workflows_for(socket.assigns.project)
       |> Enum.map(&{&1.name || "Untitled", &1.id})
 
+    can_rerun_job =
+      ProjectUsers
+      |> Permissions.can(
+        :rerun_job,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
     {:ok,
      socket
      |> assign(
        active_menu_item: :runs,
        work_orders: [],
+       can_rerun_job: can_rerun_job,
        pagination_path:
          &Routes.project_run_index_path(
            socket,
@@ -143,12 +152,7 @@ defmodule LightningWeb.RunLive.Index do
         %{"attempt_id" => attempt_id, "run_id" => run_id},
         socket
       ) do
-    if ProjectUsers
-       |> Permissions.can(
-         :rerun_job,
-         socket.assigns.current_user,
-         socket.assigns.project
-       ) do
+    if socket.assigns.can_rerun_job do
       AttemptService.get_for_rerun(attempt_id, run_id)
       |> WorkOrderService.retry_attempt_run(socket.assigns.current_user)
 
@@ -198,6 +202,7 @@ defmodule LightningWeb.RunLive.Index do
   # https://github.com/phoenixframework/phoenix_live_view/issues/2333
   # We have changed the event name to "validate" since that is what
   # the form recovery event will use.
+  # TODO: see if this is still relevant.
   def handle_event(
         "validate",
         %{"run_search_form" => %{"search_term" => search_term}},

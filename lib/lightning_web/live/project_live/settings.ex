@@ -165,7 +165,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     <%= if @can_edit_project_user do %>
       <.form
         :let={form}
-        for={%{}}
+        for={%{"failure_alert" => @project_user.failure_alert}}
         phx-change="set_failure_alert"
         id={"failure-alert-#{@project_user.id}"}
       >
@@ -173,8 +173,7 @@ defmodule LightningWeb.ProjectLive.Settings do
         <LightningWeb.Components.Form.select_field
           form={form}
           name="failure_alert"
-          values={[Disabled: "false", Enabled: "true"]}
-          value={@project_user.failure_alert}
+          values={[Disabled: false, Enabled: true]}
         />
       </.form>
     <% else %>
@@ -197,7 +196,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     <%= if @can_edit_project_user do %>
       <.form
         :let={form}
-        for={%{}}
+        for={%{"digest" => @project_user.digest}}
         phx-change="set_digest"
         id={"digest-#{@project_user.id}"}
       >
@@ -211,7 +210,6 @@ defmodule LightningWeb.ProjectLive.Settings do
             Weekly: "weekly",
             Monthly: "monthly"
           ]}
-          value={@project_user.digest}
         />
       </.form>
     <% else %>
