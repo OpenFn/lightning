@@ -29,7 +29,7 @@ import JobEditor from './job-editor';
 import WorkflowDiagram from './workflow-diagram';
 import TabSelector from './tab-selector';
 
-let dragEndListener;
+let pointerDownListener;
 let dragListener;
 
 let Hooks = {
@@ -137,7 +137,7 @@ const addDragMask = () => {
 const disconnectWorkflowResizer = () => {
   const el = document.getElementById('resizer');
   if (el) {
-    el.removeEventListener('pointerdown', pointerDownListner);
+    el.removeEventListener('pointerdown', pointerDownListener);
   }
 };
 
@@ -160,7 +160,7 @@ const connectWorkflowResizer = () => {
       const parentLeft = parentBounds.left;
       let width;
 
-      const pointerDownListener = () => {
+      pointerDownListener = () => {
         addDragMask();
         dragListener = e => {
           if (e.screenX !== 0) {
@@ -183,7 +183,9 @@ const connectWorkflowResizer = () => {
         if (dragListener) {
           const mask = document.getElementById('drag-mask');
           mask.parentNode.removeChild(mask);
-          localStorage.setItem('lightning.job-editor.width', width);
+          if (width) {
+            localStorage.setItem('lightning.job-editor.width', width);
+          }
           document.dispatchEvent(new Event('update-layout'));
           document.removeEventListener('pointermove', dragListener);
           dragListener = null;
