@@ -191,11 +191,10 @@ export default function Editor({ source, adaptor, onChange, metadata }: EditorPr
       editor.focus();
     };
     
-    // This is a temporary (and poor) solution to make the editor respond to resizing
+    // Force the editor to resize
     listeners.current.updateLayout = (e: Event) => {
       editor.layout({ width: 0, height: 0});
-      setTimeout(
-      editor.layout, 1)
+      editor.layout();
     }
 
     document.addEventListener('insert-snippet', listeners.current.insertSnippet);
