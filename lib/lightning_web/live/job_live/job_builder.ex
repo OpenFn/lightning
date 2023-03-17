@@ -175,10 +175,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="editor">
             <.job_editor_component
-                adaptor={@resolved_job_adaptor}
-                source={@job_body}
-                id={"job-editor-#{@job_id}"}
-                target={@myself}
+              adaptor={@resolved_job_adaptor}
+              source={@job_body}
+              id={"job-editor-#{@job_id}"}
+              target={@myself}
             />
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="output">
