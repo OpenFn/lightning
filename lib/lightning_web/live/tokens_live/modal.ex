@@ -17,14 +17,6 @@ defmodule LightningWeb.TokensLive.Modal do
         module={LightningWeb.CredentialLive.FormComponent}
         id={:new}
         action={:new}
-        token={
-          %Credential{
-            user_id: assigns.current_user.id,
-            project_tokens: [
-              %Lightning.Projects.ProjectCredential{project_id: @project.id}
-            ]
-          }
-        }
         projects={[]}
         project={@project}
         on_save={@on_save}

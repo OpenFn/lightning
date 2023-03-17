@@ -95,10 +95,6 @@ defmodule LightningWeb.Router do
 
       live "/settings/authentication", AuthProvidersLive.Index, :edit
       live "/settings/authentication/new", AuthProvidersLive.Index, :new
-
-      live "/settings/tokens", TokensLive.Index, :index
-      live "/settings/tokens/new", TokensLive.Edit, :new
-      live "/settings/tokens/:id", TokensLive.Edit, :edit
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
@@ -127,6 +123,10 @@ defmodule LightningWeb.Router do
 
       live "/profile", ProfileLive.Edit, :edit
       live "/profile/:id/delete", ProfileLive.Edit, :delete
+
+      live "/profile/tokens", TokensLive.Index, :index
+      live "/profile/tokens/new", TokensLive.Edit, :new
+      live "/profile/tokens/:id", TokensLive.Edit, :edit
 
       live "/", DashboardLive.Index, :index
     end

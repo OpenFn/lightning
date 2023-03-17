@@ -142,6 +142,22 @@ defmodule Lightning.Accounts do
   def get_user!(id), do: Repo.get!(User, id)
 
   @doc """
+  Gets a single token.
+
+  Raises `Ecto.NoResultsError` if the UserToken does not exist.
+
+  ## Examples
+
+      iex> get_token!(123)
+      %UserToken{}
+
+      iex> get_token!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_token!(id), do: Repo.get!(UserToken, id)
+
+  @doc """
   Registers a superuser.
 
   ## Examples
@@ -364,7 +380,8 @@ defmodule Lightning.Accounts do
           []
       end
     end)
-    |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
+    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
+                                                            password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
@@ -659,7 +676,8 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password", user.email)
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "reset_password", user.email)
 
     Repo.insert!(user_token)
 
