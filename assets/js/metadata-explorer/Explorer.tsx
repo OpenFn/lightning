@@ -56,7 +56,7 @@ export default ({ metadata, adaptor }: MetadataExplorerProps) => {
         <details open={initialShowHelp} onToggle={handleToggleHelp}>
           <summary className="block cursor-pointer text-sm">
             <InformationCircleIcon className={iconStyle + " inline"}/>
-            <span className="font-bold">Help & Tips</span>
+            <span className="font-bold">Tips</span>
           </summary>
           <div className="border-slate-200 border-l-2 ml-2 pl-2" style={{ borderLeftWidth: '2px' }}>
             <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential.</p>
