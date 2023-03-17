@@ -114,12 +114,13 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def resize_component(assigns) do
     ~H"""
-      <div
-        id={@id}
-        phx-hook="JobEditorResizer"
-        phx-update="ignore"
-        class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
-      />
+    <div
+      id={@id}
+      phx-hook="JobEditorResizer"
+      phx-update="ignore"
+      class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
+    >
+    </div>
     """
   end
 end
