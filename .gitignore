@@ -47,6 +47,8 @@ npm-debug.log
 # mnesia
 /Mnesia*
 
+benchmarking/*.csv
+
 tmp
 priv/openfn
 
