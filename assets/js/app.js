@@ -28,14 +28,13 @@ import topbar from '../vendor/topbar';
 import JobEditor from './job-editor';
 import WorkflowDiagram from './workflow-diagram';
 import TabSelector from './tab-selector';
-
-let pointerDownListener;
-let dragListener;
+import JobEditorResizer from './job-editor-resizer/mount';
 
 let Hooks = {
   WorkflowDiagram,
   TabSelector,
   JobEditor,
+  JobEditorResizer,
 };
 
 Hooks.Flash = {
@@ -58,20 +57,6 @@ Hooks.AssocListChange = {
     this.el.addEventListener('change', _event => {
       this.pushEventTo(this.el, 'select_item', { id: this.el.value });
     });
-  },
-};
-
-Hooks.AutoResize = {
-  mounted() {
-    this.parent = this.el.parentElement;
-    this.el.style.height = `${this.parent.clientHeight - 1}px`;
-
-    this.listener = addEventListener('resize', _event => {
-      this.el.style.height = `${this.parent.clientHeight - 1}px`;
-    });
-  },
-  destroyed() {
-    removeEventListener('resize', this.listener);
   },
 };
 
@@ -109,91 +94,13 @@ window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {
     topBarScheduled = setTimeout(() => topbar.show(), 120);
   }
-  disconnectWorkflowResizer();
 });
 
 window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
-  connectWorkflowResizer();
 });
-
-// The drag mask stops the cursor interacting with the page while dragging
-const addDragMask = () => {
-  const dragMask = document.createElement('div');
-  dragMask.id = 'drag-mask';
-  dragMask.style.position = 'absolute';
-  dragMask.style.left = 0;
-  dragMask.style.right = 0;
-  dragMask.style.top = 0;
-  dragMask.style.bottom = 0;
-  dragMask.style.userSelect = 'none';
-  dragMask.style.zIndex = 999;
-  dragMask.style.cursor = 'ew-resize';
-  document.body.appendChild(dragMask);
-};
-
-const disconnectWorkflowResizer = () => {
-  const el = document.getElementById('resizer');
-  if (el) {
-    el.removeEventListener('pointerdown', pointerDownListener);
-  }
-};
-
-const connectWorkflowResizer = () => {
-  const el = document.getElementById('resizer');
-  if (el) {
-    const savedWidth = localStorage.getItem('lightning.job-editor.width');
-    if (savedWidth) {
-      el.parentNode.style.width = `${savedWidth}%`;
-    }
-
-    // find the parent h-full element, which we'll size against
-    let parent = el.parentNode;
-    while (parent && !parent.className.match('h-full')) {
-      parent = parent.parentNode;
-    }
-    if (parent) {
-      const parentBounds = parent.getBoundingClientRect();
-      const parentWidth = parentBounds.width;
-      const parentLeft = parentBounds.left;
-      let width;
-
-      pointerDownListener = () => {
-        addDragMask();
-        dragListener = e => {
-          if (e.screenX !== 0) {
-            // Work out the mouse position relative to the parent
-            const relativePosition = Math.max(
-              0,
-              Math.min((e.clientX - parentLeft) / parentWidth)
-            );
-            // Invert the postion
-            width = (1 - relativePosition) * 100;
-            // Update the width
-            el.parentNode.style.width = `${width}%`;
-          }
-        };
-        document.addEventListener('pointermove', dragListener);
-      };
-      el.addEventListener('pointerdown', pointerDownListener);
-
-      document.addEventListener('pointerup', () => {
-        if (dragListener) {
-          const mask = document.getElementById('drag-mask');
-          mask.parentNode.removeChild(mask);
-          if (width) {
-            localStorage.setItem('lightning.job-editor.width', width);
-          }
-          document.dispatchEvent(new Event('update-layout'));
-          document.removeEventListener('pointermove', dragListener);
-          dragListener = null;
-        }
-      });
-    }
-  }
-};
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();
