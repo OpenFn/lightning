@@ -2,7 +2,7 @@ import http from 'k6/http';
 import { check } from 'k6';
 
 const webhookURL =
-  'http://localhost:4000/i/9102044d-0976-40ad-87a2-b15728346500';
+  'http://localhost:4000/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a';
 
 const requestsNumber = 10;
 
@@ -25,6 +25,6 @@ export default function () {
     surname: 'ipsum',
   });
   const headers = { 'Content-Type': 'application/json' };
-  http.post(webhookURL, payload, { headers });
+  const res = http.post(webhookURL, payload, { headers });
   check(res, { 'status was 200': r => r.status == 200 });
 }
