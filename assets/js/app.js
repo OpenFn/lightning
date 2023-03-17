@@ -60,6 +60,33 @@ Hooks.AssocListChange = {
   },
 };
 
+Hooks.AutoResize = {
+  mounted() {
+    this.parent = this.el.parentElement;
+    this.el.style.height = `${this.parent.clientHeight - 1}px`;
+
+    this.listener = addEventListener('resize', _event => {
+      this.el.style.height = `${this.parent.clientHeight - 1}px`;
+    });
+  },
+  destroyed() {
+    removeEventListener('resize', this.listener);
+  },
+};
+
+Hooks.Copy = {
+  mounted() {
+    let { to } = this.el.dataset;
+    this.el.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      let text = document.querySelector(to).value
+      navigator.clipboard.writeText(text).then(() => {
+        console.log("Copied!")
+      })
+    });
+  },
+};
+
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
