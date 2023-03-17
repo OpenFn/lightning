@@ -21,6 +21,8 @@ and this project adheres to
   the OpenHIE demo workflow
   [448](https://github.com/OpenFn/Lightning/issues/448)
 - Added Phoenix Storybook for improved component development
+- Added load test for webhook endpoint performance
+  [#645](https://github.com/OpenFn/Lightning/issues/634)
 
 ### Changed
 

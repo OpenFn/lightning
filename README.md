@@ -37,6 +37,13 @@ from Dockerhub.
 
 See [Deployment](DEPLOYMENT.md) for more detailed information.
 
+## **Benchmarking**
+
+We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
+folder you can find a script for benchmarking Webhook Workflows.
+
+See [Benchmarking](benchmarking/BENCHMARKING.md) for more detailed information.
+
 ## **Contribute** to this project
 
 First, thanks for being here! You're contributing to a digital public good that
