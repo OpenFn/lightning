@@ -72,7 +72,6 @@ const hook = {
     }
   },
   mounted(this: ResizerHook) {
-    const savedWidth = localStorage.getItem('lightning.job-editor.width');
     const parent = this.el.parentNode! as HTMLElement;
 
     let container: HTMLElement = parent;
@@ -81,6 +80,7 @@ const hook = {
     }
     this.container = container;
 
+    const savedWidth = localStorage.getItem('lightning.job-editor.width');
     if (parent) {
       if (savedWidth) {
         parent.style.width = `${savedWidth}%`;
