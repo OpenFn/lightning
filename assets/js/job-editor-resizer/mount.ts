@@ -53,6 +53,7 @@ const hook = {
       if (this.width) {
         localStorage.setItem('lightning.job-editor.width', `${this.width}`);
       }
+      // triggers a layout in monaco
       document.dispatchEvent(new Event('update-layout'));
     }
   },
