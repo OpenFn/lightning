@@ -22,7 +22,7 @@ const settings = persistedSettings ? JSON.parse(persistedSettings) : {
 
 const persistSettings = () => localStorage.setItem('lightning.job-editor.settings', JSON.stringify(settings))
 
-const iconStyle = "inline cursor-pointer h-6 w-6 mr-1"
+const iconStyle = "inline cursor-pointer h-6 w-6 mr-1 hover:text-primary-600"
 
 type TabSpec = {
   label: string,
@@ -108,9 +108,11 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
     }
   };
 
+  // Force monaco editor to re-layout
   const resize = () => {
-    // terrible solution to resizing the editor
-    document.dispatchEvent(new Event('update-layout'));
+    setTimeout(() => {
+      document.dispatchEvent(new Event('update-layout'));
+    }, 2)
   };
 
   const CollapseIcon = useMemo(() => {
@@ -147,8 +149,8 @@ export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) 
           onSelectionChange={handleSelectionChange}
           verticalCollapse={!vertical && !showPanel}
         />
-        <ViewColumnsIcon className={iconStyle} onClick={toggleOrientiation} />
-        <CollapseIcon className={iconStyle} onClick={toggleShowPanel} />
+        <ViewColumnsIcon className={`${iconStyle} rotate-90`} onClick={toggleOrientiation} title="Toggle panel orientation"/>
+        <CollapseIcon className={iconStyle} onClick={toggleShowPanel} title="Collapse panel" />
       </div>
       {showPanel && 
         <div className={`flex flex-1 ${vertical ? 'overflow-auto' : 'overflow-hidden'} px-2`}>
