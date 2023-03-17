@@ -34,7 +34,7 @@ defmodule Lightning.Credentials.SchemaTest do
         "required": ["hostUrl", "password", "username", "number"]
       }
       """
-      |> Jason.decode!()
+      |> Jason.decode!(objects: :ordered_objects)
 
     %{schema_map: schema_map}
   end
@@ -62,6 +62,8 @@ defmodule Lightning.Credentials.SchemaTest do
                username: :string,
                number: :integer
              }
+
+      assert schema.fields == [:username, :password, :hostUrl, :number]
     end
   end
 

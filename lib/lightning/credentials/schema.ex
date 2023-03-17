@@ -16,14 +16,28 @@ defmodule Lightning.Credentials.Schema do
 
   defstruct [:name, :root, :types, :fields]
 
-  @spec new(json_schema :: %{String.t() => any()}, name :: String.t() | nil) ::
+  @spec new(
+          json_schema :: %{String.t() => any()} | binary(),
+          name :: String.t() | nil
+        ) ::
           __MODULE__.t()
-  def new(json_schema, name \\ nil) when is_map(json_schema) do
+  def new(body, name \\ nil)
+
+  def new(json_schema, name) when is_map(json_schema) do
+    fields =
+      json_schema["properties"]
+      |> Enum.map(fn {k, _v} -> k |> String.to_atom() end)
+
     root = ExJsonSchema.Schema.resolve(json_schema)
     types = get_types(root)
-    fields = Map.keys(types)
 
     struct!(__MODULE__, name: name, root: root, types: types, fields: fields)
+  end
+
+  def new(raw_schema, name) when is_binary(raw_schema) do
+    raw_schema
+    |> Jason.decode!(objects: :ordered_objects)
+    |> new(name)
   end
 
   @spec validate(changeset :: Ecto.Changeset.t(), schema :: __MODULE__.t()) ::
@@ -86,7 +100,6 @@ defmodule Lightning.Credentials.Schema do
       {k |> String.to_atom(),
        Map.get(properties, "type", "string") |> String.to_atom()}
     end)
-    |> Enum.reverse()
     |> Map.new()
   end
 
