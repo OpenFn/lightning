@@ -42,7 +42,6 @@ export default {
     });
   },
   handleContentChange(content: string) {
-    console.log(' > ', content)
     this.pushEventTo(this.el, this.changeEvent, { source: content });
   },
   render() {
