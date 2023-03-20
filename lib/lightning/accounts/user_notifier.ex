@@ -5,6 +5,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
   import Swoosh.Email
 
+  alias Lightning.Projects
   alias Lightning.Mailer
 
   defp admin(), do: Application.get_env(:lightning, :email_addresses)[:admin]
@@ -37,6 +38,20 @@ defmodule Lightning.Accounts.UserNotifier do
 
     If you didn't create an account with us, please ignore this.
 
+    """)
+  end
+
+  @doc """
+  Deliver email to notify user of his addition of a project.
+  """
+  def deliver_project_addition_notification(user, project) do
+    role = Projects.get_project_user_role(user, project)
+
+    deliver(user.email, "Project Addition", """
+
+    Hi #{user.first_name},
+
+    You've just been added to the project #{project.name} as #{role}
     """)
   end
 
