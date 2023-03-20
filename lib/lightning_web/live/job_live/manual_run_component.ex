@@ -106,7 +106,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           current_user: current_user,
           id: id,
           job_id: job_id,
-          job: job,
           project: project,
           on_run: on_run,
           can_run_job: can_run_job,
@@ -122,13 +121,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     dataclips_options =
       dataclips
       |> Enum.map(&{&1.id, &1.id})
-
-    dataclips_options =
-      if job.trigger.type in [:webhook, :cron] do
-        dataclips_options ++ [{"New custom input", "custom"}]
-      else
-        dataclips_options
-      end
+      |> Enum.concat([{"New custom input", "custom"}])
 
     last_dataclip = List.first(dataclips)
     no_dataclip? = is_nil(last_dataclip)
@@ -167,7 +160,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        return_to: return_to
      )
      |> assign_new(:custom_input?, fn ->
-       is_nil(selected_dataclip) && job.trigger.type in [:webhook, :cron]
+       is_nil(selected_dataclip)
      end)
      |> update_form(init_form)}
   end
@@ -280,7 +273,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   defp changeset(attrs) do
     required_fields =
-      if attrs["dataclip_id"] == "custom" do
+      if attrs["dataclip_id"] == "custom" or attrs == %{} do
         [:body]
       else
         [:dataclip_id]
