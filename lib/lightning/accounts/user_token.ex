@@ -239,7 +239,8 @@ defmodule Lightning.Accounts.UserToken do
 
   def user_and_contexts_query(user, [_ | _] = contexts) do
     from(t in Lightning.Accounts.UserToken,
-      where: t.user_id == ^user.id and t.context in ^contexts
+      where: t.user_id == ^user.id and t.context in ^contexts,
+      order_by: [desc: :inserted_at]
     )
   end
 end
