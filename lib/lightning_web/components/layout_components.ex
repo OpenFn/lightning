@@ -122,6 +122,10 @@ defmodule LightningWeb.LayoutComponents do
             >
               <Heroicons.key class="w-5 h-5 text-secondary-500" /> Credentials
             </.dropdown_menu_item>
+            <.dropdown_menu_item link_type="live_redirect" to={~p"/profile/tokens"}>
+              <Heroicons.command_line class="w-5 h-5 text-secondary-500" />
+              API Tokens
+            </.dropdown_menu_item>
             <.dropdown_menu_item
               link_type="live_redirect"
               to={Routes.user_session_path(@socket, :delete)}
