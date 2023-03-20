@@ -119,7 +119,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            |> has_element?("textarea#manual_run_body")
   end
 
-  test "has custom option on cron type job ", %{
+  test "has custom option on cron type job", %{
     conn: conn,
     project: project
   } do
@@ -140,7 +140,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
            |> has_element?("textarea#manual_run_body")
   end
 
-  test "has no option on job with no runs and of type on_job_success", %{
+  test "has custom option on on_job_success type job", %{
     conn: conn,
     project: project
   } do
@@ -157,8 +157,13 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
         ~p"/projects/#{project.id}/w/#{job.workflow_id}/j/#{job.id}"
       )
 
-    refute view
-           |> has_element?("select[name='manual_run[dataclip_id]'] option")
+    assert view
+           |> has_element?(
+             "select[name='manual_run[dataclip_id]'] option[value='custom']"
+           )
+
+    assert view
+           |> has_element?("textarea#manual_run_body")
   end
 
   test "shows 3 latest dataclips for a job with several runs", %{
