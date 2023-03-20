@@ -151,6 +151,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   defp save_project(socket, :edit, project_params) do
     case Projects.update_project(socket.assigns.project, project_params) do
       {:ok, _project} ->
+        notify_project_users(project_params |> Map.get("project_users"))
+        |> IO.inspect(label: "YOOOOO")
+
         {:noreply,
          socket
          |> put_flash(:info, "Project updated successfully")
@@ -164,6 +167,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   defp save_project(socket, :new, project_params) do
     case Projects.create_project(project_params) do
       {:ok, _project} ->
+        notify_project_users(project_params |> Map.get("project_users"))
+        |> IO.inspect(label: "YOOOOO")
+
         {:noreply,
          socket
          |> put_flash(:info, "Project created successfully")
@@ -172,6 +178,15 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
     end
+  end
+
+  defp notify_project_users(nil), do: nil
+
+  defp notify_project_users(project_users) do
+    project_users
+    |> Map.values()
+    |> Enum.filter(fn pu -> pu["delete"] != "true" end)
+    |> IO.inspect()
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
