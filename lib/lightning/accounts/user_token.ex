@@ -39,10 +39,10 @@ defmodule Lightning.Accounts.UserToken do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "user_tokens" do
-    field(:token, :binary)
-    field(:context, :string)
-    field(:sent_to, :string)
-    belongs_to(:user, User)
+    field :token, :binary
+    field :context, :string
+    field :sent_to, :string
+    belongs_to :user, User
 
     timestamps(updated_at: false)
   end

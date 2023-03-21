@@ -6,45 +6,70 @@ defmodule LightningWeb.TokensLiveTest do
 
   setup :register_and_log_in_user
 
-  describe "Personal Access Tokens" do
-    test "API Tokens navigation", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, ~p"/profile/tokens")
+  # defp mask_token(token) do
+  #   length = String.length(token)
+  #   masked_length = length - 10
+  #   mask = String.duplicate("*", masked_length)
 
-      assert index_live
+  #   Regex.replace(~r/^(.{#{masked_length}})/, token, mask)
+  #   |> String.slice(225, masked_length)
+  # end
+
+  describe "Index" do
+    test "Access API Tokens page", %{conn: conn} do
+      {:ok, token_live, html} = live(conn, ~p"/profile/tokens")
+
+      assert token_live
              |> element("nav#side-menu a", "API Tokens")
              |> has_element?()
-    end
-
-    test "Empty page if there are not tokens", %{conn: conn} do
-      {:ok, index_live, html} = live(conn, ~p"/profile/tokens")
 
       assert html =~ "Personal Access Tokens"
       assert html =~ "No Personal Access Tokens"
       assert html =~ "Get started by creating a new access token."
 
-      assert index_live
+      assert token_live
              |> element("a", "Generate New Token")
     end
 
-    # Generate new token test
     test "Generate new token", %{conn: conn} do
-      {:ok, index_live, html} = live(conn, ~p"/profile/tokens")
+      {:ok, token_live, _html} = live(conn, ~p"/profile/tokens")
 
-      index_live
-      |> element("a", "Generate New Token")
-      |> render_click()
+      assert token_live
+             |> element("#generate_new_token", "Generate New Token")
+             |> render_click() =~ "Token created successfully"
 
-      refute html =~ "No Personal Access Tokens"
+      assert token_live
+             |> element("div[data-entity='new_token']")
+             |> has_element?()
 
-      assert html =~
-               "Make sure to copy your token now as you will not be able to see it again."
+      assert token_live |> element("button#copy") |> has_element?()
+
+      assert token_live |> element("button#copy") |> render_click() =~
+               "Token copied successfully"
+
+      assert token_live
+             |> element("input#new_token")
+             |> render()
+             |> Floki.parse_fragment!()
+             |> Floki.attribute("value")
+             |> Floki.text()
+             |> String.length() == 275
     end
 
     # test "See a list of tokens", %{conn: conn, user: user} do
-    #   {:ok, _profile_live, html} = live(conn, ~p"/profile/tokens")
-    #   token1 = Accounts.generate_api_token(user)
-    #   token2 = Accounts.generate_api_token(user)
-    #   assert html =~ "Personal Access Tokens"
+    #   {:ok, _token_live, html} = live(conn, ~p"/profile/tokens")
+
+    #   tokens =
+    #     Accounts.list_api_tokens(user)
+    #     |> Enum.map(fn ut ->
+    #       %{
+    #         "id" => ut.id,
+    #         "token" => mask_token(ut.token),
+    #         "inserted_at" => ut.inserted_at
+    #       }
+    #     end)
+
+    #   assert html =~ tokens
     # end
 
     # test "Delete an existing token", %{conn: conn} do
