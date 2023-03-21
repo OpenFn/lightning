@@ -18,12 +18,11 @@
     >
       <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
         <div class="grid grid-cols-4 gap-0">
-          <div class="col-span-2 py-3 px-4 font-medium text-start">
+          <div class="col-span-3 py-3 px-4 font-medium text-start">
             Tokens
           </div>
 
           <div class="py-3 px-4 font-medium">Created</div>
-          <div class="py-3 px-4 font-medium">Last Used</div>
         </div>
       </div>
       <div data-entity="tokens_list" class="bg-gray-100">
@@ -103,7 +102,7 @@
           class="my-4 grid grid-cols-4 gap-0 rounded-lg bg-white"
         >
           <%= for token <- @tokens do %>
-            <div class="col-span-2  my-auto whitespace-nowrap p-4 font-medium text-gray-900 dark:text-white">
+            <div class="col-span-3 my-auto whitespace-nowrap p-4 font-medium text-gray-900 dark:text-white">
               <div class="flex rounded overflow-auto p-2 bg-blue-100 w-auto justify-between">
                 <code class="my-auto whitespace-nowrap py-2 px-4 align-baseline text-base font-medium leading-none">
                   <span>
@@ -114,14 +113,9 @@
             </div>
 
             <div class="my-auto p-4">
-              <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
-                <%= token["inserted_at"] %>
-              </span>
-            </div>
-            <div class="my-auto p-4">
               <div class="flex content-center justify-between">
                 <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
-                  Never Used
+                  <%= token["inserted_at"] %>
                 </span>
                 <%= link(
                   to: "#",
@@ -136,6 +130,9 @@
                 <% end %>
               </div>
             </div>
+            <%!-- <div class="my-auto p-4">
+              
+            </div> --%>
           <% end %>
         </div>
       </div>

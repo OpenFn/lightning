@@ -80,7 +80,7 @@ defmodule LightningWeb.TokensLive.Index do
     mask = String.duplicate("*", masked_length)
 
     Regex.replace(~r/^(.{#{masked_length}})/, token, mask)
-    |> String.slice(225, masked_length)
+    |> String.slice(195, masked_length)
   end
 
   defp get_tokens(user) do
