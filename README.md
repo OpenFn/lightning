@@ -6,9 +6,8 @@ and more time focusing on their work.
 
 Use OpenFn Lightning to visually build, execute and manage workflows.
 
-- Technology that's been tried and tested by NGOs in over 40 countries
-- Developed by a team with over xx years of combined experience consulting with
-  NGOs to help them integrate their systems
+- The latest version of the OpenFn technology - first launched in 2014, now
+  tried and tested by NGOs in over 40 countries
 - Fully open source (no premium features or community edition, you get the same
   product whether using SaaS or self-hosted)
 - Recognised as a Digital Public Good by the
