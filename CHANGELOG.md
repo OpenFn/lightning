@@ -23,6 +23,8 @@ and this project adheres to
 - Added Phoenix Storybook for improved component development
 - Added load test for webhook endpoint performance
   [#645](https://github.com/OpenFn/Lightning/issues/634)
+- Added notify user via email when they're added to a project
+  [#306](https://github.com/OpenFn/Lightning/issues/306)
 
 ### Changed
 
