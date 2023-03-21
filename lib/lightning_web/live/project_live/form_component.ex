@@ -155,7 +155,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     case Projects.update_project(socket.assigns.project, project_params) do
       {:ok, project} ->
-        :ok = notify_project_users(project, users_to_notify)
+        notify_project_users(project, users_to_notify)
 
         {:noreply,
          socket
@@ -172,7 +172,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     case Projects.create_project(project_params) do
       {:ok, project} ->
-        :ok = notify_project_users(project, users_to_notify)
+        notify_project_users(project, users_to_notify)
 
         {:noreply,
          socket
@@ -209,8 +209,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
         project
       )
     end)
-
-    :ok
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
