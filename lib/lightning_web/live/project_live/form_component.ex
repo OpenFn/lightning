@@ -12,6 +12,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   """
   use LightningWeb, :live_component
 
+  alias Lightning.Repo
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
   import LightningWeb.Components.Form
   import LightningWeb.Components.Common
@@ -149,10 +151,11 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :edit, project_params) do
+    users_to_notify = filter_users_to_notify(socket, project_params)
+
     case Projects.update_project(socket.assigns.project, project_params) do
-      {:ok, _project} ->
-        notify_project_users(project_params |> Map.get("project_users"))
-        |> IO.inspect(label: "YOOOOO")
+      {:ok, project} ->
+        notify_project_users(project, users_to_notify)
 
         {:noreply,
          socket
@@ -165,10 +168,11 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
+    users_to_notify = filter_users_to_notify(socket, project_params)
+
     case Projects.create_project(project_params) do
-      {:ok, _project} ->
-        notify_project_users(project_params |> Map.get("project_users"))
-        |> IO.inspect(label: "YOOOOO")
+      {:ok, project} ->
+        notify_project_users(project, users_to_notify)
 
         {:noreply,
          socket
@@ -180,13 +184,33 @@ defmodule LightningWeb.ProjectLive.FormComponent do
     end
   end
 
-  defp notify_project_users(nil), do: nil
+  defp filter_users_to_notify(socket, project_params) do
+    project = Repo.preload(socket.assigns.project, :project_users)
 
-  defp notify_project_users(project_users) do
-    project_users
-    |> Map.values()
-    |> Enum.filter(fn pu -> pu["delete"] != "true" end)
-    |> IO.inspect()
+    existing_project_users =
+      project.project_users
+      |> Enum.map(fn pu -> pu.user_id end)
+
+    added_project_users =
+      project_params
+      |> Map.get("project_users")
+      |> Map.values()
+      |> Enum.filter(fn pu -> pu["delete"] != "true" end)
+      |> Enum.map(fn pu -> pu["user_id"] end)
+
+    users_to_notify = added_project_users -- existing_project_users
+  end
+
+  defp notify_project_users(project, users_to_notify) do
+    users_to_notify
+    |> Enum.map(fn user ->
+      UserNotifier.deliver_project_addition_notification(
+        Lightning.Accounts.get_user!(user),
+        project
+      )
+    end)
+
+    :ok
   end
 
   defp coerce_raw_name_to_safe_name(%{"raw_name" => raw_name} = params) do
