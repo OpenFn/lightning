@@ -10,6 +10,10 @@ assignees: ''
 
 **Version number** The version of Lightning you have seen the bug on.
 
+If you're running on a tagged version, include the number: X.Y.Z
+
+If you're running locally with an unreleased version, the commit sha: 84b1bdc
+
 I have reproduced this locally on main:
 
 - [ ] Yes
