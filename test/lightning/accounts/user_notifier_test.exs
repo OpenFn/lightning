@@ -27,7 +27,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "Project #{project.name}",
         to: "user@openfn.org",
         text_body:
-          "\nHi Anna,\n\nYou've been added to the project \"a-test-project\" as an editor.\n\nClick the link below to check it out:\n\n#{url}\n"
+          "\nHi Anna,\n\nYou've been added to the project \"a-test-project\" as an editor.\n\nClick the link below to check it out:\n\n#{url}\n\n"
       )
     end
 
