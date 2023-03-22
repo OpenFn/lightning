@@ -25,12 +25,15 @@ and this project adheres to
   [#645](https://github.com/OpenFn/Lightning/issues/634)
 - Added notify user via email when they're added to a project
   [#306](https://github.com/OpenFn/Lightning/issues/306)
+- Added notify user via email when their account is created
+  [#307](https://github.com/OpenFn/Lightning/issues/307)
 
 ### Changed
 
 - Improved errors when decoding encryption keys for use with Cloak.
   [#684](https://github.com/OpenFn/Lightning/issues/684)
-- Allow users to run ANY job with a custom input. [#629](https://github.com/OpenFn/Lightning/issues/629)
+- Allow users to run ANY job with a custom input.
+  [#629](https://github.com/OpenFn/Lightning/issues/629)
 
 ### Fixed
 
