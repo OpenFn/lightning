@@ -1,10 +1,54 @@
 # OpenFn/Lightning (alpha) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
-Lightning extends the existing [OpenFn](https://www.openfn.org) Digital Public
-Good, providing a web UI to visually manage and execute complex workflow
-automation and data integration projects. Learn more about the entire free and
-open source OpenFn Integration Toolkit toolkit at
-[docs.openfn.org](https://docs.openfn.org).
+A tool to help governments and social-sector organizations automate key business
+processes and integrate critical systems, so they spend less time managing data
+and more time focusing on their work.
+
+Use OpenFn Lightning to visually build, execute and manage workflows.
+
+- The latest version of the OpenFn technology - first launched in 2014, now
+  tried and tested by NGOs in over 40 countries
+- Fully open source (no premium features or community edition, you get the same
+  product whether using SaaS or self-hosted)
+- Recognised as a Digital Public Good by the
+  [DPGA](https://digitalpublicgoods.net/) and a Global Good for Health by
+  [Digital Square](https://digitalsquare.org/digital-health-global-goods)
+
+![Screenshot 2023-03-15 at 13 01 13](https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png)
+
+Explore our [demo app](https://demo.openfn.org/) with username:
+`demo@openfn.org`, password: `welcome123`, or read through the
+[features](#features) section to view screenshots of the app.
+
+## Table of contents
+
+- [Features](#features)
+- [Getting started](#getting-started)
+  - [Run Lightning via Docker](#run-via-docker)
+  - [Deploy Lightning on Docker or Kubernetes](#deploy-on-external-infrastructure)
+  - [Run Lightning on your local machine (contributors)](#contribute-to-this-project)
+  - [Troubleshooting](#troubleshooting)
+- [Generate the documentation](#generating-documentation)
+- [Security and standards](#security-and-standards)
+
+## Features
+
+Plan and build workflows using Lightning's visual interface to quickly define
+when, where and what you want your automation to do.
+
+![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
+
+Monitor all workflow activity in one place.
+![Screenshot 2023-03-21 at 10 07 37](https://user-images.githubusercontent.com/36554605/226538515-f8b97950-80b9-4e5e-a5f4-7406c20ed37a.png)
+
+- Filter and search runs to identify issues that need addressing and follow how
+  a specific request has been processed
+- Configure alerts to be notified on run failures
+- Receive a project digest for a daily/weekly/monthly summary of your project
+  activity
+
+Manage users and access by project
+![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
 ## Getting Started
 
@@ -158,33 +202,6 @@ MIX_ENV=test mix test
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
 
-### Security and Standards
-
-We use a host of common Elixir static analysis tools to help us avoid common
-pitfalls and make sure we keep everything clean and consistent.
-
-In addition to our test suite, you can run the following commands:
-
-- `mix format --check-formatted`  
-  Code formatting checker, run again without the `--check-formatted` flag to
-  have your code automatically changed.
-- `mix dialyzer`  
-  Static analysis for type mismatches and other common warnings. See
-  [dialyxir](https://github.com/jeremyjh/dialyxir).
-- `mix credo`  
-  Static analysis for consistency, and coding standards. See
-  [Credo](https://github.com/rrrene/credo).
-- `mix sobelow`  
-  Check for commonly known security exploits. See
-  [Sobelow](https://sobelow.io/).
-- `MIX_ENV=test mix coveralls`  
-  Test coverage reporter. This command also runs the test suite, and can be used
-  in place of `mix test` when checking everything before pushing your code. See
-  [excoveralls](https://github.com/parroty/excoveralls).
-
-> For convenience there is a `verify` mix task that runs all of the above and
-> defaults the `MIX_ENV` to `test`.
-
 ### Generating Documentation
 
 You can generate the HTML and EPUB documentation locally using:
@@ -259,3 +276,30 @@ docker compose build --no-cache web && \
 docker compose run --rm web mix ecto.migrate
 docker compose up
 ```
+
+### Security and Standards
+
+We use a host of common Elixir static analysis tools to help us avoid common
+pitfalls and make sure we keep everything clean and consistent.
+
+In addition to our test suite, you can run the following commands:
+
+- `mix format --check-formatted`  
+  Code formatting checker, run again without the `--check-formatted` flag to
+  have your code automatically changed.
+- `mix dialyzer`  
+  Static analysis for type mismatches and other common warnings. See
+  [dialyxir](https://github.com/jeremyjh/dialyxir).
+- `mix credo`  
+  Static analysis for consistency, and coding standards. See
+  [Credo](https://github.com/rrrene/credo).
+- `mix sobelow`  
+  Check for commonly known security exploits. See
+  [Sobelow](https://sobelow.io/).
+- `MIX_ENV=test mix coveralls`  
+  Test coverage reporter. This command also runs the test suite, and can be used
+  in place of `mix test` when checking everything before pushing your code. See
+  [excoveralls](https://github.com/parroty/excoveralls).
+
+> For convenience there is a `verify` mix task that runs all of the above and
+> defaults the `MIX_ENV` to `test`.
