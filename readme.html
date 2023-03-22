@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-EBE276C5.js"></script>
+    <script src="dist/sidebar_items-ED3B58F0.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -111,11 +111,32 @@ Lightning
   <span>OpenFn/Lightning (alpha) <a href="https://circleci.com/gh/OpenFn/Lightning/tree/main"><img src="https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6" alt="CircleCI"/></a> <a href="https://codecov.io/gh/OpenFn/Lightning"><img src="https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a" alt="codecov"/></a> <img src="https://img.shields.io/docker/pulls/openfn/lightning" alt="Docker Pulls"/></span>
 </h1>
 
-<p>Lightning extends the existing <a href="https://www.openfn.org">OpenFn</a> Digital Public
-Good, providing a web UI to visually manage and execute complex workflow
-automation and data integration projects. Learn more about the entire free and
-open source OpenFn Integration Toolkit toolkit at
-<a href="https://docs.openfn.org">docs.openfn.org</a>.</p><h2 id="getting-started" class="section-heading">
+<p>A tool to help governments and social-sector organizations automate key business
+processes and integrate critical systems, so they spend less time managing data
+and more time focusing on their work.</p><p>Use OpenFn Lightning to visually build, execute and manage workflows.</p><ul><li>The latest version of the OpenFn technology - first launched in 2014, now
+tried and tested by NGOs in over 40 countries</li><li>Fully open source (no premium features or community edition, you get the same
+product whether using SaaS or self-hosted)</li><li>Recognised as a Digital Public Good by the
+<a href="https://digitalpublicgoods.net/">DPGA</a> and a Global Good for Health by
+<a href="https://digitalsquare.org/digital-health-global-goods">Digital Square</a></li></ul><p><img src="https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png" alt="Screenshot 2023-03-15 at 13 01 13"/></p><p>Explore our <a href="https://demo.openfn.org/">demo app</a> with username:
+<code class="inline">demo@openfn.org</code>, password: <code class="inline">welcome123</code>, or read through the
+<a href="#features">features</a> section to view screenshots of the app.</p><h2 id="table-of-contents" class="section-heading">
+  <a href="#table-of-contents" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">table-of-contents</p>
+  </a>
+  Table of contents
+</h2>
+<ul><li><a href="#features">Features</a></li><li><a href="#getting-started">Getting started</a><ul><li><a href="#run-via-docker">Run Lightning via Docker</a></li><li><a href="#deploy-on-external-infrastructure">Deploy Lightning on Docker or Kubernetes</a></li><li><a href="#contribute-to-this-project">Run Lightning on your local machine (contributors)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li></ul></li><li><a href="#generating-documentation">Generate the documentation</a></li><li><a href="#security-and-standards">Security and standards</a></li></ul><h2 id="features" class="section-heading">
+  <a href="#features" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">features</p>
+  </a>
+  Features
+</h2>
+<p>Plan and build workflows using Lightning's visual interface to quickly define
+when, where and what you want your automation to do.</p><p><img src="https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png" alt="demo_screenshot"/></p><p>Monitor all workflow activity in one place.
+<img src="https://user-images.githubusercontent.com/36554605/226538515-f8b97950-80b9-4e5e-a5f4-7406c20ed37a.png" alt="Screenshot 2023-03-21 at 10 07 37"/></p><ul><li>Filter and search runs to identify issues that need addressing and follow how
+a specific request has been processed</li><li>Configure alerts to be notified on run failures</li><li>Receive a project digest for a daily/weekly/monthly summary of your project
+activity</li></ul><p>Manage users and access by project
+<img src="https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png" alt="Screenshot 2023-03-21 at 10 09 03"/></p><h2 id="getting-started" class="section-heading">
   <a href="#getting-started" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">getting-started</p>
   </a>
@@ -225,21 +246,7 @@ in your browser.</p><h3 id="run-the-tests" class="section-heading">
 <p>Before the first time running the tests, you need a test database setup.</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix ecto.create
 </span></code></pre><p>And then after that run the tests using:</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix test
 </span></code></pre><p>We also have <code class="inline">test.watch</code> installed which can be used to rerun the tests on file
-changes.</p><h3 id="security-and-standards" class="section-heading">
-  <a href="#security-and-standards" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">security-and-standards</p>
-  </a>
-  Security and Standards
-</h3>
-<p>We use a host of common Elixir static analysis tools to help us avoid common
-pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
-have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.2.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
-<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.7/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards. See
-<a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.11.1/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See
-<a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be used
-in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code. See
-<a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
-defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote><h3 id="generating-documentation" class="section-heading">
+changes.</p><h3 id="generating-documentation" class="section-heading">
   <a href="#generating-documentation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">generating-documentation</p>
   </a>
@@ -279,7 +286,7 @@ while using <code class="inline">xargs</code>.</p><h3 id="problems-with-debian" 
   Problems with Debian
 </h3>
 <p>If you're getting this error on debian</p><pre><code class="makeup elixir" translate="no"><span class="o">==</span><span class="o">&gt;</span><span class="w"> </span><span class="n">earmark_parser</span><span class="w">
-</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="0980896388-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="0980896388-1">)</span><span class="w">
+</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="6462934353-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="6462934353-1">)</span><span class="w">
 </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">erlang</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">parsetools</span><span class="o">-</span><span class="mf">2.3</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">yeccpre</span><span class="o">.</span><span class="ss">hrl</span><span class="p">:</span><span class="w"> </span><span class="n">no</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
 </span><span class="n">could</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">compile</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="ss">:earmark_parser</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mix compile&quot;</span><span class="w"> </span><span class="n">failed</span><span class="o">.</span><span class="w"> </span><span class="nc">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">recompile</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.compile earmark_parser&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.update earmark_parser&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">clean</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.clean earmark_parser&quot;</span></code></pre><p>You need to install erlang development environment <code class="inline">sudo apt install erlang-dev</code>
 <a href="https://github.com/elixir-lang/ex_doc/issues/1441">refer to this issue</a></p><h3 id="problems-with-docker" class="section-heading">
@@ -302,7 +309,21 @@ this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove 
 </span><span class="">
 </span><span class="">docker compose run --rm web mix ecto.migrate
 </span><span class="">docker compose up
-</span></code></pre>
+</span></code></pre><h3 id="security-and-standards" class="section-heading">
+  <a href="#security-and-standards" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">security-and-standards</p>
+  </a>
+  Security and Standards
+</h3>
+<p>We use a host of common Elixir static analysis tools to help us avoid common
+pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
+have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.2.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
+<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.7/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards. See
+<a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.11.1/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See
+<a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be used
+in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code. See
+<a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
+defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote>
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
