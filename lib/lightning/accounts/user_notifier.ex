@@ -26,6 +26,23 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   @doc """
+  Deliver account creation notification.
+  """
+  def deliver_account_creation_notification(registerer, user, url) do
+    deliver(user.email, "Confirmation instructions", """
+
+    Hi #{user.first_name},
+
+    #{registerer.first_name} has created a an account for you on Lightning Beta. Please confirm your account by visiting the URL below:
+
+    #{url}.
+
+    If this is not coming from you, please ignore it.
+
+    """)
+  end
+
+  @doc """
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(user, url) do
