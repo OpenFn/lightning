@@ -7,6 +7,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
   alias Lightning.Projects
   alias Lightning.Mailer
+  alias Lightning.Helpers
 
   defp admin(), do: Application.get_env(:lightning, :email_addresses)[:admin]
 
@@ -45,7 +46,7 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver email to notify user of his addition of a project.
   """
   def deliver_project_addition_notification(user, project) do
-    role = Projects.get_project_user_role(user, project)
+    role = Projects.get_project_user_role(user, project) |> Atom.to_string()
 
     url =
       "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
@@ -54,9 +55,9 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    You've just been added to the project #{project.name} as '#{role}'.
+    You've been added to the project "#{project.name}" as #{Helpers.indefinite_article(role)} #{role}.
 
-    Follow the link below to view it:\n\n#{url}
+    Click the link below to check it out:\n\n#{url}
     """)
   end
 
