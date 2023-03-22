@@ -7,6 +7,30 @@ defmodule Lightning.Accounts.UserNotifierTest do
   alias Lightning.Projects.Project
 
   describe "Notification emails" do
+    test "deliver_project_addition_notification/2" do
+      user = Lightning.AccountsFixtures.user_fixture(email: "user@openfn.org")
+
+      project =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user.id}]
+        )
+
+      url =
+        "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+
+      UserNotifier.deliver_project_addition_notification(
+        user,
+        project
+      )
+
+      assert_email_sent(
+        subject: "Project #{project.name}",
+        to: "user@openfn.org",
+        text_body:
+          "\nHi Anna,\n\nYou've been added to the project \"a-test-project\" as an editor.\n\nClick the link below to check it out:\n\n#{url}\n"
+      )
+    end
+
     test "send_deletion_notification_email/1" do
       UserNotifier.send_deletion_notification_email(%User{
         email: "real@email.com"
