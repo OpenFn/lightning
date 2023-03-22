@@ -47,11 +47,16 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_project_addition_notification(user, project) do
     role = Projects.get_project_user_role(user, project)
 
-    deliver(user.email, "Project Addition", """
+    url =
+      "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+
+    deliver(user.email, "Project #{project.name}", """
 
     Hi #{user.first_name},
 
-    You've just been added to the project #{project.name} as #{role}
+    You've just been added to the project #{project.name} as '#{role}'.
+
+    Follow the link below to view it:\n\n#{url}
     """)
   end
 

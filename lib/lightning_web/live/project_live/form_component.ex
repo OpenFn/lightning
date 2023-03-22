@@ -198,7 +198,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       |> Enum.filter(fn pu -> pu["delete"] != "true" end)
       |> Enum.map(fn pu -> pu["user_id"] end)
 
-    users_to_notify = added_project_users -- existing_project_users
+    added_project_users -- existing_project_users
   end
 
   defp notify_project_users(project, users_to_notify) do

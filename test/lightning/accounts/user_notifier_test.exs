@@ -15,13 +15,19 @@ defmodule Lightning.Accounts.UserNotifierTest do
           project_users: [%{user_id: user.id}]
         )
 
-      UserNotifier.deliver_project_addition_notification(user, project)
+      url =
+        "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+
+      UserNotifier.deliver_project_addition_notification(
+        user,
+        project
+      )
 
       assert_email_sent(
-        subject: "Project Addition",
+        subject: "Project #{project.name}",
         to: "user@openfn.org",
         text_body:
-          "\nHi #{user.first_name},\n\nYou've just been added to the project #{project.name} as #{Lightning.Projects.get_project_user_role(user, project)}\n"
+          "\nHi Anna,\n\nYou've just been added to the project a-test-project as 'editor'.\n\nFollow the link below to view it:\n\n#{url}\n"
       )
     end
 
