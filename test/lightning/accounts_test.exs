@@ -720,6 +720,28 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "deliver_user_confirmation_instructions/3" do
+    setup do
+      %{superuser: superuser_fixture(), user: user_fixture()}
+    end
+
+    test "sends token through notification", %{superuser: superuser, user: user} do
+      token =
+        extract_user_token(fn url ->
+          Accounts.deliver_user_confirmation_instructions(superuser, user, url)
+        end)
+
+      {:ok, token} = Base.url_decode64(token, padding: false)
+
+      assert user_token =
+               Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
+
+      assert user_token.user_id == user.id
+      assert user_token.sent_to == user.email
+      assert user_token.context == "confirm"
+    end
+  end
+
   describe "confirm_user/1" do
     setup do
       user = user_fixture()

@@ -26,23 +26,6 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   @doc """
-  Deliver account creation notification.
-  """
-  def deliver_account_creation_notification(registerer, user, url) do
-    deliver(user.email, "Confirmation instructions", """
-
-    Hi #{user.first_name},
-
-    #{registerer.first_name} has created a an account for you on Lightning Beta. Please confirm your account by visiting the URL below:
-
-    #{url}.
-
-    If this is not coming from you, please ignore it.
-
-    """)
-  end
-
-  @doc """
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(user, url) do
@@ -55,6 +38,23 @@ defmodule Lightning.Accounts.UserNotifier do
     #{url}.
 
     If you didn't create an account with us, please ignore this.
+
+    """)
+  end
+
+  @doc """
+  Deliver instructions to confirm account.
+  """
+  def deliver_confirmation_instructions(enroller, user, url) do
+    deliver(user.email, "Confirmation instructions", """
+
+    Hi #{user.first_name},
+
+    #{enroller.first_name} has created a an account for you on Lightning Beta. Please confirm your account by visiting the URL below:
+
+    #{url}.
+
+    If you don't wanna confirm this, please ignore it.
 
     """)
   end
@@ -75,6 +75,7 @@ defmodule Lightning.Accounts.UserNotifier do
     You've been added to the project "#{project.name}" as #{Helpers.indefinite_article(role)} #{role}.
 
     Click the link below to check it out:\n\n#{url}
+
     """)
   end
 

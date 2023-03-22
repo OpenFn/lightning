@@ -546,6 +546,15 @@ defmodule Lightning.Accounts do
 
   ## Confirmation
 
+  defp build_email_token(user) do
+    {encoded_token, user_token} =
+      UserToken.build_email_token(user, "confirm", user.email)
+
+    Repo.insert!(user_token)
+
+    encoded_token
+  end
+
   @doc """
   Delivers the confirmation email instructions to the given user.
 
@@ -566,12 +575,28 @@ defmodule Lightning.Accounts do
     if user.confirmed_at do
       {:error, :already_confirmed}
     else
-      {encoded_token, user_token} =
-        UserToken.build_email_token(user, "confirm", user.email)
-
-      Repo.insert!(user_token)
+      encoded_token = build_email_token(user)
 
       UserNotifier.deliver_confirmation_instructions(
+        user,
+        confirmation_url_fun.(encoded_token)
+      )
+    end
+  end
+
+  def deliver_user_confirmation_instructions(
+        %User{} = registerer,
+        %User{} = user,
+        confirmation_url_fun
+      )
+      when is_function(confirmation_url_fun, 1) do
+    if user.confirmed_at do
+      {:error, :already_confirmed}
+    else
+      encoded_token = build_email_token(user)
+
+      UserNotifier.deliver_confirmation_instructions(
+        registerer,
         user,
         confirmation_url_fun.(encoded_token)
       )

@@ -31,6 +31,39 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
     end
 
+    test "deliver_confirmation_instructions/2" do
+      UserNotifier.deliver_confirmation_instructions(
+        %User{
+          email: "real@email.com"
+        },
+        "https://lightning/users/confirm/token"
+      )
+
+      assert_email_sent(
+        subject: "Confirmation instructions",
+        to: "real@email.com",
+        text_body:
+          "\nHi ,\n\nYou've just registered for an account on Lightning Beta. Please confirm your account by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you didn't create an account with us, please ignore this.\n\n"
+      )
+    end
+
+    test "deliver_confirmation_instructions/3" do
+      UserNotifier.deliver_confirmation_instructions(
+        %User{first_name: "Super User", email: "super@email.com"},
+        %User{
+          email: "real@email.com"
+        },
+        "https://lightning/users/confirm/token"
+      )
+
+      assert_email_sent(
+        subject: "Confirmation instructions",
+        to: "real@email.com",
+        text_body:
+          "\nHi ,\n\nSuper User has created a an account for you on Lightning Beta. Please confirm your account by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you don't wanna confirm this, please ignore it.\n\n"
+      )
+    end
+
     test "send_deletion_notification_email/1" do
       UserNotifier.send_deletion_notification_email(%User{
         email: "real@email.com"
