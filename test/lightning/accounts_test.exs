@@ -61,6 +61,22 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "get_token!/1" do
+    test "raises if token is invalid" do
+      assert_raise Ecto.NoResultsError, fn ->
+        Accounts.get_token!(Ecto.UUID.generate())
+      end
+    end
+
+    test "returns the token with the given id" do
+      user = user_fixture()
+      token = Accounts.generate_api_token(user)
+      %{id: id} = user_token = Repo.get_by(UserToken, token: token)
+
+      assert %UserToken{id: ^id} = Accounts.get_token!(user_token.id)
+    end
+  end
+
   describe "register_user/1" do
     test "requires email and password to be set" do
       {:error, changeset} = Accounts.register_user(%{})
@@ -629,6 +645,15 @@ defmodule Lightning.AccountsTest do
 
     test "does not return user for invalid token" do
       refute Accounts.get_user_by_api_token("oops")
+    end
+  end
+
+  describe "delete_api_token/1" do
+    test "deletes the token" do
+      user = user_fixture()
+      token = Accounts.generate_api_token(user)
+      assert Accounts.delete_api_token(token) == :ok
+      refute Accounts.get_user_by_api_token(token)
     end
   end
 

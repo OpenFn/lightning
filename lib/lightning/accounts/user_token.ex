@@ -44,7 +44,7 @@ defmodule Lightning.Accounts.UserToken do
     field :sent_to, :string
     belongs_to :user, User
 
-    timestamps(updated_at: false)
+    timestamps updated_at: false
   end
 
   def token_config do
