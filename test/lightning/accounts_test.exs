@@ -13,6 +13,16 @@ defmodule Lightning.AccountsTest do
     assert Accounts.list_users() == [user]
   end
 
+  test "list_api_token/1 returns all user tokens" do
+    user = user_fixture()
+
+    # generate some API tokens for the user
+    tokens = for _ <- 1..3, do: Accounts.generate_api_token(user)
+
+    # verify that all generated tokens are returned by the function
+    assert Accounts.list_api_tokens(user) |> Enum.map(& &1.token) == tokens
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")
