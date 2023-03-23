@@ -51,16 +51,17 @@ defmodule Lightning.Accounts.UserNotifierTest do
       UserNotifier.deliver_confirmation_instructions(
         %User{first_name: "Super User", email: "super@email.com"},
         %User{
+          first_name: "Joe",
           email: "real@email.com"
         },
         "https://lightning/users/confirm/token"
       )
 
       assert_email_sent(
-        subject: "Confirmation instructions",
+        subject: "New OpenFn Lightning account",
         to: "real@email.com",
         text_body:
-          "\nHi ,\n\nSuper User has created a an account for you on Lightning Beta. Please confirm your account by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you don't wanna confirm this, please ignore it.\n\n"
+          "\nHi Joe,\n\nSuper User has just created an account for you on Lightning Beta. You can complete your registration by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you do not wish to have an account, please ignore this email.\n\n"
       )
     end
 

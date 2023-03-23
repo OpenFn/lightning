@@ -46,15 +46,15 @@ defmodule Lightning.Accounts.UserNotifier do
   Deliver instructions to confirm account.
   """
   def deliver_confirmation_instructions(enroller, user, url) do
-    deliver(user.email, "Confirmation instructions", """
+    deliver(user.email, "New OpenFn Lightning account", """
 
     Hi #{user.first_name},
 
-    #{enroller.first_name} has created a an account for you on Lightning Beta. Please confirm your account by visiting the URL below:
+    #{enroller.first_name} has just created an account for you on Lightning Beta. You can complete your registration by visiting the URL below:
 
     #{url}.
 
-    If you don't wanna confirm this, please ignore it.
+    If you do not wish to have an account, please ignore this email.
 
     """)
   end
