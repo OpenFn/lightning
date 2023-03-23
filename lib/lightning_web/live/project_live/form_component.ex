@@ -66,18 +66,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     project_users_params =
       fetch_field!(socket.assigns.changeset, :project_users)
-      |> Enum.with_index()
-      |> Enum.reduce([], fn {pu, i}, project_users ->
-        if i == index do
-          if is_nil(pu.id) do
-            project_users
-          else
-            [Ecto.Changeset.change(pu, %{delete: true}) | project_users]
-          end
-        else
-          [pu | project_users]
-        end
-      end)
+      |> remove_project_user(index)
 
     changeset =
       socket.assigns.changeset
@@ -105,21 +94,9 @@ defmodule LightningWeb.ProjectLive.FormComponent do
         %{"userid" => user_id},
         socket
       ) do
-    project_users = fetch_field!(socket.assigns.changeset, :project_users)
-
     project_users =
-      Enum.find(project_users, fn pu -> pu.user_id == user_id end)
-      |> if do
-        project_users
-        |> Enum.map(fn pu ->
-          if pu.user_id == user_id do
-            Ecto.Changeset.change(pu, %{delete: false})
-          end
-        end)
-      else
-        project_users
-        |> Enum.concat([%Lightning.Projects.ProjectUser{user_id: user_id}])
-      end
+      fetch_field!(socket.assigns.changeset, :project_users)
+      |> add_project_user(user_id)
 
     changeset =
       socket.assigns.changeset
@@ -139,6 +116,38 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
   def handle_event("save", %{"project" => project_params}, socket) do
     save_project(socket, socket.assigns.action, project_params)
+  end
+
+  defp remove_project_user(project_users, index) do
+    project_users
+    |> Enum.with_index()
+    |> Enum.reduce([], fn {pu, i}, project_users ->
+      case {i, pu.id} do
+        {^index, nil} ->
+          project_users
+
+        {^index, _} ->
+          [Ecto.Changeset.change(pu, %{delete: true}) | project_users]
+
+        _ ->
+          [pu | project_users]
+      end
+    end)
+  end
+
+  defp add_project_user(project_users, user_id) do
+    Enum.find(project_users, fn pu -> pu.user_id == user_id end)
+    |> if do
+      project_users
+      |> Enum.map(fn pu ->
+        if pu.user_id == user_id do
+          Ecto.Changeset.change(pu, %{delete: false})
+        end
+      end)
+    else
+      project_users
+      |> Enum.concat([%Lightning.Projects.ProjectUser{user_id: user_id}])
+    end
   end
 
   defp filter_available_users(changeset, all_users) do
