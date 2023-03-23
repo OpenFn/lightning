@@ -74,7 +74,7 @@ defmodule Lightning.MixProject do
       {:mix_test_watch, "~> 1.0", only: [:test, :dev], runtime: false},
       {:oauth2, "~> 2.1"},
       {:oban, "~> 2.13"},
-      {:petal_components, "~> 0.18"},
+      {:petal_components, "~> 1.0.4"},
       {:phoenix, "~> 1.7.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.3"},
