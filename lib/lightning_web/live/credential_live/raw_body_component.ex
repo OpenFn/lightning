@@ -12,7 +12,7 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
     ~H"""
     <%= render_slot(
       @inner_block,
-      {Phoenix.LiveView.HTMLEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
          &inner/1,
          [form: @form],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}

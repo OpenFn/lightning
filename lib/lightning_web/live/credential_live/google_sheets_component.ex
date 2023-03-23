@@ -55,7 +55,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
     ~H"""
     <%= render_slot(
       @inner_block,
-      {Phoenix.LiveView.HTMLEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
          &live_component/1,
          [
            module: __MODULE__,
