@@ -65,7 +65,7 @@ defmodule Lightning.MixProject do
       {:gettext, "~> 0.18"},
       {:hackney, "~> 1.18"},
       {:heroicons, "~> 0.5.0"},
-      {:httpoison, "~> 1.8"},
+      {:httpoison, "~> 2.1"},
       {:jason, "~> 1.2"},
       {:joken, "~> 2.6.0"},
       {:junit_formatter, "~> 3.0", only: [:test]},
