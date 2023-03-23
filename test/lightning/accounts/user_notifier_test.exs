@@ -43,7 +43,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "Confirmation instructions",
         to: "real@email.com",
         text_body:
-          "\nHi ,\n\nYou've just registered for an account on Lightning Beta. Please confirm your account by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you didn't create an account with us, please ignore this.\n\n"
+          "\nHi ,\n\nWelcome and thanks for registering a new account on OpenFn/Lightning. Please confirm your account by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you didn't create an account with us, please ignore this.\n\n"
       )
     end
 
@@ -61,7 +61,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "New OpenFn Lightning account",
         to: "real@email.com",
         text_body:
-          "\nHi Joe,\n\nSuper User has just created an account for you on Lightning Beta. You can complete your registration by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you do not wish to have an account, please ignore this email.\n\n"
+          "\nHi Joe,\n\nSuper User has just created an account for you on OpenFn/Lightning. You can complete your registration by visiting the URL below:\n\nhttps://lightning/users/confirm/token.\n\nIf you do not wish to have an account, please ignore this email.\n\n"
       )
     end
 

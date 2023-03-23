@@ -33,7 +33,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    You've just registered for an account on Lightning Beta. Please confirm your account by visiting the URL below:
+    Welcome and thanks for registering a new account on OpenFn/Lightning. Please confirm your account by visiting the URL below:
 
     #{url}.
 
@@ -50,7 +50,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    #{enroller.first_name} has just created an account for you on Lightning Beta. You can complete your registration by visiting the URL below:
+    #{enroller.first_name} has just created an account for you on OpenFn/Lightning. You can complete your registration by visiting the URL below:
 
     #{url}.
 
