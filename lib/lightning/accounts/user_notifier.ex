@@ -33,11 +33,28 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    You've just registered for an account on Lightning Beta. Please confirm your account by visiting the URL below:
+    Welcome and thanks for registering a new account on OpenFn/Lightning. Please confirm your account by visiting the URL below:
 
     #{url}.
 
     If you didn't create an account with us, please ignore this.
+
+    """)
+  end
+
+  @doc """
+  Deliver instructions to confirm account.
+  """
+  def deliver_confirmation_instructions(enroller, user, url) do
+    deliver(user.email, "New OpenFn Lightning account", """
+
+    Hi #{user.first_name},
+
+    #{enroller.first_name} has just created an account for you on OpenFn/Lightning. You can complete your registration by visiting the URL below:
+
+    #{url}.
+
+    If you do not wish to have an account, please ignore this email.
 
     """)
   end
@@ -58,6 +75,7 @@ defmodule Lightning.Accounts.UserNotifier do
     You've been added to the project "#{project.name}" as #{Helpers.indefinite_article(role)} #{role}.
 
     Click the link below to check it out:\n\n#{url}
+
     """)
   end
 

@@ -36,11 +36,13 @@ defmodule LightningWeb.UserLive.Edit do
     socket
     |> assign(:page_title, "Edit User")
     |> assign(:user, Accounts.get_user!(id))
+    |> assign(:current_user, socket.assigns.current_user)
   end
 
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, "New User")
     |> assign(:user, %User{})
+    |> assign(:current_user, socket.assigns.current_user)
   end
 end
