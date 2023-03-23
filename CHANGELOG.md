@@ -31,6 +31,7 @@ and this project adheres to
 - Improved errors when decoding encryption keys for use with Cloak.
   [#684](https://github.com/OpenFn/Lightning/issues/684)
 - Allow users to run ANY job with a custom input. [#629](https://github.com/OpenFn/Lightning/issues/629)
+- Updated dependencies (980a25, 79f7f0, b7e4303, fd7d4ac, 001747e)
 
 ### Fixed
 
