@@ -15,7 +15,7 @@
     <.table id="tokens">
       <%= if @new_token do %>
         <.tr data-entity="new_token">
-          <.td colspan="2" class="bg-blue-100">
+          <.td colspan="3" class="bg-blue-100">
             <div class="my-auto whitespace-nowrap font-medium text-gray-900">
               <div class="flex">
                 <span class="my-auto whitespace-nowrap">
@@ -55,6 +55,9 @@
           end
         }>
           <span class="px-4">Created at</span>
+        </.th>
+        <.th>
+          <span class="px-4">Last Used at</span>
         </.th>
       </.tr>
       <%= if Enum.empty?(@tokens) do %>
@@ -106,6 +109,17 @@
             <div class="flex content-center justify-between">
               <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
                 <%= token["inserted_at"] %>
+              </span>
+            </div>
+          </.td>
+          <.td>
+            <div class="flex content-center justify-between">
+              <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
+                <%= if token["last_used_at"] do %>
+                  <%= token["last_used_at"] %>
+                <% else %>
+                  Never used
+                <% end %>
               </span>
               <%= link(
                   to: "#",

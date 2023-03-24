@@ -558,7 +558,17 @@ defmodule Lightning.Accounts do
   """
   def get_user_by_api_token(token) do
     {:ok, query} = UserToken.verify_token_query(token, "api")
-    Repo.one(query)
+    user = Repo.one(query)
+
+    if user do
+      token
+      |> UserToken.token_and_context_query("api")
+      |> Repo.one()
+      |> UserToken.last_used_changeset()
+      |> Repo.update()
+
+      user
+    end
   end
 
   @doc """
@@ -573,7 +583,7 @@ defmodule Lightning.Accounts do
   Lists all user tokens
   """
   def list_api_tokens(user) do
-    UserToken.user_and_contexts_query(user, ["api"]) |> Repo.all()
+    UserToken.user_and_contexts_query(user, :api) |> Repo.all()
   end
 
   ## Confirmation

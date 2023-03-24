@@ -42,6 +42,7 @@ defmodule Lightning.Accounts.UserToken do
     field :token, :binary
     field :context, :string
     field :sent_to, :string
+    field :last_used_at, :utc_datetime_usec
     belongs_to :user, User
 
     timestamps updated_at: false
@@ -80,9 +81,17 @@ defmodule Lightning.Accounts.UserToken do
      changeset(%__MODULE__{}, %{token: token, context: context, user_id: user.id})}
   end
 
+  @doc """
+  Update when the api token was last used by setting`last_used_at`.
+  """
+  def last_used_changeset(user) do
+    now = DateTime.utc_now()
+    change(user, last_used_at: now)
+  end
+
   def changeset(user_token, attrs) do
     user_token
-    |> cast(attrs, [:token, :context, :user_id, :sent_to])
+    |> cast(attrs, [:token, :context, :user_id, :sent_to, :last_used_at])
     |> validate_required([:token, :context, :user_id])
   end
 
@@ -239,7 +248,13 @@ defmodule Lightning.Accounts.UserToken do
 
   def user_and_contexts_query(user, [_ | _] = contexts) do
     from(t in Lightning.Accounts.UserToken,
-      where: t.user_id == ^user.id and t.context in ^contexts,
+      where: t.user_id == ^user.id and t.context in ^contexts
+    )
+  end
+
+  def user_and_contexts_query(user, :api) do
+    from(t in Lightning.Accounts.UserToken,
+      where: t.user_id == ^user.id and t.context == "api",
       order_by: [desc: :inserted_at]
     )
   end

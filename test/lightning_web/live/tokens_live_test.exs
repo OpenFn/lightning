@@ -59,7 +59,7 @@ defmodule LightningWeb.TokensLiveTest do
              |> Floki.parse_fragment!()
              |> Floki.find("code span")
              |> Floki.text(sep: "\n")
-             |> String.contains?("**********")
+             |> String.contains?("...")
     end
 
     test "Delete an existing token", %{conn: conn} do

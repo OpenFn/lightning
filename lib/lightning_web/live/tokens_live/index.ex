@@ -5,7 +5,6 @@ defmodule LightningWeb.TokensLive.Index do
   use LightningWeb, :live_view
 
   alias Lightning.Accounts
-  alias Lightning.UserToken
 
   @impl true
   def mount(_params, _session, socket) do
@@ -23,7 +22,6 @@ defmodule LightningWeb.TokensLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  @impl true
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Personal Access Tokens")
@@ -60,9 +58,6 @@ defmodule LightningWeb.TokensLive.Index do
          )
          |> assign(:new_token, nil)
          |> put_flash(:info, "Token deleted successfully")}
-
-      {:error, _changeset} ->
-        {:noreply, socket |> put_flash(:error, "Can't delete token")}
     end
   end
 
@@ -73,14 +68,8 @@ defmodule LightningWeb.TokensLive.Index do
      |> put_flash(:info, "Token copied successfully")}
   end
 
-  @impl true
   defp mask_token(token) do
-    length = String.length(token)
-    masked_length = length - 10
-    mask = String.duplicate("*", masked_length)
-
-    Regex.replace(~r/^(.{#{masked_length}})/, token, mask)
-    |> String.slice(195, masked_length)
+    "..." <> String.slice(token, -10, 10)
   end
 
   defp get_tokens(user) do
@@ -89,7 +78,8 @@ defmodule LightningWeb.TokensLive.Index do
       %{
         "id" => ut.id,
         "token" => mask_token(ut.token),
-        "inserted_at" => ut.inserted_at
+        "inserted_at" => ut.inserted_at,
+        "last_used_at" => ut.last_used_at
       }
     end)
   end

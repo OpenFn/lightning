@@ -645,7 +645,20 @@ defmodule Lightning.AccountsTest do
     setup do
       user = user_fixture()
       token = Accounts.generate_api_token(user)
-      %{user: user, token: token}
+
+      user_token =
+        token
+        |> UserToken.token_and_context_query("api")
+        |> Repo.one()
+
+      %{user: user, token: token, user_token: user_token}
+    end
+
+    test "update last_used_at", %{user_token: user_token} do
+      assert user_token.last_used_at == nil
+      Accounts.get_user_by_api_token(user_token.token)
+      assert updated_user_token = Repo.get_by(UserToken, token: user_token.token)
+      assert updated_user_token.last_used_at != nil
     end
 
     test "returns user by token", %{user: user, token: token} do
