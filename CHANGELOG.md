@@ -8,22 +8,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.4.6] - 2023-03-23
+
 ### Added
 
-- Added roles and permissions to workflows and history page
+- Implement roles and permissions across entire app
   [#645](https://github.com/OpenFn/Lightning/issues/645)
-- Added roles and permissions to project settings page
-  [#645](https://github.com/OpenFn/Lightning/issues/645)
-- Added roles and permissions to profile and credentials page
-  [#645](https://github.com/OpenFn/Lightning/issues/645)
-- Fixed webhook URL
-  (`https://<<HOST_URL>>/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a`) for starting
-  the OpenHIE demo workflow
-  [448](https://github.com/OpenFn/Lightning/issues/448)
-- Added Phoenix Storybook for improved component development
-- Added load test for webhook endpoint performance
+- Fix webhook URL
+  (`https://<<HOST_URL>>/i/cae544ab-03dc-4ccc-a09c-fb4edb255d7a`) for the
+  OpenHIE demo workflow [448](https://github.com/OpenFn/Lightning/issues/448)
+- Phoenix Storybook for improved component development
+- Load test for webhook endpoint performance
   [#645](https://github.com/OpenFn/Lightning/issues/634)
-- Added notify user via email when they're added to a project
+- Notify user via email when they're added to a project
   [#306](https://github.com/OpenFn/Lightning/issues/306)
 - Added notify user via email when their account is created
   [#307](https://github.com/OpenFn/Lightning/issues/307)
@@ -44,8 +41,8 @@ and this project adheres to
 
 ### Added
 
-- Added the ability for users to receive a digest email reporting on a specified
-  project. [#638](https://github.com/OpenFn/Lightning/issues/638)
+- Users can receive a digest email reporting on a specified project.
+  [#638](https://github.com/OpenFn/Lightning/issues/638)
   [#585](https://github.com/OpenFn/Lightning/issues/585)
 
 ### Changed
@@ -56,7 +53,7 @@ and this project adheres to
 
 ### Added
 
-- Added help tooltips on Job Builder panel
+- Tooltips on Job Builder panel
   [#650](https://github.com/OpenFn/Lightning/issues/650)
 
 ### Changed
