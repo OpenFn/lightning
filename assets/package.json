@@ -8,7 +8,7 @@
     "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml"
   },
   "author": "",
-  "license": "ISC",
+  "license": "LGPLv3",
   "dependencies": {
     "@monaco-editor/react": "^4.4.5",
     "@openfn/describe-package": "^0.0.13",
