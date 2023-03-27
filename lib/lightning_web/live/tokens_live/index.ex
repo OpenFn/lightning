@@ -12,7 +12,7 @@ defmodule LightningWeb.TokensLive.Index do
      assign(
        socket,
        :tokens,
-       get_tokens(socket.assigns.current_user)
+       Accounts.list_api_tokens(socket.assigns.current_user)
      )
      |> assign(:active_menu_item, :tokens)}
   end
@@ -28,6 +28,13 @@ defmodule LightningWeb.TokensLive.Index do
     |> assign(:new_token, nil)
   end
 
+  defp apply_action(socket, :delete, %{"id" => id}) do
+    socket
+    |> assign(:page_title, "Personal Access Tokens")
+    |> assign(:token_id, id)
+    |> assign(:new_token, nil)
+  end
+
   @impl true
   def handle_event("generate_new_token", _, socket) do
     {:noreply,
@@ -38,7 +45,7 @@ defmodule LightningWeb.TokensLive.Index do
      )
      |> assign(
        :tokens,
-       get_tokens(socket.assigns.current_user)
+       Accounts.list_api_tokens(socket.assigns.current_user)
      )
      |> put_flash(:info, "Token created successfully")}
   end
@@ -54,7 +61,7 @@ defmodule LightningWeb.TokensLive.Index do
          socket
          |> assign(
            :tokens,
-           get_tokens(socket.assigns.current_user)
+           Accounts.list_api_tokens(socket.assigns.current_user)
          )
          |> assign(:new_token, nil)
          |> put_flash(:info, "Token deleted successfully")}
@@ -66,21 +73,5 @@ defmodule LightningWeb.TokensLive.Index do
     {:noreply,
      socket
      |> put_flash(:info, "Token copied successfully")}
-  end
-
-  defp mask_token(token) do
-    "..." <> String.slice(token, -10, 10)
-  end
-
-  defp get_tokens(user) do
-    Accounts.list_api_tokens(user)
-    |> Enum.map(fn ut ->
-      %{
-        "id" => ut.id,
-        "token" => mask_token(ut.token),
-        "inserted_at" => ut.inserted_at,
-        "last_used_at" => ut.last_used_at
-      }
-    end)
   end
 end
