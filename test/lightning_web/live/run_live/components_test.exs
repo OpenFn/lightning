@@ -46,7 +46,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, first_run.id)}"]}
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, first_run.id)}"]}
            )
            |> Enum.any?()
 
@@ -67,7 +67,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, second_run.id)}"]}
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, second_run.id)}"]}
            )
            |> Enum.any?()
 
@@ -88,7 +88,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
     assert html
            |> Floki.find(
-             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_path(project_id, third_run.id)}"]}
+             ~s{a[href="#{LightningWeb.RouteHelpers.show_run_url(project_id, third_run.id)}"]}
            )
            |> Enum.any?()
   end

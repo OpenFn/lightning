@@ -44,7 +44,7 @@ defmodule Lightning.FailureAlerter do
       }) do
     run = Repo.get!(Lightning.Invocation.Run, run_id)
 
-    run_url = LightningWeb.RouteHelpers.show_run_path(project_id, run_id)
+    run_url = LightningWeb.RouteHelpers.show_run_url(project_id, run_id)
 
     [time_scale: time_scale, rate_limit: rate_limit] =
       Application.fetch_env!(:lightning, __MODULE__)
