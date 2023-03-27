@@ -11,7 +11,10 @@ defmodule Lightning.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      dialyzer: [plt_add_apps: [:mix]],
+      dialyzer: [
+        plt_add_apps: [:mix],
+        plt_local_path: "priv/plts/"
+      ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         verify: :test,

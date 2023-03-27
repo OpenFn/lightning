@@ -37,7 +37,9 @@ jobs:
       - checkout
 
       - restore_cache:
-          key: testing-elixir-v1-<< parameters.version >>
+          keys:
+            - v1-deps-<< parameters.version >>-{{ checksum "mix.lock" }}
+            - v1-deps-<< parameters.version >>-
 
       - run: mix local.hex --force
       - run: mix local.rebar --force
@@ -45,7 +47,7 @@ jobs:
       - run: MIX_ENV=test mix lightning.install_runtime
 
       - save_cache:
-          key: testing-elixir-v1-<< parameters.version >>
+          key: v1-deps-<< parameters.version >>-{{ checksum "mix.lock" }}
           paths:
             - _build
             - deps
@@ -53,13 +55,13 @@ jobs:
 
       - restore_cache:
           keys:
-            - -v1-<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
-            - -v1-<< parameters.version >>-plt-cache
+            - v1-plt-<< parameters.version >>-{{ checksum "mix.lock" }}
+            - v1-plt-<< parameters.version >>-
       - run: MIX_ENV=test mix dialyzer --plt
       - save_cache:
-          key: -v1-<< parameters.version >>-plt-cache-{{ checksum "mix.lock" }}
+          key: v1-plt-<< parameters.version >>-{{ checksum "mix.lock" }}
           paths:
-            - _build
+            - priv/plts
             - ~/.mix
 
       - steps: << parameters.execute >>
