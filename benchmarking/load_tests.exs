@@ -1,63 +1,51 @@
+# Script that tests out specific code paths and leveraging Telemetry writes
+# the events out to a CSV file.
+#
+# Run using: `mix run benchmarking/load_tests.exs`
+
 defmodule TelemetryCSVLogger do
   require Logger
 
   def handle_event(
-        [:lightning, :create_dataclip, :start],
-        _measurements,
-        _metadata,
-        _config
-      ) do
-    Logger.info("Received [:lightning, :create_dataclip, :start] event.")
-  end
-
-  def handle_event(
-        [:lightning, :create_dataclip, :stop],
-        %{duration: duration} = _measurements,
+        [:lightning, :create_dataclip, :stop] = event,
+        %{duration: duration} = measurements,
         _metadata,
         output_file: file
       ) do
-    Logger.info("Received [:lightning, :create_dataclip, :stop] event. Duration: #{duration}")
+    log_received(event, measurements)
+
     IO.binwrite(file, "lightning.create_dataclip.stop, #{duration}\n")
   end
 
   def handle_event(
-        [:lightning, :create_dataclip, :exception],
-        _measurements,
-        _metadata,
-        _config
-      ) do
-    Logger.info("Received [:lightning, :create_dataclip, :exception] event.")
-  end
-
-  def handle_event(
-        [:lightning, :create_webhook_workorder, :start],
-        _measurements,
-        _metadata,
-        _config
-      ) do
-    Logger.info("Received [:lightning, :create_webhook_workorder, :start] event.")
-  end
-
-  def handle_event(
-        [:lightning, :create_webhook_workorder, :stop],
-        %{duration: duration} = _measurements,
+        [:lightning, :create_webhook_workorder, :stop] = event,
+        %{duration: duration} = measurements,
         _metadata,
         output_file: file
       ) do
-    Logger.info(
-      "Received [:lightning, :create_webhook_workorder, :stop] event. Duration: #{duration}"
-    )
+    log_received(event, measurements)
 
     IO.binwrite(file, "lightning.create_webhook_workorder.stop, #{duration}\n")
   end
 
-  def handle_event(
-        [:lightning, :create_webhook_workorder, :exception],
-        _measurements,
-        _metadata,
-        _config
-      ) do
-    Logger.info("Received [:lightning, :create_webhook_workorder, :exception] event.")
+  def handle_event(event, _measurements, _metadata, _config) do
+    log_received(event)
+  end
+
+  defp native_to_microsecond(duration) do
+    System.convert_time_unit(duration, :native, :microsecond)
+  end
+
+  defp log_received(event, %{duration: duration}) do
+    duration = native_to_microsecond(duration)
+
+    Logger.info(
+      "Received #{event |> Enum.join(".")} event. Duration: #{duration}µs"
+    )
+  end
+
+  defp log_received(event) do
+    Logger.info("Received #{event |> Enum.join(".")} event.")
   end
 end
 
@@ -146,11 +134,8 @@ job = job |> Lightning.Repo.preload(:workflow)
   [:lightning, :create_webhook_workorder],
   %{job: job, dataclip: dataclip},
   fn ->
-    Lightning.WorkOrderService.subscribe(job.workflow.project_id)
-
-    result = Lightning.WorkOrderService.create_webhook_workorder(job, dataclip.body)
-
-    {result, %{}}
+    result =
+      Lightning.WorkOrderService.create_webhook_workorder(job, dataclip.body)
   end
 )
 
