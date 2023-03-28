@@ -38,6 +38,8 @@ and this project adheres to
   the schema [#685](https://github.com/OpenFn/Lightning/issues/685)
 - Broken links in failure alert email
   [#732](https://github.com/OpenFn/Lightning/issues/732)
+- Users not disabled when scheduled for deletion
+  [#719](https://github.com/OpenFn/Lightning/issues/719)
 
 ## [0.4.4] - 2023-03-10
 
