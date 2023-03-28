@@ -52,6 +52,23 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(:users, Lightning.Accounts.list_users())
   end
 
+  @impl true
+  def handle_event("delete", %{"id" => id}, socket) do
+    project = Projects.get_project!(id)
+
+    Projects.delete_project(project)
+    |> case do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(projects: Projects.list_projects())
+         |> put_flash(:info, "Project deleted successfully")}
+
+      {:error, _changeset} ->
+        {:noreply, socket |> put_flash(:error, "Can't delete project")}
+    end
+  end
+
   # TODO: this results in n+1 queries, we need to precalculate the permissions
   # and have zipped list of projects and the permissions so when we iterate
   # over them in the templace we don't generate n number of queries

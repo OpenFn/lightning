@@ -47,7 +47,9 @@ defmodule Lightning.Policies.ProjectUsers do
           Lightning.Projects.Project.t()
         ) :: boolean
   def authorize(:delete_project, %User{} = user, %Project{} = project),
-    do: Projects.get_project_user_role(user, project) in [:owner]
+    do:
+      Projects.get_project_user_role(user, project) in [:owner] or
+        user.role == :superuser
 
   def authorize(
         :edit_digest_alerts,
