@@ -9,7 +9,12 @@ interface EditorEntrypoint {
   changeEvent: string;
   field?: HTMLTextAreaElement | null;
   handleContentChange(content: string): void;
-  pushEventTo(target: HTMLElement, event: string, payload: {}): void;
+  pushEventTo(
+    target: HTMLElement,
+    event: string,
+    payload: {},
+    callback?: (reply, ref) => void
+  ): void;
   mounted(): void;
   observer: MutationObserver | null;
   render(): void;
@@ -38,6 +43,10 @@ export default {
       this.setupObserver();
       this.render();
     });
+
+    this.pushEventTo(this.el, 'request_metadata', {}, (reply, ref) => {
+      console.log({ reply, ref });
+    });
   },
   handleContentChange(content: string) {
     this.pushEventTo(this.el, this.changeEvent, { source: content });
@@ -50,7 +59,7 @@ export default {
           adaptor={adaptor}
           source={source}
           onChange={src => this.handleContentChange(src)}
-          disabled={disabled == "true"}
+          disabled={disabled == 'true'}
         />
       );
     }

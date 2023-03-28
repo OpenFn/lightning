@@ -139,6 +139,7 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "DEPLOYMENT.md": [title: "Deployment"],
+        "benchmarking/BENCHMARKING.md": [title: "Benchmarking"],
         "CHANGELOG.md": [title: "Changelog"]
       ],
       source_url: "https://github.com/OpenFn/lightning",

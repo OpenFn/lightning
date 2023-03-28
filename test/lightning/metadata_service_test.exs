@@ -15,9 +15,11 @@ defmodule Lightning.MetadataServiceTest do
       FakeRambo.Helpers.stub_run({:ok, %{status: 0, out: stdout, err: ""}})
       credential = credential_fixture()
 
-      assert MetadataService.fetch("@openfn/language-common", credential) == %{
-               "foo" => "bar"
-             }
+      assert MetadataService.fetch("@openfn/language-common", credential) ==
+               {:ok,
+                %{
+                  "foo" => "bar"
+                }}
     end
 
     test "returns an error when the adaptor doesn't exist" do

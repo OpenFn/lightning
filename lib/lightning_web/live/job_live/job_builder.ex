@@ -286,6 +286,22 @@ defmodule LightningWeb.JobLive.JobBuilder do
     {:noreply, socket |> assign_changeset_and_params(%{"body" => source})}
   end
 
+  def handle_event("request_metadata", _params, socket) do
+    res =
+      case socket.assigns.job do
+        %{credential: nil} ->
+          %{"error" => "no_credential"}
+
+        %{adaptor: nil} ->
+          %{"error" => "no_adaptor"}
+
+        %{adaptor: adaptor, credential: credential} ->
+          Lightning.MetadataService.fetch(adaptor, credential)
+      end
+
+    {:reply, res, socket}
+  end
+
   def handle_event("open_new_credential", _params, socket) do
     LightningWeb.ModalPortal.show_modal(
       LightningWeb.CredentialLive.CredentialEditModal,

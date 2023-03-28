@@ -3,6 +3,24 @@ defmodule Lightning.MetadataService do
   Retrieves metadata for a given credential and adaptor using the OpenFn CLI.
   """
 
+  defmodule Error do
+    @type t :: %__MODULE__{type: atom, detail: any}
+
+    defexception [:type, :detail]
+
+    def message(%{type: :no_matching_adaptor}) do
+      "blerg #{:no_matching_adaptor}"
+    end
+
+    def message(%{type: :no_metadata_result}) do
+      "blerg #{:no_metadata_result}"
+    end
+
+    def message(%{type: :invalid_json}) do
+      "blerg #{:invalid_json}"
+    end
+  end
+
   @adaptor_service :adaptor_service
 
   alias Lightning.AdaptorService
@@ -14,7 +32,8 @@ defmodule Lightning.MetadataService do
 
   The adaptor must be an npm specification.
   """
-  @spec fetch(adaptor :: String.t(), Credential.t()) :: map()
+  @spec fetch(adaptor :: String.t(), Credential.t()) ::
+          {:ok, %{optional(binary) => binary}} | {:error, Error.t() | }
   def fetch(adaptor, %Credential{body: credential_body}) do
     with {:ok, adaptor_path} <- get_adaptor_path(adaptor),
          res <- CLI.metadata(credential_body, adaptor_path),
@@ -22,15 +41,23 @@ defmodule Lightning.MetadataService do
       path
       |> File.read()
       |> case do
-        {:ok, body} -> Jason.decode!(body)
+        {:ok, body} -> parse_body(body)
         e -> e
       end
     end
   end
 
+  defp parse_body(body) do
+    Jason.decode(body)
+    |> case do
+      {:error, e} -> {:error, %Error{type: :invalid_json, detail: e}}
+      res -> res
+    end
+  end
+
   defp get_adaptor_path(adaptor) do
     case AdaptorService.find_adaptor(@adaptor_service, adaptor) do
-      nil -> {:error, :no_matching_adaptor}
+      nil -> {:error, %Error{type: :no_matching_adaptor}}
       %{path: path} -> {:ok, path}
     end
   end
@@ -44,7 +71,7 @@ defmodule Lightning.MetadataService do
     if path do
       {:ok, path}
     else
-      {:error, :no_metadata_result}
+      {:error, %Error{type: :no_metadata_result}}
     end
   end
 end
