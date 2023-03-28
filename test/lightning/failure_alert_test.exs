@@ -123,6 +123,9 @@ defmodule Lightning.FailureAlertTest do
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
 
+      # TODO: remove this with https://github.com/OpenFn/Lightning/issues/693
+      Process.sleep(250)
+
       assert_receive {:email,
                       %Swoosh.Email{
                         subject: "\"workflow-a\" failed.",
@@ -154,6 +157,9 @@ defmodule Lightning.FailureAlertTest do
       Pipeline.process(attempt_run2)
 
       Oban.drain_queue(Oban, queue: :workflow_failures)
+
+      # TODO: remove this with https://github.com/OpenFn/Lightning/issues/693
+      Process.sleep(250)
 
       assert_receive {:email, %Swoosh.Email{subject: "\"workflow-a\" failed."}},
                      1000
