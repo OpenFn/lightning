@@ -24,6 +24,8 @@ and this project adheres to
   [#306](https://github.com/OpenFn/Lightning/issues/306)
 - Added notify user via email when their account is created
   [#307](https://github.com/OpenFn/Lightning/issues/307)
+- Added a test harness for monitoring critical parts of the app using Telemetry
+  [#654](https://github.com/OpenFn/Lightning/issues/654)
 
 ### Changed
 
