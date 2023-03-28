@@ -27,7 +27,10 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       ) do
     changeset = Projects.change_project(project)
 
-    all_users = users |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
+    all_users =
+      users
+      |> Enum.filter(fn user -> not user.disabled end)
+      |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
 
     {:ok,
      socket
@@ -86,8 +89,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     available_users = filter_available_users(changeset, socket.assigns.all_users)
 
-    {:noreply,
-     socket |> assign(changeset: changeset, available_users: available_users)}
+    {:noreply, socket |> assign(changeset: changeset, available_users: available_users)}
   end
 
   @impl true
