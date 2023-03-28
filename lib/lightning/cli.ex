@@ -1,8 +1,42 @@
 defmodule Lightning.CLI do
+  @moduledoc """
+  Module providing facilities to make calls to the OpenFn CLI.
+
+  See [@openfn/cli](https://github.com/OpenFn/kit/tree/main/packages/cli#openfncli)
+  """
   require Logger
   @config Application.compile_env(:lightning, CLI, child_process_mod: Rambo)
 
   defmodule Result do
+    @moduledoc """
+    Struct that wraps the output of an OpenFn CLI call.
+
+    Containing the keys:
+
+    - `start_time`
+    - `end_time`
+    - `status`
+    - `logs`
+
+    ## Logs
+
+    The OpenFn CLI returns JSON formatted log lines, which are decoded and added
+    to a `Result` struct.
+
+    There are two kinds of output:
+
+    ```
+    {"level":"<<level>>","name":"<<module>>","message":"..."],"time":<<timestamp>>}
+    ```
+
+    These are usually for general logging, and debugging.
+
+    ```
+    {"message":["<<message|filepath|output>>"]}
+    ```
+
+    The above is the equivalent of the output of a command
+    """
     @type t :: %__MODULE__{
             start_time: integer(),
             end_time: integer(),
@@ -25,6 +59,10 @@ defmodule Lightning.CLI do
       })
     end
 
+    @doc """
+    Returns `message` type log lines from a `Result`.
+    """
+    @spec get_messages(Result.t()) :: [String.t()]
     def get_messages(%__MODULE__{logs: logs}) do
       logs
       |> Enum.reduce([], fn l, messages ->
@@ -49,6 +87,9 @@ defmodule Lightning.CLI do
     end
   end
 
+  @doc """
+  Execute a command in a child process and parse the results.
+  """
   @spec execute(command :: String.t()) :: Result.t()
   def execute(command) do
     start_time = DateTime.utc_now() |> DateTime.to_unix(:millisecond)
@@ -64,6 +105,9 @@ defmodule Lightning.CLI do
     )
   end
 
+  @doc """
+  Retrieve metadata for a given adaptor and configuation.
+  """
   @spec metadata(state :: map(), adaptor_path :: String.t()) :: Result.t()
   def metadata(state, adaptor_path) when is_binary(adaptor_path) do
     state = Jason.encode_to_iodata!(state)
