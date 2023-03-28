@@ -671,12 +671,15 @@ defmodule Lightning.AccountsTest do
     end
   end
 
-  describe "delete_api_token/1" do
+  describe "delete_token/1" do
     test "deletes the token" do
       user = user_fixture()
       token = Accounts.generate_api_token(user)
-      assert Accounts.delete_api_token(token) == :ok
-      refute Accounts.get_user_by_api_token(token)
+      # assert Accounts.delete_api_token(token) == :ok
+      # refute Accounts.get_user_by_api_token(token)
+
+      assert {:ok, %UserToken{}} = Accounts.delete_user(token)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_token!(token.id) end
     end
   end
 

@@ -51,24 +51,6 @@ defmodule LightningWeb.TokensLive.Index do
   end
 
   @impl true
-  def handle_event("delete_token", %{"id" => id}, socket) do
-    token = Accounts.get_token!(id).token
-
-    Accounts.delete_api_token(token)
-    |> case do
-      :ok ->
-        {:noreply,
-         socket
-         |> assign(
-           :tokens,
-           Accounts.list_api_tokens(socket.assigns.current_user)
-         )
-         |> assign(:new_token, nil)
-         |> put_flash(:info, "Token deleted successfully")}
-    end
-  end
-
-  @impl true
   def handle_event("copy", _, socket) do
     {:noreply,
      socket

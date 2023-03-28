@@ -558,25 +558,7 @@ defmodule Lightning.Accounts do
   """
   def get_user_by_api_token(token) do
     {:ok, query} = UserToken.verify_token_query(token, "api")
-    user = Repo.one(query)
-
-    if user do
-      token
-      |> UserToken.token_and_context_query("api")
-      |> Repo.one()
-      |> UserToken.last_used_changeset()
-      |> Repo.update()
-
-      user
-    end
-  end
-
-  @doc """
-  Deletes the signed token with the api context.
-  """
-  def delete_api_token(token) do
-    Repo.delete_all(UserToken.token_and_context_query(token, "api"))
-    :ok
+    Repo.one(query)
   end
 
   @doc """

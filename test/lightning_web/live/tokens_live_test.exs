@@ -69,7 +69,9 @@ defmodule LightningWeb.TokensLiveTest do
              |> element("#generate_new_token", "Generate New Token")
              |> render_click() =~ "Token created successfully"
 
-      assert token_live |> element("a[phx-click=delete_token]") |> render_click() =~
+      assert token_live
+             |> element("button[phx-click=delete_token]")
+             |> render_click() =~
                "Token deleted successfully"
     end
   end
