@@ -8,7 +8,7 @@ and this project adheres to
 
 ## [Unreleased]
 
-## Changed
+### Changed
 
 - Set log level to `info` for runs. Most of the `debug` logging is useful for
   the CLI, but not for Lightning. In the future the log level will be
