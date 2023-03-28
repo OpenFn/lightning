@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+## Changed
+
+- Set log level to `info` for runs. Most of the `debug` logging is useful for
+  the CLI, but not for Lightning. In the future the log level will be
+  configurable at instance > project > job level by the `superuser` and any
+  project `admin`.
+
 ## [0.4.6] - 2023-03-23
 
 ### Added
