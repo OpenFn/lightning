@@ -5,7 +5,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   import Ecto.Changeset, only: [get_field: 2]
 
   @start_trigger_types [
-    "Cron Schedule": "cron",
+    "Cron Schedule (UTC)": "cron",
     "Webhook Event": "webhook"
   ]
 
@@ -14,10 +14,10 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     "On Job Failure": "on_job_failure"
   ]
 
-  attr :form, :map, required: true
-  attr :upstream_jobs, :list, required: true
-  attr :on_cron_change, :any, required: true
-  attr :disabled, :boolean, default: true
+  attr(:form, :map, required: true)
+  attr(:upstream_jobs, :list, required: true)
+  attr(:on_cron_change, :any, required: true)
+  attr(:disabled, :boolean, default: true)
 
   def trigger_picker(assigns) do
     trigger_type_options =
@@ -110,9 +110,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     end
   end
 
-  attr :changeset, :map, required: true
-  attr :field, :atom, required: true
-  slot :inner_block, required: true
+  attr(:changeset, :map, required: true)
+  attr(:field, :atom, required: true)
+  slot(:inner_block, required: true)
 
   def when_invalid(assigns) do
     has_error =
@@ -129,7 +129,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
     """
   end
 
-  attr :adaptor, :string, required: true
+  attr(:adaptor, :string, required: true)
 
   def docs_component(assigns) do
     ~H"""

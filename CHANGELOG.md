@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Show users that the cron time is always UTC.
+
 ## [0.4.6] - 2023-03-23
 
 ### Added
