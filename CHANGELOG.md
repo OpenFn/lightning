@@ -11,6 +11,7 @@ and this project adheres to
 ### Changed
 
 - Show users that the cron time is always UTC.
+  [#716](https://github.com/OpenFn/Lightning/issues/716)
 
 ## [0.4.6] - 2023-03-23
 
