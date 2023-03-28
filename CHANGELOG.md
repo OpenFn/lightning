@@ -36,6 +36,8 @@ and this project adheres to
 
 - Ensure JSON schema form inputs are in the same order as they are written in
   the schema [#685](https://github.com/OpenFn/Lightning/issues/685)
+- Broken links in failure alert email
+  [#732](https://github.com/OpenFn/Lightning/issues/732)
 
 ## [0.4.4] - 2023-03-10
 

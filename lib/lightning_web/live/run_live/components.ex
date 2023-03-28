@@ -110,7 +110,7 @@ defmodule LightningWeb.RunLive.Components do
               />
           <% end %>
           <.link
-            navigate={show_run_path(@project_id, @run.id)}
+            navigate={show_run_url(@project_id, @run.id)}
             class="hover:underline hover:underline-offset-2"
           >
             <b><%= @run.job.name %>&nbsp;</b>
