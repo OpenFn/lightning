@@ -1,21 +1,18 @@
-# - move this load test to `benchmarks`
-# - for metrics.ex either:
-#   - make it do live dashboard things
-#   - delete it
-# - write a line o the csv with 'more or less' the raw data
-#   - lightning.create_dataclip.stop   sum: duration
-
-
 defmodule TelemetryCSVLogger do
   require Logger
+
+  def write_to_file(data) do
+    {:ok, file} = File.open("benchmarking/out.csv", [:append])
+    Enum.each(data, &IO.binwrite(file, "#{&1}\n"))
+    File.close(file)
+  end
 
   def handle_event(
         [:lightning, :create_dataclip, :start],
         _measurements,
         _metadata,
-        file: file
+        _config
       ) do
-    File.write(file, )
     Logger.info("Received [:lightning, :create_dataclip, :start] event.")
   end
 
@@ -25,9 +22,8 @@ defmodule TelemetryCSVLogger do
         _metadata,
         _config
       ) do
-    Logger.info(
-      "Received [:lightning, :create_dataclip, :stop] event. Duration: #{duration}"
-    )
+    write_to_file(["lightning.create_dataclip.stop, #{duration}"])
+    Logger.info("Received [:lightning, :create_dataclip, :stop] event. Duration: #{duration}")
   end
 
   def handle_event(
@@ -45,9 +41,7 @@ defmodule TelemetryCSVLogger do
         _metadata,
         _config
       ) do
-    Logger.info(
-      "Received [:lightning, :create_webhook_workorder, :start] event."
-    )
+    Logger.info("Received [:lightning, :create_webhook_workorder, :start] event.")
   end
 
   def handle_event(
@@ -56,6 +50,8 @@ defmodule TelemetryCSVLogger do
         _metadata,
         _config
       ) do
+    write_to_file(["lightning.create_webhook_workorder.stop, #{duration}"])
+
     Logger.info(
       "Received [:lightning, :create_webhook_workorder, :stop] event. Duration: #{duration}"
     )
@@ -67,9 +63,7 @@ defmodule TelemetryCSVLogger do
         _metadata,
         _config
       ) do
-    Logger.info(
-      "Received [:lightning, :create_webhook_workorder, :exception] event."
-    )
+    Logger.info("Received [:lightning, :create_webhook_workorder, :exception] event.")
   end
 end
 
@@ -82,14 +76,12 @@ telemetry_events = [
   [:lightning, :create_webhook_workorder, :exception]
 ]
 
-file = File.open("out.csv")
-
 :ok =
   :telemetry.attach_many(
     "lightning-telemetry-metrics",
     telemetry_events,
-    &TelemetryLogger.handle_event/4,
-    file: file
+    &TelemetryCSVLogger.handle_event/4,
+    nil
   )
 
 # Time to persist a dataclip
@@ -102,7 +94,7 @@ file = File.open("out.csv")
 
 :telemetry.span(
   [:lightning, :create_dataclip],
-  %{project: project, binary_size: 12345},
+  %{project: project},
   fn ->
     result =
       Lightning.Invocation.create_dataclip(%{
@@ -114,7 +106,6 @@ file = File.open("out.csv")
     {result, %{}}
   end
 )
-
 
 # Time from dataclip created to start of job (per workflow).
 
@@ -156,12 +147,11 @@ job = job |> Lightning.Repo.preload(:workflow)
 
 :telemetry.span(
   [:lightning, :create_webhook_workorder],
-  %{project: job, dataclip: dataclip},
+  %{job: job, dataclip: dataclip},
   fn ->
     Lightning.WorkOrderService.subscribe(job.workflow.project_id)
 
-    result =
-      Lightning.WorkOrderService.create_webhook_workorder(job, dataclip.body)
+    result = Lightning.WorkOrderService.create_webhook_workorder(job, dataclip.body)
 
     {result, %{}}
   end
