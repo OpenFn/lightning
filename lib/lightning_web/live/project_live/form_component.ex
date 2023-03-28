@@ -89,7 +89,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     available_users = filter_available_users(changeset, socket.assigns.all_users)
 
-    {:noreply, socket |> assign(changeset: changeset, available_users: available_users)}
+    {:noreply,
+     socket |> assign(changeset: changeset, available_users: available_users)}
   end
 
   @impl true
