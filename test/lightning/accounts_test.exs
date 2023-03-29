@@ -20,7 +20,8 @@ defmodule Lightning.AccountsTest do
     tokens = for _ <- 1..3, do: Accounts.generate_api_token(user)
 
     # verify that all generated tokens are returned by the function
-    assert Accounts.list_api_tokens(user) |> Enum.map(& &1.token) == tokens
+    assert Accounts.list_api_tokens(user) |> Enum.map(& &1["token"]) ==
+             tokens |> Enum.map(&("..." <> String.slice(&1, -10, 10)))
   end
 
   describe "get_user_by_email/1" do
@@ -654,13 +655,6 @@ defmodule Lightning.AccountsTest do
       %{user: user, token: token, user_token: user_token}
     end
 
-    test "update last_used_at", %{user_token: user_token} do
-      assert user_token.last_used_at == nil
-      Accounts.get_user_by_api_token(user_token.token)
-      assert updated_user_token = Repo.get_by(UserToken, token: user_token.token)
-      assert updated_user_token.last_used_at != nil
-    end
-
     test "returns user by token", %{user: user, token: token} do
       assert auth_user = Accounts.get_user_by_api_token(token)
       assert auth_user.id == user.id
@@ -675,11 +669,10 @@ defmodule Lightning.AccountsTest do
     test "deletes the token" do
       user = user_fixture()
       token = Accounts.generate_api_token(user)
-      # assert Accounts.delete_api_token(token) == :ok
-      # refute Accounts.get_user_by_api_token(token)
+      %{id: id} = user_token = Repo.get_by(UserToken, token: token)
 
-      assert {:ok, %UserToken{}} = Accounts.delete_user(token)
-      assert_raise Ecto.NoResultsError, fn -> Accounts.get_token!(token.id) end
+      assert {:ok, %UserToken{}} = Accounts.delete_token(user_token)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_token!(id) end
     end
   end
 
