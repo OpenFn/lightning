@@ -69,10 +69,38 @@ defmodule LightningWeb.TokensLiveTest do
              |> element("#generate_new_token", "Generate New Token")
              |> render_click() =~ "Token created successfully"
 
-      assert token_live
-             |> element("button[phx-click=delete_token]")
-             |> render_click() =~
-               "Token deleted successfully"
+      regex = ~r{/\K[\w-]+(?=/delete)}
+
+      url =
+        token_live
+        |> element("table#tokens")
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.find("a[id=confirm_token_deletion]")
+        |> Floki.attribute("href")
+        |> Floki.text()
+
+      [token_id] = Regex.scan(regex, url) |> List.flatten()
+
+      assert has_element?(
+               token_live,
+               "a[id=confirm_token_deletion][href='/profile/tokens/#{token_id}/delete']"
+             )
+
+      {:ok, token_deletion, _html} =
+        live(conn, ~p"/profile/tokens/#{token_id}/delete")
+
+      assert token_deletion
+             |> element(
+               "button[phx-click=delete_token][phx-value-id=#{token_id}]"
+             )
+             |> render_click()
+             |> follow_redirect(conn, ~p"/profile/tokens")
+
+      {path, flash} = assert_redirect(token_deletion)
+
+      assert flash == %{"info" => "Token deleted successfully"}
+      assert path == "/profile/tokens"
     end
   end
 end
