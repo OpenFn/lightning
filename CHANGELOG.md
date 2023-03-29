@@ -47,6 +47,8 @@ and this project adheres to
   [#732](https://github.com/OpenFn/Lightning/issues/732)
 - Registration Submission on app.openfn.org shows internal server error in
   browser [#686](https://github.com/OpenFn/Lightning/issues/686)
+- Run the correct runtime install mix task in `Dockerfile-dev`
+  [#541](https://github.com/OpenFn/Lightning/issues/541)
 
 ## [0.4.4] - 2023-03-10
 
