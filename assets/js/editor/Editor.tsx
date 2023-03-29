@@ -112,6 +112,8 @@ async function loadMagicDts(name: string) {
 }
 
 async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
+  // TODO this needs removing now!
+  // Just want to get the metadata bit working first...
   if (specifier.match('dhis2')) {
     return loadMagicDts('dhis2')
   } else if (specifier.match('salesforce')) {

@@ -2,18 +2,33 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type JobEditor from './JobEditor';
 
-interface JobEditorEntrypoint {
-  componentRoot: ReturnType<typeof createRoot> | null;
+// TODO needs reorganising
+interface ViewHook {
   destroyed(): void;
   el: HTMLElement;
+  pushEventTo(
+    target: HTMLElement,
+    event: string,
+    payload: {},
+    callback?: (reply: {}, ref: unknown) => void
+  ): void;
+  handleEvent(event: string, callback: (reply: {}) => void): unknown;
+  removeHandleEvent(callbackRef: unknown): void;
+  mounted(): void;
+}
+
+
+interface JobEditorEntrypoint extends ViewHook {
+  componentRoot: ReturnType<typeof createRoot> | null;
   changeEvent: string;
   field?: HTMLTextAreaElement | null;
   handleContentChange(content: string): void;
-  pushEventTo(target: HTMLElement, event: string, payload: {}): void;
-  mounted(): void;
+  metadata?: object;
   observer: MutationObserver | null;
   render(): void;
+  requestMetadata(): Promise<{}>;
   setupObserver(): void;
+  removeHandleEvent(callbackRef: unknown): void;
 }
 
 type AttributeMutationRecord = MutationRecord & {
@@ -39,6 +54,7 @@ export default {
       }
       this.setupObserver();
       this.render();
+      this.requestMetadata()
     });
   },
   handleContentChange(content: string) {
@@ -51,11 +67,24 @@ export default {
         <JobEditorComponent
           adaptor={adaptor}
           source={source}
+          metadata={this.metadata}
           disabled={Boolean(disabled)}
           onSourceChanged={src => this.handleContentChange(src)}
         />
       );
     }
+  },
+  requestMetadata() {
+    return new Promise(resolve => {
+      const callbackRef = this.handleEvent("metadata_ready", data => {
+        console.log(data)
+        this.removeHandleEvent(callbackRef);
+        this.metadata = data
+        resolve(data);
+      });
+      
+      this.pushEventTo(this.el, 'request_metadata', {});
+    });
   },
   setupObserver() {
     this.observer = new MutationObserver(mutations => {

@@ -33,22 +33,31 @@ const sortDeep = (model: any) => {
   return model;
 };
 
-const loadMetadata = (adaptor?: string) =>
-  // Temporary fake metadata loader
+const loadMetadata = ctx =>
   new Promise<object>(resolve => {
-    let metadata = null;
-    // TODO what if the metadata changes in flight?
-    // May need to double check the adaptor value
-    if (adaptor) {
-      if (adaptor.match('dhis2')) {
-        metadata = sortDeep(metadata_dhis2);
-      } else if (adaptor.match('salesforce')) {
-        metadata = sortDeep(metadata_salesforce);
-      }
-    }
-    setTimeout(() => {
-      resolve(metadata);
-    }, 1000 * 5);
+    const callbackRef = ctx.handleEvent('metadata_ready', data => {
+      ctx.removeHandleEvent(callbackRef);
+      resolve(data);
+    });
+
+    ctx.pushEventTo(ctx.el, 'request_metadata', {});
   });
+
+// // Temporary fake metadata loader
+// new Promise<object>(resolve => {
+//   let metadata = null;
+//   // TODO what if the metadata changes in flight?
+//   // May need to double check the adaptor value
+//   if (adaptor) {
+//     if (adaptor.match('dhis2')) {
+//       metadata = sortDeep(metadata_dhis2);
+//     } else if (adaptor.match('salesforce')) {
+//       metadata = sortDeep(metadata_salesforce);
+//     }
+//   }
+//   setTimeout(() => {
+//     resolve(metadata);
+//   }, 1000 * 5);
+// });
 
 export default loadMetadata;

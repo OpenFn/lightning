@@ -4,7 +4,6 @@ import { ViewColumnsIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, Chev
 import Docs from '../adaptor-docs/Docs';
 import Editor from '../editor/Editor';
 import Metadata from '../metadata-explorer/Explorer';
-import loadMetadata from '../metadata-loader/metadata';
 
 enum SettingsKeys {
   ORIENTATION = 'lightning.job-editor.orientation',
@@ -70,21 +69,15 @@ type JobEditorProps = {
   adaptor?: string;
   source?: string;
   disabled?: boolean;
+  metadata?: object;
   onSourceChanged?: (src: string) => void;
 }
 
-export default ({ adaptor, source, disabled, onSourceChanged }: JobEditorProps) => {
+export default ({ adaptor, source, disabled, metadata, onSourceChanged }: JobEditorProps) => {
   const [vertical, setVertical] = useState(() => settings[SettingsKeys.ORIENTATION] === 'v');
   const [showPanel, setShowPanel] = useState(() => settings[SettingsKeys.SHOW_PANEL]);
   const [selectedTab, setSelectedTab] = useState(() => settings[SettingsKeys.ACTIVE_TAB]);
-  const [metadata, setMetadata] = useState<any>(true);
-
-  useEffect(() => {
-    loadMetadata(adaptor).then((m) => {
-      setMetadata(m)
-    })
-  }, [adaptor]);
-
+  
   const toggleOrientiation = useCallback(() => {
     setVertical(!vertical)
     resize();
