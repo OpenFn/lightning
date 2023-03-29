@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type JobEditor from './JobEditor';
+import { sortMetadata } from '../metadata-loader/metadata';
 
 // TODO needs reorganising
 interface ViewHook {
@@ -23,7 +24,7 @@ interface JobEditorEntrypoint extends ViewHook {
   changeEvent: string;
   field?: HTMLTextAreaElement | null;
   handleContentChange(content: string): void;
-  metadata?: object;
+  metadata?: true | object;
   observer: MutationObserver | null;
   render(): void;
   requestMetadata(): Promise<{}>;
@@ -54,7 +55,7 @@ export default {
       }
       this.setupObserver();
       this.render();
-      this.requestMetadata()
+      this.requestMetadata().then(() => this.render())
     });
   },
   handleContentChange(content: string) {
@@ -75,12 +76,15 @@ export default {
     }
   },
   requestMetadata() {
+    this.metadata = true; // indicate we're loading
+    this.render()
     return new Promise(resolve => {
       const callbackRef = this.handleEvent("metadata_ready", data => {
-        console.log(data)
+        console.log('> mount:', data)
         this.removeHandleEvent(callbackRef);
-        this.metadata = data
-        resolve(data);
+        const sortedMetadata = sortMetadata(data);
+        this.metadata = sortedMetadata
+        resolve(sortedMetadata);
       });
       
       this.pushEventTo(this.el, 'request_metadata', {});
