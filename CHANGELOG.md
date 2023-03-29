@@ -14,7 +14,7 @@ and this project adheres to
 
 ### Fixed
 
-## [0.4.7] - 2023-03-29
+## [0.4.8] - 2023-03-29
 
 ### Added
 
@@ -27,6 +27,7 @@ and this project adheres to
   the CLI, but not for Lightning. In the future the log level will be
   configurable at instance > project > job level by the `superuser` and any
   project `admin`.
+- Renamed license file so that automagic github icon is less confusing
 
 ### Fixed
 
