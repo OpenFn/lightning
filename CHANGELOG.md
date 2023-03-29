@@ -28,6 +28,8 @@ and this project adheres to
   browser [#686](https://github.com/OpenFn/Lightning/issues/686)
 - Run the correct runtime install mix task in `Dockerfile-dev`
   [#541](https://github.com/OpenFn/Lightning/issues/541)
+- Users not disabled when scheduled for deletion
+  [#719](https://github.com/OpenFn/Lightning/issues/719)
 
 ## [0.4.6] - 2023-03-23
 

@@ -442,6 +442,7 @@ defmodule Lightning.Accounts do
   def schedule_user_deletion(user, email) do
     User.scheduled_deletion_changeset(user, %{
       "scheduled_deletion" => DateTime.utc_now() |> Timex.shift(days: 7),
+      "disabled" => true,
       "scheduled_deletion_email" => email
     })
     |> Repo.update()
