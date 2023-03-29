@@ -145,6 +145,10 @@ const createCompletionProvider = (monaco, metadata) => {
           // Check all the matching lookups to find the appropriate one
           // This is complicated because we may be inside an object definition with lookup values
           const [_name, ...e] = lookup.text[0].text.split(/\s/);
+          // Filter out junk like dashess and spaces and anything that isn't a query
+          while (!e[0].startsWith('$')) {
+            e.shift();
+          }
           const expression = e.join(' ');
           // Parse this function call's arguments and map any values we have
           // Check the query expression for any placeholders (of the form arg.name)

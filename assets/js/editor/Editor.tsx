@@ -5,10 +5,8 @@ import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types'
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
 import createCompletionProvider from './magic-completion';
 
-// TMP static imports for stuff we'll soon want to pull down dynamically
+// static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
-import dts_dhis2 from './lib/dhis2.dts';
-import dts_salesforce from './lib/salesforce.dts.js';
 
 const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
 
@@ -84,58 +82,26 @@ type Lib = {
   filepath?: string;
 }
 
-// temporary function that will load the magic dts locally
-// not sure where this lives?
-// a) I publish a specially tagged adaptor version (not that jsdelivr doesn't support tags)
-// b) I take an env var which points to adaptors and people have to set up their local env
-// Let's just get it working locally for now
-async function loadMagicDts(name: string) {
-  let content;
-  if (name === 'dhis2') {
-    content = dts_dhis2
-  } else if (name === 'salesforce') {
-    content = dts_salesforce
-  }
-  
-  const result: Lib[] = [{
-    content: dts_es5
-  }];
-
-  if (content) {
-    result.push({
-      content: `declare namespace "@openfn/language-${name}" { ${content} }`,
-      filepath: `${name}/index.d.ts`
-    })
-  }
-
-  return result;
-}
-
 async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
-  // TODO this needs removing now!
-  // Just want to get the metadata bit working first...
-  if (specifier.match('dhis2')) {
-    return loadMagicDts('dhis2')
-  } else if (specifier.match('salesforce')) {
-    return loadMagicDts('salesforce')
-  }
-
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
   nameParts.pop(); // remove the version
   const name = nameParts.join('@');
 
-  let results: Lib[] = [];
+  const results: Lib[] = [{
+    content: dts_es5
+  }];
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
       '@openfn/language-common'
     ];
-    results = await loadDTS(
+    const common = await loadDTS(
       `@openfn/language-common@${commonVersion}`,
       'module'
     );
+    results.push(common)
   }
 
   for await (const filePath of fetchDTSListing(specifier)) {
