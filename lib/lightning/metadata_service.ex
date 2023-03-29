@@ -57,7 +57,7 @@ defmodule Lightning.MetadataService do
   defp parse_body(body) do
     Jason.decode(body)
     |> case do
-      {:error, e} -> {:error, %Error{type: "invalid_json"}}
+      {:error, _error} -> {:error, %Error{type: "invalid_json"}}
       res -> res
     end
   end

@@ -25,15 +25,25 @@ defmodule Lightning.MetadataServiceTest do
     test "returns an error when the adaptor doesn't exist" do
       credential = credential_fixture()
 
-      assert {:error, :no_matching_adaptor} ==
-               MetadataService.fetch("@openfn/language-foo", credential)
+      assert MetadataService.fetch("@openfn/language-foo", credential) == {
+               :error,
+               %Lightning.MetadataService.Error{
+                 type: "no_matching_adaptor",
+                 __exception__: true
+               }
+             }
     end
 
     test "returns an error when the cli failed" do
       credential = credential_fixture()
 
-      assert MetadataService.fetch("@openfn/language-common", credential) ==
-               {:error, :no_metadata_result}
+      assert MetadataService.fetch("@openfn/language-common", credential) == {
+               :error,
+               %Lightning.MetadataService.Error{
+                 type: "no_metadata_result",
+                 __exception__: true
+               }
+             }
     end
   end
 end
