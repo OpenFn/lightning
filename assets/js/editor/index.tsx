@@ -2,20 +2,26 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type Editor from './Editor';
 
-interface EditorEntrypoint {
-  componentRoot: ReturnType<typeof createRoot> | null;
+interface ViewHook {
   destroyed(): void;
   el: HTMLElement;
-  changeEvent: string;
-  field?: HTMLTextAreaElement | null;
-  handleContentChange(content: string): void;
   pushEventTo(
     target: HTMLElement,
     event: string,
     payload: {},
-    callback?: (reply, ref) => void
+    callback?: (reply: {}, ref: unknown) => void
   ): void;
+  handleEvent(event: string, callback: (reply: {}) => void): unknown;
+  removeHandleEvent(callbackRef: unknown): void;
   mounted(): void;
+}
+
+interface EditorEntrypoint extends ViewHook {
+  componentRoot: ReturnType<typeof createRoot> | null;
+  changeEvent: string;
+  field?: HTMLTextAreaElement | null;
+  handleContentChange(content: string): void;
+  requestMetadata(): Promise<{}>;
   observer: MutationObserver | null;
   render(): void;
   setupObserver(): void;
@@ -44,12 +50,23 @@ export default {
       this.render();
     });
 
-    this.pushEventTo(this.el, 'request_metadata', {}, (reply, ref) => {
-      console.log({ reply, ref });
-    });
+    // {error: 'no_credential' | 'no_adaptor' | 'no_matching_adaptor' | 'no_metadata_result' | 'invalid_json' }
+    // or <the actual json from disk>
+    this.requestMetadata().then(data => console.log(data));
   },
   handleContentChange(content: string) {
     this.pushEventTo(this.el, this.changeEvent, { source: content });
+  },
+  requestMetadata() {
+    return new Promise(resolve => {
+      let callbackRef: unknown;
+      callbackRef = this.handleEvent("metadata_ready", data => {
+        this.removeHandleEvent(callbackRef);
+        resolve(data);
+      });
+      
+      this.pushEventTo(this.el, 'request_metadata', {});
+    });
   },
   render() {
     const { adaptor, source, disabled } = this.el.dataset;
