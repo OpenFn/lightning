@@ -15,11 +15,18 @@ type MetadataExplorerProps = {
 }
 
 export default ({ metadata, adaptor }: MetadataExplorerProps) => {
+  if (!metadata) {
+    return <Empty adaptor={adaptor} />
+  }
   if (metadata === true) {
     return <div className="block m-2">Loading metadata...</div>
   }
-  if (!metadata) {
-    return <Empty adaptor={adaptor} />
+  if (metadata.error) {
+    return <>
+      <p className="text-sm mb-4">An error occured while loading metadata:</p>
+      <p  className="text-sm mb-4">{metadata.error}</p>
+    </>
+
   }
 
   const [initialShowHelp] = useState(() => {
