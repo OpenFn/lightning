@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.4.7] - 2023-03-29
+
+### Added
+
 - Added a test harness for monitoring critical parts of the app using Telemetry
   [#654](https://github.com/OpenFn/Lightning/issues/654)
 
