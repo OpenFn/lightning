@@ -13,8 +13,11 @@ defmodule LightningWeb.UserRegistrationController do
          id: user_id,
          first_name: first_name
        }) do
+    project_name =
+      "#{String.downcase(first_name)}-demo" |> String.replace(" ", "-")
+
     Lightning.SetupUtils.create_starter_project(
-      "#{String.downcase(first_name)}-demo",
+      project_name,
       [%{user_id: user_id, role: :admin}]
     )
   end

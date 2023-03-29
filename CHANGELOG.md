@@ -8,6 +8,29 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Added a test harness for monitoring critical parts of the app using Telemetry
+  [#654](https://github.com/OpenFn/Lightning/issues/654)
+
+### Changed
+
+- Set log level to `info` for runs. Most of the `debug` logging is useful for
+  the CLI, but not for Lightning. In the future the log level will be
+  configurable at instance > project > job level by the `superuser` and any
+  project `admin`.
+
+### Fixed
+
+- Broken links in failure alert email
+  [#732](https://github.com/OpenFn/Lightning/issues/732)
+- Registration Submission on app.openfn.org shows internal server error in
+  browser [#686](https://github.com/OpenFn/Lightning/issues/686)
+- Run the correct runtime install mix task in `Dockerfile-dev`
+  [#541](https://github.com/OpenFn/Lightning/issues/541)
+- Users not disabled when scheduled for deletion
+  [#719](https://github.com/OpenFn/Lightning/issues/719)
+
 ## [0.4.6] - 2023-03-23
 
 ### Added
@@ -36,10 +59,6 @@ and this project adheres to
 
 - Ensure JSON schema form inputs are in the same order as they are written in
   the schema [#685](https://github.com/OpenFn/Lightning/issues/685)
-- Broken links in failure alert email
-  [#732](https://github.com/OpenFn/Lightning/issues/732)
-- Users not disabled when scheduled for deletion
-  [#719](https://github.com/OpenFn/Lightning/issues/719)
 
 ## [0.4.4] - 2023-03-10
 
