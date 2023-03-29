@@ -277,6 +277,35 @@ defmodule LightningWeb.JobLive.JobBuilder do
     {:noreply, socket |> assign_changeset_and_params(%{"body" => source})}
   end
 
+  def handle_event("request_metadata", _params, socket) do
+    pid = self()
+
+    adaptor = socket.assigns.changeset |> Ecto.Changeset.get_field(:adaptor)
+
+    credential =
+      socket.assigns.changeset |> Ecto.Changeset.get_field(:credential)
+
+    Task.start(fn ->
+      metadata =
+        Lightning.MetadataService.fetch(adaptor, credential)
+        |> case do
+          {:error, %{type: error_type}} ->
+            %{"error" => error_type}
+
+          {:ok, metadata} ->
+            metadata
+        end
+
+      send_update(pid, __MODULE__,
+        id: id(socket.assigns.job_id),
+        metadata: metadata,
+        event: :metadata_ready
+      )
+    end)
+
+    {:noreply, socket}
+  end
+
   def handle_event("open_new_credential", _params, socket) do
     LightningWeb.ModalPortal.show_modal(
       LightningWeb.CredentialLive.CredentialEditModal,
@@ -442,6 +471,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)
      |> assign_new(:is_persisted, fn -> not is_nil(job.id) end)}
+  end
+
+  def update(%{event: :metadata_ready, metadata: metadata}, socket) do
+    {:ok, socket |> push_event("metadata_ready", metadata)}
   end
 
   def update(%{event: :job_adaptor_changed, job_adaptor: job_adaptor}, socket) do

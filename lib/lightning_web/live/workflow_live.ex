@@ -413,17 +413,16 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
-    job = Lightning.Jobs.get_job!(job_id)
-
-    %Lightning.Jobs.Job{workflow: workflow} =
-      job |> Lightning.Repo.preload(:workflow)
+    job =
+      Lightning.Jobs.get_job!(job_id)
+      |> Lightning.Repo.preload([:workflow, :credential])
 
     socket
     |> assign(
       active_menu_item: :overview,
       job: job,
-      current_workflow: workflow,
-      encoded_project_space: encode_project_space(workflow),
+      current_workflow: job.workflow,
+      encoded_project_space: encode_project_space(job.workflow),
       page_title: "Workflows"
     )
   end

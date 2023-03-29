@@ -77,6 +77,12 @@ defmodule Lightning.AdaptorService do
     @moduledoc false
     require Logger
 
+    @doc """
+    List all adaptors in the given directory.
+
+    This function is called when the service starts up in order to query
+    which adaptors are already installed.
+    """
     @callback list_local(path :: String.t()) :: list(Adaptor.t())
     def list_local(path, _depth \\ 4) when is_binary(path) do
       System.cmd("npm", ~w[list --global --json --long --prefix #{path}], env: [])
@@ -86,6 +92,9 @@ defmodule Lightning.AdaptorService do
           |> String.trim()
           |> Jason.decode!()
           |> Map.get("dependencies", %{})
+          |> Map.filter(fn {local_name, _} ->
+            local_name |> String.starts_with?("@openfn")
+          end)
           |> Enum.map(fn {local_name, details} ->
             %Adaptor{
               name: details["name"],
