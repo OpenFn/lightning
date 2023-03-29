@@ -45,6 +45,8 @@ and this project adheres to
   the schema [#685](https://github.com/OpenFn/Lightning/issues/685)
 - Broken links in failure alert email
   [#732](https://github.com/OpenFn/Lightning/issues/732)
+- Registration Submission on app.openfn.org shows internal server error in
+  browser [#686](https://github.com/OpenFn/Lightning/issues/686)
 
 ## [0.4.4] - 2023-03-10
 
