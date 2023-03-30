@@ -119,12 +119,12 @@ defmodule LightningWeb.UserAuth do
     end
   end
 
-  defp update_last_used(token),
-    do:
-      Lightning.Accounts.UserToken.token_and_context_query(token, "api")
-      |> Lightning.Repo.one()
-      |> Lightning.Accounts.UserToken.last_used_changeset()
-      |> Lightning.Repo.update!()
+  defp update_last_used(token) do
+    Lightning.Accounts.UserToken.token_and_context_query(token, "api")
+    |> Lightning.Repo.one()
+    |> Lightning.Accounts.UserToken.last_used_changeset()
+    |> Lightning.Repo.update!()
+  end
 
   def authenticate_bearer(conn, _opts) do
     with {:ok, bearer_token} <- get_bearer(conn),
@@ -133,11 +133,7 @@ defmodule LightningWeb.UserAuth do
       update_last_used(bearer_token)
       assign(conn, :current_user, user)
     else
-      {:error, _error} ->
-        conn
-
-      nil ->
-        conn
+      _ -> conn
     end
   end
 
