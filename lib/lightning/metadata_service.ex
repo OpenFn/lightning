@@ -68,6 +68,9 @@ defmodule Lightning.MetadataService do
       {nil, _} ->
         {:error, Error.new("no_adaptor")}
 
+      {_, %Ecto.Association.NotLoaded{}} ->
+        {:error, Error.new("no_credential")}
+
       {_, nil} ->
         {:error, Error.new("no_credential")}
 
