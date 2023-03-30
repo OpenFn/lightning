@@ -48,7 +48,7 @@ export default ({ metadata, adaptor, credentialName }: MetadataExplorerProps) =>
   return (
     <div className="block flex-1 flex flex-col overflow-y-hidden">
       <div className="mt-2 flex-1 overflow-y-auto">
-        {mapChildren(metadata, data => <Entity level={0} data={data} />)}
+        {mapChildren(metadata, data => <Entity level={0} data={data} key={data.name} />)}
       </div>
       <div className="pt-4">
         <div className="flex flex-row flex-wrap">
@@ -70,7 +70,7 @@ export default ({ metadata, adaptor, credentialName }: MetadataExplorerProps) =>
           </summary>
           <div className="border-slate-200 border-l-2 ml-2 pl-2" style={{ borderLeftWidth: '2px' }}>
             <p className="text-sm mb-2">Metadata shows you the structure of your datasource, based on your current credential.</p>
-            <p className="text-sm mb-2">Press <pre className="inline text-xs">ctrl + space</pre> in the code editor for suggestions while writing code.</p>
+            <p className="text-sm mb-2">Press <code className="inline text-xs">ctrl + space</code> in the code editor for suggestions while writing code.</p>
           </div>
         </details>
         </div>

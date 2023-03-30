@@ -80,7 +80,6 @@ export default {
     this.render()
     return new Promise(resolve => {
       const callbackRef = this.handleEvent("metadata_ready", data => {
-        console.log('> mount:', data)
         this.removeHandleEvent(callbackRef);
         const sortedMetadata = sortMetadata(data);
         this.metadata = sortedMetadata

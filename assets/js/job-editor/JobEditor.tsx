@@ -53,6 +53,7 @@ const Tabs = ({ options, onSelectionChange, verticalCollapse, initialSelection }
           const style = id === selected ? 
             'bg-primary-50 text-gray-700' : 'text-gray-400 hover:text-gray-700'
           return <div
+            key={id}
             onClick={() => handleSelectionChange(id)}
             className={`${style} select-none rounded-md px-3 py-2 text-sm font-medium cursor-pointer flex-row whitespace-nowrap`}
             >
