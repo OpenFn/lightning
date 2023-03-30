@@ -188,7 +188,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
               adaptor={@resolved_job_adaptor}
               source={@job_body}
               id={"job-editor-#{@job_id}"}
-              disabled={true}
+              disabled={!@can_edit_job}
               phx-target={@myself}
             />
           </LightningWeb.Components.Common.panel_content>
