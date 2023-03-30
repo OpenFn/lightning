@@ -4,8 +4,8 @@ defmodule LightningWeb.RouteHelpers do
   """
   alias LightningWeb.Router.Helpers, as: Routes
 
-  def show_run_path(project_id, run_id) do
-    Routes.project_run_show_path(
+  def show_run_url(project_id, run_id) do
+    Routes.project_run_show_url(
       LightningWeb.Endpoint,
       :show,
       project_id,

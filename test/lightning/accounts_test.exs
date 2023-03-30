@@ -890,6 +890,7 @@ defmodule Lightning.AccountsTest do
     assert user.scheduled_deletion == nil
     {:ok, user} = Accounts.schedule_user_deletion(user, user.email)
     assert user.scheduled_deletion != nil
+    assert user.disabled
   end
 
   describe "inspect/2" do

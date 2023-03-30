@@ -8,10 +8,40 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
 ### Changed
 
-- Show users that the cron time is always UTC.
+- Display timezone for cron schedule—it is always UTC.
   [#716](https://github.com/OpenFn/Lightning/issues/716)
+
+### Fixed
+
+## [0.4.8] - 2023-03-29
+
+### Added
+
+- Added a test harness for monitoring critical parts of the app using Telemetry
+  [#654](https://github.com/OpenFn/Lightning/issues/654)
+
+### Changed
+
+- Set log level to `info` for runs. Most of the `debug` logging is useful for
+  the CLI, but not for Lightning. In the future the log level will be
+  configurable at instance > project > job level by the `superuser` and any
+  project `admin`.
+- Renamed license file so that automagic github icon is less confusing
+
+### Fixed
+
+- Broken links in failure alert email
+  [#732](https://github.com/OpenFn/Lightning/issues/732)
+- Registration Submission on app.openfn.org shows internal server error in
+  browser [#686](https://github.com/OpenFn/Lightning/issues/686)
+- Run the correct runtime install mix task in `Dockerfile-dev`
+  [#541](https://github.com/OpenFn/Lightning/issues/541)
+- Users not disabled when scheduled for deletion
+  [#719](https://github.com/OpenFn/Lightning/issues/719)
 
 ## [0.4.6] - 2023-03-23
 
