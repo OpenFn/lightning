@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Display timezone for cron schedule—it is always UTC.
+  [#716](https://github.com/OpenFn/Lightning/issues/716)
+
 ### Fixed
 
 ## [0.4.8] - 2023-03-29
