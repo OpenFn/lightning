@@ -49,8 +49,6 @@ and this project adheres to
   [#147](https://github.com/OpenFn/Lightning/issues/147)
 - Add `last-used at` to API tokens
   [#722](https://github.com/OpenFn/Lightning/issues/722)
-- Improve API error codes for `401`
-  [#715](https://github.com/OpenFn/Lightning/issues/715)
 
 ### Changed
 
