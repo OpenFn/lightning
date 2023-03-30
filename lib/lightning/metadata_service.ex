@@ -8,10 +8,12 @@ defmodule Lightning.MetadataService do
 
     defexception [:type]
 
+    @spec new(type :: String.t()) :: __MODULE__.t()
     def new(type) do
       %__MODULE__{type: type}
     end
 
+    @spec message(__MODULE__.t()) :: String.t()
     def message(%{type: type}) do
       "Got #{type}."
     end
@@ -42,7 +44,7 @@ defmodule Lightning.MetadataService do
       )
     end)
     |> case do
-      {:error, e} when is_atom(e) -> {:error, Error.new(e)}
+      {:error, e} when is_atom(e) -> {:error, Error.new(e |> to_string())}
       any -> any
     end
   end
