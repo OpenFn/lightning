@@ -69,7 +69,7 @@ export default {
           adaptor={adaptor}
           source={source}
           metadata={this.metadata}
-          disabled={Boolean(disabled)}
+          disabled={disabled==="true"}
           onSourceChanged={src => this.handleContentChange(src)}
         />
       );
