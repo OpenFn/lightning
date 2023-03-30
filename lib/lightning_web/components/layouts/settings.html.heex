@@ -41,10 +41,10 @@
         <div
           class="mx-4 px-3 py-2 pl-4 text-sm font-medium block text-primary-300"
           title={
-            "You are running Lightning version #{elem(:application.get_key(:lightning, :vsn), 1)}"
+            "#{Application.get_env(:lightning, :version)[:message]}"
           }
         >
-          v<%= elem(:application.get_key(:lightning, :vsn), 1) %>
+          <code><%= Application.get_env(:lightning, :version)[:display] %></code>
         </div>
         <Settings.menu_item to={Routes.dashboard_index_path(@socket, :index)}>
           <Icon.left class="h-5 w-5 inline-block mr-2" />

@@ -12,6 +12,49 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
+image = System.get_env("IMAGE_TAG")
+
+branch =
+  System.get_env(
+    "BRANCH",
+    System.cmd("git", ["rev-parse", "--abbrev-ref", "HEAD"])
+    |> Tuple.to_list()
+    |> Enum.at(0)
+    |> String.replace("\n", "")
+  )
+
+commit =
+  System.get_env(
+    "COMMIT",
+    System.cmd("git", ["rev-parse", "--short", "HEAD"])
+    |> Tuple.to_list()
+    |> Enum.at(0)
+    |> String.replace("\n", "")
+  )
+
+display =
+  case image do
+    nil -> commit
+    "edge" -> commit <> " (edge)"
+    image -> image
+  end
+
+message =
+  case image do
+    nil ->
+      "Looks like you're running Lightning outside of Docker; the last commit is #{commit} on #{branch}."
+
+    image ->
+      "You are running Lightning #{image} on the 'edge'; this image was built from commit #{commit} on #{branch}."
+  end
+
+config :lightning, :version,
+  image: image,
+  branch: branch,
+  commit: commit,
+  display: display,
+  message: message
+
 config :lightning, :email_addresses,
   admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
 

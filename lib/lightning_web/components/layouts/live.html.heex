@@ -15,7 +15,7 @@
               }
               alt="OpenFn"
               title={
-                "Lightning v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+                "#{Application.get_env(:lightning, :version)[:message]}"
               }
             />
           </.link>
@@ -25,11 +25,11 @@
           <div class="grow"></div>
           <div
             class="mx-4 px-3 py-2 pl-4 text-sm font-medium block text-primary-300"
-            title={
-            "You are running Lightning version #{elem(:application.get_key(:lightning, :vsn), 1)}"
-          }
+            title={"#{Application.get_env(:lightning, :version)[:message]}"}
           >
-            v<%= elem(:application.get_key(:lightning, :vsn), 1) %>
+            <code>
+              <%= Application.get_env(:lightning, :version)[:display] %>
+            </code>
           </div>
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
