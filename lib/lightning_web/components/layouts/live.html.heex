@@ -14,23 +14,13 @@
                 Routes.static_path(@socket || @conn, "/images/logo-white.svg")
               }
               alt="OpenFn"
-              title={
-                "#{Application.get_env(:lightning, :version)[:message]}"
-              }
             />
           </.link>
         </div>
         <%= unless assigns[:is_first_setup] do %>
           <LayoutComponents.menu_items {assigns} />
           <div class="grow"></div>
-          <div
-            class="mx-4 px-3 py-2 pl-4 text-sm font-medium block text-primary-300"
-            title={"#{Application.get_env(:lightning, :version)[:message]}"}
-          >
-            <code>
-              <%= Application.get_env(:lightning, :version)[:display] %>
-            </code>
-          </div>
+          <LightningWeb.Components.Common.version_chip />
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
               <Heroicons.cog class="h-5 w-5 inline-block mr-2" />

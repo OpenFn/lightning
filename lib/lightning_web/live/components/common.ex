@@ -4,6 +4,26 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  def version_chip(assigns) do
+    if Application.get_env(:lightning, :version)[:image] do
+      ~H"""
+      <div
+        <div
+        class="p-2 mb-1 mt-1 text-center"
+        title={
+          "#{Application.get_env(:lightning, :version)[:message]}"
+        }
+      >
+        <code class="px-2 py-1 opacity-20 text-sm font-medium bg-gray-200 rounded-md font-mono text-indigo-500">
+          <%= Application.get_env(:lightning, :version)[:display] %>
+        </code>
+      </div>
+      """
+    else
+      ~H""
+    end
+  end
+
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :class, :string, default: ""
