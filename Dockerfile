@@ -82,10 +82,10 @@ RUN mix release
 FROM ${RUNNER_IMAGE}
 ARG NODE_VERSION
 
-ARG BRANCH_NAME=""
-ARG SHORT_SHA=""
-LABEL branch=${BRANCH_NAME}
-LABEL commit=${SHORT_SHA}
+ARG BRANCH=""
+ARG COMMIT_SHA=""
+LABEL branch=${BRANCH}
+LABEL commit=${COMMIT}
 
 RUN apt-get update -y && apt-get install -y libstdc++6 openssl libncurses5 \
   locales curl gpg
@@ -119,7 +119,7 @@ COPY --from=builder --chown=lightning:root /app/priv/schemas ./priv/schemas
 USER lightning
 
 ENV SCHEMAS_PATH="/app/priv/schemas"
-ENV COMMIT_SHA=${SHORT_SHA}
-ENV COMMIT_BRANCH=${BRANCH_NAME}
+ENV COMMIT=${COMMIT}
+ENV BRANCH=${BRANCH}
 
 CMD /app/bin/server
