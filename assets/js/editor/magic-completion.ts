@@ -180,6 +180,7 @@ const createCompletionProvider = (monaco, metadata) => {
       const info = await worker.getQuickInfoAtPosition('file:///job.js', pos);
       if (info?.kind === 'property' && info.tags) {
         const lookup = info.tags.find(({ name }) => name === 'magic');
+        console.log(lookup);
         if (lookup) {
           const path = lookup.text[0].text;
           // TODO - swap out placeholders
