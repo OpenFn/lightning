@@ -122,7 +122,7 @@ export default ({ adaptor, source, disabled, metadata, onSourceChanged }: JobEdi
   <div className="cursor-pointer" >
   </div>
   <div className={`flex h-full v-full flex-${vertical ? 'col' : 'row'}`}>
-    <div className="flex flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark">
+    <div className="flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark">
       <Editor source={source} adaptor={adaptor} metadata={metadata} disabled={disabled} onChange={onSourceChanged} />
     </div>
     <div className={`${showPanel ? 'flex flex-col flex-1 overflow-auto' : ''} bg-white`}>
