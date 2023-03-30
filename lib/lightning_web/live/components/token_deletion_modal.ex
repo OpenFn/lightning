@@ -32,7 +32,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
          |> push_redirect(to: socket.assigns.return_to)}
 
       {:error, _changeset} ->
-        {:noreply, socket}
+        {:noreply, socket |> put_flash(:error, "Something went wrong.")}
     end
   end
 

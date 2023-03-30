@@ -136,15 +136,16 @@
                   Never used
                 <% end %>
               </span>
-              <PetalComponents.Button.icon_button
-                to={~p"/profile/tokens/#{token["id"]}/delete"}
-                link_type="a"
-                size="xs"
-                color="danger"
-                id="confirm_token_deletion"
-              >
-                <Heroicons.trash outline />
-              </PetalComponents.Button.icon_button>
+              <.link patch={~p"/profile/tokens/#{token["id"]}/delete"}>
+                <PetalComponents.Button.icon_button
+                  link_type="a"
+                  size="xs"
+                  color="danger"
+                  id="confirm_token_deletion"
+                >
+                  <Heroicons.trash outline />
+                </PetalComponents.Button.icon_button>
+              </.link>
             </div>
           </.td>
         </.tr>

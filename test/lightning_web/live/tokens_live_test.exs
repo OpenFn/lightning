@@ -62,14 +62,15 @@ defmodule LightningWeb.TokensLiveTest do
              |> String.contains?("...")
     end
 
-    test "Delete an existing token", %{conn: conn} do
+    test "Delete an existing token", %{conn: conn, user: user} do
       {:ok, token_live, _html} = live(conn, ~p"/profile/tokens")
+      token = api_token_fixture(user)
 
-      assert token_live
-             |> element("#generate_new_token", "Generate New Token")
-             |> render_click() =~ "Token created successfully"
+      # assert token_live
+      #        |> element("#generate_new_token", "Generate New Token")
+      #        |> render_click() =~ "Token created successfully"
 
-      regex = ~r{/\K[\w-]+(?=/delete)}
+      # regex = ~r{/\K[\w-]+(?=/delete)}
 
       url =
         token_live
@@ -82,10 +83,24 @@ defmodule LightningWeb.TokensLiveTest do
 
       [token_id] = Regex.scan(regex, url) |> List.flatten()
 
+      # find a <tr> that has id of `token-<id>`
+      # and then click the thing that is a[title=Delete]
+
       assert has_element?(
                token_live,
                "a[id=confirm_token_deletion][href='/profile/tokens/#{token_id}/delete']"
              )
+
+      # if there was any 'state' in the liveview from clicking the button or making a new one
+      # it's gone now
+
+      # click the button
+      # assert that we patched
+
+      # can see the modal
+      # click confirm
+      # assert patched / redirect
+      # assert we can't see `token-<id>`
 
       {:ok, token_deletion, _html} =
         live(conn, ~p"/profile/tokens/#{token_id}/delete")
