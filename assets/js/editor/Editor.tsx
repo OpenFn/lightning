@@ -97,8 +97,17 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
       '@openfn/language-common'
     ];
+
+    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
+    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
+    if (!commonVersionMatch) {
+      console.warn(
+        `@openfn/language-common@${commonVersion} contains semver range syntax.`
+      );
+    }
+
     const common = await loadDTS(
-      `@openfn/language-common@${commonVersion}`,
+      `@openfn/language-common@${commonVersion.replace("^","")}`,
       'module'
     );
     results.push(common)

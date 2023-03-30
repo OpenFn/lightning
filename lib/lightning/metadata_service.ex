@@ -27,10 +27,9 @@ defmodule Lightning.MetadataService do
   @spec fetch(adaptor :: String.t(), Credential.t()) ::
           {:ok, %{optional(binary) => binary}} | {:error, Error.t()}
   def fetch(adaptor, credential) do
-    with {:ok, {adaptor, %Credential{body: credential_body}}} <-
-           validate_args(adaptor, credential),
+    with {:ok, {adaptor, state}} <- assemble_args(adaptor, credential),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),
-         res <- CLI.metadata(credential_body, adaptor_path),
+         res <- CLI.metadata(state, adaptor_path),
          {:ok, path} <- get_output_path(res) do
       path
       |> File.read()
@@ -41,7 +40,7 @@ defmodule Lightning.MetadataService do
     end
   end
 
-  defp validate_args(adaptor, credential) do
+  defp assemble_args(adaptor, credential) do
     case {adaptor, credential} do
       {nil, _} ->
         {:error, %Error{type: "no_adaptor"}}
@@ -49,8 +48,8 @@ defmodule Lightning.MetadataService do
       {_, nil} ->
         {:error, %Error{type: "no_credential"}}
 
-      args ->
-        {:ok, args}
+      {adaptor_path, %Credential{body: credential_body}} ->
+        {:ok, {adaptor_path, %{"configuration" => credential_body}}}
     end
   end
 
