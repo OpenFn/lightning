@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.4.8] - 2023-03-29
+
+### Added
+
 - Added a test harness for monitoring critical parts of the app using Telemetry
   [#654](https://github.com/OpenFn/Lightning/issues/654)
 
@@ -19,6 +27,7 @@ and this project adheres to
   the CLI, but not for Lightning. In the future the log level will be
   configurable at instance > project > job level by the `superuser` and any
   project `admin`.
+- Renamed license file so that automagic github icon is less confusing
 
 ### Fixed
 
