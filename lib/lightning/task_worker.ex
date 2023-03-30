@@ -5,6 +5,17 @@ defmodule Lightning.TaskWorker do
   A simple concurrency limiter that wraps `Task.Supervisor`, which already does
   have the ability to specify `max_children`; it throws an error when
   that limit is exceeded.
+
+  To use it, start it like any other process; ideally in your supervision tree.
+
+  ```
+    ...,
+    {Lightning.TaskWorker, name: :cli_task_worker, max_tasks: 4}
+  ```
+
+  **Options**
+
+  - `:max_tasks` Defaults to the number of system schedulers available to the vm.
   """
   use GenServer
 
@@ -44,7 +55,7 @@ defmodule Lightning.TaskWorker do
   end
 
   @spec start_task(worker :: GenServer.name(), (() -> any)) ::
-          {:error, :too_many_processes} | any
+          {:error, :too_many_processes} | term()
   def start_task(worker, fun) when is_function(fun, 0) do
     GenServer.call(worker, :checkout)
     |> case do
@@ -64,9 +75,6 @@ defmodule Lightning.TaskWorker do
           {:DOWN, ^task_ref, :process, _pid, reason} ->
             GenServer.call(worker, :checkin)
             {:error, reason}
-
-          res ->
-            res
         end
 
       any ->
