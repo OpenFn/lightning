@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.4.6">
+    <meta name="project" content="Lightning v0.4.8">
 
-    <title>Lightning.Workflows — Lightning v0.4.6</title>
+    <title>Lightning.Workflows — Lightning v0.4.8</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-BF5B4395.js"></script>
+    <script src="dist/sidebar_items-20F86E4E.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <strong class="sidebar-projectVersion" translate="no">
-        v0.4.6
+        v0.4.8
       </strong>
     </div>
     <ul class="sidebar-listNav">
@@ -108,7 +108,7 @@ Lightning
     </a>
 
   <span translate="no">Lightning.Workflows</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.4.6)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.4.8)</small>
 
 </h1>
 
@@ -276,8 +276,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="7530822275-1">(</span><span class="n">workflow</span><span class="p" data-group-id="7530822275-1">)</span><span class="w">
-</span><span class="p" data-group-id="7530822275-2">%</span><span class="nc" data-group-id="7530822275-2">Ecto.Changeset</span><span class="p" data-group-id="7530822275-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7530822275-3">%</span><span class="nc" data-group-id="7530822275-3">Workflow</span><span class="p" data-group-id="7530822275-3">{</span><span class="p" data-group-id="7530822275-3">}</span><span class="p" data-group-id="7530822275-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_workflow</span><span class="p" data-group-id="7879041456-1">(</span><span class="n">workflow</span><span class="p" data-group-id="7879041456-1">)</span><span class="w">
+</span><span class="p" data-group-id="7879041456-2">%</span><span class="nc" data-group-id="7879041456-2">Ecto.Changeset</span><span class="p" data-group-id="7879041456-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7879041456-3">%</span><span class="nc" data-group-id="7879041456-3">Workflow</span><span class="p" data-group-id="7879041456-3">{</span><span class="p" data-group-id="7879041456-3">}</span><span class="p" data-group-id="7879041456-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_workflow/1">
@@ -307,11 +307,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="5488396546-1">(</span><span class="p" data-group-id="5488396546-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5488396546-2">}</span><span class="p" data-group-id="5488396546-1">)</span><span class="w">
-</span><span class="p" data-group-id="5488396546-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5488396546-4">%</span><span class="nc" data-group-id="5488396546-4">Workflow</span><span class="p" data-group-id="5488396546-4">{</span><span class="p" data-group-id="5488396546-4">}</span><span class="p" data-group-id="5488396546-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="9333659350-1">(</span><span class="p" data-group-id="9333659350-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="9333659350-2">}</span><span class="p" data-group-id="9333659350-1">)</span><span class="w">
+</span><span class="p" data-group-id="9333659350-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9333659350-4">%</span><span class="nc" data-group-id="9333659350-4">Workflow</span><span class="p" data-group-id="9333659350-4">{</span><span class="p" data-group-id="9333659350-4">}</span><span class="p" data-group-id="9333659350-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="5488396546-5">(</span><span class="p" data-group-id="5488396546-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5488396546-6">}</span><span class="p" data-group-id="5488396546-5">)</span><span class="w">
-</span><span class="p" data-group-id="5488396546-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5488396546-8">%</span><span class="nc" data-group-id="5488396546-8">Ecto.Changeset</span><span class="p" data-group-id="5488396546-8">{</span><span class="p" data-group-id="5488396546-8">}</span><span class="p" data-group-id="5488396546-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_workflow</span><span class="p" data-group-id="9333659350-5">(</span><span class="p" data-group-id="9333659350-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9333659350-6">}</span><span class="p" data-group-id="9333659350-5">)</span><span class="w">
+</span><span class="p" data-group-id="9333659350-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9333659350-8">%</span><span class="nc" data-group-id="9333659350-8">Ecto.Changeset</span><span class="p" data-group-id="9333659350-8">{</span><span class="p" data-group-id="9333659350-8">}</span><span class="p" data-group-id="9333659350-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_workflow/1">
@@ -339,11 +339,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2572430382-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2572430382-1">)</span><span class="w">
-</span><span class="p" data-group-id="2572430382-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2572430382-3">%</span><span class="nc" data-group-id="2572430382-3">Workflow</span><span class="p" data-group-id="2572430382-3">{</span><span class="p" data-group-id="2572430382-3">}</span><span class="p" data-group-id="2572430382-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="6406060763-1">(</span><span class="n">workflow</span><span class="p" data-group-id="6406060763-1">)</span><span class="w">
+</span><span class="p" data-group-id="6406060763-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6406060763-3">%</span><span class="nc" data-group-id="6406060763-3">Workflow</span><span class="p" data-group-id="6406060763-3">{</span><span class="p" data-group-id="6406060763-3">}</span><span class="p" data-group-id="6406060763-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="2572430382-4">(</span><span class="n">workflow</span><span class="p" data-group-id="2572430382-4">)</span><span class="w">
-</span><span class="p" data-group-id="2572430382-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2572430382-6">%</span><span class="nc" data-group-id="2572430382-6">Ecto.Changeset</span><span class="p" data-group-id="2572430382-6">{</span><span class="p" data-group-id="2572430382-6">}</span><span class="p" data-group-id="2572430382-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_workflow</span><span class="p" data-group-id="6406060763-4">(</span><span class="n">workflow</span><span class="p" data-group-id="6406060763-4">)</span><span class="w">
+</span><span class="p" data-group-id="6406060763-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6406060763-6">%</span><span class="nc" data-group-id="6406060763-6">Ecto.Changeset</span><span class="p" data-group-id="6406060763-6">{</span><span class="p" data-group-id="6406060763-6">}</span><span class="p" data-group-id="6406060763-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_workflow/1">
@@ -393,10 +393,10 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="5621564899-1">(</span><span class="mi">123</span><span class="p" data-group-id="5621564899-1">)</span><span class="w">
-</span><span class="p" data-group-id="5621564899-2">%</span><span class="nc" data-group-id="5621564899-2">Workflow</span><span class="p" data-group-id="5621564899-2">{</span><span class="p" data-group-id="5621564899-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="6756120672-1">(</span><span class="mi">123</span><span class="p" data-group-id="6756120672-1">)</span><span class="w">
+</span><span class="p" data-group-id="6756120672-2">%</span><span class="nc" data-group-id="6756120672-2">Workflow</span><span class="p" data-group-id="6756120672-2">{</span><span class="p" data-group-id="6756120672-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="5621564899-3">(</span><span class="mi">456</span><span class="p" data-group-id="5621564899-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_workflow!</span><span class="p" data-group-id="6756120672-3">(</span><span class="mi">456</span><span class="p" data-group-id="6756120672-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -477,8 +477,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="3781795232-1">(</span><span class="p" data-group-id="3781795232-1">)</span><span class="w">
-</span><span class="p" data-group-id="3781795232-2">[</span><span class="p" data-group-id="3781795232-3">%</span><span class="nc" data-group-id="3781795232-3">Workflow</span><span class="p" data-group-id="3781795232-3">{</span><span class="p" data-group-id="3781795232-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3781795232-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_workflows</span><span class="p" data-group-id="1489730765-1">(</span><span class="p" data-group-id="1489730765-1">)</span><span class="w">
+</span><span class="p" data-group-id="1489730765-2">[</span><span class="p" data-group-id="1489730765-3">%</span><span class="nc" data-group-id="1489730765-3">Workflow</span><span class="p" data-group-id="1489730765-3">{</span><span class="p" data-group-id="1489730765-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="1489730765-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="mark_for_deletion/2">
@@ -508,8 +508,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_request_deletion</span><span class="p" data-group-id="2962645000-1">(</span><span class="n">workflow</span><span class="p" data-group-id="2962645000-1">)</span><span class="w">
-</span><span class="p" data-group-id="2962645000-2">%</span><span class="nc" data-group-id="2962645000-2">Ecto.Changeset</span><span class="p" data-group-id="2962645000-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="2962645000-3">%</span><span class="nc" data-group-id="2962645000-3">Workflow</span><span class="p" data-group-id="2962645000-3">{</span><span class="p" data-group-id="2962645000-3">}</span><span class="p" data-group-id="2962645000-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_request_deletion</span><span class="p" data-group-id="5402021074-1">(</span><span class="n">workflow</span><span class="p" data-group-id="5402021074-1">)</span><span class="w">
+</span><span class="p" data-group-id="5402021074-2">%</span><span class="nc" data-group-id="5402021074-2">Ecto.Changeset</span><span class="p" data-group-id="5402021074-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5402021074-3">%</span><span class="nc" data-group-id="5402021074-3">Workflow</span><span class="p" data-group-id="5402021074-3">{</span><span class="p" data-group-id="5402021074-3">}</span><span class="p" data-group-id="5402021074-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="to_project_space/1">
@@ -565,11 +565,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="8446828561-1">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8446828561-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="8446828561-2">}</span><span class="p" data-group-id="8446828561-1">)</span><span class="w">
-</span><span class="p" data-group-id="8446828561-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8446828561-4">%</span><span class="nc" data-group-id="8446828561-4">Workflow</span><span class="p" data-group-id="8446828561-4">{</span><span class="p" data-group-id="8446828561-4">}</span><span class="p" data-group-id="8446828561-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="4732573563-1">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4732573563-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="4732573563-2">}</span><span class="p" data-group-id="4732573563-1">)</span><span class="w">
+</span><span class="p" data-group-id="4732573563-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4732573563-4">%</span><span class="nc" data-group-id="4732573563-4">Workflow</span><span class="p" data-group-id="4732573563-4">{</span><span class="p" data-group-id="4732573563-4">}</span><span class="p" data-group-id="4732573563-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="8446828561-5">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8446828561-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="8446828561-6">}</span><span class="p" data-group-id="8446828561-5">)</span><span class="w">
-</span><span class="p" data-group-id="8446828561-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8446828561-8">%</span><span class="nc" data-group-id="8446828561-8">Ecto.Changeset</span><span class="p" data-group-id="8446828561-8">{</span><span class="p" data-group-id="8446828561-8">}</span><span class="p" data-group-id="8446828561-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_workflow</span><span class="p" data-group-id="4732573563-5">(</span><span class="n">workflow</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4732573563-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4732573563-6">}</span><span class="p" data-group-id="4732573563-5">)</span><span class="w">
+</span><span class="p" data-group-id="4732573563-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4732573563-8">%</span><span class="nc" data-group-id="4732573563-8">Ecto.Changeset</span><span class="p" data-group-id="4732573563-8">{</span><span class="p" data-group-id="4732573563-8">}</span><span class="p" data-group-id="4732573563-7">}</span></code></pre>
   </section>
 </section>
 
