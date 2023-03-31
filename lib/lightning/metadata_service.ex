@@ -88,9 +88,9 @@ defmodule Lightning.MetadataService do
   end
 
   defp get_adaptor_path(adaptor) do
-    case AdaptorService.find_adaptor(@adaptor_service, adaptor) do
-      nil -> {:error, Error.new("no_matching_adaptor")}
-      %{path: path} -> {:ok, path}
+    case AdaptorService.install(@adaptor_service, adaptor) do
+      {:error, _} -> {:error, Error.new("no_matching_adaptor")}
+      {:ok, %{path: path}} -> {:ok, path}
     end
   end
 
