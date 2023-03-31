@@ -28,7 +28,7 @@ const getSignature = (fn: FunctionDescription) => {
   const paramList: string[] = fn.parameters.map(({ name }) => name);
   
 return <span>
-    {fn.magic ? <span style={{ float: 'left', marginLeft: '-25px' }}>✨</span>: ''}
+    {fn.magic ? <span style={{ float: 'left', marginLeft: '-18px' }}>✨</span>: ''}
     {[
       fn.name,
       '(',
