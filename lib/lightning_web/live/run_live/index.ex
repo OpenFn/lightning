@@ -13,23 +13,10 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.RunSearchForm
   alias Lightning.RunSearchForm.MultiSelectOption
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(_params, _session, socket) do
-    statuses = [
-      %MultiSelectOption{id: :success, label: "Success", selected: true},
-      %MultiSelectOption{id: :failure, label: "Failure", selected: true},
-      %MultiSelectOption{id: :timeout, label: "Timeout", selected: true},
-      %MultiSelectOption{id: :crash, label: "Crash", selected: true},
-      %MultiSelectOption{id: :pending, label: "Pending", selected: true}
-    ]
-
-    search_fields = [
-      %MultiSelectOption{id: :body, label: "Input body", selected: true},
-      %MultiSelectOption{id: :log, label: "Logs", selected: true}
-    ]
-
     WorkOrderService.subscribe(socket.assigns.project.id)
 
     workflows =
@@ -47,6 +34,7 @@ defmodule LightningWeb.RunLive.Index do
     {:ok,
      socket
      |> assign(
+       workflows: workflows,
        active_menu_item: :runs,
        work_orders: [],
        can_rerun_job: can_rerun_job,
@@ -57,13 +45,40 @@ defmodule LightningWeb.RunLive.Index do
            socket.assigns.project,
            &1
          )
-     )
-     |> init_search_form(
-       statuses: statuses,
-       search_fields: search_fields,
-       workflows: workflows
      )}
   end
+
+  # .../?..
+  # mount
+  # handle_params
+  #   calculate new assigns
+  # render
+
+  # ... a few moment later
+
+  # handle_event "validate"
+  #   all it does is make a URI
+  #
+  #   keep the params
+  #   calculate new assigns
+  #   push_patch .../?foo=bar
+
+  # handle_params
+  #   calculate new assigns
+  # render
+
+  # handle_event("validate", params, socket)
+  #   params = %{search_term: ..., workflow_ids: [1,2,3], workorder_statuses: [:success, ...]}
+  #   probably need a changeset for validation
+  # function to turn changeset |> apply_changes() |> do_the_query()
+
+  # ====
+  # search[run_status][success]&
+  #
+  # checkboxes - what does the data look like?
+  # status_success => true
+  # status_failure => true
+  # statuses => [%{selected: true}]
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -77,20 +92,38 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
-    changeset = socket.assigns.changeset
+    # Map.get()
+    IO.inspect(params, label: "Params")
+
+    %{"search_term" => "asa"}
+
+    socket =
+      socket
+      |> assign_search_form(params)
+
+    changeset = socket.assigns.changeset |> IO.inspect()
 
     socket
     |> assign(
       status_options: Ecto.Changeset.fetch_field!(changeset, :status_options),
-      search_field_options:
-        Ecto.Changeset.fetch_field!(changeset, :search_field_options),
+      search_field_options: Ecto.Changeset.fetch_field!(changeset, :search_field_options),
       page:
         Invocation.list_work_orders_for_project(
           socket.assigns.project,
           build_filter(changeset),
           params
-        )
+        ),
+      search_changeset:
+        params
+        |> Map.get("search", %{"search_term" => nil})
+        |> search_changeset()
+        |> IO.inspect(label: "apply_action :index")
     )
+  end
+
+  defp search_changeset(params) do
+    {%{}, %{search_term: :string}}
+    |> Ecto.Changeset.cast(params, [:search_term])
   end
 
   @impl true
@@ -107,7 +140,8 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> push_patch(
-       to: Routes.project_run_index_path(socket, :index, socket.assigns.project)
+       to:
+         Routes.project_run_index_path(socket, :index, socket.assigns.project, statuses: statuses)
      )}
   end
 
@@ -121,7 +155,14 @@ defmodule LightningWeb.RunLive.Index do
       |> assign(:changeset, changeset)
       |> assign(:search_field_options, search_fields)
 
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> push_patch(
+       to:
+         Routes.project_run_index_path(socket, :index, socket.assigns.project,
+           search_fields: search_fields
+         )
+     )}
   end
 
   def handle_info(
@@ -164,6 +205,18 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
+  def handle_event("validate_2", %{"search" => search_params} = _params, socket) do
+    %{"_target" => ["search", "search_term"], "search" => %{"search_term" => "asa"}}
+    IO.inspect(search_params, label: "validate_2")
+
+    {:noreply,
+     socket
+     |> assign(search_changeset: search_changeset(search_params))
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
+     )}
+  end
+
   def handle_event(
         "validate",
         %{
@@ -192,7 +245,14 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> push_patch(
-       to: Routes.project_run_index_path(socket, :index, socket.assigns.project)
+       to:
+         Routes.project_run_index_path(socket, :index, socket.assigns.project,
+           workflow: workflow_id,
+           after: date_after,
+           before: date_before,
+           wo_after: wo_date_after,
+           wo_before: wo_date_before
+         )
      )}
   end
 
@@ -216,14 +276,30 @@ defmodule LightningWeb.RunLive.Index do
       socket
       |> assign(:changeset, changeset)
 
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> push_patch(
+       to:
+         Routes.project_run_index_path(socket, :index, socket.assigns.project,
+           search_term: search_term
+         )
+     )}
   end
 
-  defp init_search_form(socket,
-         statuses: statuses,
-         search_fields: search_fields,
-         workflows: workflows
-       ) do
+  defp assign_search_form(socket, _params) do
+    statuses = [
+      %MultiSelectOption{id: :success, label: "Success", selected: true},
+      %MultiSelectOption{id: :failure, label: "Failure", selected: true},
+      %MultiSelectOption{id: :timeout, label: "Timeout", selected: true},
+      %MultiSelectOption{id: :crash, label: "Crash", selected: true},
+      %MultiSelectOption{id: :pending, label: "Pending", selected: true}
+    ]
+
+    search_fields = [
+      %MultiSelectOption{id: :body, label: "Input body", selected: true},
+      %MultiSelectOption{id: :log, label: "Logs", selected: true}
+    ]
+
     changeset =
       %RunSearchForm{}
       |> Ecto.Changeset.change()
@@ -232,7 +308,6 @@ defmodule LightningWeb.RunLive.Index do
 
     socket
     |> assign(:changeset, changeset)
-    |> assign(:workflows, workflows)
   end
 
   # return a keyword  list of criteria:value

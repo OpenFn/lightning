@@ -38,6 +38,17 @@
       <div class="w-96 bg-gray-200 ml-4 p-4 pt-0 sticky top-0 self-start rounded-md">
         <.form
           :let={f}
+          for={@search_changeset} 
+          as={:search}
+          phx-change="validate_2">
+          <%= text_input(f, :search_term,
+                placeholder: "Search run inputs and logs",
+                class:
+                  "block w-44 flex-1 rounded-md border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+              ) %>
+        </.form>
+        <%!-- <.form
+          :let={f}
           for={@changeset}
           id="run-search-form"
           phx-change="validate"
@@ -137,7 +148,7 @@
               fn statuses -> send(self(), {:selected_statuses, statuses}) end
             }
           />
-        </.form>
+        </.form> --%>
       </div>
     </div>
   </LayoutComponents.centered>
