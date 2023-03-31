@@ -24,9 +24,9 @@ const persistSettings = () => localStorage.setItem('lightning.job-editor.setting
 const iconStyle = "inline cursor-pointer h-6 w-6 mr-1 hover:text-primary-600"
 
 type TabSpec = {
-  label: string,
-  id: string,
-  icon: React.ReactNode
+  label: string;
+  id: string;
+  icon: React.ComponentClass<React.SVGProps<SVGSVGElement>>;
 }
 
 type TabsProps = { options: TabSpec[], onSelectionChange?: (newName: string) => void, verticalCollapse: boolean, initialSelection?: String };
@@ -67,10 +67,10 @@ const Tabs = ({ options, onSelectionChange, verticalCollapse, initialSelection }
 }
 
 type JobEditorProps = {
-  adaptor?: string;
-  source?: string;
+  adaptor: string;
+  source: string;
   disabled?: boolean;
-  metadata?: object;
+  metadata?: object | true;
   onSourceChanged?: (src: string) => void;
 }
 
@@ -123,7 +123,7 @@ export default ({ adaptor, source, disabled, metadata, onSourceChanged }: JobEdi
   </div>
   <div className={`flex h-full v-full flex-${vertical ? 'col' : 'row'}`}>
     <div className="flex-1 rounded-md border border-secondary-300 shadow-sm bg-vs-dark">
-      <Editor source={source} adaptor={adaptor} metadata={metadata} disabled={disabled} onChange={onSourceChanged} />
+      <Editor source={source} adaptor={adaptor} metadata={metadata === true ? undefined : metadata} disabled={disabled} onChange={onSourceChanged} />
     </div>
     <div className={`${showPanel ? 'flex flex-col flex-1 overflow-auto' : ''} bg-white`}>
       <div className={

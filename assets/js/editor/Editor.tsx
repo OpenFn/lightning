@@ -79,7 +79,7 @@ const defaultOptions: MonacoProps['options'] = {
 
 type Lib = {
   content: string;
-  filepath?: string;
+  filePath?: string;
 }
 
 async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
@@ -110,20 +110,28 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
       `@openfn/language-common@${commonVersion.replace("^","")}`,
       'module'
     );
-    results.push(common)
+    results.push(...common);
   }
 
+  // Load all the DTS files and squash them into a single namespace
+  // We seem to have to do this because Monaco doesn't recognise types declared in different files
+  // across namespaces
+  // This should work well enough on adaptors anyway
+  let bigFile = ''
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
-      const content = await fetchFile(`${specifier}${filePath}`);
-      results.push({
-        content: `declare ${type} "${name}" { ${content} }`,
-        filePath: `${name}${filePath}`,
-      });
+      let content = await (await fetchFile(`${specifier}${filePath}`));
+      bigFile += content;
     }
   }
+  results.push({
+    content: `declare ${type} { ${bigFile} }`,
+    filePath: `${name}$/types`,
+  });
+
   return results;
 }
+
 
 export default function Editor({
   source,
