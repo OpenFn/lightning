@@ -1,4 +1,5 @@
 import jp from 'jsonpath';
+import { ModelNode } from '../metadata-explorer/Model';
 
 const ensureArray = (x: any) => (Array.isArray(x) ? x : [x]);
 
@@ -32,9 +33,10 @@ const createCompletionProvider = (monaco, metadata) => {
   };
 
   const lookupValueSuggestions = (jsonPath: string) => {
-    const suggestions = query(jsonPath).map((s: string) => {
+    const suggestions = query(jsonPath).map((s: string | ModelNode) => {
       let label;
       let insertText;
+      let detail = '';
       if (typeof s === 'string') {
         insertText = label = `"${s}"`;
       } else {
@@ -42,12 +44,13 @@ const createCompletionProvider = (monaco, metadata) => {
         // For DHIS2 it might be nice to comment in the original value
         // is this a user preferece? Language preference? Should we always do this?
         insertText = `"${s.name}" /*${s.label}*/`; // presumptuous - need a better system for this
+        detail = s.label ? s.name : '';
       }
       return {
         label,
         kind: monaco.languages.CompletionItemKind.Value,
         insertText,
-        detail: s.label ? s.name : '',
+        detail,
         // Boost this up the autocomplete list
         sortText: `00-${label}`,
       };
@@ -60,7 +63,7 @@ const createCompletionProvider = (monaco, metadata) => {
   };
 
   const lookupPropertySuggestions = (jsonPath: string) => {
-    const suggestions = query(jsonPath).map((prop: object) => {
+    const suggestions = query(jsonPath).map((prop: ModelNode) => {
       const label = `${prop.label || prop.name}`;
       return {
         // https://microsoft.github.io/monaco-editor/api/interfaces/monaco.languages.CompletionItem.html#kind
