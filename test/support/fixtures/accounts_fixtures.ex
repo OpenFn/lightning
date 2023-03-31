@@ -34,12 +34,12 @@ defmodule Lightning.AccountsFixtures do
     user
   end
 
-  def api_token_fixture(attrs \\ []) when is_list(attrs) do
-    user = attrs[:user]
+  def api_token_fixture(user) do
+    token =
+      user
+      |> Lightning.Accounts.generate_api_token()
 
-    {:ok, token} = Lightning.Accounts.generate_api_token(user)
-
-    token
+    Lightning.Repo.get_by(Lightning.Accounts.UserToken, token: token)
   end
 
   def extract_user_token(fun) do

@@ -44,7 +44,7 @@ defmodule LightningWeb.Components.TokenDeletionModal do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id={"token-#{@id}"}>
+    <div>
       <PetalComponents.Modal.modal
         max_width="sm"
         title="Delete API Access Token"

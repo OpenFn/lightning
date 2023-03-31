@@ -2,8 +2,14 @@ defmodule LightningWeb.TokensLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Lightning.{AccountsFixtures}
 
   setup :register_and_log_in_user
+
+  defp create_api_token(%{user: user}) do
+    api_token = api_token_fixture(user)
+    %{api_token: api_token}
+  end
 
   describe "Index" do
     test "Access API Tokens page", %{conn: conn} do
@@ -61,61 +67,45 @@ defmodule LightningWeb.TokensLiveTest do
              |> Floki.text(sep: "\n")
              |> String.contains?("...")
     end
+  end
 
-    test "Delete an existing token", %{conn: conn, user: user} do
+  describe "Token modal" do
+    setup :create_api_token
+
+    test "Delete an existing token", %{conn: conn, api_token: api_token} do
       {:ok, token_live, _html} = live(conn, ~p"/profile/tokens")
-      token = api_token_fixture(user)
-
-      # assert token_live
-      #        |> element("#generate_new_token", "Generate New Token")
-      #        |> render_click() =~ "Token created successfully"
-
-      # regex = ~r{/\K[\w-]+(?=/delete)}
-
-      url =
-        token_live
-        |> element("table#tokens")
-        |> render()
-        |> Floki.parse_fragment!()
-        |> Floki.find("a[id=confirm_token_deletion]")
-        |> Floki.attribute("href")
-        |> Floki.text()
-
-      [token_id] = Regex.scan(regex, url) |> List.flatten()
 
       # find a <tr> that has id of `token-<id>`
-      # and then click the thing that is a[title=Delete]
+      assert token_live
+             |> has_element?("tr#token-#{api_token.id}")
 
-      assert has_element?(
-               token_live,
-               "a[id=confirm_token_deletion][href='/profile/tokens/#{token_id}/delete']"
-             )
-
-      # if there was any 'state' in the liveview from clicking the button or making a new one
-      # it's gone now
-
-      # click the button
-      # assert that we patched
+      # and then click the thing that is a#delete-token-#token_id
+      assert token_live
+             |> element("a#delete-token-#{api_token.id}")
+             |> render_click() =~ "Any applications or scripts using this token"
 
       # can see the modal
+      assert_patched(
+        token_live,
+        ~p"/profile/tokens/#{api_token.id}/delete"
+      )
+
       # click confirm
+      {:ok, no_token_live, _html} =
+        token_live
+        |> element("button[phx-click=delete_token]")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/profile/tokens")
+
       # assert patched / redirect
-      # assert we can't see `token-<id>`
-
-      {:ok, token_deletion, _html} =
-        live(conn, ~p"/profile/tokens/#{token_id}/delete")
-
-      assert token_deletion
-             |> element(
-               "button[phx-click=delete_token][phx-value-id=#{token_id}]"
-             )
-             |> render_click()
-             |> follow_redirect(conn, ~p"/profile/tokens")
-
-      {path, flash} = assert_redirect(token_deletion)
+      {path, flash} = assert_redirect(token_live)
 
       assert flash == %{"info" => "Token deleted successfully"}
       assert path == "/profile/tokens"
+
+      # assert we can't see `token-<id>`
+      refute no_token_live
+             |> has_element?("tr#token-#{api_token.id}")
     end
   end
 end
