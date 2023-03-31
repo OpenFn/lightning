@@ -197,8 +197,13 @@ export default function Editor({
       // Force the editor to resize
       listeners.current.updateLayout = (e: Event) => {
         editor.layout({ width: 0, height: 0});
-        setTimeout(
-          editor.layout, 1)
+        setTimeout(() => {
+          try {
+              editor.layout()
+          } catch(e) {
+            editor.layout()
+          }
+        }, 1);
       }
 
       document.addEventListener('insert-snippet', listeners.current.insertSnippet);
