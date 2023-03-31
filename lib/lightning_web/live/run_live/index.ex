@@ -31,10 +31,25 @@ defmodule LightningWeb.RunLive.Index do
         socket.assigns.project
       )
 
+    statuses = [
+      %{id: :success, label: "Success"},
+      %{id: :failure, label: "Failure"},
+      %{id: :timeout, label: "Timeout"},
+      %{id: :crash, label: "Crash"},
+      %{id: :pending, label: "Pending"}
+    ]
+
+    search_fields = [
+      %{id: :body, label: "Input body"},
+      %{id: :log, label: "Logs"}
+    ]
+
     {:ok,
      socket
      |> assign(
        workflows: workflows,
+       statuses: statuses,
+       search_fields: search_fields,
        active_menu_item: :runs,
        work_orders: [],
        can_rerun_job: can_rerun_job,
@@ -48,38 +63,6 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  # .../?..
-  # mount
-  # handle_params
-  #   calculate new assigns
-  # render
-
-  # ... a few moment later
-
-  # handle_event "validate"
-  #   all it does is make a URI
-  #
-  #   keep the params
-  #   calculate new assigns
-  #   push_patch .../?foo=bar
-
-  # handle_params
-  #   calculate new assigns
-  # render
-
-  # handle_event("validate", params, socket)
-  #   params = %{search_term: ..., workflow_ids: [1,2,3], workorder_statuses: [:success, ...]}
-  #   probably need a changeset for validation
-  # function to turn changeset |> apply_changes() |> do_the_query()
-
-  # ====
-  # search[run_status][success]&
-  #
-  # checkboxes - what does the data look like?
-  # status_success => true
-  # status_failure => true
-  # statuses => [%{selected: true}]
-
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply,
@@ -91,100 +74,114 @@ defmodule LightningWeb.RunLive.Index do
      |> apply_action(socket.assigns.live_action, params)}
   end
 
+  defp get_query_data(socket, params) do
+    search = Map.get(params, "search")
+
+    if search do
+      search =
+        Enum.map(search, fn {key, value} ->
+          {String.to_existing_atom(key), value}
+        end)
+
+      statuses = Enum.map(socket.assigns.statuses, fn status -> status.id end)
+
+      search_fields =
+        Enum.map(socket.assigns.search_fields, fn search_field ->
+          search_field.id
+        end)
+
+      statuses =
+        Enum.map(search, fn {key, value} ->
+          if key in statuses do
+            key
+          end
+        end)
+        |> Enum.filter(fn v -> v end)
+
+      search_fields =
+        Enum.map(search, fn {key, value} ->
+          if key in search_fields do
+            {key, String.to_existing_atom(value)}
+          end
+        end)
+        |> Enum.filter(fn v -> v end)
+
+      remainder =
+        Enum.map(search, fn {key, value} ->
+          kw = statuses ++ search_fields
+
+          if is_nil(kw[key]) do
+            {key, value}
+          end
+        end)
+        |> Enum.filter(fn v -> v end)
+
+      [
+        status: statuses,
+        search_fields: search_fields,
+        search_term: remainder[:search_term],
+        workflow_id: remainder[:workflow_id],
+        date_after: remainder[:date_after],
+        date_before: remainder[:date_before],
+        wo_date_after: remainder[:wo_date_after],
+        wo_date_before: remainder[:wo_date_before]
+      ]
+      |> IO.inspect()
+    else
+      nil
+    end
+  end
+
   defp apply_action(socket, :index, params) do
-    # Map.get()
-    IO.inspect(params, label: "Params")
-
-    %{"search_term" => "asa"}
-
-    socket =
-      socket
-      |> assign_search_form(params)
-
-    changeset = socket.assigns.changeset |> IO.inspect()
+    data = get_query_data(socket, params)
 
     socket
     |> assign(
-      status_options: Ecto.Changeset.fetch_field!(changeset, :status_options),
-      search_field_options: Ecto.Changeset.fetch_field!(changeset, :search_field_options),
       page:
         Invocation.list_work_orders_for_project(
           socket.assigns.project,
-          build_filter(changeset),
+          data,
           params
         ),
       search_changeset:
         params
         |> Map.get("search", %{"search_term" => nil})
         |> search_changeset()
-        |> IO.inspect(label: "apply_action :index")
     )
   end
 
   defp search_changeset(params) do
-    {%{}, %{search_term: :string}}
-    |> Ecto.Changeset.cast(params, [:search_term])
-  end
-
-  @impl true
-  def handle_info({:selected_statuses, statuses}, socket) do
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_embed(:status_options, statuses)
-
-    socket =
-      socket
-      |> assign(:changeset, changeset)
-      |> assign(:status_options, statuses)
-
-    {:noreply,
-     socket
-     |> push_patch(
-       to:
-         Routes.project_run_index_path(socket, :index, socket.assigns.project, statuses: statuses)
-     )}
-  end
-
-  def handle_info({:selected_search_fields, search_fields}, socket) do
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_embed(:search_field_options, search_fields)
-
-    socket =
-      socket
-      |> assign(:changeset, changeset)
-      |> assign(:search_field_options, search_fields)
-
-    {:noreply,
-     socket
-     |> push_patch(
-       to:
-         Routes.project_run_index_path(socket, :index, socket.assigns.project,
-           search_fields: search_fields
-         )
-     )}
-  end
-
-  def handle_info(
-        {_, %Lightning.Workorders.Events.AttemptCreated{attempt: attempt}},
-        socket
-      ) do
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id
-    )
-
-    {:noreply, socket}
-  end
-
-  def handle_info(
-        {_, %Lightning.Workorders.Events.AttemptUpdated{attempt: attempt}},
-        socket
-      ) do
-    send_update(LightningWeb.RunLive.WorkOrderComponent,
-      id: attempt.work_order_id
-    )
-
-    {:noreply, socket}
+    {%{},
+     %{
+       search_term: :string,
+       body: :boolean,
+       log: :boolean,
+       workflow_id: :string,
+       date_after: :utc_datetime,
+       date_before: :utc_datetime,
+       wo_date_after: :utc_datetime,
+       wo_date_before: :utc_datetime,
+       success: :boolean,
+       failure: :boolean,
+       timeout: :boolean,
+       crash: :boolean,
+       pending: :boolean
+     }}
+    |> Ecto.Changeset.cast(params, [
+      :search_term,
+      :body,
+      :log,
+      :workflow_id,
+      :date_after,
+      :date_before,
+      :wo_date_after,
+      :wo_date_before,
+      :success,
+      :failure,
+      :timeout,
+      :crash,
+      :pending
+    ])
   end
 
   @impl true
@@ -205,132 +202,12 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("validate_2", %{"search" => search_params} = _params, socket) do
-    %{"_target" => ["search", "search_term"], "search" => %{"search_term" => "asa"}}
-    IO.inspect(search_params, label: "validate_2")
-
+  def handle_event("validate", %{"search" => search_params} = _params, socket) do
     {:noreply,
      socket
      |> assign(search_changeset: search_changeset(search_params))
      |> push_patch(
        to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
      )}
-  end
-
-  def handle_event(
-        "validate",
-        %{
-          "run_search_form" => %{
-            "workflow_id" => workflow_id,
-            "date_after" => date_after,
-            "date_before" => date_before,
-            "wo_date_after" => wo_date_after,
-            "wo_date_before" => wo_date_before
-          }
-        },
-        socket
-      ) do
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_change(:workflow_id, workflow_id)
-      |> Ecto.Changeset.put_change(:date_after, date_after)
-      |> Ecto.Changeset.put_change(:date_before, date_before)
-      |> Ecto.Changeset.put_change(:wo_date_after, wo_date_after)
-      |> Ecto.Changeset.put_change(:wo_date_before, wo_date_before)
-
-    socket =
-      socket
-      |> assign(:changeset, changeset)
-
-    {:noreply,
-     socket
-     |> push_patch(
-       to:
-         Routes.project_run_index_path(socket, :index, socket.assigns.project,
-           workflow: workflow_id,
-           after: date_after,
-           before: date_before,
-           wo_after: wo_date_after,
-           wo_before: wo_date_before
-         )
-     )}
-  end
-
-  # NOTE: this event was previously called "ignore", however there is an
-  # issue with form recovery in LiveView where only the first input (if it has
-  # a `phx-change` on it) is sent.
-  # https://github.com/phoenixframework/phoenix_live_view/issues/2333
-  # We have changed the event name to "validate" since that is what
-  # the form recovery event will use.
-  # TODO: see if this is still relevant.
-  def handle_event(
-        "validate",
-        %{"run_search_form" => %{"search_term" => search_term}},
-        socket
-      ) do
-    changeset =
-      socket.assigns.changeset
-      |> Ecto.Changeset.put_change(:search_term, search_term)
-
-    socket =
-      socket
-      |> assign(:changeset, changeset)
-
-    {:noreply,
-     socket
-     |> push_patch(
-       to:
-         Routes.project_run_index_path(socket, :index, socket.assigns.project,
-           search_term: search_term
-         )
-     )}
-  end
-
-  defp assign_search_form(socket, _params) do
-    statuses = [
-      %MultiSelectOption{id: :success, label: "Success", selected: true},
-      %MultiSelectOption{id: :failure, label: "Failure", selected: true},
-      %MultiSelectOption{id: :timeout, label: "Timeout", selected: true},
-      %MultiSelectOption{id: :crash, label: "Crash", selected: true},
-      %MultiSelectOption{id: :pending, label: "Pending", selected: true}
-    ]
-
-    search_fields = [
-      %MultiSelectOption{id: :body, label: "Input body", selected: true},
-      %MultiSelectOption{id: :log, label: "Logs", selected: true}
-    ]
-
-    changeset =
-      %RunSearchForm{}
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.put_embed(:status_options, statuses)
-      |> Ecto.Changeset.put_embed(:search_field_options, search_fields)
-
-    socket
-    |> assign(:changeset, changeset)
-  end
-
-  # return a keyword  list of criteria:value
-  defp build_filter(changeset) do
-    status =
-      Ecto.Changeset.fetch_field!(changeset, :status_options)
-      |> Enum.filter(&(&1.selected in [true, "true"]))
-      |> Enum.map(& &1.id)
-
-    search_fields =
-      Ecto.Changeset.fetch_field!(changeset, :search_field_options)
-      |> Enum.filter(&(&1.selected in [true, "true"]))
-      |> Enum.map(& &1.id)
-
-    [
-      status: status,
-      search_fields: search_fields,
-      search_term: Ecto.Changeset.fetch_field!(changeset, :search_term),
-      workflow_id: Ecto.Changeset.fetch_field!(changeset, :workflow_id),
-      date_after: Ecto.Changeset.fetch_field!(changeset, :date_after),
-      date_before: Ecto.Changeset.fetch_field!(changeset, :date_before),
-      wo_date_after: Ecto.Changeset.fetch_field!(changeset, :wo_date_after),
-      wo_date_before: Ecto.Changeset.fetch_field!(changeset, :wo_date_before)
-    ]
   end
 end

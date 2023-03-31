@@ -412,7 +412,7 @@ defmodule Lightning.Invocation do
         wo_date_before: wo_date_before
       ) do
     last_attempts =
-      from att in Lightning.Attempt,
+      from(att in Lightning.Attempt,
         group_by: att.work_order_id,
         select: %{
           work_order_id: att.work_order_id,
@@ -422,9 +422,10 @@ defmodule Lightning.Invocation do
               att.inserted_at
             )
         }
+      )
 
     last_runs =
-      from r in Lightning.Invocation.Run,
+      from(r in Lightning.Invocation.Run,
         join: att in assoc(r, :attempts),
         group_by: att.id,
         select: %{
@@ -435,6 +436,7 @@ defmodule Lightning.Invocation do
               r.finished_at
             )
         }
+      )
 
     from(wo in Lightning.WorkOrder,
       join: wo_re in assoc(wo, :reason),
@@ -442,8 +444,7 @@ defmodule Lightning.Invocation do
       as: :workflow,
       join: att in assoc(wo, :attempts),
       join: last in subquery(last_attempts),
-      on:
-        last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
+      on: last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
       join: r in assoc(att, :runs),
       as: :runs,
       join: last_run in subquery(last_runs),
