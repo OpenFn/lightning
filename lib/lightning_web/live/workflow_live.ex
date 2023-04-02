@@ -2,7 +2,7 @@ defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   alias Lightning.Jobs
   alias Lightning.Policies.{Permissions, ProjectUsers}
@@ -37,7 +37,7 @@ defmodule LightningWeb.WorkflowLive do
           </:title>
         </LayoutComponents.header>
       </:header>
-      <div class="relative h-full flex">
+      <div class="relative flex h-full">
         <%= case @live_action do %>
           <% :index -> %>
             <LayoutComponents.centered>
@@ -56,8 +56,8 @@ defmodule LightningWeb.WorkflowLive do
                 encoded_project_space={@encoded_project_space}
               />
             </div>
-            <div class="grow-0 w-1/2 relative">
-              <div class="absolute w-full inset-y-0 z-10">
+            <div class="relative w-1/2 grow-0">
+              <div class="absolute inset-y-0 z-10 w-full">
                 <div class="w-auto h-full" id="job-pane">
                   <.live_component
                     module={LightningWeb.JobLive.JobBuilder}
@@ -86,8 +86,8 @@ defmodule LightningWeb.WorkflowLive do
                 encoded_project_space={@encoded_project_space}
               />
             </div>
-            <div class="grow-0 w-1/2 relative">
-              <div class="absolute w-full inset-y-0 z-10">
+            <div class="relative w-1/2 grow-0">
+              <div class="absolute inset-y-0 z-10 w-full">
                 <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
                   <.live_component
                     module={LightningWeb.JobLive.JobBuilder}
@@ -123,8 +123,8 @@ defmodule LightningWeb.WorkflowLive do
               <% end %>
             </div>
           <% :edit_workflow -> %>
-            <div class="absolute top-0 right-0 m-2 z-10">
-              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
+            <div class="absolute top-0 right-0 z-10 m-2">
+              <div class="p-3 bg-white shadow-xl w-80 rounded-md ring-1 ring-black ring-opacity-5">
                 <.live_component
                   module={LightningWeb.WorkflowLive.WorkflowInspector}
                   id={@current_workflow.id}
@@ -143,9 +143,7 @@ defmodule LightningWeb.WorkflowLive do
 
   def encode_project_space(%Workflows.Workflow{} = workflow) do
     workflow
-    |> Lightning.Repo.preload(
-      jobs: [:credential, :workflow, trigger: [:upstream_job]]
-    )
+    |> Lightning.Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])
     |> List.wrap()
     |> Workflows.to_project_space()
     |> Jason.encode!()
@@ -216,9 +214,7 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply,
      socket
      |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
-     |> push_patch(
-       to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}"
-     )}
+     |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}")}
   end
 
   @impl true
@@ -255,8 +251,7 @@ defmodule LightningWeb.WorkflowLive do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")
        |> push_patch(
-         to:
-           ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
+         to: ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
        )}
     end
   end
@@ -298,9 +293,7 @@ defmodule LightningWeb.WorkflowLive do
         {
           :noreply,
           socket
-          |> assign(
-            workflows: Workflows.get_workflows_for(socket.assigns.project)
-          )
+          |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
           |> put_flash(:info, "Workflow deleted successfully")
         }
 
@@ -365,8 +358,7 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :new_job, %{"upstream_id" => upstream_id}) do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
-    %Lightning.Jobs.Job{workflow: workflow} =
-      upstream_job |> Lightning.Repo.preload(:workflow)
+    %Lightning.Jobs.Job{workflow: workflow} = upstream_job |> Lightning.Repo.preload(:workflow)
 
     socket
     |> assign(
@@ -414,8 +406,7 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
     job = Lightning.Jobs.get_job!(job_id)
 
-    %Lightning.Jobs.Job{workflow: workflow} =
-      job |> Lightning.Repo.preload(:workflow)
+    %Lightning.Jobs.Job{workflow: workflow} = job |> Lightning.Repo.preload(:workflow)
 
     socket
     |> assign(
@@ -449,9 +440,7 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :show, %{"workflow_id" => workflow_id}) do
     workflow =
       Lightning.Workflows.get_workflow!(workflow_id)
-      |> Lightning.Repo.preload(
-        jobs: [:credential, :workflow, trigger: [:upstream_job]]
-      )
+      |> Lightning.Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])
 
     socket
     |> assign(

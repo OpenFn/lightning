@@ -15,7 +15,8 @@ defmodule LightningWeb.ErrorHelpers do
       content_tag(
         :span,
         translate_error(error),
-        Keyword.merge([phx_feedback_for: input_name(form, field)], attrs)
+        class: "text-red-500",
+        phx_feedback_for: input_name(form, field)
       )
     end)
   end

@@ -8,7 +8,7 @@ defmodule LightningWeb.LayoutComponents do
   def menu_items(assigns) do
     ~H"""
     <%= if assigns[:project] do %>
-      <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+      <div class="p-2 mt-4 mb-4 text-center text-primary-300 bg-primary-800">
         <%= if Enum.count(@projects) > 1 do %>
           <.dropdown placement="right" label={@project.name} js_lib="live_view_js">
             <%= for project <- @projects do %>
@@ -34,7 +34,7 @@ defmodule LightningWeb.LayoutComponents do
         to={Routes.project_workflow_path(@socket, :index, @project.id)}
         active={@active_menu_item == :overview}
       >
-        <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
+        <Icon.workflows class="inline-block w-5 h-5 mr-2 align-middle" />
         <span class="inline-block align-middle">Workflows</span>
       </Settings.menu_item>
 
@@ -42,7 +42,7 @@ defmodule LightningWeb.LayoutComponents do
         to={Routes.project_run_index_path(@socket, :index, @project.id)}
         active={@active_menu_item == :runs}
       >
-        <Icon.runs class="h-5 w-5 inline-block mr-2" />
+        <Icon.runs class="inline-block w-5 h-5 mr-2" />
         <span class="inline-block align-middle">History</span>
       </Settings.menu_item>
 
@@ -50,7 +50,7 @@ defmodule LightningWeb.LayoutComponents do
         to={Routes.project_project_settings_path(@socket, :index, @project.id)}
         active={@active_menu_item == :settings}
       >
-        <Icon.settings class="h-5 w-5 inline-block mr-2" />
+        <Icon.settings class="inline-block w-5 h-5 mr-2" />
         <span class="inline-block align-middle">Settings</span>
       </Settings.menu_item>
       <!-- # Commented out until new dataclips/globals list is fully functional. -->
@@ -58,15 +58,15 @@ defmodule LightningWeb.LayoutComponents do
       to={Routes.project_dataclip_index_path(@socket, :index, @project.id)}
       active={@active_menu_item == :dataclips}
     >
-      <Icon.dataclips class="h-5 w-5 inline-block mr-2" />
+      <Icon.dataclips class="inline-block w-5 h-5 mr-2" />
       <span class="inline-block align-middle">Dataclips</span>
     </Settings.menu_item> -->
     <% else %>
       <Settings.menu_item to={Routes.profile_edit_path(@socket, :edit)}>
-        <Heroicons.cog class="h-5 w-5 inline-block mr-2" /> User Profile
+        <Heroicons.cog class="inline-block w-5 h-5 mr-2" /> User Profile
       </Settings.menu_item>
       <Settings.menu_item to={Routes.credential_index_path(@socket, :index)}>
-        <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
+        <Heroicons.key class="inline-block w-5 h-5 mr-2" /> Credentials
       </Settings.menu_item>
     <% end %>
     """
@@ -75,12 +75,12 @@ defmodule LightningWeb.LayoutComponents do
   # https://play.tailwindcss.com/r7kBDT2cJY?layout=horizontal
   def page_content(assigns) do
     ~H"""
-    <div class="flex h-full w-full flex-col">
+    <div class="flex flex-col w-full h-full">
       <%= if assigns[:header], do: render_slot(@header) %>
-      <div class="flex-auto bg-secondary-100 relative">
+      <div class="relative flex-auto bg-secondary-100">
         <section
           id="inner_content"
-          class="overflow-y-auto absolute top-0 bottom-0 left-0 right-0"
+          class="absolute top-0 bottom-0 left-0 right-0 overflow-y-auto"
         >
           <%= render_slot(@inner_block) %>
         </section>
@@ -91,9 +91,9 @@ defmodule LightningWeb.LayoutComponents do
 
   def header(assigns) do
     ~H"""
-    <div class="flex-none bg-white shadow-sm z-20">
-      <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
-        <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
+    <div class="z-20 flex-none bg-white shadow-sm">
+      <div class="flex items-center h-20 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <h1 class="flex items-center text-3xl font-bold text-secondary-900">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
         <div class="grow"></div>
@@ -138,7 +138,7 @@ defmodule LightningWeb.LayoutComponents do
 
   def centered(assigns) do
     ~H"""
-    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <div class="w-3/4 py-6 mx-auto sm:px-6 lg:px-8">
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -147,12 +147,12 @@ defmodule LightningWeb.LayoutComponents do
   def nav(assigns) do
     ~H"""
     <nav class="bg-secondary-800">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center">
             <div class="flex-shrink-0">
               <img
-                class="h-8 w-8"
+                class="w-8 h-8"
                 src={Routes.static_path(@conn, "/images/square-logo.png")}
                 alt="OpenFn"
               />

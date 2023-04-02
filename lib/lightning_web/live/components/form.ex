@@ -2,16 +2,16 @@ defmodule LightningWeb.Components.Form do
   @moduledoc false
   use LightningWeb, :component
 
-  slot :inner_block, required: true
-  attr :changeset, :map
-  attr :rest, :global, include: ~w(form disabled)
+  slot(:inner_block, required: true)
+  attr(:changeset, :map)
+  attr(:rest, :global, include: ~w(form disabled))
 
   @spec submit_button(Phoenix.LiveView.Socket.assigns()) :: any()
   def submit_button(assigns) do
     base_classes = ~w[
       inline-flex
       justify-center
-      py-2
+      py-4
       px-4
       border
       border-transparent
@@ -264,9 +264,9 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  attr :form, :any, required: true
-  attr :field, :any, required: true
-  attr :opts, :global
+  attr(:form, :any, required: true)
+  attr(:field, :any, required: true)
+  attr(:opts, :global)
 
   def error(assigns) do
     error_classes = ~w[
@@ -341,11 +341,11 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  attr :form, :any, required: true
-  attr :field, :any, required: true
-  attr :title, :string
-  attr :tooltip, :string
-  attr :opts, :global, include: ~w(for value)
+  attr(:form, :any, required: true)
+  attr(:field, :any, required: true)
+  attr(:title, :string)
+  attr(:tooltip, :string)
+  attr(:opts, :global, include: ~w(for value))
 
   def label_field(assigns) do
     label_classes = ~w[
@@ -380,11 +380,11 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  attr :form, :any
-  attr :name, :any
-  attr :values, :list
-  attr :value, :any, required: false
-  attr :rest, :global, include: ~w(selected disabled prompt)
+  attr(:form, :any)
+  attr(:name, :any)
+  attr(:values, :list)
+  attr(:value, :any, required: false)
+  attr(:rest, :global, include: ~w(selected disabled prompt))
 
   def select_field(assigns) do
     select_classes = ~w[
