@@ -54,6 +54,8 @@ defmodule LightningWeb.Router do
 
     resources "/jobs", API.JobController, only: [:index, :show]
     resources "/runs", API.RunController, only: [:index, :show]
+
+    resources "/provision", API.ProvisioningController, only: [:create]
   end
 
   ## Authentication routes

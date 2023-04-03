@@ -13,6 +13,8 @@ defmodule Lightning.Projects.Importer do
   alias Lightning.Jobs.Job
 
   def import_multi_for_project(project_data, user) do
+    project_data = project_data |> Lightning.Helpers.stringify_keys()
+
     Multi.new()
     |> put_project(project_data, user)
     |> put_credentials(project_data, user)
@@ -26,13 +28,7 @@ defmodule Lightning.Projects.Importer do
 
       attrs =
         project_data
-        |> Map.put(:id, id)
-        |> Map.put(:project_users, [
-          %{
-            project_id: id,
-            user_id: user.id
-          }
-        ])
+        |> Map.merge(%{"id" => id, "project_users" => [%{"user_id" => user.id}]})
 
       %Project{}
       |> Project.changeset(attrs)
@@ -45,15 +41,13 @@ defmodule Lightning.Projects.Importer do
         import_transaction
       ) do
     workflow =
-      workflow
-      |> Map.put(:id, workflow_id)
-      |> Map.put(:project_id, project_id)
+      Map.merge(workflow, %{
+        "id" => workflow_id,
+        "project_id" => project_id
+      })
 
     %Workflow{}
-    |> cast(
-      workflow,
-      [:name, :project_id, :id]
-    )
+    |> cast(workflow, [:name, :project_id, :id])
     |> cast_assoc(:jobs,
       with:
         {__MODULE__, :import_job_changeset, [workflow_id, import_transaction]}
@@ -61,14 +55,18 @@ defmodule Lightning.Projects.Importer do
   end
 
   def import_job_changeset(job, attrs, workflow_id, import_transaction) do
-    credential_key = attrs[:credential]
+    credential_key = attrs["credential"]
+
+    attrs = Map.merge(attrs, %{"workflow_id" => workflow_id})
 
     if credential_key do
       credential = import_transaction["credential::#{credential_key}"]
 
       if credential do
         %{project_credentials: [%{id: project_credential_id}]} = credential
-        attrs = Map.put(attrs, :project_credential_id, project_credential_id)
+
+        attrs =
+          Map.merge(attrs, %{"project_credential_id" => project_credential_id})
 
         job
         |> Job.changeset(attrs, workflow_id)
@@ -84,7 +82,7 @@ defmodule Lightning.Projects.Importer do
   end
 
   defp put_workflows(multi, project_data) do
-    workflows = project_data[:workflows] || []
+    workflows = project_data["workflows"] || []
 
     workflows
     |> Enum.reduce(multi, fn workflow, m ->
@@ -102,25 +100,29 @@ defmodule Lightning.Projects.Importer do
   end
 
   defp put_credentials(multi, project_data, user) do
-    credentials = project_data[:credentials] || []
+    credentials = project_data["credentials"] || []
 
     credentials
     |> Enum.reduce(multi, fn credential, m ->
-      Multi.insert(m, "credential::#{credential.key}", fn %{
-                                                            project: project
-                                                          } ->
+      Multi.insert(m, "credential::#{credential["key"]}", fn %{
+                                                               project: project
+                                                             } ->
         id = Ecto.UUID.generate()
 
         attrs =
-          credential
-          |> Map.put(:id, id)
-          |> Map.put(:user_id, user.id)
-          |> Map.put(:project_credentials, [
+          Map.merge(
+            credential,
             %{
-              project_id: project.id,
-              credential_id: id
+              "id" => id,
+              "user_id" => user.id,
+              "project_credentials" => [
+                %{
+                  "project_id" => project.id,
+                  "credential_id" => id
+                }
+              ]
             }
-          ])
+          )
 
         %Credential{}
         |> Credential.changeset(attrs)

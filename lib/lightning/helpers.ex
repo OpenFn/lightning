@@ -34,6 +34,24 @@ defmodule Lightning.Helpers do
   end
 
   @doc """
+  Recursively stringify keys for maps and lists.
+  """
+  def stringify_keys(data) when is_map(data) do
+    Enum.reduce(data, [], fn {k, v}, acc ->
+      [{to_string(k), stringify_keys(v)} | acc]
+    end)
+    |> Map.new()
+  end
+
+  def stringify_keys(data) when is_list(data) do
+    Enum.map(data, &stringify_keys/1)
+  end
+
+  def stringify_keys(other) do
+    other
+  end
+
+  @doc """
   Converts milliseconds (integer) to a human duration, such as "1 minute" or
   "45 years, 6 months, 5 days, 21 hours, 12 minutes, 34 seconds" using
   `Timex.Format.Duration.Formatters.Humanized.format()`.
