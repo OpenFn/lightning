@@ -81,7 +81,8 @@ defmodule Lightning.Application do
       # Start the Endpoint (http/https)
       LightningWeb.Endpoint,
       adaptor_registry_childspec,
-      adaptor_service_childspec
+      adaptor_service_childspec,
+      {Lightning.TaskWorker, name: :cli_task_worker}
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]

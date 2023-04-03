@@ -300,7 +300,7 @@ defmodule LightningWeb.Components.Common do
   def panel_content(assigns) do
     ~H"""
     <div
-      class="h-[calc(100%-0.75rem)]"
+      class="h-[calc(100%-0.4rem)]"
       data-panel-hash={@for_hash}
       style="display: none;"
       lv-keep-style

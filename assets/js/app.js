@@ -25,12 +25,17 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
+import JobEditor from './job-editor';
 import WorkflowDiagram from './workflow-diagram';
-import AdaptorDocs from './adaptor-docs';
 import TabSelector from './tab-selector';
-import Editor from './editor';
+import JobEditorResizer from './job-editor-resizer/mount';
 
-let Hooks = { WorkflowDiagram, AdaptorDocs, Editor, TabSelector };
+let Hooks = {
+  WorkflowDiagram,
+  TabSelector,
+  JobEditor,
+  JobEditorResizer,
+};
 
 Hooks.Flash = {
   mounted() {
@@ -52,20 +57,6 @@ Hooks.AssocListChange = {
     this.el.addEventListener('change', _event => {
       this.pushEventTo(this.el, 'select_item', { id: this.el.value });
     });
-  },
-};
-
-Hooks.AutoResize = {
-  mounted() {
-    this.parent = this.el.parentElement;
-    this.el.style.height = `${this.parent.clientHeight - 1}px`;
-
-    this.listener = addEventListener('resize', _event => {
-      this.el.style.height = `${this.parent.clientHeight - 1}px`;
-    });
-  },
-  destroyed() {
-    removeEventListener('resize', this.listener);
   },
 };
 

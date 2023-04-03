@@ -184,22 +184,13 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="editor">
-            <div class="flex flex-col h-full">
-              <div
-                phx-hook="Editor"
-                phx-update="ignore"
-                id={"job-editor-#{@job_id}"}
-                class=" rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
-                data-adaptor={@resolved_job_adaptor}
-                data-source={@job_body}
-                data-change-event="job_body_changed"
-                phx-target={@myself}
-                data-disabled={"#{!@can_edit_job}"}
-              />
-              <div class="flex-1 overflow-auto">
-                <.docs_component adaptor={@resolved_job_adaptor} />
-              </div>
-            </div>
+            <.job_editor_component
+              adaptor={@resolved_job_adaptor}
+              source={@job_body}
+              id={"job-editor-#{@job_id}"}
+              disabled={!@can_edit_job}
+              phx-target={@myself}
+            />
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="output">
             <%= if @follow_run_id do %>
@@ -284,6 +275,35 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     {:noreply, socket |> assign_changeset_and_params(%{"body" => source})}
+  end
+
+  def handle_event("request_metadata", _params, socket) do
+    pid = self()
+
+    adaptor = socket.assigns.changeset |> Ecto.Changeset.get_field(:adaptor)
+
+    credential =
+      socket.assigns.changeset |> Ecto.Changeset.get_field(:credential)
+
+    Task.start(fn ->
+      metadata =
+        Lightning.MetadataService.fetch(adaptor, credential)
+        |> case do
+          {:error, %{type: error_type}} ->
+            %{"error" => error_type}
+
+          {:ok, metadata} ->
+            metadata
+        end
+
+      send_update(pid, __MODULE__,
+        id: id(socket.assigns.job_id),
+        metadata: metadata,
+        event: :metadata_ready
+      )
+    end)
+
+    {:noreply, socket}
   end
 
   def handle_event("open_new_credential", _params, socket) do
@@ -451,6 +471,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)
      |> assign_new(:is_persisted, fn -> not is_nil(job.id) end)}
+  end
+
+  def update(%{event: :metadata_ready, metadata: metadata}, socket) do
+    {:ok, socket |> push_event("metadata_ready", metadata)}
   end
 
   def update(%{event: :job_adaptor_changed, job_adaptor: job_adaptor}, socket) do

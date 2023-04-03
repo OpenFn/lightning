@@ -26,8 +26,16 @@ const doCopy = async (text: string) => {
 
 const getSignature = (fn: FunctionDescription) => {
   const paramList: string[] = fn.parameters.map(({ name }) => name);
-
-  return `${fn.name}(${paramList.join(', ')})`
+  
+return <span>
+    {fn.magic ? <span style={{ float: 'left', marginLeft: '-18px' }}>✨</span>: ''}
+    {[
+      fn.name,
+      '(',
+      paramList.join(', '),
+      ')'
+    ].join('')}
+  </span>
 }
 
 const PreButton = ({ label, onClick, tooltip }: PreButtonFunctionProps) => 
@@ -76,9 +84,9 @@ const Example = ({ eg, onInsert }: ExampleProps) => {
 
 const RenderFunction = ({ fn, onInsert }: RenderFunctionProps) => {
   return (
-    <details>
-      <summary className="text-m text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm">
-        <span className="relative top-px">{getSignature(fn)}</span>
+    <details className="ml-4">
+      <summary className="text-sm text-secondary-700 mb-1 cursor-pointer marker:text-slate-600 marker:text-sm whitespace-nowrap hover:bg-sky-50/50">
+        {getSignature(fn)}
       </summary>
       <div className="block mb-4 pl-4">
         <p className="block text-sm" dangerouslySetInnerHTML={{ __html: marked.parse(fn.description)}}></p>

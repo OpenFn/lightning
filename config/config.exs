@@ -64,7 +64,6 @@ config :esbuild,
       ~w(js/app.js
          js/storybook.js
          js/workflow-diagram/component.tsx
-         js/adaptor-docs/index.tsx
          js/editor/Editor.tsx
          fonts/inter.css
          fonts/fira-code.css

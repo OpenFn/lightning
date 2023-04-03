@@ -162,6 +162,10 @@ config :lightning, LightningWeb.Endpoint,
     compress: true
   ]
 
+if log_level = System.get_env("LOG_LEVEL") do
+  config :logger, level: log_level |> String.to_atom()
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -206,10 +210,6 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: origins,
     server: true
-
-  if log_level = System.get_env("LOG_LEVEL") do
-    config :logger, level: log_level |> String.to_atom()
-  end
 
   # ## Using releases
   #

@@ -86,8 +86,9 @@ defmodule LightningWeb.WorkflowLive do
                 encoded_project_space={@encoded_project_space}
               />
             </div>
-            <div class="grow-0 w-1/2 relative">
-              <div class="absolute w-full inset-y-0 z-10">
+            <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
+              <.resize_component id={"resizer-#{@job.id}"} />
+              <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
                 <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
                   <.live_component
                     module={LightningWeb.JobLive.JobBuilder}
@@ -412,17 +413,16 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
-    job = Lightning.Jobs.get_job!(job_id)
-
-    %Lightning.Jobs.Job{workflow: workflow} =
-      job |> Lightning.Repo.preload(:workflow)
+    job =
+      Lightning.Jobs.get_job!(job_id)
+      |> Lightning.Repo.preload([:workflow, :credential])
 
     socket
     |> assign(
       active_menu_item: :overview,
       job: job,
-      current_workflow: workflow,
-      encoded_project_space: encode_project_space(workflow),
+      current_workflow: job.workflow,
+      encoded_project_space: encode_project_space(job.workflow),
       page_title: "Workflows"
     )
   end
