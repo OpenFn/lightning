@@ -58,7 +58,7 @@ const defaultOptions: MonacoProps['options'] = {
   scrollBeyondLastLine: false,
   showFoldingControls: 'always',
   // automaticLayout: true, // TODO this may impact performance as it polls
-  
+
   // Hide the right-hand "overview" ruler
   overviewRulerLanes: 0,
   overviewRulerBorder: false,
@@ -107,7 +107,7 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
     }
 
     const common = await loadDTS(
-      `@openfn/language-common@${commonVersion.replace("^","")}`,
+      `@openfn/language-common@${commonVersion.replace("^", "")}`,
       'module'
     );
     results.push(...common);
@@ -120,7 +120,7 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
   let bigFile = ''
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
-      let content = await (await fetchFile(`${specifier}${filePath}`));
+      let content = await fetchFile(`${specifier}${filePath}`);
       bigFile += content;
     }
   }
@@ -144,7 +144,7 @@ export default function Editor({
   const [loading, setLoading] = useState(false);
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
-  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject, updateLayout?: any;}>({});
+  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject, updateLayout?: any; }>({});
 
   const handleSourceChange = useCallback(
     (newSource: string) => {
@@ -193,14 +193,14 @@ export default function Editor({
         // ensure the editor has focus
         editor.focus();
       };
-    
+
       // Force the editor to resize
-      listeners.current.updateLayout = (e: Event) => {
-        editor.layout({ width: 0, height: 0});
+      listeners.current.updateLayout = (_e: Event) => {
+        editor.layout({ width: 0, height: 0 });
         setTimeout(() => {
           try {
-              editor.layout()
-          } catch(e) {
+            editor.layout()
+          } catch (e) {
             editor.layout()
           }
         }, 1);
@@ -208,7 +208,7 @@ export default function Editor({
 
       document.addEventListener('insert-snippet', listeners.current.insertSnippet);
       document.addEventListener('update-layout', listeners.current.updateLayout);
-  }, []);
+    }, []);
 
   useEffect(() => {
     if (monaco && metadata) {
