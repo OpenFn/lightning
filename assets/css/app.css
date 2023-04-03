@@ -106,10 +106,6 @@
   animation: 0.2s ease-out 0s normal forwards 1 fade-out-keys;
 }
 
-.flex-col-reverse {
-  flex-direction: column-reverse;
-}
-
 @keyframes fade-in-scale-keys {
   0% {
     scale: 0.95;
