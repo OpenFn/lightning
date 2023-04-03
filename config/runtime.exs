@@ -15,19 +15,34 @@ end
 image = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
+vsn = "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
 
-message =
-  case image do
-    nil -> "Docker image tag not found."
-    tag -> "Running Lightning #{tag}, built from #{commit} on #{branch}."
+{version_display, version_message, version_type} =
+  cond do
+    # If running in docker on edge, display commit SHA.
+    image == "edge" ->
+      {commit,
+       "Lightning #{image} in Docker (built from #{commit} on #{branch})", :edge}
+
+    # If running in docker and tag matches :vsn, display :vsn and standard message.
+    image == vsn ->
+      {vsn, "Lightning #{vsn} in Docker (built from #{commit} on #{branch})",
+       :release}
+
+    # If running in docker and tag doesn't match :vsn, display :vsn and warning.
+    image != nil and image != vsn ->
+      {commit,
+       "Lightning #{vsn} (tagged as #{image}, built from #{commit} on #{branch})",
+       :warn}
+
+    true ->
+      {vsn, "Lightning #{vsn}", :no_docker}
   end
 
 config :lightning, :version,
-  image: image,
-  branch: branch,
-  commit: commit,
-  display: if(image == "edge", do: commit, else: image),
-  message: message
+  display: version_display,
+  message: version_message,
+  type: version_type
 
 config :lightning, :email_addresses,
   admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
