@@ -5,28 +5,65 @@ defmodule LightningWeb.Components.Common do
   alias Phoenix.LiveView.JS
 
   def version_chip(assigns) do
+    image_info = Application.get_env(:lightning, :image_info)
+    image = image_info[:image_tag]
+    branch = image_info[:branch]
+    commit = image_info[:commit]
+    vsn = "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+
+    {display, message, type} =
+      cond do
+        # If running in docker on edge, display commit SHA.
+        image == "edge" ->
+          {commit,
+           "Docker image tag found: '#{image}' unreleased build from #{commit} on #{branch}",
+           :edge}
+
+        # If running in docker and tag matches :vsn, display :vsn and standard message.
+        image == vsn ->
+          {vsn,
+           "Docker image tag found: '#{image}' tagged release build from #{commit}",
+           :release}
+
+        # If running in docker and tag doesn't match :vsn, display :vsn and warning.
+        image != nil and image != vsn ->
+          {commit,
+           "Warning: detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
+           :warn}
+
+        true ->
+          {vsn, "Lightning #{vsn}", :no_docker}
+      end
+
+    icon_classes = "h-5 w-5 inline-block mr-2"
+
+    assigns =
+      assign(assigns,
+        display: display,
+        message: message,
+        type: type,
+        icon_classes: icon_classes
+      )
+
     ~H"""
     <div class="h-12 mx-4">
       <div <div class="px-3 py-2 rounded-md text-sm font-medium rounded-md block">
-        <span
-          class="opacity-20"
-          title={Application.get_env(:lightning, :version)[:message]}
-        >
-          <%= case Application.get_env(:lightning, :version)[:type] do %>
+        <span class="opacity-20" title={@message}>
+          <%= case @type do %>
             <% :release -> %>
-              <Heroicons.check_badge class="h-5 w-5 inline-block mr-2" />
+              <Heroicons.check_badge class={@icon_classes} />
             <% :edge -> %>
-              <Heroicons.cube class="h-5 w-5 inline-block mr-2" />
+              <Heroicons.cube class={@icon_classes} />
             <% :warn -> %>
-              <Heroicons.exclamation_triangle class="h-5 w-5 inline-block mr-2" />
+              <Heroicons.exclamation_triangle class={@icon_classes} />
             <% :no_docker -> %>
           <% end %>
         </span>
         <code
           class="px-2 py-1 opacity-20 text-sm font-medium bg-gray-200 rounded-md font-mono text-indigo-500 inline-block align-middle"
-          title={"OpenFn/Lightning #{Application.get_env(:lightning, :version)[:display]}"}
+          title={"OpenFn/Lightning #{@display}"}
         >
-          <%= Application.get_env(:lightning, :version)[:display] %>
+          <%= @display %>
         </code>
       </div>
     </div>
