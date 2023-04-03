@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Fixed
 
+- Locked CLI version to `@openfn/cli@0.0.35`.
+  [#761](https://github.com/OpenFn/Lightning/issues/761)
+
 ## [0.4.8] - 2023-03-29
 
 ### Added
