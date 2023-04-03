@@ -10,6 +10,17 @@ and this project adheres to
 
 ### Added
 
+- Magic functions that fetch real metadata from connected systems via
+  `credentials` and suggest completions in the job builder (e.g., pressing
+  `control-space` when setting the `orgUnit` attribute for a DHIS2 create
+  operation will pull the _actual_ list of orgUnits with human readable labels
+  and fill in their orgUnit codes upon
+  enter.)[670](https://github.com/OpenFn/Lightning/issues/670)
+- A "metadata explorer" to browse actual system metadata for connected
+  instances. [658](https://github.com/OpenFn/Lightning/issues/658)
+- Resizable job builder panel for the main canvas/workflow view.
+  [681](https://github.com/OpenFn/Lightning/issues/681)
+
 ### Changed
 
 - Display timezone for cron schedule—it is always UTC.
