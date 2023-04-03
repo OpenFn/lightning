@@ -4,6 +4,31 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  def version_chip(assigns) do
+    ~H"""
+    <div
+      <div
+      class="p-2 mb-1 mt-1 text-center"
+      title={
+        "#{Application.get_env(:lightning, :version)[:message]}"
+      }
+    >
+      <%= case Application.get_env(:lightning, :version)[:type] do %>
+        <% :release -> %>
+          <Heroicons.check_badge class="h-4 w-4 inline-block" />
+        <% :edge -> %>
+          <Heroicons.cube class="h-4 w-4 inline-block" />
+        <% :warn -> %>
+          <Heroicons.exclamation_triangle class="h-4 w-4 inline-block" />
+        <% :no_docker -> %>
+      <% end %>
+      <code class="px-2 py-1 opacity-20 text-sm font-medium bg-gray-200 rounded-md font-mono text-indigo-500">
+        <%= Application.get_env(:lightning, :version)[:display] %>
+      </code>
+    </div>
+    """
+  end
+
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :class, :string, default: ""
