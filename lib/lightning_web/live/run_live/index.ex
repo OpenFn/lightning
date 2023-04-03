@@ -126,7 +126,6 @@ defmodule LightningWeb.RunLive.Index do
         wo_date_after: remainder[:wo_date_after],
         wo_date_before: remainder[:wo_date_before]
       ]
-      |> IO.inspect()
     else
       nil
     end
@@ -207,7 +206,8 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(search_changeset: search_changeset(search_params))
      |> push_patch(
-       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
+       to:
+         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
      )}
   end
 end
