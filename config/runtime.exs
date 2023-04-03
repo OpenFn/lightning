@@ -22,17 +22,19 @@ vsn = "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
     # If running in docker on edge, display commit SHA.
     image == "edge" ->
       {commit,
-       "Lightning #{image} in Docker (built from #{commit} on #{branch})", :edge}
+       "Docker image tag found: '#{image}' built from #{commit} on #{branch}",
+       :edge}
 
     # If running in docker and tag matches :vsn, display :vsn and standard message.
     image == vsn ->
-      {vsn, "Lightning #{vsn} in Docker (built from #{commit} on #{branch})",
+      {vsn,
+       "Docker image tag found: '#{image}' built from #{commit} on #{branch}",
        :release}
 
     # If running in docker and tag doesn't match :vsn, display :vsn and warning.
     image != nil and image != vsn ->
       {commit,
-       "Lightning #{vsn} (tagged as #{image}, built from #{commit} on #{branch})",
+       "Warning: detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit} on #{branch}",
        :warn}
 
     true ->

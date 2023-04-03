@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.5.0] - 2023-04-03
+
+### Added
+
 - Magic functions that fetch real metadata from connected systems via
   `credentials` and suggest completions in the job builder (e.g., pressing
   `control-space` when setting the `orgUnit` attribute for a DHIS2 create
