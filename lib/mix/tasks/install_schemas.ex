@@ -12,10 +12,8 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
 
   @default_excluded_adaptors [
     "language-common",
-    "language-devtools"
-    # "language-divoc",
-    # "language-bigquery",
-    # "language-twilio"
+    "language-devtools",
+    "language-divoc"
   ]
 
   @spec run(any) :: any
