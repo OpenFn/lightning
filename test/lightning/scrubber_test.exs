@@ -28,6 +28,19 @@ defmodule Lightning.ScrubberTest do
       assert scrubbed == ["Successfully logged in as *** using ***"]
     end
 
+    test "doesn't replace booleans with ***" do
+      secrets = ["ip_addr", "db_name", "my_user", "my_password", 5432, false]
+      scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
+
+      scrubbed =
+        scrubber
+        |> Scrubber.scrub([
+          "Connected to ip_addr with enforce SSL set to false"
+        ])
+
+      assert scrubbed == ["Connected to *** with enforce SSL set to false"]
+    end
+
     test "replaces Base64 encoded secrets in string with ***" do
       secrets = ["23", "taylor@openfn.org", "funpass000"]
       scrubber = start_supervised!({Lightning.Scrubber, samples: secrets})
@@ -57,14 +70,20 @@ defmodule Lightning.ScrubberTest do
   end
 
   describe "encode_samples/1" do
-    test "creates base64 pairs of all samples and adds them to the initial samples" do
-      secrets = ["a", "secretpassword"]
+    test "creates base64 pairs of all samples as strings and adds them to the initial samples" do
+      secrets = ["a", "secretpassword", 5432, false]
 
       assert Scrubber.encode_samples(secrets) == [
                "c2VjcmV0cGFzc3dvcmQ6c2VjcmV0cGFzc3dvcmQ=",
+               "c2VjcmV0cGFzc3dvcmQ6NTQzMg==",
+               "NTQzMjpzZWNyZXRwYXNzd29yZA==",
                "YTpzZWNyZXRwYXNzd29yZA==",
                "c2VjcmV0cGFzc3dvcmQ6YQ==",
                "secretpassword",
+               "NTQzMjo1NDMy",
+               "YTo1NDMy",
+               "NTQzMjph",
+               "5432",
                "YTph",
                "a"
              ]
