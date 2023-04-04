@@ -13,6 +13,17 @@ defmodule Lightning.AccountsTest do
     assert Accounts.list_users() == [user]
   end
 
+  test "list_api_token/1 returns all user tokens" do
+    user = user_fixture()
+
+    tokens =
+      for(_ <- 1..3, do: Accounts.generate_api_token(user))
+      |> Enum.sort()
+
+    assert Accounts.list_api_tokens(user) |> Enum.map(& &1.token) |> Enum.sort() ==
+             tokens
+  end
+
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
       refute Accounts.get_user_by_email("unknown@example.com")
@@ -58,6 +69,22 @@ defmodule Lightning.AccountsTest do
     test "returns the user with the given id" do
       %{id: id} = user = user_fixture()
       assert %User{id: ^id} = Accounts.get_user!(user.id)
+    end
+  end
+
+  describe "get_token!/1" do
+    test "raises if token is invalid" do
+      assert_raise Ecto.NoResultsError, fn ->
+        Accounts.get_token!(Ecto.UUID.generate())
+      end
+    end
+
+    test "returns the token with the given id" do
+      user = user_fixture()
+      token = Accounts.generate_api_token(user)
+      %{id: id} = user_token = Repo.get_by(UserToken, token: token)
+
+      assert %UserToken{id: ^id} = Accounts.get_token!(user_token.id)
     end
   end
 
@@ -619,7 +646,13 @@ defmodule Lightning.AccountsTest do
     setup do
       user = user_fixture()
       token = Accounts.generate_api_token(user)
-      %{user: user, token: token}
+
+      user_token =
+        token
+        |> UserToken.token_and_context_query("api")
+        |> Repo.one()
+
+      %{user: user, token: token, user_token: user_token}
     end
 
     test "returns user by token", %{user: user, token: token} do
@@ -629,6 +662,17 @@ defmodule Lightning.AccountsTest do
 
     test "does not return user for invalid token" do
       refute Accounts.get_user_by_api_token("oops")
+    end
+  end
+
+  describe "delete_token/1" do
+    test "deletes the token" do
+      user = user_fixture()
+      token = Accounts.generate_api_token(user)
+      %{id: id} = user_token = Repo.get_by(UserToken, token: token)
+
+      assert {:ok, %UserToken{}} = Accounts.delete_token(user_token)
+      assert_raise Ecto.NoResultsError, fn -> Accounts.get_token!(id) end
     end
   end
 
