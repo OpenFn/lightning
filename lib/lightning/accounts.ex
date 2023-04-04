@@ -583,18 +583,6 @@ defmodule Lightning.Accounts do
   def list_api_tokens(user) do
     UserToken.user_and_contexts_query(user, :api)
     |> Repo.all()
-    |> Enum.map(fn ut ->
-      %{
-        "id" => ut.id,
-        "token" => mask_token(ut.token),
-        "inserted_at" => ut.inserted_at,
-        "last_used_at" => ut.last_used_at
-      }
-    end)
-  end
-
-  defp mask_token(token) do
-    "..." <> String.slice(token, -10, 10)
   end
 
   ## Confirmation

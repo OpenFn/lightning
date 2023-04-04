@@ -43,6 +43,7 @@ defmodule Lightning.Accounts.UserToken do
     field :context, :string
     field :sent_to, :string
     field :last_used_at, :utc_datetime_usec
+
     belongs_to :user, User
 
     timestamps updated_at: false

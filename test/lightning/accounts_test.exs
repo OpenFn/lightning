@@ -16,12 +16,12 @@ defmodule Lightning.AccountsTest do
   test "list_api_token/1 returns all user tokens" do
     user = user_fixture()
 
-    # generate some API tokens for the user
-    tokens = for _ <- 1..3, do: Accounts.generate_api_token(user)
+    tokens =
+      for(_ <- 1..3, do: Accounts.generate_api_token(user))
+      |> Enum.sort()
 
-    # verify that all generated tokens are returned by the function
-    assert Accounts.list_api_tokens(user) |> Enum.map(& &1["token"]) ==
-             tokens |> Enum.map(&("..." <> String.slice(&1, -10, 10)))
+    assert Accounts.list_api_tokens(user) |> Enum.map(& &1.token) |> Enum.sort() ==
+             tokens
   end
 
   describe "get_user_by_email/1" do

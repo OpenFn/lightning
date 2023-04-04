@@ -10,6 +10,11 @@ and this project adheres to
 
 ### Added
 
+- Added ability to create and revoke personal API tokens
+  [#147](https://github.com/OpenFn/Lightning/issues/147)
+- Add `last-used at` to API tokens
+  [#722](https://github.com/OpenFn/Lightning/issues/722)
+
 ### Changed
 
 ### Fixed
@@ -45,10 +50,6 @@ and this project adheres to
 
 - Added a test harness for monitoring critical parts of the app using Telemetry
   [#654](https://github.com/OpenFn/Lightning/issues/654)
-- Added ability to create and revoke personal API tokens
-  [#147](https://github.com/OpenFn/Lightning/issues/147)
-- Add `last-used at` to API tokens
-  [#722](https://github.com/OpenFn/Lightning/issues/722)
 
 ### Changed
 

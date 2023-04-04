@@ -9,11 +9,7 @@ defmodule LightningWeb.TokensLive.Index do
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
-     assign(
-       socket,
-       :tokens,
-       Accounts.list_api_tokens(socket.assigns.current_user)
-     )
+     assign(socket, :tokens, get_api_tokens_for(socket.assigns.current_user))
      |> assign(:active_menu_item, :tokens)}
   end
 
@@ -43,10 +39,7 @@ defmodule LightningWeb.TokensLive.Index do
        :new_token,
        Accounts.generate_api_token(socket.assigns.current_user)
      )
-     |> assign(
-       :tokens,
-       Accounts.list_api_tokens(socket.assigns.current_user)
-     )
+     |> assign(:tokens, get_api_tokens_for(socket.assigns.current_user))
      |> put_flash(:info, "Token created successfully")}
   end
 
@@ -55,5 +48,13 @@ defmodule LightningWeb.TokensLive.Index do
     {:noreply,
      socket
      |> put_flash(:info, "Token copied successfully")}
+  end
+
+  defp get_api_tokens_for(user) do
+    Accounts.list_api_tokens(user)
+  end
+
+  defp mask_token(token) do
+    "..." <> String.slice(token.token, -10, 10)
   end
 end

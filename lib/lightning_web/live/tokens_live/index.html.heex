@@ -16,7 +16,6 @@
       <.live_component
         module={LightningWeb.Components.TokenDeletionModal}
         id={@token_id}
-        current_user={@current_user}
         return_to={~p"/profile/tokens"}
       />
     <% end %>
@@ -106,12 +105,12 @@
         </.tr>
       <% end %>
       <%= for token <- @tokens do %>
-        <.tr id={"token-#{token["id"]}"}>
+        <.tr id={"token-#{token.id}"}>
           <.td>
             <div class="flex rounded overflow-auto p-2 bg-blue-100 w-auto justify-between">
               <code class="my-auto whitespace-nowrap py-2 px-4 align-baseline text-base font-medium leading-none">
                 <span>
-                  <%= token["token"] %>
+                  <%= mask_token(token) %>
                 </span>
               </code>
             </div>
@@ -119,17 +118,16 @@
           <.td>
             <div class="flex content-center justify-between">
               <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
-                <%= token["inserted_at"]
-                |> Calendar.strftime("%a, %-d %b %Y at %X") %>
+                <%= Calendar.strftime(token.inserted_at, "%a, %-d %b %Y at %X") %>
               </span>
             </div>
           </.td>
           <.td>
             <div class="flex content-center justify-between">
               <span class="my-auto whitespace-nowrap py-2 px-4 text-center align-baseline font-medium leading-none">
-                <%= if token["last_used_at"] do %>
-                  <%= token["last_used_at"]
-                  |> Timex.Format.DateTime.Formatters.Relative.format!(
+                <%= if token.last_used_at do %>
+                  <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                    token.last_used_at,
                     "{relative}"
                   ) %>
                 <% else %>
@@ -138,11 +136,11 @@
               </span>
 
               <PetalComponents.Button.icon_button
-                to={~p"/profile/tokens/#{token["id"]}/delete"}
+                to={~p"/profile/tokens/#{token.id}/delete"}
                 link_type="live_patch"
                 size="xs"
                 color="danger"
-                id={"delete-token-#{token["id"]}"}
+                id={"delete-token-#{token.id}"}
               >
                 <Heroicons.trash outline />
               </PetalComponents.Button.icon_button>

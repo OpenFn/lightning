@@ -5,13 +5,8 @@ defmodule LightningWeb.Components.TokenDeletionModal do
   alias Lightning.Accounts
 
   @impl true
-  def update(%{id: id, current_user: current_user} = assigns, socket) do
-    {:ok,
-     socket
-     |> assign(:id, id)
-     |> assign(:new_token, nil)
-     |> assign(:current_user, current_user)
-     |> assign(assigns)}
+  def update(%{id: id} = assigns, socket) do
+    {:ok, socket |> assign(id: id, return_to: assigns.return_to)}
   end
 
   @impl true
@@ -23,11 +18,6 @@ defmodule LightningWeb.Components.TokenDeletionModal do
       {:ok, _} ->
         {:noreply,
          socket
-         |> assign(
-           :tokens,
-           Accounts.list_api_tokens(socket.assigns.current_user)
-         )
-         |> assign(:new_token, nil)
          |> put_flash(:info, "Token deleted successfully")
          |> push_redirect(to: socket.assigns.return_to)}
 
