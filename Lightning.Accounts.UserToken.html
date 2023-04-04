@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-BBC9170D.js"></script>
+    <script src="dist/sidebar_items-379414AB.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -193,6 +193,16 @@ tokens do not need to be hashed.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#last_used_changeset/1" translate="no">last_used_changeset(user)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Update when the api token was last used by setting<code class="inline">last_used_at</code>.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#token_and_context_query/2" translate="no">token_and_context_query(token, context)</a>
 
       </div>
@@ -284,7 +294,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">build_email_token(user, context, sent_to)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L142" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L152" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -312,7 +322,7 @@ for example, by phone numbers.</p>
     </a>
     <h1 class="signature" translate="no">build_token(user, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L66" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L68" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -331,6 +341,7 @@ for example, by phone numbers.</p>
      context: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
      id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
      inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+     last_used_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
      sent_to: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
      token: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
      user: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -353,7 +364,7 @@ tokens do not need to be hashed.</p>
     </a>
     <h1 class="signature" translate="no">changeset(user_token, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L83" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L93" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -431,6 +442,28 @@ tokens do not need to be hashed.</p>
 <p>Same as <a href="#generate_and_sign/2"><code class="inline">generate_and_sign/2</code></a> but raises if error</p>
   </section>
 </section>
+<section class="detail" id="last_used_changeset/1">
+
+  <div class="detail-header">
+    <a href="#last_used_changeset/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">last_used_changeset(user)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L88" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Update when the api token was last used by setting<code class="inline">last_used_at</code>.</p>
+  </section>
+</section>
 <section class="detail" id="token_and_context_query/2">
 
   <div class="detail-header">
@@ -440,7 +473,7 @@ tokens do not need to be hashed.</p>
     </a>
     <h1 class="signature" translate="no">token_and_context_query(token, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L229" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L239" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -462,7 +495,7 @@ tokens do not need to be hashed.</p>
     </a>
     <h1 class="signature" translate="no">user_and_contexts_query(user, contexts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L236" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L246" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -550,7 +583,7 @@ tokens do not need to be hashed.</p>
     </a>
     <h1 class="signature" translate="no">verify_change_email_token_query(token, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L207" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L217" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -577,7 +610,7 @@ The context must always start with &quot;change:&quot;.</p>
     </a>
     <h1 class="signature" translate="no">verify_email_token_query(token, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L168" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L178" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -605,7 +638,7 @@ see <a href="#verify_change_email_token_query/2"><code class="inline">verify_cha
     </a>
     <h1 class="signature" translate="no">verify_token_query(token, context)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L97" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_token.ex#L107" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
