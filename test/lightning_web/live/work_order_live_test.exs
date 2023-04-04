@@ -30,8 +30,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      work_order =
-        work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
+      work_order = work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
 
       now = Timex.now()
 
@@ -75,8 +74,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      work_order =
-        work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
+      work_order = work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
 
       now = Timex.now()
 
@@ -643,8 +641,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck :failure
 
       view
-      |> element("input#run-search-form_failure")
-      |> render_change(%{"search[failure][selected]" => false})
+      |> form("#run-search-form", search: %{"failure" => "false"})
+      |> render_change()
 
       refute view
              |> element(
@@ -655,8 +653,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> element("input#run-search-form_failure")
-      |> render_change(%{"search[failure][selected]" => true})
+      |> form("#run-search-form", search: %{"failure" => "true"})
+      |> render_change()
 
       div =
         view
@@ -777,9 +775,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-        )
+        |> element("section#inner_content div[data-entity='work_order_list'] > div:first-child")
         |> render()
 
       refute div =~ "workflow 1"
@@ -793,9 +789,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       div =
         view
-        |> element(
-          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-        )
+        |> element("section#inner_content div[data-entity='work_order_list'] > div:first-child")
         |> render()
 
       assert div =~ "workflow 1"
@@ -830,10 +824,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_one.id,
-              started_at:
-                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
-              finished_at:
-                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              started_at: DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at: DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
               exit_code: 0,
               input_dataclip_id: dataclip.id
             }
@@ -865,10 +857,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_two.id,
-              started_at:
-                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
-              finished_at:
-                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              started_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id
             }
@@ -940,8 +930,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_one.workflow_id)
 
-      dataclip =
-        dataclip_fixture(type: :http_request, body: %{"name" => "some data"})
+      dataclip = dataclip_fixture(type: :http_request, body: %{"name" => "some data"})
 
       reason =
         reason_fixture(
@@ -956,10 +945,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_one.id,
-              started_at:
-                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
-              finished_at:
-                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              started_at: DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at: DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
               exit_code: 0,
               input_dataclip_id: dataclip.id
             }
@@ -991,10 +978,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_two.id,
-              started_at:
-                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
-              finished_at:
-                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              started_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id,
               log: ["xxx", "xxx some log zzz", "bbbb"]
@@ -1176,16 +1161,34 @@ defmodule LightningWeb.RunWorkOrderTest do
     for type <- [:body, :log] do
       checked = type in types
 
+      %{
+        "body" => "true",
+        "crash" => "true",
+        "date_after" => "",
+        "date_before" => "",
+        "failure" => "true",
+        "log" => "true",
+        "pending" => "true",
+        "search_term" => "",
+        "success" => "false",
+        "timeout" => "true",
+        "wo_date_after" => "",
+        "wo_date_before" => "",
+        "workflow_id" => ""
+      }
+
       view
-      |> element("input#run-search-form_#{type}")
-      |> render_change(%{
-        "search[#{type}][selected]" => checked
-      })
+      |> form("#run-search-form",
+        search: %{"#{type}" => "#{checked}"} |> IO.inspect(label: "WHAT?")
+      )
+      |> render_change()
     end
 
     view
-    |> element("input#run-search-form_search_term")
-    |> render_change(%{"search[search_term]" => term})
+    |> form("#run-search-form",
+      search: %{"search_term" => term} |> IO.inspect(label: "WHAT?")
+    )
+    |> render_change()
 
     view
     |> form("#run-search-form")
@@ -1195,9 +1198,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   def workflow_displayed(view, name) do
     elem =
       view
-      |> element(
-        "section#inner_content div[data-entity='work_order_list'] > div:first-child"
-      )
+      |> element("section#inner_content div[data-entity='work_order_list'] > div:first-child")
 
     if elem |> has_element?() do
       elem |> render() =~ name

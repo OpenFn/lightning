@@ -82,23 +82,23 @@ defmodule LightningWeb.RunLive.Index do
 
       statuses = Enum.map(socket.assigns.statuses, fn status -> status.id end)
 
-      search_fields =
-        Enum.map(socket.assigns.search_fields, fn search_field ->
-          search_field.id
-        end)
-
       statuses =
-        Enum.map(search, fn {key, _value} ->
-          if key in statuses do
+        Enum.map(search, fn {key, value} ->
+          if key in statuses and String.to_existing_atom(value) do
             key
           end
         end)
         |> Enum.filter(fn v -> v end)
 
       search_fields =
+        Enum.map(socket.assigns.search_fields, fn search_field ->
+          search_field.id
+        end)
+
+      search_fields =
         Enum.map(search, fn {key, value} ->
-          if key in search_fields do
-            {key, String.to_existing_atom(value)}
+          if key in search_fields and String.to_existing_atom(value) do
+            key
           end
         end)
         |> Enum.filter(fn v -> v end)
@@ -203,8 +203,7 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(search_changeset: search_changeset(search_params))
      |> push_patch(
-       to:
-         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
+       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
      )}
   end
 end
