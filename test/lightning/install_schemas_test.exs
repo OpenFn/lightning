@@ -177,7 +177,13 @@ defmodule Lightning.InstallSchemasTest do
     end
 
     test "parse_excluded" do
-      assert ["pack1", "pack2", "language-common", "language-devtools", "language-divoc"] ==
+      assert [
+               "pack1",
+               "pack2",
+               "language-common",
+               "language-devtools",
+               "language-divoc"
+             ] ==
                InstallSchemas.parse_excluded(["--exclude", "pack1", "pack2"])
 
       assert ["language-common", "language-devtools", "language-divoc"] ==
