@@ -20,7 +20,6 @@
         <%= unless assigns[:is_first_setup] do %>
           <LayoutComponents.menu_items {assigns} />
           <div class="grow"></div>
-          <LightningWeb.Components.Common.version_chip />
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
               <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
@@ -33,11 +32,8 @@
               </Settings.menu_item>
             <% end %>
           <% end %>
-          <Settings.menu_item to={Routes.user_session_path(@socket, :delete)}>
-            <Heroicons.arrow_right_on_rectangle class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Log out</span>
-          </Settings.menu_item>
         <% end %>
+        <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>
     <main class="flex-auto">

@@ -35,7 +35,7 @@ defmodule LightningWeb.Components.Common do
           {vsn, "Lightning #{vsn}", :no_docker}
       end
 
-    icon_classes = "h-5 w-5 inline-block mr-2"
+    icon_classes = "h-4 w-4 inline-block mr-1"
 
     assigns =
       assign(assigns,
@@ -46,26 +46,24 @@ defmodule LightningWeb.Components.Common do
       )
 
     ~H"""
-    <div class="h-12 mx-4">
-      <div <div class="px-3 py-2 rounded-md text-sm font-medium rounded-md block">
-        <span class="opacity-20" title={@message}>
-          <%= case @type do %>
-            <% :release -> %>
-              <Heroicons.check_badge class={@icon_classes} />
-            <% :edge -> %>
-              <Heroicons.cube class={@icon_classes} />
-            <% :warn -> %>
-              <Heroicons.exclamation_triangle class={@icon_classes} />
-            <% :no_docker -> %>
-          <% end %>
-        </span>
-        <code
-          class="px-2 py-1 opacity-20 text-sm font-medium bg-gray-200 rounded-md font-mono text-indigo-500 inline-block align-middle"
-          title={"OpenFn/Lightning #{@display}"}
-        >
-          <%= @display %>
-        </code>
-      </div>
+    <div class="px-3 pb-3 rounded-md text-xs rounded-md block text-center">
+      <span class="opacity-20" title={@message}>
+        <%= case @type do %>
+          <% :release -> %>
+            <Heroicons.check_badge class={@icon_classes} />
+          <% :edge -> %>
+            <Heroicons.cube class={@icon_classes} />
+          <% :warn -> %>
+            <Heroicons.exclamation_triangle class={@icon_classes} />
+          <% :no_docker -> %>
+        <% end %>
+      </span>
+      <code
+        class="px-2 py-1 opacity-20 bg-gray-100 rounded-md font-mono text-indigo-500 inline-block align-middle"
+        title={"OpenFn/Lightning #{@display}"}
+      >
+        <%= @display %>
+      </code>
     </div>
     """
   end

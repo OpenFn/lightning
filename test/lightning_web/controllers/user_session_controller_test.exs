@@ -81,7 +81,7 @@ defmodule LightningWeb.UserSessionControllerTest do
         get(recycle(conn), redirected_path)
         |> html_response(200)
 
-      assert response =~ "Log out</span>"
+      assert response =~ "User Profile"
     end
 
     test "renders log in page for an invalid token", %{conn: conn} do
@@ -131,8 +131,7 @@ defmodule LightningWeb.UserSessionControllerTest do
       # Now do a logged in request and assert on the menu
       conn = get(conn, "/")
       response = html_response(conn, 200)
-      # assert response =~ user.email
-      assert response =~ "Log out</span>"
+      assert response =~ "User Profile"
     end
 
     test "a user that has been scheduled for deletion can't log in", %{
