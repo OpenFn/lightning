@@ -274,7 +274,6 @@ defmodule Lightning.Projects do
     {:ok, yaml}
   end
 
-  @spec import_project(any, any) :: {:ok, binary}
   @doc """
   Imports a project as map.
 

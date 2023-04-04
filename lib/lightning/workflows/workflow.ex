@@ -39,7 +39,7 @@ defmodule Lightning.Workflows.Workflow do
   @doc false
   def changeset(workflow, attrs) do
     workflow
-    |> cast(attrs, [:name, :project_id])
+    |> cast(attrs, [:name, :project_id, :id])
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Job.changeset/2)
     |> validate()
