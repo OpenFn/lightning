@@ -81,15 +81,20 @@ defmodule Lightning.Scrubber do
   """
   @spec encode_samples(samples :: [String.t()]) :: [String.t()]
   def encode_samples(samples) do
-    base64_secrets =
+    stringified_samples =
       samples
+      |> Enum.filter(fn x -> not is_boolean(x) end)
+      |> Enum.map(fn x -> if is_integer(x), do: Integer.to_string(x), else: x end)
+
+    base64_secrets =
+      stringified_samples
       |> cartesian_pairs()
       |> Enum.map(fn [x, y] ->
         "#{x}:#{y}"
         |> Base.encode64()
       end)
 
-    Enum.concat([samples, base64_secrets])
+    Enum.concat([stringified_samples, base64_secrets])
     |> Enum.sort_by(&String.length/1, :desc)
   end
 

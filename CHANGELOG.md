@@ -17,7 +17,13 @@ and this project adheres to
 
 ### Changed
 
+- The secret scrubber now ignores booleans
+  [690](https://github.com/OpenFn/Lightning/issues/690)
+
 ### Fixed
+
+- The secret scrubber now properly handles integer secrets from credentials
+  [690](https://github.com/OpenFn/Lightning/issues/690)
 
 ## [0.5.0] - 2023-04-03
 
