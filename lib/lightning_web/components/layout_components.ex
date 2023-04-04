@@ -128,7 +128,7 @@ defmodule LightningWeb.LayoutComponents do
               to={Routes.user_session_path(@socket, :delete)}
             >
               <Heroicons.arrow_right_on_rectangle class="w-5 h-5 text-secondary-500" />
-              Logout
+              Log out
             </.dropdown_menu_item>
           </.dropdown>
         <% end %>
