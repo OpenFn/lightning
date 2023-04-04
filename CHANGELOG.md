@@ -24,6 +24,8 @@ and this project adheres to
 
 - The secret scrubber now properly handles integer secrets from credentials
   [690](https://github.com/OpenFn/Lightning/issues/690)
+- Updated describe-package dependency, fixing sparkles in adaptor-docs
+  [657](https://github.com/OpenFn/Lightning/issues/657)
 
 ## [0.5.0] - 2023-04-03
 
