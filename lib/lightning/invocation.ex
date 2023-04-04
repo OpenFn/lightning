@@ -379,13 +379,8 @@ defmodule Lightning.Invocation do
 
   def filter_run_body_and_logs_where(search_term, search_fields)
       when search_fields != [] do
-    IO.inspect(search_fields, label: "Search fields")
-    IO.inspect(search_term, label: "Search term")
-
-    Enum.reduce(search_fields, dynamic([], false), fn
+    Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
-        IO.inspect(query, label: ":log")
-
         dynamic(
           [runs: r],
           ^query or
@@ -393,8 +388,6 @@ defmodule Lightning.Invocation do
         )
 
       :body, query ->
-        IO.inspect(query, label: ":body")
-
         dynamic(
           [input: i],
           ^query or
@@ -405,7 +398,6 @@ defmodule Lightning.Invocation do
         # Not a where parameter
         query
     end)
-    |> IO.inspect(label: "Output")
   end
 
   def list_work_orders_for_project_query(

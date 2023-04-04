@@ -930,7 +930,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_one.workflow_id)
 
-      dataclip = dataclip_fixture(type: :http_request, body: %{"name" => "some data"})
+      dataclip = dataclip_fixture(type: :http_request, body: %{"username" => "eliaswalyba"})
 
       reason =
         reason_fixture(
@@ -963,7 +963,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_two.workflow_id)
 
-      dataclip = dataclip_fixture(type: :http_request, body: %{"name" => "bar"})
+      dataclip = dataclip_fixture(type: :http_request, body: %{"username" => "qassim"})
 
       reason =
         reason_fixture(
@@ -982,7 +982,7 @@ defmodule LightningWeb.RunWorkOrderTest do
               finished_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id,
-              log: ["xxx", "xxx some log zzz", "bbbb"]
+              log: ["Hi mom!", "Log me something fun.", "It's another great log."]
             }
           ]
         })
@@ -1018,13 +1018,13 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute workflow_displayed(view, "workflow 2")
 
       view
-      |> search_for("some data", [:body, :log])
+      |> search_for("eliaswalyba", [:body, :log])
 
       assert workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
       view
-      |> search_for("bar", [:body, :log])
+      |> search_for("qassim", [:body, :log])
 
       refute workflow_displayed(view, "workflow 1")
       assert workflow_displayed(view, "workflow 2")
@@ -1039,7 +1039,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       |> search_for("some log", [:log])
 
       refute workflow_displayed(view, "workflow 1")
-      assert workflow_displayed(view, "workflow 2")
+      refute workflow_displayed(view, "workflow 2")
     end
   end
 
@@ -1161,32 +1161,16 @@ defmodule LightningWeb.RunWorkOrderTest do
     for type <- [:body, :log] do
       checked = type in types
 
-      %{
-        "body" => "true",
-        "crash" => "true",
-        "date_after" => "",
-        "date_before" => "",
-        "failure" => "true",
-        "log" => "true",
-        "pending" => "true",
-        "search_term" => "",
-        "success" => "false",
-        "timeout" => "true",
-        "wo_date_after" => "",
-        "wo_date_before" => "",
-        "workflow_id" => ""
-      }
-
       view
       |> form("#run-search-form",
-        search: %{"#{type}" => "#{checked}"} |> IO.inspect(label: "WHAT?")
+        search: %{"#{type}" => "#{checked}"}
       )
       |> render_change()
     end
 
     view
     |> form("#run-search-form",
-      search: %{"search_term" => term} |> IO.inspect(label: "WHAT?")
+      search: %{"search_term" => term}
     )
     |> render_change()
 
