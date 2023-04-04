@@ -20,7 +20,6 @@
         <%= unless assigns[:is_first_setup] do %>
           <LayoutComponents.menu_items {assigns} />
           <div class="grow"></div>
-          <LightningWeb.Components.Common.version_chip />
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
               <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
@@ -34,6 +33,7 @@
             <% end %>
           <% end %>
         <% end %>
+        <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>
     <main class="flex-auto">
