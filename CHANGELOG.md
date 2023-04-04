@@ -19,6 +19,8 @@ and this project adheres to
 
 ### Fixed
 
+- Updated describe-package dependency, fixing sparkles in adaptor-docs
+
 ## [0.5.0] - 2023-04-03
 
 ### Added
