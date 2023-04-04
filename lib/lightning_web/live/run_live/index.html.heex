@@ -74,6 +74,7 @@
                 <div class="form-check">
                   <div class="selectable-option">
                     <%= checkbox(f, search_field.id,
+                      checked: search_field.value,
                       class:
                         "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     ) %>
@@ -145,6 +146,7 @@
                 <div class="form-check">
                   <div class="selectable-option">
                     <%= checkbox(f, status.id,
+                      checked: status.value,
                       class:
                         "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     ) %>

@@ -554,33 +554,23 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "Filter by workorder status"
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_0_selected[checked]"
-             )
+             |> element("input#run-search-form_success[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_1_selected[checked]"
-             )
+             |> element("input#run-search-form_failure[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_2_selected[checked]"
-             )
+             |> element("input#run-search-form_timeout[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_3_selected[checked]"
-             )
+             |> element("input#run-search-form_crash[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_4_selected[checked]"
-             )
+             |> element("input#run-search-form_pending[checked]")
              |> has_element?()
 
       assert view
@@ -588,15 +578,11 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_search_field_options_0_selected[checked]"
-             )
+             |> element("input#run-search-form_body[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_search_field_options_1_selected[checked]"
-             )
+             |> element("input#run-search-form_log[checked]")
              |> has_element?()
     end
 
@@ -657,8 +643,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck :failure
 
       view
-      |> element("input#run-search-form_status_options_1_selected[checked]")
-      |> render_change(%{"run_search_form[status_options][1][selected]" => false})
+      |> element("input#run-search-form_failure")
+      |> render_change(%{"search[failure][selected]" => false})
 
       refute view
              |> element(
@@ -669,8 +655,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> element("input#run-search-form_status_options_1_selected")
-      |> render_change(%{"run_search_form[status_options][1][selected]" => true})
+      |> element("input#run-search-form_failure")
+      |> render_change(%{"search[failure][selected]" => true})
 
       div =
         view
@@ -802,7 +788,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view
              |> element("form#run-search-form")
              |> render_change(%{
-               "run_search_form[workflow_id]" => job.workflow_id
+               "search[workflow_id]" => job.workflow_id
              })
 
       div =
@@ -905,7 +891,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         view
         |> element("form#run-search-form")
         |> render_change(%{
-          "run_search_form[date_after]" => ~N[2022-08-25 00:00:00.123456]
+          "search[date_after]" => ~N[2022-08-25 00:00:00.123456]
         })
 
       assert result =~ "2022-08-29"
@@ -916,13 +902,13 @@ defmodule LightningWeb.RunWorkOrderTest do
       # reset after date
       view
       |> element("form#run-search-form")
-      |> render_change(%{"run_search_form[date_after]" => nil})
+      |> render_change(%{"search[date_after]" => nil})
 
       result =
         view
         |> element("form#run-search-form")
         |> render_change(%{
-          "run_search_form[date_before]" => ~N[2022-08-28 00:00:00.123456]
+          "search[date_before]" => ~N[2022-08-28 00:00:00.123456]
         })
 
       assert result =~ "2022-08-23"
@@ -932,7 +918,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{"run_search_form[date_before]" => nil})
+        |> render_change(%{"search[date_before]" => nil})
 
       assert result =~ "2022-08-23"
       assert result =~ "2022-08-29"
@@ -1187,19 +1173,19 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   def search_for(view, term, types) do
-    for {type, index} <- [:body, :log] |> Enum.with_index() do
+    for type <- [:body, :log] do
       checked = type in types
 
       view
-      |> element("input#run-search-form_search_field_options_#{index}_selected")
+      |> element("input#run-search-form_#{type}")
       |> render_change(%{
-        "run_search_form[search_field_options][#{index}][selected]" => checked
+        "search[#{type}][selected]" => checked
       })
     end
 
     view
     |> element("input#run-search-form_search_term")
-    |> render_change(%{"run_search_form[search_term]" => term})
+    |> render_change(%{"search[search_term]" => term})
 
     view
     |> form("#run-search-form")

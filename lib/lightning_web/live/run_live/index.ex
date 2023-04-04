@@ -7,11 +7,8 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrderService
-  alias Lightning.{AttemptService, Invocation, RunSearchForm}
+  alias Lightning.{AttemptService, Invocation}
   alias Lightning.Invocation.Run
-
-  alias Lightning.RunSearchForm
-  alias Lightning.RunSearchForm.MultiSelectOption
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
@@ -32,16 +29,16 @@ defmodule LightningWeb.RunLive.Index do
       )
 
     statuses = [
-      %{id: :success, label: "Success"},
-      %{id: :failure, label: "Failure"},
-      %{id: :timeout, label: "Timeout"},
-      %{id: :crash, label: "Crash"},
-      %{id: :pending, label: "Pending"}
+      %{id: :success, label: "Success", value: true},
+      %{id: :failure, label: "Failure", value: true},
+      %{id: :timeout, label: "Timeout", value: true},
+      %{id: :crash, label: "Crash", value: true},
+      %{id: :pending, label: "Pending", value: true}
     ]
 
     search_fields = [
-      %{id: :body, label: "Input body"},
-      %{id: :log, label: "Logs"}
+      %{id: :body, label: "Input body", value: true},
+      %{id: :log, label: "Logs", value: true}
     ]
 
     {:ok,
@@ -91,7 +88,7 @@ defmodule LightningWeb.RunLive.Index do
         end)
 
       statuses =
-        Enum.map(search, fn {key, value} ->
+        Enum.map(search, fn {key, _value} ->
           if key in statuses do
             key
           end
