@@ -444,7 +444,8 @@ defmodule Lightning.Invocation do
       as: :workflow,
       join: att in assoc(wo, :attempts),
       join: last in subquery(last_attempts),
-      on: last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
+      on:
+        last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
       join: r in assoc(att, :runs),
       as: :runs,
       join: last_run in subquery(last_runs),

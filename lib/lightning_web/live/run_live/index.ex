@@ -203,7 +203,8 @@ defmodule LightningWeb.RunLive.Index do
      socket
      |> assign(search_changeset: search_changeset(search_params))
      |> push_patch(
-       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
+       to:
+         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
      )}
   end
 end

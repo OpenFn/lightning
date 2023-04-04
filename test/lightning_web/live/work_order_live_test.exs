@@ -30,7 +30,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      work_order = work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
+      work_order =
+        work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
 
       now = Timex.now()
 
@@ -74,7 +75,8 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip_id: dataclip.id
         )
 
-      work_order = work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
+      work_order =
+        work_order_fixture(workflow_id: job.workflow_id, reason_id: reason.id)
 
       now = Timex.now()
 
@@ -775,7 +777,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       div =
         view
-        |> element("section#inner_content div[data-entity='work_order_list'] > div:first-child")
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+        )
         |> render()
 
       refute div =~ "workflow 1"
@@ -789,7 +793,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       div =
         view
-        |> element("section#inner_content div[data-entity='work_order_list'] > div:first-child")
+        |> element(
+          "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+        )
         |> render()
 
       assert div =~ "workflow 1"
@@ -824,8 +830,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_one.id,
-              started_at: DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
-              finished_at: DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              started_at:
+                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
               exit_code: 0,
               input_dataclip_id: dataclip.id
             }
@@ -857,8 +865,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_two.id,
-              started_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
-              finished_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              started_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id
             }
@@ -930,7 +940,11 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_one.workflow_id)
 
-      dataclip = dataclip_fixture(type: :http_request, body: %{"username" => "eliaswalyba"})
+      dataclip =
+        dataclip_fixture(
+          type: :http_request,
+          body: %{"username" => "eliaswalyba"}
+        )
 
       reason =
         reason_fixture(
@@ -945,8 +959,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_one.id,
-              started_at: DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
-              finished_at: DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
+              started_at:
+                DateTime.from_naive!(~N[2022-08-23 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-23 00:50:10.123456], "Etc/UTC"),
               exit_code: 0,
               input_dataclip_id: dataclip.id
             }
@@ -963,7 +979,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_two.workflow_id)
 
-      dataclip = dataclip_fixture(type: :http_request, body: %{"username" => "qassim"})
+      dataclip =
+        dataclip_fixture(type: :http_request, body: %{"username" => "qassim"})
 
       reason =
         reason_fixture(
@@ -978,11 +995,17 @@ defmodule LightningWeb.RunWorkOrderTest do
           runs: [
             %{
               job_id: job_two.id,
-              started_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
-              finished_at: DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              started_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
+              finished_at:
+                DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id,
-              log: ["Hi mom!", "Log me something fun.", "It's another great log."]
+              log: [
+                "Hi mom!",
+                "Log me something fun.",
+                "It's another great log."
+              ]
             }
           ]
         })
@@ -1182,7 +1205,9 @@ defmodule LightningWeb.RunWorkOrderTest do
   def workflow_displayed(view, name) do
     elem =
       view
-      |> element("section#inner_content div[data-entity='work_order_list'] > div:first-child")
+      |> element(
+        "section#inner_content div[data-entity='work_order_list'] > div:first-child"
+      )
 
     if elem |> has_element?() do
       elem |> render() =~ name
