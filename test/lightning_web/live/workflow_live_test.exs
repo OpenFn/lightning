@@ -11,6 +11,13 @@ defmodule LightningWeb.WorkflowLiveTest do
   import Lightning.WorkflowsFixtures
 
   describe "index" do
+    test "displays the current version", %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+    end
+
     test "lists all workflows for a project", %{
       conn: conn,
       project: project
@@ -38,10 +45,7 @@ defmodule LightningWeb.WorkflowLiveTest do
   end
 
   describe "create" do
-    test "Create empty workflow for a project", %{
-      conn: conn,
-      project: project
-    } do
+    test "Create empty workflow for a project", %{conn: conn, project: project} do
       {:ok, view, html} =
         live(conn, Routes.project_workflow_path(conn, :index, project.id))
 

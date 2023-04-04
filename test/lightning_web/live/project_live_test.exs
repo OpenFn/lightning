@@ -45,13 +45,6 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ project.name
     end
 
-    test "displays the current version" do
-      {:ok, _index_live, html} =
-        live(conn, Routes.project_index_path(conn, :index))
-
-      assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
-    end
-
     test "saves new project", %{conn: conn} do
       user = user_fixture()
 
