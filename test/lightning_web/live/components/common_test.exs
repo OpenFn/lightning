@@ -1,10 +1,7 @@
-defmodule LightningWeb.CommonTest do
+defmodule LightningWeb.Components.CommonTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-
-  setup :register_and_log_in_user
-  setup :create_project_for_current_user
 
   describe "version_chip on docker release" do
     setup do
@@ -21,12 +18,8 @@ defmodule LightningWeb.CommonTest do
       end)
     end
 
-    test "displays the version and a badge", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, _view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+    test "displays the version and a badge" do
+      html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       # Check for the badge icon
       assert html =~
@@ -34,7 +27,6 @@ defmodule LightningWeb.CommonTest do
 
       assert html =~ "Docker image tag found"
       assert html =~ "tagged release build"
-
       assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
     end
   end
@@ -54,12 +46,8 @@ defmodule LightningWeb.CommonTest do
       end)
     end
 
-    test "displays the SHA and a cube", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, _view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+    test "displays the SHA and a cube" do
+      html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       # Check for the cube icon
       assert html =~
@@ -86,12 +74,8 @@ defmodule LightningWeb.CommonTest do
       end)
     end
 
-    test "displays the version and a badge", %{
-      conn: conn,
-      project: project
-    } do
-      {:ok, _view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+    test "displays the version and a badge" do
+      html = render_component(&LightningWeb.Components.Common.version_chip/1)
 
       # Check for the warning icon
       assert html =~
