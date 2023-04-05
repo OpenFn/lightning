@@ -115,6 +115,24 @@ window.addEventListener('phx:page-loading-stop', () => {
   topbar.hide();
 });
 
+window.addEventListener('keydown', event => {
+  // define our edit_job_path
+  const currentURL = window.location.pathname;
+  const edit_job_url = /\/projects\/(.+)\/w\/(.+)\/j\/(.+)/;
+  // Check if the user pressed CTRL+S
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    // Prevent the default behavior
+    event.preventDefault();
+    if (edit_job_url.test(currentURL)) {
+      console.log('Saving the job');
+      let form = document.querySelector("button[form='job-form']");
+      form.click();
+    }
+    // Trigger a custom event named "ctrl-s-pressed"
+    // document.dispatchEvent(new Event('ctrl-s-pressed'));
+  }
+});
+
 // connect if there are any LiveViews on the page
 liveSocket.connect();
 // expose liveSocket on window for web console debug logs and latency simulation:

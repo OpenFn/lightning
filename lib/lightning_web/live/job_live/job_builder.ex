@@ -225,7 +225,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
         </div>
         <div class="flex-none sticky p-3 border-t">
           <!-- BUTTONS -->
-          <%= live_patch("Cancel",
+          <%= live_patch("Close",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
             to: @return_to
@@ -374,7 +374,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
     socket
     |> put_flash(:info, "Job updated successfully")
-    |> push_patch(to: socket.assigns.return_to)
+    |> push_patch(to: socket.assigns.return_to <> "/j/#{socket.assigns.job.id}")
   end
 
   defp merge_params(prev, next) do
