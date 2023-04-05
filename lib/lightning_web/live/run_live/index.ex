@@ -162,8 +162,20 @@ defmodule LightningWeb.RunLive.Index do
     )
   end
 
+  def checked(changeset, id) do
+    case Ecto.Changeset.fetch_field(changeset, id) do
+      {:changes, true} -> true
+      _ -> false
+    end
+  end
+
   defp search_changeset(params),
-    do: Ecto.Changeset.cast({%{}, @filters_types}, params, Map.keys(@filters_types))
+    do:
+      Ecto.Changeset.cast(
+        {%{}, @filters_types},
+        params,
+        Map.keys(@filters_types)
+      )
 
   @impl true
   def handle_event(
@@ -185,6 +197,7 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("validate", %{"search" => search_params} = _params, socket) do
     IO.inspect(search_params)
+
     {:noreply,
      socket
      |> assign(search_changeset: search_changeset(search_params))
