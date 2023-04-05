@@ -21,7 +21,9 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           field={:adaptor_name}
           title="Adaptor"
           for="adaptor-name"
-          tooltip="Which system to perform an action in. Hint: select the `common` adaptor to perform data manipulations in OpenFn."
+          tooltip="Adaptors provide a specific set functions (actions you can
+            perform) which work with various systems. Hint: select the 'common'
+            adaptor if this job only performs data manipulation."
         />
         <Form.select_field
           form={:adaptor_picker}
