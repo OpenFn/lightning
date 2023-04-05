@@ -48,7 +48,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           </span>
           <Common.tooltip
             id="trigger-tooltip"
-            title="When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+            title="When to run this job. Hint: select `webhook` to trigger this job when an event happens in an external system."
             class="inline-block"
           />
         </div>
