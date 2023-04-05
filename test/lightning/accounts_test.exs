@@ -929,12 +929,29 @@ defmodule Lightning.AccountsTest do
     assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
   end
 
-  test "schedule user for deletion" do
-    user = user_fixture()
-    assert user.scheduled_deletion == nil
-    {:ok, user} = Accounts.schedule_user_deletion(user, user.email)
-    assert user.scheduled_deletion != nil
-    assert user.disabled
+  describe "scheduling a user for deletion" do
+    setup do
+      prev = Application.get_env(:lightning, :purge_deleted_after_days)
+      Application.put_env(:lightning, :purge_deleted_after_days, 2)
+
+      on_exit(fn ->
+        Application.put_env(:lightning, :purge_deleted_after_days, prev)
+      end)
+    end
+
+    test "schedule_user_deletion/2 sets a date in the future according to the :purge_deleted_after_days env" do
+      days = Application.get_env(:lightning, :purge_deleted_after_days)
+
+      user = user_fixture()
+      assert user.scheduled_deletion == nil
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      {:ok, user} = Accounts.schedule_user_deletion(user, user.email)
+
+      assert user.scheduled_deletion != nil
+      assert Timex.diff(user.scheduled_deletion, now, :days) == days
+      assert user.disabled
+    end
   end
 
   describe "inspect/2" do
