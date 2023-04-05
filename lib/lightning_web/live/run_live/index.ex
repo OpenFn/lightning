@@ -178,6 +178,39 @@ defmodule LightningWeb.RunLive.Index do
       )
 
   @impl true
+  def handle_info(
+        "toggle_details",
+        socket
+      ) do
+    IO.inspect(socket)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        {_, %Lightning.Workorders.Events.AttemptCreated{attempt: attempt}},
+        socket
+      ) do
+    send_update(LightningWeb.RunLive.WorkOrderComponent,
+      id: attempt.work_order_id
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(
+        {_, %Lightning.Workorders.Events.AttemptUpdated{attempt: attempt}},
+        socket
+      ) do
+    send_update(LightningWeb.RunLive.WorkOrderComponent,
+      id: attempt.work_order_id
+    )
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event(
         "rerun",
         %{"attempt_id" => attempt_id, "run_id" => run_id},
@@ -196,8 +229,6 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("validate", %{"search" => search_params} = _params, socket) do
-    IO.inspect(search_params)
-
     {:noreply,
      socket
      |> assign(search_changeset: search_changeset(search_params))
