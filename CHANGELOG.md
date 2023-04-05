@@ -26,6 +26,8 @@ and this project adheres to
   [690](https://github.com/OpenFn/Lightning/issues/690)
 - Updated describe-package dependency, fixing sparkles in adaptor-docs
   [657](https://github.com/OpenFn/Lightning/issues/657)
+- Clicks on the workflow canvas were not lining up with the nodes users clicked
+  on; they are now [733](https://github.com/OpenFn/Lightning/issues/733)
 
 ## [0.5.0] - 2023-04-03
 
