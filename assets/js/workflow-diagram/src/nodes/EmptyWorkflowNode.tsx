@@ -1,6 +1,6 @@
 import React, { memo } from "react";
 
-const EmptyWorkflowNode = () => <div className="h-full cursor-default"></div>;
+const EmptyWorkflowNode = () => <div></div>;
 
 EmptyWorkflowNode.displayName = "WorkflowNode";
 
