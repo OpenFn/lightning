@@ -10,6 +10,22 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.{AttemptService, Invocation}
   alias Lightning.Invocation.Run
 
+  @filters_types %{
+    search_term: :string,
+    body: :boolean,
+    log: :boolean,
+    workflow_id: :string,
+    date_after: :utc_datetime,
+    date_before: :utc_datetime,
+    wo_date_after: :utc_datetime,
+    wo_date_before: :utc_datetime,
+    success: :boolean,
+    failure: :boolean,
+    timeout: :boolean,
+    crash: :boolean,
+    pending: :boolean
+  }
+
   on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
@@ -71,7 +87,7 @@ defmodule LightningWeb.RunLive.Index do
      |> apply_action(socket.assigns.live_action, params)}
   end
 
-  defp get_query_data(socket, params) do
+  defp prepare_search_filters(socket, params) do
     search = Map.get(params, "search")
 
     if search do
@@ -129,14 +145,14 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
-    data = get_query_data(socket, params)
+    filters = prepare_search_filters(socket, params)
 
     socket
     |> assign(
       page:
         Invocation.list_work_orders_for_project(
           socket.assigns.project,
-          data,
+          filters,
           params
         ),
       search_changeset:
@@ -146,39 +162,8 @@ defmodule LightningWeb.RunLive.Index do
     )
   end
 
-  defp search_changeset(params) do
-    {%{},
-     %{
-       search_term: :string,
-       body: :boolean,
-       log: :boolean,
-       workflow_id: :string,
-       date_after: :utc_datetime,
-       date_before: :utc_datetime,
-       wo_date_after: :utc_datetime,
-       wo_date_before: :utc_datetime,
-       success: :boolean,
-       failure: :boolean,
-       timeout: :boolean,
-       crash: :boolean,
-       pending: :boolean
-     }}
-    |> Ecto.Changeset.cast(params, [
-      :search_term,
-      :body,
-      :log,
-      :workflow_id,
-      :date_after,
-      :date_before,
-      :wo_date_after,
-      :wo_date_before,
-      :success,
-      :failure,
-      :timeout,
-      :crash,
-      :pending
-    ])
-  end
+  defp search_changeset(params),
+    do: Ecto.Changeset.cast({%{}, @filters_types}, params, Map.keys(@filters_types))
 
   @impl true
   def handle_event(
@@ -199,12 +184,12 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("validate", %{"search" => search_params} = _params, socket) do
+    IO.inspect(search_params)
     {:noreply,
      socket
      |> assign(search_changeset: search_changeset(search_params))
      |> push_patch(
-       to:
-         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
+       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
      )}
   end
 end
