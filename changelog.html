@@ -168,7 +168,14 @@ instances. <a href="https://github.com/OpenFn/Lightning/issues/658">658</a></li>
   Changed
 </h3>
 <ul><li>Display timezone for cron schedule—it is always UTC.
-<a href="https://github.com/OpenFn/Lightning/issues/716">#716</a></li></ul><h3 id="fixed-1" class="section-heading">
+<a href="https://github.com/OpenFn/Lightning/issues/716">#716</a></li><li>Instance administrators can now configure the interval between when a project
+owner or user requests deletion and when these records are purged from the
+database. It defaults to 7, but by providing a <code class="inline">PURGE_DELETED_AFTER_DAYS</code>
+environment variable the grace period can be altered. Note that setting this
+variable to <code class="inline">0</code> will make automatic purging <em>never</em> occur but will still make
+&quot;deleted&quot; projects and users unavailable. This has been requested by certain
+organizations that must retain audit logs in a Lightning instance.
+<a href="https://github.com/OpenFn/Lightning/issues/758">758</a></li></ul><h3 id="fixed-1" class="section-heading">
   <a href="#fixed-1" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">fixed-1</p>
   </a>
