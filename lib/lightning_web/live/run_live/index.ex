@@ -164,7 +164,7 @@ defmodule LightningWeb.RunLive.Index do
 
   def checked(changeset, id) do
     case Ecto.Changeset.fetch_field(changeset, id) do
-      {:changes, true} -> true
+      value when value in [:error, {:changes, true}] -> true
       _ -> false
     end
   end
