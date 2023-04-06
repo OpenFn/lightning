@@ -48,9 +48,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           </span>
           <Common.tooltip
             id="trigger-tooltip"
-            title="Choose when this job should run. Select 'webhook' for
-              realtime workflows triggered by notifications from
-              external systems."
+            title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
             class="inline-block"
           />
         </div>
