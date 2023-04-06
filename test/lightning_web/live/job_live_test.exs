@@ -293,9 +293,7 @@ defmodule LightningWeb.JobLiveTest do
       assert view
              |> element("#trigger-tooltip")
              |> tooltip_text() ==
-               "Choose when this job should run. Select 'webhook' for
-               realtime workflows triggered by notifications from
-               external systems."
+               "Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
 
       # Adaptor tooltip
       assert view
