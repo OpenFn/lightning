@@ -38,9 +38,9 @@
       <div class="w-96 bg-gray-200 ml-4 p-4 pt-0 sticky top-0 self-start rounded-md">
         <.form
           :let={f}
-          for={@search_changeset}
+          for={@filters_changeset}
           id="run-search-form"
-          as={:search}
+          as={:filters}
           phx-change="validate"
           phx-submit="validate"
         >
@@ -77,7 +77,7 @@
                     <%= checkbox(f, search_field.id,
                       checked:
                         checked(
-                          @search_changeset,
+                          @filters_changeset,
                           search_field.id
                         ),
                       class:
@@ -151,7 +151,7 @@
                 <div class="form-check">
                   <div class="selectable-option">
                     <%= checkbox(f, status.id,
-                      checked: checked(@search_changeset, status.id),
+                      checked: checked(@filters_changeset, status.id),
                       class:
                         "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     ) %>

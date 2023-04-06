@@ -87,19 +87,19 @@ defmodule LightningWeb.RunLive.Index do
      |> apply_action(socket.assigns.live_action, params)}
   end
 
-  defp prepare_search_filters(socket, params) do
-    search = Map.get(params, "search")
+  defp prepare_filters(socket, params) do
+    filters = Map.get(params, "filters")
 
-    if search do
-      search =
-        Enum.map(search, fn {key, value} ->
+    if filters do
+      filters =
+        Enum.map(filters, fn {key, value} ->
           {String.to_existing_atom(key), value}
         end)
 
       statuses = Enum.map(socket.assigns.statuses, fn status -> status.id end)
 
       statuses =
-        Enum.map(search, fn {key, value} ->
+        Enum.map(filters, fn {key, value} ->
           if key in statuses and String.to_existing_atom(value) do
             key
           end
@@ -112,7 +112,7 @@ defmodule LightningWeb.RunLive.Index do
         end)
 
       search_fields =
-        Enum.map(search, fn {key, value} ->
+        Enum.map(filters, fn {key, value} ->
           if key in search_fields and String.to_existing_atom(value) do
             key
           end
@@ -120,7 +120,7 @@ defmodule LightningWeb.RunLive.Index do
         |> Enum.filter(fn v -> v end)
 
       remainder =
-        Enum.map(search, fn {key, value} ->
+        Enum.map(filters, fn {key, value} ->
           kw = statuses ++ search_fields
 
           if is_nil(kw[key]) do
@@ -145,7 +145,7 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
-    filters = prepare_search_filters(socket, params)
+    filters = prepare_filters(socket, params)
 
     socket
     |> assign(
@@ -155,10 +155,10 @@ defmodule LightningWeb.RunLive.Index do
           filters,
           params
         ),
-      search_changeset:
+      filters_changeset:
         params
-        |> Map.get("search", %{"search_term" => nil})
-        |> search_changeset()
+        |> Map.get("filters", %{"search_term" => nil})
+        |> filters_changeset()
     )
   end
 
@@ -169,7 +169,7 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  defp search_changeset(params),
+  defp filters_changeset(params),
     do:
       Ecto.Changeset.cast(
         {%{}, @filters_types},
@@ -219,12 +219,12 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("validate", %{"search" => search_params} = _params, socket) do
+  def handle_event("validate", %{"filters" => filters_params} = _params, socket) do
     {:noreply,
      socket
-     |> assign(search_changeset: search_changeset(search_params))
+     |> assign(filters_changeset: filters_changeset(filters_params))
      |> push_patch(
-       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{search: search_params}}"
+       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters_params}}"
      )}
   end
 end
