@@ -21,9 +21,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           field={:adaptor_name}
           title="Adaptor"
           for="adaptor-name"
-          tooltip="Adaptors provide a specific set functions (actions you can
-            perform) which work with various systems. Hint: select the 'common'
-            adaptor if this job only performs data manipulation."
+          tooltip="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick ‘http’ for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
         />
         <Form.select_field
           form={:adaptor_picker}

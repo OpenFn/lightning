@@ -18,9 +18,7 @@ defmodule LightningWeb.Components.Jobs do
       field={:project_credential_id}
       title="Credential"
       for="credentialField"
-      tooltip="To connect to an external system that requires authentication you
-        usually want a credential with the same 'type' as your adaptor. Hint: If
-        you are using the common adaptor there is no need for credentials."
+      tooltip="If the system you’re working with requires authentication, choose a credential with login details (“secrets”) that will allow this job to connect. If you’re not connecting to an external systems you don’t need a credential."
     />
     <%= error_tag(@form, :project_credential_id, class: "block w-full rounded-md") %>
     <.select_field
