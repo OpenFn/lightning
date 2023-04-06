@@ -28,6 +28,8 @@ and this project adheres to
   [657](https://github.com/OpenFn/Lightning/issues/657)
 - Clicks on the workflow canvas were not lining up with the nodes users clicked
   on; they are now [733](https://github.com/OpenFn/Lightning/issues/733)
+- Job panel behaves better when collapsed
+  [774](https://github.com/OpenFn/Lightning/issues/774)
 
 ## [0.5.0] - 2023-04-03
 

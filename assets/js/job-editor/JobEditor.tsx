@@ -41,14 +41,17 @@ const Tabs = ({ options, onSelectionChange, verticalCollapse, initialSelection }
     }
   }
 
+  const commonStyle = 'flex'
+  const horizStyle = 'flex-space-x-2 w-full'
+  const vertStyle = 'flex-space-y-2'
+
   const style = verticalCollapse ? {
     writingMode: 'vertical-rl',
     textOrientation: 'mixed'
   } : {};
 
   return (
-    <nav className={`flex space-${verticalCollapse?'y':'x'}-2 w-full`} aria-label="Tabs" style={style}>
-       {/* TODO need to support more information in each tab */}
+    <nav className={`${commonStyle} ${verticalCollapse ? vertStyle : horizStyle}`} aria-label="Tabs" style={style}>
        {options.map(({ label, id, icon }) => {
           const style = id === selected ? 
             'bg-primary-50 text-gray-700' : 'text-gray-400 hover:text-gray-700'
@@ -117,7 +120,6 @@ export default ({ adaptor, source, disabled, metadata, onSourceChanged }: JobEdi
     }
   }, [vertical, showPanel])
 
-  // TODO too many complex style rules embedded in this - is there a better approach?
   return (<>
   <div className="cursor-pointer" >
   </div>
@@ -128,7 +130,7 @@ export default ({ adaptor, source, disabled, metadata, onSourceChanged }: JobEdi
     <div className={`${showPanel ? 'flex flex-col flex-1 overflow-auto' : ''} bg-white`}>
       <div className={
         ['flex',
-        `flex-${!vertical && !showPanel ? 'col-reverse items-center' : 'row'}`,
+        !vertical && !showPanel ? 'flex-col-reverse items-center' : 'flex-row',
         'w-full',
         'justify-items-end',
         'sticky',
@@ -143,8 +145,10 @@ export default ({ adaptor, source, disabled, metadata, onSourceChanged }: JobEdi
           onSelectionChange={handleSelectionChange}
           verticalCollapse={!vertical && !showPanel}
         />
-        <ViewColumnsIcon className={`${iconStyle} rotate-90`} onClick={toggleOrientiation} title="Toggle panel orientation"/>
-        <CollapseIcon className={iconStyle} onClick={toggleShowPanel} title="Collapse panel" />
+        <div className={`flex select-none flex-1 text-right py-2 ${!showPanel && !vertical? 'px-2 flex-col-reverse' : 'flex-row'}`}>
+          <ViewColumnsIcon className={`${iconStyle} ${!vertical ? 'rotate-90' : ''}`} onClick={toggleOrientiation} title="Toggle panel orientation"/>
+          <CollapseIcon className={iconStyle} onClick={toggleShowPanel} title="Collapse panel" />
+        </div>
       </div>
       {showPanel && 
         <div className={`flex flex-1 ${vertical ? 'overflow-auto' : 'overflow-hidden'} px-2`}>
