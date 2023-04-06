@@ -179,15 +179,6 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        "toggle_details",
-        socket
-      ) do
-    IO.inspect(socket)
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_info(
         {_, %Lightning.Workorders.Events.AttemptCreated{attempt: attempt}},
         socket
       ) do
