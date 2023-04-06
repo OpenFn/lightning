@@ -262,6 +262,19 @@ defmodule LightningWeb.WorkflowLive do
     end
   end
 
+  def handle_event("close_job_builder", _, socket) do
+    if !socket.assigns.saved do
+      {:noreply, socket |> put_flash(:error, "Not saved")}
+    else
+      IO.inspect("We are good")
+      {:noreply, socket}
+      # socket
+      # |> push_patch(
+      #   to: socket.assigns.return_to <> "/j/#{socket.assigns.job.id}"
+      # )
+    end
+  end
+
   @impl true
   def handle_event("copied_to_clipboard", _, socket) do
     {:noreply,
@@ -340,6 +353,14 @@ defmodule LightningWeb.WorkflowLive do
          socket.assigns.builder_state
          |> Map.merge(%{dataclip: dataclip, job_id: job_id})
      )}
+  end
+
+  def handle_info(
+        {:job_saved, saved},
+        socket
+      ) do
+    IO.inspect(saved, label: "Saved?")
+    {:noreply, socket |> assign(saved: saved)}
   end
 
   # A generic handler for forwarding updates from PubSub

@@ -225,17 +225,23 @@ defmodule LightningWeb.JobLive.JobBuilder do
         </div>
         <div class="flex-none sticky p-3 border-t">
           <!-- BUTTONS -->
-          <%= live_patch("Close",
+          <Common.button
+            id="close_job_builder"
+            text="Close"
+            target={@myself}
+            phx-click="close_job_builder"
+          />
+          <%!-- <%= live_patch("Close",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
             to: @return_to
-          ) %>
+          ) %> --%>
           <Form.submit_button
             disabled={!(@changeset.valid? and @can_edit_job)}
             phx-disable-with="Saving"
             form="job-form"
           >
-            Save
+            <%= if @job_id != "new", do: "Save", else: "Create" %>
           </Form.submit_button>
           <%= if @job_id != "new" do %>
             <Common.button
@@ -270,6 +276,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   @impl true
   def handle_event("validate", %{"job_form" => params}, socket) do
+    send(
+      self(),
+      {:job_saved, false}
+    )
+
     {:noreply, socket |> assign_changeset_and_params(params)}
   end
 
@@ -346,8 +357,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
         changeset
         |> Lightning.Repo.insert_or_update()
         |> case do
-          {:ok, _job} ->
-            on_save_success(socket)
+          {:ok, job} ->
+            on_save_success(socket, job)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, changeset: changeset, params: params)
@@ -362,7 +373,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
     end
   end
 
-  defp on_save_success(socket) do
+  defp on_save_success(socket, job) do
     workflow_id =
       socket.assigns.changeset |> Ecto.Changeset.get_field(:workflow_id)
 
@@ -372,9 +383,19 @@ defmodule LightningWeb.JobLive.JobBuilder do
       %{workflow_id: workflow_id}
     )
 
+    message =
+      if socket.assigns.job.id != job.id,
+        do: "Job created successfully",
+        else: "Job updated successfully"
+
+    send(
+      self(),
+      {:job_saved, true}
+    )
+
     socket
-    |> put_flash(:info, "Job updated successfully")
-    |> push_patch(to: socket.assigns.return_to <> "/j/#{socket.assigns.job.id}")
+    |> put_flash(:info, message)
+    |> push_patch(to: socket.assigns.return_to <> "/j/#{job.id}")
   end
 
   defp merge_params(prev, next) do
@@ -418,6 +439,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   @impl true
   def mount(socket) do
+    send(
+      self(),
+      {:job_saved, true}
+    )
+
     {:ok, socket |> assign(follow_run_id: nil)}
   end
 
