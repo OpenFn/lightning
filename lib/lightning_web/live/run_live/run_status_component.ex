@@ -14,8 +14,8 @@ defmodule Lightning.RunLive.RunStatusComponent do
         Filter by workorder status
         <Common.tooltip
           id="trigger-tooltip"
-          title="Filter workorders based on their status. (I.e., the status of
-            the last run in any attempt for that workorder.)"
+          title="Filter workorders by their status. Hint: this is equivalent to
+            the status of their most recent run in their most recent attempt."
           class="inline-block"
         />
       </div>
