@@ -266,7 +266,6 @@ defmodule LightningWeb.WorkflowLive do
     if !socket.assigns.saved do
       {:noreply, socket |> put_flash(:error, "Not saved")}
     else
-      IO.inspect("We are good")
       {:noreply, socket}
       # socket
       # |> push_patch(
@@ -359,7 +358,6 @@ defmodule LightningWeb.WorkflowLive do
         {:job_saved, saved},
         socket
       ) do
-    IO.inspect(saved, label: "Saved?")
     {:noreply, socket |> assign(saved: saved)}
   end
 
