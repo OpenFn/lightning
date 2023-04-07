@@ -97,7 +97,7 @@ defmodule LightningWeb.RunLive.Index do
     }
 
   @impl true
-  def handle_params(params, url, socket) do
+  def handle_params(params, _url, socket) do
     if is_nil(Map.get(params, "filters")) do
       params = Map.put(params, "filters", socket.assigns.filters)
 
