@@ -224,8 +224,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </LightningWeb.Components.Common.panel_content>
         </div>
         <div class="flex-none sticky p-3 border-t">
-          <!-- BUTTONS -->
-          <%= live_patch("Cancel",
+          <%= live_patch("Close",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
             to: @return_to
@@ -235,7 +234,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             phx-disable-with="Saving"
             form="job-form"
           >
-            Save
+            <%= if @job_id != "new", do: "Save", else: "Create" %>
           </Form.submit_button>
           <%= if @job_id != "new" do %>
             <Common.button
@@ -346,8 +345,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
         changeset
         |> Lightning.Repo.insert_or_update()
         |> case do
-          {:ok, _job} ->
-            on_save_success(socket)
+          {:ok, job} ->
+            on_save_success(socket, job)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, changeset: changeset, params: params)
@@ -362,7 +361,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
     end
   end
 
-  defp on_save_success(socket) do
+  defp on_save_success(socket, job) do
     workflow_id =
       socket.assigns.changeset |> Ecto.Changeset.get_field(:workflow_id)
 
@@ -372,9 +371,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
       %{workflow_id: workflow_id}
     )
 
+    message =
+      if socket.assigns.job.id != job.id,
+        do: "Job created successfully",
+        else: "Job updated successfully"
+
     socket
-    |> put_flash(:info, "Job updated successfully")
-    |> push_patch(to: socket.assigns.return_to)
+    |> put_flash(:info, message)
+    |> push_patch(to: socket.assigns.return_to <> "/j/#{job.id}")
   end
 
   defp merge_params(prev, next) do

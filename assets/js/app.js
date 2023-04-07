@@ -115,6 +115,19 @@ window.addEventListener('phx:page-loading-stop', () => {
   topbar.hide();
 });
 
+window.addEventListener('keydown', event => {
+  const currentURL = window.location.pathname;
+  const edit_job_url = /\/projects\/(.+)\/w\/(.+)\/j\/(.+)/;
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    if (edit_job_url.test(currentURL)) {
+      event.preventDefault();
+      console.log('Saving the job');
+      let form = document.querySelector("button[form='job-form']");
+      form.click();
+    }
+  }
+});
+
 // connect if there are any LiveViews on the page
 liveSocket.connect();
 // expose liveSocket on window for web console debug logs and latency simulation:

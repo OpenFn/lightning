@@ -14,6 +14,10 @@ and this project adheres to
   [#147](https://github.com/OpenFn/Lightning/issues/147)
 - Add `last-used at` to API tokens
   [#722](https://github.com/OpenFn/Lightning/issues/722)
+- Improved "save" for job builder; users can now press `Ctrl + S` or `⌘ + S` to
+  save new or updated jobs job panel will _not_ close. (Click elsewhere in the
+  canvas or click the "Close" button to close.)
+  [#568](https://github.com/OpenFn/Lightning/issues/568)
 
 ### Changed
 

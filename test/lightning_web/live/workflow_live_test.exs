@@ -195,7 +195,13 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert_patch(
         view,
-        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
+        Routes.project_workflow_path(
+          conn,
+          :edit_job,
+          project.id,
+          job.workflow_id,
+          job.id
+        )
       )
 
       assert render(view) =~ "Job updated successfully"
@@ -333,20 +339,24 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert view |> has_error_for("name", "can't be blank")
 
       view
-      |> form("#job-form", job_form: %{enabled: true, name: "My Job"})
+      |> form("#job-form", job_form: %{enabled: true, name: "New Job"})
       |> render_change()
 
       refute view |> has_error_for("name")
 
-      view |> submit_form()
+      view
+      |> submit_form()
+
+      job = Lightning.Repo.get_by!(Lightning.Jobs.Job, %{name: "New Job"})
 
       assert_patch(
         view,
         Routes.project_workflow_path(
           conn,
-          :show,
+          :edit_job,
           project.id,
-          upstream_job.workflow_id
+          job.workflow_id,
+          job.id
         )
       )
 
@@ -376,14 +386,22 @@ defmodule LightningWeb.WorkflowLiveTest do
       |> render_hook(:job_body_changed, %{source: "some body"})
 
       view
-      |> form("#job-form", job_form: %{enabled: true, name: "My Job"})
+      |> form("#job-form", job_form: %{enabled: true, name: "DHIS2 Job"})
       |> render_change()
 
       view |> submit_form()
 
+      job = Lightning.Repo.get_by!(Lightning.Jobs.Job, %{name: "DHIS2 Job"})
+
       assert_patch(
         view,
-        ~p"/projects/#{project.id}/w/#{workflow.id}"
+        Routes.project_workflow_path(
+          conn,
+          :edit_job,
+          project.id,
+          job.workflow_id,
+          job.id
+        )
       )
 
       view |> encoded_project_space_matches(workflow)
@@ -742,19 +760,25 @@ defmodule LightningWeb.WorkflowLiveTest do
       |> render_hook(:job_body_changed, %{source: "some body"})
 
       assert view
-             |> form("#job-form", job_form: %{name: "my job", enabled: true})
+             |> form("#job-form", job_form: %{name: "timer job", enabled: true})
              |> render_change()
 
-      view |> submit_form() =~ "Job updated successfully"
+      view |> submit_form() =~ "Job created successfully"
+
+      job =
+        Lightning.Repo.get_by!(Lightning.Jobs.Job, %{name: "timer job"})
+        |> Lightning.Repo.preload([:workflow, :trigger])
 
       assert_patch(
         view,
-        Routes.project_workflow_path(conn, :show, project.id, job.workflow_id)
+        Routes.project_workflow_path(
+          conn,
+          :edit_job,
+          project.id,
+          job.workflow_id,
+          job.id
+        )
       )
-
-      job =
-        Lightning.Repo.get_by!(Lightning.Jobs.Job, %{name: "my job"})
-        |> Lightning.Repo.preload([:workflow, :trigger])
 
       due_for_execution =
         Timex.now()
