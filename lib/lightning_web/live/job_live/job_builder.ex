@@ -224,18 +224,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </LightningWeb.Components.Common.panel_content>
         </div>
         <div class="flex-none sticky p-3 border-t">
-          <!-- BUTTONS -->
-          <Common.button
-            id="close_job_builder"
-            text="Close"
-            target={@myself}
-            phx-click="close_job_builder"
-          />
-          <%!-- <%= live_patch("Close",
+          <%= live_patch("Close",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
             to: @return_to
-          ) %> --%>
+          ) %>
           <Form.submit_button
             disabled={!(@changeset.valid? and @can_edit_job)}
             phx-disable-with="Saving"
@@ -276,11 +269,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   @impl true
   def handle_event("validate", %{"job_form" => params}, socket) do
-    send(
-      self(),
-      {:job_saved, false}
-    )
-
     {:noreply, socket |> assign_changeset_and_params(params)}
   end
 
@@ -388,11 +376,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
         do: "Job created successfully",
         else: "Job updated successfully"
 
-    send(
-      self(),
-      {:job_saved, true}
-    )
-
     socket
     |> put_flash(:info, message)
     |> push_patch(to: socket.assigns.return_to <> "/j/#{job.id}")
@@ -439,11 +422,6 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   @impl true
   def mount(socket) do
-    send(
-      self(),
-      {:job_saved, true}
-    )
-
     {:ok, socket |> assign(follow_run_id: nil)}
   end
 
