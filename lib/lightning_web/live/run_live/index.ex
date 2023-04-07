@@ -26,10 +26,10 @@ defmodule LightningWeb.RunLive.Index do
     pending: :boolean
   }
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     WorkOrderService.subscribe(socket.assigns.project.id)
 
     workflows =
@@ -57,6 +57,8 @@ defmodule LightningWeb.RunLive.Index do
       %{id: :log, label: "Logs", value: true}
     ]
 
+    params = Map.put_new(params, "filters", init_filters())
+
     {:ok,
      socket
      |> assign(
@@ -72,19 +74,53 @@ defmodule LightningWeb.RunLive.Index do
            :index,
            socket.assigns.project,
            &1
-         )
+         ),
+       filters: params["filters"]
      )}
   end
 
+  defp init_filters(),
+    do: %{
+      "body" => "true",
+      "crash" => "true",
+      "date_after" => "",
+      "date_before" => "",
+      "failure" => "true",
+      "log" => "true",
+      "pending" => "true",
+      "search_term" => "",
+      "success" => "true",
+      "timeout" => "true",
+      "wo_date_after" => "",
+      "wo_date_before" => "",
+      "workflow_id" => ""
+    }
+
   @impl true
-  def handle_params(params, _url, socket) do
-    {:noreply,
-     socket
-     |> assign(
-       page_title: "History",
-       run: %Run{}
-     )
-     |> apply_action(socket.assigns.live_action, params)}
+  def handle_params(params, url, socket) do
+    if is_nil(Map.get(params, "filters")) do
+      params = Map.put(params, "filters", socket.assigns.filters)
+
+      {:noreply,
+       socket
+       |> assign(
+         page_title: "History",
+         run: %Run{},
+         filters_changeset: filters_changeset(socket.assigns.filters)
+       )
+       |> push_patch(
+         to: ~p"/projects/#{socket.assigns.project.id}/runs?#{params}"
+       )}
+    else
+      {:noreply,
+       socket
+       |> assign(
+         page_title: "History",
+         run: %Run{},
+         filters_changeset: filters_changeset(socket.assigns.filters)
+       )
+       |> apply_action(socket.assigns.live_action, params)}
+    end
   end
 
   defp prepare_filters(socket, params) do
@@ -157,7 +193,7 @@ defmodule LightningWeb.RunLive.Index do
         ),
       filters_changeset:
         params
-        |> Map.get("filters", %{"search_term" => nil})
+        |> Map.get("filters", init_filters())
         |> filters_changeset()
     )
   end
@@ -223,8 +259,10 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply,
      socket
      |> assign(filters_changeset: filters_changeset(filters_params))
+     |> assign(filters: filters_params)
      |> push_patch(
-       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters_params}}"
+       to:
+         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters_params}}"
      )}
   end
 end
