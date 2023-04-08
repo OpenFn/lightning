@@ -14,8 +14,8 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grid grid-cols-4 gap-1">
-      <div class="md:col-span-3">
+    <div class="grid grid-cols-4 gap-2 @container">
+      <div class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={:adaptor_picker}
           field={:adaptor_name}
@@ -34,8 +34,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           disabled={@disabled}
         />
       </div>
-
-      <div class="md:col-span-1">
+      <div class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={@form}
           field={:adaptor_version}

@@ -109,8 +109,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-submit="save"
               class="h-full"
             >
-              <div class="md:grid md:grid-cols-4 md:gap-4 @container">
-                <div class="md:col-span-2">
+              <div class="md:grid md:grid-cols-6 md:gap-4 @container">
+                <div class="col-span-6">
+                  <Form.check_box form={f} id={:enabled} disabled={!@can_edit_job} />
+                </div>
+                <div class="col-span-6 @md:col-span-4">
                   <Form.text_field
                     form={f}
                     label="Job Name"
@@ -118,10 +121,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     disabled={!@can_edit_job}
                   />
                 </div>
-                <div class="md:col-span-2">
-                  <Form.check_box form={f} id={:enabled} disabled={!@can_edit_job} />
-                </div>
-                <div class="md:col-span-4">
+                <div class="col-span-6">
                   <%= for t <- inputs_for(f, :trigger) do %>
                     <.trigger_picker
                       form={t}
@@ -135,7 +135,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     />
                   <% end %>
                 </div>
-                <div class="col-span-4">
+                <div class="col-span-6">
                   <.live_component
                     id="adaptor-picker"
                     module={LightningWeb.JobLive.AdaptorPicker}
@@ -144,23 +144,13 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     disabled={!@can_edit_job}
                   />
                 </div>
-                <div class="md:col-span-2">
+                <div class="col-span-6 @md:col-span-4">
                   <Components.Jobs.credential_select
                     form={f}
                     credentials={@credentials}
                     disabled={!@can_edit_job}
+                    myself={@myself}
                   />
-                  <%= if @can_edit_job do %>
-                    <button
-                      id="new-credential-launcher"
-                      type="button"
-                      class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
-                      phx-click="open_new_credential"
-                      phx-target={@myself}
-                    >
-                      New credential
-                    </button>
-                  <% end %>
                 </div>
               </div>
             </.form>

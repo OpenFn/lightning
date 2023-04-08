@@ -39,9 +39,9 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       )
 
     ~H"""
-    <div class="md:grid md:grid-cols-2 md:gap-4">
+    <div class="grid grid-cols-4 gap-4">
       <%= hidden_inputs_for(@form) %>
-      <%= label @form, :type, class: "" do %>
+      <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
         <div class="flex flex-row">
           <span class="text-sm font-medium text-secondary-700">
             Trigger
@@ -60,21 +60,23 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           values={@trigger_type_options}
           disabled={@disabled}
         />
-      <% end %>
-      <%= if @webhook_url do %>
-        <a
-          id="copyWebhookUrl"
-          href={@webhook_url}
-          class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
-          onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-          target="_blank"
-          phx-click="copied_to_clipboard"
-        >
-          Copy webhook url
-        </a>
+        <%= if @webhook_url do %>
+          <div class="col-span-4 @md:col-span-2 text-right text-">
+            <a
+              id="copyWebhookUrl"
+              href={@webhook_url}
+              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+              target="_blank"
+              phx-click="copied_to_clipboard"
+            >
+              Copy webhook url
+            </a>
+          </div>
+        <% end %>
       <% end %>
       <%= if @requires_upstream_job do %>
-        <%= label @form, :upstream_job_id, class: "block" do %>
+        <%= label @form, :upstream_job_id, class: "block col-span-4 @md:col-span-2" do %>
           <span class="block text-sm font-medium text-secondary-700">
             Upstream Job
           </span>

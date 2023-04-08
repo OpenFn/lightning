@@ -29,6 +29,19 @@ defmodule LightningWeb.Components.Jobs do
       values={@credentials}
       disabled={@disabled}
     />
+    <%= if !@disabled do %>
+      <div class="text-right">
+        <button
+          id="new-credential-launcher"
+          type="button"
+          class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
+          phx-click="open_new_credential"
+          phx-target={@myself}
+        >
+          New credential
+        </button>
+      </div>
+    <% end %>
     """
   end
 end
