@@ -4,9 +4,9 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
-  attr :id, :string, required: true
-  attr :title, :string, required: true
-  attr :class, :string, default: ""
+  attr(:id, :string, required: true)
+  attr(:title, :string, required: true)
+  attr(:class, :string, default: "")
 
   def tooltip(assigns) do
     classes = ~w"
@@ -37,11 +37,11 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr :text, :string, required: false
-  slot :inner_block, required: false
-  attr :disabled, :boolean, default: false
-  attr :color, :string, default: "primary", values: ["primary", "red", "green"]
-  attr :rest, :global
+  attr(:text, :string, required: false)
+  slot(:inner_block, required: false)
+  attr(:disabled, :boolean, default: false)
+  attr(:color, :string, default: "primary", values: ["primary", "red", "green"])
+  attr(:rest, :global)
 
   def button(assigns) do
     class =
@@ -165,7 +165,7 @@ defmodule LightningWeb.Components.Common do
       }
       phx-hook="Flash"
     >
-      <div class="flex justify-between items-center space-x-3 text-red-900">
+      <div class="flex items-center justify-between text-red-900 space-x-3">
         <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>
@@ -198,7 +198,7 @@ defmodule LightningWeb.Components.Common do
       phx-value-key="info"
       phx-hook="Flash"
     >
-      <div class="flex justify-between items-center space-x-3 text-blue-900">
+      <div class="flex items-center justify-between text-blue-900 space-x-3">
         <Heroicons.check_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>

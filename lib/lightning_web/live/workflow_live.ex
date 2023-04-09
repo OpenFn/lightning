@@ -45,6 +45,8 @@ defmodule LightningWeb.WorkflowLive do
                 can_create_workflow={@can_create_workflow}
                 workflows={@workflows}
                 project={@project}
+                toggle_content={@toggle_content}
+                name={@name}
               />
             </LayoutComponents.centered>
           <% :new_job -> %>
@@ -285,6 +287,29 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   @impl true
+  def handle_event("show-body", _, socket) do
+    {:noreply, update(socket, :toggle_content, &(&1 = true))}
+  end
+
+  @impl true
+  def handle_event("hide-body", _, socket) do
+    {:noreply, update(socket, :toggle_content, &(&1 = false))}
+  end
+
+  @impl true
+  def handle_event("search_workflow", %{"name" => name}, socket) do
+    send(self(), {:search_by_name, name})
+
+    socket =
+      assign(socket,
+        name: name,
+        workflows: []
+      )
+
+    {:noreply, socket}
+  end
+
+  @impl true
   def handle_event("delete_workflow", %{"id" => id}, socket) do
     Workflows.get_workflow!(id)
     |> Workflows.mark_for_deletion()
@@ -334,6 +359,23 @@ defmodule LightningWeb.WorkflowLive do
      )}
   end
 
+  def handle_info({:search_by_name, name}, socket) do
+    case(Workflows.search_workflow_by_name(socket.assigns.project, name)) do
+      [] ->
+        socket =
+          socket
+          |> put_flash(:info, "No workflow matching #{name}")
+          |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
+
+        {:noreply, socket}
+
+      workflows ->
+        socket = socket |> assign(workflows: workflows)
+
+        {:noreply, socket}
+    end
+  end
+
   # A generic handler for forwarding updates from PubSub
   @impl true
   def handle_info({:forward, mod, opts}, socket) do
@@ -351,7 +393,9 @@ defmodule LightningWeb.WorkflowLive do
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
-      workflows: Workflows.get_workflows_for(socket.assigns.project)
+      workflows: Workflows.get_workflows_for(socket.assigns.project),
+      toggle_content: true,
+      name: ""
     )
   end
 

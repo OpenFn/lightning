@@ -114,6 +114,15 @@ defmodule Lightning.Workflows do
     |> Repo.all()
   end
 
+  def search_workflow_by_name(%Project{} = project, name) do
+    like = "%#{name}%"
+
+    from(w in get_workflows_for_query(project),
+      where: ilike(w.name, ^like)
+    )
+    |> Repo.all()
+  end
+
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
       preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],

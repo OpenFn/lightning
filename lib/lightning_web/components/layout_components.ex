@@ -92,7 +92,7 @@ defmodule LightningWeb.LayoutComponents do
   def header(assigns) do
     ~H"""
     <div class="z-20 flex-none bg-white shadow-sm">
-      <div class="flex items-center h-20 mx-auto max-w-7xl sm:px-6 lg:px-8">
+      <div class="flex items-center w-3/4 h-20 mx-auto sm:px-6 lg:px-8">
         <h1 class="flex items-center text-3xl font-bold text-secondary-900">
           <%= if assigns[:title], do: render_slot(@title) %>
         </h1>
