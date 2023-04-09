@@ -88,27 +88,28 @@ defmodule LightningWeb.WorkflowLive do
                 encoded_project_space={@encoded_project_space}
               />
             </div>
-            
+
             <div class="relative w-1/2 grow-0">
               <div class="absolute inset-y-0 z-10 w-full">
-            <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
-              <.resize_component id={"resizer-#{@job.id}"} />
-              <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
-
-                <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
-                  <.live_component
-                    module={LightningWeb.JobLive.JobBuilder}
-                    id={"builder-#{@job.id}"}
-                    job={@job}
-                    project={@project}
-                    current_user={@current_user}
-                    builder_state={@builder_state}
-                    return_to={
-                      ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
-                    }
-                    can_delete_job={@can_delete_job}
-                    can_edit_job={@can_edit_job}
-                  />
+                <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
+                  <.resize_component id={"resizer-#{@job.id}"} />
+                  <div class="absolute inset-y-0 right-0 z-10 resize-x left-2 ">
+                    <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
+                      <.live_component
+                        module={LightningWeb.JobLive.JobBuilder}
+                        id={"builder-#{@job.id}"}
+                        job={@job}
+                        project={@project}
+                        current_user={@current_user}
+                        builder_state={@builder_state}
+                        return_to={
+                          ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
+                        }
+                        can_delete_job={@can_delete_job}
+                        can_edit_job={@can_edit_job}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -150,7 +151,9 @@ defmodule LightningWeb.WorkflowLive do
 
   def encode_project_space(%Workflows.Workflow{} = workflow) do
     workflow
-    |> Lightning.Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])
+    |> Lightning.Repo.preload(
+      jobs: [:credential, :workflow, trigger: [:upstream_job]]
+    )
     |> List.wrap()
     |> Workflows.to_project_space()
     |> Jason.encode!()
@@ -221,7 +224,9 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply,
      socket
      |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
-     |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}")}
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}"
+     )}
   end
 
   @impl true
@@ -258,7 +263,8 @@ defmodule LightningWeb.WorkflowLive do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")
        |> push_patch(
-         to: ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
+         to:
+           ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
        )}
     end
   end
@@ -323,7 +329,9 @@ defmodule LightningWeb.WorkflowLive do
         {
           :noreply,
           socket
-          |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
+          |> assign(
+            workflows: Workflows.get_workflows_for(socket.assigns.project)
+          )
           |> put_flash(:info, "Workflow deleted successfully")
         }
 
@@ -370,7 +378,9 @@ defmodule LightningWeb.WorkflowLive do
         socket =
           socket
           |> put_flash(:info, "No workflow matching #{name}")
-          |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
+          |> assign(
+            workflows: Workflows.get_workflows_for(socket.assigns.project)
+          )
 
         {:noreply, socket}
 
@@ -407,7 +417,8 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :new_job, %{"upstream_id" => upstream_id}) do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
-    %Lightning.Jobs.Job{workflow: workflow} = upstream_job |> Lightning.Repo.preload(:workflow)
+    %Lightning.Jobs.Job{workflow: workflow} =
+      upstream_job |> Lightning.Repo.preload(:workflow)
 
     socket
     |> assign(
@@ -453,15 +464,14 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
-
     job = Lightning.Jobs.get_job!(job_id)
 
-    %Lightning.Jobs.Job{workflow: workflow} = job |> Lightning.Repo.preload(:workflow)
+    %Lightning.Jobs.Job{workflow: workflow} =
+      job |> Lightning.Repo.preload(:workflow)
 
     job =
       Lightning.Jobs.get_job!(job_id)
       |> Lightning.Repo.preload([:workflow, :credential])
-
 
     socket
     |> assign(
@@ -495,7 +505,9 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :show, %{"workflow_id" => workflow_id}) do
     workflow =
       Lightning.Workflows.get_workflow!(workflow_id)
-      |> Lightning.Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])
+      |> Lightning.Repo.preload(
+        jobs: [:credential, :workflow, trigger: [:upstream_job]]
+      )
 
     socket
     |> assign(
