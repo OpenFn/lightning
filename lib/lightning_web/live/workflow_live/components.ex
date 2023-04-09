@@ -9,15 +9,15 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="py-6">
       <%= if Enum.count(@workflows) > 0 do %>
-      <.workflow_header
-        project={@project}
-        toggle_content={@toggle_content}
-        can_create_workflow={@can_create_workflow}
-        name={@name}
-      />
-    <% else %>
-      <.empty_state can_create_workflow={@can_create_workflow} />
-    <% end %>
+        <.workflow_header
+          project={@project}
+          toggle_content={@toggle_content}
+          can_create_workflow={@can_create_workflow}
+          name={@name}
+        />
+      <% else %>
+        <.empty_state can_create_workflow={@can_create_workflow} />
+      <% end %>
       <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <%= for workflow <- @workflows do %>
           <.workflow_card
@@ -153,7 +153,6 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-
   def workflow_header(assigns) do
     ~H"""
     <h1 class="text-2xl font-bold text-gray-900 leading-7 sm:leading-9 sm:truncate">
@@ -167,16 +166,16 @@ defmodule LightningWeb.WorkflowLive.Components do
               <Heroicons.magnifying_glass class="w-5 h-5" />
             </div>
             <form phx-change="search_workflow">
-            <input
-              phx-debounce="800"
-              id="search"
-              name="name"
-              value={@name}
-              class="block w-full py-2 pl-10 pr-3 text-indigo-800 placeholder-gray-500 border border-transparent rounded-md leading-5 bg-opacity-25 focus:outline-none focus:bg-white focus:ring-0 focus:placeholder-gray-400 focus:text-gray-900 sm:text-sm"
-              placeholder="Search workflows..."
-              type="search"
-            />
-          </form>
+              <input
+                phx-debounce="800"
+                id="search"
+                name="name"
+                value={@name}
+                class="block w-full py-2 pl-10 pr-3 text-indigo-800 placeholder-gray-500 border border-transparent rounded-md leading-5 bg-opacity-25 focus:outline-none focus:bg-white focus:ring-0 focus:placeholder-gray-400 focus:text-gray-900 sm:text-sm"
+                placeholder="Search workflows..."
+                type="search"
+              />
+            </form>
           </div>
         </div>
       </div>
@@ -219,17 +218,22 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div class="text-center">
       <Heroicons.folder_plus outline class="w-12 h-12 mx-auto text-gray-400" />
-    <h3 class="mt-2 text-sm font-medium text-gray-900">No workflows</h3>
-    <p class="mt-1 text-sm text-gray-500">Get started by creating a new workflow.</p>
-    <div class="mt-6">
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No workflows</h3>
+      <p class="mt-1 text-sm text-gray-500">
+        Get started by creating a new workflow.
+      </p>
+      <div class="mt-6">
         <LightningWeb.Components.Common.button
           phx-click="create_workflow"
           disabled={!@can_create_workflow}
         >
-          <Heroicons.plus outline class="inline-block w-5 h-5 mr-2 -ml-1 text-white" fill="currentColor" />
-          Create a workflow
+          <Heroicons.plus
+            outline
+            class="inline-block w-5 h-5 mr-2 -ml-1 text-white"
+            fill="currentColor"
+          /> Create a workflow
         </LightningWeb.Components.Common.button>
-    </div>
+      </div>
     </div>
     """
   end

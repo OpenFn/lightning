@@ -1,37 +1,51 @@
 <.auth_wrapper heading="Log in" conn={@conn}>
-<.form :let={f} for={@conn} action={Routes.user_session_path(@conn, :create)} as={:user} class="space-y-6">
-<.flash_message kind={:error} flash={@flash} />
-<.flash_message kind={:info} flash={@flash} />
-<div>
-  <div class="mt-1">
-    <.email_field form={f} id={:email} required={true} />
-  </div>
-</div>
+  <.form
+    :let={f}
+    for={@conn}
+    action={Routes.user_session_path(@conn, :create)}
+    as={:user}
+    class="space-y-6"
+  >
+    <.flash_message kind={:error} flash={@flash} />
+    <.flash_message kind={:info} flash={@flash} />
+    <div>
+      <div class="mt-1">
+        <.email_field form={f} id={:email} required={true} />
+      </div>
+    </div>
 
-<div>
-  <.password_field form={f} id={:password} required={true} />
-</div>
+    <div>
+      <.password_field form={f} id={:password} required={true} />
+    </div>
 
-<div class="flex items-center justify-between">
-  <div class="flex items-start">
-    <.check_box form={f} id={:remember_me}>
-    <br />
-    <span class="text-xs text-secondary-500">
-      Keep me logged in for 60 days
-    </span>
-    </.check_box>
-  </div>
-</div>
+    <div class="flex items-center justify-between">
+      <div class="flex items-start">
+        <.check_box form={f} id={:remember_me}>
+          <br />
+          <span class="text-xs text-secondary-500">
+            Keep me logged in for 60 days
+          </span>
+        </.check_box>
+      </div>
+    </div>
 
-<.auth_submit button="Log in"/>
+    <.auth_submit button="Log in" />
+  </.form>
 
-</.form>
-
-<.auth_footer_link>
-<:actions>
-      <a href={Routes.user_registration_path(@conn, :new)} class="font-medium text-gray-600 hover:text-gray-500">Register</a>
-      <a href={Routes.user_reset_password_path(@conn, :new)} class="font-medium text-gray-600 hover:text-gray-500"> Forgot your password? </a>
-</:actions>
-</.auth_footer_link>
-
+  <.auth_footer_link>
+    <:actions>
+      <a
+        href={Routes.user_registration_path(@conn, :new)}
+        class="font-medium text-gray-600 hover:text-gray-500"
+      >
+        Register
+      </a>
+      <a
+        href={Routes.user_reset_password_path(@conn, :new)}
+        class="font-medium text-gray-600 hover:text-gray-500"
+      >
+         Forgot your password? 
+      </a>
+    </:actions>
+  </.auth_footer_link>
 </.auth_wrapper>

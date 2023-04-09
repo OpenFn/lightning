@@ -7,7 +7,7 @@ defmodule LightningWeb.Components.Common do
   attr(:id, :string, required: true)
   attr(:title, :string, required: true)
   attr(:class, :string, default: "")
-  
+
   def version_chip(assigns) do
     image_info = Application.get_env(:lightning, :image_info)
     image = image_info[:image_tag]
@@ -75,7 +75,6 @@ defmodule LightningWeb.Components.Common do
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :class, :string, default: ""
-  
 
   def tooltip(assigns) do
     classes = ~w"

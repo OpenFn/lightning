@@ -1,20 +1,35 @@
 <.auth_wrapper heading="Forgot your password?" conn={@conn}>
-<.form :let={f} for={%{}} as={:user} action={Routes.user_reset_password_path(@conn, :create)}>
-<.flash_message kind={:error} flash={@flash} />
-<.flash_message kind={:info} flash={@flash} />
-<div class="grid grid-flow-row gap-4 auto-rows-max">
-  <div>
-    <LightningWeb.Components.Form.email_field form={f} id={:email} required={true}/>
-  </div>
-  <LightningWeb.Components.Form.submit_button>
-  Send instructions to reset password
-  </LightningWeb.Components.Form.submit_button>
-</div>
-</.form>
-<.auth_footer_link>
-  <:actions>
-    <%= link("Log in", to: Routes.user_session_path(@conn, :new), class: "font-medium text-gray-600 hover:text-gray-500") %>
-    <%= link("Register", to: Routes.user_registration_path(@conn, :new), class: "font-medium text-gray-600 hover:text-gray-500") %>
-  </:actions>
-</.auth_footer_link>
+  <.form
+    :let={f}
+    for={%{}}
+    as={:user}
+    action={Routes.user_reset_password_path(@conn, :create)}
+  >
+    <.flash_message kind={:error} flash={@flash} />
+    <.flash_message kind={:info} flash={@flash} />
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <div>
+        <LightningWeb.Components.Form.email_field
+          form={f}
+          id={:email}
+          required={true}
+        />
+      </div>
+      <LightningWeb.Components.Form.submit_button>
+        Send instructions to reset password
+      </LightningWeb.Components.Form.submit_button>
+    </div>
+  </.form>
+  <.auth_footer_link>
+    <:actions>
+      <%= link("Log in",
+        to: Routes.user_session_path(@conn, :new),
+        class: "font-medium text-gray-600 hover:text-gray-500"
+      ) %>
+      <%= link("Register",
+        to: Routes.user_registration_path(@conn, :new),
+        class: "font-medium text-gray-600 hover:text-gray-500"
+      ) %>
+    </:actions>
+  </.auth_footer_link>
 </.auth_wrapper>
