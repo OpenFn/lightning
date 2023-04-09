@@ -30,6 +30,21 @@
     </div>
 
     <.auth_submit button="Log in" />
+    <%= if @auth_handler_url do %>
+      <div class="text-xs text-secondary-700 border-b text-center leading-[0]">
+        <span class="px-2 bg-white">or</span>
+      </div>
+      <button class="inline-flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <a href={@auth_handler_url} class="w-full">
+          <div class="h-full -ml-1">
+            <Heroicons.identification class="inline-block w-4 h-4" />
+            <span class="inline-block align-middle">
+              via external provider
+            </span>
+          </div>
+        </a>
+      </button>
+    <% end %>
   </.form>
 
   <.auth_footer_link>
@@ -44,7 +59,7 @@
         href={Routes.user_reset_password_path(@conn, :new)}
         class="font-medium text-gray-600 hover:text-gray-500"
       >
-         Forgot your password? 
+        Forgot your password?
       </a>
     </:actions>
   </.auth_footer_link>

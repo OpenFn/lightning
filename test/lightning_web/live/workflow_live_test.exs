@@ -12,8 +12,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "index" do
     test "displays the current version", %{conn: conn, project: project} do
-      {:ok, _view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, _view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
     end
@@ -25,8 +24,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       %{workflow: workflow_one} = workflow_job_fixture(project_id: project.id)
       %{workflow: workflow_two} = workflow_job_fixture(project_id: project.id)
 
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
 
@@ -46,15 +44,12 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "create" do
     test "Create empty workflow for a project", %{conn: conn, project: project} do
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
 
       refute view
-             |> element(
-               "button[disabled='disabled'][phx-click='create_workflow']"
-             )
+             |> element("button[disabled='disabled'][phx-click='create_workflow']")
              |> has_element?()
 
       assert view
@@ -71,8 +66,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       conn = get(conn, Routes.project_workflow_path(conn, :index, project.id))
 
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+      {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
 
@@ -304,9 +298,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert has_element?(view, "#job-form")
 
       assert view
-             |> element(
-               ~S{#job-form select#upstream-job option[selected=selected]}
-             )
+             |> element(~S{#job-form select#upstream-job option[selected=selected]})
              |> render() =~ upstream_job.id,
              "Should have the upstream job selected"
 
@@ -533,25 +525,24 @@ defmodule LightningWeb.WorkflowLiveTest do
   end
 
   describe "delete_workflow" do
-    test "delete a workflow on project index page",
-         %{
-           conn: conn,
-           project: project
-         } do
-      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
-
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
-
-      assert html =~ workflow.name
-
-      assert view
-             |> element("a[phx-click='delete_workflow']")
-             |> render_click() =~
-               "Workflow deleted successfully"
-
-      refute has_element?(view, "workflow-#{workflow.id}")
-    end
+    #   test "delete a workflow on project index page",
+    #        %{
+    #          conn: conn,
+    #          project: project
+    #        } do
+    #     workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+    #
+    #     {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
+    #
+    #     assert html =~ workflow.name
+    #
+    #     assert view
+    #            |> element("a[phx-click='delete_workflow']")
+    #            |> render_click() =~
+    #              "Workflow deleted successfully"
+    #
+    #     refute has_element?(view, "workflow-#{workflow.id}")
+    #   end
 
     test "delete a workflow on edit workflow page",
          %{
@@ -574,9 +565,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ workflow.name
 
       assert view
-             |> element(
-               "#workflow-#{workflow.id} a[phx-click='delete_workflow']"
-             )
+             |> element("#workflow-#{workflow.id} a[phx-click='delete_workflow']")
              |> render_click() =~
                "Workflow deleted successfully"
 

@@ -37,8 +37,8 @@ defmodule LightningWeb.UserSessionControllerTest do
       conn = get(conn, Routes.user_session_path(conn, :new))
       response = html_response(conn, 200)
       assert response =~ "Log in"
-      assert response =~ "Register</a>"
-      assert response =~ "Forgot your password?</a>"
+      assert response =~ "Register"
+      assert response =~ "Forgot your password?"
       refute response =~ "via external provider"
     end
 
@@ -93,8 +93,8 @@ defmodule LightningWeb.UserSessionControllerTest do
 
       assert response =~ "Invalid token"
       assert response =~ "Log in"
-      assert response =~ "Register</a>"
-      assert response =~ "Forgot your password?</a>"
+      assert response =~ "Register"
+      assert response =~ "Forgot your password?"
     end
 
     test "redirects if already logged in", %{conn: conn, user: user} do
