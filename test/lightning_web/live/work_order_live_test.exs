@@ -676,7 +676,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       view
       |> form("#run-search-form", filters: %{"failure" => "false"})
-      |> render_change()
+      |> render_submit()
 
       refute view
              |> element(
@@ -688,7 +688,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       view
       |> form("#run-search-form", filters: %{"failure" => "true"})
-      |> render_change()
+      |> render_submit()
 
       div =
         view
@@ -807,7 +807,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element("form#run-search-form")
-             |> render_change(%{
+             |> render_submit(%{
                "filters[workflow_id]" => job_two.workflow_id
              })
 
@@ -823,7 +823,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element("form#run-search-form")
-             |> render_change(%{
+             |> render_submit(%{
                "filters[workflow_id]" => job.workflow_id
              })
 
@@ -930,7 +930,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{
+        |> render_submit(%{
           "filters[date_after]" => ~N[2022-08-25 00:00:00.123456]
         })
 
@@ -942,12 +942,12 @@ defmodule LightningWeb.RunWorkOrderTest do
       # reset after date
       view
       |> element("form#run-search-form")
-      |> render_change(%{"filters[date_after]" => nil})
+      |> render_submit(%{"filters[date_after]" => nil})
 
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{
+        |> render_submit(%{
           "filters[date_before]" => ~N[2022-08-28 00:00:00.123456]
         })
 
@@ -958,7 +958,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{"filters[date_before]" => nil})
+        |> render_submit(%{"filters[date_before]" => nil})
 
       assert result =~ "2022-08-23"
       assert result =~ "2022-08-29"
@@ -1225,24 +1225,17 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   def search_for(view, term, types) do
+    filter_attrs = %{"search_term" => term}
+
     for type <- [:body, :log] do
       checked = type in types
-
-      view
-      |> form("#run-search-form",
-        filters: %{"#{type}" => "#{checked}"}
-      )
-      |> render_change()
+      Map.put(filter_attrs, "#{type}", "#{checked}")
     end
 
     view
     |> form("#run-search-form",
-      filters: %{"search_term" => term}
+      filters: filter_attrs
     )
-    |> render_change()
-
-    view
-    |> form("#run-search-form")
     |> render_submit()
   end
 

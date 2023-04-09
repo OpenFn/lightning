@@ -255,7 +255,7 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("validate", %{"filters" => filters_params} = _params, socket) do
+  def handle_event("filter", %{"filters" => filters_params} = _params, socket) do
     {:noreply,
      socket
      |> assign(filters_changeset: filters_changeset(filters_params))
