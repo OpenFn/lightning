@@ -5,7 +5,7 @@
       id={@user.id}
       user={@user}
       logout={true}
-      return_to={Routes.profile_edit_path(@socket, :edit)}
+      return_to={~p"/profile"}
     />
   <% end %>
   <.form

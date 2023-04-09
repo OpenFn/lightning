@@ -61,6 +61,23 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
+  describe "JobBuilder events" do
+    test "request_metadata", %{conn: conn, project: project} do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/j/new")
+
+      assert has_element?(view, "#builder-new")
+
+      assert view
+             |> with_target("#builder-new")
+             |> render_click("request_metadata", %{})
+
+      assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
+    end
+  end
+
   describe "Deleting a job from inspector" do
     test "jobs with no downstream jobs can be deleted", %{
       conn: conn,
@@ -276,19 +293,19 @@ defmodule LightningWeb.JobLiveTest do
       assert view
              |> element("#trigger-tooltip")
              |> tooltip_text() ==
-               "When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+               "Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
 
       # Adaptor tooltip
       assert view
              |> element("#adaptor_name-tooltip")
              |> tooltip_text() ==
-               "Which system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from."
+               "Choose an adaptor to perform operations (via helper functions) in a specific application. Pick ‘http’ for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
 
       # Credential tooltip
       assert view
              |> element("#project_credential_id-tooltip")
              |> tooltip_text() ==
-               "How to connect. The credentials you need for authentication in the selected system."
+               "If the system you’re working with requires authentication, choose a credential with login details (“secrets”) that will allow this job to connect. If you’re not connecting to an external system you don’t need a credential."
     end
   end
 end

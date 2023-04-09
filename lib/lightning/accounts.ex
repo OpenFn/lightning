@@ -142,6 +142,22 @@ defmodule Lightning.Accounts do
   def get_user!(id), do: Repo.get!(User, id)
 
   @doc """
+  Gets a single token.
+
+  Raises `Ecto.NoResultsError` if the UserToken does not exist.
+
+  ## Examples
+
+      iex> get_token!(123)
+      %UserToken{}
+
+      iex> get_token!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_token!(id), do: Repo.get!(UserToken, id)
+
+  @doc """
   Registers a superuser.
 
   ## Examples
@@ -436,12 +452,20 @@ defmodule Lightning.Accounts do
 
   @doc """
   Given a user and a confirmation email, this function sets a scheduled deletion
-  date 7 days in the future. Note that subsequent logins will be blocked for
-  users pending deletion.
+  date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
+  set, this date defaults to NOW but the automatic user purge cronjob will never
+  run. (Note that subsequent logins will be blocked for users pending deletion.)
   """
   def schedule_user_deletion(user, email) do
+    date =
+      case Application.get_env(:lightning, :purge_deleted_after_days) do
+        nil -> DateTime.utc_now()
+        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+      end
+
     User.scheduled_deletion_changeset(user, %{
-      "scheduled_deletion" => DateTime.utc_now() |> Timex.shift(days: 7),
+      "scheduled_deletion" => date,
+      "disabled" => true,
       "scheduled_deletion_email" => email
     })
     |> Repo.update()
@@ -542,6 +566,30 @@ defmodule Lightning.Accounts do
   def get_user_by_api_token(token) do
     {:ok, query} = UserToken.verify_token_query(token, "api")
     Repo.one(query)
+  end
+
+  @doc """
+  Deletes a token.
+
+  ## Examples
+
+      iex> delete_token(token)
+      {:ok, %UserToken{}}
+
+      iex> delete_token(token)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_token(%UserToken{} = token) do
+    Repo.delete(token)
+  end
+
+  @doc """
+  Lists all user tokens
+  """
+  def list_api_tokens(user) do
+    UserToken.user_and_contexts_query(user, :api)
+    |> Repo.all()
   end
 
   ## Confirmation

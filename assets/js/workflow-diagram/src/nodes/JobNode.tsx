@@ -79,7 +79,7 @@ const JobNode = ({
         </div>
       </div>
       <div
-        className="flex flex-col items-center opacity-0 
+        className="flex flex-col w-fit mx-auto items-center opacity-0 
                       group-hover:opacity-100 transition duration-150 ease-in-out"
       >
         <PlusButton />

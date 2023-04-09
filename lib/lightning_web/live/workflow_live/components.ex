@@ -153,6 +153,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+
   def workflow_header(assigns) do
     ~H"""
     <h1 class="text-2xl font-bold text-gray-900 leading-7 sm:leading-9 sm:truncate">
@@ -339,5 +340,19 @@ defmodule LightningWeb.WorkflowLive.Components do
       true -> "bg-gray-200"
       false -> ""
     end
+  end
+
+  attr :id, :string, required: true
+
+  def resize_component(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-hook="JobEditorResizer"
+      phx-update="ignore"
+      class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
+    >
+    </div>
+    """
   end
 end

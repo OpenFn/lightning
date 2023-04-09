@@ -13,7 +13,10 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="cron-setup-component" class="grid grid-cols-4 gap-1">
+    <div
+      id="cron-setup-component"
+      class="col-span-4 @md:col-span-2 grid grid-cols-4 gap-2"
+    >
       <div class="col-span-4">
         <.frequency_field
           target={@myself}

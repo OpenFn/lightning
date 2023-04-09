@@ -33,23 +33,17 @@ defmodule Mix.Tasks.Lightning.InstallRuntime do
 
     package_list = packages() |> Enum.join(" ")
 
-    System.cmd(
+    Rambo.run(
       "/usr/bin/env",
-      [
-        "sh",
-        "-c",
-        "npm install --prefix $NODE_PATH --global #{package_list}"
-      ],
-      env: [{"NODE_PATH", @default_path}],
-      stderr_to_stdout: true,
-      into: IO.stream(:stdio, :line)
+      ["sh", "-c", "npm install --prefix $NODE_PATH --global #{package_list}"],
+      log: true,
+      env: %{"NODE_PATH" => @default_path}
     )
   end
 
   def packages() do
     ~W(
-      @openfn/cli@latest
-      @openfn/core@latest
+      @openfn/cli@0.0.35
       @openfn/language-common@latest
     )
   end

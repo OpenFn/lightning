@@ -6,26 +6,6 @@ defmodule LightningWeb.LiveHelpers do
 
   alias LightningWeb.Components.{Common, Icon}
 
-  @doc """
-  Renders a live component inside a modal.
-
-  The rendered modal receives a `:return_to` option to properly update
-  the URL when the modal is closed.
-
-  ## Examples
-
-      <.modal return_to={Routes.job_index_path(@socket, :index)}>
-        <.live_component
-          module={LightningWeb.JobLive.BigFormComponent}
-          id={@job.id || :new}
-          title={@page_title}
-          action={@live_action}
-          return_to={Routes.job_index_path(@socket, :index)}
-          job: @job
-        />
-      </.modal>
-  """
-
   def live_info_block(assigns) do
     assigns =
       assigns

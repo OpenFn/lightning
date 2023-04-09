@@ -14,14 +14,14 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="grid grid-cols-4 gap-1">
-      <div class="md:col-span-3">
+    <div class="grid grid-cols-4 gap-2 @container">
+      <div class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={:adaptor_picker}
           field={:adaptor_name}
           title="Adaptor"
           for="adaptor-name"
-          tooltip="Which system to connect to. This will update the adaptor documentation in the editor with system-specific operations to select from."
+          tooltip="Choose an adaptor to perform operations (via helper functions) in a specific application. Pick ‘http’ for generic REST APIs or the 'common' adaptor if this job only performs data manipulation."
         />
         <Form.select_field
           form={:adaptor_picker}
@@ -34,8 +34,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           disabled={@disabled}
         />
       </div>
-
-      <div class="md:col-span-1">
+      <div class="col-span-4 @md:col-span-2">
         <Form.label_field
           form={@form}
           field={:adaptor_version}

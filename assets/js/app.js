@@ -25,12 +25,17 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
+import JobEditor from './job-editor';
 import WorkflowDiagram from './workflow-diagram';
-import AdaptorDocs from './adaptor-docs';
 import TabSelector from './tab-selector';
-import Editor from './editor';
+import JobEditorResizer from './job-editor-resizer/mount';
 
-let Hooks = { WorkflowDiagram, AdaptorDocs, Editor, TabSelector };
+let Hooks = {
+  WorkflowDiagram,
+  TabSelector,
+  JobEditor,
+  JobEditorResizer,
+};
 
 Hooks.Flash = {
   mounted() {
@@ -55,17 +60,16 @@ Hooks.AssocListChange = {
   },
 };
 
-Hooks.AutoResize = {
+Hooks.Copy = {
   mounted() {
-    this.parent = this.el.parentElement;
-    this.el.style.height = `${this.parent.clientHeight - 1}px`;
-
-    this.listener = addEventListener('resize', _event => {
-      this.el.style.height = `${this.parent.clientHeight - 1}px`;
+    let { to } = this.el.dataset;
+    this.el.addEventListener('click', ev => {
+      ev.preventDefault();
+      let text = document.querySelector(to).value;
+      navigator.clipboard.writeText(text).then(() => {
+        console.log('Copied!');
+      });
     });
-  },
-  destroyed() {
-    removeEventListener('resize', this.listener);
   },
 };
 
@@ -109,6 +113,19 @@ window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
+});
+
+window.addEventListener('keydown', event => {
+  const currentURL = window.location.pathname;
+  const edit_job_url = /\/projects\/(.+)\/w\/(.+)\/j\/(.+)/;
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    if (edit_job_url.test(currentURL)) {
+      event.preventDefault();
+      console.log('Saving the job');
+      let form = document.querySelector("button[form='job-form']");
+      form.click();
+    }
+  }
 });
 
 // connect if there are any LiveViews on the page

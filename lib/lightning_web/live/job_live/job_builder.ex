@@ -109,8 +109,11 @@ defmodule LightningWeb.JobLive.JobBuilder do
               phx-submit="save"
               class="h-full"
             >
-              <div class="md:grid md:grid-cols-4 md:gap-4 @container">
-                <div class="md:col-span-2">
+              <div class="md:grid md:grid-cols-6 md:gap-4 @container">
+                <div class="col-span-6">
+                  <Form.check_box form={f} id={:enabled} disabled={!@can_edit_job} />
+                </div>
+                <div class="col-span-6 @md:col-span-4">
                   <Form.text_field
                     form={f}
                     label="Job Name"
@@ -118,10 +121,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     disabled={!@can_edit_job}
                   />
                 </div>
-                <div class="md:col-span-2">
-                  <Form.check_box form={f} id={:enabled} disabled={!@can_edit_job} />
-                </div>
-                <div class="md:col-span-4">
+                <div class="col-span-6">
                   <%= for t <- inputs_for(f, :trigger) do %>
                     <.trigger_picker
                       form={t}
@@ -135,7 +135,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     />
                   <% end %>
                 </div>
-                <div class="col-span-4">
+                <div class="col-span-6">
                   <.live_component
                     id="adaptor-picker"
                     module={LightningWeb.JobLive.AdaptorPicker}
@@ -144,23 +144,13 @@ defmodule LightningWeb.JobLive.JobBuilder do
                     disabled={!@can_edit_job}
                   />
                 </div>
-                <div class="md:col-span-2">
+                <div class="col-span-6 @md:col-span-4">
                   <Components.Jobs.credential_select
                     form={f}
                     credentials={@credentials}
                     disabled={!@can_edit_job}
+                    myself={@myself}
                   />
-                  <%= if @can_edit_job do %>
-                    <button
-                      id="new-credential-launcher"
-                      type="button"
-                      class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
-                      phx-click="open_new_credential"
-                      phx-target={@myself}
-                    >
-                      New credential
-                    </button>
-                  <% end %>
                 </div>
               </div>
             </.form>
@@ -184,22 +174,13 @@ defmodule LightningWeb.JobLive.JobBuilder do
             <% end %>
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="editor">
-            <div class="flex flex-col h-full">
-              <div
-                phx-hook="Editor"
-                phx-update="ignore"
-                id={"job-editor-#{@job_id}"}
-                class=" rounded-md border border-secondary-300 shadow-sm bg-vs-dark h-96"
-                data-adaptor={@resolved_job_adaptor}
-                data-source={@job_body}
-                data-change-event="job_body_changed"
-                phx-target={@myself}
-                data-disabled={"#{!@can_edit_job}"}
-              />
-              <div class="flex-1 overflow-auto">
-                <.docs_component adaptor={@resolved_job_adaptor} />
-              </div>
-            </div>
+            <.job_editor_component
+              adaptor={@resolved_job_adaptor}
+              source={@job_body}
+              id={"job-editor-#{@job_id}"}
+              disabled={!@can_edit_job}
+              phx-target={@myself}
+            />
           </LightningWeb.Components.Common.panel_content>
           <LightningWeb.Components.Common.panel_content for_hash="output">
             <%= if @follow_run_id do %>
@@ -233,8 +214,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
           </LightningWeb.Components.Common.panel_content>
         </div>
         <div class="flex-none sticky p-3 border-t">
-          <!-- BUTTONS -->
-          <%= live_patch("Cancel",
+          <%= live_patch("Close",
             class:
               "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-secondary-700 hover:bg-secondary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary-500",
             to: @return_to
@@ -244,7 +224,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
             phx-disable-with="Saving"
             form="job-form"
           >
-            Save
+            <%= if @job_id != "new", do: "Save", else: "Create" %>
           </Form.submit_button>
           <%= if @job_id != "new" do %>
             <Common.button
@@ -284,6 +264,35 @@ defmodule LightningWeb.JobLive.JobBuilder do
 
   def handle_event("job_body_changed", %{"source" => source}, socket) do
     {:noreply, socket |> assign_changeset_and_params(%{"body" => source})}
+  end
+
+  def handle_event("request_metadata", _params, socket) do
+    pid = self()
+
+    adaptor = socket.assigns.changeset |> Ecto.Changeset.get_field(:adaptor)
+
+    credential =
+      socket.assigns.changeset |> Ecto.Changeset.get_field(:credential)
+
+    Task.start(fn ->
+      metadata =
+        Lightning.MetadataService.fetch(adaptor, credential)
+        |> case do
+          {:error, %{type: error_type}} ->
+            %{"error" => error_type}
+
+          {:ok, metadata} ->
+            metadata
+        end
+
+      send_update(pid, __MODULE__,
+        id: id(socket.assigns.job_id),
+        metadata: metadata,
+        event: :metadata_ready
+      )
+    end)
+
+    {:noreply, socket}
   end
 
   def handle_event("open_new_credential", _params, socket) do
@@ -326,8 +335,8 @@ defmodule LightningWeb.JobLive.JobBuilder do
         changeset
         |> Lightning.Repo.insert_or_update()
         |> case do
-          {:ok, _job} ->
-            on_save_success(socket)
+          {:ok, job} ->
+            on_save_success(socket, job)
 
           {:error, %Ecto.Changeset{} = changeset} ->
             assign(socket, changeset: changeset, params: params)
@@ -342,7 +351,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
     end
   end
 
-  defp on_save_success(socket) do
+  defp on_save_success(socket, job) do
     workflow_id =
       socket.assigns.changeset |> Ecto.Changeset.get_field(:workflow_id)
 
@@ -352,9 +361,14 @@ defmodule LightningWeb.JobLive.JobBuilder do
       %{workflow_id: workflow_id}
     )
 
+    message =
+      if socket.assigns.job.id != job.id,
+        do: "Job created successfully",
+        else: "Job updated successfully"
+
     socket
-    |> put_flash(:info, "Job updated successfully")
-    |> push_patch(to: socket.assigns.return_to)
+    |> put_flash(:info, message)
+    |> push_patch(to: socket.assigns.return_to <> "/j/#{job.id}")
   end
 
   defp merge_params(prev, next) do
@@ -451,6 +465,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
      |> assign_new(:params, fn -> params end)
      |> assign_new(:job_id, fn -> job.id || "new" end)
      |> assign_new(:is_persisted, fn -> not is_nil(job.id) end)}
+  end
+
+  def update(%{event: :metadata_ready, metadata: metadata}, socket) do
+    {:ok, socket |> push_event("metadata_ready", metadata)}
   end
 
   def update(%{event: :job_adaptor_changed, job_adaptor: job_adaptor}, socket) do

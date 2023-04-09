@@ -12,6 +12,11 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
+config :lightning, :image_info,
+  image_tag: System.get_env("IMAGE_TAG"),
+  branch: System.get_env("BRANCH"),
+  commit: System.get_env("COMMIT")
+
 config :lightning, :email_addresses,
   admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
 
@@ -29,21 +34,28 @@ config :lightning,
     System.get_env("SCHEMAS_PATH") ||
       Application.get_env(:lightning, :schemas_path) || "./priv"
 
+base_oban_cron = [
+  {"* * * * *", Lightning.Jobs.Scheduler},
+  {"* * * * *", ObanPruner},
+  {"0 10 * * *", Lightning.DigestEmailWorker,
+   args: %{"type" => "daily_project_digest"}},
+  {"0 10 * * MON", Lightning.DigestEmailWorker,
+   args: %{"type" => "weekly_project_digest"}},
+  {"0 10 1 * *", Lightning.DigestEmailWorker,
+   args: %{"type" => "monthly_project_digest"}}
+]
+
+conditional_cron =
+  if System.get_env("PURGE_DELETED_AFTER_DAYS") != 0,
+    do:
+      base_oban_cron ++
+        [{"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}}],
+    else: base_oban_cron
+
 config :lightning, Oban,
   repo: Lightning.Repo,
   plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"* * * * *", Lightning.Jobs.Scheduler},
-       {"* * * * *", ObanPruner},
-       {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
-       {"0 10 * * *", Lightning.DigestEmailWorker,
-        args: %{"type" => "daily_project_digest"}},
-       {"0 10 * * MON", Lightning.DigestEmailWorker,
-        args: %{"type" => "weekly_project_digest"}},
-       {"0 10 1 * *", Lightning.DigestEmailWorker,
-        args: %{"type" => "monthly_project_digest"}}
-     ]}
+    {Oban.Plugins.Cron, crontab: conditional_cron}
   ],
   shutdown_grace_period:
     System.get_env("MAX_RUN_DURATION", "60000")
@@ -71,6 +83,11 @@ if System.get_env("PLAUSIBLE_SRC"),
       src: System.get_env("PLAUSIBLE_SRC"),
       "data-domain": System.get_env("PLAUSIBLE_DATA_DOMAIN")
     )
+
+config :lightning,
+       :purge_deleted_after_days,
+       System.get_env("PURGE_DELETED_AFTER_DAYS", "7")
+       |> String.to_integer()
 
 config :lightning,
        :max_run_duration,
@@ -162,6 +179,10 @@ config :lightning, LightningWeb.Endpoint,
     compress: true
   ]
 
+if log_level = System.get_env("LOG_LEVEL") do
+  config :logger, level: log_level |> String.to_atom()
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
@@ -206,10 +227,6 @@ if config_env() == :prod do
     secret_key_base: secret_key_base,
     check_origin: origins,
     server: true
-
-  if log_level = System.get_env("LOG_LEVEL") do
-    config :logger, level: log_level |> String.to_atom()
-  end
 
   # ## Using releases
   #

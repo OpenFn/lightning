@@ -5,7 +5,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   import Ecto.Changeset, only: [get_field: 2]
 
   @start_trigger_types [
-    "Cron Schedule": "cron",
+    "Cron Schedule (UTC)": "cron",
     "Webhook Event": "webhook"
   ]
 
@@ -39,16 +39,16 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       )
 
     ~H"""
-    <div class="md:grid md:grid-cols-2 md:gap-4">
+    <div class="grid grid-cols-4 gap-4">
       <%= hidden_inputs_for(@form) %>
-      <%= label @form, :type, class: "" do %>
+      <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
         <div class="flex flex-row">
           <span class="text-sm font-medium text-secondary-700">
             Trigger
           </span>
           <Common.tooltip
             id="trigger-tooltip"
-            title="When your job will run. Select webhook to trigger is from an external system or cron to trigger it at a recurring point in time."
+            title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
             class="inline-block"
           />
         </div>
@@ -60,21 +60,23 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           values={@trigger_type_options}
           disabled={@disabled}
         />
-      <% end %>
-      <%= if @webhook_url do %>
-        <a
-          id="copyWebhookUrl"
-          href={@webhook_url}
-          class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
-          onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-          target="_blank"
-          phx-click="copied_to_clipboard"
-        >
-          Copy webhook url
-        </a>
+        <%= if @webhook_url do %>
+          <div class="col-span-4 @md:col-span-2 text-right text-">
+            <a
+              id="copyWebhookUrl"
+              href={@webhook_url}
+              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+              target="_blank"
+              phx-click="copied_to_clipboard"
+            >
+              Copy webhook url
+            </a>
+          </div>
+        <% end %>
       <% end %>
       <%= if @requires_upstream_job do %>
-        <%= label @form, :upstream_job_id, class: "block" do %>
+        <%= label @form, :upstream_job_id, class: "block col-span-4 @md:col-span-2" do %>
           <span class="block text-sm font-medium text-secondary-700">
             Upstream Job
           </span>
@@ -130,14 +132,23 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   end
 
   attr :adaptor, :string, required: true
+  attr :disabled, :boolean, default: false
+  attr :source, :string, required: true
+  attr :rest, :global
 
-  def docs_component(assigns) do
+  def job_editor_component(assigns) do
+    assigns = assigns |> assign(disabled: assigns.disabled |> to_string())
+
     ~H"""
     <div
       data-adaptor={@adaptor}
-      phx-hook="AdaptorDocs"
+      data-source={@source}
+      data-disabled={@disabled}
+      data-change-event="job_body_changed"
+      phx-hook="JobEditor"
       phx-update="ignore"
-      id="adaptor-docs-component"
+      class="flex flex-col h-full"
+      {@rest}
     >
       <!-- Placeholder while the component loads -->
       <div>

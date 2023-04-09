@@ -5,10 +5,10 @@ defmodule LightningWeb.SettingsLiveTest do
 
   setup :register_and_log_in_user
 
-  describe "Index for superuser" do
+  describe "System settings index (as superuser)" do
     setup :register_and_log_in_superuser
 
-    test "a regular user cannot access the settings page", %{
+    test "can be accessed", %{
       conn: conn,
       user: _user
     } do
@@ -20,10 +20,10 @@ defmodule LightningWeb.SettingsLiveTest do
     end
   end
 
-  describe "Index for user" do
+  describe "System settings index (as normal user)" do
     setup :register_and_log_in_user
 
-    test "a regular user cannot access the settings page", %{
+    test "cannot be accessed", %{
       conn: conn
     } do
       {:ok, _index_live, html} =

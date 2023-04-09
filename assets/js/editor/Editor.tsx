@@ -3,13 +3,17 @@ import Monaco from '@monaco-editor/react';
 import type { EditorProps as MonacoProps } from '@monaco-editor/react/lib/types';
 
 import { fetchDTSListing, fetchFile } from '@openfn/describe-package';
+import createCompletionProvider from './magic-completion';
 
-const DEFAULT_TEXT =
-  '// Get started by adding operations from the API reference';
+// static imports for core lib
+import dts_es5 from './lib/es5.min.dts';
+
+const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
 
 type EditorProps = {
   source?: string;
   adaptor?: string; // fully specified adaptor name - <id>@<version>
+  metadata?: object; // TODO I can actually this very effectively from adaptors...
   onChange?: (newSource: string) => void;
   disabled?: boolean;
 };
@@ -27,7 +31,7 @@ const spinner = (
       cy="12"
       r="10"
       stroke="currentColor"
-      stroke-width="4"
+      strokeWidth="4"
     ></circle>
     <path
       className="opacity-75"
@@ -53,6 +57,7 @@ const defaultOptions: MonacoProps['options'] = {
   },
   scrollBeyondLastLine: false,
   showFoldingControls: 'always',
+  // automaticLayout: true, // TODO this may impact performance as it polls
 
   // Hide the right-hand "overview" ruler
   overviewRulerLanes: 0,
@@ -63,62 +68,83 @@ const defaultOptions: MonacoProps['options'] = {
 
   suggest: {
     showKeywords: false,
-  },
+    showModules: false, // hides global this
+    showFiles: false, // This hides property names ??
+    // showProperties: false, // seems to hide consts but show properties??
+    showClasses: false,
+    showInterfaces: false,
+    showConstructors: false,
+  }
 };
 
 type Lib = {
   content: string;
-  filePath: string;
-};
+  filePath?: string;
+}
 
-// TODO this can take a little while to run, we should consider giving some feedback to the user
-async function loadDTS(
-  specifier: string,
-  type: 'namespace' | 'module' = 'namespace'
-): Promise<Lib[]> {
+async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
   nameParts.pop(); // remove the version
   const name = nameParts.join('@');
 
-  let results: Lib[] = [];
+  const results: Lib[] = [{
+    content: dts_es5
+  }];
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
       '@openfn/language-common'
     ];
-    results = await loadDTS(
-      `@openfn/language-common@${commonVersion}`,
+
+    // jsDeliver doesn't appear to support semver range syntax (^1.0.0, 1.x, ~1.1.0)
+    const commonVersionMatch = commonVersion?.match(/^\d+\.\d+\.\d+/);
+    if (!commonVersionMatch) {
+      console.warn(
+        `@openfn/language-common@${commonVersion} contains semver range syntax.`
+      );
+    }
+
+    const common = await loadDTS(
+      `@openfn/language-common@${commonVersion.replace("^", "")}`,
       'module'
     );
+    results.push(...common);
   }
 
+  // Load all the DTS files and squash them into a single namespace
+  // We seem to have to do this because Monaco doesn't recognise types declared in different files
+  // across namespaces
+  // This should work well enough on adaptors anyway
+  let bigFile = ''
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
-      const content = await fetchFile(`${specifier}${filePath}`);
-      results.push({
-        content: `declare ${type} "${name}" { ${content} }`,
-        filePath: `${name}${filePath}`,
-      });
+      let content = await fetchFile(`${specifier}${filePath}`);
+      bigFile += content;
     }
   }
+  results.push({
+    content: `declare ${type} { ${bigFile} }`,
+    filePath: `${name}$/types`,
+  });
+
   return results;
 }
+
 
 export default function Editor({
   source,
   adaptor,
   onChange,
   disabled,
+  metadata,
 }: EditorProps) {
   const [lib, setLib] = useState<Lib[]>();
   const [loading, setLoading] = useState(false);
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
-  const listeners = useRef<{
-    insertSnippet?: EventListenerOrEventListenerObject;
-  }>({});
+  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject, updateLayout?: any; }>({});
 
   const handleSourceChange = useCallback(
     (newSource: string) => {
@@ -168,13 +194,37 @@ export default function Editor({
         editor.focus();
       };
 
-      document.addEventListener(
-        'insert-snippet',
-        listeners.current.insertSnippet
+      // Force the editor to resize
+      listeners.current.updateLayout = (_e: Event) => {
+        editor.layout({ width: 0, height: 0 });
+        setTimeout(() => {
+          try {
+            editor.layout()
+          } catch (e) {
+            editor.layout()
+          }
+        }, 1);
+      }
+
+      document.addEventListener('insert-snippet', listeners.current.insertSnippet);
+      document.addEventListener('update-layout', listeners.current.updateLayout);
+    }, []);
+
+  useEffect(() => {
+    if (monaco && metadata) {
+      const p = monaco.languages.registerCompletionItemProvider(
+        'javascript',
+        createCompletionProvider(monaco, metadata)
       );
-    },
-    []
-  );
+      return () => {
+        // Note: For now, whenever the adaptor changes, the editor will be un-mounted and remounted, so this is safe
+        // If and when the adaptor can be seamlessly changed, we'll have to be a bit smarter about how we dispose of the
+        // completion handler. State doesn't work very well, we probably need a ref for this
+        // If metadata is passed as a prop, this becomes a little bit easier to manage
+        p.dispose();
+      }
+    }
+  }, [monaco, metadata]);
 
   useEffect(() => {
     // Create a node to hold overflow widgets
@@ -205,10 +255,11 @@ export default function Editor({
     if (adaptor) {
       setLoading(true);
       setLib([]); // instantly clear intelligence
-      loadDTS(adaptor).then(l => {
-        setLib(l);
-        setLoading(false);
-      });
+      loadDTS(adaptor)
+        .then(l => {
+          setLib(l)
+          setLoading(false)
+        });
     }
   }, [adaptor]);
 
@@ -226,6 +277,7 @@ export default function Editor({
       <Monaco
         defaultLanguage="javascript"
         theme="vs-dark"
+        defaultPath="/job.js"
         value={source || DEFAULT_TEXT}
         options={options}
         onMount={handleEditorDidMount}

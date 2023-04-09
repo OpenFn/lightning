@@ -7,6 +7,75 @@ defmodule LightningWeb.Components.Common do
   attr(:id, :string, required: true)
   attr(:title, :string, required: true)
   attr(:class, :string, default: "")
+  
+  def version_chip(assigns) do
+    image_info = Application.get_env(:lightning, :image_info)
+    image = image_info[:image_tag]
+    branch = image_info[:branch]
+    commit = image_info[:commit]
+    vsn = "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+
+    {display, message, type} =
+      cond do
+        # If running in docker on edge, display commit SHA.
+        image == "edge" ->
+          {commit,
+           "Docker image tag found: '#{image}' unreleased build from #{commit} on #{branch}",
+           :edge}
+
+        # If running in docker and tag matches :vsn, display :vsn and standard message.
+        image == vsn ->
+          {vsn,
+           "Docker image tag found: '#{image}' tagged release build from #{commit}",
+           :release}
+
+        # If running in docker and tag doesn't match :vsn, display :vsn and warning.
+        image != nil and image != vsn ->
+          {commit,
+           "Warning: detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
+           :warn}
+
+        true ->
+          {vsn, "Lightning #{vsn}", :no_docker}
+      end
+
+    icon_classes = "h-4 w-4 inline-block mr-1"
+
+    assigns =
+      assign(assigns,
+        display: display,
+        message: message,
+        type: type,
+        icon_classes: icon_classes
+      )
+
+    ~H"""
+    <div class="px-3 pb-3 rounded-md text-xs rounded-md block text-center">
+      <span class="opacity-20" title={@message}>
+        <%= case @type do %>
+          <% :release -> %>
+            <Heroicons.check_badge class={@icon_classes} />
+          <% :edge -> %>
+            <Heroicons.cube class={@icon_classes} />
+          <% :warn -> %>
+            <Heroicons.exclamation_triangle class={@icon_classes} />
+          <% :no_docker -> %>
+        <% end %>
+      </span>
+      <code
+        class="px-2 py-1 opacity-20 bg-gray-100 rounded-md font-mono text-indigo-500 inline-block align-middle"
+        title={"OpenFn/Lightning #{@display}"}
+      >
+        <%= @display %>
+      </code>
+    </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :class, :string, default: ""
+  
 
   def tooltip(assigns) do
     classes = ~w"
@@ -300,7 +369,7 @@ defmodule LightningWeb.Components.Common do
   def panel_content(assigns) do
     ~H"""
     <div
-      class="h-[calc(100%-0.75rem)]"
+      class="h-[calc(100%-0.4rem)]"
       data-panel-hash={@for_hash}
       style="display: none;"
       lv-keep-style

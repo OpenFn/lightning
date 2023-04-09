@@ -56,12 +56,20 @@ const WorkflowDiagram = React.forwardRef<
     }
   }, [ref]);
 
+  // TODO: Remove workflow nodes properly in https://github.com/OpenFn/Lightning/issues/316
+  // Note: this is TD's ugly hack to solve https://github.com/OpenFn/Lightning/issues/733
+  const nakedNodes = nodes
+    .filter(node => !(node.type == 'workflow'))
+    .map(node => {
+      return { ...node, parentNode: null };
+    });
+
   return (
     <ReactFlowProvider>
       <ReactFlow
         // Thank you, Christopher Möller, for explaining that we can use this...
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
-        nodes={nodes}
+        nodes={nakedNodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}

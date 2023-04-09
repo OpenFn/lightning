@@ -69,3 +69,5 @@ config :lightning, LightningWeb, allow_credential_transfer: true
 config :lightning, LightningWeb,
   allow_credential_transfer: true,
   enable_google_credential: true
+
+config :lightning, CLI, child_process_mod: FakeRambo

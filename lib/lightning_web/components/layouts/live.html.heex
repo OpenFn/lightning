@@ -14,23 +14,12 @@
                 Routes.static_path(@socket || @conn, "/images/logo-white.svg")
               }
               alt="OpenFn"
-              title={
-                "Lightning v#{elem(:application.get_key(:lightning, :vsn), 1)}"
-              }
             />
           </.link>
         </div>
         <%= unless assigns[:is_first_setup] do %>
           <LayoutComponents.menu_items {assigns} />
           <div class="grow"></div>
-          <div
-            class="mx-4 px-3 py-2 pl-4 text-sm font-medium block text-primary-300"
-            title={
-            "You are running Lightning version #{elem(:application.get_key(:lightning, :vsn), 1)}"
-          }
-          >
-            v<%= elem(:application.get_key(:lightning, :vsn), 1) %>
-          </div>
           <%= if @current_user.role == :superuser do %>
             <Settings.menu_item to={Routes.project_index_path(@socket, :index)}>
               <Heroicons.cog class="h-5 w-5 inline-block mr-2" />
@@ -43,11 +32,8 @@
               </Settings.menu_item>
             <% end %>
           <% end %>
-          <Settings.menu_item to={Routes.user_session_path(@socket, :delete)}>
-            <Heroicons.arrow_right_on_rectangle class="h-5 w-5 inline-block mr-2" />
-            <span class="inline-block align-middle">Log out</span>
-          </Settings.menu_item>
         <% end %>
+        <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>
     <main class="flex-auto">

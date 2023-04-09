@@ -40,7 +40,9 @@ defmodule LightningWeb.UserRegistrationControllerTest do
       response = html_response(conn, 200)
       # assert response =~ email
 
-      assert response =~ "Log out</span>"
+      assert response =~ "User Profile"
+      assert response =~ "No projects found."
+      assert response =~ "User created successfully."
     end
 
     test "creates account and initial project and logs the user in", %{

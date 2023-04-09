@@ -1,5 +1,5 @@
 defmodule Lightning.CrashTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
   # use Oban.Testing, repo: Lightning.Repo
 
   alias Lightning.Pipeline
@@ -17,7 +17,11 @@ defmodule Lightning.CrashTest do
 
   describe "Oban manager" do
     setup do
-      Application.put_env(:lightning, :max_run_duration, 5 * 1000)
+      prev = Application.get_env(:lightning, :max_run_duration)
+      on_exit(fn -> Application.put_env(:lightning, :max_run_duration, prev) end)
+
+      Application.put_env(:lightning, :max_run_duration, 1 * 1000)
+
       project = project_fixture()
 
       job =
@@ -27,7 +31,7 @@ defmodule Lightning.CrashTest do
             setTimeout(() => {
               console.log('wait, and then resolve');
               resolve(state);
-            }, 10 * 1000);
+            }, 2 * 1000);
           });
         });],
           project_id: project.id
