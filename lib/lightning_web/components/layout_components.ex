@@ -68,6 +68,7 @@ defmodule LightningWeb.LayoutComponents do
       </Settings.menu_item>
       <Settings.menu_item to={Routes.credential_index_path(@socket, :index)}>
         <Heroicons.key class="inline-block w-5 h-5 mr-2" /> Credentials
+       </Settings.menu_item>
         
       <Settings.menu_item to={~p"/profile"}>
         <Heroicons.cog class="h-5 w-5 inline-block mr-2" /> User Profile
