@@ -416,11 +416,7 @@ defmodule Lightning.Invocation do
         group_by: att.work_order_id,
         select: %{
           work_order_id: att.work_order_id,
-          last_inserted_at:
-            fragment(
-              "max(?)",
-              att.inserted_at
-            )
+          last_inserted_at: max(att.inserted_at)
         }
 
     last_runs =
