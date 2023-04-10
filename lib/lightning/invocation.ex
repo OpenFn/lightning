@@ -422,14 +422,11 @@ defmodule Lightning.Invocation do
     last_runs =
       from r in Lightning.Invocation.Run,
         join: att in assoc(r, :attempts),
-        group_by: att.id,
+        distinct: att.id,
+        order_by: [desc_nulls_first: r.finished_at],
         select: %{
           attempt_id: att.id,
-          last_finished_at:
-            fragment(
-              "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
-              r.finished_at
-            )
+          last_finished_at: r.finished_at
         }
 
     from(wo in Lightning.WorkOrder,
