@@ -458,7 +458,7 @@ defmodule Lightning.Invocation do
         id: wo.id,
         last_finished_at:
           fragment(
-            "nullif(max(coalesce(?, 'infinity')::timestamptz), 'infinity')",
+            "nullif(max(coalesce(?, 'infinity')), 'infinity')",
             r.finished_at
           )
           |> selected_as(:last_finished_at)
@@ -538,6 +538,24 @@ defmodule Lightning.Invocation do
   def list_work_orders_for_project(%Project{} = project, filter, params) do
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
+    |> Map.get_and_update!(
+      :entries,
+      fn current_value ->
+        {current_value,
+         Enum.map(current_value, fn e ->
+           %{
+             id: e.id,
+             last_finished_at:
+               if is_nil(e.last_finished_at) do
+                 nil
+               else
+                 DateTime.from_naive!(e.last_finished_at, "Etc/UTC")
+               end
+           }
+         end)}
+      end
+    )
+    |> elem(1)
   end
 
   def list_work_orders_for_project(%Project{} = project) do
