@@ -146,14 +146,16 @@ defmodule Lightning.WorkflowsTest do
       assert w2.deleted_at == nil
 
       assert (w1
-              |> Repo.preload(
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+              |> Repo.preload([
+                :work_orders,
+                jobs: [:credential, :runs, :workflow, trigger: [:upstream_job]]
+              ])) in results
 
       assert (w2
-              |> Repo.preload(
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+              |> Repo.preload([
+                :work_orders,
+                jobs: [:credential, :runs, :workflow, trigger: [:upstream_job]]
+              ])) in results
 
       assert length(results) == 2
     end

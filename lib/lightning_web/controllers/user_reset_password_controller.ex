@@ -22,7 +22,7 @@ defmodule LightningWeb.UserResetPasswordController do
       :info,
       "If your email is in our system, you will receive instructions to reset your password shortly."
     )
-    |> redirect(to: "/")
+    |> redirect(to: "/users/log_in")
   end
 
   def edit(conn, _params) do
@@ -53,7 +53,7 @@ defmodule LightningWeb.UserResetPasswordController do
     else
       conn
       |> put_flash(:error, "Reset password link is invalid or it has expired.")
-      |> redirect(to: "/")
+      |> redirect(to: "/users/log_in")
       |> halt()
     end
   end

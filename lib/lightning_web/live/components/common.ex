@@ -4,9 +4,9 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
-  attr(:id, :string, required: true)
-  attr(:title, :string, required: true)
-  attr(:class, :string, default: "")
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :class, :string, default: ""
 
   def version_chip(assigns) do
     image_info = Application.get_env(:lightning, :image_info)
@@ -105,11 +105,11 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:text, :string, required: false)
-  slot(:inner_block, required: false)
-  attr(:disabled, :boolean, default: false)
-  attr(:color, :string, default: "primary", values: ["primary", "red", "green"])
-  attr(:rest, :global)
+  attr :text, :string, required: false
+  slot :inner_block, required: false
+  attr :disabled, :boolean, default: false
+  attr :color, :string, default: "primary", values: ["primary", "red", "green"]
+  attr :rest, :global
 
   def button(assigns) do
     class =
@@ -233,7 +233,7 @@ defmodule LightningWeb.Components.Common do
       }
       phx-hook="Flash"
     >
-      <div class="flex items-center justify-between text-red-900 space-x-3">
+      <div class="flex justify-between items-center space-x-3 text-red-900">
         <Heroicons.exclamation_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>
@@ -266,7 +266,7 @@ defmodule LightningWeb.Components.Common do
       phx-value-key="info"
       phx-hook="Flash"
     >
-      <div class="flex items-center justify-between text-blue-900 space-x-3">
+      <div class="flex justify-between items-center text-blue-900 space-x-3">
         <Heroicons.check_circle solid class="w-5 h-5" />
         <p class="flex-1 text-sm font-medium" role="alert">
           <%= msg %>
@@ -319,10 +319,10 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:id, :string, required: true)
-  attr(:default_hash, :string, required: true)
-  attr(:orientation, :string, required: true)
-  slot(:inner_block, required: true)
+  attr :id, :string, required: true
+  attr :default_hash, :string, required: true
+  attr :orientation, :string, required: true
+  slot :inner_block, required: true
 
   def tab_bar(assigns) do
     horizontal_classes = ~w[
@@ -362,8 +362,8 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:for_hash, :string, required: true)
-  slot(:inner_block, required: true)
+  attr :for_hash, :string, required: true
+  slot :inner_block, required: true
 
   def panel_content(assigns) do
     ~H"""
@@ -378,9 +378,9 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:hash, :string, required: true)
-  attr(:orientation, :string, required: true)
-  slot(:inner_block, required: true)
+  attr :hash, :string, required: true
+  attr :orientation, :string, required: true
+  slot :inner_block, required: true
 
   def tab_item(assigns) do
     vertical_classes = ~w[

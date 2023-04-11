@@ -2,7 +2,7 @@ defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Jobs
   alias Lightning.Policies.{Permissions, ProjectUsers}
@@ -37,7 +37,7 @@ defmodule LightningWeb.WorkflowLive do
           </:title>
         </LayoutComponents.header>
       </:header>
-      <div class="relative flex h-full">
+      <div class="relative h-full flex">
         <%= case @live_action do %>
           <% :index -> %>
             <LayoutComponents.centered>
@@ -47,6 +47,7 @@ defmodule LightningWeb.WorkflowLive do
                 project={@project}
                 toggle_content={@toggle_content}
                 name={@name}
+                search={@search}
               />
             </LayoutComponents.centered>
           <% :new_job -> %>
@@ -58,8 +59,8 @@ defmodule LightningWeb.WorkflowLive do
                 encoded_project_space={@encoded_project_space}
               />
             </div>
-            <div class="relative w-1/2 grow-0">
-              <div class="absolute inset-y-0 z-10 w-full">
+            <div class="grow-0 w-1/2 relative">
+              <div class="absolute w-full inset-y-0 z-10">
                 <div class="w-auto h-full" id="job-pane">
                   <.live_component
                     module={LightningWeb.JobLive.JobBuilder}
@@ -89,27 +90,23 @@ defmodule LightningWeb.WorkflowLive do
               />
             </div>
 
-            <div class="relative w-1/2 grow-0">
-              <div class="absolute inset-y-0 z-10 w-full">
-                <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
-                  <.resize_component id={"resizer-#{@job.id}"} />
-                  <div class="absolute inset-y-0 right-0 z-10 resize-x left-2 ">
-                    <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
-                      <.live_component
-                        module={LightningWeb.JobLive.JobBuilder}
-                        id={"builder-#{@job.id}"}
-                        job={@job}
-                        project={@project}
-                        current_user={@current_user}
-                        builder_state={@builder_state}
-                        return_to={
-                          ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
-                        }
-                        can_delete_job={@can_delete_job}
-                        can_edit_job={@can_edit_job}
-                      />
-                    </div>
-                  </div>
+            <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
+              <.resize_component id={"resizer-#{@job.id}"} />
+              <div class="absolute inset-y-0 right-0 z-10 resize-x left-2 ">
+                <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
+                  <.live_component
+                    module={LightningWeb.JobLive.JobBuilder}
+                    id={"builder-#{@job.id}"}
+                    job={@job}
+                    project={@project}
+                    current_user={@current_user}
+                    builder_state={@builder_state}
+                    return_to={
+                      ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
+                    }
+                    can_delete_job={@can_delete_job}
+                    can_edit_job={@can_edit_job}
+                  />
                 </div>
               </div>
             </div>
@@ -131,8 +128,8 @@ defmodule LightningWeb.WorkflowLive do
               <% end %>
             </div>
           <% :edit_workflow -> %>
-            <div class="absolute top-0 right-0 z-10 m-2">
-              <div class="p-3 bg-white shadow-xl w-80 rounded-md ring-1 ring-black ring-opacity-5">
+            <div class="absolute top-0 right-0 m-2 z-10">
+              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
                   module={LightningWeb.WorkflowLive.WorkflowInspector}
                   id={@current_workflow.id}
@@ -206,7 +203,8 @@ defmodule LightningWeb.WorkflowLive do
        can_delete_job: can_delete_job,
        active_menu_item: :projects,
        new_credential: false,
-       builder_state: %{}
+       builder_state: %{},
+       workflows: []
      )}
   end
 
@@ -326,13 +324,17 @@ defmodule LightningWeb.WorkflowLive do
     |> Workflows.mark_for_deletion()
     |> case do
       {:ok, _} ->
+        socket =
+          socket
+          |> update(
+            :workflows,
+            &(&1 = Workflows.get_workflows_for(socket.assigns.project))
+          )
+          |> put_flash(:info, "Workflow deleted successfully")
+
         {
           :noreply,
           socket
-          |> assign(
-            workflows: Workflows.get_workflows_for(socket.assigns.project)
-          )
-          |> put_flash(:info, "Workflow deleted successfully")
         }
 
       {:error, _changeset} ->
@@ -375,17 +377,12 @@ defmodule LightningWeb.WorkflowLive do
   def handle_info({:search_by_name, name}, socket) do
     case(Workflows.search_workflow_by_name(socket.assigns.project, name)) do
       [] ->
-        socket =
-          socket
-          |> put_flash(:info, "No workflow matching #{name}")
-          |> assign(
-            workflows: Workflows.get_workflows_for(socket.assigns.project)
-          )
+        socket = socket |> assign(search: true, worflow: [])
 
         {:noreply, socket}
 
       workflows ->
-        socket = socket |> assign(workflows: workflows)
+        socket = assign(socket, workflows: workflows)
 
         {:noreply, socket}
     end
@@ -410,7 +407,8 @@ defmodule LightningWeb.WorkflowLive do
       page_title: "Workflows",
       workflows: Workflows.get_workflows_for(socket.assigns.project),
       toggle_content: true,
-      name: ""
+      name: "",
+      search: false
     )
   end
 

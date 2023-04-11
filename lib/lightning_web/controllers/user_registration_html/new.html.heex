@@ -1,4 +1,4 @@
-<.auth_wrapper heading="Register" conn={@conn}>
+<.auth_wrapper heading="Register" conn={@conn} flash={@flash}>
   <.form
     :let={f}
     for={@changeset}
@@ -6,8 +6,6 @@
     action={Routes.user_registration_path(@conn, :create)}
     class="space-y-6"
   >
-    <.flash_message kind={:error} flash={@flash} />
-    <.flash_message kind={:info} flash={@flash} />
     <div>
       <div class="mt-1">
         <LightningWeb.Components.Form.text_field

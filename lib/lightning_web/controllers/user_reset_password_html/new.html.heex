@@ -1,12 +1,10 @@
-<.auth_wrapper heading="Forgot your password?" conn={@conn}>
+<.auth_wrapper heading="Forgot your password?" conn={@conn} flash={@flash}>
   <.form
     :let={f}
     for={%{}}
     as={:user}
     action={Routes.user_reset_password_path(@conn, :create)}
   >
-    <.flash_message kind={:error} flash={@flash} />
-    <.flash_message kind={:info} flash={@flash} />
     <div class="grid grid-flow-row gap-4 auto-rows-max">
       <div>
         <LightningWeb.Components.Form.email_field
@@ -15,9 +13,7 @@
           required={true}
         />
       </div>
-      <LightningWeb.Components.Form.submit_button>
-        Send instructions to reset password
-      </LightningWeb.Components.Form.submit_button>
+      <.auth_submit button="Send instructions to reset password" />
     </div>
   </.form>
   <.auth_footer_link>

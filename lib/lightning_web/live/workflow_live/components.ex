@@ -3,42 +3,50 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
   alias Phoenix.LiveView.JS
 
-  attr(:active, :boolean, default: true)
+  attr :active, :boolean, default: true
+  attr :toggle_content, :boolean, required: true
+  attr :project, :map, required: true
+  attr :workflows, :map, required: true
+  attr :name, :string, default: ""
+  attr :search, :boolean
+  attr :can_create_workflow, :boolean
 
   def workflow_list(assigns) do
     ~H"""
     <div class="py-6">
-      <%= if Enum.count(@workflows) > 0 do %>
-        <.workflow_header
-          project={@project}
-          toggle_content={@toggle_content}
-          can_create_workflow={@can_create_workflow}
-          name={@name}
-        />
-      <% else %>
-        <.empty_state can_create_workflow={@can_create_workflow} />
-      <% end %>
+      <.workflow_header
+        project={@project}
+        toggle_content={@toggle_content}
+        can_create_workflow={@can_create_workflow}
+        name={@name}
+      />
       <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <%= for workflow <- @workflows do %>
           <.workflow_card
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
+            workflows={@workflows}
           />
         <% end %>
       </div>
+      <%= if length(@workflows) == 0 do %>
+        <.empty_state
+          can_create_workflow={@can_create_workflow}
+          search={@search}
+          project={@project}
+        />
+      <% end %>
     </div>
     """
   end
 
-  attr(:active, :boolean, default: true)
-  attr(:data, :string, default: "")
-  attr(:text, :string, default: "")
-  attr(:heading, :string, default: "text-sm")
-
   def workflow_card(assigns) do
     ~H"""
     <.confirm_modal id={@workflow.id} />
-    <div class="relative px-4 pt-5 pb-12 overflow-hidden bg-white rounded-lg shadow sm:pt-6 sm:px-6">
+    <div
+      class="relative px-4 pt-5 pb-12 overflow-hidden bg-white rounded-lg shadow sm:pt-6 sm:px-6"
+      id={@workflow.id}
+    >
       <dt class="" id="data-list">
         <div class="absolute p-3 bg-indigo-500 rounded-md">
           <svg
@@ -58,12 +66,16 @@ defmodule LightningWeb.WorkflowLive.Components do
       <dd class="flex items-baseline pb-6 ml-16 sm:pb-7">
         <div class="flex items-baseline justify-between w-full" id="content">
           <p class="flex items-end text-2xl font-semibold text-gray-900">
-            <%= Enum.count(@workflow.jobs) %> <span class="pl-2 text-sm">jobs</span>
+            <%= Enum.count(@workflow.jobs) %>
+            <span class="pl-2 text-sm">jobs</span>
           </p>
 
-          <div class="flex justify-end inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800 md:mt-2 lg:mt-0">
-            12%
-          </div>
+          <.link
+            navigate={~p"/projects/#{@project.id}/runs"}
+            class="flex justify-end inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800 md:mt-2 lg:mt-0"
+          >
+            <%= "#{success_metric(@workflow)}" %>
+          </.link>
         </div>
         <div class="absolute inset-x-0 bottom-0 px-4 py-4 bg-gray-50 sm:px-6">
           <div class="flex justify-between text-sm">
@@ -80,7 +92,10 @@ defmodule LightningWeb.WorkflowLive.Components do
             >
               View
             </.link>
-            <a href="#" phx-click={show_modal("#confirm-modal", @workflow.id)}>
+            <a
+              href="#"
+              phx-click={show_modal("#confirm-modal-#{@workflow.id}", @workflow.id)}
+            >
               <Icon.trash class="w-6 h-6 text-red-400 hover:text-rose-700" />
             </a>
           </div>
@@ -107,15 +122,15 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:socket, :map, required: true)
-  attr(:project, :map, required: true)
-  attr(:workflow, :map, required: true)
-  attr(:disabled, :boolean, default: true)
+  attr :socket, :map, required: true
+  attr :project, :map, required: true
+  attr :workflow, :map, required: true
+  attr :disabled, :boolean, default: true
 
   def create_job_panel(assigns) do
     ~H"""
-    <div class="w-1/2 h-16 pt-4 mx-auto my-16 text-center">
-      <div class="pb-4 text-sm font-semibold text-gray-500">
+    <div class="w-1/2 h-16 text-center my-16 mx-auto pt-4">
+      <div class="text-sm font-semibold text-gray-500 pb-4">
         Create your first job to get started.
       </div>
       <LightningWeb.Components.Common.button
@@ -123,7 +138,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         disabled={@disabled}
       >
         <div class="h-full">
-          <Heroicons.plus class="inline-block w-4 h-4" />
+          <Heroicons.plus class="h-4 w-4inline-block" />
           <span class="inline-block align-middle">
             Create job
           </span>
@@ -133,16 +148,16 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:id, :string, required: true)
-  attr(:encoded_project_space, :string, required: true)
-  attr(:selected_node, :string, default: nil)
-  attr(:base_path, :string, required: true)
+  attr :id, :string, required: true
+  attr :encoded_project_space, :string, required: true
+  attr :selected_node, :string, default: nil
+  attr :base_path, :string, required: true
 
   def workflow_diagram(assigns) do
     ~H"""
     <div
       phx-hook="WorkflowDiagram"
-      class="w-full h-full"
+      class="h-full w-full"
       id={"hook-#{@id}"}
       phx-update="ignore"
       base-path={@base_path}
@@ -158,7 +173,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <h1 class="text-2xl font-bold text-gray-900 leading-7 sm:leading-9 sm:truncate">
       <%= "Project #{String.capitalize(@project.name)}" %>
     </h1>
-    <div class="flex mt-4 md:items-center md:justify-between">
+    <div class="flex mt-4 md:items-end md:justify-between">
       <div class="justify-start flex-1 hidden lg:flex">
         <div class="w-1/2">
           <div class="relative text-indigo-400 focus-within:text-gray-400">
@@ -167,10 +182,10 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
             <form phx-change="search_workflow">
               <input
-                phx-debounce="800"
                 id="search"
                 name="name"
                 value={@name}
+                phx-debounce="500"
                 class="block w-full py-2 pl-10 pr-3 text-indigo-800 placeholder-gray-500 border border-transparent rounded-md leading-5 bg-opacity-25 focus:outline-none focus:bg-white focus:ring-0 focus:placeholder-gray-400 focus:text-gray-900 sm:text-sm"
                 placeholder="Search workflows..."
                 type="search"
@@ -207,7 +222,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           phx-click="create_workflow"
           disabled={!@can_create_workflow}
         >
-          Create a workflow
+          <span class="sr-only">Create a workflow </span> Create a workflow
         </LightningWeb.Components.Common.button>
       </div>
     </div>
@@ -216,23 +231,40 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def empty_state(assigns) do
     ~H"""
-    <div class="text-center">
-      <Heroicons.folder_plus outline class="w-12 h-12 mx-auto text-gray-400" />
-      <h3 class="mt-2 text-sm font-medium text-gray-900">No workflows</h3>
-      <p class="mt-1 text-sm text-gray-500">
-        Get started by creating a new workflow.
-      </p>
-      <div class="mt-6">
-        <LightningWeb.Components.Common.button
-          phx-click="create_workflow"
-          disabled={!@can_create_workflow}
-        >
-          <Heroicons.plus
-            outline
-            class="inline-block w-5 h-5 mr-2 -ml-1 text-white"
-            fill="currentColor"
-          /> Create a workflow
-        </LightningWeb.Components.Common.button>
+    <div class="w-full px-4 mx-auto mt-4 bg-white rounded-lg shadow-lg sm:px-6 lg:px-8">
+      <div class="text-center py-14">
+        <Heroicons.folder_plus outline class="w-12 h-12 mx-auto text-gray-400" />
+        <%= if @search == false do %>
+          <h3 class="mt-6 text-base font-medium text-gray-900">
+            There are no worflows for this Project.
+          </h3>
+          <div class="mt-4 text-sm text-gray-500">
+            <button
+              class="font-medium text-blue-600 hover:cursor-pointer"
+              phx-click="create_workflow"
+              type="button"
+              id="create_workflow"
+            >
+              Create a new workflow
+            </button>
+            now to get started. These worflows will be associated with this project.
+          </div>
+        <% else %>
+          <h3 class="mt-6 text-base font-medium text-gray-900">
+            We could't find any workflow that matches your search.
+          </h3>
+          <div class="mt-4 text-sm text-gray-500">
+            <.link
+              navigate={~p"/projects/#{@project.id}/w"}
+              class="font-medium text-blue-600 hover:cursor-pointer"
+              phx-click="create_workflow"
+              type="button"
+            >
+              Clear Search
+            </.link>
+          </div>
+        <% end %>
+        <div class="mt-6"></div>
       </div>
     </div>
     """
@@ -245,9 +277,9 @@ defmodule LightningWeb.WorkflowLive.Components do
       aria-labelledby="modal-title"
       role="dialog"
       aria-modal="true"
-      id="confirm-modal"
-      phx-click={cancel_modal("#confirm-modal")}
-      phx-window-keydown={cancel_modal("#confirm-modal")}
+      id={"confirm-modal-#{@id}"}
+      phx-click={cancel_modal("#confirm-modal-#{@id}")}
+      phx-window-keydown={cancel_modal("#confirm-modal-#{@id}")}
       phx-key="escape"
     >
       <div class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -286,14 +318,15 @@ defmodule LightningWeb.WorkflowLive.Components do
           <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
-              phx-click={delete_modal("#confirm-modal", @id)}
+              id="delete_workflow"
+              phx-click={delete_modal("#confirm-modal-#{@id}", @id)}
               class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
             >
               Delete
             </button>
             <button
               type="button"
-              phx-click={cancel_modal("#confirm-modal")}
+              phx-click={cancel_modal("#confirm-modal-#{@id}")}
               class="inline-flex justify-center w-full px-4 py-2 mt-3 text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
             >
               Cancel
@@ -305,14 +338,34 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  def show_modal(id, workflow, js \\ %JS{}) do
+  def success_metric(workflow) do
+    work_orders = Enum.count(workflow.work_orders)
+    jobs = List.first(workflow.jobs)
+
+    case jobs do
+      nil ->
+        "Let's start"
+
+      _ ->
+        success =
+          Enum.count(List.first(workflow.jobs).runs, &(&1.exit_code == 0))
+
+        if success > 0 do
+          "#{round(success / work_orders * 100)} %"
+        else
+          "running..."
+        end
+    end
+  end
+
+  def show_modal(id, _workflow, js \\ %JS{}) do
     js
     |> JS.remove_class("hidden", to: id)
   end
 
   def delete_modal(id, workflow, js \\ %JS{}) do
     js
-    |> JS.push("delete_workflow", value: %{id: workflow}, target: @myself)
+    |> JS.push("delete_workflow", value: %{id: workflow})
     |> JS.add_class("hidden", to: id)
   end
 
@@ -321,18 +374,18 @@ defmodule LightningWeb.WorkflowLive.Components do
     |> JS.add_class("hidden", to: id)
   end
 
-  def hide_content(id, active, js \\ %JS{}) do
+  def hide_content(id, _active, js \\ %JS{}) do
     js
-    |> JS.push("hide-body", target: @myself)
+    |> JS.push("hide-body")
     |> JS.add_class("hidden", to: id)
     |> JS.remove_class("text-sm", to: "#title-header")
     |> JS.add_class("text-lg", to: "#title-header")
     |> JS.add_class("flex items-center", to: "#data-list")
   end
 
-  def show_content(id, active, js \\ %JS{}) do
+  def show_content(id, _active, js \\ %JS{}) do
     js
-    |> JS.push("show-body", target: @myself)
+    |> JS.push("show-body")
     |> JS.remove_class("hidden", to: id)
     |> JS.add_class("text-sm", to: "#title-header")
     |> JS.remove_class("text-lg", to: "#title-header")
@@ -354,7 +407,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       id={@id}
       phx-hook="JobEditorResizer"
       phx-update="ignore"
-      class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
+      class="w-2 h-full resize-x bg-slate-200 cursor-col-resize z-11"
     >
     </div>
     """

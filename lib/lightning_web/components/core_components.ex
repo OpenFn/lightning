@@ -4,7 +4,7 @@ defmodule LightningWeb.CoreComponents do
   alias LightningWeb.Router.Helpers, as: Routes
   use Phoenix.Component
 
-  slot(:actions)
+  slot :actions
 
   def auth_footer_link(assigns) do
     ~H"""
@@ -19,7 +19,7 @@ defmodule LightningWeb.CoreComponents do
     """
   end
 
-  attr(:button, :string)
+  attr :button, :string
 
   def auth_submit(assigns) do
     ~H"""
@@ -34,9 +34,10 @@ defmodule LightningWeb.CoreComponents do
     """
   end
 
-  attr(:conn, :map)
-  attr(:heading, :string)
-  slot(:inner_block, doc: "Inner content")
+  attr :conn, :map
+  attr :heading, :string
+  attr :flash, :map, default: %{}
+  slot :inner_block, doc: "Inner content"
 
   def auth_wrapper(assigns) do
     ~H"""
@@ -53,6 +54,8 @@ defmodule LightningWeb.CoreComponents do
           <h2 class="mt-8 mb-12 text-3xl font-extrabold text-center">
             <%= @heading %>
           </h2>
+          <.flash_message kind={:error} flash={@flash} />
+          <.flash_message kind={:info} flash={@flash} />
           <%= render_slot(@inner_block) %>
         </div>
       </div>
@@ -68,17 +71,15 @@ defmodule LightningWeb.CoreComponents do
       <.flash_message kind={:info} flash={@flash} />
       <.flash_message kind={:info} phx-mounted={show("#flash")}>Welcome Back!</.flash>
   """
-  attr(:id, :string, default: "flash", doc: "the optional id of flash container")
-  attr(:flash, :map, default: %{}, doc: "the map of flash messages to display")
+  attr :id, :string, default: "flash", doc: "the optional id of flash container"
+  attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
 
-  attr(:kind, :atom,
+  attr :kind, :atom,
     values: [:info, :error],
     doc: "used for styling and flash lookup"
-  )
 
-  slot(:inner_block,
+  slot :inner_block,
     doc: "the optional inner block that renders the flash message"
-  )
 
   def flash_message(assigns) do
     ~H"""
