@@ -255,29 +255,22 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("filter", %{"filters" => filters_params} = _params, socket) do
-    {:noreply,
-     socket
-     |> assign(filters_changeset: filters_changeset(filters_params))
-     |> assign(filters: filters_params)
-     |> push_patch(
-       to:
-         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters_params}}"
-     )}
+  def handle_event("search", %{"filters" => filters} = _params, socket) do
+    apply_filters(filters, socket)
   end
 
-  def handle_event("filter_by_status", params, socket) do
-    value = Map.get(params, "value", "false")
-    id = Map.get(params, "id", nil)
-    filter_params = %{id => value}
-
-    {:noreply,
-     socket
-     |> assign(filters_changeset: filters_changeset(filter_params))
-     |> assign(filters: filter_params)
-     |> push_patch(
-       to:
-         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filter_params}}"
-     )}
+  def handle_event("apply_filters", %{"filters" => filters}, socket) do
+    apply_filters(Map.merge(socket.assigns.filters, filters), socket)
   end
+
+  defp apply_filters(filters, socket),
+    do:
+      {:noreply,
+       socket
+       |> assign(filters_changeset: filters_changeset(filters))
+       |> assign(filters: filters)
+       |> push_patch(
+         to:
+           ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
+       )}
 end
