@@ -4,6 +4,10 @@ defmodule LightningWeb.WorkflowLive.Components do
   alias Phoenix.LiveView.JS
 
   attr(:active, :boolean, default: true)
+  attr(:toggle_content, :boolean, required: true)
+  attr(:project, :map, required: true)
+  attr(:workflows, :map, required: true)
+  attr(:name, :string, default: "")
 
   def workflow_list(assigns) do
     ~H"""
@@ -80,7 +84,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             >
               View
             </.link>
-            <a href="#" phx-click={show_modal("#confirm-modal", @workflow.id)}>
+            <a href="#" phx-click={show_modal("#confirm-modal")}>
               <Icon.trash class="w-6 h-6 text-red-400 hover:text-rose-700" />
             </a>
           </div>
@@ -305,7 +309,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  def show_modal(id, workflow, js \\ %JS{}) do
+  def show_modal(id, js \\ %JS{}) do
     js
     |> JS.remove_class("hidden", to: id)
   end
