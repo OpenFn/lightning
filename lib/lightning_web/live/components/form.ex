@@ -11,7 +11,7 @@ defmodule LightningWeb.Components.Form do
     base_classes = ~w[
       inline-flex
       justify-center
-      py-4
+      py-2
       px-4
       border
       border-transparent
@@ -25,6 +25,7 @@ defmodule LightningWeb.Components.Form do
       focus:ring-offset-2
       focus:ring-primary-500
     ]
+
 
     inactive_classes = ~w[
       bg-primary-300

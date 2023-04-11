@@ -1,4 +1,4 @@
-<.auth_wrapper heading="Log in" conn={@conn}>
+<.auth_wrapper heading="Log in" conn={@conn} flash={@flash}>
   <.form
     :let={f}
     for={@conn}
@@ -6,8 +6,6 @@
     as={:user}
     class="space-y-6"
   >
-    <.flash_message kind={:error} flash={@flash} />
-    <.flash_message kind={:info} flash={@flash} />
     <div>
       <div class="mt-1">
         <.email_field form={f} id={:email} required={true} />

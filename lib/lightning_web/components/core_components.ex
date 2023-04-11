@@ -36,6 +36,7 @@ defmodule LightningWeb.CoreComponents do
 
   attr(:conn, :map)
   attr(:heading, :string)
+  attr(:flash, :map, default: %{})
   slot(:inner_block, doc: "Inner content")
 
   def auth_wrapper(assigns) do
@@ -53,6 +54,8 @@ defmodule LightningWeb.CoreComponents do
           <h2 class="mt-8 mb-12 text-3xl font-extrabold text-center">
             <%= @heading %>
           </h2>
+          <.flash_message kind={:error} flash={@flash} />
+          <.flash_message kind={:info} flash={@flash} />
           <%= render_slot(@inner_block) %>
         </div>
       </div>
