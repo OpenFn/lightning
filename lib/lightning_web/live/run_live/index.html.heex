@@ -150,6 +150,8 @@
                 <div class="form-check">
                   <div class="selectable-option">
                     <%= checkbox(f, status.id,
+                      phx_click: "filter_by_status",
+                      phx_value_id: status.id,
                       checked: checked(@filters_changeset, status.id),
                       class:
                         "mb-1 mr-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"

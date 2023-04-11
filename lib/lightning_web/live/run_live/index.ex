@@ -265,4 +265,19 @@ defmodule LightningWeb.RunLive.Index do
          ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters_params}}"
      )}
   end
+
+  def handle_event("filter_by_status", params, socket) do
+    value = Map.get(params, "value", "false")
+    id = Map.get(params, "id", nil)
+    filter_params = %{id => value}
+
+    {:noreply,
+     socket
+     |> assign(filters_changeset: filters_changeset(filter_params))
+     |> assign(filters: filter_params)
+     |> push_patch(
+       to:
+         ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filter_params}}"
+     )}
+  end
 end
