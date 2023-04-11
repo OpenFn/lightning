@@ -1,10 +1,14 @@
-# OpenFn/Lightning (alpha) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
+# OpenFn/Lightning (beta) [![CircleCI](https://circleci.com/gh/OpenFn/Lightning/tree/main.svg?style=svg&circle-token=085c00fd6662e9a36012810fb7cf1f09f3604bc6)](https://circleci.com/gh/OpenFn/Lightning/tree/main) [![codecov](https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a)](https://codecov.io/gh/OpenFn/Lightning) ![Docker Pulls](https://img.shields.io/docker/pulls/openfn/lightning)
 
-A tool to help governments and social-sector organizations automate key business
-processes and integrate critical systems, so they spend less time managing data
-and more time focusing on their work.
+OpenFn/Lightning is a fully open source, workflow automation platform that's
+used to automate critical business processes and integrate information systems.
+From last-mile services to national-level reporting, it boosts efficiency &
+effectiveness while enabling secure, stable, scalable interoperability at all
+levels.
 
-Use OpenFn Lightning to visually build, execute and manage workflows.
+Lightning is the latest "v2" of OpenFn, the
+[Digital Public Good for workflow automation](https://app.digitalpublicgoods.net/a/10176).
+Use Lightning to visually build, execute and manage workflows.
 
 - The latest version of the OpenFn technology - first launched in 2014, now
   tried and tested by NGOs in over 40 countries
@@ -16,11 +20,19 @@ Use OpenFn Lightning to visually build, execute and manage workflows.
 
 ![Screenshot 2023-03-15 at 13 01 13](https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png)
 
-Explore our [demo app](https://demo.openfn.org/) with username:
-`demo@openfn.org`, password: `welcome123`, or read through the
-[features](#features) section to view screenshots of the app.
+## Demo 
 
-## Table of contents
+Watch a quick demo here: https://www.youtube.com/watch?v=BNaxlHAWb5I
+
+Explore our [demo app*](https://demo.openfn.org/) with username:
+`demo@openfn.org`, password: `welcome123`, or read through the
+[features](#features) section to view screenshots of the app. 
+
+_*Note that the demo app refreshes daily, so do not configure workflows you want to save._
+
+## README Contents
+
+Click on the links below to navigate to a specific documentation section.
 
 - [Features](#features)
 - [Getting started](#getting-started)
@@ -30,6 +42,7 @@ Explore our [demo app](https://demo.openfn.org/) with username:
   - [Troubleshooting](#troubleshooting)
 - [Generate the documentation](#generating-documentation)
 - [Security and standards](#security-and-standards)
+- [Questions or feedback?](#support)
 
 ## Features
 
@@ -303,3 +316,16 @@ In addition to our test suite, you can run the following commands:
 
 > For convenience there is a `verify` mix task that runs all of the above and
 > defaults the `MIX_ENV` to `test`.
+
+For more guidance on security best practices for workflow automation
+implementations, check out OpenFn Docs:
+[docs.openfn.org/documentation/getting-started/security](https://docs.openfn.org/documentation/getting-started/security)
+
+## Support
+
+If you have any questions, feedback, or issues, please:
+
+- Post on the OpenFn Community at
+  [community.openfn.org](https://community.openfn.org)
+- Open an issue directly on this Github Repo:
+  [github.com/OpenFn/Lightning/issues](https://github.com/OpenFn/Lightning/issues)
