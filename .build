@@ -68,9 +68,6 @@ Lightning.Projects.ProjectUser.html
 Lightning.Projects.html
 Lightning.Release.html
 Lightning.Repo.html
-Lightning.RunLive.Components.html
-Lightning.RunLive.RunSearchForComponent.html
-Lightning.RunLive.RunStatusComponent.html
 Lightning.RunSearchForm.html
 Lightning.Runtime.ChildProcess.html
 Lightning.Runtime.Handler.html
@@ -188,8 +185,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-0B8FC423.js
-dist/sidebar_items-0F0C1EC3.js
+dist/search_items-1CDBE97D.js
+dist/sidebar_items-69F26111.js
 index.html
 readme.html
 search.html
