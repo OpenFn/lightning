@@ -101,6 +101,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
 
       assert html =~ "History"
 
@@ -168,6 +172,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+        )
 
       div =
         view
@@ -216,6 +224,10 @@ defmodule LightningWeb.RunWorkOrderTest do
         live(
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
         )
 
       div =
@@ -301,6 +313,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+        )
 
       div =
         view
@@ -380,6 +396,10 @@ defmodule LightningWeb.RunWorkOrderTest do
         live(
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
         )
 
       assert view
@@ -487,6 +507,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+        )
 
       div =
         view
@@ -550,37 +574,31 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
 
       assert html =~ "Filter by workorder status"
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_0_selected[checked]"
-             )
+             |> element("input#run-search-form_success[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_1_selected[checked]"
-             )
+             |> element("input#run-search-form_failure[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_2_selected[checked]"
-             )
+             |> element("input#run-search-form_timeout[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_3_selected[checked]"
-             )
+             |> element("input#run-search-form_crash[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_status_options_4_selected[checked]"
-             )
+             |> element("input#run-search-form_pending[checked]")
              |> has_element?()
 
       assert view
@@ -588,15 +606,11 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_search_field_options_0_selected[checked]"
-             )
+             |> element("input#run-search-form_body[checked]")
              |> has_element?()
 
       assert view
-             |> element(
-               "input#run-search-form_search_field_options_1_selected[checked]"
-             )
+             |> element("input#run-search-form_log[checked]")
              |> has_element?()
     end
 
@@ -644,6 +658,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
 
       div =
         view
@@ -657,8 +675,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck :failure
 
       view
-      |> element("input#run-search-form_status_options_1_selected[checked]")
-      |> render_change(%{"run_search_form[status_options][1][selected]" => false})
+      |> form("#run-search-form", filters: %{"failure" => "false"})
+      |> render_submit()
 
       refute view
              |> element(
@@ -669,8 +687,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> element("input#run-search-form_status_options_1_selected")
-      |> render_change(%{"run_search_form[status_options][1][selected]" => true})
+      |> form("#run-search-form", filters: %{"failure" => "true"})
+      |> render_submit()
 
       div =
         view
@@ -768,6 +786,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
 
       assert html =~ "Filter by workflow"
 
@@ -785,8 +807,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element("form#run-search-form")
-             |> render_change(%{
-               "run_search_form[workflow_id]" => job_two.workflow_id
+             |> render_submit(%{
+               "filters[workflow_id]" => job_two.workflow_id
              })
 
       div =
@@ -801,8 +823,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       assert view
              |> element("form#run-search-form")
-             |> render_change(%{
-               "run_search_form[workflow_id]" => job.workflow_id
+             |> render_submit(%{
+               "filters[workflow_id]" => job.workflow_id
              })
 
       div =
@@ -895,6 +917,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
 
       assert html =~ "2022-08-23"
       assert html =~ "2022-08-29"
@@ -904,8 +930,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{
-          "run_search_form[date_after]" => ~N[2022-08-25 00:00:00.123456]
+        |> render_submit(%{
+          "filters[date_after]" => ~N[2022-08-25 00:00:00.123456]
         })
 
       assert result =~ "2022-08-29"
@@ -916,13 +942,13 @@ defmodule LightningWeb.RunWorkOrderTest do
       # reset after date
       view
       |> element("form#run-search-form")
-      |> render_change(%{"run_search_form[date_after]" => nil})
+      |> render_submit(%{"filters[date_after]" => nil})
 
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{
-          "run_search_form[date_before]" => ~N[2022-08-28 00:00:00.123456]
+        |> render_submit(%{
+          "filters[date_before]" => ~N[2022-08-28 00:00:00.123456]
         })
 
       assert result =~ "2022-08-23"
@@ -932,7 +958,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       result =
         view
         |> element("form#run-search-form")
-        |> render_change(%{"run_search_form[date_before]" => nil})
+        |> render_submit(%{"filters[date_before]" => nil})
 
       assert result =~ "2022-08-23"
       assert result =~ "2022-08-29"
@@ -955,7 +981,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       work_order = work_order_fixture(workflow_id: job_one.workflow_id)
 
       dataclip =
-        dataclip_fixture(type: :http_request, body: %{"name" => "some data"})
+        dataclip_fixture(
+          type: :http_request,
+          body: %{"username" => "eliaswalyba"}
+        )
 
       reason =
         reason_fixture(
@@ -990,7 +1019,8 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       work_order = work_order_fixture(workflow_id: job_two.workflow_id)
 
-      dataclip = dataclip_fixture(type: :http_request, body: %{"name" => "bar"})
+      dataclip =
+        dataclip_fixture(type: :http_request, body: %{"username" => "qassim"})
 
       reason =
         reason_fixture(
@@ -1011,7 +1041,11 @@ defmodule LightningWeb.RunWorkOrderTest do
                 DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id,
-              log: ["xxx", "xxx some log zzz", "bbbb"]
+              log: [
+                "Hi mom!",
+                "Log me something fun.",
+                "It's another great log."
+              ]
             }
           ]
         })
@@ -1021,6 +1055,10 @@ defmodule LightningWeb.RunWorkOrderTest do
         live(
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
+        )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
         )
 
       div =
@@ -1047,13 +1085,13 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute workflow_displayed(view, "workflow 2")
 
       view
-      |> search_for("some data", [:body, :log])
+      |> search_for("eliaswalyba", [:body, :log])
 
       assert workflow_displayed(view, "workflow 1")
       refute workflow_displayed(view, "workflow 2")
 
       view
-      |> search_for("bar", [:body, :log])
+      |> search_for("qassim", [:body, :log])
 
       refute workflow_displayed(view, "workflow 1")
       assert workflow_displayed(view, "workflow 2")
@@ -1068,7 +1106,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       |> search_for("some log", [:log])
 
       refute workflow_displayed(view, "workflow 1")
-      assert workflow_displayed(view, "workflow 2")
+      refute workflow_displayed(view, "workflow 2")
     end
   end
 
@@ -1187,22 +1225,17 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   def search_for(view, term, types) do
-    for {type, index} <- [:body, :log] |> Enum.with_index() do
-      checked = type in types
+    filter_attrs = %{"search_term" => term}
 
-      view
-      |> element("input#run-search-form_search_field_options_#{index}_selected")
-      |> render_change(%{
-        "run_search_form[search_field_options][#{index}][selected]" => checked
-      })
+    for type <- [:body, :log] do
+      checked = type in types
+      Map.put(filter_attrs, "#{type}", "#{checked}")
     end
 
     view
-    |> element("input#run-search-form_search_term")
-    |> render_change(%{"run_search_form[search_term]" => term})
-
-    view
-    |> form("#run-search-form")
+    |> form("#run-search-form",
+      filters: filter_attrs
+    )
     |> render_submit()
   end
 
@@ -1275,6 +1308,10 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+        )
 
       assert view
              |> render_click("rerun", %{
@@ -1336,6 +1373,10 @@ defmodule LightningWeb.RunWorkOrderTest do
         live(
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+        )
+        |> follow_redirect(
+          conn,
+          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
         )
 
       assert view
