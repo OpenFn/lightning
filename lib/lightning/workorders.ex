@@ -2,6 +2,9 @@ defmodule Lightning.Workorders do
   @moduledoc false
   import Ecto.Query, warn: false
 
+  alias Lightning.WorkOrderService
+  alias Lightning.WorkOrder
+  alias Lightning.Projects
   alias Lightning.Repo
 
   @doc """
@@ -10,116 +13,95 @@ defmodule Lightning.Workorders do
   """
   def get_digest_data(workflow, digest)
       when digest in [:daily, :weekly, :monthly] do
+    date_after = digest_to_date(digest)
+    successful_workorders = successful_workorders(workflow, date_after)
+    failed_workorders = failed_workorders(workflow, date_after)
+    rerun_workorders = rerun_workorders(workflow, date_after)
+
     %{
       workflow_name: workflow.name,
-      successful_workorders:
-        successful_workorders_query(workflow, digest) |> Repo.one(),
-      rerun_workorders: rerun_workorders_query(workflow, digest) |> Repo.one(),
-      failed_workorders: failed_workorders_query(workflow, digest) |> Repo.one()
+      successful_workorders: successful_workorders.total_entries,
+      rerun_workorders: rerun_workorders.total_entries,
+      failed_workorders: failed_workorders.total_entries
     }
   end
 
-  defp filter_digest(digest) do
-    from_date =
-      case digest do
-        :monthly ->
-          Timex.now() |> Timex.shift(months: -1) |> Timex.beginning_of_month()
+  defp digest_to_date(digest) do
+    case digest do
+      :monthly ->
+        Timex.now() |> Timex.shift(months: -1) |> Timex.beginning_of_month()
 
-        :daily ->
-          Timex.now() |> Timex.beginning_of_day()
+      :daily ->
+        Timex.now() |> Timex.beginning_of_day()
 
-        :weekly ->
-          Timex.now() |> Timex.shift(days: -7) |> Timex.beginning_of_week()
-      end
-
-    dynamic([r], r.finished_at >= ^from_date)
+      :weekly ->
+        Timex.now() |> Timex.shift(days: -7) |> Timex.beginning_of_week()
+    end
   end
 
-  defp successful_workorders_query(workflow, digest) do
-    from(wo in Lightning.WorkOrder,
-      join: w in assoc(wo, :workflow),
-      as: :workflow,
-      join: att in assoc(wo, :attempts),
-      on: wo.id == att.work_order_id,
-      join: r in assoc(att, :runs),
-      as: :runs,
-      join:
-        run in subquery(
-          from(r in Lightning.Invocation.Run,
-            join: att in assoc(r, :attempts),
-            group_by: [att.id, r.exit_code],
-            where: r.exit_code == 0,
-            where: ^filter_digest(digest),
-            select: %{
-              attempt_id: att.id
-            }
-          )
-        ),
-      on: att.id == run.attempt_id,
-      where: w.id == ^workflow.id,
-      select: count(w.id)
+  defp successful_workorders(workflow, date_after) do
+    Lightning.Invocation.list_work_orders_for_project(
+      Projects.get_project!(workflow.project_id),
+      [
+        status: [:success],
+        search_fields: [:body, :log],
+        search_term: "",
+        workflow_id: workflow.id,
+        date_after: date_after,
+        date_before: Timex.now(),
+        wo_date_after: "",
+        wo_date_before: ""
+      ],
+      %{}
     )
   end
 
-  defp rerun_workorders_query(workflow, digest) do
-    from(
-      attempt in Lightning.Attempt,
-      as: :attempts,
+  defp failed_workorders(workflow, date_after) do
+    Lightning.Invocation.list_work_orders_for_project(
+      Projects.get_project!(workflow.project_id),
+      [
+        status: [:failure],
+        search_fields: [:body, :log],
+        search_term: "",
+        workflow_id: workflow.id,
+        date_after: date_after,
+        date_before: Timex.now(),
+        wo_date_after: "",
+        wo_date_before: ""
+      ],
+      %{}
+    )
+  end
+
+  defp rerun_workorders(workflow, date_after) do
+    from(wo in Lightning.WorkOrder,
+      join: a in Lightning.Attempt,
+      on: wo.id == a.work_order_id,
+      as: :attempt,
+      join: ar in Lightning.AttemptRun,
+      on: a.id == ar.attempt_id,
+      join: r in Lightning.Invocation.Run,
+      on: ar.run_id == r.id,
       where:
-        1 <
-          subquery(
-            from(wo in Lightning.WorkOrder,
-              join: w in assoc(wo, :workflow),
-              as: :workflow,
-              join: att in assoc(wo, :attempts),
-              on: wo.id == att.work_order_id,
-              join: r in assoc(att, :runs),
-              as: :runs,
-              join:
-                run in subquery(
-                  from(r in Lightning.Invocation.Run,
-                    join: att in assoc(r, :attempts),
-                    group_by: [att.id, r.exit_code],
-                    where: r.exit_code == 0,
-                    where: ^filter_digest(digest),
-                    select: %{
-                      attempt_id: att.id
-                    }
-                  )
-                ),
-              on: att.id == run.attempt_id,
-              where: w.id == ^workflow.id,
-              where: parent_as(:attempts).work_order_id == wo.id,
-              select: count(wo.id)
+        wo.workflow_id == ^workflow.id and r.exit_code != 0 and
+          r.finished_at >= ^date_after and
+          exists(
+            from(ar2 in Lightning.AttemptRun,
+              join: r2 in Lightning.Invocation.Run,
+              on: ar2.run_id == r2.id,
+              where:
+                parent_as(:attempt).id == ar2.attempt_id and
+                  r2.exit_code == 0 and
+                  r2.finished_at >= ^date_after,
+              order_by: [desc: r2.inserted_at],
+              limit: 1,
+              offset: 0,
+              select: 1
             )
           ),
-      select: count(attempt.id)
+      distinct: true,
+      select: wo
     )
-  end
-
-  defp failed_workorders_query(workflow, digest) do
-    from(wo in Lightning.WorkOrder,
-      join: w in assoc(wo, :workflow),
-      as: :workflow,
-      join: att in assoc(wo, :attempts),
-      on: wo.id == att.work_order_id,
-      join: r in assoc(att, :runs),
-      as: :runs,
-      join:
-        run in subquery(
-          from(r in Lightning.Invocation.Run,
-            join: att in assoc(r, :attempts),
-            group_by: [att.id, r.exit_code],
-            where: r.exit_code != 0,
-            where: ^filter_digest(digest),
-            select: %{
-              attempt_id: att.id
-            }
-          )
-        ),
-      on: att.id == run.attempt_id,
-      where: w.id == ^workflow.id,
-      select: count(w.id)
-    )
+    |> Repo.paginate(%{})
   end
 end

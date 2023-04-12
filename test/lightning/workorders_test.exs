@@ -12,6 +12,30 @@ defmodule Lightning.WorkordersTest do
 
   describe "Project digest" do
     test "Gets project digest data" do
+      # """
+      # Given:
+
+      # Project: test
+
+      # Workorder A - workflow A
+      # - Attempt 1 finished 12/04/2023
+
+      # Workorder B - workflow A
+      # - Attempt 2 finished 12/04/2023: success
+      # - Attempt 1 finished 11/04/2023: failure
+
+      # Workorder C - workflow B
+      # - Attempt 2 finished 12/04/2023: success
+      # - Attempt 1 finished 10/04/2023: failure
+
+      # Workorder D - workflow B
+      # - Attempt 2 finished 12/04/2023: success
+      # - Attempt 1 finished 10/04/2023: success
+
+      # Workorder E - workflow A
+      # - Attempt 1 finished 12/04/2023: failure
+      # """
+
       user = AccountsFixtures.user_fixture()
 
       project =
@@ -19,117 +43,116 @@ defmodule Lightning.WorkordersTest do
           project_users: [%{user_id: user.id, digest: :daily}]
         )
 
-      workflow = WorkflowsFixtures.workflow_fixture(project_id: project.id)
+      workflow_a = WorkflowsFixtures.workflow_fixture(project_id: project.id)
+      workflow_b = WorkflowsFixtures.workflow_fixture(project_id: project.id)
 
-      job =
+      job_a =
         JobsFixtures.job_fixture(
           project_id: project.id,
-          workflow_id: workflow.id
+          workflow_id: workflow_a.id
         )
 
-      workorder_1 =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+      job_b =
+        JobsFixtures.job_fixture(
+          project_id: project.id,
+          workflow_id: workflow_b.id
+        )
 
-      workorder_2 =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
+      workorder_a =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
 
-      reason = InvocationFixtures.reason_fixture(trigger_id: job.trigger.id)
+      workorder_b =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
 
-      create_run(workorder_1, reason, %{
+      workorder_c =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow_b.id)
+
+      workorder_d =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow_b.id)
+
+      workorder_e =
+        InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
+
+      reason = InvocationFixtures.reason_fixture(trigger_id: job_a.trigger.id)
+
+      finished_at = Timex.now() |> Timex.shift(days: -1)
+
+      create_run(workorder_a, reason, %{
         project_id: project.id,
-        job_id: job.id,
+        job_id: job_a.id,
         input_dataclip_id: reason.dataclip_id,
         exit_code: 0,
-        finished_at: Timex.now()
+        finished_at: finished_at
       })
 
-      create_run(workorder_2, reason, %{
+      create_run(workorder_b, reason, %{
         project_id: project.id,
-        job_id: job.id,
+        job_id: job_a.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 1,
+        finished_at: finished_at
+      })
+
+      create_run(workorder_b, reason, %{
+        project_id: project.id,
+        job_id: job_a.id,
         input_dataclip_id: reason.dataclip_id,
         exit_code: 0,
-        finished_at: Timex.now()
+        finished_at: finished_at
       })
 
-      assert Workorders.get_digest_data(workflow, :daily) == %{
-               failed_workorders: 0,
-               rerun_workorders: 0,
+      create_run(workorder_c, reason, %{
+        project_id: project.id,
+        job_id: job_b.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 1,
+        finished_at: finished_at
+      })
+
+      create_run(workorder_c, reason, %{
+        project_id: project.id,
+        job_id: job_b.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 0,
+        finished_at: finished_at
+      })
+
+      create_run(workorder_d, reason, %{
+        project_id: project.id,
+        job_id: job_b.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 0,
+        finished_at: finished_at
+      })
+
+      create_run(workorder_d, reason, %{
+        project_id: project.id,
+        job_id: job_b.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 0,
+        finished_at: finished_at
+      })
+
+      create_run(workorder_e, reason, %{
+        project_id: project.id,
+        job_id: job_a.id,
+        input_dataclip_id: reason.dataclip_id,
+        exit_code: 1,
+        finished_at: finished_at
+      })
+
+      assert Workorders.get_digest_data(workflow_a, :monthly) == %{
+               failed_workorders: 1,
+               rerun_workorders: 1,
                successful_workorders: 2,
-               workflow_name: workflow.name
+               workflow_name: workflow_a.name
              }
 
-      workorder_1 =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
-
-      workorder_2 =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
-
-      workorder_3 =
-        InvocationFixtures.work_order_fixture(workflow_id: workflow.id)
-
-      create_run(workorder_1, reason, %{
-        project_id: project.id,
-        job_id: job.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at: Timex.now()
-      })
-
-      create_run(workorder_2, reason, %{
-        project_id: project.id,
-        job_id: job.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 1,
-        finished_at: Timex.now()
-      })
-
-      create_run(workorder_3, reason, %{
-        project_id: project.id,
-        job_id: job.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 1,
-        finished_at: Timex.now()
-      })
-
-      create_run(workorder_3, reason, %{
-        project_id: project.id,
-        job_id: job.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 1,
-        finished_at: Timex.now() |> Timex.shift(days: -7)
-      })
-
-      create_run(workorder_3, reason, %{
-        project_id: project.id,
-        job_id: job.id,
-        input_dataclip_id: reason.dataclip_id,
-        exit_code: 0,
-        finished_at:
-          Timex.now()
-          |> Timex.shift(months: -1)
-          |> Timex.beginning_of_month()
-          |> Timex.shift(hours: 4)
-      })
-
-      assert Workorders.get_digest_data(workflow, :daily) == %{
-               failed_workorders: 2,
-               rerun_workorders: 0,
-               successful_workorders: 3,
-               workflow_name: workflow.name
-             }
-
-      assert Workorders.get_digest_data(workflow, :weekly) == %{
-               failed_workorders: 3,
-               rerun_workorders: 0,
-               successful_workorders: 3,
-               workflow_name: workflow.name
-             }
-
-      assert Workorders.get_digest_data(workflow, :monthly) == %{
-               failed_workorders: 3,
-               rerun_workorders: 0,
-               successful_workorders: 4,
-               workflow_name: workflow.name
+      assert Workorders.get_digest_data(workflow_b, :monthly) == %{
+               failed_workorders: 0,
+               rerun_workorders: 1,
+               successful_workorders: 2,
+               workflow_name: workflow_b.name
              }
     end
   end
