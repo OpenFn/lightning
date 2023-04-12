@@ -4,7 +4,7 @@ OpenFn/Lightning is a fully open source, workflow automation platform that's
 used to automate critical business processes and integrate information systems.
 From last-mile services to national-level reporting, it boosts efficiency &
 effectiveness while enabling secure, stable, scalable interoperability at all
-levels.
+levels. **Read more about Lightning [on OpenFn/Docs](https://docs.openfn.org/documentation/about-lightning).**
 
 Lightning is the latest "v2" of OpenFn, the
 [Digital Public Good for workflow automation](https://app.digitalpublicgoods.net/a/10176).
@@ -17,6 +17,23 @@ Use Lightning to visually build, execute and manage workflows.
 - Recognised as a Digital Public Good by the
   [DPGA](https://digitalpublicgoods.net/) and a Global Good for Health by
   [Digital Square](https://digitalsquare.org/digital-health-global-goods)
+
+# README Contents
+
+Click on the links below to navigate to a specific documentation section.
+
+- [Demo](#demo)
+- [Features](#features)
+- [Getting started](#getting-started)
+  - [Run Lightning via Docker](#run-via-docker)
+  - [Deploy Lightning on Docker or Kubernetes](#deploy-on-external-infrastructure)
+  - [Run Lightning on your local machine (contributors)](#contribute-to-this-project)
+  - [Troubleshooting](#troubleshooting)
+  - [Project Configuration Quickstart](#project-configuration-quickstart)
+- [Generate the documentation](#generating-documentation)
+- [Security and standards](#security-and-standards)
+- [Server specs for self-hosting](#server-specs-for-self-hosting)
+- [Questions or feedback?](#support)
 
 ![Screenshot 2023-03-15 at 13 01 13](https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png)
 
@@ -38,21 +55,7 @@ through the
 [quick-start guide](https://docs.openfn.org/documentation/build/lightning-quick-start)
 to get familiar with the app.
 
-## README Contents
-
-Click on the links below to navigate to a specific documentation section.
-
-- [Features](#features)
-- [Getting started](#getting-started)
-  - [Run Lightning via Docker](#run-via-docker)
-  - [Deploy Lightning on Docker or Kubernetes](#deploy-on-external-infrastructure)
-  - [Run Lightning on your local machine (contributors)](#contribute-to-this-project)
-  - [Troubleshooting](#troubleshooting)
-- [Generate the documentation](#generating-documentation)
-- [Security and standards](#security-and-standards)
-- [Questions or feedback?](#support)
-
-## Features
+# Features
 
 Plan and build workflows using Lightning's visual interface to quickly define
 when, where and what you want your automation to do.
@@ -71,7 +74,7 @@ Monitor all workflow activity in one place.
 Manage users and access by project
 ![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
-## Getting Started
+# Getting Started
 
 - If you only want to [_**RUN**_](#run-via-docker) Lightning on your own server,
   we recommend using Docker.
@@ -223,12 +226,6 @@ MIX_ENV=test mix test
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
 
-### Generating Documentation
-
-You can generate the HTML and EPUB documentation locally using:
-
-`mix docs` and opening `doc/index.html` in your browser.
-
 ## Troubleshooting
 
 ### Trouble with environment variables
@@ -297,8 +294,17 @@ docker compose build --no-cache web && \
 docker compose run --rm web mix ecto.migrate
 docker compose up
 ```
+## Project Configuration Quickstart
 
-### Security and Standards
+For help getting started with your OpenFn/Lightning Project and Workflows configuration, check out the [Lightning Quickstart Guidance](https://docs.openfn.org/documentation/build/lightning-quick-start) on OpenFn/Docs. 
+
+# Generating Documentation
+
+You can generate the HTML and EPUB documentation locally using:
+
+`mix docs` and opening `doc/index.html` in your browser.
+
+# Security and Standards
 
 We use a host of common Elixir static analysis tools to help us avoid common
 pitfalls and make sure we keep everything clean and consistent.
@@ -329,7 +335,11 @@ For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
 [docs.openfn.org/documentation/getting-started/security](https://docs.openfn.org/documentation/getting-started/security)
 
-## Support
+# Server Specs for Self-Hosting
+
+For recommend server specifications for self-hosting of Lightning, check out this Community topic: [community.openfn.org/t/specs-for-self-hosting-lightning/292](https://community.openfn.org/t/specs-for-self-hosting-lightning/292)
+
+# Support
 
 If you have any questions, feedback, or issues, please:
 
