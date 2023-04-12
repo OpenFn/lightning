@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.5.1] - 2023-04-12
+
+### Added
+
 - Added ability to create and revoke personal API tokens
   [#147](https://github.com/OpenFn/Lightning/issues/147)
 - Add `last-used at` to API tokens
