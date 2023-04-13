@@ -155,14 +155,47 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
-  defp build_email_body(data, digest) do
+  def build_digest_url(workflow, start_date, end_date) do
+    URI.new!(
+      "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{workflow.project_id}/runs?"
+    )
+    |> URI.append_query(
+      URI.encode_query(%{
+        "filters[body]" => true,
+        "filters[crash]" => true,
+        "filters[failure]" => true,
+        "filters[log]" => true,
+        "filters[pending]" => true,
+        "filters[search_term]" => "",
+        "filters[success]" => true,
+        "filters[timeout]" => true,
+        "filters[wo_date_after]" => "",
+        "ilters[wo_date_before]" => "",
+        "filters[date_after]" => start_date,
+        "filters[date_before]" => end_date,
+        "filters[workflow_id]" => workflow.id
+      })
+    )
+    |> URI.to_string()
+  end
+
+  defp build_email(%{
+         start_date: start_date,
+         end_date: end_date,
+         digest: digest,
+         workflow: workflow,
+         successful_workorders: successful_workorders,
+         rerun_workorders: rerun_workorders,
+         failed_workorders: failed_workorders
+       }) do
     digest_lookup = %{daily: "day", monthly: "month", weekly: "week"}
 
     """
-    #{data.workflow_name}:
-    - #{data.successful_workorders} workorders correctly processed this #{digest_lookup[digest]}
-    - #{data.rerun_workorders} failed work orders that were rerun and then processed correctly
-    - #{data.failed_workorders} work orders that failed/still need addressing
+    #{workflow.name}:
+    - #{successful_workorders} workorders correctly processed this #{digest_lookup[digest]}
+    - #{rerun_workorders} failed work orders that were rerun and then processed correctly
+    - #{failed_workorders} work orders that failed/still need addressing
+    Click here to view this in the history page: #{build_digest_url(workflow, start_date, end_date)}
 
     """
   end
@@ -170,11 +203,38 @@ defmodule Lightning.Accounts.UserNotifier do
   @doc """
   Deliver a digest for a project to a user.
   """
-  def deliver_project_digest(user, project, data, digest) do
-    email = user.email
-    title = "Weekly digest for project #{project.name}"
-    body = Enum.map_join(data, fn d -> build_email_body(d, digest) end)
+  def deliver_project_digest(
+        digest_data,
+        %{
+          user: user,
+          project: project,
+          digest: digest,
+          start_date: start_date,
+          end_date: end_date
+        } = _params
+      ) do
+    title =
+      "#{Atom.to_string(digest) |> String.capitalize()} digest for #{project.name} project"
 
-    deliver(email, title, body)
+    body =
+      Enum.map_join(digest_data, fn data ->
+        build_email(
+          Map.merge(data, %{
+            start_date: start_date,
+            end_date: end_date,
+            digest: digest
+          })
+        )
+      end)
+
+    body = """
+    Hi #{user.first_name},
+
+    Here's a #{Atom.to_string(digest) |> String.capitalize()} digest for #{project.name} project activity since #{start_date}.
+
+    #{body}
+    """
+
+    deliver(user.email, title, body)
   end
 end
