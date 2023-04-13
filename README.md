@@ -20,15 +20,23 @@ Use Lightning to visually build, execute and manage workflows.
 
 ![Screenshot 2023-03-15 at 13 01 13](https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png)
 
-## Demo 
+## Demo
 
 Watch a quick demo here: https://www.youtube.com/watch?v=BNaxlHAWb5I
 
-Explore our [demo app*](https://demo.openfn.org/) with username:
+Explore our [demo app\*](https://demo.openfn.org/) with username:
 `demo@openfn.org`, password: `welcome123`, or read through the
-[features](#features) section to view screenshots of the app. 
+[features](#features) section to view screenshots of the app.
 
-_*Note that the demo app refreshes daily, so do not configure workflows you want to save._
+_\*Note that the demo app refreshes daily, so do not configure workflows you
+want to save._
+
+## Register for a Beta account
+
+Register for a Beta account at [app.openfn.org](https://app.openfn.org/) and go
+through the
+[quick-start guide](https://docs.openfn.org/documentation/build/lightning-quick-start)
+to get familiar with the app.
 
 ## README Contents
 
