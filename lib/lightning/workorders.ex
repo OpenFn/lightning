@@ -74,33 +74,32 @@ defmodule Lightning.Workorders do
   end
 
   defp rerun_workorders(workflow, date_after) do
-    from(wo in Lightning.WorkOrder,
-      join: a in Lightning.Attempt,
-      on: wo.id == a.work_order_id,
-      as: :attempt,
-      join: ar in Lightning.AttemptRun,
-      on: a.id == ar.attempt_id,
-      join: r in Lightning.Invocation.Run,
-      on: ar.run_id == r.id,
+    probably_reruns =
+      from(wo in WorkOrder,
+        join: workflow in Lightning.Workflows.Workflow,
+        where: workflow.id == ^workflow.id,
+        join: a in Lightning.Attempt,
+        on: a.work_order_id == wo.id,
+        join: ar in Lightning.AttemptRun,
+        on: ar.attempt_id == a.id,
+        join: r in Lightning.Invocation.Run,
+        on: r.id == ar.run_id,
+        where: r.exit_code == 0 and r.finished_at >= ^date_after,
+        group_by: [wo.id, wo.workflow_id],
+        order_by: [desc: wo.inserted_at],
+        select: wo.id
+      )
+
+    from(wo in WorkOrder,
       where:
-        wo.workflow_id == ^workflow.id and r.exit_code != 0 and
-          r.finished_at >= ^date_after and
-          exists(
-            from(ar2 in Lightning.AttemptRun,
-              join: r2 in Lightning.Invocation.Run,
-              on: ar2.run_id == r2.id,
-              where:
-                parent_as(:attempt).id == ar2.attempt_id and
-                  r2.exit_code == 0 and
-                  r2.finished_at >= ^date_after,
-              order_by: [desc: r2.inserted_at],
-              limit: 1,
-              offset: 0,
-              select: 1
-            )
-          ),
-      distinct: true,
-      select: wo
+        wo.workflow_id == ^workflow.id and wo.id in subquery(probably_reruns),
+      join: a in Lightning.Attempt,
+      on: a.work_order_id == wo.id,
+      join: ar in Lightning.AttemptRun,
+      on: ar.attempt_id == a.id,
+      join: r in Lightning.Invocation.Run,
+      on: r.id == ar.run_id,
+      where: r.exit_code != 0
     )
     |> Repo.paginate(%{})
   end

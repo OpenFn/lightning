@@ -12,30 +12,6 @@ defmodule Lightning.WorkordersTest do
 
   describe "Project digest" do
     test "Gets project digest data" do
-      # """
-      # Given:
-
-      # Project: test
-
-      # Workorder A - workflow A
-      # - Attempt 1 finished 12/04/2023
-
-      # Workorder B - workflow A
-      # - Attempt 2 finished 12/04/2023: success
-      # - Attempt 1 finished 11/04/2023: failure
-
-      # Workorder C - workflow B
-      # - Attempt 2 finished 12/04/2023: success
-      # - Attempt 1 finished 10/04/2023: failure
-
-      # Workorder D - workflow B
-      # - Attempt 2 finished 12/04/2023: success
-      # - Attempt 1 finished 10/04/2023: success
-
-      # Workorder E - workflow A
-      # - Attempt 1 finished 12/04/2023: failure
-      # """
-
       user = AccountsFixtures.user_fixture()
 
       project =
