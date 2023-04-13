@@ -230,7 +230,7 @@ defmodule Lightning.Accounts.UserNotifier do
     body = """
     Hi #{user.first_name},
 
-    Here's a #{Atom.to_string(digest) |> String.capitalize()} digest for #{project.name} project activity since #{start_date}.
+    Here's a #{Atom.to_string(digest) |> String.capitalize()} digest for #{project.name} project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
 
     #{body}
     """

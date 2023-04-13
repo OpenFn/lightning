@@ -146,7 +146,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's a Daily digest for Real Project project activity since #{start_date}.
+        Here's a Daily digest for Real Project project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
 
         Workflow A:
         - 12 workorders correctly processed this day
@@ -222,7 +222,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's a Weekly digest for Real Project project activity since #{start_date}.
+        Here's a Weekly digest for Real Project project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
 
         Workflow A:
         - 12 workorders correctly processed this week
@@ -300,7 +300,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         text_body: """
         Hi Elias,
 
-        Here's a Monthly digest for Real Project project activity since #{start_date}.
+        Here's a Monthly digest for Real Project project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
 
         Workflow A:
         - 12 workorders correctly processed this month
