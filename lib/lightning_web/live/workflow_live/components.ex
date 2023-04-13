@@ -12,7 +12,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_list(assigns) do
     ~H"""
     <div class="py-6">
-      <%= if Enum.count(@workflows) > 0 do %>
+      <%= if !@state do %>
         <.workflow_header
           project={@project}
           toggle_content={@toggle_content}
@@ -20,14 +20,17 @@ defmodule LightningWeb.WorkflowLive.Components do
           name={@name}
         />
       <% else %>
-        <.empty_state can_create_workflow={@can_create_workflow} />
-      <% end %>
+      <.empty_state can_create_workflow={@can_create_workflow} />
+    <% end %>
       <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <%= for workflow <- @workflows do %>
           <.workflow_card
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
           />
+        <% end %>
+        <%= if length(@workflows) == 0 && !@state do %>
+          <p class="text-base">No worflow found</p>
         <% end %>
       </div>
     </div>
@@ -171,10 +174,10 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
             <form phx-change="search_workflow">
               <input
-                phx-debounce="800"
                 id="search"
                 name="name"
                 value={@name}
+                phx-debounce="500"
                 class="block w-full py-2 pl-10 pr-3 text-indigo-800 placeholder-gray-500 border border-transparent rounded-md leading-5 bg-opacity-25 focus:outline-none focus:bg-white focus:ring-0 focus:placeholder-gray-400 focus:text-gray-900 sm:text-sm"
                 placeholder="Search workflows..."
                 type="search"
@@ -315,8 +318,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   def delete_modal(id, workflow, js \\ %JS{}) do
-    js
-    |> JS.push("delete_workflow", value: %{id: workflow}, target: @myself)
+    JS.push("delete_workflow", value: %{id: workflow}, target: @myself)
     |> JS.add_class("hidden", to: id)
   end
 
@@ -350,7 +352,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     end
   end
 
-  attr :id, :string, required: true
+  attr(:id, :string, required: true)
 
   def resize_component(assigns) do
     ~H"""
@@ -358,7 +360,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       id={@id}
       phx-hook="JobEditorResizer"
       phx-update="ignore"
-      class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
+      class="w-2 h-full resize-x bg-slate-200 cursor-col-resize z-11"
     >
     </div>
     """
