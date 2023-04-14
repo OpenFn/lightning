@@ -65,8 +65,7 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_project_addition_notification(user, project) do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
 
-    url =
-      "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+    url = "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
 
     deliver(user.email, "Project #{project.name}", """
 
@@ -188,20 +187,21 @@ defmodule Lightning.Accounts.UserNotifier do
          rerun_workorders: rerun_workorders,
          failed_workorders: failed_workorders
        }) do
-    digest_lookup = %{daily: "day", monthly: "month", weekly: "week"}
+    digest_lookup = %{daily: "today", monthly: "this month", weekly: "this week"}
 
     """
     #{workflow.name}:
-    - #{successful_workorders} workorders correctly processed this #{digest_lookup[digest]}
+    - #{successful_workorders} workorders correctly processed #{digest_lookup[digest]}
     - #{rerun_workorders} failed work orders that were rerun and then processed correctly
-    - #{failed_workorders} work orders that failed/still need addressing
-    Click here to view this in the history page: #{build_digest_url(workflow, start_date, end_date)}
+    - #{failed_workorders} work orders that failed, crashed or timed out
+    Click the link below to view this in the history page:
+    #{build_digest_url(workflow, start_date, end_date)}
 
     """
   end
 
   @doc """
-  Deliver a digest for a project to a user.
+  Deliver a project digest of daily/weekly or monthly activity to a user.
   """
   def deliver_project_digest(
         digest_data,
@@ -213,8 +213,7 @@ defmodule Lightning.Accounts.UserNotifier do
           end_date: end_date
         } = _params
       ) do
-    title =
-      "#{Atom.to_string(digest) |> String.capitalize()} digest for #{project.name} project"
+    title = "#{Atom.to_string(digest) |> String.capitalize()} digest for project #{project.name}"
 
     body =
       Enum.map_join(digest_data, fn data ->
@@ -230,7 +229,7 @@ defmodule Lightning.Accounts.UserNotifier do
     body = """
     Hi #{user.first_name},
 
-    Here's a #{Atom.to_string(digest) |> String.capitalize()} digest for #{project.name} project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
+    Here's a #{Atom.to_string(digest)} digest for "#{project.name}" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
     #{body}
     """

@@ -11,13 +11,9 @@ defmodule Lightning.Accounts.UserNotifierTest do
     test "deliver_project_addition_notification/2" do
       user = Lightning.AccountsFixtures.user_fixture(email: "user@openfn.org")
 
-      project =
-        Lightning.ProjectsFixtures.project_fixture(
-          project_users: [%{user_id: user.id}]
-        )
+      project = Lightning.ProjectsFixtures.project_fixture(project_users: [%{user_id: user.id}])
 
-      url =
-        "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+      url = "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
 
       UserNotifier.deliver_project_addition_notification(
         user,
@@ -99,14 +95,11 @@ defmodule Lightning.Accounts.UserNotifierTest do
       user = %User{email: "real@email.com", first_name: "Elias"}
       project = %Project{name: "Real Project"}
 
-      workflow_a =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+      workflow_a = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
-      workflow_b =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
+      workflow_b = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
 
-      workflow_c =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
+      workflow_c = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
 
       data = [
         %{
@@ -141,30 +134,33 @@ defmodule Lightning.Accounts.UserNotifierTest do
       })
 
       assert_email_sent(
-        subject: "Daily digest for Real Project project",
+        subject: "Daily digest for project Real Project",
         to: "real@email.com",
         text_body: """
         Hi Elias,
 
-        Here's a Daily digest for Real Project project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
+        Here's a daily digest for "Real Project" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
         Workflow A:
-        - 12 workorders correctly processed this day
+        - 12 workorders correctly processed today
         - 6 failed work orders that were rerun and then processed correctly
-        - 3 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        - 3 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
-        - 10 workorders correctly processed this day
+        - 10 workorders correctly processed today
         - 0 failed work orders that were rerun and then processed correctly
-        - 0 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        - 0 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
-        - 3 workorders correctly processed this day
+        - 3 workorders correctly processed today
         - 0 failed work orders that were rerun and then processed correctly
-        - 7 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        - 7 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
 
         """
@@ -175,14 +171,11 @@ defmodule Lightning.Accounts.UserNotifierTest do
       user = %User{email: "real@email.com", first_name: "Elias"}
       project = %Project{name: "Real Project"}
 
-      workflow_a =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+      workflow_a = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
-      workflow_b =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
+      workflow_b = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
 
-      workflow_c =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
+      workflow_c = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
 
       data = [
         %{
@@ -217,30 +210,33 @@ defmodule Lightning.Accounts.UserNotifierTest do
       })
 
       assert_email_sent(
-        subject: "Weekly digest for Real Project project",
+        subject: "Weekly digest for project Real Project",
         to: "real@email.com",
         text_body: """
         Hi Elias,
 
-        Here's a Weekly digest for Real Project project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
+        Here's a weekly digest for "Real Project" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
         Workflow A:
         - 12 workorders correctly processed this week
         - 6 failed work orders that were rerun and then processed correctly
-        - 3 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        - 3 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         - 10 workorders correctly processed this week
         - 0 failed work orders that were rerun and then processed correctly
-        - 0 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        - 0 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         - 3 workorders correctly processed this week
         - 0 failed work orders that were rerun and then processed correctly
-        - 7 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        - 7 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
 
         """
@@ -251,14 +247,11 @@ defmodule Lightning.Accounts.UserNotifierTest do
       user = %User{email: "real@email.com", first_name: "Elias"}
       project = %Project{name: "Real Project"}
 
-      workflow_a =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+      workflow_a = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
-      workflow_b =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
+      workflow_b = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
 
-      workflow_c =
-        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
+      workflow_c = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
 
       data = [
         %{
@@ -295,30 +288,33 @@ defmodule Lightning.Accounts.UserNotifierTest do
       })
 
       assert_email_sent(
-        subject: "Monthly digest for Real Project project",
+        subject: "Monthly digest for project Real Project",
         to: "real@email.com",
         text_body: """
         Hi Elias,
 
-        Here's a Monthly digest for Real Project project activity since #{start_date |> Timex.Format.DateTime.Formatter.format!("{UNIX}")}.
+        Here's a monthly digest for "Real Project" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
 
         Workflow A:
         - 12 workorders correctly processed this month
         - 6 failed work orders that were rerun and then processed correctly
-        - 3 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
+        - 3 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         - 10 workorders correctly processed this month
         - 0 failed work orders that were rerun and then processed correctly
-        - 0 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
+        - 0 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         - 3 workorders correctly processed this month
         - 0 failed work orders that were rerun and then processed correctly
-        - 7 work orders that failed/still need addressing
-        Click here to view this in the history page: #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
+        - 7 work orders that failed, crashed or timed out
+        Click the link below to view this in the history page:
+        #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
 
 
         """
