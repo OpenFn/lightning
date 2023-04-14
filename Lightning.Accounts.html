@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-1922E008.js"></script>
+    <script src="dist/sidebar_items-FF980210.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -586,10 +586,10 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="9670941896-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9670941896-2">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9670941896-2">}</span><span class="p" data-group-id="9670941896-1">)</span><span class="w">
-</span><span class="p" data-group-id="9670941896-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9670941896-4">%</span><span class="nc" data-group-id="9670941896-4">User</span><span class="p" data-group-id="9670941896-4">{</span><span class="p" data-group-id="9670941896-4">}</span><span class="p" data-group-id="9670941896-3">}</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:superuser</span><span class="w">
-</span><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="9670941896-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9670941896-6">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9670941896-6">}</span><span class="p" data-group-id="9670941896-5">)</span><span class="w">
-</span><span class="p" data-group-id="9670941896-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9670941896-8">%</span><span class="nc" data-group-id="9670941896-8">Ecto.Changeset</span><span class="p" data-group-id="9670941896-8">{</span><span class="p" data-group-id="9670941896-8">}</span><span class="p" data-group-id="9670941896-7">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="6379462624-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6379462624-2">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6379462624-2">}</span><span class="p" data-group-id="6379462624-1">)</span><span class="w">
+</span><span class="p" data-group-id="6379462624-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6379462624-4">%</span><span class="nc" data-group-id="6379462624-4">User</span><span class="p" data-group-id="6379462624-4">{</span><span class="p" data-group-id="6379462624-4">}</span><span class="p" data-group-id="6379462624-3">}</span><span class="ss">role</span><span class="p">:</span><span class="w"> </span><span class="ss">:superuser</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">apply_user_email</span><span class="p" data-group-id="6379462624-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6379462624-6">%{</span><span class="ss">email</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6379462624-6">}</span><span class="p" data-group-id="6379462624-5">)</span><span class="w">
+</span><span class="p" data-group-id="6379462624-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6379462624-8">%</span><span class="nc" data-group-id="6379462624-8">Ecto.Changeset</span><span class="p" data-group-id="6379462624-8">{</span><span class="p" data-group-id="6379462624-8">}</span><span class="p" data-group-id="6379462624-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_scheduled_deletion/2">
@@ -619,8 +619,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_scheduled_deletion</span><span class="p" data-group-id="9040099279-1">(</span><span class="n">user</span><span class="p" data-group-id="9040099279-1">)</span><span class="w">
-</span><span class="p" data-group-id="9040099279-2">%</span><span class="nc" data-group-id="9040099279-2">Ecto.Changeset</span><span class="p" data-group-id="9040099279-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9040099279-3">%</span><span class="nc" data-group-id="9040099279-3">User</span><span class="p" data-group-id="9040099279-3">{</span><span class="p" data-group-id="9040099279-3">}</span><span class="p" data-group-id="9040099279-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_scheduled_deletion</span><span class="p" data-group-id="9581582660-1">(</span><span class="n">user</span><span class="p" data-group-id="9581582660-1">)</span><span class="w">
+</span><span class="p" data-group-id="9581582660-2">%</span><span class="nc" data-group-id="9581582660-2">Ecto.Changeset</span><span class="p" data-group-id="9581582660-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9581582660-3">%</span><span class="nc" data-group-id="9581582660-3">User</span><span class="p" data-group-id="9581582660-3">{</span><span class="p" data-group-id="9581582660-3">}</span><span class="p" data-group-id="9581582660-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_superuser_registration/1">
@@ -656,8 +656,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_superuser_registration</span><span class="p" data-group-id="4011950510-1">(</span><span class="n">user</span><span class="p" data-group-id="4011950510-1">)</span><span class="w">
-</span><span class="p" data-group-id="4011950510-2">%</span><span class="nc" data-group-id="4011950510-2">Ecto.Changeset</span><span class="p" data-group-id="4011950510-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4011950510-3">%</span><span class="nc" data-group-id="4011950510-3">User</span><span class="p" data-group-id="4011950510-3">{</span><span class="p" data-group-id="4011950510-3">}</span><span class="p" data-group-id="4011950510-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_superuser_registration</span><span class="p" data-group-id="6016020769-1">(</span><span class="n">user</span><span class="p" data-group-id="6016020769-1">)</span><span class="w">
+</span><span class="p" data-group-id="6016020769-2">%</span><span class="nc" data-group-id="6016020769-2">Ecto.Changeset</span><span class="p" data-group-id="6016020769-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6016020769-3">%</span><span class="nc" data-group-id="6016020769-3">User</span><span class="p" data-group-id="6016020769-3">{</span><span class="p" data-group-id="6016020769-3">}</span><span class="p" data-group-id="6016020769-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_details/2">
@@ -711,8 +711,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_email</span><span class="p" data-group-id="8739574448-1">(</span><span class="n">user</span><span class="p" data-group-id="8739574448-1">)</span><span class="w">
-</span><span class="p" data-group-id="8739574448-2">%</span><span class="nc" data-group-id="8739574448-2">Ecto.Changeset</span><span class="p" data-group-id="8739574448-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8739574448-3">%</span><span class="nc" data-group-id="8739574448-3">User</span><span class="p" data-group-id="8739574448-3">{</span><span class="p" data-group-id="8739574448-3">}</span><span class="p" data-group-id="8739574448-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_email</span><span class="p" data-group-id="5240781915-1">(</span><span class="n">user</span><span class="p" data-group-id="5240781915-1">)</span><span class="w">
+</span><span class="p" data-group-id="5240781915-2">%</span><span class="nc" data-group-id="5240781915-2">Ecto.Changeset</span><span class="p" data-group-id="5240781915-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5240781915-3">%</span><span class="nc" data-group-id="5240781915-3">User</span><span class="p" data-group-id="5240781915-3">{</span><span class="p" data-group-id="5240781915-3">}</span><span class="p" data-group-id="5240781915-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_password/2">
@@ -742,8 +742,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_password</span><span class="p" data-group-id="7770582647-1">(</span><span class="n">user</span><span class="p" data-group-id="7770582647-1">)</span><span class="w">
-</span><span class="p" data-group-id="7770582647-2">%</span><span class="nc" data-group-id="7770582647-2">Ecto.Changeset</span><span class="p" data-group-id="7770582647-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="7770582647-3">%</span><span class="nc" data-group-id="7770582647-3">User</span><span class="p" data-group-id="7770582647-3">{</span><span class="p" data-group-id="7770582647-3">}</span><span class="p" data-group-id="7770582647-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_password</span><span class="p" data-group-id="5547808674-1">(</span><span class="n">user</span><span class="p" data-group-id="5547808674-1">)</span><span class="w">
+</span><span class="p" data-group-id="5547808674-2">%</span><span class="nc" data-group-id="5547808674-2">Ecto.Changeset</span><span class="p" data-group-id="5547808674-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5547808674-3">%</span><span class="nc" data-group-id="5547808674-3">User</span><span class="p" data-group-id="5547808674-3">{</span><span class="p" data-group-id="5547808674-3">}</span><span class="p" data-group-id="5547808674-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="change_user_registration/1">
@@ -773,8 +773,8 @@ it in the database.</p><h2 id="apply_user_email/3-examples" class="section-headi
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_registration</span><span class="p" data-group-id="9810437206-1">(</span><span class="n">user</span><span class="p" data-group-id="9810437206-1">)</span><span class="w">
-</span><span class="p" data-group-id="9810437206-2">%</span><span class="nc" data-group-id="9810437206-2">Ecto.Changeset</span><span class="p" data-group-id="9810437206-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="9810437206-3">%</span><span class="nc" data-group-id="9810437206-3">User</span><span class="p" data-group-id="9810437206-3">{</span><span class="p" data-group-id="9810437206-3">}</span><span class="p" data-group-id="9810437206-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_user_registration</span><span class="p" data-group-id="8849475901-1">(</span><span class="n">user</span><span class="p" data-group-id="8849475901-1">)</span><span class="w">
+</span><span class="p" data-group-id="8849475901-2">%</span><span class="nc" data-group-id="8849475901-2">Ecto.Changeset</span><span class="p" data-group-id="8849475901-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="8849475901-3">%</span><span class="nc" data-group-id="8849475901-3">User</span><span class="p" data-group-id="8849475901-3">{</span><span class="p" data-group-id="8849475901-3">}</span><span class="p" data-group-id="8849475901-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="confirm_user/1">
@@ -869,11 +869,11 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="8885203696-1">(</span><span class="n">token</span><span class="p" data-group-id="8885203696-1">)</span><span class="w">
-</span><span class="p" data-group-id="8885203696-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8885203696-3">%</span><span class="nc" data-group-id="8885203696-3">UserToken</span><span class="p" data-group-id="8885203696-3">{</span><span class="p" data-group-id="8885203696-3">}</span><span class="p" data-group-id="8885203696-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="3860774133-1">(</span><span class="n">token</span><span class="p" data-group-id="3860774133-1">)</span><span class="w">
+</span><span class="p" data-group-id="3860774133-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3860774133-3">%</span><span class="nc" data-group-id="3860774133-3">UserToken</span><span class="p" data-group-id="3860774133-3">{</span><span class="p" data-group-id="3860774133-3">}</span><span class="p" data-group-id="3860774133-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="8885203696-4">(</span><span class="n">token</span><span class="p" data-group-id="8885203696-4">)</span><span class="w">
-</span><span class="p" data-group-id="8885203696-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8885203696-6">%</span><span class="nc" data-group-id="8885203696-6">Ecto.Changeset</span><span class="p" data-group-id="8885203696-6">{</span><span class="p" data-group-id="8885203696-6">}</span><span class="p" data-group-id="8885203696-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_token</span><span class="p" data-group-id="3860774133-4">(</span><span class="n">token</span><span class="p" data-group-id="3860774133-4">)</span><span class="w">
+</span><span class="p" data-group-id="3860774133-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3860774133-6">%</span><span class="nc" data-group-id="3860774133-6">Ecto.Changeset</span><span class="p" data-group-id="3860774133-6">{</span><span class="p" data-group-id="3860774133-6">}</span><span class="p" data-group-id="3860774133-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_user/1">
@@ -901,11 +901,11 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="1438322600-1">(</span><span class="n">user</span><span class="p" data-group-id="1438322600-1">)</span><span class="w">
-</span><span class="p" data-group-id="1438322600-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1438322600-3">%</span><span class="nc" data-group-id="1438322600-3">User</span><span class="p" data-group-id="1438322600-3">{</span><span class="p" data-group-id="1438322600-3">}</span><span class="p" data-group-id="1438322600-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="6310633969-1">(</span><span class="n">user</span><span class="p" data-group-id="6310633969-1">)</span><span class="w">
+</span><span class="p" data-group-id="6310633969-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6310633969-3">%</span><span class="nc" data-group-id="6310633969-3">User</span><span class="p" data-group-id="6310633969-3">{</span><span class="p" data-group-id="6310633969-3">}</span><span class="p" data-group-id="6310633969-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="1438322600-4">(</span><span class="n">user</span><span class="p" data-group-id="1438322600-4">)</span><span class="w">
-</span><span class="p" data-group-id="1438322600-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1438322600-6">%</span><span class="nc" data-group-id="1438322600-6">Ecto.Changeset</span><span class="p" data-group-id="1438322600-6">{</span><span class="p" data-group-id="1438322600-6">}</span><span class="p" data-group-id="1438322600-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_user</span><span class="p" data-group-id="6310633969-4">(</span><span class="n">user</span><span class="p" data-group-id="6310633969-4">)</span><span class="w">
+</span><span class="p" data-group-id="6310633969-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6310633969-6">%</span><span class="nc" data-group-id="6310633969-6">Ecto.Changeset</span><span class="p" data-group-id="6310633969-6">{</span><span class="p" data-group-id="6310633969-6">}</span><span class="p" data-group-id="6310633969-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_update_email_instructions/3">
@@ -933,8 +933,8 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_update_email_instructions</span><span class="p" data-group-id="9847542893-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">current_email</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_update_email_url</span><span class="p" data-group-id="9847542893-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="9847542893-2">)</span><span class="p" data-group-id="9847542893-1">)</span><span class="w">
-</span><span class="p" data-group-id="9847542893-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9847542893-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="9847542893-4">}</span><span class="p" data-group-id="9847542893-3">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_update_email_instructions</span><span class="p" data-group-id="2653901666-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">current_email</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_update_email_url</span><span class="p" data-group-id="2653901666-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="2653901666-2">)</span><span class="p" data-group-id="2653901666-1">)</span><span class="w">
+</span><span class="p" data-group-id="2653901666-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2653901666-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="2653901666-4">}</span><span class="p" data-group-id="2653901666-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_user_confirmation_instructions/2">
@@ -962,11 +962,11 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="3739688210-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="3739688210-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="3739688210-2">)</span><span class="p" data-group-id="3739688210-1">)</span><span class="w">
-</span><span class="p" data-group-id="3739688210-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3739688210-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3739688210-4">}</span><span class="p" data-group-id="3739688210-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="3752659644-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="3752659644-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="3752659644-2">)</span><span class="p" data-group-id="3752659644-1">)</span><span class="w">
+</span><span class="p" data-group-id="3752659644-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3752659644-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3752659644-4">}</span><span class="p" data-group-id="3752659644-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="3739688210-5">(</span><span class="n">confirmed_user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="3739688210-6">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="3739688210-6">)</span><span class="p" data-group-id="3739688210-5">)</span><span class="w">
-</span><span class="p" data-group-id="3739688210-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:already_confirmed</span><span class="p" data-group-id="3739688210-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_confirmation_instructions</span><span class="p" data-group-id="3752659644-5">(</span><span class="n">confirmed_user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_confirmation_url</span><span class="p" data-group-id="3752659644-6">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="3752659644-6">)</span><span class="p" data-group-id="3752659644-5">)</span><span class="w">
+</span><span class="p" data-group-id="3752659644-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:already_confirmed</span><span class="p" data-group-id="3752659644-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="deliver_user_confirmation_instructions/3">
@@ -1016,8 +1016,8 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_reset_password_instructions</span><span class="p" data-group-id="5565373954-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_reset_password_url</span><span class="p" data-group-id="5565373954-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="5565373954-2">)</span><span class="p" data-group-id="5565373954-1">)</span><span class="w">
-</span><span class="p" data-group-id="5565373954-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5565373954-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="5565373954-4">}</span><span class="p" data-group-id="5565373954-3">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">deliver_user_reset_password_instructions</span><span class="p" data-group-id="3052778974-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nc">Routes</span><span class="o">.</span><span class="n">user_reset_password_url</span><span class="p" data-group-id="3052778974-2">(</span><span class="n">conn</span><span class="p">,</span><span class="w"> </span><span class="ss">:edit</span><span class="p">,</span><span class="w"> </span><span class="ni">&amp;1</span><span class="p" data-group-id="3052778974-2">)</span><span class="p" data-group-id="3052778974-1">)</span><span class="w">
+</span><span class="p" data-group-id="3052778974-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3052778974-4">%{</span><span class="ss">to</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p">,</span><span class="w"> </span><span class="ss">body</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="3052778974-4">}</span><span class="p" data-group-id="3052778974-3">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="exchange_auth_token/1">
@@ -1133,10 +1133,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="5918054371-1">(</span><span class="mi">123</span><span class="p" data-group-id="5918054371-1">)</span><span class="w">
-</span><span class="p" data-group-id="5918054371-2">%</span><span class="nc" data-group-id="5918054371-2">UserToken</span><span class="p" data-group-id="5918054371-2">{</span><span class="p" data-group-id="5918054371-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="9166850421-1">(</span><span class="mi">123</span><span class="p" data-group-id="9166850421-1">)</span><span class="w">
+</span><span class="p" data-group-id="9166850421-2">%</span><span class="nc" data-group-id="9166850421-2">UserToken</span><span class="p" data-group-id="9166850421-2">{</span><span class="p" data-group-id="9166850421-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="5918054371-3">(</span><span class="mi">456</span><span class="p" data-group-id="5918054371-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_token!</span><span class="p" data-group-id="9166850421-3">(</span><span class="mi">456</span><span class="p" data-group-id="9166850421-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -1165,10 +1165,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="9658735222-1">(</span><span class="mi">123</span><span class="p" data-group-id="9658735222-1">)</span><span class="w">
-</span><span class="p" data-group-id="9658735222-2">%</span><span class="nc" data-group-id="9658735222-2">User</span><span class="p" data-group-id="9658735222-2">{</span><span class="p" data-group-id="9658735222-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="2970417209-1">(</span><span class="mi">123</span><span class="p" data-group-id="2970417209-1">)</span><span class="w">
+</span><span class="p" data-group-id="2970417209-2">%</span><span class="nc" data-group-id="2970417209-2">User</span><span class="p" data-group-id="2970417209-2">{</span><span class="p" data-group-id="2970417209-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="9658735222-3">(</span><span class="mi">456</span><span class="p" data-group-id="9658735222-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user!</span><span class="p" data-group-id="2970417209-3">(</span><span class="mi">456</span><span class="p" data-group-id="2970417209-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -1241,10 +1241,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="2643166235-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p" data-group-id="2643166235-1">)</span><span class="w">
-</span><span class="p" data-group-id="2643166235-2">%</span><span class="nc" data-group-id="2643166235-2">User</span><span class="p" data-group-id="2643166235-2">{</span><span class="p" data-group-id="2643166235-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="1106011390-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p" data-group-id="1106011390-1">)</span><span class="w">
+</span><span class="p" data-group-id="1106011390-2">%</span><span class="nc" data-group-id="1106011390-2">User</span><span class="p" data-group-id="1106011390-2">{</span><span class="p" data-group-id="1106011390-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="2643166235-3">(</span><span class="s">&quot;unknown@example.com&quot;</span><span class="p" data-group-id="2643166235-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email</span><span class="p" data-group-id="1106011390-3">(</span><span class="s">&quot;unknown@example.com&quot;</span><span class="p" data-group-id="1106011390-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -1273,10 +1273,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="9019880539-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;correct_password&quot;</span><span class="p" data-group-id="9019880539-1">)</span><span class="w">
-</span><span class="p" data-group-id="9019880539-2">%</span><span class="nc" data-group-id="9019880539-2">User</span><span class="p" data-group-id="9019880539-2">{</span><span class="p" data-group-id="9019880539-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="0147504400-1">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;correct_password&quot;</span><span class="p" data-group-id="0147504400-1">)</span><span class="w">
+</span><span class="p" data-group-id="0147504400-2">%</span><span class="nc" data-group-id="0147504400-2">User</span><span class="p" data-group-id="0147504400-2">{</span><span class="p" data-group-id="0147504400-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="9019880539-3">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid_password&quot;</span><span class="p" data-group-id="9019880539-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_email_and_password</span><span class="p" data-group-id="0147504400-3">(</span><span class="s">&quot;foo@example.com&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid_password&quot;</span><span class="p" data-group-id="0147504400-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -1305,10 +1305,10 @@ and the token is deleted.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="3230212224-1">(</span><span class="s">&quot;validtoken&quot;</span><span class="p" data-group-id="3230212224-1">)</span><span class="w">
-</span><span class="p" data-group-id="3230212224-2">%</span><span class="nc" data-group-id="3230212224-2">User</span><span class="p" data-group-id="3230212224-2">{</span><span class="p" data-group-id="3230212224-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="9984608500-1">(</span><span class="s">&quot;validtoken&quot;</span><span class="p" data-group-id="9984608500-1">)</span><span class="w">
+</span><span class="p" data-group-id="9984608500-2">%</span><span class="nc" data-group-id="9984608500-2">User</span><span class="p" data-group-id="9984608500-2">{</span><span class="p" data-group-id="9984608500-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="3230212224-3">(</span><span class="s">&quot;invalidtoken&quot;</span><span class="p" data-group-id="3230212224-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_user_by_reset_password_token</span><span class="p" data-group-id="9984608500-3">(</span><span class="s">&quot;invalidtoken&quot;</span><span class="p" data-group-id="9984608500-3">)</span><span class="w">
 </span><span class="no">nil</span></code></pre>
   </section>
 </section>
@@ -1432,8 +1432,8 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_users</span><span class="p" data-group-id="6741737923-1">(</span><span class="p" data-group-id="6741737923-1">)</span><span class="w">
-</span><span class="p" data-group-id="6741737923-2">[</span><span class="p" data-group-id="6741737923-3">%</span><span class="nc" data-group-id="6741737923-3">User</span><span class="p" data-group-id="6741737923-3">{</span><span class="p" data-group-id="6741737923-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6741737923-2">]</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">list_users</span><span class="p" data-group-id="0740211194-1">(</span><span class="p" data-group-id="0740211194-1">)</span><span class="w">
+</span><span class="p" data-group-id="0740211194-2">[</span><span class="p" data-group-id="0740211194-3">%</span><span class="nc" data-group-id="0740211194-3">User</span><span class="p" data-group-id="0740211194-3">{</span><span class="p" data-group-id="0740211194-3">}</span><span class="p">,</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="0740211194-2">]</span></code></pre>
   </section>
 </section>
 <section class="detail" id="perform/1">
@@ -1511,11 +1511,11 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="4650588517-1">(</span><span class="p" data-group-id="4650588517-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="4650588517-2">}</span><span class="p" data-group-id="4650588517-1">)</span><span class="w">
-</span><span class="p" data-group-id="4650588517-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4650588517-4">%</span><span class="nc" data-group-id="4650588517-4">User</span><span class="p" data-group-id="4650588517-4">{</span><span class="p" data-group-id="4650588517-4">}</span><span class="p" data-group-id="4650588517-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="1961197360-1">(</span><span class="p" data-group-id="1961197360-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1961197360-2">}</span><span class="p" data-group-id="1961197360-1">)</span><span class="w">
+</span><span class="p" data-group-id="1961197360-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1961197360-4">%</span><span class="nc" data-group-id="1961197360-4">User</span><span class="p" data-group-id="1961197360-4">{</span><span class="p" data-group-id="1961197360-4">}</span><span class="p" data-group-id="1961197360-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="4650588517-5">(</span><span class="p" data-group-id="4650588517-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="4650588517-6">}</span><span class="p" data-group-id="4650588517-5">)</span><span class="w">
-</span><span class="p" data-group-id="4650588517-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4650588517-8">%</span><span class="nc" data-group-id="4650588517-8">Ecto.Changeset</span><span class="p" data-group-id="4650588517-8">{</span><span class="p" data-group-id="4650588517-8">}</span><span class="p" data-group-id="4650588517-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">register_superuser</span><span class="p" data-group-id="1961197360-5">(</span><span class="p" data-group-id="1961197360-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1961197360-6">}</span><span class="p" data-group-id="1961197360-5">)</span><span class="w">
+</span><span class="p" data-group-id="1961197360-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1961197360-8">%</span><span class="nc" data-group-id="1961197360-8">Ecto.Changeset</span><span class="p" data-group-id="1961197360-8">{</span><span class="p" data-group-id="1961197360-8">}</span><span class="p" data-group-id="1961197360-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="register_user/1">
@@ -1553,11 +1553,11 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="0053449609-1">(</span><span class="p" data-group-id="0053449609-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="0053449609-2">}</span><span class="p" data-group-id="0053449609-1">)</span><span class="w">
-</span><span class="p" data-group-id="0053449609-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0053449609-4">%</span><span class="nc" data-group-id="0053449609-4">User</span><span class="p" data-group-id="0053449609-4">{</span><span class="p" data-group-id="0053449609-4">}</span><span class="p" data-group-id="0053449609-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="5344606067-1">(</span><span class="p" data-group-id="5344606067-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="5344606067-2">}</span><span class="p" data-group-id="5344606067-1">)</span><span class="w">
+</span><span class="p" data-group-id="5344606067-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5344606067-4">%</span><span class="nc" data-group-id="5344606067-4">User</span><span class="p" data-group-id="5344606067-4">{</span><span class="p" data-group-id="5344606067-4">}</span><span class="p" data-group-id="5344606067-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="0053449609-5">(</span><span class="p" data-group-id="0053449609-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0053449609-6">}</span><span class="p" data-group-id="0053449609-5">)</span><span class="w">
-</span><span class="p" data-group-id="0053449609-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0053449609-8">%</span><span class="nc" data-group-id="0053449609-8">Ecto.Changeset</span><span class="p" data-group-id="0053449609-8">{</span><span class="p" data-group-id="0053449609-8">}</span><span class="p" data-group-id="0053449609-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">register_user</span><span class="p" data-group-id="5344606067-5">(</span><span class="p" data-group-id="5344606067-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="5344606067-6">}</span><span class="p" data-group-id="5344606067-5">)</span><span class="w">
+</span><span class="p" data-group-id="5344606067-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="5344606067-8">%</span><span class="nc" data-group-id="5344606067-8">Ecto.Changeset</span><span class="p" data-group-id="5344606067-8">{</span><span class="p" data-group-id="5344606067-8">}</span><span class="p" data-group-id="5344606067-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="reset_user_password/2">
@@ -1585,11 +1585,11 @@ This triggers the setup page on fresh installs.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="4998576437-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4998576437-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p" data-group-id="4998576437-2">}</span><span class="p" data-group-id="4998576437-1">)</span><span class="w">
-</span><span class="p" data-group-id="4998576437-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4998576437-4">%</span><span class="nc" data-group-id="4998576437-4">User</span><span class="p" data-group-id="4998576437-4">{</span><span class="p" data-group-id="4998576437-4">}</span><span class="p" data-group-id="4998576437-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="9129184896-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9129184896-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;new long password&quot;</span><span class="p" data-group-id="9129184896-2">}</span><span class="p" data-group-id="9129184896-1">)</span><span class="w">
+</span><span class="p" data-group-id="9129184896-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9129184896-4">%</span><span class="nc" data-group-id="9129184896-4">User</span><span class="p" data-group-id="9129184896-4">{</span><span class="p" data-group-id="9129184896-4">}</span><span class="p" data-group-id="9129184896-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="4998576437-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4998576437-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;valid&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;not the same&quot;</span><span class="p" data-group-id="4998576437-6">}</span><span class="p" data-group-id="4998576437-5">)</span><span class="w">
-</span><span class="p" data-group-id="4998576437-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4998576437-8">%</span><span class="nc" data-group-id="4998576437-8">Ecto.Changeset</span><span class="p" data-group-id="4998576437-8">{</span><span class="p" data-group-id="4998576437-8">}</span><span class="p" data-group-id="4998576437-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">reset_user_password</span><span class="p" data-group-id="9129184896-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9129184896-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;valid&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">password_confirmation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;not the same&quot;</span><span class="p" data-group-id="9129184896-6">}</span><span class="p" data-group-id="9129184896-5">)</span><span class="w">
+</span><span class="p" data-group-id="9129184896-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9129184896-8">%</span><span class="nc" data-group-id="9129184896-8">Ecto.Changeset</span><span class="p" data-group-id="9129184896-8">{</span><span class="p" data-group-id="9129184896-8">}</span><span class="p" data-group-id="9129184896-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="schedule_user_deletion/2">
@@ -1689,11 +1689,11 @@ The confirmed_at date is also updated to the current time.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="6400060886-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6400060886-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6400060886-2">}</span><span class="p" data-group-id="6400060886-1">)</span><span class="w">
-</span><span class="p" data-group-id="6400060886-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6400060886-4">%</span><span class="nc" data-group-id="6400060886-4">User</span><span class="p" data-group-id="6400060886-4">{</span><span class="p" data-group-id="6400060886-4">}</span><span class="p" data-group-id="6400060886-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="8154115702-1">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;valid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8154115702-2">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8154115702-2">}</span><span class="p" data-group-id="8154115702-1">)</span><span class="w">
+</span><span class="p" data-group-id="8154115702-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8154115702-4">%</span><span class="nc" data-group-id="8154115702-4">User</span><span class="p" data-group-id="8154115702-4">{</span><span class="p" data-group-id="8154115702-4">}</span><span class="p" data-group-id="8154115702-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="6400060886-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6400060886-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="6400060886-6">}</span><span class="p" data-group-id="6400060886-5">)</span><span class="w">
-</span><span class="p" data-group-id="6400060886-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="6400060886-8">%</span><span class="nc" data-group-id="6400060886-8">Ecto.Changeset</span><span class="p" data-group-id="6400060886-8">{</span><span class="p" data-group-id="6400060886-8">}</span><span class="p" data-group-id="6400060886-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_user_password</span><span class="p" data-group-id="8154115702-5">(</span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;invalid password&quot;</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8154115702-6">%{</span><span class="ss">password</span><span class="p">:</span><span class="w"> </span><span class="n">...</span><span class="p" data-group-id="8154115702-6">}</span><span class="p" data-group-id="8154115702-5">)</span><span class="w">
+</span><span class="p" data-group-id="8154115702-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8154115702-8">%</span><span class="nc" data-group-id="8154115702-8">Ecto.Changeset</span><span class="p" data-group-id="8154115702-8">{</span><span class="p" data-group-id="8154115702-8">}</span><span class="p" data-group-id="8154115702-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="validate_change_user_email/2">
