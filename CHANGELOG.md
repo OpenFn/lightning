@@ -26,6 +26,8 @@ and this project adheres to
   save new or updated jobs job panel will _not_ close. (Click elsewhere in the
   canvas or click the "Close" button to close.)
   [#568](https://github.com/OpenFn/Lightning/issues/568)
+- Add filtered search params to the history page URL
+  [#660](https://github.com/OpenFn/Lightning/issues/660)
 
 ### Changed
 
