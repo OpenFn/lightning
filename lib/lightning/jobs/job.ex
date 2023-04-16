@@ -53,6 +53,7 @@ defmodule Lightning.Jobs.Job do
     has_one :credential, through: [:project_credential, :credential]
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
+    has_many :runs, Lightning.Invocation.Run
 
     timestamps()
   end

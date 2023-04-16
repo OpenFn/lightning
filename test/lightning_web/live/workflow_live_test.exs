@@ -59,6 +59,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert view
              |> element("button[phx-click='create_workflow']")
+             |> element("button[phx-click='create_workflow']")
              |> render_click() =~
                "Create job"
     end

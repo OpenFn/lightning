@@ -48,7 +48,6 @@ defmodule LightningWeb.WorkflowLive do
                 toggle_content={@toggle_content}
                 name={@name}
                 search={@search}
-                state={@state}
               />
             </LayoutComponents.centered>
           <% :new_job -> %>
@@ -91,7 +90,7 @@ defmodule LightningWeb.WorkflowLive do
               />
             </div>
 
-          <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
+            <div class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]">
               <.resize_component id={"resizer-#{@job.id}"} />
               <div class="absolute inset-y-0 right-0 z-10 resize-x left-2 ">
                 <div class="w-auto h-full" id={"job-pane-#{@job.id}"}>
@@ -149,7 +148,9 @@ defmodule LightningWeb.WorkflowLive do
 
   def encode_project_space(%Workflows.Workflow{} = workflow) do
     workflow
-    |> Lightning.Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])
+    |> Lightning.Repo.preload(
+      jobs: [:credential, :workflow, trigger: [:upstream_job]]
+    )
     |> List.wrap()
     |> Workflows.to_project_space()
     |> Jason.encode!()
@@ -220,7 +221,9 @@ defmodule LightningWeb.WorkflowLive do
     {:noreply,
      socket
      |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
-     |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}")}
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/w/#{workflow_id}"
+     )}
   end
 
   @impl true
@@ -257,7 +260,8 @@ defmodule LightningWeb.WorkflowLive do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")
        |> push_patch(
-         to: ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
+         to:
+           ~p"/projects/#{socket.assigns.project.id}/w/#{socket.assigns.current_workflow.id}"
        )}
     end
   end
@@ -319,12 +323,17 @@ defmodule LightningWeb.WorkflowLive do
     |> Workflows.mark_for_deletion()
     |> case do
       {:ok, _} ->
+        socket =
+          socket
+          |> update(
+            :workflows,
+            &(&1 = Workflows.get_workflows_for(socket.assigns.project))
+          )
+          |> put_flash(:info, "Workflow deleted successfully")
+
         {
           :noreply,
           socket
-          |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/w")
-          |> assign(workflows: Workflows.get_workflows_for(socket.assigns.project))
-          |> put_flash(:info, "Workflow deleted successfully")
         }
 
       {:error, _changeset} ->
@@ -372,7 +381,7 @@ defmodule LightningWeb.WorkflowLive do
         {:noreply, socket}
 
       workflows ->
-        socket = socket |> assign(workflows: workflows)
+        socket = assign(socket, workflows: workflows)
 
         {:noreply, socket}
     end
@@ -397,16 +406,16 @@ defmodule LightningWeb.WorkflowLive do
       page_title: "Workflows",
       workflows: Workflows.get_workflows_for(socket.assigns.project),
       toggle_content: true,
-      search: false,
-      state: Enum.empty?(Workflows.get_workflows_for(socket.assigns.project)),
-      name: ""
+      name: "",
+      search: false
     )
   end
 
   defp apply_action(socket, :new_job, %{"upstream_id" => upstream_id}) do
     upstream_job = Lightning.Jobs.get_job!(upstream_id)
 
-    %Lightning.Jobs.Job{workflow: workflow} = upstream_job |> Lightning.Repo.preload(:workflow)
+    %Lightning.Jobs.Job{workflow: workflow} =
+      upstream_job |> Lightning.Repo.preload(:workflow)
 
     socket
     |> assign(
@@ -454,7 +463,8 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :edit_job, %{"job_id" => job_id}) do
     job = Lightning.Jobs.get_job!(job_id)
 
-    %Lightning.Jobs.Job{workflow: workflow} = job |> Lightning.Repo.preload(:workflow)
+    %Lightning.Jobs.Job{workflow: workflow} =
+      job |> Lightning.Repo.preload(:workflow)
 
     job =
       Lightning.Jobs.get_job!(job_id)
@@ -492,7 +502,9 @@ defmodule LightningWeb.WorkflowLive do
   defp apply_action(socket, :show, %{"workflow_id" => workflow_id}) do
     workflow =
       Lightning.Workflows.get_workflow!(workflow_id)
-      |> Lightning.Repo.preload(jobs: [:credential, :workflow, trigger: [:upstream_job]])
+      |> Lightning.Repo.preload(
+        jobs: [:credential, :workflow, trigger: [:upstream_job]]
+      )
 
     socket
     |> assign(
