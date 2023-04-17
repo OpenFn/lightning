@@ -2,7 +2,7 @@ defmodule LightningWeb.WorkflowLive do
   @moduledoc false
   use LightningWeb, :live_view
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   alias Lightning.Jobs
   alias Lightning.Policies.{Permissions, ProjectUsers}
@@ -37,7 +37,7 @@ defmodule LightningWeb.WorkflowLive do
           </:title>
         </LayoutComponents.header>
       </:header>
-      <div class="relative flex h-full">
+      <div class="relative h-full flex">
         <%= case @live_action do %>
           <% :index -> %>
             <LayoutComponents.centered>
@@ -59,8 +59,8 @@ defmodule LightningWeb.WorkflowLive do
                 encoded_project_space={@encoded_project_space}
               />
             </div>
-            <div class="relative w-1/2 grow-0">
-              <div class="absolute inset-y-0 z-10 w-full">
+            <div class="grow-0 w-1/2 relative">
+              <div class="absolute w-full inset-y-0 z-10">
                 <div class="w-auto h-full" id="job-pane">
                   <.live_component
                     module={LightningWeb.JobLive.JobBuilder}
@@ -128,8 +128,8 @@ defmodule LightningWeb.WorkflowLive do
               <% end %>
             </div>
           <% :edit_workflow -> %>
-            <div class="absolute top-0 right-0 z-10 m-2">
-              <div class="p-3 bg-white shadow-xl w-80 rounded-md ring-1 ring-black ring-opacity-5">
+            <div class="absolute top-0 right-0 m-2 z-10">
+              <div class="w-80 bg-white rounded-md shadow-xl ring-1 ring-black ring-opacity-5 p-3">
                 <.live_component
                   module={LightningWeb.WorkflowLive.WorkflowInspector}
                   id={@current_workflow.id}

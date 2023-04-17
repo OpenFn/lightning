@@ -42,6 +42,44 @@ defmodule LightningWeb.WorkflowLiveTest do
              )
              |> has_element?()
     end
+
+    test "search workflows by name", %{
+      conn: conn,
+      project: project
+    } do
+      workflow_one =
+        workflow_job_fixture(name: "workflow one", project_id: project.id)
+
+      workflow_two =
+        workflow_job_fixture(name: "workflow two", project_id: project.id)
+
+      workflow_three =
+        workflow_job_fixture(name: "workflow three", project_id: project.id)
+
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "Search workflows..."
+
+      html = render_change(view, :search_workflow, %{name: workflow_one.name})
+
+      assert html =~ workflow_one.name
+      refute html =~ workflow_two.name
+      refute html =~ workflow_three.name
+    end
+
+    test "test for empty state or search for unknown workflows", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "Search workflows..."
+
+      render_change(view, :search_workflow, %{name: "unknown"}) =~
+        "We could't find any workflow that matches your search"
+    end
   end
 
   describe "create" do
@@ -53,17 +91,17 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert html =~ "Create a new workflow"
 
       refute view
-             |> element("button[disabled='disabled'][phx-click='create_workflow']")
+             |> element(
+               "button[disabled='disabled'][phx-click='create_workflow']"
+             )
              |> has_element?()
 
+      assert view
+             |> element("button", "Create a new workflow")
+             |> render_click() =~ "Create job"
 
       assert view
-          |> element("button", "Create a workflow")
-          |> render_click() =~ "Create job"
-
-
-      assert view
-          |> render_click("create_workflow", %{}) =~ "Create job"
+             |> render_click("create_workflow") =~ "Create job"
     end
 
     test "Project viewers can't create workflows", %{
@@ -536,24 +574,25 @@ defmodule LightningWeb.WorkflowLiveTest do
   end
 
   describe "delete_workflow" do
-    #   test "delete a workflow on project index page",
-    #        %{
-    #          conn: conn,
-    #          project: project
-    #        } do
-    #     workflow = workflow_fixture(name: "the workflow", project_id: project.id)
-    #
-    #     {:ok, view, html} = live(conn, Routes.project_workflow_path(conn, :index, project.id))
-    #
-    #     assert html =~ workflow.name
-    #
-    #     assert view
-    #            |> element("a[phx-click='delete_workflow']")
-    #            |> render_click() =~
-    #              "Workflow deleted successfully"
-    #
-    #     refute has_element?(view, "workflow-#{workflow.id}")
-    #   end
+    test "delete a workflow on project index page",
+         %{
+           conn: conn,
+           project: project
+         } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ workflow.name
+
+      assert view
+             |> element("#delete_workflow")
+             |> render_click() =~
+               "Workflow deleted successfully"
+
+      refute has_element?(view, "workflow-#{workflow.id}")
+    end
 
     test "delete a workflow on edit workflow page",
          %{

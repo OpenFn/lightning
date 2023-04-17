@@ -70,7 +70,10 @@ defmodule LightningWeb.WorkflowLive.Components do
             <span class="pl-2 text-sm">jobs</span>
           </p>
 
-          <.link navigate={~p"/projects/#{@project.id}/runs"} class="flex justify-end inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800 md:mt-2 lg:mt-0">
+          <.link
+            navigate={~p"/projects/#{@project.id}/runs"}
+            class="flex justify-end inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800 md:mt-2 lg:mt-0"
+          >
             <%= "#{success_metric(@workflow)}" %>
           </.link>
         </div>
@@ -126,8 +129,8 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def create_job_panel(assigns) do
     ~H"""
-    <div class="w-1/2 h-16 pt-4 mx-auto my-16 text-center">
-      <div class="pb-4 text-sm font-semibold text-gray-500">
+    <div class="w-1/2 h-16 text-center my-16 mx-auto pt-4">
+      <div class="text-sm font-semibold text-gray-500 pb-4">
         Create your first job to get started.
       </div>
       <LightningWeb.Components.Common.button
@@ -135,7 +138,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         disabled={@disabled}
       >
         <div class="h-full">
-          <Heroicons.plus class="inline-block w-4 h-4" />
+          <Heroicons.plus class="h-4 w-4inline-block" />
           <span class="inline-block align-middle">
             Create job
           </span>
@@ -154,7 +157,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div
       phx-hook="WorkflowDiagram"
-      class="w-full h-full"
+      class="h-full w-full"
       id={"hook-#{@id}"}
       phx-update="ignore"
       base-path={@base_path}
@@ -219,7 +222,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           phx-click="create_workflow"
           disabled={!@can_create_workflow}
         >
-          Create a workflow
+          <span class="sr-only">Create a workflow </span> Create a workflow
         </LightningWeb.Components.Common.button>
       </div>
     </div>
@@ -315,6 +318,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           <div class="px-4 py-3 bg-gray-50 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
+              id="delete_workflow"
               phx-click={delete_modal("#confirm-modal-#{@id}", @id)}
               class="inline-flex justify-center w-full px-4 py-2 text-base font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
             >
@@ -334,19 +338,24 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-
   def success_metric(workflow) do
     work_orders = Enum.count(workflow.work_orders)
+    jobs = List.first(workflow.jobs)
 
-    success = Enum.count(List.first(workflow.jobs).runs, &(&1.exit_code == 0))
+    case jobs do
+      nil ->
+        "Let's start"
 
-    if success > 0 do
-     metric = (success / work_orders) * 100
-     "#{round(metric)} %"
-    else
-      "running..."
+      _ ->
+        success =
+          Enum.count(List.first(workflow.jobs).runs, &(&1.exit_code == 0))
+
+        if success > 0 do
+          "#{round(success / work_orders * 100)} %"
+        else
+          "running..."
+        end
     end
-
   end
 
   def show_modal(id, _workflow, js \\ %JS{}) do
@@ -390,7 +399,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     end
   end
 
-  attr(:id, :string, required: true)
+  attr :id, :string, required: true
 
   def resize_component(assigns) do
     ~H"""
