@@ -240,8 +240,9 @@ defmodule LightningWeb.WorkflowLive.Components do
               class="font-medium text-blue-600 hover:cursor-pointer"
               phx-click="create_workflow"
               type="button"
+              id="create_workflow"
             >
-              Create a workflow
+              Create a new workflow
             </button>
             now to get started. These worflows will be associated with this project.
           </div>

@@ -50,18 +50,20 @@ defmodule LightningWeb.WorkflowLiveTest do
         live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
       assert html =~ "Create a workflow"
+      assert html =~ "Create a new workflow"
 
       refute view
-             |> element(
-               "button[disabled='disabled'][phx-click='create_workflow']"
-             )
+             |> element("button[disabled='disabled'][phx-click='create_workflow']")
              |> has_element?()
 
+
       assert view
-             |> element("button[phx-click='create_workflow']")
-             |> element("button[phx-click='create_workflow']")
-             |> render_click() =~
-               "Create job"
+          |> element("button", "Create a workflow")
+          |> render_click() =~ "Create job"
+
+
+      assert view
+          |> render_click("create_workflow", %{}) =~ "Create job"
     end
 
     test "Project viewers can't create workflows", %{

@@ -97,6 +97,7 @@ defmodule Lightning.WorkflowsTest do
           project_id: project.id,
           workflow_id: w1.id,
           trigger: %{type: :webhook}
+
         )
 
       JobsFixtures.job_fixture(
@@ -146,16 +147,16 @@ defmodule Lightning.WorkflowsTest do
       assert w2.deleted_at == nil
 
       assert (w1
-              |> Repo.preload(
+              |> Repo.preload([
                 :work_orders,
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+                jobs: [:credential,:runs, :workflow, trigger: [:upstream_job]]
+              ])) in results
 
       assert (w2
-              |> Repo.preload(
+              |> Repo.preload([
                 :work_orders,
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+                jobs: [:credential, :runs, :workflow, trigger: [:upstream_job]]
+              ])) in results
 
       assert length(results) == 2
     end

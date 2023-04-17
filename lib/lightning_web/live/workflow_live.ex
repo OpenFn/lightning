@@ -203,7 +203,8 @@ defmodule LightningWeb.WorkflowLive do
        can_delete_job: can_delete_job,
        active_menu_item: :projects,
        new_credential: false,
-       builder_state: %{}
+       builder_state: %{},
+       workflows: []
      )}
   end
 
