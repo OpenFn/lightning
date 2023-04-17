@@ -80,9 +80,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       assert view
              |> element("button", "Create a new workflow")
              |> render_click() =~ "Create job"
-
     end
-
 
     test "test for empty state or search for unknown workflows", %{
       conn: conn,
