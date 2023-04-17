@@ -45,7 +45,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <.confirm_modal id={@workflow.id} />
     <div
       class="relative px-4 pt-5 pb-12 overflow-hidden bg-white rounded-lg shadow sm:pt-6 sm:px-6"
-      id={@workflow.id}
+      id={"workflow-#{@workflow.id}"}
     >
       <dt class="" id="data-list">
         <div class="absolute p-3 bg-indigo-500 rounded-md">
@@ -138,7 +138,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         disabled={@disabled}
       >
         <div class="h-full">
-          <Heroicons.plus class="h-4 w-4inline-block" />
+          <Heroicons.plus class="h-4 w-4 inline-block" />
           <span class="inline-block align-middle">
             Create job
           </span>
@@ -236,7 +236,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         <Heroicons.folder_plus outline class="w-12 h-12 mx-auto text-gray-400" />
         <%= if @search == false do %>
           <h3 class="mt-6 text-base font-medium text-gray-900">
-            There are no worflows for this Project.
+            There are no workflows for this Project.
           </h3>
           <div class="mt-4 text-sm text-gray-500">
             <button
@@ -247,7 +247,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             >
               Create a new workflow
             </button>
-            now to get started. These worflows will be associated with this project.
+            now to get started. These workflows will be associated with this project.
           </div>
         <% else %>
           <h3 class="mt-6 text-base font-medium text-gray-900">

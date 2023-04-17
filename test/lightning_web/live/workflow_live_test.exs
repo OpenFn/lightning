@@ -68,6 +68,22 @@ defmodule LightningWeb.WorkflowLiveTest do
       refute html =~ workflow_three.name
     end
 
+    test "test for empty state when project has no workflows", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert html =~ "There are no workflows for this Project."
+
+      assert view
+             |> element("button", "Create a new workflow")
+             |> render_click() =~ "Create job"
+
+    end
+
+
     test "test for empty state or search for unknown workflows", %{
       conn: conn,
       project: project
