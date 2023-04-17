@@ -29,7 +29,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           />
         <% end %>
       </div>
-      <%= if length(@workflows) == 0 do %>
+      <%= if (length(@workflows) == 0) do %>
         <.empty_state
           can_create_workflow={@can_create_workflow}
           search={@search}
