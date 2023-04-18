@@ -113,8 +113,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "validates email and password when given" do
-      {:error, changeset} =
-        Accounts.register_user(%{email: "not valid", password: "not valid"})
+      {:error, changeset} = Accounts.register_user(%{email: "not valid", password: "not valid"})
 
       assert %{
                email: ["must have the @ sign and no spaces"]
@@ -124,8 +123,7 @@ defmodule Lightning.AccountsTest do
     test "validates maximum values for email and password for security" do
       too_long = String.duplicate("db@db.sn", 100)
 
-      {:error, changeset} =
-        Accounts.register_user(%{email: too_long, password: too_long})
+      {:error, changeset} = Accounts.register_user(%{email: too_long, password: too_long})
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
       assert "should be at most 72 character(s)" in errors_on(changeset).password
@@ -137,8 +135,7 @@ defmodule Lightning.AccountsTest do
       assert "has already been taken" in errors_on(changeset).email
 
       # Now try with the upper cased email too, to check that email case is ignored.
-      {:error, changeset} =
-        Accounts.register_user(%{email: String.upcase(email)})
+      {:error, changeset} = Accounts.register_user(%{email: String.upcase(email)})
 
       assert "has already been taken" in errors_on(changeset).email
     end
@@ -176,8 +173,7 @@ defmodule Lightning.AccountsTest do
     test "validates maximum values for email and password for security" do
       too_long = String.duplicate("db@db.sn", 100)
 
-      {:error, changeset} =
-        Accounts.register_superuser(%{email: too_long, password: too_long})
+      {:error, changeset} = Accounts.register_superuser(%{email: too_long, password: too_long})
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
       assert "should be at most 72 character(s)" in errors_on(changeset).password
@@ -213,9 +209,7 @@ defmodule Lightning.AccountsTest do
       password = valid_user_password()
 
       changeset =
-        Accounts.change_user_registration(
-          valid_user_attributes(email: email, password: password)
-        )
+        Accounts.change_user_registration(valid_user_attributes(email: email, password: password))
 
       assert changeset.valid?
       assert get_change(changeset, :email) == email
@@ -226,8 +220,7 @@ defmodule Lightning.AccountsTest do
 
   describe "change_superuser_registration/2" do
     test "returns a changeset" do
-      assert %Ecto.Changeset{} =
-               changeset = Accounts.change_superuser_registration()
+      assert %Ecto.Changeset{} = changeset = Accounts.change_superuser_registration()
 
       assert changeset.required == [:password, :email, :first_name]
     end
@@ -257,8 +250,7 @@ defmodule Lightning.AccountsTest do
 
   describe "change_scheduled_deletion/2" do
     test "returns a user changeset" do
-      assert %Ecto.Changeset{} =
-               changeset = Accounts.change_scheduled_deletion(%User{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_scheduled_deletion(%User{})
 
       assert changeset.required == []
     end
@@ -314,13 +306,9 @@ defmodule Lightning.AccountsTest do
   describe "The default Oban function Accounts.perform/1" do
     test "removes all users past deletion date when called with type 'purge_deleted'" do
       user_to_delete =
-        user_fixture(
-          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
-        )
+        user_fixture(scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10))
 
-      user_fixture(
-        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
-      )
+      user_fixture(scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10))
 
       count_before = Repo.all(User) |> Enum.count()
 
@@ -328,6 +316,26 @@ defmodule Lightning.AccountsTest do
         Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
 
       assert count_before - 1 == Repo.all(User) |> Enum.count()
+      assert 1 == users_deleted |> Enum.count()
+
+      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
+    end
+
+    test "removes user from project users before deleting them" do
+      user_to_delete =
+        user_fixture(scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10))
+
+      another_user = user_fixture()
+
+      _project =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user_to_delete.id}, %{user_id: another_user.id}]
+        )
+
+      {:ok, %{users_deleted: users_deleted}} =
+        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+
       assert 1 == users_deleted |> Enum.count()
 
       assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
@@ -340,8 +348,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "requires email to change", %{user: user} do
-      {:error, changeset} =
-        Accounts.apply_user_email(user, valid_user_password(), %{})
+      {:error, changeset} = Accounts.apply_user_email(user, valid_user_password(), %{})
 
       assert %{email: ["did not change"]} = errors_on(changeset)
     end
@@ -352,8 +359,7 @@ defmodule Lightning.AccountsTest do
           email: "not valid"
         })
 
-      assert %{email: ["must have the @ sign and no spaces"]} =
-               errors_on(changeset)
+      assert %{email: ["must have the @ sign and no spaces"]} = errors_on(changeset)
     end
 
     test "validates maximum value for email for security", %{user: user} do
@@ -384,8 +390,7 @@ defmodule Lightning.AccountsTest do
     test "applies the email without persisting it", %{user: user} do
       email = unique_user_email()
 
-      {:ok, user} =
-        Accounts.apply_user_email(user, valid_user_password(), %{email: email})
+      {:ok, user} = Accounts.apply_user_email(user, valid_user_password(), %{email: email})
 
       assert user.email == email
       assert Accounts.get_user!(user.id).email != email
@@ -409,8 +414,7 @@ defmodule Lightning.AccountsTest do
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
-      assert user_token =
-               Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
+      assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
       assert user_token.sent_to == "current@example.com"
@@ -465,8 +469,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not update email if token expired", %{user: user, token: token} do
-      {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
 
       assert Accounts.update_user_email(user, token) == :error
       assert Repo.get!(User, user.id).email == user.email
@@ -476,8 +479,7 @@ defmodule Lightning.AccountsTest do
 
   describe "change_user_password/2" do
     test "returns a user changeset" do
-      assert %Ecto.Changeset{} =
-               changeset = Accounts.change_user_password(%User{})
+      assert %Ecto.Changeset{} = changeset = Accounts.change_user_password(%User{})
 
       assert changeset.required == [:password]
     end
@@ -693,8 +695,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not return user for expired token", %{token: token} do
-      {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
 
       refute Accounts.get_user_by_auth_token(token)
     end
@@ -726,8 +727,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not return user for expired token", %{token: token} do
-      {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
 
       refute Accounts.get_user_by_session_token(token)
     end
@@ -755,8 +755,7 @@ defmodule Lightning.AccountsTest do
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
-      assert user_token =
-               Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
+      assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
       assert user_token.sent_to == user.email
@@ -777,8 +776,7 @@ defmodule Lightning.AccountsTest do
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
-      assert user_token =
-               Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
+      assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
       assert user_token.sent_to == user.email
@@ -813,8 +811,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not confirm email if token expired", %{user: user, token: token} do
-      {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
 
       assert Accounts.confirm_user(token) == :error
       refute Repo.get!(User, user.id).confirmed_at
@@ -835,8 +832,7 @@ defmodule Lightning.AccountsTest do
 
       {:ok, token} = Base.url_decode64(token, padding: false)
 
-      assert user_token =
-               Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
+      assert user_token = Repo.get_by(UserToken, token: :crypto.hash(:sha256, token))
 
       assert user_token.user_id == user.id
       assert user_token.sent_to == user.email
@@ -867,8 +863,7 @@ defmodule Lightning.AccountsTest do
     end
 
     test "does not return the user if token expired", %{user: user, token: token} do
-      {1, nil} =
-        Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
+      {1, nil} = Repo.update_all(UserToken, set: [inserted_at: ~N[2020-01-01 00:00:00]])
 
       refute Accounts.get_user_by_reset_password_token(token)
       assert Repo.get_by(UserToken, user_id: user.id)
@@ -895,15 +890,13 @@ defmodule Lightning.AccountsTest do
     test "validates maximum values for password for security", %{user: user} do
       too_long = String.duplicate("db", 100)
 
-      {:error, changeset} =
-        Accounts.reset_user_password(user, %{password: too_long})
+      {:error, changeset} = Accounts.reset_user_password(user, %{password: too_long})
 
       assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
     test "updates the password", %{user: user} do
-      {:ok, updated_user} =
-        Accounts.reset_user_password(user, %{password: "new valid password"})
+      {:ok, updated_user} = Accounts.reset_user_password(user, %{password: "new valid password"})
 
       assert is_nil(updated_user.password)
 
@@ -916,8 +909,7 @@ defmodule Lightning.AccountsTest do
     test "deletes all tokens for the given user", %{user: user} do
       _ = Accounts.generate_user_session_token(user)
 
-      {:ok, _} =
-        Accounts.reset_user_password(user, %{password: "new valid password"})
+      {:ok, _} = Accounts.reset_user_password(user, %{password: "new valid password"})
 
       refute Repo.get_by(UserToken, user_id: user.id)
     end

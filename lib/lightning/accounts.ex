@@ -32,16 +32,23 @@ defmodule Lightning.Accounts do
     Projects.get_projects_for_user(%User{id: id})
     |> Repo.preload(:project_users)
     |> Enum.each(fn p ->
+      [{project_user, index}] =
+        Projects.get_project_with_users!(p.id)
+        |> Map.get(:project_users)
+        |> Enum.with_index()
+        |> Enum.filter(fn {project_user, _index} ->
+          project_user.user_id == id
+        end)
+        |> IO.inspect(label: "Project with users")
+
       Projects.update_project(
         p,
         %{
           "project_users" => %{
-            "0" => %{
+            "#{index}" => %{
               "delete" => "true",
               "user_id" => id,
-              "id" =>
-                Enum.find(p.project_users, fn pu -> pu.user_id == id end)
-                |> Map.get(:id)
+              "id" => project_user.id
             }
           }
         }
@@ -380,8 +387,7 @@ defmodule Lightning.Accounts do
           []
       end
     end)
-    |> Ecto.Changeset.validate_change(:current_password, fn :current_password,
-                                                            password ->
+    |> Ecto.Changeset.validate_change(:current_password, fn :current_password, password ->
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
@@ -595,8 +601,7 @@ defmodule Lightning.Accounts do
   ## Confirmation
 
   defp build_email_token(user) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "confirm", user.email)
+    {encoded_token, user_token} = UserToken.build_email_token(user, "confirm", user.email)
 
     Repo.insert!(user_token)
 
@@ -692,8 +697,7 @@ defmodule Lightning.Accounts do
         reset_password_url_fun
       )
       when is_function(reset_password_url_fun, 1) do
-    {encoded_token, user_token} =
-      UserToken.build_email_token(user, "reset_password", user.email)
+    {encoded_token, user_token} = UserToken.build_email_token(user, "reset_password", user.email)
 
     Repo.insert!(user_token)
 
