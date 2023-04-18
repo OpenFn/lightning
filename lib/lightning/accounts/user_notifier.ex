@@ -3,6 +3,8 @@ defmodule Lightning.Accounts.UserNotifier do
   The UserNotifier module.
   """
 
+  use LightningWeb, :html
+
   import Swoosh.Email
 
   alias Lightning.Projects
@@ -65,7 +67,7 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_project_addition_notification(user, project) do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
 
-    url = "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+    url = ~p"/projects/#{project.id}/w"
 
     deliver(user.email, "Project #{project.name}", """
 
@@ -155,27 +157,25 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   def build_digest_url(workflow, start_date, end_date) do
-    URI.new!(
-      "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{workflow.project_id}/runs?"
-    )
-    |> URI.append_query(
-      URI.encode_query(%{
-        "filters[body]" => true,
-        "filters[crash]" => true,
-        "filters[failure]" => true,
-        "filters[log]" => true,
-        "filters[pending]" => true,
-        "filters[search_term]" => "",
-        "filters[success]" => true,
-        "filters[timeout]" => true,
-        "filters[wo_date_after]" => "",
-        "ilters[wo_date_before]" => "",
-        "filters[date_after]" => start_date,
-        "filters[date_before]" => end_date,
-        "filters[workflow_id]" => workflow.id
-      })
-    )
-    |> URI.to_string()
+    uri_params = %{
+      "filters" => %{
+        "body" => true,
+        "crash" => true,
+        "failure" => true,
+        "log" => true,
+        "pending" => true,
+        "search_term" => true,
+        "success" => true,
+        "timeout" => true,
+        "wo_date_after" => "",
+        "wo_date_before" => "",
+        "date_after" => start_date |> DateTime.to_string(),
+        "date_before" => end_date |> DateTime.to_string(),
+        "workflow_id" => workflow.id
+      }
+    }
+
+    ~p"/projects/#{workflow.project_id}/runs?#{uri_params}"
   end
 
   defp build_email(%{
@@ -184,7 +184,6 @@ defmodule Lightning.Accounts.UserNotifier do
          digest: digest,
          workflow: workflow,
          successful_workorders: successful_workorders,
-         rerun_workorders: rerun_workorders,
          failed_workorders: failed_workorders
        }) do
     digest_lookup = %{daily: "today", monthly: "this month", weekly: "this week"}
@@ -192,7 +191,6 @@ defmodule Lightning.Accounts.UserNotifier do
     """
     #{workflow.name}:
     - #{successful_workorders} workorders correctly processed #{digest_lookup[digest]}
-    - #{rerun_workorders} failed work orders that were rerun and then processed correctly
     - #{failed_workorders} work orders that failed, crashed or timed out
     Click the link below to view this in the history page:
     #{build_digest_url(workflow, start_date, end_date)}
@@ -213,7 +211,8 @@ defmodule Lightning.Accounts.UserNotifier do
           end_date: end_date
         } = _params
       ) do
-    title = "#{Atom.to_string(digest) |> String.capitalize()} digest for project #{project.name}"
+    title =
+      "#{Atom.to_string(digest) |> String.capitalize()} digest for project #{project.name}"
 
     body =
       Enum.map_join(digest_data, fn data ->

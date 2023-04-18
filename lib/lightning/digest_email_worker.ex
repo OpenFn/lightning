@@ -87,12 +87,10 @@ defmodule Lightning.DigestEmailWorker do
   def get_digest_data(workflow, start_date, end_date) do
     successful_workorders = successful_workorders(workflow, start_date, end_date)
     failed_workorders = failed_workorders(workflow, start_date, end_date)
-    rerun_workorders = rerun_workorders(workflow, start_date, end_date)
 
     %{
       workflow: workflow,
       successful_workorders: successful_workorders.total_entries,
-      rerun_workorders: rerun_workorders.total_entries,
       failed_workorders: failed_workorders.total_entries
     }
   end
@@ -131,36 +129,37 @@ defmodule Lightning.DigestEmailWorker do
     )
   end
 
-  defp rerun_workorders(workflow, start_date, end_date) do
-    probably_reruns =
-      from(wo in Lightning.WorkOrder,
-        join: workflow in Lightning.Workflows.Workflow,
-        where: workflow.id == ^workflow.id,
-        join: a in Lightning.Attempt,
-        on: a.work_order_id == wo.id,
-        join: ar in Lightning.AttemptRun,
-        on: ar.attempt_id == a.id,
-        join: r in Lightning.Invocation.Run,
-        on: r.id == ar.run_id,
-        where:
-          r.exit_code == 0 and r.finished_at >= ^start_date and
-            r.finished_at < ^end_date,
-        group_by: [wo.id, wo.workflow_id],
-        order_by: [desc: wo.inserted_at],
-        select: wo.id
-      )
+  # TODO: This currently doesn't work as expected. And it is taking longer than expected. We decided to address it properly as a new feature in the issue #795.
+  # defp rerun_workorders(workflow, start_date, end_date) do
+  #   probably_reruns =
+  #     from(wo in Lightning.WorkOrder,
+  #       join: workflow in Lightning.Workflows.Workflow,
+  #       where: workflow.id == ^workflow.id,
+  #       join: a in Lightning.Attempt,
+  #       on: a.work_order_id == wo.id,
+  #       join: ar in Lightning.AttemptRun,
+  #       on: ar.attempt_id == a.id,
+  #       join: r in Lightning.Invocation.Run,
+  #       on: r.id == ar.run_id,
+  #       where:
+  #         r.exit_code == 0 and r.finished_at >= ^start_date and
+  #           r.finished_at < ^end_date,
+  #       group_by: [wo.id, wo.workflow_id],
+  #       order_by: [desc: wo.inserted_at],
+  #       select: wo.id
+  #     )
 
-    from(wo in Lightning.WorkOrder,
-      where:
-        wo.workflow_id == ^workflow.id and wo.id in subquery(probably_reruns),
-      join: a in Lightning.Attempt,
-      on: a.work_order_id == wo.id,
-      join: ar in Lightning.AttemptRun,
-      on: ar.attempt_id == a.id,
-      join: r in Lightning.Invocation.Run,
-      on: r.id == ar.run_id,
-      where: r.exit_code != 0
-    )
-    |> Repo.paginate(%{})
-  end
+  #   from(wo in Lightning.WorkOrder,
+  #     where:
+  #       wo.workflow_id == ^workflow.id and wo.id in subquery(probably_reruns),
+  #     join: a in Lightning.Attempt,
+  #     on: a.work_order_id == wo.id,
+  #     join: ar in Lightning.AttemptRun,
+  #     on: ar.attempt_id == a.id,
+  #     join: r in Lightning.Invocation.Run,
+  #     on: r.id == ar.run_id,
+  #     where: r.exit_code != 0
+  #   )
+  #   |> Repo.paginate(%{})
+  # end
 end

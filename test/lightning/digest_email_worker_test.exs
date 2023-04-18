@@ -171,10 +171,12 @@ defmodule Lightning.DigestEmailWorkerTest do
       start_date = DigestEmailWorker.digest_to_date(:monthly)
       end_date = Timex.now()
 
+      # TODO: When implementing issue #795, please uncomment the lines with rerun_workorders for testing.
+
       assert DigestEmailWorker.get_digest_data(workflow_a, start_date, end_date) ==
                %{
                  failed_workorders: 1,
-                 rerun_workorders: 1,
+                 #  rerun_workorders: 1,
                  successful_workorders: 2,
                  workflow: workflow_a
                }
@@ -182,7 +184,7 @@ defmodule Lightning.DigestEmailWorkerTest do
       assert DigestEmailWorker.get_digest_data(workflow_b, start_date, end_date) ==
                %{
                  failed_workorders: 0,
-                 rerun_workorders: 1,
+                 #  rerun_workorders: 1,
                  successful_workorders: 2,
                  workflow: workflow_b
                }

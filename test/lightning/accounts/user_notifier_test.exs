@@ -1,5 +1,6 @@
 defmodule Lightning.Accounts.UserNotifierTest do
   use Lightning.DataCase, async: true
+  use LightningWeb, :html
 
   import Swoosh.TestAssertions
 
@@ -11,9 +12,12 @@ defmodule Lightning.Accounts.UserNotifierTest do
     test "deliver_project_addition_notification/2" do
       user = Lightning.AccountsFixtures.user_fixture(email: "user@openfn.org")
 
-      project = Lightning.ProjectsFixtures.project_fixture(project_users: [%{user_id: user.id}])
+      project =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [%{user_id: user.id}]
+        )
 
-      url = "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+      url = ~p"/projects/#{project.id}/w"
 
       UserNotifier.deliver_project_addition_notification(
         user,
@@ -95,11 +99,14 @@ defmodule Lightning.Accounts.UserNotifierTest do
       user = %User{email: "real@email.com", first_name: "Elias"}
       project = %Project{name: "Real Project"}
 
-      workflow_a = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+      workflow_a =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
-      workflow_b = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
+      workflow_b =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
 
-      workflow_c = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
+      workflow_c =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
 
       data = [
         %{
@@ -143,21 +150,18 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Workflow A:
         - 12 workorders correctly processed today
-        - 6 failed work orders that were rerun and then processed correctly
         - 3 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         - 10 workorders correctly processed today
-        - 0 failed work orders that were rerun and then processed correctly
         - 0 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         - 3 workorders correctly processed today
-        - 0 failed work orders that were rerun and then processed correctly
         - 7 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
@@ -171,11 +175,14 @@ defmodule Lightning.Accounts.UserNotifierTest do
       user = %User{email: "real@email.com", first_name: "Elias"}
       project = %Project{name: "Real Project"}
 
-      workflow_a = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+      workflow_a =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
-      workflow_b = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
+      workflow_b =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
 
-      workflow_c = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
+      workflow_c =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
 
       data = [
         %{
@@ -219,21 +226,18 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Workflow A:
         - 12 workorders correctly processed this week
-        - 6 failed work orders that were rerun and then processed correctly
         - 3 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         - 10 workorders correctly processed this week
-        - 0 failed work orders that were rerun and then processed correctly
         - 0 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         - 3 workorders correctly processed this week
-        - 0 failed work orders that were rerun and then processed correctly
         - 7 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
@@ -247,11 +251,14 @@ defmodule Lightning.Accounts.UserNotifierTest do
       user = %User{email: "real@email.com", first_name: "Elias"}
       project = %Project{name: "Real Project"}
 
-      workflow_a = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
+      workflow_a =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow A")
 
-      workflow_b = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
+      workflow_b =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow B")
 
-      workflow_c = Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
+      workflow_c =
+        Lightning.WorkflowsFixtures.workflow_fixture(name: "Workflow C")
 
       data = [
         %{
@@ -297,21 +304,18 @@ defmodule Lightning.Accounts.UserNotifierTest do
 
         Workflow A:
         - 12 workorders correctly processed this month
-        - 6 failed work orders that were rerun and then processed correctly
         - 3 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_a, start_date, end_date)}
 
         Workflow B:
         - 10 workorders correctly processed this month
-        - 0 failed work orders that were rerun and then processed correctly
         - 0 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_b, start_date, end_date)}
 
         Workflow C:
         - 3 workorders correctly processed this month
-        - 0 failed work orders that were rerun and then processed correctly
         - 7 work orders that failed, crashed or timed out
         Click the link below to view this in the history page:
         #{UserNotifier.build_digest_url(workflow_c, start_date, end_date)}
