@@ -81,7 +81,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
           [pu | project_users]
         end
       end)
-      |> IO.inspect()
 
     changeset =
       socket.assigns.changeset
@@ -90,7 +89,8 @@ defmodule LightningWeb.ProjectLive.FormComponent do
 
     available_users = filter_available_users(changeset, socket.assigns.all_users)
 
-    {:noreply, socket |> assign(changeset: changeset, available_users: available_users)}
+    {:noreply,
+     socket |> assign(changeset: changeset, available_users: available_users)}
   end
 
   @impl true
@@ -141,7 +141,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    IO.inspect(project_params, label: "Project params")
     save_project(socket, socket.assigns.action, project_params)
   end
 
