@@ -2,7 +2,6 @@ defmodule Lightning.InvocationReason do
   @moduledoc """
   Ecto model for InvocationReasons.
 
-
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -32,7 +31,7 @@ defmodule Lightning.InvocationReason do
     belongs_to :trigger, Trigger
     belongs_to :dataclip, Dataclip
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @spec new(attrs :: %{optional(atom()) => any()}) ::

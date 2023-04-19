@@ -20,7 +20,7 @@ defmodule Lightning.AttemptRun do
     belongs_to :attempt, Attempt
     belongs_to :run, Run
 
-    timestamps(type: :naive_datetime_usec)
+    timestamps(type: :utc_datetime_usec)
   end
 
   def new(attrs \\ %{}) do

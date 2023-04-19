@@ -441,7 +441,7 @@ defmodule Lightning.AccountsTest do
       token: token,
       email: email
     } do
-      now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       assert {:ok, changed_user} = Accounts.update_user_email(user, token)
 

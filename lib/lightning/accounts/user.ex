@@ -26,7 +26,7 @@ defmodule Lightning.Accounts.User do
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
-    field :confirmed_at, :naive_datetime
+    field :confirmed_at, :utc_datetime
     field :role, RolesEnum, default: :user
     field :disabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
@@ -239,7 +239,7 @@ defmodule Lightning.Accounts.User do
   Confirms the account by setting `confirmed_at`.
   """
   def confirm_changeset(user) do
-    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
     change(user, confirmed_at: now)
   end
 
