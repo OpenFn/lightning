@@ -10,6 +10,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.{Importer, Project, ProjectCredential}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
+  alias Lightning.Workflows.Workflow
 
   @doc """
   Returns the list of projects.
@@ -144,7 +145,23 @@ defmodule Lightning.Projects do
 
   """
   def delete_project(%Project{} = project) do
-    Repo.delete(project)
+    Repo.transaction(fn ->
+      Repo.delete_all(from(p in ProjectUser, where: p.project_id == ^project.id))
+
+      Repo.delete_all(
+        from(pc in ProjectCredential, where: pc.project_id == ^project.id)
+      )
+
+      Repo.delete_all(from(w in Workflow, where: w.project_id == ^project.id))
+      Repo.delete(project)
+    end)
+
+    # project
+    # |> Ecto.Changeset.change()
+    # |> Ecto.Changeset.no_assoc_constraint(:project_users)
+    # |> Ecto.Changeset.no_assoc_constraint(:project_credentials)
+    # |> Ecto.Changeset.no_assoc_constraint(:workflows)
+    # |> Repo.delete()
   end
 
   @doc """
