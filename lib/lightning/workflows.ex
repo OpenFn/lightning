@@ -72,8 +72,19 @@ defmodule Lightning.Workflows do
   """
   def update_workflow(%Workflow{} = workflow, attrs) do
     workflow
+    |> maybe_preload([:jobs, :triggers, :edges], attrs)
     |> Workflow.changeset(attrs)
     |> Repo.update()
+  end
+
+  # Helper to preload associations only if they are present in the attributes
+  defp maybe_preload(workflow, assoc, attrs) do
+    List.wrap(assoc)
+    |> Enum.filter(&Map.has_key?(attrs, &1))
+    |> case do
+      [] -> workflow
+      assocs -> Repo.preload(workflow, assocs)
+    end
   end
 
   @doc """

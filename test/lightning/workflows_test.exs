@@ -85,6 +85,85 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "workflows and edges" do
+    test "using create_workflow/1" do
+      project = ProjectsFixtures.project_fixture()
+      valid_attrs = %{name: "some-name", project_id: project.id}
+
+      assert {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
+
+      assert workflow.name == "some-name"
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      valid_attrs = %{
+        name: "some-other-name",
+        project_id: project.id,
+        jobs: [%{id: job_id, name: "some-job"}],
+        triggers: [%{id: trigger_id, type: :webhook}],
+        edges: [%{source_trigger_id: trigger_id, target_job_id: job_id}]
+      }
+
+      assert {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
+
+      edge = workflow.edges |> List.first()
+      assert edge.source_trigger_id == trigger_id
+      assert edge.target_job_id == job_id
+
+      assert workflow.name == "some-other-name"
+    end
+
+    test "using update_workflow/2" do
+      project = ProjectsFixtures.project_fixture()
+
+      job_id = Ecto.UUID.generate()
+      trigger_id = Ecto.UUID.generate()
+
+      valid_attrs = %{
+        name: "some-name",
+        project_id: project.id,
+        jobs: [%{id: job_id, name: "some-job"}],
+        triggers: [%{id: trigger_id, type: :webhook}],
+        edges: [%{source_trigger_id: trigger_id, target_job_id: job_id}]
+      }
+
+      {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
+
+      edge = workflow.edges |> List.first()
+
+      # Updating a job and resubmitting the same edge should not create a new edge
+      valid_attrs = %{
+        jobs: [%{id: job_id, name: "some-job-renamed"}],
+        edges: [
+          %{id: edge.id, source_trigger_id: trigger_id, target_job_id: job_id}
+        ]
+      }
+
+      assert {:ok, workflow} =
+               Lightning.Workflows.update_workflow(workflow, valid_attrs)
+
+      assert Repo.get_by(Lightning.Jobs.Job, id: job_id, name: "some-job-renamed")
+
+      assert workflow.name == "some-name"
+      assert workflow.edges |> List.first() == edge
+
+      valid_attrs = %{
+        jobs: [%{id: job_id, name: "some-job"}],
+        triggers: [%{id: trigger_id, type: :webhook}],
+        edges: []
+      }
+
+      assert {:ok, workflow} =
+               Lightning.Workflows.update_workflow(workflow, valid_attrs)
+
+      assert workflow.name == "some-name"
+      assert workflow.edges |> Enum.empty?()
+
+      refute Repo.get(Lightning.Workflows.Edge, edge.id)
+    end
+  end
+
   describe "workflows and project spaces" do
     setup do
       project = ProjectsFixtures.project_fixture()
