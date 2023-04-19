@@ -16,6 +16,26 @@ defmodule Lightning.Accounts do
   alias Lightning.Credentials
   alias Lightning.Projects
 
+  defp project_users_to_params(project_users, user_id) do
+    project_users
+    |> Enum.with_index()
+    |> Enum.map(fn {project_user, index} ->
+      param = %{
+        "id" => project_user.id,
+        "user_id" => project_user.user_id,
+        "project_id" => project_user.project_id
+      }
+
+      param =
+        if project_user.user_id == user_id,
+          do: Map.put(param, "delete", "true"),
+          else: Map.put(param, "delete", "")
+
+      {"#{index}", param}
+    end)
+    |> Map.new()
+  end
+
   @spec purge_user(id :: Ecto.UUID.t()) :: :ok
   def purge_user(id) do
     Logger.debug(fn ->
@@ -31,30 +51,11 @@ defmodule Lightning.Accounts do
     # Revoke access to projects
     Projects.get_projects_for_user(%User{id: id})
     |> Repo.preload(:project_users)
-    |> Enum.each(fn p ->
-      params =
-        p.project_users
-        |> Enum.with_index()
-        |> Enum.map(fn {project_user, index} ->
-          param = %{
-            "id" => project_user.id,
-            "user_id" => project_user.user_id,
-            "project_id" => project_user.project_id
-          }
-
-          param =
-            if project_user.user_id == id,
-              do: Map.put(param, "delete", "true"),
-              else: Map.put(param, "delete", "")
-
-          {"#{index}", param}
-        end)
-        |> Map.new()
-
-      Projects.update_project(
-        p,
-        %{"project_users" => params}
-      )
+    |> Enum.map(fn p ->
+      {p, %{"project_users" => project_users_to_params(p.project_users, id)}}
+    end)
+    |> Enum.each(fn {project, param} ->
+      Projects.update_project(project, param)
     end)
 
     Repo.get(User, id) |> delete_user()
