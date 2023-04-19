@@ -25,7 +25,7 @@ defmodule Lightning.Credentials.Credential do
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
 
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 
   @doc false

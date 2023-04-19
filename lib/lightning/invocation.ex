@@ -429,6 +429,7 @@ defmodule Lightning.Invocation do
           last_finished_at: r.finished_at
         }
 
+    # TODO: Refactor to remove the fragment used here; it causes timezone issues
     from(wo in Lightning.WorkOrder,
       join: wo_re in assoc(wo, :reason),
       join: w in assoc(wo, :workflow),
@@ -536,6 +537,8 @@ defmodule Lightning.Invocation do
   end
 
   def list_work_orders_for_project(%Project{} = project, filter, params) do
+    # TODO: The "get_and_update" below is only necessary because of the fragment
+    # on line 461 of this file. See other "TODO".
     list_work_orders_for_project_query(project, filter)
     |> Repo.paginate(params)
     |> Map.get_and_update!(
