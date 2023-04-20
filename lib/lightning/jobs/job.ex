@@ -66,6 +66,7 @@ defmodule Lightning.Jobs.Job do
     change =
       job
       |> cast(attrs, [
+        :id,
         :name,
         :body,
         :enabled,
@@ -78,8 +79,7 @@ defmodule Lightning.Jobs.Job do
         :name,
         :body,
         :enabled,
-        :adaptor,
-        :workflow_id
+        :adaptor
       ])
 
     change

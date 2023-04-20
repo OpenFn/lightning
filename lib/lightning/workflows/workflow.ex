@@ -12,6 +12,7 @@ defmodule Lightning.Workflows.Workflow do
 
   alias Lightning.Jobs.{Job, Trigger}
   alias Lightning.Projects.Project
+  alias Lightning.Workflows.Edge
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -25,8 +26,11 @@ defmodule Lightning.Workflows.Workflow do
   schema "workflows" do
     field :name, :string
 
+    has_many :edges, Edge, on_replace: :delete
+
     has_many :jobs, Job
     has_many :triggers, Trigger
+
     has_many :work_orders, Lightning.WorkOrder
     has_many :attempts, through: [:work_orders, :attempts]
     belongs_to :project, Project
@@ -41,7 +45,8 @@ defmodule Lightning.Workflows.Workflow do
     workflow
     |> cast(attrs, [:name, :project_id])
     |> cast_assoc(:jobs, with: &Job.changeset/2)
-    |> cast_assoc(:triggers, with: &Job.changeset/2)
+    |> cast_assoc(:triggers, with: &Trigger.changeset/2)
+    |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> validate()
   end
 

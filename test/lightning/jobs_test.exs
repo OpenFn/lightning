@@ -306,18 +306,14 @@ defmodule Lightning.JobsTest do
 
   describe "create_job/1" do
     test "new job without a workflow" do
-      assert {:error, changeset} =
-               Jobs.create_job(%{
-                 body: "some body",
-                 enabled: true,
-                 name: "some name",
-                 trigger: %{type: "webhook", comment: "foo"},
-                 adaptor: "@openfn/language-common"
-               })
-
-      refute changeset.valid?
-
-      assert {:workflow_id, {"can't be blank", [validation: :required]}} in changeset.errors
+      assert_raise Postgrex.Error, fn ->
+        Jobs.create_job(%{
+          body: "some body",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common"
+        })
+      end
     end
 
     test "with a credential associated creates a Job with a credential" do

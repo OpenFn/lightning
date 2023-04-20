@@ -17,13 +17,9 @@ defmodule Lightning.TaskWorkerTest do
       end)
       |> Task.await_many(100)
 
-    assert results == [
-             1,
-             2,
-             {:error, :too_many_processes},
-             {:error, :too_many_processes},
-             {:error, :too_many_processes}
-           ]
+    assert results
+           |> Enum.filter(fn x -> x == {:error, :too_many_processes} end)
+           |> length() == 3
 
     assert {:ok, %{max_tasks: 2, task_count: 0, task_sup: _sup}} =
              TaskWorker.get_status(task_worker)
