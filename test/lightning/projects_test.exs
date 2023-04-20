@@ -168,8 +168,87 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "delete_project/1 deletes the project" do
-      project = project_fixture()
+      # project workflow setup
+      %{project: project, w1: w1, w1_job: w1_job} = full_project_fixture()
+
+      user =
+        from(u in Lightning.Accounts.User,
+          join: p in assoc(u, :project_users),
+          where: p.project_id == ^project.id
+        )
+        |> Repo.one()
+
+      # Add project artifacts from usage
+      # Create a workorder
+      {:ok, workorder_multi} =
+        Lightning.WorkOrderService.multi_for(
+          :webhook,
+          w1_job,
+          ~s[{"foo": "bar"}] |> Jason.decode!()
+        )
+        |> Repo.transaction()
+
+      # Create a retry attempt
+      Lightning.WorkOrderService.retry_attempt_run(
+        workorder_multi.attempt_run,
+        user
+      )
+
       assert {:ok, %Project{}} = Projects.delete_project(project)
+      # Assert project_user are deleted
+      assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
+             |> Repo.one() == 0
+
+      # Assert project_user are deleted
+      assert from(pc in Ecto.assoc(project, :project_credentials),
+               select: count(pc.id)
+             )
+             |> Repo.one() == 0
+
+      # Assert workflows are deleted
+      assert from(w in Ecto.assoc(project, :workflows), select: count(w.id))
+             |> Repo.one() == 0
+
+      # Assert jobs are deleted
+      assert from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
+             |> Repo.one() == 0
+
+      #  Assert attemps are deleted
+      assert from(a in Lightning.Attempt,
+               where: a.id == ^workorder_multi.attempt.id
+             )
+             |> Repo.one() == nil
+
+      #  Assert attempsrun are deleted
+      assert from(ar in Lightning.AttemptRun,
+               where: ar.id == ^workorder_multi.attempt_run.id
+             )
+             |> Repo.one() == nil
+
+      #  Assert workorders are deleted
+      assert from(w in Lightning.WorkOrder, where: w.workflow_id == ^w1.id)
+             |> Repo.all() == []
+
+      # Assert invocation reason for workflow trigger are deleted
+      assert from(ir in Lightning.InvocationReason,
+               join: t in assoc(ir, :trigger),
+               where: t.workflow_id == ^w1.id
+             )
+             |> Repo.all() == []
+
+      #  Assert invocation reason for job run is deleted
+      assert from(ir in Lightning.InvocationReason,
+               join: r in assoc(ir, :run),
+               where: r.job_id == ^w1_job.id
+             )
+             |> Repo.all() == []
+
+      #  Assert invocation reason for dataclip are deleted
+      assert from(ir in Lightning.InvocationReason,
+               join: d in assoc(ir, :dataclip),
+               where: d.project_id == ^project.id
+             )
+             |> Repo.all() == []
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(project.id)

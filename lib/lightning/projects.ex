@@ -4,6 +4,9 @@ defmodule Lightning.Projects do
   """
 
   import Ecto.Query, warn: false
+  alias Lightning.Attempt
+  alias Lightning.AttemptRun
+  alias Lightning.Jobs.Trigger
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
@@ -11,6 +14,8 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
+  alias Lightning.InvocationReason
+  alias Lightning.WorkOrder
 
   @doc """
   Returns the list of projects.
@@ -145,23 +150,82 @@ defmodule Lightning.Projects do
 
   """
   def delete_project(%Project{} = project) do
-    Repo.transaction(fn ->
-      Repo.delete_all(from(p in ProjectUser, where: p.project_id == ^project.id))
+    workflows =
+      from(w in Workflow, where: w.project_id == ^project.id)
+      |> Repo.all()
 
+    Repo.transaction(fn ->
+      Enum.each(workflows, fn workflow ->
+        work_orders = from(w in WorkOrder, where: w.workflow_id == ^workflow.id)
+
+        Enum.each(work_orders |> Repo.all(), fn work_order ->
+          attempts = from(a in Attempt, where: a.work_order_id == ^work_order.id)
+
+          # Delete all attemptsrun
+          Enum.each(attempts |> Repo.all(), fn attempt ->
+            Repo.delete_all(
+              from(ar in AttemptRun, where: ar.attempt_id == ^attempt.id)
+            )
+          end)
+
+          # Delete all attempts
+          Repo.delete_all(attempts)
+        end)
+
+        # Delete all work_orders
+        Repo.delete_all(work_orders)
+
+        # Delete associated invocation reasons for each workflow trigger
+        Repo.delete_all(
+          from(ir in InvocationReason,
+            join: t in assoc(ir, :trigger),
+            where: t.workflow_id == ^workflow.id
+          )
+        )
+
+        jobs =
+          from(t in Lightning.Jobs.Job, where: t.workflow_id == ^workflow.id)
+
+        # Delete associated invocation reasons for each run
+        Enum.each(jobs |> Repo.all(), fn job ->
+          Repo.delete_all(
+            from(ir in InvocationReason,
+              join: r in assoc(ir, :run),
+              where: r.job_id == ^job.id
+            )
+          )
+        end)
+
+        # Delete all jobs
+        Repo.delete_all(jobs)
+
+        triggers = from(t in Trigger, where: t.workflow_id == ^workflow.id)
+        # Delete all triggers
+        Repo.delete_all(triggers)
+      end)
+
+      # Delete all project users
+      Repo.delete_all(from(p in ProjectUser, where: p.project_id == ^project.id))
+      # Delete all project credentials
       Repo.delete_all(
         from(pc in ProjectCredential, where: pc.project_id == ^project.id)
       )
 
+      # Delete all project workflow
       Repo.delete_all(from(w in Workflow, where: w.project_id == ^project.id))
-      Repo.delete(project)
-    end)
 
-    # project
-    # |> Ecto.Changeset.change()
-    # |> Ecto.Changeset.no_assoc_constraint(:project_users)
-    # |> Ecto.Changeset.no_assoc_constraint(:project_credentials)
-    # |> Ecto.Changeset.no_assoc_constraint(:workflows)
-    # |> Repo.delete()
+      # Delete associated invocation reasons for dataclip
+      Repo.delete_all(
+        from(ir in InvocationReason,
+          join: d in assoc(ir, :dataclip),
+          where: d.project_id == ^project.id
+        )
+      )
+
+      # Delete project
+      {:ok, project} = Repo.delete(project)
+      project
+    end)
   end
 
   @doc """
