@@ -18,6 +18,9 @@ and this project adheres to
 
 ### Changed
 
+- The `delete-project` function now delete all associated activities
+  [#759](https://github.com/OpenFn/Lightning/issues/759)
+
 ### Fixed
 
 ## [0.5.1] - 2023-04-12
