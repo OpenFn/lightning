@@ -11,6 +11,7 @@ defmodule Lightning.Invocation.Run do
 
   alias Lightning.Invocation.Dataclip
   alias Lightning.Jobs.Job
+  alias Lightning.Credentials.Credential
   alias Lightning.{AttemptRun, Attempt}
 
   @type t :: %__MODULE__{
@@ -27,6 +28,7 @@ defmodule Lightning.Invocation.Run do
     field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
     belongs_to :job, Job
+    belongs_to :credential, Credential
 
     belongs_to :input_dataclip, Dataclip
     belongs_to :output_dataclip, Dataclip
@@ -68,6 +70,7 @@ defmodule Lightning.Invocation.Run do
       :started_at,
       :finished_at,
       :job_id,
+      :credential_id,
       :input_dataclip_id,
       :output_dataclip_id
     ])

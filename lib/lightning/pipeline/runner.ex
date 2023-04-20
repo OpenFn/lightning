@@ -4,6 +4,8 @@ defmodule Lightning.Pipeline.Runner do
   """
   require Logger
   alias Lightning.Invocation
+  alias Lightning.Jobs.Job
+  alias Lightning.Credentials.Credential
 
   import Lightning.AdaptorService,
     only: [install!: 2, resolve_package_name: 1, find_adaptor: 2]
@@ -16,9 +18,21 @@ defmodule Lightning.Pipeline.Runner do
     alias Lightning.Pipeline.Runner
     import Lightning.Invocation, only: [update_run: 2]
 
+    @doc """
+    The on_start handler updates the run, setting the started_at time and
+    stamping the run with the ID of the credential that was used, if any, to
+    facilitate easier auditing.
+    """
     @impl true
     def on_start(run: run, scrubber: _) do
-      update_run(run, %{started_at: DateTime.utc_now()})
+      update_run(run, %{
+        started_at: DateTime.utc_now(),
+        credential_id:
+          case run do
+            %{job: %Job{credential: %Credential{id: id}}} -> id
+            _else -> nil
+          end
+      })
     end
 
     @impl true
