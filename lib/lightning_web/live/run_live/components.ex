@@ -238,10 +238,7 @@ defmodule LightningWeb.RunLive.Components do
         do: "#{run.credential.name} (owned by #{run.credential.user.email})",
         else: nil
 
-    run_job =
-      if Ecto.assoc_loaded?(run.job) && run.job,
-        do: "#{run.job.name}",
-        else: run.job_id
+    run_job = get_in(run, [Access.key!(:job), Access.key(:name, run.job_id)])
 
     assigns =
       assigns
