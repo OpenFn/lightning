@@ -82,6 +82,7 @@ Lightning.TaskWorker.html
 Lightning.Vault.html
 Lightning.WorkOrder.html
 Lightning.WorkOrderService.html
+Lightning.Workflows.Edge.html
 Lightning.Workflows.Graph.html
 Lightning.Workflows.Workflow.html
 Lightning.Workflows.html
@@ -185,8 +186,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-A733572D.js
-dist/sidebar_items-A6FED0E6.js
+dist/search_items-36F55D44.js
+dist/sidebar_items-1538A078.js
 index.html
 readme.html
 search.html

@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.5.1">
 
-    <title>LightningWeb.CredentialLive.JsonSchemaBodyComponent — Lightning v0.5.1</title>
+    <title>Lightning.Workflows.Edge — Lightning v0.5.1</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -102,16 +102,22 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/json_schema_body_component.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.CredentialLive.JsonSchemaBodyComponent</span> 
+  <span translate="no">Lightning.Workflows.Edge</span> 
   <small class="app-vsn" translate="no">(Lightning v0.5.1)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Ecto model for Workflow Edges.</p><p>A Workflow Edge represents a connection between two jobs
+(or a trigger and a job) in a workflow.</p><p>The source of the edge is either a job or a trigger.
+The target of the edge is always a job.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -129,21 +135,9 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#fieldset/1" translate="no">fieldset(assigns)</a>
+        <a href="#changeset/2" translate="no">changeset(edge, attrs)</a>
 
       </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">inner_block</code></li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#schema_input/1" translate="no">schema_input(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">schema</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">field</code> (<code class="inline">:any</code>) (required)</li></ul></div>
 
     </div>
 
@@ -161,16 +155,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="fieldset/1">
+<section class="detail" id="changeset/2">
 
   <div class="detail-header">
-    <a href="#fieldset/1" class="detail-link" title="Link to this function">
+    <a href="#changeset/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">fieldset(assigns)</h1>
+    <h1 class="signature" translate="no">changeset(edge, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/json_schema_body_component.ex#L1" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/workflows/edge.ex#L31" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -180,47 +174,7 @@ Functions
 
   <section class="docstring">
 
-<h2 id="fieldset/1-attributes" class="section-heading">
-  <a href="#fieldset/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">attributes</p>
-  </a>
-  Attributes
-</h2>
-<ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li></ul><h2 id="fieldset/1-slots" class="section-heading">
-  <a href="#fieldset/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">slots</p>
-  </a>
-  Slots
-</h2>
-<ul><li><code class="inline">inner_block</code></li></ul>
-  </section>
-</section>
-<section class="detail" id="schema_input/1">
 
-  <div class="detail-header">
-    <a href="#schema_input/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">schema_input(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/credential_live/json_schema_body_component.ex#L1" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<h2 id="schema_input/1-attributes" class="section-heading">
-  <a href="#schema_input/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">attributes</p>
-  </a>
-  Attributes
-</h2>
-<ul><li><code class="inline">form</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">schema</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">field</code> (<code class="inline">:any</code>) (required)</li></ul>
   </section>
 </section>
 
