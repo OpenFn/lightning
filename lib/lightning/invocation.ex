@@ -5,6 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Accounts.User
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Run}
@@ -250,6 +251,14 @@ defmodule Lightning.Invocation do
     %Run{}
     |> Run.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def count_invocation_reasons_for_user(%User{id: id}) do
+    from(invocation_reason in Lightning.InvocationReason,
+      where: invocation_reason.user_id == ^id,
+      select: count(invocation_reason.id)
+    )
+    |> Repo.one()
   end
 
   @doc """

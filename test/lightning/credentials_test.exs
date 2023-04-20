@@ -17,6 +17,39 @@ defmodule Lightning.CredentialsTest do
   describe "Model interactions" do
     @invalid_attrs %{body: nil, name: nil}
 
+    test "count_project_credentials_for_user/1" do
+      user = user_fixture()
+      another_user = user_fixture()
+
+      project_1 = project_fixture()
+      project_2 = project_fixture()
+
+      credential_fixture(
+        user_id: user.id,
+        project_credentials: [
+          %{project_id: project_1.id}
+        ]
+      )
+
+      credential_fixture(
+        user_id: user.id,
+        project_credentials: [
+          %{project_id: project_1.id}
+        ]
+      )
+
+      credential_fixture(
+        user_id: user.id,
+        project_credentials: [
+          %{project_id: project_2.id}
+        ]
+      )
+
+      assert Credentials.count_project_credentials_for_user(user) == 3
+
+      assert Credentials.count_project_credentials_for_user(another_user) == 0
+    end
+
     test "list_credentials_for_user/1 returns all credentials for given user" do
       user_1 = user_fixture()
       user_2 = user_fixture()

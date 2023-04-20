@@ -4,6 +4,10 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   use Phoenix.LiveComponent
 
+  alias Lightning.Invocation
+  alias Lightning.Credentials
+  alias Lightning.Projects
+  alias Lightning.Accounts.User
   alias Lightning.Accounts
 
   @impl true
@@ -65,6 +69,14 @@ defmodule LightningWeb.Components.UserDeletionModal do
   defp logout_after_deletion(%{assigns: %{logout: false}} = socket),
     do: push_redirect(socket, to: socket.assigns.return_to)
 
+  defp has_activity_in_projects?(%User{} = user) do
+    project_credentials_count =
+      Credentials.count_project_credentials_for_user(user)
+
+    invocation_reasons_count = Invocation.count_invocation_reasons_for_user(user)
+    project_credentials_count != 0 or invocation_reasons_count != 0
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -83,6 +95,15 @@ defmodule LightningWeb.Components.UserDeletionModal do
           id="scheduled_deletion_form"
         >
           <span>This user's account and credential data will be deleted</span>
+
+          <%= if has_activity_in_projects?(@user) do %>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
+            <p>
+              *Note that this user has activity in some projects. We may not be able to delete them entirely from the app, until those projects are alive.
+            </p>
+          <% end %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>

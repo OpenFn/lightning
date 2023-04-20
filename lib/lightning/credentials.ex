@@ -5,6 +5,8 @@ defmodule Lightning.Credentials do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Projects.ProjectCredential
+  alias Lightning.Accounts.User
   alias Lightning.Repo
   alias Ecto.Multi
 
@@ -279,5 +281,16 @@ defmodule Lightning.Credentials do
       |> Repo.all()
 
     project_credentials -- project_users
+  end
+
+  def count_project_credentials_for_user(%User{id: id}) do
+    from(project_credential in ProjectCredential,
+      join: credential in Credential,
+      on:
+        credential.id == project_credential.credential_id and
+          credential.user_id == ^id,
+      select: count(project_credential.id)
+    )
+    |> Repo.one()
   end
 end
