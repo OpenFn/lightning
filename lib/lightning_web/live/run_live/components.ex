@@ -233,15 +233,35 @@ defmodule LightningWeb.RunLive.Components do
           "Not started."
       end
 
+    run_credential =
+      if Ecto.assoc_loaded?(run.credential) && run.credential,
+        do: "#{run.credential.name} (owned by #{run.credential.user.email})",
+        else: nil
+
+    run_job =
+      if Ecto.assoc_loaded?(run.job) && run.job,
+        do: "#{run.job.name}",
+        else: run.job_id
+
     assigns =
       assigns
       |> assign(
         run_finished_at: run_finished_at,
+        run_credential: run_credential,
+        run_job: run_job,
         ran_for: ran_for
       )
 
     ~H"""
     <div class="flex flex-col gap-2">
+      <div class="flex gap-4 flex-row text-sm" id={"job-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Job</div>
+        <div class="basis-1/2 text-right"><%= @run_job %></div>
+      </div>
+      <div class="flex gap-4 flex-row text-sm" id={"job-#{@run.id}"}>
+        <div class="basis-1/2 font-semibold text-secondary-700">Credential</div>
+        <div class="basis-1/2 text-right"><%= @run_credential || "n/a" %></div>
+      </div>
       <div class="flex gap-4 flex-row text-sm" id={"finished-at-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Finished</div>
         <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
