@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Add `workflow_edges` table in preparation for new workflow editor
+  implementation [#794](https://github.com/OpenFn/Lightning/issues/794)
+
 ### Changed
 
 ### Fixed
