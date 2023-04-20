@@ -18,27 +18,80 @@ defmodule Lightning.Workflows.Edge do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
-    belongs_to :workflow, Workflow
-    belongs_to :source_job, Job
-    belongs_to :source_trigger, Trigger
-    belongs_to :target_job, Job
+    belongs_to(:workflow, Workflow)
+    belongs_to(:source_job, Job)
+    belongs_to(:source_trigger, Trigger)
+    belongs_to(:target_job, Job)
 
-    field :condition, :string
+    field(:condition, :string)
 
     timestamps()
   end
 
-  # TODO: Add validation for source_job XOR source_trigger
-  # TODO: Ensure that source_* and target_job are in the same workflow
-  # TODO: Ensure that source_job and target_job are not the same
   def changeset(edge, attrs) do
     edge
     |> cast(attrs, [
       :workflow_id,
       :source_job_id,
       :source_trigger_id,
+      :condition,
       :target_job_id
     ])
-    |> foreign_key_constraint(:target_job_id)
+    |> validate_node_in_same_workflow()
+    |> foreign_key_constraint(:workflow_id)
+    |> validate_exclusive(
+      [:source_job_id, :source_trigger_id],
+      "source_job_id and source_trigger_id are mutually exclusive"
+    )
+    |> validate_different_nodes()
+  end
+
+  # Ensure that only one of the fields is set at a time
+  defp validate_exclusive(changeset, fields, message) do
+    fields
+    |> Enum.map(&get_field(changeset, &1))
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      f when length(f) > 1 ->
+        error_field =
+          fields
+          |> Enum.map(&[&1, fetch_field(changeset, &1)])
+          |> Enum.find(fn [_, {kind, _}] -> kind == :changes end)
+          |> List.first()
+
+        add_error(changeset, error_field, message)
+
+      _ ->
+        changeset
+    end
+  end
+
+  defp validate_different_nodes(changeset) do
+    [:source_job_id, :target_job_id]
+    |> Enum.map(&get_field(changeset, &1))
+    |> case do
+      [source, target] when is_nil(source) or is_nil(target) ->
+        changeset
+
+      [source, target] when source == target ->
+        add_error(
+          changeset,
+          :target_job_id,
+          "target_job_id must be different from source_job_id"
+        )
+    end
+  end
+
+  defp validate_node_in_same_workflow(changeset) do
+    changeset
+    |> foreign_key_constraint(:source_job_id,
+      message: "job doesn't exist, or is not in the same workflow"
+    )
+    |> foreign_key_constraint(:source_trigger_id,
+      message: "trigger doesn't exist, or is not in the same workflow"
+    )
+    |> foreign_key_constraint(:target_job_id,
+      message: "job doesn't exist, or is not in the same workflow"
+    )
   end
 end
