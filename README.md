@@ -4,7 +4,8 @@ OpenFn/Lightning is a fully open source, workflow automation platform that's
 used to automate critical business processes and integrate information systems.
 From last-mile services to national-level reporting, it boosts efficiency &
 effectiveness while enabling secure, stable, scalable interoperability at all
-levels. **Read more about Lightning [on OpenFn/Docs](https://docs.openfn.org/documentation/about-lightning).**
+levels. **Read more about Lightning
+[on OpenFn/Docs](https://docs.openfn.org/documentation/about-lightning).**
 
 Lightning is the latest "v2" of OpenFn, the
 [Digital Public Good for workflow automation](https://app.digitalpublicgoods.net/a/10176).
@@ -18,11 +19,10 @@ Use Lightning to visually build, execute and manage workflows.
   [DPGA](https://digitalpublicgoods.net/) and a Global Good for Health by
   [Digital Square](https://digitalsquare.org/digital-health-global-goods)
 
-# README Contents
-
-Click on the links below to navigate to a specific documentation section.
+## Contents
 
 - [Demo](#demo)
+- [Sign up for the BETA](#register-for-a-beta-account)
 - [Features](#features)
 - [Getting started](#getting-started)
   - [Run Lightning via Docker](#run-via-docker)
@@ -55,7 +55,7 @@ through the
 [quick-start guide](https://docs.openfn.org/documentation/build/lightning-quick-start)
 to get familiar with the app.
 
-# Features
+## Features
 
 Plan and build workflows using Lightning's visual interface to quickly define
 when, where and what you want your automation to do.
@@ -74,7 +74,7 @@ Monitor all workflow activity in one place.
 Manage users and access by project
 ![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
-# Getting Started
+## Getting Started
 
 - If you only want to [_**RUN**_](#run-via-docker) Lightning on your own server,
   we recommend using Docker.
@@ -105,13 +105,6 @@ from Dockerhub.
 
 See [Deployment](DEPLOYMENT.md) for more detailed information.
 
-## **Benchmarking**
-
-We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
-folder you can find a script for benchmarking Webhook Workflows.
-
-See [Benchmarking](benchmarking/BENCHMARKING.md) for more detailed information.
-
 ## **Contribute** to this project
 
 First, thanks for being here! You're contributing to a digital public good that
@@ -135,7 +128,7 @@ forks" link on GitHub's
 [pull request](https://github.com/OpenFn/Lightning/compare) interface and then
 open one for review.
 
-#### Clone the repo and optionally set ENVs
+### Clone the repo and optionally set ENVs
 
 ```sh
 git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
@@ -148,7 +141,7 @@ your Postgres setup and your ENVs. You can run lightning without any ENVs
 assuming a vanilla postgres setup (see below), but you may want to make
 adjustments.
 
-#### Database Setup
+### Database Setup
 
 If you're already using Postgres locally, create a new database called
 `lightning_dev`, for example.
@@ -169,7 +162,7 @@ docker create \
 docker start lightning-postgres
 ```
 
-#### Elixir & Ecto Setup
+### Elixir & Ecto Setup
 
 We use [asdf](https://github.com/asdf-vm/asdf) to configure our local
 environments. Included in the repo is a `.tool-versions` file that is read by
@@ -225,6 +218,13 @@ MIX_ENV=test mix test
 
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
+
+## **Benchmarking**
+
+We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
+folder you can find a script for benchmarking Webhook Workflows.
+
+See [Benchmarking](benchmarking/BENCHMARKING.md) for more detailed information.
 
 ## Troubleshooting
 
@@ -294,17 +294,21 @@ docker compose build --no-cache web && \
 docker compose run --rm web mix ecto.migrate
 docker compose up
 ```
+
 ## Project Configuration Quickstart
 
-For help getting started with your OpenFn/Lightning Project and Workflows configuration, check out the [Lightning Quickstart Guidance](https://docs.openfn.org/documentation/build/lightning-quick-start) on OpenFn/Docs. 
+For help getting started with your OpenFn/Lightning Project and Workflows
+configuration, check out the
+[Lightning Quickstart Guidance](https://docs.openfn.org/documentation/build/lightning-quick-start)
+on OpenFn/Docs.
 
-# Generating Documentation
+## Generating Documentation
 
 You can generate the HTML and EPUB documentation locally using:
 
 `mix docs` and opening `doc/index.html` in your browser.
 
-# Security and Standards
+## Security and Standards
 
 We use a host of common Elixir static analysis tools to help us avoid common
 pitfalls and make sure we keep everything clean and consistent.
@@ -335,11 +339,13 @@ For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
 [docs.openfn.org/documentation/getting-started/security](https://docs.openfn.org/documentation/getting-started/security)
 
-# Server Specs for Self-Hosting
+## Server Specs for Self-Hosting
 
-For recommend server specifications for self-hosting of Lightning, check out this Community topic: [community.openfn.org/t/specs-for-self-hosting-lightning/292](https://community.openfn.org/t/specs-for-self-hosting-lightning/292)
+For recommend server specifications for self-hosting of Lightning, check out
+this Community topic:
+[community.openfn.org/t/specs-for-self-hosting-lightning/292](https://community.openfn.org/t/specs-for-self-hosting-lightning/292)
 
-# Support
+## Support
 
 If you have any questions, feedback, or issues, please:
 
