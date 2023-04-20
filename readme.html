@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-FF980210.js"></script>
+    <script src="dist/sidebar_items-A6FED0E6.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -115,13 +115,20 @@ Lightning
 used to automate critical business processes and integrate information systems.
 From last-mile services to national-level reporting, it boosts efficiency &amp;
 effectiveness while enabling secure, stable, scalable interoperability at all
-levels.</p><p>Lightning is the latest &quot;v2&quot; of OpenFn, the
+levels. <strong>Read more about Lightning
+<a href="https://docs.openfn.org/documentation/about-lightning">on OpenFn/Docs</a>.</strong></p><p>Lightning is the latest &quot;v2&quot; of OpenFn, the
 <a href="https://app.digitalpublicgoods.net/a/10176">Digital Public Good for workflow automation</a>.
 Use Lightning to visually build, execute and manage workflows.</p><ul><li>The latest version of the OpenFn technology - first launched in 2014, now
 tried and tested by NGOs in over 40 countries</li><li>Fully open source (no premium features or community edition, you get the same
 product whether using SaaS or self-hosted)</li><li>Recognised as a Digital Public Good by the
 <a href="https://digitalpublicgoods.net/">DPGA</a> and a Global Good for Health by
-<a href="https://digitalsquare.org/digital-health-global-goods">Digital Square</a></li></ul><p><img src="https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png" alt="Screenshot 2023-03-15 at 13 01 13"/></p><h2 id="demo" class="section-heading">
+<a href="https://digitalsquare.org/digital-health-global-goods">Digital Square</a></li></ul><h2 id="contents" class="section-heading">
+  <a href="#contents" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">contents</p>
+  </a>
+  Contents
+</h2>
+<ul><li><a href="#demo">Demo</a></li><li><a href="#register-for-a-beta-account">Sign up for the BETA</a></li><li><a href="#features">Features</a></li><li><a href="#getting-started">Getting started</a><ul><li><a href="#run-via-docker">Run Lightning via Docker</a></li><li><a href="#deploy-on-external-infrastructure">Deploy Lightning on Docker or Kubernetes</a></li><li><a href="#contribute-to-this-project">Run Lightning on your local machine (contributors)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#project-configuration-quickstart">Project Configuration Quickstart</a></li></ul></li><li><a href="#generating-documentation">Generate the documentation</a></li><li><a href="#security-and-standards">Security and standards</a></li><li><a href="#server-specs-for-self-hosting">Server specs for self-hosting</a></li><li><a href="#support">Questions or feedback?</a></li></ul><p><img src="https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png" alt="Screenshot 2023-03-15 at 13 01 13"/></p><h2 id="demo" class="section-heading">
   <a href="#demo" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">demo</p>
   </a>
@@ -139,13 +146,7 @@ want to save.</em></p><h2 id="register-for-a-beta-account" class="section-headin
 <p>Register for a Beta account at <a href="https://app.openfn.org/">app.openfn.org</a> and go
 through the
 <a href="https://docs.openfn.org/documentation/build/lightning-quick-start">quick-start guide</a>
-to get familiar with the app.</p><h2 id="readme-contents" class="section-heading">
-  <a href="#readme-contents" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">readme-contents</p>
-  </a>
-  README Contents
-</h2>
-<p>Click on the links below to navigate to a specific documentation section.</p><ul><li><a href="#features">Features</a></li><li><a href="#getting-started">Getting started</a><ul><li><a href="#run-via-docker">Run Lightning via Docker</a></li><li><a href="#deploy-on-external-infrastructure">Deploy Lightning on Docker or Kubernetes</a></li><li><a href="#contribute-to-this-project">Run Lightning on your local machine (contributors)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li></ul></li><li><a href="#generating-documentation">Generate the documentation</a></li><li><a href="#security-and-standards">Security and standards</a></li><li><a href="#support">Questions or feedback?</a></li></ul><h2 id="features" class="section-heading">
+to get familiar with the app.</p><h2 id="features" class="section-heading">
   <a href="#features" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">features</p>
   </a>
@@ -184,14 +185,7 @@ from Dockerhub.</p><h2 id="deploy-on-external-infrastructure" class="section-hea
   </a>
   <strong>Deploy</strong> on external infrastructure
 </h2>
-<p>See <a href="deployment.html">Deployment</a> for more detailed information.</p><h2 id="benchmarking" class="section-heading">
-  <a href="#benchmarking" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">benchmarking</p>
-  </a>
-  <strong>Benchmarking</strong>
-</h2>
-<p>We are using <a href="https://k6.io/">k6</a> to benchmark Lightning. Under <code class="inline">benchmarking</code>
-folder you can find a script for benchmarking Webhook Workflows.</p><p>See <a href="benchmarking.html">Benchmarking</a> for more detailed information.</p><h2 id="contribute-to-this-project" class="section-heading">
+<p>See <a href="deployment.html">Deployment</a> for more detailed information.</p><h2 id="contribute-to-this-project" class="section-heading">
   <a href="#contribute-to-this-project" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">contribute-to-this-project</p>
   </a>
@@ -214,13 +208,25 @@ submitting a pull request. If you're new to OpenFn, you'll need to
 changes there.</p><p>Once you're ready to submit a pull request, you can click the &quot;compare across
 forks&quot; link on GitHub's
 <a href="https://github.com/OpenFn/Lightning/compare">pull request</a> interface and then
-open one for review.</p><h4>Clone the repo and optionally set ENVs</h4><pre><code class="makeup sh" translate="no"><span class="">git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
+open one for review.</p><h3 id="clone-the-repo-and-optionally-set-envs" class="section-heading">
+  <a href="#clone-the-repo-and-optionally-set-envs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">clone-the-repo-and-optionally-set-envs</p>
+  </a>
+  Clone the repo and optionally set ENVs
+</h3>
+<pre><code class="makeup sh" translate="no"><span class="">git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
 </span><span class="">cd Lightning
 </span><span class="">cp .env.example .env # and adjust as necessary!
 </span></code></pre><p>Take note of database names and ports in particular—they've got to match across
 your Postgres setup and your ENVs. You can run lightning without any ENVs
 assuming a vanilla postgres setup (see below), but you may want to make
-adjustments.</p><h4>Database Setup</h4><p>If you're already using Postgres locally, create a new database called
+adjustments.</p><h3 id="database-setup" class="section-heading">
+  <a href="#database-setup" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">database-setup</p>
+  </a>
+  Database Setup
+</h3>
+<p>If you're already using Postgres locally, create a new database called
 <code class="inline">lightning_dev</code>, for example.</p><p>If you'd rather use Docker to set up a Postgres DB, create a new volume and
 image:</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
 </span><span class="">
@@ -232,7 +238,13 @@ image:</p><pre><code class="makeup sh" translate="no"><span class="">docker volu
 </span><span class="">  postgres:14.1-alpine
 </span><span class="">
 </span><span class="">docker start lightning-postgres
-</span></code></pre><h4>Elixir &amp; Ecto Setup</h4><p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
+</span></code></pre><h3 id="elixir-ecto-setup" class="section-heading">
+  <a href="#elixir-ecto-setup" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">elixir-ecto-setup</p>
+  </a>
+  Elixir &amp; Ecto Setup
+</h3>
+<p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
 environments. Included in the repo is a <code class="inline">.tool-versions</code> file that is read by
 asdf in order to dynamically make the specified versions of Elixir and Erlang
 available. You'll need asdf plugins for
@@ -266,13 +278,14 @@ in your browser.</p><h3 id="run-the-tests" class="section-heading">
 <p>Before the first time running the tests, you need a test database setup.</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix ecto.create
 </span></code></pre><p>And then after that run the tests using:</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix test
 </span></code></pre><p>We also have <code class="inline">test.watch</code> installed which can be used to rerun the tests on file
-changes.</p><h3 id="generating-documentation" class="section-heading">
-  <a href="#generating-documentation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">generating-documentation</p>
+changes.</p><h2 id="benchmarking" class="section-heading">
+  <a href="#benchmarking" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">benchmarking</p>
   </a>
-  Generating Documentation
-</h3>
-<p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.29.1/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p><h2 id="troubleshooting" class="section-heading">
+  <strong>Benchmarking</strong>
+</h2>
+<p>We are using <a href="https://k6.io/">k6</a> to benchmark Lightning. Under <code class="inline">benchmarking</code>
+folder you can find a script for benchmarking Webhook Workflows.</p><p>See <a href="benchmarking.html">Benchmarking</a> for more detailed information.</p><h2 id="troubleshooting" class="section-heading">
   <a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">troubleshooting</p>
   </a>
@@ -306,7 +319,7 @@ while using <code class="inline">xargs</code>.</p><h3 id="problems-with-debian" 
   Problems with Debian
 </h3>
 <p>If you're getting this error on debian</p><pre><code class="makeup elixir" translate="no"><span class="o">==</span><span class="o">&gt;</span><span class="w"> </span><span class="n">earmark_parser</span><span class="w">
-</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="7301602078-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="7301602078-1">)</span><span class="w">
+</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="9060938684-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="9060938684-1">)</span><span class="w">
 </span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">erlang</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">parsetools</span><span class="o">-</span><span class="mf">2.3</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">yeccpre</span><span class="o">.</span><span class="ss">hrl</span><span class="p">:</span><span class="w"> </span><span class="n">no</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
 </span><span class="n">could</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">compile</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="ss">:earmark_parser</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mix compile&quot;</span><span class="w"> </span><span class="n">failed</span><span class="o">.</span><span class="w"> </span><span class="nc">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">recompile</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.compile earmark_parser&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.update earmark_parser&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">clean</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.clean earmark_parser&quot;</span></code></pre><p>You need to install erlang development environment <code class="inline">sudo apt install erlang-dev</code>
 <a href="https://github.com/elixir-lang/ex_doc/issues/1441">refer to this issue</a></p><h3 id="problems-with-docker" class="section-heading">
@@ -329,12 +342,27 @@ this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove 
 </span><span class="">
 </span><span class="">docker compose run --rm web mix ecto.migrate
 </span><span class="">docker compose up
-</span></code></pre><h3 id="security-and-standards" class="section-heading">
+</span></code></pre><h2 id="project-configuration-quickstart" class="section-heading">
+  <a href="#project-configuration-quickstart" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">project-configuration-quickstart</p>
+  </a>
+  Project Configuration Quickstart
+</h2>
+<p>For help getting started with your OpenFn/Lightning Project and Workflows
+configuration, check out the
+<a href="https://docs.openfn.org/documentation/build/lightning-quick-start">Lightning Quickstart Guidance</a>
+on OpenFn/Docs.</p><h2 id="generating-documentation" class="section-heading">
+  <a href="#generating-documentation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">generating-documentation</p>
+  </a>
+  Generating Documentation
+</h2>
+<p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.29.1/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p><h2 id="security-and-standards" class="section-heading">
   <a href="#security-and-standards" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">security-and-standards</p>
   </a>
   Security and Standards
-</h3>
+</h2>
 <p>We use a host of common Elixir static analysis tools to help us avoid common
 pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
 have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.2.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
@@ -345,7 +373,15 @@ in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="in
 <a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
 defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote><p>For more guidance on security best practices for workflow automation
 implementations, check out OpenFn Docs:
-<a href="https://docs.openfn.org/documentation/getting-started/security">docs.openfn.org/documentation/getting-started/security</a></p><h2 id="support" class="section-heading">
+<a href="https://docs.openfn.org/documentation/getting-started/security">docs.openfn.org/documentation/getting-started/security</a></p><h2 id="server-specs-for-self-hosting" class="section-heading">
+  <a href="#server-specs-for-self-hosting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">server-specs-for-self-hosting</p>
+  </a>
+  Server Specs for Self-Hosting
+</h2>
+<p>For recommend server specifications for self-hosting of Lightning, check out
+this Community topic:
+<a href="https://community.openfn.org/t/specs-for-self-hosting-lightning/292">community.openfn.org/t/specs-for-self-hosting-lightning/292</a></p><h2 id="support" class="section-heading">
   <a href="#support" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">support</p>
   </a>
