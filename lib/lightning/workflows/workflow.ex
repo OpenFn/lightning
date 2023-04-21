@@ -53,6 +53,7 @@ defmodule Lightning.Workflows.Workflow do
   defp validate(changeset) do
     changeset
     |> assoc_constraint(:project)
+    |> validate_required([:name, :project_id])
     |> unique_constraint([:name, :project_id],
       message: "A workflow with this name does already exist in this project."
     )

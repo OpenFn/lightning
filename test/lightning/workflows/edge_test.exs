@@ -53,6 +53,15 @@ defmodule Lightning.Workflows.EdgeTest do
                :target_job_id,
                {"target_job_id must be different from source_job_id", []}
              } in changeset.errors
+
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_job_id: job_id,
+          target_job_id: Ecto.UUID.generate()
+        })
+
+      assert changeset.valid?
     end
 
     test "can't assign a node from a different workflow" do

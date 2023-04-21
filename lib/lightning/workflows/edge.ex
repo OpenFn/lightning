@@ -18,12 +18,12 @@ defmodule Lightning.Workflows.Edge do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
-    belongs_to(:workflow, Workflow)
-    belongs_to(:source_job, Job)
-    belongs_to(:source_trigger, Trigger)
-    belongs_to(:target_job, Job)
+    belongs_to :workflow, Workflow
+    belongs_to :source_job, Job
+    belongs_to :source_trigger, Trigger
+    belongs_to :target_job, Job
 
-    field(:condition, :string)
+    field :condition, :string
 
     timestamps()
   end
@@ -31,6 +31,7 @@ defmodule Lightning.Workflows.Edge do
   def changeset(edge, attrs) do
     edge
     |> cast(attrs, [
+      :id,
       :workflow_id,
       :source_job_id,
       :source_trigger_id,
@@ -79,6 +80,8 @@ defmodule Lightning.Workflows.Edge do
           :target_job_id,
           "target_job_id must be different from source_job_id"
         )
+
+      _ -> changeset
     end
   end
 

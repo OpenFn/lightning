@@ -26,13 +26,14 @@
     "react-dom": "^18.1.0",
     "react-flow-renderer": "^10.3.16",
     "react-markdown": "^8.0.3",
-    "zustand": "^4.1.0"
+    "zustand": "^4.3.7"
   },
   "devDependencies": {
     "@types/marked": "^4.0.8",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "ava": "^5.1.0",
+    "immer": "^10.0.1",
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.1"
   },
