@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-1538A078.js"></script>
+    <script src="dist/sidebar_items-001348D4.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -102,7 +102,7 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L11" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L13" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
@@ -147,6 +147,18 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#on_start/1" translate="no">on_start(context)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>The on_start handler updates the run, setting the started_at time and
+stamping the run with the ID of the credential that was used, if any, to
+facilitate easier auditing.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#stop/1" translate="no">stop(state)</a>
 
       </div>
@@ -176,7 +188,7 @@ Types
     </a>
     <h1 class="signature" translate="no">handler_opts()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L15" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L17" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -208,6 +220,30 @@ Types
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="on_start/1">
+
+  <div class="detail-header">
+    <a href="#on_start/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">on_start(context)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L27" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>The on_start handler updates the run, setting the started_at time and
+stamping the run with the ID of the credential that was used, if any, to
+facilitate easier auditing.</p>
+  </section>
+</section>
 <section class="detail" id="stop/1">
 
   <div class="detail-header">
@@ -217,7 +253,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">stop(state)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L15" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L17" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
