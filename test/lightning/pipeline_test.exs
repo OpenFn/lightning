@@ -86,16 +86,18 @@ defmodule Lightning.PipelineTest do
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
+      %{id: project_credential_id, credential_id: credential_id} =
+        project_credential_fixture(
+          name: "my credential",
+          body: %{"apiToken" => "secret123"}
+        )
+
       %{id: _downstream_job_id} =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
           workflow_id: job.workflow_id,
-          project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
-            ).id
+          project_credential_id: project_credential_id
         )
 
       %{id: _disabled_downstream_job_id} =
@@ -149,6 +151,8 @@ defmodule Lightning.PipelineTest do
         |> Repo.one!()
 
       assert expected_run.input_dataclip_id == output_dataclip_id
+
+      assert expected_run.credential_id == credential_id
 
       assert %{
                "data" => %{}

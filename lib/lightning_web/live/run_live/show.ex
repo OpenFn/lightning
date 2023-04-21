@@ -29,7 +29,7 @@ defmodule LightningWeb.RunLive.Show do
     run =
       from(r in Run,
         where: r.id == ^id,
-        preload: [:output_dataclip, :input_dataclip]
+        preload: [:output_dataclip, :input_dataclip, :job, [credential: [:user]]]
       )
       |> Lightning.Repo.one()
 

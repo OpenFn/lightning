@@ -12,6 +12,9 @@ and this project adheres to
 
 - Add `workflow_edges` table in preparation for new workflow editor
   implementation [#794](https://github.com/OpenFn/Lightning/issues/794)
+- Stamped `credential_id` on run directly for easier auditing of the history
+  interface. Admins can now see which credential was used to run a run.
+  [#800](https://github.com/OpenFn/Lightning/issues/800)
 
 ### Changed
 

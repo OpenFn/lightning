@@ -73,9 +73,6 @@ defmodule Lightning.Factories do
   defp put_assocs(changeset, %{__struct__: struct} = record) do
     struct.__schema__(:associations)
     |> Enum.reduce(changeset, fn association_name, changeset ->
-      # association = struct.__schema__(:association, association_name)
-      # IO.inspect({association, Map.get(record, association_name)})
-
       case Map.get(record, association_name) do
         %Ecto.Association.NotLoaded{} ->
           changeset

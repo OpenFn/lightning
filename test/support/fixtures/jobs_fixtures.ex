@@ -6,6 +6,7 @@ defmodule Lightning.JobsFixtures do
 
   import Lightning.ProjectsFixtures
   import Lightning.WorkflowsFixtures
+  import Lightning.CredentialsFixtures
 
   @doc """
   Generate a job.
@@ -48,6 +49,12 @@ defmodule Lightning.JobsFixtures do
         [:project_id, :id, :name]
       )
 
+    project_credential =
+      project_credential_fixture(
+        name: "my first cred",
+        body: %{"shhh" => "secret-stuff"}
+      )
+
     attrs =
       attrs
       |> Enum.into(%{
@@ -55,6 +62,7 @@ defmodule Lightning.JobsFixtures do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
+        project_credential_id: project_credential.id,
         trigger: %{type: "webhook"}
       })
 
