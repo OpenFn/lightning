@@ -168,8 +168,14 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "delete_project/1 deletes the project" do
-      # project workflow setup
-      %{project: project, w1: w1, w1_job: w1_job} = full_project_fixture()
+      %{
+        project: project,
+        w1: w1,
+        w1_job: w1_job,
+        project1: project1,
+        # p1_w1: p1_w1,
+        p1_w1_job: p1_w1_job
+      } = full_project_fixture()
 
       user =
         from(u in Lightning.Accounts.User,
@@ -178,8 +184,6 @@ defmodule Lightning.ProjectsTest do
         )
         |> Repo.one()
 
-      # Add project artifacts from usage
-      # Create a workorder
       {:ok, workorder_multi} =
         Lightning.WorkOrderService.multi_for(
           :webhook,
@@ -188,142 +192,161 @@ defmodule Lightning.ProjectsTest do
         )
         |> Repo.transaction()
 
-      # Create a retry attempt
+      Lightning.WorkOrderService.multi_for(
+        :webhook,
+        p1_w1_job,
+        ~s[{"foo": "bar"}] |> Jason.decode!()
+      )
+      |> Repo.transaction()
+
       Lightning.WorkOrderService.retry_attempt_run(
         workorder_multi.attempt_run,
         user
       )
 
-      #  Assert workoder is 1
       assert from(w in Lightning.WorkOrder,
                where: w.workflow_id == ^w1.id,
                select: count(w.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one workorder"
 
-      #  Assert attempt is 1
       assert from(a in Lightning.Attempt,
                where: a.id == ^workorder_multi.attempt.id,
                select: count(a.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one attempt"
 
-      #  Assert attempt run is 1
       assert from(ar in Lightning.AttemptRun,
                where: ar.id == ^workorder_multi.attempt_run.id,
                select: count(ar.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one attempt run"
 
-      #  Assert invocation reason for trigger is 1
       assert from(ir in Lightning.InvocationReason,
                join: t in assoc(ir, :trigger),
                where: t.workflow_id == ^w1.id,
                select: count(ir.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one invocation reason for a trigger"
 
-      #  Assert invocation reason for job run is 1
       assert from(ir in Lightning.InvocationReason,
                join: r in assoc(ir, :run),
                where: r.job_id == ^w1_job.id,
                select: count(ir.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one invocation reason for a run."
 
-      #  Assert invocation reason for dataclip is 1
       assert from(ir in Lightning.InvocationReason,
                join: d in assoc(ir, :dataclip),
                where: d.project_id == ^project.id,
                select: count(ir.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one invocation reason for dataclip"
 
-      # Assert project has 1 project_users
       assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one project user"
 
-      # Assert project has 1 project_credentials
       assert from(pc in Ecto.assoc(project, :project_credentials),
                select: count(pc.id)
              )
-             |> Repo.one() == 1
+             |> Repo.one() == 1,
+             "There should be only one project credential"
 
-      # Assert project has 2 workflows
       assert from(w in Ecto.assoc(project, :workflows), select: count(w.id))
-             |> Repo.one() == 2
+             |> Repo.one() == 2,
+             "There should be only two workflows"
 
-      # Assert project has 5 jobs
       assert from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
-             |> Repo.one() == 5
+             |> Repo.one() == 5,
+             "There should be only five jobs"
 
       assert {:ok, %Project{}} = Projects.delete_project(project)
-      # Assert project_users are deleted
-      assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
-             |> Repo.one() == 0
 
-      # Assert project_user are deleted
+      assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
+             |> Repo.one() == 0,
+             "Should be no project users left after deletion"
+
       assert from(pc in Ecto.assoc(project, :project_credentials),
                select: count(pc.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no project credential left after deletion"
 
-      # Assert workflows are deleted
       assert from(w in Ecto.assoc(project, :workflows), select: count(w.id))
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no workflows left after deletion"
 
-      # Assert jobs are deleted
       assert from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no jobs left after deletion"
 
-      #  Assert attemps are deleted
       assert from(a in Lightning.Attempt,
                where: a.id == ^workorder_multi.attempt.id,
                select: count(a.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no attempts left after deletion"
 
-      #  Assert attempsrun are deleted
       assert from(ar in Lightning.AttemptRun,
                where: ar.id == ^workorder_multi.attempt_run.id,
                select: count(ar.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no attempts run left after deletion"
 
-      #  Assert workorders are deleted
       assert from(w in Lightning.WorkOrder,
                where: w.workflow_id == ^w1.id,
                select: count(w.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no workorder left after deletion"
 
-      # Assert invocation reason for workflow trigger are deleted
       assert from(ir in Lightning.InvocationReason,
                join: t in assoc(ir, :trigger),
                where: t.workflow_id == ^w1.id,
                select: count(ir.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no invocation reasons left for the trigger after deletion."
 
-      #  Assert invocation reason for job run is deleted
       assert from(ir in Lightning.InvocationReason,
                join: r in assoc(ir, :run),
                where: r.job_id == ^w1_job.id,
                select: count(ir.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no invocation reasons left for the job run after deletion."
 
-      #  Assert invocation reason for dataclip are deleted
       assert from(ir in Lightning.InvocationReason,
                join: d in assoc(ir, :dataclip),
                where: d.project_id == ^project.id,
                select: count(ir.id)
              )
-             |> Repo.one() == 0
+             |> Repo.one() == 0,
+             "Should be no invocation reasons left for the dataclip after deletion."
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(project.id)
       end
+
+      assert project1.id == Projects.get_project!(project1.id).id,
+             "Should be one project1"
+
+      assert from(r in Lightning.Invocation.Run,
+               join: j in assoc(r, :job),
+               join: w in assoc(j, :workflow),
+               where: w.project_id == ^project1.id,
+               select: count(r.id)
+             )
+             |> Repo.one() == 1,
+             "Should be one run activity for project1"
     end
 
     test "change_project/1 returns a project changeset" do

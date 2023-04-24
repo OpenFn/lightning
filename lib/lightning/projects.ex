@@ -7,6 +7,7 @@ defmodule Lightning.Projects do
   alias Lightning.Attempt
   alias Lightning.AttemptRun
   alias Lightning.Jobs.Trigger
+  alias Lightning.Jobs.Job
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
@@ -150,31 +151,52 @@ defmodule Lightning.Projects do
 
   """
   def delete_project(%Project{} = project) do
-    workflows =
-      from(w in Workflow, where: w.project_id == ^project.id)
-      |> Repo.all()
-
     Repo.transaction(fn ->
+      work_orders =
+        from(wo in WorkOrder,
+          join: w in assoc(wo, :workflow),
+          where: w.project_id == ^project.id
+        )
+
+      wo_ids = work_orders |> Repo.all() |> Enum.map(& &1.id)
+      attempts = from(a in Attempt, where: a.work_order_id in ^wo_ids)
+
+      attempts_ids = attempts |> Repo.all() |> Enum.map(& &1.id)
+      # Delete all attempt run
+      Repo.delete_all(
+        from(ar in AttemptRun, where: ar.attempt_id in ^attempts_ids)
+      )
+
+      # Delete attempts
+      Repo.delete_all(attempts)
+
+      # Delete work_orders
+      Repo.delete_all(work_orders)
+
+      jobs =
+        from(j in Job,
+          join: w in assoc(j, :workflow),
+          where: w.project_id == ^project.id
+        )
+
+      # Delete associated invocation reasons for each run
+      jobs_ids = jobs |> Repo.all() |> Enum.map(& &1.id)
+
+      Repo.delete_all(
+        from(ir in InvocationReason,
+          join: r in assoc(ir, :run),
+          where: r.job_id in ^jobs_ids
+        )
+      )
+
+      # Delete all jobs
+      Repo.delete_all(jobs)
+
+      workflows =
+        from(w in Workflow, where: w.project_id == ^project.id)
+        |> Repo.all()
+
       Enum.each(workflows, fn workflow ->
-        work_orders = from(w in WorkOrder, where: w.workflow_id == ^workflow.id)
-
-        Enum.each(work_orders |> Repo.all(), fn work_order ->
-          attempts = from(a in Attempt, where: a.work_order_id == ^work_order.id)
-
-          # Delete all attemptsrun
-          Enum.each(attempts |> Repo.all(), fn attempt ->
-            Repo.delete_all(
-              from(ar in AttemptRun, where: ar.attempt_id == ^attempt.id)
-            )
-          end)
-
-          # Delete all attempts
-          Repo.delete_all(attempts)
-        end)
-
-        # Delete all work_orders
-        Repo.delete_all(work_orders)
-
         # Delete associated invocation reasons for each workflow trigger
         Repo.delete_all(
           from(ir in InvocationReason,
@@ -182,22 +204,6 @@ defmodule Lightning.Projects do
             where: t.workflow_id == ^workflow.id
           )
         )
-
-        jobs =
-          from(t in Lightning.Jobs.Job, where: t.workflow_id == ^workflow.id)
-
-        # Delete associated invocation reasons for each run
-        Enum.each(jobs |> Repo.all(), fn job ->
-          Repo.delete_all(
-            from(ir in InvocationReason,
-              join: r in assoc(ir, :run),
-              where: r.job_id == ^job.id
-            )
-          )
-        end)
-
-        # Delete all jobs
-        Repo.delete_all(jobs)
 
         triggers = from(t in Trigger, where: t.workflow_id == ^workflow.id)
         # Delete all triggers
