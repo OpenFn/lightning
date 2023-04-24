@@ -194,8 +194,71 @@ defmodule Lightning.ProjectsTest do
         user
       )
 
+      #  Assert workoder is 1
+      assert from(w in Lightning.WorkOrder,
+               where: w.workflow_id == ^w1.id,
+               select: count(w.id)
+             )
+             |> Repo.one() == 1
+
+      #  Assert attempt is 1
+      assert from(a in Lightning.Attempt,
+               where: a.id == ^workorder_multi.attempt.id,
+               select: count(a.id)
+             )
+             |> Repo.one() == 1
+
+      #  Assert attempt run is 1
+      assert from(ar in Lightning.AttemptRun,
+               where: ar.id == ^workorder_multi.attempt_run.id,
+               select: count(ar.id)
+             )
+             |> Repo.one() == 1
+
+      #  Assert invocation reason for trigger is 1
+      assert from(ir in Lightning.InvocationReason,
+               join: t in assoc(ir, :trigger),
+               where: t.workflow_id == ^w1.id,
+               select: count(ir.id)
+             )
+             |> Repo.one() == 1
+
+      #  Assert invocation reason for job run is 1
+      assert from(ir in Lightning.InvocationReason,
+               join: r in assoc(ir, :run),
+               where: r.job_id == ^w1_job.id,
+               select: count(ir.id)
+             )
+             |> Repo.one() == 1
+
+      #  Assert invocation reason for dataclip is 1
+      assert from(ir in Lightning.InvocationReason,
+               join: d in assoc(ir, :dataclip),
+               where: d.project_id == ^project.id,
+               select: count(ir.id)
+             )
+             |> Repo.one() == 1
+
+      # Assert project has 1 project_users
+      assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
+             |> Repo.one() == 1
+
+      # Assert project has 1 project_credentials
+      assert from(pc in Ecto.assoc(project, :project_credentials),
+               select: count(pc.id)
+             )
+             |> Repo.one() == 1
+
+      # Assert project has 2 workflows
+      assert from(w in Ecto.assoc(project, :workflows), select: count(w.id))
+             |> Repo.one() == 2
+
+      # Assert project has 5 jobs
+      assert from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
+             |> Repo.one() == 5
+
       assert {:ok, %Project{}} = Projects.delete_project(project)
-      # Assert project_user are deleted
+      # Assert project_users are deleted
       assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
              |> Repo.one() == 0
 
@@ -215,40 +278,48 @@ defmodule Lightning.ProjectsTest do
 
       #  Assert attemps are deleted
       assert from(a in Lightning.Attempt,
-               where: a.id == ^workorder_multi.attempt.id
+               where: a.id == ^workorder_multi.attempt.id,
+               select: count(a.id)
              )
-             |> Repo.one() == nil
+             |> Repo.one() == 0
 
       #  Assert attempsrun are deleted
       assert from(ar in Lightning.AttemptRun,
-               where: ar.id == ^workorder_multi.attempt_run.id
+               where: ar.id == ^workorder_multi.attempt_run.id,
+               select: count(ar.id)
              )
-             |> Repo.one() == nil
+             |> Repo.one() == 0
 
       #  Assert workorders are deleted
-      assert from(w in Lightning.WorkOrder, where: w.workflow_id == ^w1.id)
-             |> Repo.all() == []
+      assert from(w in Lightning.WorkOrder,
+               where: w.workflow_id == ^w1.id,
+               select: count(w.id)
+             )
+             |> Repo.one() == 0
 
       # Assert invocation reason for workflow trigger are deleted
       assert from(ir in Lightning.InvocationReason,
                join: t in assoc(ir, :trigger),
-               where: t.workflow_id == ^w1.id
+               where: t.workflow_id == ^w1.id,
+               select: count(ir.id)
              )
-             |> Repo.all() == []
+             |> Repo.one() == 0
 
       #  Assert invocation reason for job run is deleted
       assert from(ir in Lightning.InvocationReason,
                join: r in assoc(ir, :run),
-               where: r.job_id == ^w1_job.id
+               where: r.job_id == ^w1_job.id,
+               select: count(ir.id)
              )
-             |> Repo.all() == []
+             |> Repo.one() == 0
 
       #  Assert invocation reason for dataclip are deleted
       assert from(ir in Lightning.InvocationReason,
                join: d in assoc(ir, :dataclip),
-               where: d.project_id == ^project.id
+               where: d.project_id == ^project.id,
+               select: count(ir.id)
              )
-             |> Repo.all() == []
+             |> Repo.one() == 0
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(project.id)

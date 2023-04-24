@@ -43,7 +43,8 @@ defmodule Lightning.ProjectsFixtures do
       CredentialsFixtures.project_credential_fixture(
         user_id: user.id,
         name: "new credential",
-        body: %{"foo" => "manchu"}
+        body: %{"foo" => "manchu"},
+        project_id: project.id
       )
 
     Ecto.assoc(project_credential, [:credential, :user]) |> Lightning.Repo.all()
