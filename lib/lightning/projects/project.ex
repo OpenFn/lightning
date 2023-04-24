@@ -19,6 +19,7 @@ defmodule Lightning.Projects.Project do
   schema "projects" do
     field :name, :string
     field :description, :string
+    field :scheduled_deletion, :utc_datetime
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
     has_many :project_credentials, ProjectCredential
@@ -43,5 +44,13 @@ defmodule Lightning.Projects.Project do
     |> validate_length(:description, max: 240)
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
+  end
+
+  @doc """
+  A project changeset for changing the scheduled_deletion property.
+  """
+  def scheduled_deletion_changeset(project, attrs) do
+    project
+    |> cast(attrs, [:scheduled_deletion])
   end
 end

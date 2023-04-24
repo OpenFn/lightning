@@ -394,4 +394,23 @@ defmodule Lightning.Projects do
 
     {:ok, yaml}
   end
+
+  @doc """
+  Given a project, this function sets a scheduled deletion
+  date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
+  set, this date defaults to NOW but the automatic project purge cronjob will never
+  run. (Note that subsequent logins will be blocked for projects pending deletion.)
+  """
+  def schedule_project_deletion(project) do
+    date =
+      case Application.get_env(:lightning, :purge_deleted_after_days) do
+        nil -> DateTime.utc_now()
+        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+      end
+
+    Project.scheduled_deletion_changeset(project, %{
+      "scheduled_deletion" => date
+    })
+    |> Repo.update()
+  end
 end
