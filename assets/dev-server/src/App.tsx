@@ -1,18 +1,32 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 import WorkflowDiagram from '../../js/workflow-diagram/src/WorkflowDiagram'
 import useStore from './store'
 import './main.css'
 
+
+const wf = {
+  jobs: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+  triggers: [{ id: 'z' }],
+  edges: [
+    { id: 'z-a', source_trigger: 'z', target_job: 'a' },
+    { id: 'a-b', source_job: 'a', target_job: 'b' },
+    { id: 'a-c', source_job: 'a', target_job: 'c' },
+  ],
+};
+
 export default () => {
   const [history, setHistory ] = React.useState([])
   const [selectedNodes, setSelectedNodes ] = React.useState('')
-  const workflow = useStore(
-    ({ triggers, jobs, edges }) => ({ triggers, jobs, edges })
-  );
+
+  // TODO this doesn't seem to be properly immutable, do we need immer?
+  // Or createStore?
+  // const workflow = useStore(
+  //   ({ triggers, jobs, edges }) => ({ triggers, jobs, edges })
+  // );
+  const workflow = wf;
 
   const handleSelectionChange = (ids: string[]) => {
-    console.log(ids)
     setSelectedNodes(ids)
   }
 

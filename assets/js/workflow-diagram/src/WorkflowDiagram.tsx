@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges } from 'react-flow-renderer';
 import layout from './layout'
 import nodeTypes from './types';
@@ -84,36 +84,47 @@ const convertWorkflow  = (workflow: Workflow) => {
 // the component has to track internal chart state, like selection,
 // as well as incoming changes from the server (like node state change)
 export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
-  // const [nodes, setNodes] = useState([]);
-  // const [edges, setEdges] = useState([]);
-  // const [selected, setSelected] = useState({ nodes, edge });
+  const [model, setModel] = useState({ nodes: [], edges: [] });
+  const [selected, setSelected] = useState({ nodes: {}, edges: {} });
 
-  // useEffect(() => convertWorkflow(workflow), [workflow], [workflow])
+  // respond to changes pushed into the component
+  // For now this just means the job has changed
+  // but later it might mean syncing back with the server
+  // TODO at the moment the parent app is forcing a re-render here each time
+  useEffect(() => {
+    console.log('UPDATING MODEL')
+    const data = convertWorkflow(workflow);
+    setModel(data)
+  }, [workflow])
 
-  const { nodes, edges } = useMemo(() => convertWorkflow(workflow), [workflow])
+  const onNodesChange = useCallback(
+    (changes) => {
+      const newNodes = applyNodeChanges(changes, model.nodes);
+      console.log(newNodes)
+      setModel({ nodes: newNodes, links: model.links });
+    }, [setModel, model]);
 
+  // const onEdgesChange = useCallback(
+  //   (changes) => setModel((eds) => {
+  //     const newLinks = applyEdgeChanges(changes, eds)
+  //     setModel({ links: newLinks, nodes: model.nodes })
+  //   },
+  //   [setModel]
+  // );
 
-  // const handleNodeChange = useCallback((evts) => {
-  //   const selectionChangeEvents = evts.filter(({ type }) => type === 'select' )
-  //   console.log(evts)
-  //   if (selectionChangeEvents.length > 0) {
-  //     // Publish a nice clean event of the currently selected things
-  //     const selected = selectionChangeEvents.filter(({ selected }) => selected).map(({id}) => id)
-  //     onSelectionChange(selected)
-  //   }
-  // }, [onSelectionChange]);
-  const handleSelectionChange = ({ nodes, edges }) => {
+  const handleSelectionChange = useCallback(({ nodes, edges }) => {
     const everything = nodes.concat(edges);
-    const selection = everything.map(({ id }) => id)
-    onSelectionChange(selection)
-  };
+    const selection = everything.map(({ id }) => id);
+    onSelectionChange(selection);
+  }, [onSelectionChange]);
 
   return <ReactFlowProvider>
       <ReactFlow
-        // proOptions={{ account: 'paid-pro', hideAttribution: true }}
-        nodes={nodes}
-        edges={edges}
+        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        nodes={model.nodes}
+        edges={model.edges}
         onSelectionChange={handleSelectionChange}
+        onNodesChange={onNodesChange}
         // onEdgesChange={onEdgesChange}
         // // onSelectionChange={onSelectedNodeChange}
         // // onConnect={onConnect}
