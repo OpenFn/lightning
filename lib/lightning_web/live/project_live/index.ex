@@ -52,9 +52,81 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(:users, Lightning.Accounts.list_users())
   end
 
+  @impl true
+  def handle_event(
+        "delete_now",
+        %{"id" => project_id},
+        socket
+      ) do
+    project = Projects.get_project(project_id)
+
+    Projects.delete_project(project)
+    |> case do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign(
+           active_menu_item: :projects,
+           projects: Projects.list_projects(),
+           page_title: "Projects"
+         )
+         |> put_flash(:info, "Project deleted successfully")}
+
+      {:error, changeset} ->
+        {:noreply,
+         socket
+         |> assign(changeset: changeset)
+         |> put_flash(:error, "Can't delete project")}
+    end
+  end
+
+  def handle_event(
+        "cancel_delete",
+        %{"id" => project_id},
+        socket
+      ) do
+    project = Projects.get_project(project_id)
+
+    case Projects.cancel_scheduled_deletion(project) do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Canceled project deletion schedule")
+         |> push_patch(to: socket.assigns.return_to)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+    end
+  end
+
+  def handle_event(
+        "schedule_delete",
+        %{"id" => project_id},
+        socket
+      ) do
+    project = Projects.get_project(project_id)
+
+    case Projects.schedule_project_deletion(project) do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Project scheduled for deletion")
+         |> push_patch(to: socket.assigns.return_to)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+    end
+  end
+
   # TODO: this results in n+1 queries, we need to precalculate the permissions
   # and have zipped list of projects and the permissions so when we iterate
   # over them in the templace we don't generate n number of queries
   def can_delete_project(current_user, project),
     do: ProjectUsers |> Permissions.can?(:delete_project, current_user, project)
+
+  def can_request_project_deletion(current_user, project) do
+    is_nil(project.scheduled_deletion) and
+      (can_delete_project(current_user, project) or
+         Lightning.Policies.Projects |> Permissions.can(:delete, current_user))
+  end
 end

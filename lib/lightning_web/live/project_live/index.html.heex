@@ -30,7 +30,7 @@
           <%!-- <.th>Owner</.th> --%>
           <.th>Created At</.th>
           <.th>Description</.th>
-          <%!-- <.th>Scheduled Deletion</.th> --%>
+          <.th>Scheduled Deletion</.th>
           <.th>Actions</.th>
         </.tr>
         <%= for project <- @projects do %>
@@ -39,7 +39,7 @@
             <%!-- <.td><%= project.owner %></.td> --%>
             <.td><%= project.inserted_at %></.td>
             <.td><%= project.description %></.td>
-            <%!-- <.td><%= project.scheduled_deletion %></.td> --%>
+            <.td><%= project.scheduled_deletion %></.td>
             <.td>
               <span>
                 <.link navigate={
@@ -48,14 +48,51 @@
                   Edit
                 </.link>
               </span>
-              <%!-- TODO: Mtuchi look here! --%>
-              <%!-- |
-              <.link navigate={
-                Routes.project_index_path(@socket, :delete, project)
-              }>
-                Delete
-              </.link>
-              --%>
+
+              <%= if can_request_project_deletion(@current_user, project)  do %>
+                |
+                <span>
+                  <%= link(
+                  to: "#",
+                  id: "schedule-delete-#{project.id}",
+                  phx_click: "schedule_delete",
+                  phx_value_id: project.id,
+                  class: "inline-block align-middle"
+                ) do %>
+                    Schedule Delete
+                  <% end %>
+                </span>
+              <% end %>
+              <%= if project.scheduled_deletion do %>
+                <span>
+                  |
+                  <%= link(
+                  to: "#",
+                  id: "cancel-delete-#{project.id}",
+                  phx_click: "cancel_delete",
+                  phx_value_id: project.id,
+                  data: [confirm: "Are you sure?"],
+                  class: "inline-block align-middle"
+                ) do %>
+                    Cancel Deletion
+                  <% end %>
+                </span>
+              <% end %>
+              <%= if can_delete_project(@current_user, project) do %>
+                |
+                <span>
+                  <%= link(
+                  to: "#",
+                  id: "delete-#{project.id}",
+                  phx_click: "delete_now",
+                  phx_value_id: project.id,
+                  data: [confirm: "Are you sure?"],
+                  class: "inline-block align-middle"
+                ) do %>
+                    Delete Now
+                  <% end %>
+                </span>
+              <% end %>
             </.td>
           </.tr>
         <% end %>
