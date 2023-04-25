@@ -1,94 +1,103 @@
 // Hook for Workflow Editor Component
-import { mount } from './component';
-import { WorkflowState, createWorkflowStore } from './store';
-import { shallow } from 'zustand/shallow';
+import type { mount } from './component';
+import {
+  Patch,
+  PendingAction,
+  WorkflowState,
+  createWorkflowStore,
+} from './store';
 
 interface PhoenixHook {
   mounted(): void;
   el: HTMLElement;
   destroyed(): void;
   handleEvent<T = {}>(eventName: string, callback: (payload: T) => void): void;
-  pushEventTo(
+  pushEventTo<P = {}, R = any>(
     selectorOrTarget: string | HTMLElement,
     event: string,
-    payload: {},
-    callback?: (reply: any, ref: any) => void
+    payload: P,
+    callback?: (reply: R, ref: any) => void
   ): void;
 }
 
 interface WorkflowEditorEntrypoint extends PhoenixHook {
   component: ReturnType<typeof mount> | null;
   workflowStore: ReturnType<typeof createWorkflowStore>;
-  cancelStoreSubscription: () => void;
-  sendChanges: (state: {}) => void;
+  componentModule: Promise<{ mount: typeof mount }>;
+  pendingChanges: PendingAction[];
+  pushPendingChange(
+    pendingChange: PendingAction,
+    abortController: AbortController
+  ): Promise<boolean>;
+  abortController: AbortController | null;
 }
 
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
-    // add some defaults or pull from the DOM if needed
-    this.workflowStore = createWorkflowStore({}, state =>
-      this.sendChanges(state)
-    );
+    this.pendingChanges = [];
 
-    // What does the data look like coming from the server?
-    this.handleEvent('data-changed', payload => {
-      console.log('data-changed', payload);
-      this.workflowStore.getState().setWorkflow(payload);
-    });
+    // Setup our abort controller to stop any pending changes.
+    this.abortController = new AbortController();
 
-    // We may want to subscribeWithSelector
-    // https://github.com/pmndrs/zustand#using-subscribe-with-selector
-    this.cancelStoreSubscription = this.workflowStore.subscribe(
-      (state: WorkflowState, prevState: WorkflowState) => {
-        if (
-          state.jobs != prevState.jobs ||
-          state.edges != prevState.edges ||
-          state.triggers != prevState.triggers
-        ) {
-          const payload = {
-            jobs: serialize(state.jobs),
-            edges: serialize(state.edges),
-            triggers: serialize(state.triggers),
-          };
+    // Preload the component
+    this.componentModule = import('./component');
 
-          if (prevState.workflow?.jobs) {
-            console.log(
-              'shallow comp jobs',
-              shallow(payload.jobs, prevState.workflow.jobs)
-            );
+    // Get the initial data from the server
+    this.pushEventTo(this.el, 'get-initial-state', {}, (payload: any) => {
+      console.log(payload);
+
+      this.workflowStore = createWorkflowStore(payload, pendingChange => {
+        this.pendingChanges.push(pendingChange);
+
+        // Ensure that changes are pushed in order
+        // TODO: on the event of a change failing do we collect up all the
+        // pending changes and revert them? 
+        (async () => {
+          while (
+            this.pendingChanges.length > 0 &&
+            !this.abortController!.signal.aborted
+          ) {
+            const pendingChange = this.pendingChanges.shift()!;
+
+            // TODO: if this fails or times out, we need to undo the change
+            // Immer's patch callback also produces a list of inverse patches.
+            await this.pushPendingChange(pendingChange, this.abortController!);
           }
+        })();
 
-          // this.sendChanges(state);
-          console.log('nodes or edges changed');
-        }
+        console.log('pendingChanges', this.pendingChanges);
+      });
 
-        console.log('state at subscribe', state, prevState);
-      }
-    );
-
-    import('./component').then(({ mount }) => {
-      this.pushEventTo(this.el, 'workflow-editor-mounted', {});
-      this.component = mount(this.el, this.workflowStore);
+      this.componentModule.then(({ mount }) => {
+        this.component = mount(this.el, this.workflowStore);
+      });
     });
-  },
-  sendChanges(state: WorkflowState) {
-    const payload = {
-      jobs: serialize(state.jobs),
-      edges: serialize(state.edges),
-      triggers: serialize(state.triggers),
-    };
-
-    this.pushEventTo(this.el, 'update-workflow', payload);
   },
   destroyed() {
-    this.cancelStoreSubscription();
     if (this.component) {
       this.component.unmount();
     }
+
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+  },
+  pushPendingChange(pendingChange, abortController?) {
+    return new Promise((resolve, reject) => {
+      // How do we _undo_ the change if it fails?
+      this.pushEventTo<PendingAction, { patches: Patch[] }>(
+        this.el,
+        'push-change',
+        pendingChange,
+        response => {
+          abortController?.signal.addEventListener('abort', () =>
+            reject(false)
+          );
+
+          this.workflowStore.getState().applyPatches(response.patches);
+          resolve(true);
+        }
+      );
+    });
   },
 } as WorkflowEditorEntrypoint;
-
-// Take the values of the object and remove the errors
-function serialize(obj: Record<string, any>) {
-  return Object.values(obj).map(({ errors, ...rest }) => rest);
-}

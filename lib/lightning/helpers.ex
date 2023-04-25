@@ -49,4 +49,21 @@ defmodule Lightning.Helpers do
     first_letter = String.first(noun) |> String.downcase()
     if Enum.member?(["a", "e", "i", "o", "u"], first_letter), do: "an", else: "a"
   end
+
+  # TODO: write typespec and docs
+  def json_safe(nil), do: nil
+
+  def json_safe(map = %{}) do
+    map
+    |> Enum.map(fn {k, v} -> {Atom.to_string(k), json_safe(v)} end)
+    |> Enum.into(%{})
+  end
+
+  def json_safe([head | rest]) do
+    [json_safe(head) | json_safe(rest)]
+  end
+
+  def json_safe(a) when is_atom(a), do: Atom.to_string(a)
+
+  def json_safe(any), do: any
 end

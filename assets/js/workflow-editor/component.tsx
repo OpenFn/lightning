@@ -17,16 +17,16 @@ function WorkflowEditor() {
   const store = useContext(WorkflowContext);
   if (!store) throw new Error('Missing WorkflowContext.Provider in the tree');
 
-  const { edges, jobs, triggers, addJob, addTrigger, addEdge } =
+  const { change_id, edges, jobs, triggers, addJob, addTrigger, addEdge } =
     useStore(store);
 
   return (
     <div>
       <h1 className="text-lg font-bold">Workflow Diagram</h1>
       <h3 className="font-bold">Triggers</h3>
-      {Object.keys(triggers).map(id => (
+      {triggers.map(({ id, errors }) => (
         <li key={id} className="text-sm font-mono">
-          {id} - {JSON.stringify(triggers[id].errors)}
+          {id} - {JSON.stringify(errors)}
         </li>
       ))}
       <button
@@ -39,9 +39,9 @@ function WorkflowEditor() {
       </button>
 
       <h3 className="font-bold">Jobs</h3>
-      {Object.keys(jobs).map(id => (
+      {jobs.map(({ id, errors }) => (
         <li key={id} className="text-sm font-mono">
-          {id} - {JSON.stringify(jobs[id].errors)}
+          {id} - {JSON.stringify(errors)}
         </li>
       ))}
       <button
@@ -54,9 +54,9 @@ function WorkflowEditor() {
       </button>
 
       <h3 className="font-bold">Edges</h3>
-      {Object.keys(edges).map(id => (
+      {edges.map(({ id, errors }) => (
         <li key={id} className="text-sm font-mono">
-          {id} - {JSON.stringify(edges[id].errors)}
+          {id} - {JSON.stringify(errors)}
         </li>
       ))}
       <button
@@ -67,6 +67,9 @@ function WorkflowEditor() {
       >
         Add Edge
       </button>
+
+      <br />
+      <p>Change ID: {change_id}</p>
     </div>
   );
 }

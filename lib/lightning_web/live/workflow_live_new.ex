@@ -3,8 +3,9 @@ defmodule LightningWeb.WorkflowNewLive do
   use LightningWeb, :live_view
 
   alias Lightning.Workflows.Workflow
+  alias LightningWeb.Components.Form
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   # alias Lightning.Jobs
   # alias Lightning.Policies.{Permissions, ProjectUsers}
@@ -18,10 +19,17 @@ defmodule LightningWeb.WorkflowNewLive do
       <:header>
         <LayoutComponents.header socket={@socket}>
           <:title><%= @page_title %></:title>
+          <Form.submit_button
+            class=""
+            phx-disable-with="Saving..."
+            disabled={!@changeset.valid?}
+          >
+            Save
+          </Form.submit_button>
         </LayoutComponents.header>
       </:header>
       <div class="relative h-full flex">
-        <div phx-hook="WorkflowEditor" id={@project.id}>
+        <div phx-hook="WorkflowEditor" id={@project.id} phx-update="ignore">
           <!-- Before Editor component has mounted -->
           Loading...
         </div>
@@ -45,11 +53,14 @@ defmodule LightningWeb.WorkflowNewLive do
 
   @impl true
   def handle_params(_params, _uri, socket) do
+    workflow = %Workflow{}
     job_1_id = Ecto.UUID.generate()
     job_2_id = Ecto.UUID.generate()
     trigger_1_id = Ecto.UUID.generate()
 
     params = %{
+      "name" => "workflow-1",
+      "project_id" => socket.assigns.project.id,
       "jobs" => [
         %{"id" => job_1_id, "name" => ""},
         %{"id" => job_2_id, "name" => "job-2"}
@@ -73,8 +84,15 @@ defmodule LightningWeb.WorkflowNewLive do
       ]
     }
 
-    changeset = %Workflow{} |> Workflow.changeset(params)
-    {:noreply, assign(socket, changeset: changeset)}
+    changeset = workflow |> Workflow.changeset(params)
+    workflow_params = changeset |> to_serializable()
+
+    {:noreply,
+     assign(socket,
+       workflow: workflow,
+       changeset: changeset,
+       workflow_params: workflow_params
+     )}
   end
 
   @impl true
@@ -84,28 +102,43 @@ defmodule LightningWeb.WorkflowNewLive do
     {:noreply, socket |> push_event("data-changed", workflow_json)}
   end
 
-  def handle_event("update-workflow", params, socket) do
-    IO.inspect(params, label: "params")
+  def handle_event("get-initial-state", _params, socket) do
+    # IO.inspect(params, label: "params")
     # workflow_json = socket.assigns.changeset |> to_serializable()
 
-    changeset = %Workflow{} |> Workflow.changeset(params)
-
-    {:noreply,
-     socket
-     |> assign(changeset: changeset)
-     |> push_event("data-changed", changeset |> to_serializable())}
+    {:reply,
+     socket.assigns.workflow_params
+     |> Map.put(:change_id, Ecto.UUID.generate()), socket}
   end
 
-  def handle_event("add-job", params, socket) do
-    IO.inspect(params, label: "params")
-    # workflow_json = socket.assigns.changeset |> to_serializable()
+  # TODO: move this all into the new "Params" module
+  def handle_event("push-change", %{"patches" => patches}, socket) do
+    # Apply the incoming patches to the current workflow params producing a new
+    # set of params.
+    {:ok, params} =
+      calculate_next_params(patches, socket.assigns.workflow_params)
 
-    changeset = %Workflow{} |> Workflow.changeset(params)
+    # Build a new changeset from the new params
+    changeset = socket.assigns.workflow |> Workflow.changeset(params)
 
-    {:noreply,
-     socket
-     |> assign(changeset: changeset)
-     |> push_event("data-changed", changeset |> to_serializable())}
+    # Prepare a new set of workflow params from the changeset
+    workflow_params = changeset |> to_serializable()
+
+    # Calculate the difference between the new params and changes introduced by
+    # the changeset/validation.
+    patches =
+      Jsonpatch.diff(params, workflow_params)
+      |> Jsonpatch.Mapper.to_map()
+
+    {:reply, %{patches: patches},
+     socket |> assign(workflow_params: workflow_params, changeset: changeset)}
+  end
+
+  defp calculate_next_params(patches, current_params) do
+    Jsonpatch.apply_patch(
+      patches |> Enum.map(&Jsonpatch.Mapper.from_map/1),
+      current_params
+    )
   end
 
   # TODO: move this to a module, maybe `WorkflowJSON`?
@@ -130,6 +163,7 @@ defmodule LightningWeb.WorkflowNewLive do
           :target_job_id
         ])
     }
+    |> Lightning.Helpers.json_safe()
   end
 
   defp to_serializable(changesets, fields) when is_list(changesets) do

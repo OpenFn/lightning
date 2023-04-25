@@ -1,11 +1,15 @@
+import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore } from 'zustand';
-import { produce } from 'immer';
+import type { Patch as ImmerPatch } from 'immer';
+
+enablePatches();
 
 type WorkflowProps = {
-  triggers: Record<string, any>;
-  jobs: Record<string, any>;
-  edges: Record<string, any>;
+  triggers: {}[];
+  jobs: {}[];
+  edges: {}[];
   workflow: any | null;
+  change_id: string | null;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -13,7 +17,20 @@ export interface WorkflowState extends WorkflowProps {
   addJob: (job: any) => void;
   addTrigger: (node: any) => void;
   setWorkflow: (payload: any) => void;
-  onChange: (state: WorkflowState) => void;
+  onChange: (pendingAction: PendingAction) => void;
+  applyPatches: (patches: Patch[]) => void;
+}
+
+// Immer's Patch type has an array of strings for the path, but RFC 6902
+// specifies that the path should be a string. This is a workaround.
+export type Patch = {
+  path: string;
+} & Omit<ImmerPatch, 'path'>;
+
+export interface PendingAction {
+  id: string;
+  fn: (draft: WorkflowState) => void;
+  patches: Patch[];
 }
 
 function buildNode() {
@@ -26,42 +43,66 @@ function buildEdge() {
 
 export const createWorkflowStore = (
   initProps?: Partial<WorkflowProps>,
-  onChange?: (state: WorkflowState) => void
+  onChange?: (pendingAction: PendingAction) => void
 ) => {
   const DEFAULT_PROPS: WorkflowProps = {
-    triggers: {},
-    jobs: {},
-    edges: {},
+    triggers: [],
+    jobs: [],
+    edges: [],
     workflow: null,
+    change_id: null,
   };
+
+  function proposeChanges(
+    state: WorkflowState,
+    fn: (draft: WorkflowState) => void
+  ) {
+    let patches: Patch[] = [];
+
+    const nextState = produce(
+      state,
+      draft => {
+        fn(draft);
+      },
+      (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
+        console.log(p);
+
+        patches = p.map(patch => ({
+          ...patch,
+          path: `/${patch.path.join('/')}`,
+        }));
+      }
+    );
+
+    if (onChange) onChange({ id: crypto.randomUUID(), fn, patches });
+
+    return nextState;
+  }
 
   return createStore<WorkflowState>()(set => ({
     ...DEFAULT_PROPS,
     ...initProps,
     addJob: job => {
-      const newJob = buildNode();
-
       set(state =>
-        produce(state, draft => {
-          draft.jobs[newJob.id] = newJob;
+        proposeChanges(state, draft => {
+          const newJob = buildNode();
+          draft.jobs.push(newJob);
         })
       );
     },
     addTrigger: trigger => {
-      const newTrigger = buildNode();
-
       set(state =>
-        produce(state, draft => {
-          draft.triggers[newTrigger.id] = newTrigger;
+        proposeChanges(state, draft => {
+          const newTrigger = buildNode();
+          draft.triggers.push(newTrigger);
         })
       );
     },
     addEdge: edge => {
-      const newEdge = buildEdge();
-
       set(state =>
-        produce(state, draft => {
-          draft.edges[newEdge.id] = newEdge;
+        proposeChanges(state, draft => {
+          const newEdge = buildEdge();
+          draft.edges.push(newEdge);
         })
       );
     },
@@ -70,21 +111,20 @@ export const createWorkflowStore = (
 
       set(state =>
         produce(state, draft => {
-          for (const job of payload.jobs) {
-            state.jobs[job.id] = job;
-          }
-
-          for (const trigger of payload.triggers) {
-            state.triggers[trigger.id] = trigger;
-          }
-
-          for (const edge of payload.edges) {
-            state.edges[edge.id] = edge;
-          }
-
-          state.workflow = payload;
+          draft.jobs = payload.jobs;
+          draft.triggers = payload.triggers;
+          draft.edges = payload.edges;
+          draft.workflow = payload;
         })
       );
+    },
+    applyPatches: patches => {
+      const immerPatches: ImmerPatch[] = patches.map(patch => ({
+        ...patch,
+        path: patch.path.split('/').filter(Boolean),
+      }));
+
+      set(state => applyPatches(state, immerPatches));
     },
     onChange: onChange ? onChange : () => {},
   }));

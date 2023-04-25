@@ -81,7 +81,8 @@ defmodule Lightning.Workflows.Edge do
           "target_job_id must be different from source_job_id"
         )
 
-      _ -> changeset
+      _ ->
+        changeset
     end
   end
 
