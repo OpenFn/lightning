@@ -85,6 +85,8 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project
     } do
       delete_button = "#delete-#{project.id}"
+      schedule_delete_button = "#schedule-delete-#{project.id}"
+      # cancel_delete_button = "#cancel-delete-#{project.id}"
 
       conn =
         setup_project_user(
@@ -96,6 +98,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
       refute view |> element(delete_button) |> has_element?()
+      assert view |> element(schedule_delete_button) |> has_element?()
 
       conn =
         setup_project_user(
@@ -106,7 +109,7 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
-      assert view |> element(delete_button) |> has_element?()
+      assert view |> element(schedule_delete_button) |> has_element?()
     end
 
     test "Edits a project", %{conn: conn} do
