@@ -80,13 +80,13 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
     end
 
-    test "Only project owners can delete projects", %{
+    test "Only superuser can delete projects", %{
       conn: conn,
       project: project
     } do
       delete_button = "#delete-#{project.id}"
       schedule_delete_button = "#schedule-delete-#{project.id}"
-      # cancel_delete_button = "#cancel-delete-#{project.id}"
+      cancel_delete_button = "#cancel-delete-#{project.id}"
 
       conn =
         setup_project_user(
@@ -97,8 +97,15 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
-      refute view |> element(delete_button) |> has_element?()
-      assert view |> element(schedule_delete_button) |> has_element?()
+
+      refute view |> element(delete_button) |> has_element?(),
+             "Should not show delete button"
+
+      refute view |> element(cancel_delete_button) |> has_element?(),
+             "Should not show cancel deletion button"
+
+      assert view |> element(schedule_delete_button) |> has_element?(),
+             "Should show schedule delete button"
 
       conn =
         setup_project_user(
@@ -109,7 +116,56 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
-      assert view |> element(schedule_delete_button) |> has_element?()
+
+      assert view
+             |> element(schedule_delete_button)
+             |> render_click() =~ "Project scheduled for deletion"
+
+      assert has_element?(view, delete_button), "Should show delete now button"
+
+      assert has_element?(view, cancel_delete_button),
+             "Should show cancel deletion button"
+
+      refute view |> element(schedule_delete_button) |> has_element?(),
+             "Should not show schedule delete button"
+
+      assert view
+             |> element(cancel_delete_button)
+             |> render_click() =~ "Canceled project deletion schedule"
+
+      refute view |> element(delete_button) |> has_element?(),
+             "Should not show delete now button"
+
+      refute view |> element(cancel_delete_button) |> has_element?(),
+             "Should not show cancel deletion button"
+
+      assert view |> element(schedule_delete_button) |> has_element?(),
+             "Should show schedule delete button"
+
+      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+
+      assert view
+             |> element(schedule_delete_button)
+             |> render_click() =~ "Project scheduled for deletion"
+
+      assert has_element?(view, delete_button), "Should show delete now button"
+
+      assert has_element?(view, cancel_delete_button),
+             "Should show cancel deletion button"
+
+      refute view |> element(schedule_delete_button) |> has_element?(),
+             "Should not show schedule delete button"
+
+      #  This test is blocked by (#759)[https://github.com/OpenFn/Lightning/pull/798]
+      # assert view
+      #        |> element(delete_button)
+      #        |> render_click() =~ "Project deleted successfully"
+
+      # refute view |> element(schedule_delete_button) |> has_element?(),
+      #        "Should not show schedule delete button"
+
+      # refute view |> element(cancel_delete_button) |> has_element?(),
+      #        "Should not show cancel deletion button"
     end
 
     test "Edits a project", %{conn: conn} do

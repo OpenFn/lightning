@@ -338,5 +338,16 @@ defmodule Lightning.ProjectsTest do
       assert project.scheduled_deletion != nil
       assert Timex.diff(project.scheduled_deletion, now, :days) == days
     end
+
+    test "cancel_scheduled_deletion/2" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      project = project_fixture(scheduled_deletion: now)
+
+      assert project.scheduled_deletion != nil
+
+      {:ok, project} = Projects.cancel_scheduled_deletion(project)
+      assert project.scheduled_deletion == nil
+    end
   end
 end

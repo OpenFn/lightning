@@ -34,7 +34,7 @@ defmodule Lightning.Projects.Project do
   @doc false
   def changeset(project, attrs) do
     project
-    |> cast(attrs, [:name, :description])
+    |> cast(attrs, [:name, :description, :scheduled_deletion])
     |> cast_assoc(:project_users)
     |> validate()
   end

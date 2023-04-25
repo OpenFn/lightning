@@ -70,7 +70,8 @@ defmodule LightningWeb.ProjectLive.Index do
            projects: Projects.list_projects(),
            page_title: "Projects"
          )
-         |> put_flash(:info, "Project deleted successfully")}
+         |> put_flash(:info, "Project deleted successfully")
+         |> push_patch(to: ~p"/settings/projects")}
 
       {:error, changeset} ->
         {:noreply,
@@ -92,7 +93,7 @@ defmodule LightningWeb.ProjectLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Canceled project deletion schedule")
-         |> push_patch(to: socket.assigns.return_to)}
+         |> push_patch(to: ~p"/settings/projects")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
@@ -111,7 +112,7 @@ defmodule LightningWeb.ProjectLive.Index do
         {:noreply,
          socket
          |> put_flash(:info, "Project scheduled for deletion")
-         |> push_patch(to: socket.assigns.return_to)}
+         |> push_patch(to: ~p"/settings/projects")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
