@@ -348,6 +348,26 @@ defmodule Lightning.ProjectsTest do
 
       {:ok, project} = Projects.cancel_scheduled_deletion(project)
       assert project.scheduled_deletion == nil
+
+      errors =
+        Project.scheduled_deletion_changeset(project, %{
+          "scheduled_deletion" => nil
+        })
+        |> errors_on()
+
+      assert errors[:scheduled_deletion] == nil
+    end
+
+    test "schedule deletion changeset" do
+      project = project_fixture()
+
+      errors =
+        Project.scheduled_deletion_changeset(project, %{
+          "scheduled_deletion" => nil
+        })
+        |> errors_on()
+
+      assert errors[:scheduled_deletion] == nil
     end
   end
 end
