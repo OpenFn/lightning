@@ -3,9 +3,22 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Workflow Test Harness</title>
+    <link rel="stylesheet" href="index.css"> 
   </head>
   <body>
     <div id="root"></div>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "./react.js",
+          "react/jsx-runtime": "./react.js",
+          "react-dom": "./react.js",
+          "react-dom/client": "./react.js"
+        }
+      }
+    </script>
+    <script src="react.js" type="module"></script>
+    <script src="index.js" type="module"></script>
   </body>
 </html>
