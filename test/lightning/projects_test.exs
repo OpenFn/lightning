@@ -173,7 +173,6 @@ defmodule Lightning.ProjectsTest do
         w1: w1,
         w1_job: w1_job,
         project1: project1,
-        # p1_w1: p1_w1,
         p1_w1_job: p1_w1_job
       } = full_project_fixture()
 
@@ -204,132 +203,120 @@ defmodule Lightning.ProjectsTest do
         user
       )
 
-      assert from(w in Lightning.WorkOrder,
-               where: w.workflow_id == ^w1.id,
-               select: count(w.id)
-             )
-             |> Repo.one() == 1,
+      work_order_query =
+        from(w in Lightning.WorkOrder,
+          where: w.workflow_id == ^w1.id,
+          select: count(w.id)
+        )
+
+      attempt_query =
+        from(a in Lightning.Attempt,
+          where: a.id == ^workorder_multi.attempt.id,
+          select: count(a.id)
+        )
+
+      attempt_run_query =
+        from(ar in Lightning.AttemptRun,
+          where: ar.id == ^workorder_multi.attempt_run.id,
+          select: count(ar.id)
+        )
+
+      ir_trigger_query =
+        from(ir in Lightning.InvocationReason,
+          join: t in assoc(ir, :trigger),
+          where: t.workflow_id == ^w1.id,
+          select: count(ir.id)
+        )
+
+      ir_run_query =
+        from(ir in Lightning.InvocationReason,
+          join: r in assoc(ir, :run),
+          where: r.job_id == ^w1_job.id,
+          select: count(ir.id)
+        )
+
+      ir_dataclip_query =
+        from(ir in Lightning.InvocationReason,
+          join: d in assoc(ir, :dataclip),
+          where: d.project_id == ^project.id,
+          select: count(ir.id)
+        )
+
+      pu_query =
+        from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
+
+      pc_query =
+        from(pc in Ecto.assoc(project, :project_credentials),
+          select: count(pc.id)
+        )
+
+      workflows_query =
+        from(w in Ecto.assoc(project, :workflows), select: count(w.id))
+
+      jobs_query = from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
+
+      assert work_order_query |> Repo.one() == 1,
              "There should be only one work-order"
 
-      assert from(a in Lightning.Attempt,
-               where: a.id == ^workorder_multi.attempt.id,
-               select: count(a.id)
-             )
+      assert attempt_query
              |> Repo.one() == 1,
              "There should be only one attempt"
 
-      assert from(ar in Lightning.AttemptRun,
-               where: ar.id == ^workorder_multi.attempt_run.id,
-               select: count(ar.id)
-             )
-             |> Repo.one() == 1,
+      assert attempt_run_query |> Repo.one() == 1,
              "There should be only one attempt run"
 
-      assert from(ir in Lightning.InvocationReason,
-               join: t in assoc(ir, :trigger),
-               where: t.workflow_id == ^w1.id,
-               select: count(ir.id)
-             )
+      assert ir_trigger_query
              |> Repo.one() == 1,
              "There should be only one invocation reason for a trigger"
 
-      assert from(ir in Lightning.InvocationReason,
-               join: r in assoc(ir, :run),
-               where: r.job_id == ^w1_job.id,
-               select: count(ir.id)
-             )
-             |> Repo.one() == 1,
+      assert ir_run_query |> Repo.one() == 1,
              "There should be only one invocation reason for a run."
 
-      assert from(ir in Lightning.InvocationReason,
-               join: d in assoc(ir, :dataclip),
-               where: d.project_id == ^project.id,
-               select: count(ir.id)
-             )
-             |> Repo.one() == 1,
+      assert ir_dataclip_query |> Repo.one() == 1,
              "There should be only one invocation reason for dataclip"
 
-      assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
-             |> Repo.one() == 1,
+      assert pu_query |> Repo.one() == 1,
              "There should be only one project user"
 
-      assert from(pc in Ecto.assoc(project, :project_credentials),
-               select: count(pc.id)
-             )
-             |> Repo.one() == 1,
+      assert pc_query |> Repo.one() == 1,
              "There should be only one project credential"
 
-      assert from(w in Ecto.assoc(project, :workflows), select: count(w.id))
-             |> Repo.one() == 2,
+      assert workflows_query |> Repo.one() == 2,
              "There should be only two workflows"
 
-      assert from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
-             |> Repo.one() == 5,
+      assert jobs_query |> Repo.one() == 5,
              "There should be only five jobs"
 
       assert {:ok, %Project{}} = Projects.delete_project(project)
 
-      assert from(pu in Ecto.assoc(project, :project_users), select: count(pu.id))
-             |> Repo.one() == 0,
+      assert pu_query |> Repo.one() == 0,
              "Should be no project users left after deletion"
 
-      assert from(pc in Ecto.assoc(project, :project_credentials),
-               select: count(pc.id)
-             )
-             |> Repo.one() == 0,
+      assert pc_query |> Repo.one() == 0,
              "Should be no project credential left after deletion"
 
-      assert from(w in Ecto.assoc(project, :workflows), select: count(w.id))
-             |> Repo.one() == 0,
+      assert workflows_query |> Repo.one() == 0,
              "Should be no workflows left after deletion"
 
-      assert from(jo in Ecto.assoc(project, :jobs), select: count(jo.id))
-             |> Repo.one() == 0,
+      assert jobs_query |> Repo.one() == 0,
              "Should be no jobs left after deletion"
 
-      assert from(a in Lightning.Attempt,
-               where: a.id == ^workorder_multi.attempt.id,
-               select: count(a.id)
-             )
-             |> Repo.one() == 0,
+      assert attempt_query |> Repo.one() == 0,
              "Should be no attempts left after deletion"
 
-      assert from(ar in Lightning.AttemptRun,
-               where: ar.id == ^workorder_multi.attempt_run.id,
-               select: count(ar.id)
-             )
-             |> Repo.one() == 0,
+      assert attempt_run_query |> Repo.one() == 0,
              "Should be no attempts run left after deletion"
 
-      assert from(w in Lightning.WorkOrder,
-               where: w.workflow_id == ^w1.id,
-               select: count(w.id)
-             )
-             |> Repo.one() == 0,
+      assert work_order_query |> Repo.one() == 0,
              "Should be no workorder left after deletion"
 
-      assert from(ir in Lightning.InvocationReason,
-               join: t in assoc(ir, :trigger),
-               where: t.workflow_id == ^w1.id,
-               select: count(ir.id)
-             )
-             |> Repo.one() == 0,
+      assert ir_trigger_query |> Repo.one() == 0,
              "Should be no invocation reasons left for the trigger after deletion."
 
-      assert from(ir in Lightning.InvocationReason,
-               join: r in assoc(ir, :run),
-               where: r.job_id == ^w1_job.id,
-               select: count(ir.id)
-             )
-             |> Repo.one() == 0,
+      assert ir_run_query |> Repo.one() == 0,
              "Should be no invocation reasons left for the job run after deletion."
 
-      assert from(ir in Lightning.InvocationReason,
-               join: d in assoc(ir, :dataclip),
-               where: d.project_id == ^project.id,
-               select: count(ir.id)
-             )
-             |> Repo.one() == 0,
+      assert ir_dataclip_query |> Repo.one() == 0,
              "Should be no invocation reasons left for the dataclip after deletion."
 
       assert_raise Ecto.NoResultsError, fn ->
