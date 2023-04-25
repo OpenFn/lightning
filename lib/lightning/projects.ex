@@ -160,17 +160,14 @@ defmodule Lightning.Projects do
 
       wo_ids = work_orders |> Repo.all() |> Enum.map(& &1.id)
       attempts = from(a in Attempt, where: a.work_order_id in ^wo_ids)
-
       attempts_ids = attempts |> Repo.all() |> Enum.map(& &1.id)
-      # Delete all attempt run
+
       Repo.delete_all(
         from(ar in AttemptRun, where: ar.attempt_id in ^attempts_ids)
       )
 
-      # Delete attempts
       Repo.delete_all(attempts)
 
-      # Delete work_orders
       Repo.delete_all(work_orders)
 
       jobs =
@@ -179,7 +176,6 @@ defmodule Lightning.Projects do
           where: w.project_id == ^project.id
         )
 
-      # Delete associated invocation reasons for each run
       jobs_ids = jobs |> Repo.all() |> Enum.map(& &1.id)
 
       Repo.delete_all(
@@ -189,7 +185,6 @@ defmodule Lightning.Projects do
         )
       )
 
-      # Delete all jobs
       Repo.delete_all(jobs)
 
       workflows =
@@ -197,7 +192,6 @@ defmodule Lightning.Projects do
         |> Repo.all()
 
       Enum.each(workflows, fn workflow ->
-        # Delete associated invocation reasons for each workflow trigger
         Repo.delete_all(
           from(ir in InvocationReason,
             join: t in assoc(ir, :trigger),
@@ -206,21 +200,18 @@ defmodule Lightning.Projects do
         )
 
         triggers = from(t in Trigger, where: t.workflow_id == ^workflow.id)
-        # Delete all triggers
+
         Repo.delete_all(triggers)
       end)
 
-      # Delete all project users
       Repo.delete_all(from(p in ProjectUser, where: p.project_id == ^project.id))
-      # Delete all project credentials
+
       Repo.delete_all(
         from(pc in ProjectCredential, where: pc.project_id == ^project.id)
       )
 
-      # Delete all project workflow
       Repo.delete_all(from(w in Workflow, where: w.project_id == ^project.id))
 
-      # Delete associated invocation reasons for dataclip
       Repo.delete_all(
         from(ir in InvocationReason,
           join: d in assoc(ir, :dataclip),
@@ -228,7 +219,6 @@ defmodule Lightning.Projects do
         )
       )
 
-      # Delete project
       {:ok, project} = Repo.delete(project)
       project
     end)

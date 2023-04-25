@@ -209,7 +209,7 @@ defmodule Lightning.ProjectsTest do
                select: count(w.id)
              )
              |> Repo.one() == 1,
-             "There should be only one workorder"
+             "There should be only one work-order"
 
       assert from(a in Lightning.Attempt,
                where: a.id == ^workorder_multi.attempt.id,
