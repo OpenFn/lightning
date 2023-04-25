@@ -413,4 +413,11 @@ defmodule Lightning.Projects do
     })
     |> Repo.update()
   end
+
+  def cancel_scheduled_deletion(project, attrs \\ %{}) do
+    Project.scheduled_deletion_changeset(project, %{
+      "scheduled_deletion" => nil
+    })
+    |> Repo.update()
+  end
 end
