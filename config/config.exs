@@ -58,7 +58,7 @@ config :lightning, :oauth_clients,
 
 # Configure esbuild (the version is required)
 config :esbuild,
-  version: "0.15.12",
+  version: "0.17.18",
   default: [
     args:
       ~w(js/app.js
@@ -77,7 +77,7 @@ config :esbuild,
 
 # https://fly.io/phoenix-files/tailwind-standalone/
 config :tailwind,
-  version: "3.2.4",
+  version: "3.3.1",
   default: [
     args: ~w(
       --config=tailwind.config.js
