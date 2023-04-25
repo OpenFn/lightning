@@ -1,9 +1,3 @@
-# TODO @Mtuchi
-# This was copied from lib/lightning/projects/policy.ex
-# Open an issue to refactor
-#  -- lib/lightning_web/hooks.ex
-#  -- test/lightning/projects/policy_test.exs
-
 defmodule Lightning.Policies.Projects do
   @moduledoc """
   The Bodyguard Policy module.
