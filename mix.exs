@@ -113,7 +113,14 @@ defmodule Lightning.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "lightning.install_runtime", "ecto.setup"],
+      setup: [
+        "deps.get",
+        "tailwind.install --if-missing",
+        "esbuild.install --if-missing",
+        "lightning.install_runtime",
+        "lightning.install_schemas",
+        "ecto.setup"
+      ],
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
