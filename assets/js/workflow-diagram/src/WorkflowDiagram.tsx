@@ -40,10 +40,14 @@ type Workflow = {
 };
 
 
-const convertWorkflow  = (workflow: Workflow) => {
+// TODO pass in the currently selected items so that we can maintain selection
+const convertWorkflow  = (workflow: Workflow, selection: Record<string, true>) => {
+  if (workflow.jobs.length == 0) {
+    return { nodes: [], edges: [] }
+  }
+
   const nodes = [] as any[];
   const edges = [] as any[];
-
 
   const process = (items: any[], collection: any[], type: 'job' | 'trigger' | 'edge') => {
     items.forEach((item) => {
@@ -85,6 +89,8 @@ const convertWorkflow  = (workflow: Workflow) => {
 // as well as incoming changes from the server (like node state change)
 export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   const [model, setModel] = useState({ nodes: [], edges: [] });
+
+  // TODO can selection just be a flat object? Easier to maintain state this way
   const [selected, setSelected] = useState({ nodes: {}, edges: {} });
 
   // respond to changes pushed into the component
@@ -100,7 +106,6 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   const onNodesChange = useCallback(
     (changes) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
-      console.log(newNodes)
       setModel({ nodes: newNodes, links: model.links });
     }, [setModel, model]);
 

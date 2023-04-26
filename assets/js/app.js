@@ -26,8 +26,8 @@ import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
 import JobEditor from './job-editor';
-import WorkflowDiagram from './workflow-diagram';
 import WorkflowEditor from './workflow-editor';
+import WorkflowDiagram from './workflow-diagram-old';
 import TabSelector from './tab-selector';
 import JobEditorResizer from './job-editor-resizer/mount';
 

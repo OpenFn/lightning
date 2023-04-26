@@ -1,16 +1,21 @@
 import create from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 
-const useStore = create(set => {
-  console.log('CREATE STORE');
-  return {
-    jobs: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-    triggers: [{ id: 'z' }],
-    edges: [
-      { id: 'z-a', source_trigger: 'z', target_job: 'a' },
-      { id: 'a-b', source_job: 'a', target_job: 'b' },
-      { id: 'a-c', source_job: 'a', target_job: 'c' },
-    ],
-  };
-});
+const useStore = create(
+  immer(set => {
+    console.log('CREATE STORE');
+    return {
+      // Basic model
+      workflow: {
+        jobs: [],
+        triggers: [],
+        edges: [],
+      },
+
+      // Set a whole new workflow
+      setWorkflow: workflow => set({ workflow }),
+    };
+  })
+);
 
 export default useStore;
