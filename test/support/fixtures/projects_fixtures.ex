@@ -27,18 +27,6 @@ defmodule Lightning.ProjectsFixtures do
 
     project = project_fixture(project_users: [%{user_id: user.id}])
 
-    project1 =
-      project_fixture(
-        project_users: [
-          %{
-            user_id: user.id,
-            role: :viewer,
-            digest: :monthly,
-            failure_alert: true
-          }
-        ]
-      )
-
     w1 =
       WorkflowsFixtures.workflow_fixture(
         project_id: project.id,
@@ -51,12 +39,6 @@ defmodule Lightning.ProjectsFixtures do
         name: "workflow 2"
       )
 
-    p1_w1 =
-      WorkflowsFixtures.workflow_fixture(
-        project_id: project1.id,
-        name: "workflow 1"
-      )
-
     project_credential =
       CredentialsFixtures.project_credential_fixture(
         user_id: user.id,
@@ -65,25 +47,7 @@ defmodule Lightning.ProjectsFixtures do
         project_id: project.id
       )
 
-    project1_credential =
-      CredentialsFixtures.project_credential_fixture(
-        user_id: user.id,
-        name: "new credential",
-        body: %{"foo" => "manchu"},
-        project_id: project1.id
-      )
-
     Ecto.assoc(project_credential, [:credential, :user]) |> Lightning.Repo.all()
-
-    p1_w1_job =
-      JobsFixtures.job_fixture(
-        name: "webhook job",
-        project_id: project1.id,
-        workflow_id: p1_w1.id,
-        project_credential_id: project1_credential.id,
-        trigger: %{type: :webhook},
-        body: "console.log('webhook job')\nfn(state => state)"
-      )
 
     w1_job =
       JobsFixtures.job_fixture(
@@ -135,10 +99,7 @@ defmodule Lightning.ProjectsFixtures do
       w1: w1,
       w2: w2,
       w1_job: w1_job,
-      w2_job: w2_job,
-      project1: project1,
-      p1_w1: p1_w1,
-      p1_w1_job: p1_w1_job
+      w2_job: w2_job
     }
   end
 end

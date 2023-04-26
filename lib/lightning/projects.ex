@@ -16,6 +16,7 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
   alias Lightning.InvocationReason
+  alias Lightning.Invocation.Run
   alias Lightning.WorkOrder
 
   @doc """
@@ -139,7 +140,8 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Deletes a project.
+  Deletes a project and its related data, including workflows, work orders,
+  runs, jobs, attempts, triggers, project users, project credentials, and dataclips
 
   ## Examples
 
@@ -216,6 +218,14 @@ defmodule Lightning.Projects do
         from(ir in InvocationReason,
           join: d in assoc(ir, :dataclip),
           where: d.project_id == ^project.id
+        )
+      )
+
+      Repo.delete_all(
+        from(r in Run,
+          join: j in assoc(r, :job),
+          join: w in assoc(j, :workflow),
+          where: w.project_id == ^project.id
         )
       )
 
