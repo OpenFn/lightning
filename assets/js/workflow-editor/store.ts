@@ -8,15 +8,12 @@ type WorkflowProps = {
   triggers: {}[];
   jobs: {}[];
   edges: {}[];
-  workflow: any | null;
-  change_id: string | null;
 };
 
 export interface WorkflowState extends WorkflowProps {
   addEdge: (edge: any) => void;
   addJob: (job: any) => void;
   addTrigger: (node: any) => void;
-  setWorkflow: (payload: any) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
 }
@@ -27,18 +24,34 @@ export type Patch = {
   path: string;
 } & Omit<ImmerPatch, 'path'>;
 
+// TODO: we aren't using the `id` property anywhere currently, but it could be
+// required when reconciling out of date changes.
 export interface PendingAction {
   id: string;
   fn: (draft: WorkflowState) => void;
   patches: Patch[];
 }
 
+// Build a new node, with the bare minimum properties.
 function buildNode() {
   return { id: crypto.randomUUID() };
 }
 
+// Build a new trigger, with the bare minimum properties.
+function buildTrigger() {
+  return { id: crypto.randomUUID() };
+}
+
+// Build a new edge, with the bare minimum properties.
 function buildEdge() {
   return { id: crypto.randomUUID() };
+}
+
+function toRFC6902Patch(patch: ImmerPatch): Patch {
+  return {
+    ...patch,
+    path: `/${patch.path.join('/')}`,
+  };
 }
 
 export const createWorkflowStore = (
@@ -49,10 +62,10 @@ export const createWorkflowStore = (
     triggers: [],
     jobs: [],
     edges: [],
-    workflow: null,
-    change_id: null,
   };
 
+  // Calculate the next state using Immer, and then call the onChange callback
+  // with the patches resulting from the change.
   function proposeChanges(
     state: WorkflowState,
     fn: (draft: WorkflowState) => void
@@ -65,12 +78,7 @@ export const createWorkflowStore = (
         fn(draft);
       },
       (p: ImmerPatch[], _inverse: ImmerPatch[]) => {
-        console.log(p);
-
-        patches = p.map(patch => ({
-          ...patch,
-          path: `/${patch.path.join('/')}`,
-        }));
+        patches = p.map(toRFC6902Patch);
       }
     );
 
@@ -93,7 +101,7 @@ export const createWorkflowStore = (
     addTrigger: trigger => {
       set(state =>
         proposeChanges(state, draft => {
-          const newTrigger = buildNode();
+          const newTrigger = buildTrigger();
           draft.triggers.push(newTrigger);
         })
       );
@@ -103,18 +111,6 @@ export const createWorkflowStore = (
         proposeChanges(state, draft => {
           const newEdge = buildEdge();
           draft.edges.push(newEdge);
-        })
-      );
-    },
-    setWorkflow: payload => {
-      console.log('payload', payload);
-
-      set(state =>
-        produce(state, draft => {
-          draft.jobs = payload.jobs;
-          draft.triggers = payload.triggers;
-          draft.edges = payload.edges;
-          draft.workflow = payload;
         })
       );
     },

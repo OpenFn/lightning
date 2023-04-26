@@ -147,21 +147,21 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
           <div class="col-span-3">
             <div class="grid grid-flow-row auto-rows-max gap-4">
               <div>
-                <.text_field form={f} id={:name}>
+                <.text_field form={f} field={:name}>
                   <span class="text-xs text-secondary-500">
                     The name of the provider, used in the redirect URI.
                   </span>
                 </.text_field>
               </div>
               <div>
-                <.text_field form={f} id={:discovery_url} label="Discovery URL">
+                <.text_field form={f} field={:discovery_url} label="Discovery URL">
                   <span class="text-xs text-secondary-500">
                     The URL to the <code>.well-known</code> endpoint.
                   </span>
                 </.text_field>
               </div>
               <div>
-                <.text_field form={f} id={:client_id} label="Client ID" />
+                <.text_field form={f} field={:client_id} label="Client ID" />
               </div>
               <div>
                 <.password_field
@@ -173,7 +173,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
                 />
               </div>
               <div>
-                <.text_field form={f} id={:redirect_host} label="Redirect Host" />
+                <.text_field form={f} field={:redirect_host} label="Redirect Host" />
               </div>
             </div>
             <div class="hidden sm:block mt-4" aria-hidden="true">

@@ -1,11 +1,6 @@
 // Hook for Workflow Editor Component
 import type { mount } from './component';
-import {
-  Patch,
-  PendingAction,
-  WorkflowState,
-  createWorkflowStore,
-} from './store';
+import { Patch, PendingAction, createWorkflowStore } from './store';
 
 interface PhoenixHook {
   mounted(): void;
@@ -44,14 +39,12 @@ export default {
 
     // Get the initial data from the server
     this.pushEventTo(this.el, 'get-initial-state', {}, (payload: any) => {
-      console.log(payload);
-
       this.workflowStore = createWorkflowStore(payload, pendingChange => {
         this.pendingChanges.push(pendingChange);
 
         // Ensure that changes are pushed in order
         // TODO: on the event of a change failing do we collect up all the
-        // pending changes and revert them? 
+        // pending changes and revert them?
         (async () => {
           while (
             this.pendingChanges.length > 0 &&

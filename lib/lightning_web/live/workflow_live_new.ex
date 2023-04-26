@@ -4,13 +4,35 @@ defmodule LightningWeb.WorkflowNewLive do
 
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
+  alias LightningWeb.WorkflowNewLive.WorkflowParams
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
-  # alias Lightning.Jobs
-  # alias Lightning.Policies.{Permissions, ProjectUsers}
-  # alias Lightning.Workflows
-  # import LightningWeb.WorkflowLive.Components
+  attr :changeset, :map, required: true
+
+  def workflow_name_field(assigns) do
+    ~H"""
+    <.form :let={f} for={@changeset}>
+      <div class="relative">
+        <%= text_input(
+          f,
+          :name,
+          class: "peer block w-full
+            text-2xl font-bold text-secondary-900
+            border-0 py-1.5 focus:ring-0",
+          placeholder: "Untitled"
+        ) %>
+        <div
+          class="absolute inset-x-0 bottom-0
+                 peer-hover:border-t peer-hover:border-gray-300
+                 peer-focus:border-t-2 peer-focus:border-indigo-600"
+          aria-hidden="true"
+        >
+        </div>
+      </div>
+    </.form>
+    """
+  end
 
   @impl true
   def render(assigns) do
@@ -18,7 +40,9 @@ defmodule LightningWeb.WorkflowNewLive do
     <LayoutComponents.page_content>
       <:header>
         <LayoutComponents.header socket={@socket}>
-          <:title><%= @page_title %></:title>
+          <:title>
+            <.workflow_name_field changeset={@changeset} />
+          </:title>
           <Form.submit_button
             class=""
             phx-disable-with="Saving..."
@@ -46,7 +70,7 @@ defmodule LightningWeb.WorkflowNewLive do
      socket
      |> assign(
        project: project,
-       page_title: "Page Title",
+       page_title: "",
        active_menu_item: :projects
      )}
   end
@@ -59,7 +83,7 @@ defmodule LightningWeb.WorkflowNewLive do
     trigger_1_id = Ecto.UUID.generate()
 
     params = %{
-      "name" => "workflow-1",
+      "name" => nil,
       "project_id" => socket.assigns.project.id,
       "jobs" => [
         %{"id" => job_1_id, "name" => ""},
@@ -85,10 +109,11 @@ defmodule LightningWeb.WorkflowNewLive do
     }
 
     changeset = workflow |> Workflow.changeset(params)
-    workflow_params = changeset |> to_serializable()
+    workflow_params = changeset |> WorkflowParams.to_map()
 
     {:noreply,
      assign(socket,
+       page_title: "New Workflow",
        workflow: workflow,
        changeset: changeset,
        workflow_params: workflow_params
@@ -96,86 +121,27 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   @impl true
-  def handle_event("workflow-editor-mounted", _params, socket) do
-    workflow_json = socket.assigns.changeset |> to_serializable()
-
-    {:noreply, socket |> push_event("data-changed", workflow_json)}
-  end
-
   def handle_event("get-initial-state", _params, socket) do
-    # IO.inspect(params, label: "params")
-    # workflow_json = socket.assigns.changeset |> to_serializable()
-
-    {:reply,
-     socket.assigns.workflow_params
-     |> Map.put(:change_id, Ecto.UUID.generate()), socket}
+    {:reply, socket.assigns.workflow_params, socket}
   end
 
-  # TODO: move this all into the new "Params" module
   def handle_event("push-change", %{"patches" => patches}, socket) do
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
-      calculate_next_params(patches, socket.assigns.workflow_params)
+      WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
     # Build a new changeset from the new params
     changeset = socket.assigns.workflow |> Workflow.changeset(params)
 
     # Prepare a new set of workflow params from the changeset
-    workflow_params = changeset |> to_serializable()
+    workflow_params = changeset |> WorkflowParams.to_map()
 
     # Calculate the difference between the new params and changes introduced by
     # the changeset/validation.
-    patches =
-      Jsonpatch.diff(params, workflow_params)
-      |> Jsonpatch.Mapper.to_map()
+    patches = WorkflowParams.to_patches(params, workflow_params)
 
     {:reply, %{patches: patches},
      socket |> assign(workflow_params: workflow_params, changeset: changeset)}
-  end
-
-  defp calculate_next_params(patches, current_params) do
-    Jsonpatch.apply_patch(
-      patches |> Enum.map(&Jsonpatch.Mapper.from_map/1),
-      current_params
-    )
-  end
-
-  # TODO: move this to a module, maybe `WorkflowJSON`?
-  defp to_serializable(changeset) do
-    %{
-      jobs:
-        changeset
-        |> Ecto.Changeset.get_change(:jobs)
-        |> to_serializable([:id, :name]),
-      triggers:
-        changeset
-        |> Ecto.Changeset.get_change(:triggers)
-        |> to_serializable([:id, :type]),
-      edges:
-        changeset
-        |> Ecto.Changeset.get_change(:edges)
-        |> to_serializable([
-          :id,
-          :source_trigger_id,
-          :source_job_id,
-          :condition,
-          :target_job_id
-        ])
-    }
-    |> Lightning.Helpers.json_safe()
-  end
-
-  defp to_serializable(changesets, fields) when is_list(changesets) do
-    changesets
-    |> Enum.map(fn changeset ->
-      changeset
-      |> Ecto.Changeset.apply_changes()
-      |> Map.take(fields)
-      |> Map.put(
-        :errors,
-        Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-      )
-    end)
   end
 end

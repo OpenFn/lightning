@@ -79,7 +79,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         <% end %>
       </div>
       <%= if Map.get(@cron_data, :frequency) == "custom" do %>
-        <Form.text_field id={:cron_expression} form={@form} />
+        <Form.text_field field={:cron_expression} form={@form} />
       <% end %>
     </div>
     """

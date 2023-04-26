@@ -17,7 +17,7 @@ function WorkflowEditor() {
   const store = useContext(WorkflowContext);
   if (!store) throw new Error('Missing WorkflowContext.Provider in the tree');
 
-  const { change_id, edges, jobs, triggers, addJob, addTrigger, addEdge } =
+  const { edges, jobs, triggers, addJob, addTrigger, addEdge } =
     useStore(store);
 
   return (
@@ -67,9 +67,6 @@ function WorkflowEditor() {
       >
         Add Edge
       </button>
-
-      <br />
-      <p>Change ID: {change_id}</p>
     </div>
   );
 }

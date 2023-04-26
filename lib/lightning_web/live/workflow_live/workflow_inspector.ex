@@ -65,7 +65,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowInspector do
       >
         <div class="md:grid md:grid-cols-2 md:gap-4">
           <div class="md:col-span-2">
-            <Form.text_field form={f} id={:name} />
+            <Form.text_field form={f} field={:name} />
           </div>
         </div>
         <Form.divider />
