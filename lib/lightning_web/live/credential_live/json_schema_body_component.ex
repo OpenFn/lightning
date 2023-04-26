@@ -29,7 +29,7 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
     ~H"""
     <%= render_slot(
       @inner_block,
-      {Phoenix.LiveView.HTMLEngine.component(
+      {Phoenix.LiveView.TagEngine.component(
          &inner/1,
          [form: @form, schema_changeset: @schema_changeset, schema: @schema],
          {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}

@@ -53,7 +53,7 @@ defmodule Lightning.Helpers do
   # TODO: write typespec and docs
   def json_safe(nil), do: nil
 
-  def json_safe(map = %{}) do
+  def json_safe(map) when is_map(map) do
     map
     |> Enum.map(fn {k, v} -> {Atom.to_string(k), json_safe(v)} end)
     |> Enum.into(%{})
