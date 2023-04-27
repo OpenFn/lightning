@@ -74,16 +74,25 @@ defmodule Lightning.Accounts do
   """
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    users =
-      Repo.all(
-        from(u in User,
-          where: u.scheduled_deletion <= ago(0, "second")
-        )
+    users_with_activities =
+      from(invocation_reason in Lightning.InvocationReason,
+        join: user in Lightning.Accounts.User,
+        on: invocation_reason.user_id == user.id,
+        select: user.id,
+        distinct: true
       )
 
-    :ok = Enum.each(users, fn u -> purge_user(u.id) end)
+    users_to_delete =
+      from(u in User,
+        where:
+          u.scheduled_deletion <= ago(0, "second") and
+            u.id not in subquery(users_with_activities)
+      )
+      |> Repo.all()
 
-    {:ok, %{users_deleted: users}}
+    :ok = Enum.each(users_to_delete, fn u -> purge_user(u.id) end)
+
+    {:ok, %{users_deleted: users_to_delete}}
   end
 
   @doc """
