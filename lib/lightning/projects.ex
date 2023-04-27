@@ -16,7 +16,7 @@ defmodule Lightning.Projects do
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
   alias Lightning.InvocationReason
-  alias Lightning.Invocation.Run
+  alias Lightning.Invocation.{Run, Dataclip}
   alias Lightning.WorkOrder
 
   @doc """
@@ -152,86 +152,124 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
+
   def delete_project(%Project{} = project) do
     Repo.transaction(fn ->
-      work_orders =
-        from(wo in WorkOrder,
-          join: w in assoc(wo, :workflow),
-          where: w.project_id == ^project.id
-        )
+      project_attempts_query(project) |> Repo.delete_all()
 
-      wo_ids = work_orders |> Repo.all() |> Enum.map(& &1.id)
-      attempts = from(a in Attempt, where: a.work_order_id in ^wo_ids)
-      attempts_ids = attempts |> Repo.all() |> Enum.map(& &1.id)
+      project_attempt_run_query(project) |> Repo.delete_all()
 
-      Repo.delete_all(
-        from(ar in AttemptRun, where: ar.attempt_id in ^attempts_ids)
-      )
+      project_workorders_query(project) |> Repo.delete_all()
 
-      Repo.delete_all(attempts)
+      project_runs_invocation_reason(project) |> Repo.delete_all()
 
-      Repo.delete_all(work_orders)
+      project_runs_query(project) |> Repo.delete_all()
 
-      jobs =
-        from(j in Job,
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^project.id
-        )
+      project_jobs_query(project) |> Repo.delete_all()
 
-      jobs_ids = jobs |> Repo.all() |> Enum.map(& &1.id)
+      project_trigger_invocation_reason(project) |> Repo.delete_all()
 
-      Repo.delete_all(
-        from(ir in InvocationReason,
-          join: r in assoc(ir, :run),
-          where: r.job_id in ^jobs_ids
-        )
-      )
+      project_triggers_query(project) |> Repo.delete_all()
 
-      Repo.delete_all(jobs)
+      project_workflows_query(project) |> Repo.delete_all()
 
-      workflows =
-        from(w in Workflow, where: w.project_id == ^project.id)
-        |> Repo.all()
+      project_users_query(project) |> Repo.delete_all()
 
-      Enum.each(workflows, fn workflow ->
-        Repo.delete_all(
-          from(ir in InvocationReason,
-            join: t in assoc(ir, :trigger),
-            where: t.workflow_id == ^workflow.id
-          )
-        )
+      project_credentials_query(project) |> Repo.delete_all()
 
-        triggers = from(t in Trigger, where: t.workflow_id == ^workflow.id)
+      project_dataclips_invocation_reason_query(project) |> Repo.delete_all()
 
-        Repo.delete_all(triggers)
-      end)
-
-      Repo.delete_all(from(p in ProjectUser, where: p.project_id == ^project.id))
-
-      Repo.delete_all(
-        from(pc in ProjectCredential, where: pc.project_id == ^project.id)
-      )
-
-      Repo.delete_all(from(w in Workflow, where: w.project_id == ^project.id))
-
-      Repo.delete_all(
-        from(ir in InvocationReason,
-          join: d in assoc(ir, :dataclip),
-          where: d.project_id == ^project.id
-        )
-      )
-
-      Repo.delete_all(
-        from(r in Run,
-          join: j in assoc(r, :job),
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^project.id
-        )
-      )
+      project_dataclips_query(project) |> Repo.delete_all()
 
       {:ok, project} = Repo.delete(project)
       project
     end)
+  end
+
+  def project_attempts_query(project) do
+    from(att in Attempt,
+      join: wo in assoc(att, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_attempt_run_query(project) do
+    from(ar in AttemptRun,
+      join: att in assoc(ar, :attempt),
+      join: wo in assoc(att, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_workorders_query(project) do
+    from(wo in WorkOrder,
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_jobs_query(project) do
+    from(j in Job,
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_runs_query(project) do
+    from(r in Run,
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_runs_invocation_reason(project) do
+    from(ir in InvocationReason,
+      join: r in assoc(ir, :run),
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_workflows_query(project) do
+    from(w in Workflow, where: w.project_id == ^project.id)
+  end
+
+  def project_users_query(project) do
+    from(p in ProjectUser, where: p.project_id == ^project.id)
+  end
+
+  def project_credentials_query(project) do
+    from(pc in ProjectCredential, where: pc.project_id == ^project.id)
+  end
+
+  def project_dataclips_query(project) do
+    from(d in Dataclip, where: d.project_id == ^project.id)
+  end
+
+  def project_dataclips_invocation_reason_query(project) do
+    from(ir in InvocationReason,
+      join: d in assoc(ir, :dataclip),
+      where: d.project_id == ^project.id
+    )
+  end
+
+  def project_triggers_query(project) do
+    from(tr in Trigger,
+      join: w in assoc(tr, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_trigger_invocation_reason(project) do
+    from(ir in InvocationReason,
+      join: tr in assoc(ir, :trigger),
+      join: w in assoc(tr, :workflow),
+      where: w.project_id == ^project.id
+    )
   end
 
   @doc """
