@@ -8,6 +8,7 @@ defmodule Lightning.Accounts do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+  alias Lightning.Projects.ProjectCredential
   alias Lightning.Repo
 
   require Logger
@@ -44,11 +45,7 @@ defmodule Lightning.Accounts do
       # coveralls-ignore-stop
     end)
 
-    # Remove credentials
-    Credentials.list_credentials_for_user(id)
-    |> Enum.each(&Credentials.delete_credential/1)
-
-    # Revoke access to projects
+    # Delete all project_users
     Projects.get_projects_for_user(%User{id: id})
     |> Repo.preload(:project_users)
     |> Enum.map(fn p ->
@@ -57,6 +54,43 @@ defmodule Lightning.Accounts do
     |> Enum.each(fn {project, param} ->
       Projects.update_project(project, param)
     end)
+
+    # Prep credentials for deletion
+    credentials_for_user = Credentials.list_credentials_for_user(id)
+
+    user_credentials_ids =
+      Enum.map(credentials_for_user, fn credential -> credential.id end)
+
+    project_credentials_for_user =
+      from(project_credential in Lightning.Projects.ProjectCredential,
+        where: project_credential.credential_id in ^user_credentials_ids
+      )
+      |> Repo.all()
+
+    user_project_credentials_ids =
+      Enum.map(project_credentials_for_user, fn project_credential ->
+        project_credential.id
+      end)
+
+    # Set null all jobs using credentials
+    :ok =
+      from(job in Lightning.Jobs.Job,
+        where: job.project_credential_id in ^user_project_credentials_ids
+      )
+      |> Repo.all()
+      |> Enum.each(fn job ->
+        Lightning.Jobs.update_job(job, %{credential_id: nil})
+      end)
+
+    # Delete all project_credentials
+    :ok =
+      Enum.each(project_credentials_for_user, fn project_credential ->
+        ProjectCredential.changeset(project_credential, %{"delete" => "true"})
+        |> Repo.delete!()
+      end)
+
+    # Delete all credentials
+    Enum.each(credentials_for_user, &Credentials.delete_credential/1)
 
     Repo.get(User, id) |> delete_user()
 
