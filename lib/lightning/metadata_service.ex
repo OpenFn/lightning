@@ -100,10 +100,24 @@ defmodule Lightning.MetadataService do
       |> CLI.Result.get_messages()
       |> List.first()
 
-    if path do
-      {:ok, path}
-    else
-      {:error, Error.new("no_metadata_result")}
+    cond do
+      path ->
+        {:ok, path}
+
+      should_have_metadata(result) ->
+        {:error, Error.new("no_metadata_result")}
+
+      true ->
+        {:error, Error.new("no_metadata_function")}
     end
+  end
+
+  defp should_have_metadata(result) do
+    result
+    |> Map.get(:logs, [])
+    |> Enum.any?(fn log ->
+      List.first(Map.get(log, "message", ""))
+      |> String.contains?("Metadata function found")
+    end)
   end
 end

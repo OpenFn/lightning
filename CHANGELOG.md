@@ -15,6 +15,8 @@ and this project adheres to
 - Stamped `credential_id` on run directly for easier auditing of the history
   interface. Admins can now see which credential was used to run a run.
   [#800](https://github.com/OpenFn/Lightning/issues/800)
+- Better errors when using magic functions: "no magic yet" and "check
+  credential" [#812](https://github.com/OpenFn/Lightning/issues/812)
 
 ### Changed
 

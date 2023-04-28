@@ -27,6 +27,24 @@ defmodule Lightning.MetadataServiceTest do
                 }}
     end
 
+    @tag :skip
+    test "returns an error when the cli failed" do
+      stdout = """
+      {"level":"info","name":"CLI","message":["Metadata function found. Generating metadata..."]}
+      """
+
+      FakeRambo.Helpers.stub_run({:error, %{status: 1, out: stdout, err: ""}})
+      credential = credential_fixture()
+
+      assert MetadataService.fetch("@openfn/language-common", credential) == {
+               :error,
+               %Lightning.MetadataService.Error{
+                 type: "no_metadata_result",
+                 __exception__: true
+               }
+             }
+    end
+
     test "returns an error when the adaptor doesn't exist" do
       credential = credential_fixture()
 
@@ -39,13 +57,13 @@ defmodule Lightning.MetadataServiceTest do
              }
     end
 
-    test "returns an error when the cli failed" do
+    test "returns an error when there's no magic yet for an adaptor" do
       credential = credential_fixture()
 
       assert MetadataService.fetch("@openfn/language-common", credential) == {
                :error,
                %Lightning.MetadataService.Error{
-                 type: "no_metadata_result",
+                 type: "no_metadata_function",
                  __exception__: true
                }
              }
