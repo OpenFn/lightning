@@ -52,6 +52,7 @@ const loadingIndicator = (
 const defaultOptions: MonacoProps['options'] = {
   dragAndDrop: false,
   lineNumbersMinChars: 3,
+  tabSize: 2,
   minimap: {
     enabled: false,
   },
