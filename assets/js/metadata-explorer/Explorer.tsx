@@ -20,7 +20,6 @@ export default ({
   adaptor,
   credentialName,
 }: MetadataExplorerProps) => {
-  console.log('meta', metadata);
   if (!metadata) {
     return <Empty adaptor={adaptor} />;
   }
@@ -29,6 +28,8 @@ export default ({
   }
   if (metadata.error) {
     const { error } = metadata;
+    if (error === 'no_metadata_function') return <Empty adaptor={adaptor} />;
+
     let message = `An error occurred while loading metadata: ${error}`;
 
     if (error === 'no_credential')
@@ -36,7 +37,7 @@ export default ({
         "Metadata can only be loaded once you've added a valid credential.";
 
     if (error === 'no_metadata_result')
-      message = `The ${adaptor} adaptor isn't returning any metadata.`;
+      message = `The ${adaptor} adaptor isn't returning any metadata. This could be because your credential is invalid or not authorized to access the metadata APIs for your system.`;
 
     return <div className="block m-2">{message}</div>;
   }
