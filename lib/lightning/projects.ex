@@ -161,13 +161,13 @@ defmodule Lightning.Projects do
 
       project_workorders_query(project) |> Repo.delete_all()
 
-      project_runs_invocation_reason(project) |> Repo.delete_all()
+      project_users_invocation_reasons(project) |> Repo.delete_all()
 
       project_runs_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
 
-      project_trigger_invocation_reason(project) |> Repo.delete_all()
+      project_workflows_invocation_reason(project) |> Repo.delete_all()
 
       project_triggers_query(project) |> Repo.delete_all()
 
@@ -177,13 +177,29 @@ defmodule Lightning.Projects do
 
       project_credentials_query(project) |> Repo.delete_all()
 
-      project_dataclips_invocation_reason_query(project) |> Repo.delete_all()
-
       project_dataclips_query(project) |> Repo.delete_all()
 
       {:ok, project} = Repo.delete(project)
       project
     end)
+  end
+
+  def project_workflows_invocation_reason(project) do
+    from(ir in InvocationReason,
+      join: tr in assoc(ir, :trigger),
+      join: w in assoc(tr, :workflow),
+      join: d in assoc(ir, :dataclip),
+      where: w.project_id == ^project.id or d.project_id == ^project.id
+    )
+  end
+
+  def project_users_invocation_reasons(project) do
+    from(ir in InvocationReason,
+      join: u in assoc(ir, :user),
+      join: pu in assoc(u, :project_users),
+      join: p in assoc(pu, :project),
+      where: p.id == ^project.id
+    )
   end
 
   def project_attempts_query(project) do
@@ -225,19 +241,12 @@ defmodule Lightning.Projects do
     )
   end
 
-  def project_runs_invocation_reason(project) do
-    from(ir in InvocationReason,
-      join: r in assoc(ir, :run),
-      join: j in assoc(r, :job),
-      join: w in assoc(j, :workflow),
-      where: w.project_id == ^project.id
-    )
-  end
-
   def project_workflows_query(project) do
     from(w in Workflow, where: w.project_id == ^project.id)
   end
 
+  @spec project_users_query(atom | %{:id => any, optional(any) => any}) ::
+          Ecto.Query.t()
   def project_users_query(project) do
     from(p in ProjectUser, where: p.project_id == ^project.id)
   end
@@ -250,23 +259,8 @@ defmodule Lightning.Projects do
     from(d in Dataclip, where: d.project_id == ^project.id)
   end
 
-  def project_dataclips_invocation_reason_query(project) do
-    from(ir in InvocationReason,
-      join: d in assoc(ir, :dataclip),
-      where: d.project_id == ^project.id
-    )
-  end
-
   def project_triggers_query(project) do
     from(tr in Trigger,
-      join: w in assoc(tr, :workflow),
-      where: w.project_id == ^project.id
-    )
-  end
-
-  def project_trigger_invocation_reason(project) do
-    from(ir in InvocationReason,
-      join: tr in assoc(ir, :trigger),
       join: w in assoc(tr, :workflow),
       where: w.project_id == ^project.id
     )

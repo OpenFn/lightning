@@ -206,25 +206,25 @@ defmodule Lightning.ProjectsTest do
         user
       )
 
-      runs_query =
-        from(r in Lightning.Invocation.Run,
-          join: j in assoc(r, :job),
-          join: w in assoc(j, :workflow),
-          where: w.project_id == ^p1.id,
-          select: count(r.id)
-        )
+      runs_query = Lightning.Projects.project_runs_query(p1)
+      # from(r in Lightning.Invocation.Run,
+      #   join: j in assoc(r, :job),
+      #   join: w in assoc(j, :workflow),
+      #   where: w.project_id == ^p1.id,
+      #   select: count(r.id)
+      # )
 
-      work_order_query =
-        from(w in Lightning.WorkOrder,
-          where: w.workflow_id == ^w1.id,
-          select: count(w.id)
-        )
+      work_order_query = Lightning.Projects.project_workorders_query(p1)
+      # from(w in Lightning.WorkOrder,
+      #   where: w.workflow_id == ^w1.id,
+      #   select: count(w.id)
+      # )
 
-      attempt_query =
-        from(a in Lightning.Attempt,
-          where: a.id == ^p1_workoder.attempt.id,
-          select: count(a.id)
-        )
+      attempt_query = Lightning.Projects.project_attempts_query(p1)
+      # from(a in Lightning.Attempt,
+      #   where: a.id == ^p1_workoder.attempt.id,
+      #   select: count(a.id)
+      # )
 
       attempt_run_query =
         from(ar in Lightning.AttemptRun,
@@ -265,11 +265,11 @@ defmodule Lightning.ProjectsTest do
 
       jobs_query = from(jo in Ecto.assoc(p1, :jobs), select: count(jo.id))
 
-      assert runs_query |> Repo.one() == 3
+      assert runs_query |> Repo.aggregate(:count, :id) == 3
 
-      assert work_order_query |> Repo.one() == 1
+      assert work_order_query |> Repo.aggregate(:count, :id) == 1
 
-      assert attempt_query |> Repo.one() == 1
+      assert attempt_query |> Repo.aggregate(:count, :id) == 1
 
       assert attempt_run_query |> Repo.one() == 1
 
@@ -290,7 +290,10 @@ defmodule Lightning.ProjectsTest do
              "There should be only five jobs"
 
       assert {:ok, %Project{}} = Projects.delete_project(p1)
-      assert runs_query |> Repo.one() == 0
+
+      assert runs_query |> Repo.aggregate(:count, :id) == 0
+
+      assert work_order_query |> Repo.aggregate(:count, :id) == 0
 
       assert pu_query |> Repo.one() == 0
 
@@ -300,11 +303,9 @@ defmodule Lightning.ProjectsTest do
 
       assert jobs_query |> Repo.one() == 0
 
-      assert attempt_query |> Repo.one() == 0
+      assert attempt_query |> Repo.aggregate(:count, :id) == 0
 
       assert attempt_run_query |> Repo.one() == 0
-
-      assert work_order_query |> Repo.one() == 0
 
       assert ir_trigger_query |> Repo.one() == 0
 
