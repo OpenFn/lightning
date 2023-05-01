@@ -79,7 +79,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       data-entity="work_order"
       class="my-4 grid grid-cols-6 gap-0 rounded-lg bg-white"
     >
-      <div class="my-auto whitespace-nowrap p-4 font-medium text-gray-900 dark:text-white">
+      <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white #{unless @show_details, do: "truncate"}"}>
         <%= @workflow_name %>
       </div>
       <div class="my-auto p-4"><%= @work_order.reason.type %></div>
