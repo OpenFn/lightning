@@ -1,6 +1,6 @@
 <LayoutComponents.page_content>
   <:header>
-    <LayoutComponents.header socket={@socket}>
+    <LayoutComponents.header socket={@socket} current_user={@current_user}>
       <:title><%= @page_title %></:title>
     </LayoutComponents.header>
   </:header>
@@ -44,7 +44,7 @@
             <div>
               <h6 class="font-medium text-black">Project details</h6>
               <small class="block my-1 text-xs text-gray-600">
-                This is how the project will appear to other collaborators
+                Projects are isolated workspaces that contain workflows, accessible to certain users.
               </small>
             </div>
             <.form
@@ -107,7 +107,7 @@
           <div>
             <h6 class="font-medium text-black">Project credentials</h6>
             <small class="block my-1 text-xs text-gray-600">
-              The list of credentials that this project has access to
+              View and edit credentials that are currently accesible for use in this project.
             </small>
           </div>
           <div class="hidden sm:block" aria-hidden="true">
@@ -119,6 +119,7 @@
               <.th>Type</.th>
               <.th>Owner</.th>
               <.th>Production</.th>
+              <.th>Actions</.th>
             </.tr>
 
             <%= for credential <- @credentials do %>
@@ -134,6 +135,17 @@
                     </div>
                   <% end %>
                 </.td>
+                <.td>
+                  <%= if credential.user_id == @current_user.id do %>
+                    <span>
+                      <.link navigate={
+                        Routes.credential_edit_path(@socket, :edit, credential)
+                      }>
+                        Edit
+                      </.link>
+                    </span>
+                  <% end %>
+                </.td>
               </.tr>
             <% end %>
           </.table>
@@ -142,7 +154,7 @@
           <div>
             <h6 class="font-medium text-black">Project collaboration</h6>
             <small class="block my-1 text-xs text-gray-600">
-              The list of collaborators
+              View collaborators and manage alert settings for this project.
             </small>
           </div>
           <div class="hidden sm:block" aria-hidden="true">

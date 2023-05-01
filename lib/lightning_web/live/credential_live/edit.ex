@@ -15,7 +15,7 @@ defmodule LightningWeb.CredentialLive.Edit do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header socket={@socket}>
+        <LayoutComponents.header socket={@socket} current_user={@current_user}>
           <:title><%= @credential.name || @page_title %></:title>
         </LayoutComponents.header>
       </:header>
@@ -66,7 +66,7 @@ defmodule LightningWeb.CredentialLive.Edit do
       )
 
     if can_access_own_credentials do
-      {:ok, socket}
+      {:ok, socket |> assign(:active_menu_item, :credentials)}
     else
       {:ok,
        put_flash(socket, :error, "You can't access that page")

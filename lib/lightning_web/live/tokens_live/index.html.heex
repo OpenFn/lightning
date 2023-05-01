@@ -1,6 +1,6 @@
 <LayoutComponents.page_content>
   <:header>
-    <LayoutComponents.header socket={@socket}>
+    <LayoutComponents.header socket={@socket} current_user={@current_user}>
       <:title><%= @page_title %></:title>
 
       <Common.button phx-click="generate_new_token">
@@ -58,7 +58,7 @@
         </.tr>
       <% end %>
       <.tr>
-        <.th>Tokens</.th>
+        <.th>Token</.th>
         <.th>
           <span class="px-4">Created at</span>
         </.th>
@@ -107,8 +107,8 @@
       <%= for token <- @tokens do %>
         <.tr id={"token-#{token.id}"}>
           <.td>
-            <div class="flex rounded overflow-auto p-2 bg-blue-100 w-auto justify-between">
-              <code class="my-auto whitespace-nowrap py-2 px-4 align-baseline text-base font-medium leading-none">
+            <div class="flex rounded overflow-auto p-2 w-auto justify-between">
+              <code class="my-auto whitespace-nowrap align-baseline leading-none">
                 <span>
                   <%= mask_token(token) %>
                 </span>

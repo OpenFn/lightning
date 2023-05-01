@@ -18,7 +18,7 @@ defmodule LightningWeb.Components.Jobs do
       field={:project_credential_id}
       title="Credential"
       for="credentialField"
-      tooltip="If the system you’re working with requires authentication, choose a credential with login details (“secrets”) that will allow this job to connect. If you’re not connecting to an external system you don’t need a credential."
+      tooltip="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
     />
     <%= error_tag(@form, :project_credential_id, class: "block w-full rounded-md") %>
     <.select_field

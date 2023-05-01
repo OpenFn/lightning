@@ -305,7 +305,7 @@ defmodule LightningWeb.JobLiveTest do
       assert view
              |> element("#project_credential_id-tooltip")
              |> tooltip_text() ==
-               "If the system you’re working with requires authentication, choose a credential with login details (“secrets”) that will allow this job to connect. If you’re not connecting to an external system you don’t need a credential."
+               "If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
     end
   end
 end
