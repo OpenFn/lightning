@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.5.2]
+
+### Added
+
 - Add `workflow_edges` table in preparation for new workflow editor
   implementation [#794](https://github.com/OpenFn/Lightning/issues/794)
 - Stamped `credential_id` on run directly for easier auditing of the history
