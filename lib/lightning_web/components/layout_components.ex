@@ -102,14 +102,6 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   def header(assigns) do
-    initials =
-      if assigns[:socket] do
-        String.at(assigns.current_user.first_name, 0) <>
-          String.at(assigns.current_user.last_name, 0)
-      else
-        nil
-      end
-
     ~H"""
     <div class="flex-none bg-white shadow-sm z-20">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
@@ -118,12 +110,20 @@ defmodule LightningWeb.LayoutComponents do
         </h1>
         <div class="grow"></div>
         <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
-        <%= if assigns[:socket] do %>
+        <%= if assigns[:current_user] do %>
           <div class="w-5" />
           <.dropdown js_lib="live_view_js">
             <:trigger_element>
               <div class="inline-flex items-center justify-center w-full align-middle focus:outline-none">
-                <.avatar size="sm" name={initials} />
+                <.avatar
+                  size="sm"
+                  name={
+                    String.at(@current_user.first_name, 0) <>
+                      if is_nil(@current_user.last_name),
+                        do: "",
+                        else: String.at(@current_user.last_name, 0)
+                  }
+                />
                 <Heroicons.chevron_down
                   solid
                   class="w-4 h-4 ml-1 -mr-1 text-secondary-400 dark:text-secondary-100"
@@ -132,7 +132,7 @@ defmodule LightningWeb.LayoutComponents do
             </:trigger_element>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/profile"}>
               <Heroicons.user_circle class="w-5 h-5 text-secondary-500" />
-              <%= @current_user.email %>
+              User Profile
             </.dropdown_menu_item>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/credentials"}>
               <Heroicons.key class="w-5 h-5 text-secondary-500" /> Credentials

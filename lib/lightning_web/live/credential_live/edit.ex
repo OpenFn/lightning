@@ -66,7 +66,7 @@ defmodule LightningWeb.CredentialLive.Edit do
       )
 
     if can_access_own_credentials do
-      {:ok, socket}
+      {:ok, socket |> assign(:active_menu_item, :credentials)}
     else
       {:ok,
        put_flash(socket, :error, "You can't access that page")

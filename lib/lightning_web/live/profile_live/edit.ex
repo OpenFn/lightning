@@ -17,7 +17,7 @@ defmodule LightningWeb.ProfileLive.Edit do
       )
 
     if can_access_own_profile do
-      {:ok, socket}
+      {:ok, socket |> assign(:active_menu_item, :profile)}
     else
       {:ok,
        put_flash(socket, :error, "You can't access that page")
@@ -38,14 +38,12 @@ defmodule LightningWeb.ProfileLive.Edit do
   defp apply_action(socket, :edit, params) do
     socket
     |> assign(:page_title, "User Profile")
-    |> assign(:active_menu_item, :profile)
     |> assign(:user, params)
   end
 
   defp apply_action(socket, :delete, user) do
     socket
     |> assign(:page_title, "User Profile")
-    |> assign(:active_menu_item, :profile)
     |> assign(:user, user)
   end
 end
