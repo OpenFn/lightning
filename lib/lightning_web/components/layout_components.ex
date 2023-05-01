@@ -62,6 +62,9 @@ defmodule LightningWeb.LayoutComponents do
       <span class="inline-block align-middle">Dataclips</span>
     </Settings.menu_item> -->
     <% else %>
+      <Settings.menu_item to={~p"/"}>
+        <Heroicons.squares_2x2 class="h-5 w-5 inline-block mr-2" /> Projects
+      </Settings.menu_item>
       <Settings.menu_item to={~p"/profile"}>
         <Heroicons.cog class="h-5 w-5 inline-block mr-2" /> User Profile
       </Settings.menu_item>
