@@ -14,7 +14,7 @@ defmodule LightningWeb.WorkflowLive do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header socket={@socket}>
+        <LayoutComponents.header socket={@socket} current_user={@current_user}>
           <:title>
             <%= @page_title %>
             <%= case @live_action do %>

@@ -65,13 +65,19 @@ defmodule LightningWeb.LayoutComponents do
       <Settings.menu_item to={~p"/"}>
         <Heroicons.squares_2x2 class="h-5 w-5 inline-block mr-2" /> Projects
       </Settings.menu_item>
-      <Settings.menu_item to={~p"/profile"}>
-        <Heroicons.cog class="h-5 w-5 inline-block mr-2" /> User Profile
+      <Settings.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
+        <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
       </Settings.menu_item>
-      <Settings.menu_item to={~p"/credentials"}>
+      <Settings.menu_item
+        to={~p"/credentials"}
+        active={@active_menu_item == :credentials}
+      >
         <Heroicons.key class="h-5 w-5 inline-block mr-2" /> Credentials
       </Settings.menu_item>
-      <Settings.menu_item to={~p"/profile/tokens"}>
+      <Settings.menu_item
+        to={~p"/profile/tokens"}
+        active={@active_menu_item == :tokens}
+      >
         <Heroicons.command_line class="h-5 w-5 inline-block mr-2" /> API Tokens
       </Settings.menu_item>
     <% end %>
@@ -96,6 +102,14 @@ defmodule LightningWeb.LayoutComponents do
   end
 
   def header(assigns) do
+    initials =
+      if assigns[:socket] do
+        String.at(assigns.current_user.first_name, 0) <>
+          String.at(assigns.current_user.last_name, 0)
+      else
+        nil
+      end
+
     ~H"""
     <div class="flex-none bg-white shadow-sm z-20">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
@@ -109,7 +123,7 @@ defmodule LightningWeb.LayoutComponents do
           <.dropdown js_lib="live_view_js">
             <:trigger_element>
               <div class="inline-flex items-center justify-center w-full align-middle focus:outline-none">
-                <.avatar size="sm" />
+                <.avatar size="sm" name={initials} />
                 <Heroicons.chevron_down
                   solid
                   class="w-4 h-4 ml-1 -mr-1 text-secondary-400 dark:text-secondary-100"
@@ -117,7 +131,8 @@ defmodule LightningWeb.LayoutComponents do
               </div>
             </:trigger_element>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/profile"}>
-              <Heroicons.cog class="w-5 h-5 text-secondary-500" /> User Profile
+              <Heroicons.user_circle class="w-5 h-5 text-secondary-500" />
+              <%= @current_user.email %>
             </.dropdown_menu_item>
             <.dropdown_menu_item link_type="live_redirect" to={~p"/credentials"}>
               <Heroicons.key class="w-5 h-5 text-secondary-500" /> Credentials

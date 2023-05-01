@@ -15,7 +15,7 @@ defmodule LightningWeb.CredentialLive.Edit do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header socket={@socket}>
+        <LayoutComponents.header socket={@socket} current_user={@current_user}>
           <:title><%= @credential.name || @page_title %></:title>
         </LayoutComponents.header>
       </:header>
