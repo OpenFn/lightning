@@ -148,7 +148,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
     test "allows a user to schedule their own account for deletion", %{
       conn: conn,
-      user: user
+      user: {user, user2}
     } do
       {:ok, profile_live, html} =
         live(conn, Routes.profile_edit_path(conn, :edit))
@@ -182,6 +182,22 @@ defmodule LightningWeb.ProfileLiveTest do
       )
       |> render_submit()
       |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
+
+      {:ok, new_live, _html} =
+        profile_live
+        |> element("a", "Delete my account")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.profile_edit_path(conn, :delete, user2)
+        )
+
+      assert new_live
+             |> form("#scheduled_deletion_form",
+               user: user.email
+             )
+             |> render_change() =~
+               "This email doesn&#39;t match your current email"
 
       assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
     end
