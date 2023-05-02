@@ -92,15 +92,12 @@ defmodule LightningWeb.CredentialLive.Edit do
   defp apply_action(socket, :edit, %{"id" => id}) do
     credential = Credentials.get_credential!(id)
 
-    can_edit_credentials =
-      Lightning.Policies.Users
-      |> Permissions.can(
-        :edit_credentials,
-        socket.assigns.current_user,
-        credential
-      )
-
-    if can_edit_credentials do
+    if Lightning.Policies.Users
+       |> Permissions.can(
+         :edit_credential,
+         socket.assigns.current_user,
+         credential
+       ) do
       socket
       |> assign(:page_title, "Edit Credential")
       |> assign(

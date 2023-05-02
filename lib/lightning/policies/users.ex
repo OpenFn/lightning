@@ -10,7 +10,7 @@ defmodule Lightning.Policies.Users do
   @type actions ::
           :access_admin_space
           | :access_own_credentials
-          | :edit_credentials
+          | :edit_credential
           | :access_own_profile
           | :change_email
           | :change_password
@@ -56,7 +56,7 @@ defmodule Lightning.Policies.Users do
   end
 
   def authorize(
-        :edit_credentials,
+        :edit_credential,
         %User{id: user_id} = _authenticated_user,
         %Credential{} = credential
       ) do
