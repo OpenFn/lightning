@@ -21,7 +21,10 @@ defmodule Lightning.PermissionsTest do
       superuser: superuser
     } do
       credential_1 = CredentialsFixtures.credential_fixture(user_id: user.id)
-      credential_2 = CredentialsFixtures.credential_fixture(user_id: superuser.id)
+
+      credential_2 =
+        CredentialsFixtures.credential_fixture(user_id: superuser.id)
+
       credential_3 = CredentialsFixtures.credential_fixture()
 
       assert Users |> Permissions.can(:edit_credential, user, credential_1)
