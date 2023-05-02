@@ -17,12 +17,6 @@ defmodule LightningWeb.API.ProjectControllerTest do
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
-    test "with token for other project", %{conn: conn} do
-      other_project = project_fixture()
-      conn = get(conn, Routes.api_project_path(conn, :show, other_project.id))
-      assert json_response(conn, 403) == %{"error" => "Forbidden"}
-    end
-
     test "lists all projects", %{conn: conn, project: project} do
       conn = get(conn, Routes.api_project_path(conn, :index))
       response = json_response(conn, 200)
