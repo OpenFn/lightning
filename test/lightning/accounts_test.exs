@@ -378,7 +378,7 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "Users with ongoing activities in live projects are never deleted" do
+    test "users that are still linked to an invocation reason are not deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
