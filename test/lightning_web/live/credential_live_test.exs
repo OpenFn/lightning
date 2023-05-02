@@ -8,6 +8,7 @@ defmodule LightningWeb.CredentialLiveTest do
     CredentialsFixtures
   }
 
+  alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
 
   @create_attrs %{
@@ -304,6 +305,20 @@ defmodule LightningWeb.CredentialLiveTest do
       assert flash == %{"info" => "Credential updated successfully"}
 
       assert html =~ "some updated name"
+    end
+
+    test "users can only edit their own credentials", %{
+      conn: conn
+    } do
+      # some credential for another user
+      credential = CredentialsFixtures.credential_fixture()
+
+      {:ok, _view, html} =
+        live(conn, ~p"/credentials/#{credential.id}")
+        |> follow_redirect(conn)
+        |> follow_redirect(conn)
+
+      assert html =~ "You can&#39;t access that page"
     end
 
     test "marks a credential for use in a 'production' system", %{

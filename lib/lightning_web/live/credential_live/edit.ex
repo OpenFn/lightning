@@ -26,6 +26,7 @@ defmodule LightningWeb.CredentialLive.Edit do
           title={@page_title}
           action={@live_action}
           credential={@credential}
+          current_user={@current_user}
           projects={@projects}
           return_to={Routes.credential_index_path(@socket, :index)}
         >
@@ -89,15 +90,27 @@ defmodule LightningWeb.CredentialLive.Edit do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Credential")
-    |> assign(
-      credential:
-        Credentials.get_credential!(id)
-        |> Lightning.Repo.preload(:project_credentials),
-      projects: list_projects(socket),
-      users: list_users()
-    )
+    credential = Credentials.get_credential!(id)
+
+    if Lightning.Policies.Users
+       |> Permissions.can(
+         :edit_credential,
+         socket.assigns.current_user,
+         credential
+       ) do
+      socket
+      |> assign(:page_title, "Edit Credential")
+      |> assign(
+        credential:
+          credential
+          |> Lightning.Repo.preload(:project_credentials),
+        projects: list_projects(socket),
+        users: list_users()
+      )
+    else
+      put_flash(socket, :error, "You can't access that page")
+      |> push_redirect(to: "/")
+    end
   end
 
   defp apply_action(socket, :new, _params) do

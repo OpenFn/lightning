@@ -4,6 +4,7 @@ defmodule Lightning.PermissionsTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
 
+  alias Lightning.CredentialsFixtures
   alias Lightning.Policies.{Permissions, Users, ProjectUsers}
 
   setup do
@@ -15,6 +16,26 @@ defmodule Lightning.PermissionsTest do
   end
 
   describe "User policies by instance-wide role" do
+    test "users can only edit their own credentials", %{
+      user: user,
+      superuser: superuser
+    } do
+      credential_1 = CredentialsFixtures.credential_fixture(user_id: user.id)
+
+      credential_2 =
+        CredentialsFixtures.credential_fixture(user_id: superuser.id)
+
+      credential_3 = CredentialsFixtures.credential_fixture()
+
+      assert Users |> Permissions.can(:edit_credential, user, credential_1)
+      assert Users |> Permissions.can(:edit_credential, superuser, credential_2)
+
+      refute Users |> Permissions.can(:edit_credential, user, credential_3)
+      refute Users |> Permissions.can(:edit_credential, superuser, credential_3)
+      refute Users |> Permissions.can(:edit_credential, user, credential_2)
+      refute Users |> Permissions.can(:edit_credential, superuser, credential_1)
+    end
+
     test ":user permissions", %{user: user, another_user: another_user} do
       refute Users |> Permissions.can(:create_projects, user, {})
       refute Users |> Permissions.can(:view_projects, user, {})
@@ -52,9 +73,6 @@ defmodule Lightning.PermissionsTest do
 
       refute Users |> Permissions.can(:view_credentials, user, another_user)
       assert Users |> Permissions.can(:view_credentials, user, user)
-
-      refute Users |> Permissions.can(:edit_credentials, user, another_user)
-      assert Users |> Permissions.can(:edit_credentials, user, user)
 
       refute Users |> Permissions.can(:delete_credential, user, another_user)
       assert Users |> Permissions.can(:delete_credential, user, user)
@@ -102,9 +120,6 @@ defmodule Lightning.PermissionsTest do
 
       refute Users |> Permissions.can(:view_credentials, superuser, another_user)
       assert Users |> Permissions.can(:view_credentials, superuser, superuser)
-
-      refute Users |> Permissions.can(:edit_credentials, superuser, another_user)
-      assert Users |> Permissions.can(:edit_credentials, superuser, superuser)
 
       refute Users
              |> Permissions.can(:delete_credential, superuser, another_user)
