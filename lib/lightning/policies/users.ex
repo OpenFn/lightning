@@ -5,10 +5,12 @@ defmodule Lightning.Policies.Users do
   @behaviour Bodyguard.Policy
 
   alias Lightning.Accounts.User
+  alias Lightning.Credentials.Credential
 
   @type actions ::
           :access_admin_space
           | :access_own_credentials
+          | :edit_credentials
           | :access_own_profile
           | :change_email
           | :change_password
@@ -53,6 +55,14 @@ defmodule Lightning.Policies.Users do
     role in [:superuser]
   end
 
+  def authorize(
+        :edit_credentials,
+        %User{id: user_id} = _authenticated_user,
+        %Credential{} = credential
+      ) do
+    credential.user_id == user_id
+  end
+
   def authorize(action, %User{} = requesting_user, %User{} = authenticated_user)
       when action in [
              :access_own_credentials,
@@ -61,7 +71,6 @@ defmodule Lightning.Policies.Users do
              :change_password,
              :delete_account,
              :delete_credential,
-             :edit_credentials,
              :view_credentials
            ] do
     requesting_user.id == authenticated_user.id
