@@ -212,7 +212,10 @@ defmodule LightningWeb.WorkflowLive do
 
   defp create_workflow(%{assigns: %{can_create_workflow: true}} = socket) do
     {:ok, %Workflows.Workflow{id: workflow_id}} =
-      Workflows.create_workflow(%{project_id: socket.assigns.project.id})
+      Workflows.create_workflow(%{
+        project_id: socket.assigns.project.id,
+        name: "Untitled"
+      })
 
     {:noreply,
      socket

@@ -458,7 +458,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "edit_workflow" do
     setup %{project: project} do
-      %{job: workflow_job_fixture(project_id: project.id)}
+      %{
+        job:
+          workflow_job_fixture(project_id: project.id, workflow_name: "Untitled")
+      }
     end
 
     test "renders inplace workflow form", %{
@@ -623,7 +626,10 @@ defmodule LightningWeb.WorkflowLiveTest do
     alias LightningWeb.JobLive.CronSetupComponent
 
     setup %{project: project} do
-      %{job: workflow_job_fixture(project_id: project.id)}
+      %{
+        job:
+          workflow_job_fixture(project_id: project.id, workflow_name: "Untitled")
+      }
     end
 
     test "get_cron_data/1" do

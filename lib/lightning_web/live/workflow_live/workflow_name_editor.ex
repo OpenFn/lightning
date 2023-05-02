@@ -10,8 +10,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
         %{workflow: workflow, return_to: return_to, project: project},
         socket
       ) do
-    changeset =
-      Workflows.change_workflow(workflow, %{name: workflow.name || "Untitled"})
+    changeset = Workflows.change_workflow(workflow, %{})
 
     {:ok,
      socket
