@@ -1,13 +1,5 @@
-import React, { MouseEvent } from 'react';
+import React, { createContext, useContext } from 'react';
 import { createRoot } from 'react-dom/client';
-
-type UpdateParams = {
-  onNodeClick(event: MouseEvent, node: any): void;
-  onJobAddClick(node: any): void;
-  onPaneClick(event: MouseEvent): void;
-};
-
-import { createContext, useContext } from 'react';
 import { StoreApi, useStore } from 'zustand';
 import { WorkflowState, createWorkflowStore } from './store';
 
@@ -17,8 +9,11 @@ function WorkflowEditor() {
   const store = useContext(WorkflowContext);
   if (!store) throw new Error('Missing WorkflowContext.Provider in the tree');
 
-  const { edges, jobs, triggers, addJob, addTrigger, addEdge } =
+  const { edges, jobs, triggers, addJob, addTrigger, addEdge, editJobUrl } =
     useStore(store);
+
+  // Maybe pull editJobUrl and the data-phx-* attributes into a provider
+  // and component?
 
   return (
     <div>
@@ -26,7 +21,7 @@ function WorkflowEditor() {
       <h3 className="font-bold">Triggers</h3>
       {triggers.map(({ id, errors }) => (
         <li key={id} className="text-sm font-mono">
-          {id} - {JSON.stringify(errors)}
+          {id} - {JSON.stringify(errors, null, 2)}
         </li>
       ))}
       <button
@@ -39,9 +34,16 @@ function WorkflowEditor() {
       </button>
 
       <h3 className="font-bold">Jobs</h3>
-      {jobs.map(({ id, errors }) => (
+      {jobs.map(({ id, ...rest }) => (
         <li key={id} className="text-sm font-mono">
-          {id} - {JSON.stringify(errors)}
+          <a
+            data-phx-link="patch"
+            data-phx-link-state="push"
+            href={editJobUrl.replace(':job_id', id)}
+          >
+            {id}
+          </a>
+          - {JSON.stringify(rest, null, 2)}
         </li>
       ))}
       <button

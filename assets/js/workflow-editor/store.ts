@@ -1,6 +1,6 @@
+import type { Patch as ImmerPatch } from 'immer';
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore } from 'zustand';
-import type { Patch as ImmerPatch } from 'immer';
 
 enablePatches();
 
@@ -8,6 +8,7 @@ type WorkflowProps = {
   triggers: {}[];
   jobs: {}[];
   edges: {}[];
+  editJobUrl: string;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -62,6 +63,7 @@ export const createWorkflowStore = (
     triggers: [],
     jobs: [],
     edges: [],
+    editJobUrl: '',
   };
 
   // Calculate the next state using Immer, and then call the onChange callback

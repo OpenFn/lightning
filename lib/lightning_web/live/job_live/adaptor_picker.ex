@@ -8,8 +8,8 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   alias LightningWeb.Components.Form
 
   attr :form, :map, required: true
-  attr :on_change, :any, required: true
-  attr :disabled, :boolean, required: true
+  attr :on_change, :any, default: nil
+  attr :disabled, :boolean, default: false
 
   @impl true
   def render(assigns) do
@@ -45,6 +45,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           class: "block w-full rounded-md text-sm text-secondary-700 "
         ) %>
         <Form.select_field
+          :if={@on_change}
           form={:adaptor_picker}
           name={:adaptor_version}
           selected={@adaptor_version}
@@ -54,28 +55,33 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           phx-target={@myself}
           disabled={@disabled}
         />
+        <Form.select_field
+          :if={!@on_change}
+          form={@form}
+          name={:adaptor}
+          id="adaptor-version"
+          values={@versions}
+          disabled={@disabled}
+        />
       </div>
     </div>
     """
   end
 
   @impl true
-  def update(
-        %{form: form, on_change: on_change, disabled: disabled},
-        socket
-      ) do
-    {adaptor_name, version, adaptors, versions} =
+  def update(%{form: form} = params, socket) do
+    {adaptor_name, _version, adaptors, versions} =
       get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
     {:ok,
      socket
      |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptor_version, version || "latest")
+     |> assign(:adaptor_version, Phoenix.HTML.Form.input_value(form, :adaptor))
      |> assign(:adaptors, adaptors)
      |> assign(:versions, versions)
-     |> assign(:on_change, on_change)
+     |> assign(:on_change, Map.get(params, :on_change))
      |> assign(:form, form)
-     |> assign(:disabled, disabled)}
+     |> assign(:disabled, Map.get(params, :disabled, false))}
   end
 
   @doc """
@@ -116,7 +122,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           |> Enum.map(&Map.get(&1, :version))
           |> Enum.sort_by(&Version.parse(&1), :desc)
           |> Enum.map(fn version ->
-            [key: version, value: version]
+            build_select_option(module_name, version)
           end)
 
         key =
@@ -126,12 +132,17 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
             ""
           end
 
-        {module_name, version, [[key: key, value: "latest"] | versions]}
+        {module_name, version,
+         [[key: key, value: "#{module_name}@latest"] | versions]}
       else
         {nil, nil, []}
       end
 
     {module_name, version, adaptor_names, versions}
+  end
+
+  defp build_select_option(module_name, version) do
+    [key: version, value: "#{module_name}@#{version}"]
   end
 
   @impl true
@@ -153,9 +164,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
         %{"adaptor_picker" => %{"adaptor_version" => adaptor_version}},
         socket
       ) do
-    adaptor_name = socket.assigns.adaptor_name
-
-    socket.assigns.on_change.("#{adaptor_name}@#{adaptor_version}")
+    socket.assigns.on_change.(adaptor_version)
 
     {:noreply, socket |> assign(:adaptor_version, adaptor_version)}
   end

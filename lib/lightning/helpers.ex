@@ -50,7 +50,10 @@ defmodule Lightning.Helpers do
     if Enum.member?(["a", "e", "i", "o", "u"], first_letter), do: "an", else: "a"
   end
 
-  # TODO: write typespec and docs
+  @doc """
+  Recursively ensures a given map is safe to convert to JSON,
+  where all keys are strings and all values are json safe (primitive values).
+  """
   def json_safe(nil), do: nil
 
   def json_safe(map) when is_map(map) do

@@ -185,9 +185,9 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       view |> pick_adaptor_name("@openfn/language-http")
 
-      assert view |> has_expected_version?("latest")
+      assert view |> has_expected_version?("@openfn/language-http@latest")
 
-      view |> pick_adaptor_version("3.1.10")
+      view |> pick_adaptor_version("@openfn/language-http@3.1.10")
 
       # TODO: test that the compiler and editor get the new adaptor
 
@@ -219,7 +219,7 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert has_element?(view, "#builder-#{job.id}")
 
-      assert view |> has_expected_version?("3.1.10")
+      assert view |> has_expected_version?("@openfn/language-http@3.1.10")
     end
 
     test "project viewers can't edit jobs", %{
