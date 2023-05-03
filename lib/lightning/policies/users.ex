@@ -62,8 +62,7 @@ defmodule Lightning.Policies.Users do
       when action in [
              :change_email,
              :change_password,
-             :delete_account,
-             :view_credentials
+             :delete_account
            ] do
     requesting_user.id == authenticated_user.id
   end
