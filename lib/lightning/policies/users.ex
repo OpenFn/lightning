@@ -58,12 +58,8 @@ defmodule Lightning.Policies.Users do
     credential.user_id == authenticated_user.id
   end
 
-  def authorize(action, %User{} = requesting_user, %User{} = authenticated_user)
-      when action in [
-             :change_email,
-             :change_password,
-             :delete_account
-           ] do
-    requesting_user.id == authenticated_user.id
+  # You can only delete an account if the id in the URL is matching your id
+  def authorize(:delete_account, authenticated_user, account_id) do
+    authenticated_user.id == account_id
   end
 end

@@ -17,7 +17,6 @@ defmodule Lightning.ProjectUserPermissionsTest do
 
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
-
   alias Lightning.Policies.{Permissions, ProjectUsers}
 
   setup do
