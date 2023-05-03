@@ -28,6 +28,14 @@ defmodule Lightning.UserPermissionsTest do
   end
 
   describe "Users" do
+    test "can only delete their own accounts", %{
+      user: user,
+      other_user: another_user
+    } do
+      assert Users |> Permissions.can(:delete_account, user, user.id)
+      refute Users |> Permissions.can(:delete_account, user, another_user.id)
+    end
+
     test "can only edit & delete their own credentials", %{user: user} do
       user_cred = CredentialsFixtures.credential_fixture(user_id: user.id)
       other_cred = CredentialsFixtures.credential_fixture()
@@ -40,8 +48,7 @@ defmodule Lightning.UserPermissionsTest do
     end
 
     test "can only manage their own accounts", %{
-      user: user,
-      other_user: other_user
+      user: user
     } do
       refute Users |> Permissions.can(:create_projects, user, {})
       refute Users |> Permissions.can(:view_projects, user, {})
@@ -57,15 +64,6 @@ defmodule Lightning.UserPermissionsTest do
              |> Permissions.can(:configure_external_auth_provider, user, {})
 
       refute Users |> Permissions.can(:view_credentials_audit_trail, user, {})
-
-      refute Users |> Permissions.can(:change_email, user, other_user)
-      assert Users |> Permissions.can(:change_email, user, user)
-
-      refute Users |> Permissions.can(:change_password, user, other_user)
-      assert Users |> Permissions.can(:change_password, user, user)
-
-      refute Users |> Permissions.can(:delete_account, user, other_user)
-      assert Users |> Permissions.can(:delete_account, user, user)
     end
   end
 
@@ -90,14 +88,8 @@ defmodule Lightning.UserPermissionsTest do
       assert Users
              |> Permissions.can(:view_credentials_audit_trail, superuser, {})
 
-      refute Users |> Permissions.can(:change_email, superuser, other_user)
-      assert Users |> Permissions.can(:change_email, superuser, superuser)
-
-      refute Users |> Permissions.can(:change_password, superuser, other_user)
-      assert Users |> Permissions.can(:change_password, superuser, superuser)
-
-      refute Users |> Permissions.can(:delete_account, superuser, other_user)
-      assert Users |> Permissions.can(:delete_account, superuser, superuser)
+      refute Users |> Permissions.can(:delete_account, superuser, other_user.id)
+      assert Users |> Permissions.can(:delete_account, superuser, superuser.id)
     end
   end
 end
