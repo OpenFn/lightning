@@ -63,7 +63,7 @@ const convertWorkflow  = (workflow: Workflow, selection: Record<string, true>) =
 
       model.data = {
         ...item,
-        label: item.id,
+        label: item.label || item.id,
         // TMP
         trigger:  {
           type: 'webhook'
@@ -76,7 +76,6 @@ const convertWorkflow  = (workflow: Workflow, selection: Record<string, true>) =
   process(workflow.jobs, nodes, 'job')
   process(workflow.triggers, nodes, 'trigger')
   process(workflow.edges, edges, 'edge')
-
   return layout({ nodes, edges })
 };
 
@@ -92,21 +91,35 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
 
   // TODO can selection just be a flat object? Easier to maintain state this way
   const [selected, setSelected] = useState({ nodes: {}, edges: {} });
+  const [flow, setFlow] = useState()
+
+  const setFlowInstance = useCallback((s) => {
+    setFlow(s)
+  }, [setFlow])
 
   // respond to changes pushed into the component
   // For now this just means the job has changed
   // but later it might mean syncing back with the server
-  // TODO at the moment the parent app is forcing a re-render here each time
   useEffect(() => {
     console.log('UPDATING MODEL')
     const data = convertWorkflow(workflow);
     setModel(data)
   }, [workflow])
-
+  
+  useEffect(() => {
+    console.log('FIT')
+    if (flow) {
+      // TODO there's a timing issue here
+      setTimeout(() => {
+        flow.fitView({ duration: 250 });
+      }, 50)
+    }
+  }, [model])
+  
   const onNodesChange = useCallback(
     (changes) => {
-      const newNodes = applyNodeChanges(changes, model.nodes);
-      setModel({ nodes: newNodes, links: model.links });
+      // const newNodes = applyNodeChanges(changes, model.nodes);
+      // setModel({ nodes: newNodes, links: model.links });
     }, [setModel, model]);
 
   // const onEdgesChange = useCallback(
@@ -122,7 +135,7 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
     const selection = everything.map(({ id }) => id);
     onSelectionChange(selection);
   }, [onSelectionChange]);
-
+  
   return <ReactFlowProvider>
       <ReactFlow
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
@@ -142,7 +155,7 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
         // snapGrid={[10, 10]}
         // onNodeClick={handleNodeClick}
         // onPaneClick={onPaneClick}
-        // onInit={Store.setReactFlowInstance}
+        onInit={setFlowInstance}
         fitView
       />
     </ReactFlowProvider>

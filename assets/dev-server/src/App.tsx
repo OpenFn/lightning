@@ -25,6 +25,17 @@ const chart2 = {
   ],
 };
 
+const chart3 = {
+  id: 'chart3',
+  jobs: [{ id: 'a' }, { id: 'b', label: 'this is a very long node name oh yes' }, { id: 'c' }],
+  triggers: [],
+  edges: [
+    // { id: 'z-a', source_trigger: 'z', target_job: 'a' },
+    { id: 'a-b', source_job: 'a', target_job: 'b' },
+    { id: 'b-c', source_job: 'b', target_job: 'c' },
+  ],
+};
+
 export default () => {
   const [history, setHistory ] = useState([])
   const [selectedNodes, setSelectedNodes ] = useState('')
@@ -67,6 +78,7 @@ export default () => {
         */}
         <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflow(chart1)}>Load chart 1</button>
         <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflow(chart2)}>Load chart 2</button>
+        <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflow(chart3)}>Load chart 3</button>
         <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white">Add random node</button>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2">

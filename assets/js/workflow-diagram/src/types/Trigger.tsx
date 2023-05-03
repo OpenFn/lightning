@@ -41,8 +41,9 @@ const TriggerNode = ({
   return (
     <div
       className={`bg-white ${cursor} h-full py-1 px-1 rounded-md shadow-sm text-center text-xs ring-0.5 ring-black ring-opacity-5`}
+      style={{ width: '150px'}}
     >
-      <div className="flex flex-col items-center justify-center h-full text-center">
+      <div className="flex flex-col items-center justify-center h-full ">
         <p
           title={title}
           className="text-[0.6rem] italic text-ellipsis overflow-hidden whitespace-pre-line"

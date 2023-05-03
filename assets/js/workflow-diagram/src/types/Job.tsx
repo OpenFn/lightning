@@ -51,6 +51,7 @@ const JobNode = ({
         selected ? 'ring-indigo-500' : 'ring-black',
         selected ? 'ring-opacity-20' : 'ring-opacity-5',
       ])}
+      style={{ width: '150px'}}
       title={data?.label}
     >
       <Handle
