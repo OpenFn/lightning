@@ -9,9 +9,7 @@ defmodule Lightning.Policies.Users do
 
   @type actions ::
           :access_admin_space
-          | :access_own_credentials
           | :edit_credential
-          | :access_own_profile
           | :change_email
           | :change_password
           | :configure_external_auth_provider
@@ -55,23 +53,16 @@ defmodule Lightning.Policies.Users do
     role in [:superuser]
   end
 
-  def authorize(
-        :edit_credential,
-        %User{id: user_id} = _authenticated_user,
-        %Credential{} = credential
-      ) do
-    credential.user_id == user_id
+  def authorize(action, %User{} = authenticated_user, %Credential{} = credential)
+      when action in [:edit_credential, :delete_credential] do
+    credential.user_id == authenticated_user.id
   end
 
   def authorize(action, %User{} = requesting_user, %User{} = authenticated_user)
       when action in [
-             :access_own_credentials,
-             :access_own_profile,
              :change_email,
              :change_password,
-             :delete_account,
-             :delete_credential,
-             :view_credentials
+             :delete_account
            ] do
     requesting_user.id == authenticated_user.id
   end

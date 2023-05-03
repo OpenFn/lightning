@@ -1,132 +1,24 @@
-defmodule Lightning.PermissionsTest do
+defmodule Lightning.ProjectUserPermissionsTest do
+  @moduledoc """
+  Project user permissions determine what a user can and cannot do within a
+  project. Projects (i.e., "workspaces") can have multiple collaborators with
+  varying levels of access to the resources (workflows, jobs, triggers, runs)
+  within.
+
+  The tests ensure both that user "Amy" that has been added as an `editor` for
+  project "X", via the creation of a
+
+    %ProjectUser{ user: "Amy", role: "editor", project: "X"}
+
+  _can_ view and edit jobs (for example) in project X, and that they _cannot_
+  view and edit jobs in project Y.
+  """
   use Lightning.DataCase, async: true
 
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
 
-  alias Lightning.CredentialsFixtures
-  alias Lightning.Policies.{Permissions, Users, ProjectUsers}
-
-  setup do
-    %{
-      superuser: superuser_fixture(),
-      user: user_fixture(),
-      another_user: user_fixture()
-    }
-  end
-
-  describe "User policies by instance-wide role" do
-    test "users can only edit their own credentials", %{
-      user: user,
-      superuser: superuser
-    } do
-      credential_1 = CredentialsFixtures.credential_fixture(user_id: user.id)
-
-      credential_2 =
-        CredentialsFixtures.credential_fixture(user_id: superuser.id)
-
-      credential_3 = CredentialsFixtures.credential_fixture()
-
-      assert Users |> Permissions.can(:edit_credential, user, credential_1)
-      assert Users |> Permissions.can(:edit_credential, superuser, credential_2)
-
-      refute Users |> Permissions.can(:edit_credential, user, credential_3)
-      refute Users |> Permissions.can(:edit_credential, superuser, credential_3)
-      refute Users |> Permissions.can(:edit_credential, user, credential_2)
-      refute Users |> Permissions.can(:edit_credential, superuser, credential_1)
-    end
-
-    test ":user permissions", %{user: user, another_user: another_user} do
-      refute Users |> Permissions.can(:create_projects, user, {})
-      refute Users |> Permissions.can(:view_projects, user, {})
-      refute Users |> Permissions.can(:edit_projects, user, {})
-      refute Users |> Permissions.can(:create_users, user, {})
-      refute Users |> Permissions.can(:view_users, user, {})
-      refute Users |> Permissions.can(:edit_users, user, {})
-      refute Users |> Permissions.can(:delete_users, user, {})
-      refute Users |> Permissions.can(:disable_users, user, {})
-      refute Users |> Permissions.can(:access_admin_space, user, {})
-
-      refute Users
-             |> Permissions.can(:configure_external_auth_provider, user, {})
-
-      refute Users |> Permissions.can(:view_credentials_audit_trail, user, {})
-
-      refute Users
-             |> Permissions.can(:access_own_profile, user, another_user)
-
-      assert Users |> Permissions.can(:access_own_profile, user, user)
-
-      refute Users
-             |> Permissions.can(:access_own_credentials, user, another_user)
-
-      assert Users |> Permissions.can(:access_own_credentials, user, user)
-
-      refute Users |> Permissions.can(:change_email, user, another_user)
-      assert Users |> Permissions.can(:change_email, user, user)
-
-      refute Users |> Permissions.can(:change_password, user, another_user)
-      assert Users |> Permissions.can(:change_password, user, user)
-
-      refute Users |> Permissions.can(:delete_account, user, another_user)
-      assert Users |> Permissions.can(:delete_account, user, user)
-
-      refute Users |> Permissions.can(:view_credentials, user, another_user)
-      assert Users |> Permissions.can(:view_credentials, user, user)
-
-      refute Users |> Permissions.can(:delete_credential, user, another_user)
-      assert Users |> Permissions.can(:delete_credential, user, user)
-    end
-
-    test ":superuser permissions", %{
-      superuser: superuser,
-      another_user: another_user
-    } do
-      assert Users |> Permissions.can(:create_projects, superuser, {})
-      assert Users |> Permissions.can(:view_projects, superuser, {})
-      assert Users |> Permissions.can(:edit_projects, superuser, {})
-      assert Users |> Permissions.can(:create_users, superuser, {})
-      assert Users |> Permissions.can(:view_users, superuser, {})
-      assert Users |> Permissions.can(:edit_users, superuser, {})
-      assert Users |> Permissions.can(:delete_users, superuser, {})
-      assert Users |> Permissions.can(:disable_users, superuser, {})
-      assert Users |> Permissions.can(:access_admin_space, superuser, {})
-
-      assert Users
-             |> Permissions.can(:configure_external_auth_provider, superuser, {})
-
-      assert Users
-             |> Permissions.can(:view_credentials_audit_trail, superuser, {})
-
-      refute Users
-             |> Permissions.can(:access_own_profile, superuser, another_user)
-
-      assert Users |> Permissions.can(:access_own_profile, superuser, superuser)
-
-      refute Users
-             |> Permissions.can(:access_own_credentials, superuser, another_user)
-
-      assert Users
-             |> Permissions.can(:access_own_credentials, superuser, superuser)
-
-      refute Users |> Permissions.can(:change_email, superuser, another_user)
-      assert Users |> Permissions.can(:change_email, superuser, superuser)
-
-      refute Users |> Permissions.can(:change_password, superuser, another_user)
-      assert Users |> Permissions.can(:change_password, superuser, superuser)
-
-      refute Users |> Permissions.can(:delete_account, superuser, another_user)
-      assert Users |> Permissions.can(:delete_account, superuser, superuser)
-
-      refute Users |> Permissions.can(:view_credentials, superuser, another_user)
-      assert Users |> Permissions.can(:view_credentials, superuser, superuser)
-
-      refute Users
-             |> Permissions.can(:delete_credential, superuser, another_user)
-
-      assert Users |> Permissions.can(:delete_credential, superuser, superuser)
-    end
-  end
+  alias Lightning.Policies.{Permissions, ProjectUsers}
 
   setup do
     viewer = user_fixture()
@@ -155,8 +47,8 @@ defmodule Lightning.PermissionsTest do
     }
   end
 
-  describe "Project user policies by project user role" do
-    test ":viewer permissions", %{project: project, viewer: viewer} do
+  describe "Project users with the :viewer role" do
+    test "can see but not edit resources", %{project: project, viewer: viewer} do
       refute ProjectUsers |> Permissions.can(:create_workflow, viewer, project)
       refute ProjectUsers |> Permissions.can(:edit_job, viewer, project)
       refute ProjectUsers |> Permissions.can(:create_job, viewer, project)
@@ -220,8 +112,13 @@ defmodule Lightning.PermissionsTest do
       refute ProjectUsers
              |> Permissions.can(:edit_project_user, viewer, editor_project_user)
     end
+  end
 
-    test "editor permissions", %{project: project, editor: editor} do
+  describe "Project users with the :editor role" do
+    test "can edit resources in their project", %{
+      project: project,
+      editor: editor
+    } do
       assert ProjectUsers |> Permissions.can(:create_workflow, editor, project)
       assert ProjectUsers |> Permissions.can(:edit_job, editor, project)
       assert ProjectUsers |> Permissions.can(:create_job, editor, project)
@@ -285,8 +182,13 @@ defmodule Lightning.PermissionsTest do
       refute ProjectUsers
              |> Permissions.can(:edit_project_user, editor, viewer_project_user)
     end
+  end
 
-    test "admin permissions", %{project: project, admin: admin} do
+  describe "Project users with the :admin role" do
+    test "can do everything that editors can do, plus...", %{
+      project: project,
+      admin: admin
+    } do
       assert ProjectUsers |> Permissions.can(:create_workflow, admin, project)
       assert ProjectUsers |> Permissions.can(:edit_job, admin, project)
       assert ProjectUsers |> Permissions.can(:create_job, admin, project)
@@ -350,8 +252,13 @@ defmodule Lightning.PermissionsTest do
       refute ProjectUsers
              |> Permissions.can(:edit_project_user, admin, viewer_project_user)
     end
+  end
 
-    test "owner permissions", %{project: project, owner: owner} do
+  describe "Project users with the :owner role" do
+    test "can do everything that admins can do, plus...", %{
+      project: project,
+      owner: owner
+    } do
       assert ProjectUsers |> Permissions.can(:create_workflow, owner, project)
       assert ProjectUsers |> Permissions.can(:edit_job, owner, project)
       assert ProjectUsers |> Permissions.can(:create_job, owner, project)
@@ -415,10 +322,12 @@ defmodule Lightning.PermissionsTest do
       refute ProjectUsers
              |> Permissions.can(:edit_project_user, owner, viewer_project_user)
     end
+  end
 
+  describe "Thieves (users without any project_user for a given project)" do
     # For things like :view_job we should be able to show that people who do not
     # have access to a project cannot view the jobs in that project.
-    test "thief permissions", %{project: project, thief: thief} do
+    test "cannot view or modify anything...", %{project: project, thief: thief} do
       refute ProjectUsers |> Permissions.can(:create_workflow, thief, project)
       refute ProjectUsers |> Permissions.can(:create_job, thief, project)
       refute ProjectUsers |> Permissions.can(:delete_job, thief, project)
