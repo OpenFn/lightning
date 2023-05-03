@@ -156,16 +156,15 @@ defmodule LightningWeb.ProjectLiveTest do
       refute view |> element(schedule_delete_button) |> has_element?(),
              "Should not show schedule delete button"
 
-      #  This test is blocked by (#759)[https://github.com/OpenFn/Lightning/pull/798]
-      # assert view
-      #        |> element(delete_button)
-      #        |> render_click() =~ "Project deleted successfully"
+      assert view
+             |> element(delete_button)
+             |> render_click() =~ "Project deleted successfully"
 
-      # refute view |> element(schedule_delete_button) |> has_element?(),
-      #        "Should not show schedule delete button"
+      refute view |> element(schedule_delete_button) |> has_element?(),
+             "Should not show schedule delete button"
 
-      # refute view |> element(cancel_delete_button) |> has_element?(),
-      #        "Should not show cancel deletion button"
+      refute view |> element(cancel_delete_button) |> has_element?(),
+             "Should not show cancel deletion button"
     end
 
     test "Edits a project", %{conn: conn} do
