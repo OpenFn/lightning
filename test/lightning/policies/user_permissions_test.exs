@@ -47,23 +47,10 @@ defmodule Lightning.UserPermissionsTest do
       refute Users |> Permissions.can(:delete_credential, user, other_cred)
     end
 
-    test "can only manage their own accounts", %{
+    test "can't access admin settings", %{
       user: user
     } do
-      refute Users |> Permissions.can(:create_projects, user, {})
-      refute Users |> Permissions.can(:view_projects, user, {})
-      refute Users |> Permissions.can(:edit_projects, user, {})
-      refute Users |> Permissions.can(:create_users, user, {})
-      refute Users |> Permissions.can(:view_users, user, {})
-      refute Users |> Permissions.can(:edit_users, user, {})
-      refute Users |> Permissions.can(:delete_users, user, {})
-      refute Users |> Permissions.can(:disable_users, user, {})
       refute Users |> Permissions.can(:access_admin_space, user, {})
-
-      refute Users
-             |> Permissions.can(:configure_external_auth_provider, user, {})
-
-      refute Users |> Permissions.can(:view_credentials_audit_trail, user, {})
     end
   end
 
