@@ -47,19 +47,33 @@ defmodule LightningWeb.CredentialLive.Index do
   def handle_event("delete", %{"id" => id}, socket) do
     credential = Credentials.get_credential!(id)
 
-    Credentials.delete_credential(credential)
-    |> case do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(
-           :credentials,
-           list_credentials(socket.assigns.current_user.id)
-         )
-         |> put_flash(:info, "Credential deleted successfully")}
+    can_delete_credential =
+      Lightning.Policies.Users
+      |> Lightning.Policies.Permissions.can(
+        :delete_credential,
+        socket.assigns.current_user,
+        credential
+      )
 
-      {:error, _changeset} ->
-        {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+    if can_delete_credential do
+      Credentials.delete_credential(credential)
+      |> case do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(
+             :credentials,
+             list_credentials(socket.assigns.current_user.id)
+           )
+           |> put_flash(:info, "Credential deleted successfully")}
+
+        {:error, _changeset} ->
+          {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+      end
+    else
+      {:noreply,
+       put_flash(socket, :error, "You can't perform this action")
+       |> push_patch(to: ~p"/credentials")}
     end
   end
 

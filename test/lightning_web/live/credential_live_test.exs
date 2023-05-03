@@ -96,6 +96,18 @@ defmodule LightningWeb.CredentialLiveTest do
 
       refute has_element?(index_live, "#credential-#{credential.id}")
     end
+
+    test "user can only delete their own credential", %{
+      conn: conn
+    } do
+      credential = credential_fixture()
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      assert index_live
+             |> render_click("delete", %{"id" => credential.id}) =~
+               "You can&#39;t perform this action"
+    end
   end
 
   describe "Clicking new from the list view" do
