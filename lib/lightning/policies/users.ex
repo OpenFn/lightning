@@ -10,7 +10,6 @@ defmodule Lightning.Policies.Users do
   @type actions ::
           :access_admin_space
           | :edit_credential
-          | :access_own_profile
           | :change_email
           | :change_password
           | :configure_external_auth_provider
@@ -61,7 +60,6 @@ defmodule Lightning.Policies.Users do
 
   def authorize(action, %User{} = requesting_user, %User{} = authenticated_user)
       when action in [
-             :access_own_profile,
              :change_email,
              :change_password,
              :delete_account,
