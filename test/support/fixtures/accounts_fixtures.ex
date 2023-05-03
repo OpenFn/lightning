@@ -35,10 +35,7 @@ defmodule Lightning.AccountsFixtures do
   end
 
   def api_token_fixture(user) do
-    token =
-      user
-      |> Lightning.Accounts.generate_api_token()
-
+    token = Lightning.Accounts.generate_api_token(user)
     Lightning.Repo.get_by(Lightning.Accounts.UserToken, token: token)
   end
 

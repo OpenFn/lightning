@@ -27,16 +27,11 @@ defmodule LightningWeb.TokensLive.Index do
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
-    token = Accounts.get_token!(id).token
-    account = Accounts.get_user_by_api_token(token)
+    api_token = Accounts.get_token!(id).token
+    current_user = socket.assigns.current_user
 
     can_delete_api_token =
-      Users
-      |> Permissions.can(
-        :delete_api_token,
-        socket.assigns.current_user,
-        account.id
-      )
+      Users |> Permissions.can(:delete_api_token, current_user, api_token)
 
     if can_delete_api_token do
       socket

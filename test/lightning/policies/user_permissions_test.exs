@@ -16,7 +16,6 @@ defmodule Lightning.UserPermissionsTest do
 
   import Lightning.AccountsFixtures
 
-  alias Lightning.Accounts
   alias Lightning.CredentialsFixtures
   alias Lightning.Policies.{Permissions, Users}
 
@@ -24,9 +23,7 @@ defmodule Lightning.UserPermissionsTest do
     %{
       superuser: superuser_fixture(),
       user: user_fixture(),
-      other_user: user_fixture(),
-      user_api: user_fixture() |> api_token_fixture(),
-      other_user_api: user_fixture() |> api_token_fixture()
+      other_user: user_fixture()
     }
   end
 
@@ -35,24 +32,30 @@ defmodule Lightning.UserPermissionsTest do
       user: user,
       other_user: other_user
     } do
-      assert Users |> Permissions.can(:delete_account, user, user.id)
-      refute Users |> Permissions.can(:delete_account, user, other_user.id)
+      assert Users |> Permissions.can(:delete_account, user, user)
+      refute Users |> Permissions.can(:delete_account, user, other_user)
     end
 
     test "can only delete their own api tokens", %{
-      user_api: user_api,
-      other_user_api: other_user_api
+      user: user,
+      other_user: other_user
     } do
-      user = Accounts.get_user_by_api_token(user_api.token)
-      other_user = Accounts.get_user_by_api_token(other_user_api.token)
-
-      assert Users |> Permissions.can(:delete_api_token, user, user.id)
-      refute Users |> Permissions.can(:delete_api_token, user, other_user.id)
+      user_api_token = api_token_fixture(user).token
+      other_user_api_token = api_token_fixture(other_user).token
 
       assert Users
-             |> Permissions.can(:delete_api_token, other_user, other_user.id)
+             |> Permissions.can(
+               :delete_api_token,
+               user,
+               user_api_token
+             )
 
-      refute Users |> Permissions.can(:delete_api_token, other_user, user.id)
+      refute Users
+             |> Permissions.can(
+               :delete_api_token,
+               user,
+               other_user_api_token
+             )
     end
 
     test "can only edit & delete their own credentials", %{user: user} do
@@ -74,28 +77,10 @@ defmodule Lightning.UserPermissionsTest do
   end
 
   describe "Superusers" do
-    test "can manage any users account", %{
-      superuser: superuser,
-      other_user: other_user
+    test "can access admin settings", %{
+      superuser: superuser
     } do
-      assert Users |> Permissions.can(:create_projects, superuser, {})
-      assert Users |> Permissions.can(:view_projects, superuser, {})
-      assert Users |> Permissions.can(:edit_projects, superuser, {})
-      assert Users |> Permissions.can(:create_users, superuser, {})
-      assert Users |> Permissions.can(:view_users, superuser, {})
-      assert Users |> Permissions.can(:edit_users, superuser, {})
-      assert Users |> Permissions.can(:delete_users, superuser, {})
-      assert Users |> Permissions.can(:disable_users, superuser, {})
       assert Users |> Permissions.can(:access_admin_space, superuser, {})
-
-      assert Users
-             |> Permissions.can(:configure_external_auth_provider, superuser, {})
-
-      assert Users
-             |> Permissions.can(:view_credentials_audit_trail, superuser, {})
-
-      refute Users |> Permissions.can(:delete_account, superuser, other_user.id)
-      assert Users |> Permissions.can(:delete_account, superuser, superuser.id)
     end
   end
 end

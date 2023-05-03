@@ -111,7 +111,7 @@ defmodule LightningWeb.TokensLiveTest do
     test "Users can't delete other users api tokens", %{
       conn: conn
     } do
-      another_user_token = user_fixture() |> api_token_fixture()
+      another_user_token = api_token_fixture(user_fixture())
 
       {:ok, _tokens_live, html} =
         live(conn, ~p"/profile/tokens/#{another_user_token.id}/delete")

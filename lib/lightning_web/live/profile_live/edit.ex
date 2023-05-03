@@ -2,7 +2,6 @@ defmodule LightningWeb.ProfileLive.Edit do
   @moduledoc """
   LiveView for user profile page.
   """
-  alias Lightning.Policies.Users
   use LightningWeb, :live_view
 
   @impl true
@@ -27,18 +26,20 @@ defmodule LightningWeb.ProfileLive.Edit do
   end
 
   defp apply_action(socket, :delete, %{"id" => user_id}) do
+    user = Lightning.Accounts.get_user!(user_id)
+
     can_delete_account =
       Lightning.Policies.Users
       |> Lightning.Policies.Permissions.can(
         :delete_account,
         socket.assigns.current_user,
-        user_id
+        user
       )
 
     if can_delete_account do
       socket
       |> assign(:page_title, "User Profile")
-      |> assign(:user, Lightning.Accounts.get_user!(user_id))
+      |> assign(:user, user)
     else
       put_flash(socket, :error, "You can't perform this action")
       |> push_patch(to: ~p"/profile")

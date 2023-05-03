@@ -30,14 +30,24 @@ defmodule Lightning.Policies.Users do
   end
 
   # You can only delete an account if the id in the URL is matching your id
-  def authorize(action, authenticated_user, account_id)
-      when action in [:delete_account, :delete_api_token] do
-    # TODO: change account_id to account
-    authenticated_user.id == account_id
+  def authorize(
+        :delete_account,
+        %User{} = authenticated_user,
+        %User{} = account_user
+      ) do
+    authenticated_user.id == account_user.id
+  end
+
+  def authorize(
+        :delete_api_token,
+        %User{} = authenticated_user,
+        token
+      ) do
+    authenticated_user.id == Accounts.get_user_by_api_token(token).id
   end
 
   def authorize(action, %User{} = authenticated_user, %Credential{} = credential)
       when action in [:edit_credential, :delete_credential] do
-    credential.user_id == authenticated_user.id
+    authenticated_user.id == credential.user_id
   end
 end
