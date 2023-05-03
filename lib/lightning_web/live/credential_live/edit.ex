@@ -8,7 +8,7 @@ defmodule LightningWeb.CredentialLive.Edit do
   alias Lightning.Credentials
   alias Lightning.Credentials.Credential
   alias Lightning.Projects
-  alias Lightning.Policies.{Users, Permissions}
+  alias Lightning.Policies.Permissions
 
   @impl true
   def render(assigns) do
@@ -58,21 +58,7 @@ defmodule LightningWeb.CredentialLive.Edit do
 
   @impl true
   def mount(_params, _session, socket) do
-    can_access_own_credentials =
-      Users
-      |> Permissions.can(
-        :access_own_credentials,
-        socket.assigns.current_user,
-        socket.assigns.current_user
-      )
-
-    if can_access_own_credentials do
-      {:ok, socket |> assign(:active_menu_item, :credentials)}
-    else
-      {:ok,
-       put_flash(socket, :error, "You can't access that page")
-       |> push_redirect(to: "/")}
-    end
+    {:ok, socket |> assign(:active_menu_item, :credentials)}
   end
 
   @doc """
