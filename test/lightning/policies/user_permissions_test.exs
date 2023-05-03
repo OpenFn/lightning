@@ -16,6 +16,7 @@ defmodule Lightning.UserPermissionsTest do
 
   import Lightning.AccountsFixtures
 
+  alias Lightning.Accounts
   alias Lightning.CredentialsFixtures
   alias Lightning.Policies.{Permissions, Users}
 
@@ -23,30 +24,35 @@ defmodule Lightning.UserPermissionsTest do
     %{
       superuser: superuser_fixture(),
       user: user_fixture(),
-      other_user: user_fixture()
+      other_user: user_fixture(),
+      user_api: user_fixture() |> api_token_fixture(),
+      other_user_api: user_fixture() |> api_token_fixture()
     }
   end
 
   describe "Users" do
     test "can only delete their own accounts", %{
       user: user,
-      other_user: another_user
+      other_user: other_user
     } do
       assert Users |> Permissions.can(:delete_account, user, user.id)
-      refute Users |> Permissions.can(:delete_account, user, another_user.id)
+      refute Users |> Permissions.can(:delete_account, user, other_user.id)
     end
 
     test "can only delete their own api tokens", %{
-      user: user,
-      other_user: another_user
+      user_api: user_api,
+      other_user_api: other_user_api
     } do
-      #1.  Create a api token for user
-      #2. Assert that you can delete it
-      #3 Create a api token for another_user
-      #4 Assert that another user can delete it
-      #5 Now refute that user can delete another user's token and vice versa
-      assert Users |> Permissions.can(:delete_account, user, user.id)
-      refute Users |> Permissions.can(:delete_account, user, another_user.id)
+      user = Accounts.get_user_by_api_token(user_api.token)
+      other_user = Accounts.get_user_by_api_token(other_user_api.token)
+
+      assert Users |> Permissions.can(:delete_api_token, user, user.id)
+      refute Users |> Permissions.can(:delete_api_token, user, other_user.id)
+
+      assert Users
+             |> Permissions.can(:delete_api_token, other_user, other_user.id)
+
+      refute Users |> Permissions.can(:delete_api_token, other_user, user.id)
     end
 
     test "can only edit & delete their own credentials", %{user: user} do
