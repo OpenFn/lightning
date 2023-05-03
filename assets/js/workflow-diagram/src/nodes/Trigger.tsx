@@ -2,25 +2,11 @@ import React, { memo } from 'react';
 
 import { Handle, Position } from 'react-flow-renderer';
 import type { NodeProps } from 'react-flow-renderer';
-import cronstrue from 'cronstrue';
+import getTriggerLabels from '../util/get-trigger-labels';
 
 type Trigger = any;
 type Workflow = any;
 
-function descriptionFor({ trigger }: { trigger: Trigger }): string | null {
-  switch (trigger.type) {
-    case 'webhook':
-      return `When data is received at ${trigger.webhookUrl}`;
-    case 'cron':
-      try {
-        return cronstrue.toString(trigger.cronExpression);
-      } catch (_error) {
-        return null;
-      }
-    default:
-      return null;
-  }
-}
 
 const TriggerNode = ({
   data,
@@ -29,11 +15,7 @@ const TriggerNode = ({
 }: NodeProps & {
   data: { label: string; trigger: Trigger; workflow: Workflow };
 }): JSX.Element => {
-  const description = descriptionFor(data);
-  const title =
-    data.trigger?.type === 'webhook'
-      ? 'Click to copy webhook URL'
-      : description || '';
+  const { label, tooltip } = getTriggerLabels(data);
 
   const cursor =
     data.trigger.type === 'webhook' ? 'cursor-pointer' : 'cursor-default';
@@ -45,10 +27,10 @@ const TriggerNode = ({
     >
       <div className="flex flex-col items-center justify-center h-full ">
         <p
-          title={title}
+          title={tooltip}
           className="text-[0.6rem] italic text-ellipsis overflow-hidden whitespace-pre-line"
         >
-          {description}
+          {label}
         </p>
       </div>
       <Handle

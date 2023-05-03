@@ -1,44 +1,13 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges } from 'react-flow-renderer';
 import layout from './layout'
-import nodeTypes from './types';
+import nodeTypes from './nodes';
+import { Workflow } from './types';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
   onNodeSelected: (id: string) => void;
 }
-
-interface Node {
-  id: string;
-  name: string,
-  workflowId: string;
-
-}
-
-interface Trigger extends Node {
-  // TODO trigger type data
-}
-
-interface Job extends Node {
-  
-}
-
-interface Edge {
-  id: string;
-  condition: string;
-  source_job?: string;
-  source_trigger?: string;
-  target_job?: string;
-}
-
-type Workflow = {
-  id: string;
-  changeId?: string;
-  triggers: Trigger[],
-  jobs: Job[],
-  edges: Edge[],
-};
-
 
 // TODO pass in the currently selected items so that we can maintain selection
 const convertWorkflow  = (workflow: Workflow, selection: Record<string, true>) => {
