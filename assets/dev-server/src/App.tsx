@@ -7,12 +7,29 @@ import './main.css'
 
 const chart1 = {
   id: 'chart1',
-  jobs: [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-  triggers: [{ id: 'z' }],
+  jobs: [{
+    id: 'a',
+    adaptor: 'common',
+    expression: 'fn(s => s)',
+  }, {
+    id: 'b',
+    adaptor: 'salesforce',
+    expression: 'fn(s => s)',
+  },
+  {
+    id: 'c',
+    adaptor: 'http',
+    expression: 'fn(s => s)',
+  }],
+  triggers: [{
+    id: 'z',
+    type: 'cron',
+    cronExpression: '0 0 0',
+  }],
   edges: [
-    { id: 'z-a', source_trigger: 'z', target_job: 'a' },
-    { id: 'a-b', source_job: 'a', target_job: 'b' },
-    { id: 'a-c', source_job: 'a', target_job: 'c' },
+    { id: 'z-a', label: 'on success', source_trigger: 'z', target_job: 'a' },
+    { id: 'a-b', label: 'on success', source_job: 'a', target_job: 'b' },
+    { id: 'a-c', label: 'on success', source_job: 'a', target_job: 'c' },
   ],
 };
 
@@ -36,9 +53,21 @@ const chart3 = {
   ],
 };
 
+const Form = ({ node }) => {
+  if (!node) {
+    return <div>No node selected</div>
+  }
+  return  (<>
+            <p>{`id: ${node.id}`}</p>
+            {node.adaptor && <p>{`adaptor: ${node.adaptor}`}</p>}
+            {node.type && <p>{`type: ${node.type}`}</p>}
+            <p>{`expression: ${node.cronExpression || node.expression}`}</p>
+          </>);
+}
+
 export default () => {
   const [history, setHistory ] = useState([])
-  const [selectedNodes, setSelectedNodes ] = useState('')
+  const [selectedNode, setSelectedNode ] = useState(null)
 
   const { setWorkflow, workflow } = useStore(
       ({ workflow, setWorkflow }) => ({ workflow, setWorkflow })
@@ -50,7 +79,9 @@ export default () => {
   }, [])
 
   const handleSelectionChange = (ids: string[]) => {
-    setSelectedNodes(ids)
+    const [first] = ids;
+    const node = workflow.triggers.find(t => t.id === first) || workflow.jobs.find(t => t.id === first)
+    setSelectedNode(node)
   }
 
   // Right now the diagram just supports the adding and removing of nodes,
@@ -84,11 +115,13 @@ export default () => {
         <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white">Add random node</button>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2">
-        <h2>Selected Node</h2>
-        {/* Just show the node id here, it's more honest really */}
-        { selectedNodes && <p>{selectedNodes}</p>}
+        <h2 className="text-center">Selected Node</h2>
+        <Form node={selectedNode} />
       </div>
-      <div className="flex-1 border-2 border-slate-200 m-2 p-2">Changes</div>
+      <div className="flex-1 border-2 border-slate-200 m-2 p-2">
+        <h2 className="text-center">Changes</h2>
+        {/* Not sure how to render this yet */}
+      </div>
     </div>
   </div>
   );

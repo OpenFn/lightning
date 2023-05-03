@@ -4,55 +4,11 @@ import layout, { animate } from './layout'
 import nodeTypes from './nodes';
 import { Workflow } from './types';
 import addPlaceholder from './util/add-placeholder';
+import fromWorkflow from './util/from-workflow';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
   onNodeSelected: (id: string) => void;
-}
-
-// TODO pass in the currently selected items so that we can maintain selection
-const fromWorkflow = (workflow: Workflow, selection: Record<string, true>) => {
-  if (workflow.jobs.length == 0) {
-    return { nodes: [], edges: [] }
-  }
-
-  const nodes = [] as any[];
-  const edges = [] as any[];
-
-  const process = (items: any[], collection: any[], type: 'job' | 'trigger' | 'edge') => {
-    items.forEach((item) => {
-      const model = {
-        id: item.id
-      }
-      if (/(job|trigger)/.test(type)) {
-        model.type = type;
-      } else {
-        model.source = item.source_trigger || item.source_job;
-        model.target = item.target_job;
-      }
-
-      model.data = {
-        ...item,
-        label: item.label || item.id,
-        // TMP
-        trigger:  {
-          type: 'webhook'
-        },
-      }
-      collection.push(model)
-    });
-  };
-
-  process(workflow.jobs, nodes, 'job')
-  process(workflow.triggers, nodes, 'trigger')
-  process(workflow.edges, edges, 'edge')
-  return layout({ nodes, edges })
-};
-
-// Convert a react flow model back into a workflow
-// We do this to report changes out of the component
-const toWorkflow = () => {
-
 }
 
 // Not sure on the relationship to the store
@@ -79,6 +35,7 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   useEffect(() => {
     console.log('UPDATING WORKFLOW')
     const newModel = fromWorkflow(workflow);
+    console.log(newModel)
     setModel(newModel)
   }, [workflow])
   

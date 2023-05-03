@@ -22,6 +22,8 @@ export interface JobNode extends Node {}
 
 export interface Edge {
   id: string;
+  label: string;
+  error_path: boolean;
   condition: string;
   source_job?: string;
   source_trigger?: string;
