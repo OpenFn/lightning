@@ -36,6 +36,19 @@ defmodule Lightning.UserPermissionsTest do
       refute Users |> Permissions.can(:delete_account, user, another_user.id)
     end
 
+    test "can only delete their own api tokens", %{
+      user: user,
+      other_user: another_user
+    } do
+      #1.  Create a api token for user
+      #2. Assert that you can delete it
+      #3 Create a api token for another_user
+      #4 Assert that another user can delete it
+      #5 Now refute that user can delete another user's token and vice versa
+      assert Users |> Permissions.can(:delete_account, user, user.id)
+      refute Users |> Permissions.can(:delete_account, user, another_user.id)
+    end
+
     test "can only edit & delete their own credentials", %{user: user} do
       user_cred = CredentialsFixtures.credential_fixture(user_id: user.id)
       other_cred = CredentialsFixtures.credential_fixture()
