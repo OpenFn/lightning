@@ -62,6 +62,9 @@ export default () => {
   const onNodeRemoved = (id) => {
     // remove a node and link from the store
   }
+  const onChanged = () => {
+    // notify when the model has changed
+  }
 
   return (<div className="flex flex-row h-full w-full">
     <div className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100">

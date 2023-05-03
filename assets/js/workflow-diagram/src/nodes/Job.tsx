@@ -62,6 +62,7 @@ const JobNode = ({
         className="flex flex-col w-fit mx-auto items-center opacity-0 
                       group-hover:opacity-100 transition duration-150 ease-in-out"
       >
+        {/* TODO don't show this if ths node already has a placeholder child */}
         <PlusButton />
       </div>
       <Handle

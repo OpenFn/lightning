@@ -1,8 +1,9 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges } from 'react-flow-renderer';
-import layout from './layout'
+import layout, { animate } from './layout'
 import nodeTypes from './nodes';
 import { Workflow } from './types';
+import addPlaceholder from './util/add-placeholder';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
@@ -10,7 +11,7 @@ type WorkflowDiagramProps = {
 }
 
 // TODO pass in the currently selected items so that we can maintain selection
-const convertWorkflow  = (workflow: Workflow, selection: Record<string, true>) => {
+const fromWorkflow = (workflow: Workflow, selection: Record<string, true>) => {
   if (workflow.jobs.length == 0) {
     return { nodes: [], edges: [] }
   }
@@ -48,6 +49,12 @@ const convertWorkflow  = (workflow: Workflow, selection: Record<string, true>) =
   return layout({ nodes, edges })
 };
 
+// Convert a react flow model back into a workflow
+// We do this to report changes out of the component
+const toWorkflow = () => {
+
+}
+
 // Not sure on the relationship to the store
 // I kinda just want the component to do visalusation and fir eevents
 // Does it even know about zustand? Any benefit?
@@ -70,34 +77,43 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   // For now this just means the job has changed
   // but later it might mean syncing back with the server
   useEffect(() => {
-    console.log('UPDATING MODEL')
-    const data = convertWorkflow(workflow);
-    setModel(data)
+    console.log('UPDATING WORKFLOW')
+    const newModel = fromWorkflow(workflow);
+    setModel(newModel)
   }, [workflow])
   
-  useEffect(() => {
-    console.log('FIT')
-    if (flow) {
-      // TODO there's a timing issue here
-      setTimeout(() => {
-        flow.fitView({ duration: 250 });
-      }, 50)
-    }
-  }, [model])
+  // TODO this will fight animation
+  // useEffect(() => {
+  //   console.log('FIT')
+  //   if (flow) {
+  //     // TODO there's a timing issue here
+  //     setTimeout(() => {
+  //       flow.fitView({ duration: 250 });
+  //     }, 50)
+  //   }
+  // }, [model])
   
   const onNodesChange = useCallback(
     (changes) => {
-      // const newNodes = applyNodeChanges(changes, model.nodes);
-      // setModel({ nodes: newNodes, links: model.links });
+      const newNodes = applyNodeChanges(changes, model.nodes);
+      setModel({ nodes: newNodes, edges: model.edges });
     }, [setModel, model]);
 
-  // const onEdgesChange = useCallback(
-  //   (changes) => setModel((eds) => {
-  //     const newLinks = applyEdgeChanges(changes, eds)
-  //     setModel({ links: newLinks, nodes: model.nodes })
-  //   },
-  //   [setModel]
-  // );
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
+    event.stopPropagation();
+    if (event.target.closest('[name=add-node]')) {
+      const startModel = addPlaceholder(model, node)
+      const endModel = layout(startModel)
+      //setModel(newModelWithPositions)
+
+      // animate to the new bound at the same time as we
+      animate(startModel, endModel, setModel, flow, 500)
+      // flow.fitView({ duration: 500, padding: 0.4 });
+      
+      // TODO publish the change outside the component, converting back to the original format
+
+    }
+  }, [model])
 
   const handleSelectionChange = useCallback(({ nodes, edges }) => {
     const everything = nodes.concat(edges);
@@ -122,7 +138,7 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
         nodeTypes={nodeTypes}
         // snapToGrid={true}
         // snapGrid={[10, 10]}
-        // onNodeClick={handleNodeClick}
+        onNodeClick={handleNodeClick}
         // onPaneClick={onPaneClick}
         onInit={setFlowInstance}
         fitView
