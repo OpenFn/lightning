@@ -23,7 +23,9 @@ defmodule Lightning.ProjectsFixtures do
 
   @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
-    project = project_fixture()
+    user = Lightning.AccountsFixtures.user_fixture()
+
+    project = project_fixture(project_users: [%{user_id: user.id}])
 
     w1 =
       WorkflowsFixtures.workflow_fixture(
@@ -39,9 +41,13 @@ defmodule Lightning.ProjectsFixtures do
 
     project_credential =
       CredentialsFixtures.project_credential_fixture(
+        user_id: user.id,
         name: "new credential",
-        body: %{"foo" => "manchu"}
+        body: %{"foo" => "manchu"},
+        project_id: project.id
       )
+
+    Ecto.assoc(project_credential, [:credential, :user]) |> Lightning.Repo.all()
 
     w1_job =
       JobsFixtures.job_fixture(
@@ -88,6 +94,12 @@ defmodule Lightning.ProjectsFixtures do
       trigger: %{type: :webhook}
     )
 
-    %{project: project, w1: w1, w2: w2}
+    %{
+      project: project,
+      w1: w1,
+      w2: w2,
+      w1_job: w1_job,
+      w2_job: w2_job
+    }
   end
 end

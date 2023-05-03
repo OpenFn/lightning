@@ -4,12 +4,20 @@ defmodule Lightning.Projects do
   """
 
   import Ecto.Query, warn: false
+  alias Lightning.Attempt
+  alias Lightning.AttemptRun
+  alias Lightning.Jobs.Trigger
+  alias Lightning.Jobs.Job
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
   alias Lightning.Projects.{Importer, Project, ProjectCredential}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
+  alias Lightning.Workflows.Workflow
+  alias Lightning.InvocationReason
+  alias Lightning.Invocation.{Run, Dataclip}
+  alias Lightning.WorkOrder
 
   @doc """
   Returns the list of projects.
@@ -132,7 +140,8 @@ defmodule Lightning.Projects do
   end
 
   @doc """
-  Deletes a project.
+  Deletes a project and its related data, including workflows, work orders,
+  runs, jobs, attempts, triggers, project users, project credentials, and dataclips
 
   ## Examples
 
@@ -143,8 +152,118 @@ defmodule Lightning.Projects do
       {:error, %Ecto.Changeset{}}
 
   """
+
   def delete_project(%Project{} = project) do
-    Repo.delete(project)
+    Repo.transaction(fn ->
+      project_attempts_query(project) |> Repo.delete_all()
+
+      project_attempt_run_query(project) |> Repo.delete_all()
+
+      project_workorders_query(project) |> Repo.delete_all()
+
+      project_users_invocation_reasons(project) |> Repo.delete_all()
+
+      project_runs_query(project) |> Repo.delete_all()
+
+      project_jobs_query(project) |> Repo.delete_all()
+
+      project_workflows_invocation_reason(project) |> Repo.delete_all()
+
+      project_triggers_query(project) |> Repo.delete_all()
+
+      project_workflows_query(project) |> Repo.delete_all()
+
+      project_users_query(project) |> Repo.delete_all()
+
+      project_credentials_query(project) |> Repo.delete_all()
+
+      project_dataclips_query(project) |> Repo.delete_all()
+
+      {:ok, project} = Repo.delete(project)
+      project
+    end)
+  end
+
+  def project_workflows_invocation_reason(project) do
+    from(ir in InvocationReason,
+      join: tr in assoc(ir, :trigger),
+      join: w in assoc(tr, :workflow),
+      join: d in assoc(ir, :dataclip),
+      where: w.project_id == ^project.id or d.project_id == ^project.id
+    )
+  end
+
+  def project_users_invocation_reasons(project) do
+    from(ir in InvocationReason,
+      join: u in assoc(ir, :user),
+      join: pu in assoc(u, :project_users),
+      join: p in assoc(pu, :project),
+      where: p.id == ^project.id
+    )
+  end
+
+  def project_attempts_query(project) do
+    from(att in Attempt,
+      join: wo in assoc(att, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_attempt_run_query(project) do
+    from(ar in AttemptRun,
+      join: att in assoc(ar, :attempt),
+      join: wo in assoc(att, :work_order),
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_workorders_query(project) do
+    from(wo in WorkOrder,
+      join: w in assoc(wo, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_jobs_query(project) do
+    from(j in Job,
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_runs_query(project) do
+    from(r in Run,
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
+    )
+  end
+
+  def project_workflows_query(project) do
+    from(w in Workflow, where: w.project_id == ^project.id)
+  end
+
+  @spec project_users_query(atom | %{:id => any, optional(any) => any}) ::
+          Ecto.Query.t()
+  def project_users_query(project) do
+    from(p in ProjectUser, where: p.project_id == ^project.id)
+  end
+
+  def project_credentials_query(project) do
+    from(pc in ProjectCredential, where: pc.project_id == ^project.id)
+  end
+
+  def project_dataclips_query(project) do
+    from(d in Dataclip, where: d.project_id == ^project.id)
+  end
+
+  def project_triggers_query(project) do
+    from(tr in Trigger,
+      join: w in assoc(tr, :workflow),
+      where: w.project_id == ^project.id
+    )
   end
 
   @doc """

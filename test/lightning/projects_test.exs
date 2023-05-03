@@ -168,12 +168,113 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "delete_project/1 deletes the project" do
-      project = project_fixture()
-      assert {:ok, %Project{}} = Projects.delete_project(project)
+      %{
+        project: p1,
+        w1_job: w1_job
+      } = full_project_fixture()
+
+      %{
+        project: p2,
+        w2_job: w2_job
+      } = full_project_fixture()
+
+      {:ok, p1_pu} = p1.project_users |> Enum.fetch(0)
+
+      p1_user = Lightning.Accounts.get_user!(p1_pu.user_id)
+
+      {:ok, p1_work_order} =
+        Lightning.WorkOrderService.multi_for(
+          :webhook,
+          w1_job,
+          ~s[{"foo": "bar"}] |> Jason.decode!()
+        )
+        |> Repo.transaction()
+
+      Lightning.WorkOrderService.retry_attempt_run(
+        p1_work_order.attempt_run,
+        p1_user
+      )
+
+      Lightning.WorkOrderService.multi_for(
+        :webhook,
+        w2_job,
+        ~s[{"foo": "bar"}] |> Jason.decode!()
+      )
+      |> Repo.transaction()
+
+      runs_query = Lightning.Projects.project_runs_query(p1)
+
+      work_order_query = Lightning.Projects.project_workorders_query(p1)
+
+      attempt_query = Lightning.Projects.project_attempts_query(p1)
+
+      attempt_run_query = Lightning.Projects.project_attempt_run_query(p1)
+
+      workflows_ir_query =
+        Lightning.Projects.project_workflows_invocation_reason(p1)
+
+      pu_ir_query = Lightning.Projects.project_users_invocation_reasons(p1)
+
+      pu_query = Lightning.Projects.project_users_query(p1)
+
+      pc_query = Lightning.Projects.project_credentials_query(p1)
+
+      workflows_query = Lightning.Projects.project_workflows_query(p1)
+
+      jobs_query = Lightning.Projects.project_jobs_query(p1)
+
+      assert runs_query |> Repo.aggregate(:count, :id) == 3
+
+      assert work_order_query |> Repo.aggregate(:count, :id) == 1
+
+      assert attempt_query |> Repo.aggregate(:count, :id) == 2
+
+      assert attempt_run_query |> Repo.aggregate(:count, :id) == 3
+
+      assert workflows_ir_query |> Repo.aggregate(:count, :id) == 1
+
+      assert pu_ir_query |> Repo.aggregate(:count, :id) == 1
+
+      assert pu_query |> Repo.aggregate(:count, :id) == 1
+
+      assert pc_query |> Repo.aggregate(:count, :id) == 1
+
+      assert workflows_query |> Repo.aggregate(:count, :id) == 2,
+             "There should be only two workflows"
+
+      assert jobs_query |> Repo.aggregate(:count, :id) == 5,
+             "There should be only five jobs"
+
+      assert {:ok, %Project{}} = Projects.delete_project(p1)
+
+      assert runs_query |> Repo.aggregate(:count, :id) == 0
+
+      assert work_order_query |> Repo.aggregate(:count, :id) == 0
+
+      assert attempt_query |> Repo.aggregate(:count, :id) == 0
+
+      assert attempt_run_query |> Repo.aggregate(:count, :id) == 0
+
+      assert pu_query |> Repo.aggregate(:count, :id) == 0
+
+      assert pc_query |> Repo.aggregate(:count, :id) == 0
+
+      assert workflows_query |> Repo.aggregate(:count, :id) == 0
+
+      assert jobs_query |> Repo.aggregate(:count, :id) == 0
+
+      assert workflows_ir_query |> Repo.aggregate(:count, :id) == 0
+
+      assert pu_ir_query |> Repo.aggregate(:count, :id) == 0
 
       assert_raise Ecto.NoResultsError, fn ->
-        Projects.get_project!(project.id)
+        Projects.get_project!(p1.id)
       end
+
+      assert p2.id == Projects.get_project!(p2.id).id
+
+      assert Lightning.Projects.project_runs_query(p2)
+             |> Repo.aggregate(:count, :id) == 1
     end
 
     test "change_project/1 returns a project changeset" do
