@@ -4,34 +4,82 @@ defmodule LightningWeb.API.RunControllerTest do
   import Lightning.InvocationFixtures
   import Lightning.WorkflowsFixtures
   import Lightning.JobsFixtures
+  import Lightning.ProjectsFixtures
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
   end
 
+  test "without a token", %{conn: conn} do
+    conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/runs")
+
+    assert %{"error" => "Unauthorized"} == json_response(conn, 401)
+  end
+
+  # given subject
+  # it { subject } should [not] be (==, gt, lt, etc) value
+
+  # given, when, then, *so that
+
+  # shows a list of runs for a project
+  #   must be authenicated
+  #   returns 404 if they don't belong to the project
+  # shows list of from for all projects the user is a member of
+  #   must be authenicated
+  #   must not include existing runs belonging to other projects
+  # show a single run
+  #   must be authenicated
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user, :create_run]
 
-    test "lists all runs (via projects)", %{
+    # given a project
+    #   that has 10 runs
+    # and given a project that I don't belong to
+    #   that has 2 runs
+    # when I make a request to the api project runs controller/route
+    #   with a page size of 5
+    # then I should get a response with 2 runs that belong to the project
+    #   and doesn't have any runs from the other project
+
+    def pluck_id(data) do
+      Map.get(data, "id") || Map.get(data, :id)
+    end
+
+    test "lists all runs for a project I belong to", %{
       conn: conn,
       project: project
     } do
-      runs = Enum.map(1..11, fn _ -> create_run(%{project: project}).run end)
+      other_project = project_fixture()
+      runs = Enum.map(0..10, fn _ -> run_fixture(project_id: project.id) end)
 
-      conn =
-        get(
-          conn,
-          Routes.api_project_run_path(conn, :index, project.id, %{
-            "page_size" => 2
-          })
-        )
+      other_runs =
+        Enum.map(0..2, fn _ -> run_fixture(project_id: other_project.id) end)
+
+      conn = get(conn, ~p"/api/projects/#{project.id}/runs?#{%{page_size: 2}}")
 
       response = json_response(conn, 200)
 
-      runs
-      |> Enum.each(fn r ->
-        response["data"] |> Enum.any?(fn d -> d["id"] == r.id end)
-      end)
+      all_run_ids = MapSet.new(runs |> Enum.map(&pluck_id/1))
+      returned_run_ids = MapSet.new(response["data"] |> Enum.map(&pluck_id/1))
+
+      assert MapSet.subset?(returned_run_ids, all_run_ids)
+
+      other_run_ids = MapSet.new(other_runs |> Enum.map(&pluck_id/1))
+
+      refute MapSet.subset?(other_run_ids, all_run_ids)
+    end
+
+    # given a project that I don't belong to
+    # when I make a request to the api project runs controller/route
+    # then I should get a 404 response
+    test "responds with a 404 when I don't have access", %{conn: conn} do
+      other_project = project_fixture()
+
+      conn = get(conn, ~p"/api/projects/#{other_project.id}/runs")
+
+      response = json_response(conn, 404)
+
+      assert response == %{"error" => "Not Found"}
     end
 
     test "lists all runs for the current user", %{
@@ -91,6 +139,7 @@ defmodule LightningWeb.API.RunControllerTest do
     end
   end
 
+  # TODO: see if we can't use run fixture
   defp create_run(%{project: project}) do
     job = job_fixture(workflow_id: workflow_fixture(project_id: project.id).id)
     %{run: run_fixture(job_id: job.id)}

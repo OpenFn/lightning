@@ -1,15 +1,17 @@
 defmodule LightningWeb.API.RunController do
   use LightningWeb, :controller
 
+  alias Lightning.Projects.Project
   alias Lightning.Invocation
   # alias Lightning.Jobs.Job
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback(LightningWeb.FallbackController)
 
   def index(conn, %{"project_id" => project_id} = params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    with project <- Lightning.Projects.get_project(project_id),
+    with project = %Project{} <-
+           Lightning.Projects.get_project(project_id) || {:error, :not_found},
          :ok <-
            Bodyguard.permit(
              Invocation.Policy,
