@@ -3,63 +3,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram'
 // import useStore from './store'
 import { createWorkflowStore } from '../../js/workflow-editor/store'
+import workflows from './workflows';
 import './main.css'
-
-
-const chart1 = {
-  id: 'chart1',
-  jobs: [{
-    id: 'a',
-    adaptor: 'common',
-    expression: 'fn(s => s)',
-  }, {
-    id: 'b',
-    adaptor: 'salesforce',
-    expression: 'fn(s => s)',
-  },
-  {
-    id: 'c',
-    adaptor: 'http',
-    expression: 'fn(s => s)',
-  }],
-  triggers: [{
-    id: 'z',
-    type: 'cron',
-    cronExpression: '0 0 0',
-  }],
-  edges: [
-    { id: 'z-a', label: 'on success', source_trigger_id: 'z', target_job_id: 'a' },
-    { id: 'a-b', label: 'on success', source_job_id: 'a', target_job_id: 'b' },
-    { id: 'a-c', label: 'on success', source_job_id: 'a', target_job_id: 'c' },
-  ],
-};
-
-const chart2 = {
-  id: 'chart2',
-  jobs: [{ id: 'a' }],
-  triggers: [{ id: 'z' }],
-  edges: [
-    { id: 'z-a', source_trigger_id: 'z', target_job_id: 'a' },
-  ],
-};
-
-const chart3 = {
-  id: 'chart3',
-  jobs: [{ id: 'a' }, { id: 'b', label: 'this is a very long node name oh yes' }, { id: 'c' }],
-  triggers: [],
-  edges: [
-    // { id: 'z-a', source_trigger_id: 'z', target_job_id: 'a' },
-    { id: 'a-b', source_job: 'a', target_job_id: 'b' },
-    { id: 'b-c', source_job: 'b', target_job_id: 'c' },
-  ],
-};
 
 const Form = ({ node }) => {
   if (!node) {
     return <div>No node selected</div>
   }
   return  (<>
-            <p>{`id: ${node.id}`}</p>
+            <p>{`name: ${node.label || node.id}`}</p>
             {node.adaptor && <p>{`adaptor: ${node.adaptor}`}</p>}
             {node.type && <p>{`type: ${node.type}`}</p>}
             <p>{`expression: ${node.cronExpression || node.expression}`}</p>
@@ -67,6 +19,7 @@ const Form = ({ node }) => {
 }
 
 export default () => {
+  const [workflowId, setWorkflowId] = useState('chart1');
   const [history, setHistory ] = useState([])
   const [store, setStore ] = useState({});
   const [selectedNode, setSelectedNode ] = useState(null)
@@ -84,10 +37,10 @@ export default () => {
       setHistory((h) => [evt, ...h])
     }
 
-    const s = createWorkflowStore(chart1, onChange)
+    const s = createWorkflowStore(workflows[workflowId], onChange)
 
     const unsubscribe = s.subscribe(({ jobs, edges, triggers }) => {
-      console.log('sub: ', { jobs, edges, triggers })
+      console.log('store change: ', { jobs, edges, triggers })
       setWorkflow({ jobs, edges, triggers });
     });
 
@@ -96,17 +49,7 @@ export default () => {
     setStore(s);
 
     return () => unsubscribe();
-  }, [])
-  // console.log(store)
-  // console.log(workflow)
-
-  // const { setWorkflow, workflow } = useStore(
-  //     ({ workflow, setWorkflow }) => ({ workflow, setWorkflow })
-  // );
-
-  // useEffect(() => {
-  //   setWorkflow(chart1)
-  // }, [])
+  }, [workflowId])
 
   const handleSelectionChange = (ids: string[]) => {
     const [first] = ids;
@@ -114,13 +57,13 @@ export default () => {
     setSelectedNode(node)
   }
 
+  // Adding a job in the store will push the new workflow structure through to the inner component
+  // Selection should be preserved (but probably isn't right now)
+  // At the moment this doesn't animate, which is fine and expected
   const addJob = useCallback(() => {
-    console.log(store)
-    const { add, addJob } = store.getState();
+    const { add } = store.getState();
 
-    // TODO ideally these should be batched up to trigger fewer updates
     const newNodeId = crypto.randomUUID();
-    // addJob()
     add({
       jobs: [{
         id: newNodeId,
@@ -158,8 +101,8 @@ export default () => {
           Options to control data flow from outside the chart
           These must write to the store and push to the component
         */}
-        <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflow(chart1)}>Load chart 1</button>
-        <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflow(chart2)}>Load chart 2</button>
+        <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflowId('chart1')}>Workflow 1</button>
+        <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => setWorkflowId('chart2')}>Workflow 2</button>
         <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => addJob()}>Add Job</button>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2">
@@ -167,7 +110,7 @@ export default () => {
         <Form node={selectedNode} />
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2 overflow-y-auto">
-        <h2 className="text-center">Changes Events</h2>
+        <h2 className="text-center">Change Events</h2>
         <ul className="ml-4">{
           history.map((change) => {
           return (<li key={change.id} className="border border-slate-50 border-1 p-4 m-2">

@@ -29,12 +29,12 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
     setFlow(s)
   }, [setFlow])
 
-  // respond to changes pushed into the component
-  // For now this just means the job has changed
-  // but later it might mean syncing back with the server
+  // Respond to changes pushed into the component from outside
+  // This usually means the workflow has changed or its the first load, so we don't want to animate
+  // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
     const newModel = fromWorkflow(workflow);
-    console.log('UPDATING WORKFLOW');
+    console.log('UPDATING WORKFLOW', workflow);
     setModel(newModel)
     
     // This is rough, but make sure we fit the view after a change
