@@ -10,6 +10,7 @@ const model = model => {
   model.nodes.forEach(node => {
     const wfNode = {
       id: node.id,
+      label: node.data?.label,
     };
     if (node.type === 'trigger') {
       workflow.triggers.push(wfNode);
@@ -17,6 +18,7 @@ const model = model => {
       workflow.jobs.push(wfNode);
     }
   });
+
   model.edges.forEach(edge => {
     const source = model.nodes.find(({ id }) => id === edge.source);
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { getRectOfNodes } from 'react-flow-renderer';
+import { getRectOfNodes } from 'reactflow';
 import type { Node, Edge } from 'reactflow';
 import { stratify, tree } from 'd3-hierarchy';
 import { timer } from 'd3-timer';

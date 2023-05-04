@@ -5,6 +5,7 @@ import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram'
 import { createWorkflowStore } from '../../js/workflow-editor/store'
 import workflows from './workflows';
 import './main.css'
+import 'reactflow/dist/style.css';
 
 const Form = ({ node }) => {
   if (!node) {

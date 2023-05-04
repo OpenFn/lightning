@@ -1,8 +1,8 @@
 import React, { memo, useState } from 'react';
 
 import cc from 'classcat';
-import type { NodeProps } from 'react-flow-renderer';
-import { Handle, Position } from 'react-flow-renderer';
+import type { NodeProps } from 'reactflow';
+import { Handle, Position } from 'reactflow';
 import { NodeData } from '../layout/types';
 
 function PlusButton() {

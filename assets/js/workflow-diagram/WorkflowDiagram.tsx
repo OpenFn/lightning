@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges } from 'react-flow-renderer';
+import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges } from 'reactflow';
 import layout, { animate } from './layout'
 import nodeTypes from './nodes';
 import { Workflow } from './types';

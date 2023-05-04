@@ -1,5 +1,5 @@
 import { ElkExtendedEdge, ElkNode } from 'elkjs';
-import { Edge, EdgeMarker, Node } from 'react-flow-renderer';
+import { Edge, EdgeMarker, Node } from 'reactflow';
 
 export interface EdgeFlowProps {
   animated: boolean;

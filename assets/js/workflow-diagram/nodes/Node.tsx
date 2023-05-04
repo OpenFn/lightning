@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { Handle, Position, NodeProps } from 'react-flow-renderer';
+import { Handle, Position, NodeProps } from 'reactflow';
 
 type NodeData = any;
 
@@ -34,13 +34,13 @@ const Node = ({
       style={{ width: '150px', height: '40px' }}
       title={tooltip || label}
     >
-      <Handle
+      {targetPosition && <Handle
         type="target"
         position={targetPosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', height: 0, top: 0 }}
       />
-
+}
       <div
         className={[
           'h-full',
@@ -72,7 +72,7 @@ const Node = ({
         type="source"
         position={sourcePosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', height: 0, bottom: 0 }}
       />
     </div>
   );
