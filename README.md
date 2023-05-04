@@ -265,7 +265,7 @@ Here is an example of how we the `Lightning.Policies.Permissions.can/4` interfac
 ```elixir
 can_edit_job = Lightning.Policies.ProjectUsers |> Lightning.Policies.Permissions.can?(:edit_job, socket.assigns.current_user, socket.assigns.project)
 
-if socket.assigns.can_edit_job do
+if can_edit_job do
     # allow user to edit the job
 else
     # quick user out
