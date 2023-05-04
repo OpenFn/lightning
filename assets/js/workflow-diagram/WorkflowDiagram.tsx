@@ -33,22 +33,22 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   // For now this just means the job has changed
   // but later it might mean syncing back with the server
   useEffect(() => {
-    console.log('UPDATING WORKFLOW')
     const newModel = fromWorkflow(workflow);
-    console.log(newModel)
+    console.log('UPDATING WORKFLOW');
     setModel(newModel)
+    
+    // This is rough, but make sure we fit the view after a change
+    let t;
+    if (flow) {
+      t = setTimeout(() => {
+        flow.fitView({ duration: 250 });
+      }, 50);
+    }
+
+    return () => {
+      clearTimeout(t);
+    }
   }, [workflow])
-  
-  // TODO this will fight animation
-  // useEffect(() => {
-  //   console.log('FIT')
-  //   if (flow) {
-  //     // TODO there's a timing issue here
-  //     setTimeout(() => {
-  //       flow.fitView({ duration: 250 });
-  //     }, 50)
-  //   }
-  // }, [model])
   
   const onNodesChange = useCallback(
     (changes) => {
@@ -61,14 +61,8 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
     if (event.target.closest('[name=add-node]')) {
       const startModel = addPlaceholder(model, node)
       const endModel = layout(startModel)
-      //setModel(newModelWithPositions)
 
-      // animate to the new bound at the same time as we
       animate(startModel, endModel, setModel, flow, 500)
-      // flow.fitView({ duration: 500, padding: 0.4 });
-      
-      // TODO publish the change outside the component, converting back to the original format
-
     }
   }, [model])
 

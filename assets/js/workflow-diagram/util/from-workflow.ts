@@ -12,8 +12,16 @@ const fromWorkflow = (workflow: Workflow, selection: Record<string, true>) => {
   process(workflow.jobs, nodes, 'job');
   process(workflow.triggers, nodes, 'trigger');
   process(workflow.edges, edges, 'edge');
-
-  return layout({ nodes, edges });
+  // console.log(nodes);
+  // console.log(edges);
+  try {
+    return layout({ nodes, edges });
+  } catch (e) {
+    // Common use case right now is to try and layout an inconsistent chart
+    // This will keep me alive until I can fix it
+    console.error(e);
+    return { nodes, edges };
+  }
 };
 
 export default fromWorkflow;

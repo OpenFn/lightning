@@ -4,8 +4,7 @@ import { Node } from '../types';
 // A node can only have one placeholder at a time
 // We show the new job form and when the job is actually
 // created, we replace the placeholder with the real thing
-export default (model, node: Node) => {
-  console.log(model);
+export default (model: any, node: Node) => {
   const newModel = {
     nodes: [...model.nodes],
     edges: [...model.edges],
