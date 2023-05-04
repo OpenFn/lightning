@@ -160,7 +160,7 @@ defmodule LightningWeb.WorkflowLive do
 
     can_create_workflow =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :create_workflow,
         socket.assigns.current_user,
         socket.assigns.project
@@ -168,7 +168,7 @@ defmodule LightningWeb.WorkflowLive do
 
     can_create_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :create_job,
         socket.assigns.current_user,
         socket.assigns.project
@@ -176,7 +176,7 @@ defmodule LightningWeb.WorkflowLive do
 
     can_edit_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :edit_job,
         socket.assigns.current_user,
         socket.assigns.project
@@ -184,7 +184,7 @@ defmodule LightningWeb.WorkflowLive do
 
     can_delete_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :delete_job,
         socket.assigns.current_user,
         socket.assigns.project

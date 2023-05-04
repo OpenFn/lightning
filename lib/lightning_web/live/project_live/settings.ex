@@ -21,7 +21,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     can_edit_project_name =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :edit_project_name,
         socket.assigns.current_user,
         socket.assigns.project
@@ -29,7 +29,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     can_edit_project_description =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :edit_project_description,
         socket.assigns.current_user,
         socket.assigns.project
@@ -54,7 +54,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        ),
        do:
          ProjectUsers
-         |> Permissions.can(:edit_digest_alerts, current_user, project_user)
+         |> Permissions.can?(:edit_digest_alerts, current_user, project_user)
 
   defp can_edit_project(socket),
     do:

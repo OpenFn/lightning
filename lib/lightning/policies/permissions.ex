@@ -3,7 +3,11 @@ defmodule Lightning.Policies.Permissions do
   The Bodyguard permissions module.
   """
   def can(policy, action, user, params \\ []) do
-    case Bodyguard.permit(policy, action, user, params) do
+    Bodyguard.permit(policy, action, user, params)
+  end
+
+  def can?(policy, action, user, params \\ []) do
+    case can(policy, action, user, params) do
       :ok -> true
       {:error, :unauthorized} -> false
     end

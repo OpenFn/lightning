@@ -11,7 +11,7 @@ defmodule LightningWeb.ProjectLive.Index do
   def mount(_params, _session, socket) do
     can_access_admin_space =
       Users
-      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
+      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
 
     if can_access_admin_space do
       {:ok, socket, layout: {LightningWeb.Layouts, :settings}}
@@ -56,5 +56,5 @@ defmodule LightningWeb.ProjectLive.Index do
   # and have zipped list of projects and the permissions so when we iterate
   # over them in the templace we don't generate n number of queries
   def can_delete_project(current_user, project),
-    do: ProjectUsers |> Permissions.can(:delete_project, current_user, project)
+    do: ProjectUsers |> Permissions.can?(:delete_project, current_user, project)
 end

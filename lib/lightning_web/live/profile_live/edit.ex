@@ -30,7 +30,7 @@ defmodule LightningWeb.ProfileLive.Edit do
 
     can_delete_account =
       Lightning.Policies.Users
-      |> Lightning.Policies.Permissions.can(
+      |> Lightning.Policies.Permissions.can?(
         :delete_account,
         socket.assigns.current_user,
         user

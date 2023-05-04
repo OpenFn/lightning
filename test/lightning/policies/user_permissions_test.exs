@@ -32,8 +32,8 @@ defmodule Lightning.UserPermissionsTest do
       user: user,
       other_user: other_user
     } do
-      assert Users |> Permissions.can(:delete_account, user, user)
-      refute Users |> Permissions.can(:delete_account, user, other_user)
+      assert Users |> Permissions.can?(:delete_account, user, user)
+      refute Users |> Permissions.can?(:delete_account, user, other_user)
     end
 
     test "can only delete their own api tokens", %{
@@ -44,14 +44,14 @@ defmodule Lightning.UserPermissionsTest do
       other_user_api_token = api_token_fixture(other_user).token
 
       assert Users
-             |> Permissions.can(
+             |> Permissions.can?(
                :delete_api_token,
                user,
                user_api_token
              )
 
       refute Users
-             |> Permissions.can(
+             |> Permissions.can?(
                :delete_api_token,
                user,
                other_user_api_token
@@ -62,17 +62,17 @@ defmodule Lightning.UserPermissionsTest do
       user_cred = CredentialsFixtures.credential_fixture(user_id: user.id)
       other_cred = CredentialsFixtures.credential_fixture()
 
-      assert Users |> Permissions.can(:edit_credential, user, user_cred)
-      assert Users |> Permissions.can(:delete_credential, user, user_cred)
+      assert Users |> Permissions.can?(:edit_credential, user, user_cred)
+      assert Users |> Permissions.can?(:delete_credential, user, user_cred)
 
-      refute Users |> Permissions.can(:edit_credential, user, other_cred)
-      refute Users |> Permissions.can(:delete_credential, user, other_cred)
+      refute Users |> Permissions.can?(:edit_credential, user, other_cred)
+      refute Users |> Permissions.can?(:delete_credential, user, other_cred)
     end
 
     test "can't access admin settings", %{
       user: user
     } do
-      refute Users |> Permissions.can(:access_admin_space, user, {})
+      refute Users |> Permissions.can?(:access_admin_space, user, {})
     end
   end
 
@@ -80,7 +80,7 @@ defmodule Lightning.UserPermissionsTest do
     test "can access admin settings", %{
       superuser: superuser
     } do
-      assert Users |> Permissions.can(:access_admin_space, superuser, {})
+      assert Users |> Permissions.can?(:access_admin_space, superuser, {})
     end
   end
 end

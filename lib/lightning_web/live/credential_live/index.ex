@@ -34,7 +34,7 @@ defmodule LightningWeb.CredentialLive.Index do
 
     can_delete_credential =
       Lightning.Policies.Users
-      |> Lightning.Policies.Permissions.can(
+      |> Lightning.Policies.Permissions.can?(
         :delete_credential,
         socket.assigns.current_user,
         credential

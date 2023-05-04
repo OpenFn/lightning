@@ -2,6 +2,8 @@ defmodule LightningWeb.Hooks do
   @moduledoc """
   LiveView Hooks
   """
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   import Phoenix.LiveView
   import Phoenix.Component
 
@@ -19,20 +21,17 @@ defmodule LightningWeb.Hooks do
     projects =
       Lightning.Projects.get_projects_for_user(socket.assigns.current_user)
 
-    case Bodyguard.permit(
-           Lightning.Projects.Policy,
-           :read,
-           socket.assigns.current_user,
-           project
-         ) do
-      {:error, :unauthorized} ->
-        {:halt, redirect(socket, to: "/") |> put_flash(:nav, :no_access)}
+    can_access_project =
+      ProjectUsers
+      |> Permissions.can?(:access_project, socket.assigns.current_user, project)
 
-      :ok ->
-        {:cont,
-         socket
-         |> assign_new(:project, fn -> project end)
-         |> assign_new(:projects, fn -> projects end)}
+    if can_access_project do
+      {:cont,
+       socket
+       |> assign_new(:project, fn -> project end)
+       |> assign_new(:projects, fn -> projects end)}
+    else
+      {:halt, redirect(socket, to: "/") |> put_flash(:nav, :no_access)}
     end
   end
 

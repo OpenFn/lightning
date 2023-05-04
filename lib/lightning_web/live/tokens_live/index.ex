@@ -31,7 +31,7 @@ defmodule LightningWeb.TokensLive.Index do
     current_user = socket.assigns.current_user
 
     can_delete_api_token =
-      Users |> Permissions.can(:delete_api_token, current_user, api_token)
+      Users |> Permissions.can?(:delete_api_token, current_user, api_token)
 
     if can_delete_api_token do
       socket

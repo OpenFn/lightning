@@ -171,7 +171,7 @@ defmodule LightningWeb.ProfileLiveTest do
       assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
     end
 
-    test "users can't schedule deletion on other users accounts", %{
+    test "users can't schedule deletion for other users", %{
       conn: conn,
       user: _user
     } do

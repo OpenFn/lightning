@@ -79,7 +79,7 @@ defmodule LightningWeb.CredentialLive.Edit do
     credential = Credentials.get_credential!(id)
 
     if Lightning.Policies.Users
-       |> Permissions.can(
+       |> Permissions.can?(
          :edit_credential,
          socket.assigns.current_user,
          credential

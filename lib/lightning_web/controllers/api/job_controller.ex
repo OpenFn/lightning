@@ -1,19 +1,20 @@
 defmodule LightningWeb.API.JobController do
   use LightningWeb, :controller
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Jobs
-  # alias Lightning.Jobs.Job
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback(LightningWeb.FallbackController)
 
   def index(conn, %{"project_id" => project_id} = params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
     with project <- Lightning.Projects.get_project(project_id),
          :ok <-
-           Bodyguard.permit(
-             Jobs.Policy,
-             :list,
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
              conn.assigns.current_user,
              project
            ) do
