@@ -45,8 +45,15 @@ export default () => {
     });
 
     const { jobs, edges, triggers } = s.getState();
-    setWorkflow({ jobs, edges, triggers });
-    setStore(s);
+    // Set the chart to null to reset its positions
+    setWorkflow({ jobs: [], edges: [], triggers: [] });
+    
+    // now set the chart properly
+    // use a timeout to make sure its applied
+    setTimeout( () =>  {
+      setWorkflow({ jobs, edges, triggers });
+      setStore(s);
+    }, 1)
 
     return () => unsubscribe();
   }, [workflowId])
@@ -75,6 +82,11 @@ export default () => {
     })
   }, [store, selectedNode]);
 
+  const handleRequestChange = useCallback((diff) => {
+    const { add } = store.getState();
+    add(diff)
+  }, [store]);
+
   // Right now the diagram just supports the adding and removing of nodes,
   // so lets respect that
   const onNodeAdded = (from, data) => {
@@ -92,6 +104,7 @@ export default () => {
     <div className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100">
       <WorkflowDiagram 
         workflow={workflow}
+        requestChange={handleRequestChange}
         onSelectionChange={handleSelectionChange}
       />
     </div>

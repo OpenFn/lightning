@@ -5,6 +5,7 @@ import nodeTypes from './nodes';
 import { Workflow } from './types';
 import addPlaceholder from './util/add-placeholder';
 import fromWorkflow from './util/from-workflow';
+import toWorkflow from './util/to-workflow';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
@@ -18,12 +19,17 @@ type WorkflowDiagramProps = {
 // So in controlled mode things get difficult
 // the component has to track internal chart state, like selection,
 // as well as incoming changes from the server (like node state change)
-export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
+export default ({ workflow, requestChange, onSelectionChange }: WorkflowDiagramProps) => {
   const [model, setModel] = useState({ nodes: [], edges: [] });
+  
+  // Track positions internally, so that when incoming changes come in,
+  // we can preserve positions and/or animate properly
+  const [positions, setPositions] = useState({});
 
   // TODO can selection just be a flat object? Easier to maintain state this way
   const [selected, setSelected] = useState({ nodes: {}, edges: {} });
-  const [flow, setFlow] = useState()
+  
+  const [flow, setFlow] = useState();
 
   const setFlowInstance = useCallback((s) => {
     setFlow(s)
@@ -33,22 +39,16 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const newModel = fromWorkflow(workflow);
-    console.log('UPDATING WORKFLOW', workflow);
-    setModel(newModel)
-    
-    // This is rough, but make sure we fit the view after a change
-    let t;
-    if (flow) {
-      t = setTimeout(() => {
-        flow.fitView({ duration: 250 });
-      }, 50);
-    }
+    const newModel = fromWorkflow(workflow, positions);
 
-    return () => {
-      clearTimeout(t);
+    console.log('UPDATING WORKFLOW', newModel);
+    if (flow && newModel.nodes.length) {
+      const positions = layout(newModel, setModel, flow, 500)
+      setPositions(positions)
+    } else {
+      setPositions({})
     }
-  }, [workflow])
+  }, [workflow, flow, setModel])
   
   const onNodesChange = useCallback(
     (changes) => {
@@ -59,12 +59,15 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
     event.stopPropagation();
     if (event.target.closest('[name=add-node]')) {
-      const startModel = addPlaceholder(model, node)
-      const endModel = layout(startModel)
-
-      animate(startModel, endModel, setModel, flow, 500)
+      addNode(node);
     }
   }, [model])
+  
+  const addNode = useCallback((parentNode: Node) => {
+    // Generate a placeholder node and edge
+    const diff = addPlaceholder(model, parentNode);
+    requestChange?.(toWorkflow(diff));
+  }, [requestChange]);
 
   const handleSelectionChange = useCallback(({ nodes, edges }) => {
     const everything = nodes.concat(edges);
@@ -79,18 +82,9 @@ export default ({ workflow, onSelectionChange }: WorkflowDiagramProps) => {
         edges={model.edges}
         onSelectionChange={handleSelectionChange}
         onNodesChange={onNodesChange}
-        // onEdgesChange={onEdgesChange}
-        // // onSelectionChange={onSelectedNodeChange}
-        // // onConnect={onConnect}
-        // // If we let folks drag, we have to save new visual configuration...
         nodesDraggable={false}
-        // // No interaction for this yet...
-        // nodesConnectable={false}
         nodeTypes={nodeTypes}
-        // snapToGrid={true}
-        // snapGrid={[10, 10]}
         onNodeClick={handleNodeClick}
-        // onPaneClick={onPaneClick}
         onInit={setFlowInstance}
         fitView
       />

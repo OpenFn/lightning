@@ -10,7 +10,15 @@ const layout = tree<Node>()
   // this is needed for creating equal space between all nodes
   .separation(() => 1);
 
-export default ({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) => {
+type Model = { nodes: Node[]; edges: Edge[] };
+
+const calculateLayout = (
+  model: Model,
+  update,
+  flow,
+  duration: number | false = 500
+) => {
+  const { nodes, edges } = model;
   const hierarchy = stratify<Node>()
     .id(d => d.id)
     // get the id of each node by searching through the edges
@@ -19,7 +27,6 @@ export default ({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) => {
 
   // run the layout algorithm with the hierarchy data structure
   const root = layout(hierarchy);
-
   const newNodes = root.descendants().map(d => ({
     ...d.data,
     position: { x: d.x, y: d.y },
@@ -28,15 +35,41 @@ export default ({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) => {
     height: d.height || 40,
   }));
 
-  return { nodes: newNodes, edges };
+  const newModel = { nodes: newNodes, edges };
+
+  const hasOldPositions = nodes.find(n => n.position);
+
+  // If the old model had no positions, this is a first load and we should not animate
+  if (hasOldPositions && duration) {
+    animate(model, newModel, update, flow, duration);
+  } else {
+    update(newModel);
+    setTimeout(() => {
+      // also update the view
+      flow.fitView({ duration: 250 });
+    }, 100);
+  }
+
+  return newNodes.reduce((obj, next) => {
+    obj[next.id] = next.position;
+    return obj;
+  }, {});
 };
+
+export default calculateLayout;
 
 export const animate = (from, to, setModel, flowInstance, duration = 500) => {
   const transitions = to.nodes.map(node => {
-    const oldNode = from.nodes.find(({ id }) => id === node.id);
+    // We usually animate a node from its previous position
+    let animateFrom = from.nodes.find(({ id }) => id === node.id);
+    if (!animateFrom || !animateFrom.position) {
+      // But if this a node node, animate from its parent (source)
+      const edge = from.edges.find(({ target }) => target === node.id);
+      animateFrom = from.nodes.find(({ id }) => id === edge.source);
+    }
     return {
       id: node.id,
-      from: oldNode.position,
+      from: animateFrom.position || { x: 0, y: 0 },
       to: node.position,
       node,
     };

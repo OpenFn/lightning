@@ -6,8 +6,8 @@ import { Node } from '../types';
 // created, we replace the placeholder with the real thing
 export default (model: any, node: Node) => {
   const newModel = {
-    nodes: [...model.nodes],
-    edges: [...model.edges],
+    nodes: [] as any[],
+    edges: [] as any[],
   };
 
   const id = `${node.id}-placeholder`;

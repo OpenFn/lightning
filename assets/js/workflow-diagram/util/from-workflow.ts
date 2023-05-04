@@ -1,7 +1,9 @@
-import layout from '../layout';
 import { Node, Edge, Workflow } from '../types';
 
-const fromWorkflow = (workflow: Workflow, selection: Record<string, true>) => {
+type Positions = Record<string, { x: number; y: number }>;
+
+// TODO pass in the currently selected items so that we can maintain selection
+const fromWorkflow = (workflow: Workflow, positions: Positions) => {
   if (workflow.jobs.length == 0) {
     return { nodes: [], edges: [] };
   }
@@ -9,19 +11,11 @@ const fromWorkflow = (workflow: Workflow, selection: Record<string, true>) => {
   const nodes = [] as any[];
   const edges = [] as any[];
 
-  process(workflow.jobs, nodes, 'job');
-  process(workflow.triggers, nodes, 'trigger');
+  process(workflow.jobs, nodes, 'job', positions);
+  process(workflow.triggers, nodes, 'trigger', positions);
   process(workflow.edges, edges, 'edge');
-  // console.log(nodes);
-  // console.log(edges);
-  try {
-    return layout({ nodes, edges });
-  } catch (e) {
-    // Common use case right now is to try and layout an inconsistent chart
-    // This will keep me alive until I can fix it
-    console.error(e);
-    return { nodes, edges };
-  }
+
+  return { nodes, edges };
 };
 
 export default fromWorkflow;
@@ -29,7 +23,8 @@ export default fromWorkflow;
 const process = (
   items: Array<Node | Edge>,
   collection: any[],
-  type: 'job' | 'trigger' | 'edge'
+  type: 'job' | 'trigger' | 'edge',
+  positions?: Positions
 ) => {
   items.forEach(item => {
     const model: any = {
@@ -37,6 +32,10 @@ const process = (
     };
     if (/(job|trigger)/.test(type)) {
       model.type = type;
+
+      if (positions && positions[item.id]) {
+        model.position = positions[item.id];
+      }
     } else {
       let edge = item as Edge;
       model.source = edge.source_trigger_id || edge.source_job_id;
@@ -58,5 +57,3 @@ const process = (
     collection.push(model);
   });
 };
-
-// TODO pass in the currently selected items so that we can maintain selection
