@@ -13,9 +13,7 @@ config :lightning,
 config :lightning, Lightning.Repo, types: Lightning.PostgrexTypes
 
 config :hammer,
-  backend:
-    {Hammer.Backend.Mnesia,
-     [expiry_ms: 60_000 * 60 * 4, cleanup_interval_ms: 60_000 * 10]}
+  backend: {Hammer.Backend.Mnesia, [expiry_ms: 60_000 * 60 * 4, cleanup_interval_ms: 60_000 * 10]}
 
 # Configures the endpoint
 config :lightning, LightningWeb.Endpoint,
@@ -60,10 +58,9 @@ config :lightning, :oauth_clients,
 config :esbuild,
   version: "0.17.18",
   default: [
-    args:
-      ~w(js/app.js
+    args: ~w(js/app.js
          js/storybook.js
-         js/workflow-diagram/component.tsx
+         js/workflow-diagram-old/component.tsx
          js/editor/Editor.tsx
          fonts/inter.css
          fonts/fira-code.css

@@ -31,8 +31,8 @@ const process = (
       model.type = type;
     } else {
       let edge = item as Edge;
-      model.source = edge.source_trigger || edge.source_job;
-      model.target = edge.target_job;
+      model.source = edge.source_trigger_id || edge.source_job_id;
+      model.target = edge.target_job_id;
       model.label = item.label;
       model.labelBgStyle = {
         fill: 'rgb(243, 244, 246)',

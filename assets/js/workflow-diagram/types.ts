@@ -22,12 +22,13 @@ export interface JobNode extends Node {}
 
 export interface Edge {
   id: string;
+  source_job_id?: string;
+  source_trigger_id?: string;
+  target_job_id?: string;
   label: string;
-  error_path: boolean;
-  condition: string;
-  source_job?: string;
-  source_trigger?: string;
-  target_job?: string;
+  condition?: string;
+  error_path?: boolean;
+  errors: any;
 }
 
 export type Workflow = {
