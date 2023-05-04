@@ -9,19 +9,19 @@ defmodule Lightning.Policies.ProjectUsers do
   alias Lightning.Accounts.User
 
   @type actions ::
-          :add_project_collaborator
-          | :access_project
+          :run_job
           | :edit_job
+          | :rerun_job
           | :create_job
-          | :create_workflow
           | :delete_job
           | :delete_project
+          | :access_project
+          | :create_workflow
+          | :edit_project_name
           | :edit_digest_alerts
           | :edit_failure_alerts
           | :edit_project_description
-          | :edit_project_name
-          | :rerun_job
-          | :run_job
+          | :add_project_collaborator
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
