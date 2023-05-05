@@ -17,12 +17,24 @@ export function mount(
 
   function render() {
     // Note that object diffing won't work welll ike this
-    const { edges, jobs, triggers } = workflowStore.getState();
+    const { edges, jobs, triggers, editJobUrl } = workflowStore.getState();
     const workflow = { edges, jobs, triggers };
-    console.log(workflow)
+
+
+    const handleSelectionChange = (ids) => {
+      const id = ids[0]
+      if (id && !window.location.href.match(id)) {
+        console.log(editJobUrl, id)
+        window.location.href = editJobUrl.replace(':job_id', id)
+      }
+    }
+
     componentRoot.render(
       // TODO listen to change events from the diagram and upadte the store accordingly
-      <WorkflowDiagram workflow={workflow} onSelectionChange={()=>{}}/>
+      <WorkflowDiagram
+        workflow={workflow}
+        onSelectionChange={handleSelectionChange}
+        handleRequestChange={()=>{}}/>
     );
   }
 
