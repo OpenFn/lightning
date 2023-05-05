@@ -1,4 +1,5 @@
 import { Node, Edge, Workflow } from '../types';
+import { isPlaceholder } from './add-placeholder';
 
 type Positions = Record<string, { x: number; y: number }>;
 
@@ -20,14 +21,12 @@ const fromWorkflow = (
     items.forEach(item => {
       const model: any = {
         id: item.id,
-        // className: 'nodrag', // prevent selection
-        // selectable: false,
       };
       if (item.id === selectedNodeId) {
         model.selected = true;
       }
       if (/(job|trigger)/.test(type)) {
-        model.type = type;
+        model.type = isPlaceholder(item) ? 'placeholder' : type;
 
         if (positions && positions[item.id]) {
           model.position = positions[item.id];
@@ -40,6 +39,13 @@ const fromWorkflow = (
         model.labelBgStyle = {
           fill: 'rgb(243, 244, 246)',
         };
+        if (isPlaceholder(item)) {
+          model.style = {
+            'stroke-dasharray': '4, 4',
+            stroke: 'rgb(99, 102, 241, 0.3)',
+            'stroke-width': '1.5px',
+          };
+        }
       }
 
       model.data = {

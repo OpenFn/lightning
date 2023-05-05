@@ -43,7 +43,6 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
     const { positions, selectedId } = chartCache.current;
-    console.log('selectedId', selectedId)
     const newModel = fromWorkflow(workflow, positions, selectedId);
 
     console.log('UPDATING WORKFLOW', newModel);
@@ -57,13 +56,11 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   
   const onNodesChange = useCallback(
     (changes) => {
-      console.log('change', changes)
-      // const newNodes = applyNodeChanges(changes, model.nodes);
-      // setModel({ nodes: newNodes, edges: model.edges });
+      const newNodes = applyNodeChanges(changes, model.nodes);
+      setModel({ nodes: newNodes, edges: model.edges });
     }, [setModel, model]);
 
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
-    console.log('click')
     event.stopPropagation();
     event.preventDefault()
     if (event.target.closest('[name=add-node]')) {

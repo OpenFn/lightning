@@ -13,10 +13,6 @@ export const add = (model: any, node: Node) => {
   const id = `${node.id}-placeholder`;
   newModel.nodes.push({
     id,
-    type: 'job',
-    data: {
-      label: 'New Job',
-    },
     position: node.position,
   });
   newModel.edges.push({
@@ -29,6 +25,8 @@ export const add = (model: any, node: Node) => {
 
 // Do we have a placeholder associated with this node?
 export const exists = (model: any, node: Node) => {};
+
+export const isPlaceholder = (node: Node) => node.id.match(/-placeholder$/);
 
 // Conver a node from a placeholder to a normal node
 // Assign it a UUID
