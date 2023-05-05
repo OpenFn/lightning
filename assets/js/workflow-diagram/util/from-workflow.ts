@@ -29,6 +29,7 @@ const fromWorkflow = (
         model.type = isPlaceholder(item) ? 'placeholder' : type;
 
         if (positions && positions[item.id]) {
+          // console.log('adding position for ' + item.id, positions[item.id]);
           model.position = positions[item.id];
         }
       } else {
@@ -41,9 +42,9 @@ const fromWorkflow = (
         };
         if (isPlaceholder(item)) {
           model.style = {
-            'stroke-dasharray': '4, 4',
+            strokeDasharray: '4, 4',
             stroke: 'rgb(99, 102, 241, 0.3)',
-            'stroke-width': '1.5px',
+            strokeWidth: '1.5px',
           };
         }
       }

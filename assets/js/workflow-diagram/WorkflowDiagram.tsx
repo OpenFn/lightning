@@ -47,8 +47,10 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
 
     console.log('UPDATING WORKFLOW', newModel);
     if (flow && newModel.nodes.length) {
-      const positions = layout(newModel, setModel, flow, 500)
-      chartCache.current.positions = positions;
+      layout(newModel, setModel, flow, 200, (positions) => {
+        // Bit of a hack - don't update positions until the animation has finished
+        chartCache.current.positions = positions;
+      });
     } else {
       chartCache.current.positions = {}
     }

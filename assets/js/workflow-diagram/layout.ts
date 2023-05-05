@@ -16,7 +16,8 @@ const calculateLayout = (
   model: Model,
   update,
   flow,
-  duration: number | false = 500
+  duration: number | false = 500,
+  onComplete
 ) => {
   const { nodes, edges } = model;
   const hierarchy = stratify<Node>()
@@ -41,15 +42,25 @@ const calculateLayout = (
 
   // If the old model had no positions, this is a first load and we should not animate
   if (hasOldPositions && duration) {
-    animate(model, newModel, update, flow, duration);
+    animate(model, newModel, update, flow, duration, onComplete);
   } else {
     update(newModel);
     setTimeout(() => {
       // also update the view
       flow.fitView({ duration: 250 });
     }, 100);
+
+    // TODO deal with this
+    if (onComplete) {
+      const positions = newNodes.reduce((obj, next) => {
+        obj[next.id] = next.position;
+        return obj;
+      }, {});
+      onComplete(positions);
+    }
   }
 
+  // TODO deal with this
   return newNodes.reduce((obj, next) => {
     obj[next.id] = next.position;
     return obj;
@@ -58,7 +69,14 @@ const calculateLayout = (
 
 export default calculateLayout;
 
-export const animate = (from, to, setModel, flowInstance, duration = 500) => {
+export const animate = (
+  from,
+  to,
+  setModel,
+  flowInstance,
+  duration = 500,
+  onComplete
+) => {
   const transitions = to.nodes.map(node => {
     // We usually animate a node from its previous position
     let animateFrom = from.nodes.find(({ id }) => id === node.id);
@@ -89,7 +107,6 @@ export const animate = (from, to, setModel, flowInstance, duration = 500) => {
         y: from.y + (to.y - from.y) * s,
       },
     }));
-
     setModel({ edges: to.edges, nodes: currNodes });
 
     if (isFirst) {
@@ -114,6 +131,15 @@ export const animate = (from, to, setModel, flowInstance, duration = 500) => {
 
       // stop the animation
       t.stop();
+
+      // TODO deal with this
+      if (onComplete) {
+        const positions = to.nodes.reduce((obj, next) => {
+          obj[next.id] = next.position;
+          return obj;
+        }, {});
+        onComplete(positions);
+      }
     }
   });
 };

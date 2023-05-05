@@ -29,7 +29,7 @@ const model = model => {
 
     if (source && source.type === 'trigger') {
       wfEdge.source_trigger_id = edge.source;
-      wfEdge.trigger = edge.data.trgger || {};
+      wfEdge.trigger = edge.data.trigger || {};
     } else {
       wfEdge.source_job_id = edge.source;
     }

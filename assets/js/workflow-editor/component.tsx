@@ -17,12 +17,17 @@ export function mount(
   }
 
   function render() {
-    const { edges, jobs, triggers, editJobUrl } = workflowStore.getState();
+    const { edges, jobs, triggers, add } = workflowStore.getState();
     const workflow = { edges, jobs, triggers };
 
 
     const handleSelectionChange = (id) => {
-      onSelectionChange?.(id);
+      // onSelectionChange?.(id);
+    }
+
+    const handleRequestChange = (diff) => {
+      console.log('diff', diff)
+      add(diff)
     }
 
     componentRoot.render(
@@ -31,11 +36,12 @@ export function mount(
         ref={el}
         workflow={workflow}
         onSelectionChange={handleSelectionChange}
-        handleRequestChange={()=>{}}/>
+        requestChange={handleRequestChange}/>
     );
   }
 
   workflowStore.subscribe(() => {
+    console.log('> subscribe')
     render()
   })
 
