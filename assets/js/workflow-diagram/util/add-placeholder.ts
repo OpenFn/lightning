@@ -4,7 +4,7 @@ import { Node } from '../types';
 // A node can only have one placeholder at a time
 // We show the new job form and when the job is actually
 // created, we replace the placeholder with the real thing
-export default (model: any, node: Node) => {
+export const add = (model: any, node: Node) => {
   const newModel = {
     nodes: [] as any[],
     edges: [] as any[],
@@ -26,3 +26,10 @@ export default (model: any, node: Node) => {
   });
   return newModel;
 };
+
+// Do we have a placeholder associated with this node?
+export const exists = (model: any, node: Node) => {};
+
+// Conver a node from a placeholder to a normal node
+// Assign it a UUID
+export const convert = (model: any) => {};

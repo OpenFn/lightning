@@ -20,6 +20,8 @@ const fromWorkflow = (
     items.forEach(item => {
       const model: any = {
         id: item.id,
+        // className: 'nodrag', // prevent selection
+        // selectable: false,
       };
       if (item.id === selectedNodeId) {
         model.selected = true;
