@@ -26,7 +26,7 @@ defmodule LightningWeb.RunLive.Index do
     pending: :boolean
   }
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(params, _session, socket) do
@@ -108,9 +108,7 @@ defmodule LightningWeb.RunLive.Index do
          run: %Run{},
          filters_changeset: filters_changeset(socket.assigns.filters)
        )
-       |> push_patch(
-         to: ~p"/projects/#{socket.assigns.project.id}/runs?#{params}"
-       )}
+       |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/runs?#{params}")}
     else
       {:noreply,
        socket
@@ -269,8 +267,5 @@ defmodule LightningWeb.RunLive.Index do
        socket
        |> assign(filters_changeset: filters_changeset(filters))
        |> assign(filters: filters)
-       |> push_patch(
-         to:
-           ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
-       )}
+       |> push_patch(to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}")}
 end
