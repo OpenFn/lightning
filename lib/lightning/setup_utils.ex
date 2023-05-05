@@ -102,6 +102,37 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id
       })
 
+      {:ok, dataclip} =
+        attrs
+        |> Keyword.put_new_lazy(:project_id, project.id)
+        |> Enum.into(%{
+          body: %{
+            {
+              "data": {
+                "age_in_months": 19,
+                "name": "Genevieve Wimplemews"
+              }
+            }
+          },
+          type: :http_request
+        })
+        |> Lightning.Invocation.create_dataclip()
+
+      {:ok, run} =
+        attrs
+        |> Keyword.put_new_lazy(:job_id, job_1.id)
+        |> Keyword.put_new_lazy(:input_dataclip_id, fn ->
+          dataclip_fixture(project_id: attrs[:project_id]).id
+        end)
+        |> Enum.into(%{
+          exit_code: nil,
+          finished_at: nil,
+          log: [],
+          event_id: nil,
+          started_at: nil
+        })
+        |> Lightning.Invocation.create_run()
+
     {:ok, job_2} =
       Jobs.create_job(%{
         name: "Job 2 - Convert data to DHIS2 format",
