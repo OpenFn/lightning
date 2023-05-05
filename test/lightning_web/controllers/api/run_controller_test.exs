@@ -16,6 +16,15 @@ defmodule LightningWeb.API.RunControllerTest do
     assert %{"error" => "Unauthorized"} == json_response(conn, 401)
   end
 
+  describe "with invalid token" do
+    test "gets a 401", %{conn: conn} do
+      token = "Oooops"
+      conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+      conn = get(conn, ~p"/api/projects/#{Ecto.UUID.generate()}/runs")
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+  end
+
   describe "index" do
     setup [:assign_bearer_for_api, :create_project_for_current_user, :create_run]
 
