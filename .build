@@ -149,6 +149,7 @@ LightningWeb.UserRegistrationController.html
 LightningWeb.UserResetPasswordController.html
 LightningWeb.UserSessionController.html
 LightningWeb.WebhooksController.html
+LightningWeb.WorkflowNewLive.WorkflowParams.html
 LightningWeb.html
 Mix.Tasks.Lightning.GenEncryptionKey.html
 Mix.Tasks.Lightning.InstallRuntime.html
@@ -185,8 +186,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-79D8B7C3.js
-dist/sidebar_items-4EC3D2DC.js
+dist/search_items-74E4AE35.js
+dist/sidebar_items-F1CE86A1.js
 index.html
 readme.html
 search.html
