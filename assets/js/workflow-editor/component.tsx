@@ -16,7 +16,6 @@ export function mount(
   }
 
   function render() {
-    // Note that object diffing won't work welll ike this
     const { edges, jobs, triggers, editJobUrl } = workflowStore.getState();
     const workflow = { edges, jobs, triggers };
 

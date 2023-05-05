@@ -56,7 +56,7 @@ const JobNode = ({
         type="target"
         position={targetPosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', height: 0, top: 0 }}
       />
 
       <div
@@ -88,7 +88,7 @@ const JobNode = ({
         type="source"
         position={sourcePosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', height: 0, bottom: 0 }}
       />
     </div>
   );
