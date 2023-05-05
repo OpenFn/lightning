@@ -6,7 +6,7 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Projects
   # alias Lightning.Jobs.Job
 
-  action_fallback(LightningWeb.FallbackController)
+  action_fallback LightningWeb.FallbackController
 
   def index(conn, params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])

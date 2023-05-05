@@ -114,45 +114,64 @@ defmodule Lightning.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :viewer role" do
-    test "cannot create workflows, create/edit/delete/run/rerun jobs, delete the project, and edit the project name or description",
+    test "cannot create workflows, create/edit/delete/run/rerun jobs, add a collaborator to the project, delete the project, and edit the project name or description",
          %{
            project: project,
            viewer: viewer
          } do
-      refute ProjectUsers |> Permissions.can?(:run_job, viewer, project)
-      refute ProjectUsers |> Permissions.can?(:edit_job, viewer, project)
-      refute ProjectUsers |> Permissions.can?(:rerun_job, viewer, project)
-      refute ProjectUsers |> Permissions.can?(:create_job, viewer, project)
-      refute ProjectUsers |> Permissions.can?(:delete_job, viewer, project)
-      refute ProjectUsers |> Permissions.can?(:delete_project, viewer, project)
       refute ProjectUsers |> Permissions.can?(:create_workflow, viewer, project)
+
+      refute ProjectUsers |> Permissions.can?(:create_job, viewer, project)
+      refute ProjectUsers |> Permissions.can?(:edit_job, viewer, project)
+      refute ProjectUsers |> Permissions.can?(:delete_job, viewer, project)
+      refute ProjectUsers |> Permissions.can?(:run_job, viewer, project)
+      refute ProjectUsers |> Permissions.can?(:rerun_job, viewer, project)
+
+      refute ProjectUsers
+             |> Permissions.can?(:add_project_collaborator, viewer, project)
+
+      refute ProjectUsers |> Permissions.can?(:delete_project, viewer, project)
 
       refute ProjectUsers
              |> Permissions.can?(:edit_project_name, viewer, project)
 
       refute ProjectUsers
              |> Permissions.can?(:edit_project_description, viewer, project)
-
-      refute ProjectUsers
-             |> Permissions.can?(:add_project_collaborator, viewer, project)
     end
   end
 
+  defp assert_can(module, actions, user, subject) when is_list(actions) do
+    Enum.each(&assert_can(module, &1, user, subject))
+  end
+
+    defp assert_can(module, action, user, subject) do
+      assert module |> Permissions.can?(action, user, subject)
+    end
+
   describe "Project users with the :editor role" do
-    test "can create workflows and edit/create/delete/run/rerun jobs in the project",
+    test "can create workflows and create/edit/delete/run/rerun jobs in the project",
          %{
            project: project,
            editor: editor
          } do
-      assert ProjectUsers |> Permissions.can?(:run_job, editor, project)
-      assert ProjectUsers |> Permissions.can?(:edit_job, editor, project)
-      assert ProjectUsers |> Permissions.can?(:rerun_job, editor, project)
+
+      ~w(
+        create_workflow
+        create_job
+        edit_job
+        delete_job
+        run_job
+        rerun_job
+      )a |> &assert_can(ProjectUsers, &1, editor, project)      assert ProjectUsers |> Permissions.can?(:create_workflow, editor, project)
+
       assert ProjectUsers |> Permissions.can?(:create_job, editor, project)
+      assert ProjectUsers |> Permissions.can?(:edit_job, editor, project)
       assert ProjectUsers |> Permissions.can?(:delete_job, editor, project)
-      assert ProjectUsers |> Permissions.can?(:create_workflow, editor, project)
+      assert ProjectUsers |> Permissions.can?(:run_job, editor, project)
+      assert ProjectUsers |> Permissions.can?(:rerun_job, editor, project)
     end
 
-    test "cannot delete the project, edit the project name, and edit the project description",
+    test "cannot delete the project, edit the project name, edit the project description, and add a collaborator to the project",
          %{
            project: project,
            editor: editor
@@ -176,6 +195,14 @@ defmodule Lightning.ProjectUserPermissionsTest do
            project: project,
            admin: admin
          } do
+      assert ProjectUsers |> Permissions.can?(:create_workflow, admin, project)
+
+      assert ProjectUsers |> Permissions.can?(:create_job, admin, project)
+      assert ProjectUsers |> Permissions.can?(:edit_job, admin, project)
+      assert ProjectUsers |> Permissions.can?(:delete_job, admin, project)
+      assert ProjectUsers |> Permissions.can?(:run_job, admin, project)
+      assert ProjectUsers |> Permissions.can?(:rerun_job, admin, project)
+
       assert ProjectUsers |> Permissions.can?(:edit_project_name, admin, project)
 
       assert ProjectUsers
