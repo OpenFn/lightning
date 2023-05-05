@@ -21,8 +21,7 @@ export function mount(
     const workflow = { edges, jobs, triggers };
 
 
-    const handleSelectionChange = (ids) => {
-      const id = ids[0]
+    const handleSelectionChange = (id) => {
       onSelectionChange?.(id);
     }
 

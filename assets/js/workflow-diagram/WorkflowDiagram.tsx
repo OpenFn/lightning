@@ -9,7 +9,8 @@ import toWorkflow from './util/to-workflow';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
-  onNodeSelected: (id: string) => void;
+  onSelectionChange: (id: string) => void;
+  requestChange: (id: string) => void;
 }
 
 // Not sure on the relationship to the store
@@ -27,8 +28,8 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   // we can preserve positions and/or animate properly
   const [positions, setPositions] = useState({});
 
-  // TODO can selection just be a flat object? Easier to maintain state this way
-  const [selected, setSelected] = useState({ nodes: {}, edges: {} });
+  // Only track a single selected node
+  const [selectedId, setSelectedId] = useState();
   
   const [flow, setFlow] = useState();
 
@@ -40,7 +41,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   // This usually means the workflow has changed or its the first load, so we don't want to animate
   // Later, if responding to changes from other users live, we may want to animate
   useEffect(() => {
-    const newModel = fromWorkflow(workflow, positions);
+    const newModel = fromWorkflow(workflow, positions, selectedId);
 
     console.log('UPDATING WORKFLOW', newModel);
     if (flow && newModel.nodes.length) {
@@ -70,11 +71,13 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     requestChange?.(toWorkflow(diff));
   }, [requestChange]);
 
-  const handleSelectionChange = useCallback(({ nodes, edges }) => {
-    const everything = nodes.concat(edges);
-    console.log('selection change', everything)
-    const selection = everything.map(({ id }) => id);
-    onSelectionChange(selection);
+  // Note that we only support a single selection
+  const handleSelectionChange = useCallback(({ nodes }) => {
+    const newSelectedId = nodes.length ? nodes[0].id : undefined
+    if (newSelectedId !== selectedId) {
+      onSelectionChange(newSelectedId);
+      setSelectedId(newSelectedId);
+    }
   }, [onSelectionChange]);
 
     // Observe any changes to the parent div, and trigger

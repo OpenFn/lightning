@@ -25,7 +25,6 @@ export default () => {
   const [store, setStore ] = useState({});
   const [selectedNode, setSelectedNode ] = useState(null)
   const ref = useRef(null)
-  console.log(ref)
 
   const [workflow, setWorkflow] = useState({ jobs: [], triggers: [], edges: [] })
 
@@ -60,10 +59,14 @@ export default () => {
     return () => unsubscribe();
   }, [workflowId])
 
-  const handleSelectionChange = (ids: string[]) => {
-    const [first] = ids;
-    const node = workflow.triggers.find(t => t.id === first) || workflow.jobs.find(t => t.id === first)
-    setSelectedNode(node)
+  const handleSelectionChange = (id: string ) => {
+    if (id) {
+      const node = workflow.triggers.find(t => t.id === id) ||
+        workflow.jobs.find(w => w.id === id);
+      setSelectedNode(node)
+    } else {
+      setSelectedNode(null)
+    }
   }
 
   // Adding a job in the store will push the new workflow structure through to the inner component
