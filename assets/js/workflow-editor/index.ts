@@ -68,6 +68,7 @@ export default {
     });
   },
   selectJob(id) {
+    console.log('select', id);
     const url = this.editJobUrl.replace(
       id ? ':job_id' : '/j/:job_id',
       id || ''

@@ -29,6 +29,7 @@ export function mount(
     componentRoot.render(
       // TODO listen to change events from the diagram and upadte the store accordingly
       <WorkflowDiagram
+        ref={el}
         workflow={workflow}
         onSelectionChange={handleSelectionChange}
         handleRequestChange={()=>{}}/>

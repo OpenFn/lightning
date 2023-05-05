@@ -19,7 +19,8 @@ type WorkflowDiagramProps = {
 // So in controlled mode things get difficult
 // the component has to track internal chart state, like selection,
 // as well as incoming changes from the server (like node state change)
-export default ({ workflow, requestChange, onSelectionChange }: WorkflowDiagramProps) => {
+export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
+  const { workflow, requestChange, onSelectionChange } = props;
   const [model, setModel] = useState({ nodes: [], edges: [] });
   
   // Track positions internally, so that when incoming changes come in,
@@ -71,9 +72,25 @@ export default ({ workflow, requestChange, onSelectionChange }: WorkflowDiagramP
 
   const handleSelectionChange = useCallback(({ nodes, edges }) => {
     const everything = nodes.concat(edges);
+    console.log('selection change', everything)
     const selection = everything.map(({ id }) => id);
     onSelectionChange(selection);
   }, [onSelectionChange]);
+
+    // Observe any changes to the parent div, and trigger
+  // a `fitView` to recenter the diagram.
+  useEffect(() => {
+    if (ref && flow) {
+      const resizeOb = new ResizeObserver(function (_entries) {
+        // Animate? I think I prefer it without...
+        flow.fitView();
+      });
+      resizeOb.observe(ref);
+      return () => {
+        resizeOb.unobserve(ref);
+      };
+    }
+  }, [ref, flow]);
   
   return <ReactFlowProvider>
       <ReactFlow
@@ -89,4 +106,4 @@ export default ({ workflow, requestChange, onSelectionChange }: WorkflowDiagramP
         fitView
       />
     </ReactFlowProvider>
-}
+})

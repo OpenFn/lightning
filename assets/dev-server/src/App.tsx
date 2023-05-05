@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 import WorkflowDiagram from '../../js/workflow-diagram/WorkflowDiagram'
 // import useStore from './store'
@@ -24,7 +24,8 @@ export default () => {
   const [history, setHistory ] = useState([])
   const [store, setStore ] = useState({});
   const [selectedNode, setSelectedNode ] = useState(null)
-
+  const ref = useRef(null)
+  console.log(ref)
 
   const [workflow, setWorkflow] = useState({ jobs: [], triggers: [], edges: [] })
 
@@ -102,8 +103,9 @@ export default () => {
   }
 
   return (<div className="flex flex-row h-full w-full">
-    <div className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100">
+    <div className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100" ref={ref}>
       <WorkflowDiagram 
+        ref={ref.current}
         workflow={workflow}
         requestChange={handleRequestChange}
         onSelectionChange={handleSelectionChange}
