@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
   use LightningWeb, :component
 
+  alias LightningWeb.Components.Form
+
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
@@ -121,6 +123,73 @@ defmodule LightningWeb.WorkflowLive.Components do
       class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
     >
     </div>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :cancel_url, :string, required: true
+
+  def job_form(assigns) do
+    ~H"""
+    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
+      <div class="flex sticky top-0 border-b p-2">
+        <div class="grow">
+          <%= @form
+          |> input_value(:name)
+          |> then(fn
+            "" -> "Untitled Job"
+            name -> name
+          end) %>
+        </div>
+        <div class="flex-none">
+          <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
+            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+          </.link>
+        </div>
+      </div>
+      <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+        <%= hidden_inputs_for(@form) %>
+        <div class="col-span-6">
+          <Form.check_box form={@form} field={:enabled} />
+        </div>
+        <div class="col-span-6 @md:col-span-4">
+          <Form.text_field form={@form} label="Job Name" field={:name} />
+        </div>
+        <div class="col-span-6">
+          <.live_component
+            id={"adaptor-picker-#{input_value(@form, :id)}"}
+            module={LightningWeb.JobLive.AdaptorPicker}
+            form={@form}
+          />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :changeset, :map, required: true
+
+  def workflow_name_field(assigns) do
+    ~H"""
+    <.form :let={f} for={@changeset} phx-change="validate">
+      <div class="relative">
+        <%= text_input(
+          f,
+          :name,
+          class: "peer block w-full
+            text-2xl font-bold text-secondary-900
+            border-0 py-1.5 focus:ring-0",
+          placeholder: "Untitled"
+        ) %>
+        <div
+          class="absolute inset-x-0 bottom-0
+                 peer-hover:border-t peer-hover:border-gray-300
+                 peer-focus:border-t-2 peer-focus:border-indigo-600"
+          aria-hidden="true"
+        >
+        </div>
+      </div>
+    </.form>
     """
   end
 end

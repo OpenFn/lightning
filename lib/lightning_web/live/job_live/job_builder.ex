@@ -111,13 +111,17 @@ defmodule LightningWeb.JobLive.JobBuilder do
             >
               <div class="md:grid md:grid-cols-6 md:gap-4 @container">
                 <div class="col-span-6">
-                  <Form.check_box form={f} id={:enabled} disabled={!@can_edit_job} />
+                  <Form.check_box
+                    form={f}
+                    field={:enabled}
+                    disabled={!@can_edit_job}
+                  />
                 </div>
                 <div class="col-span-6 @md:col-span-4">
                   <Form.text_field
                     form={f}
                     label="Job Name"
-                    id={:name}
+                    field={:name}
                     disabled={!@can_edit_job}
                   />
                 </div>

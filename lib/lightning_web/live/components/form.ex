@@ -191,7 +191,7 @@ defmodule LightningWeb.Components.Form do
   Generic text field wrapper for forms. Expects:
 
   * `form` - The form
-  * `id` - The field key
+  * `field` - The field key
 
   And optionally:
 
@@ -200,13 +200,23 @@ defmodule LightningWeb.Components.Form do
   An inner block for a 'hint' section which is rendered below the label.
 
   ```
-  <.text_field form={f} id={:discovery_url} label="Discovery URL">
+  <.text_field form={f} field={:discovery_url} label="Discovery URL">
     <span class="text-xs text-secondary-500">
       The URL to the <code>.well-known</code> endpoint.
     </span>
   </.text_field>
   ```
   """
+
+  attr :form, :map, required: true
+  attr :field, :any, required: true
+  attr :label, :string, default: nil
+  attr :hint, :string, default: nil
+  attr :required, :boolean, default: false
+  attr :disabled, :boolean, default: false
+  slot :inner_block, required: false
+  attr :rest, :global
+
   def text_field(assigns) do
     label_classes = ~w[
       block
@@ -233,32 +243,26 @@ defmodule LightningWeb.Components.Form do
       rounded-md
     ]
 
-    opts = assigns_to_attributes(assigns, [:id, :form, :name, :values])
-
     assigns =
       assigns
       |> assign(
         label_classes: label_classes,
         error_classes: error_classes,
         input_classes: input_classes,
-        opts: opts
+        opts: assigns.rest |> assigns_to_attributes()
       )
-      |> assign_new(:label, fn -> nil end)
-      |> assign_new(:hint, fn -> nil end)
-      |> assign_new(:required, fn -> false end)
-      |> assign_new(:disabled, fn -> false end)
 
     ~H"""
     <%= if @label do %>
-      <%= label(@form, @id, @label, class: @label_classes) %>
+      <%= label(@form, @field, @label, class: @label_classes) %>
     <% else %>
-      <%= label(@form, @id, class: @label_classes) %>
+      <%= label(@form, @field, class: @label_classes) %>
     <% end %>
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
-    <%= error_tag(@form, @id, class: @error_classes) %>
+    <.error form={@form} field={@field} />
     <%= text_input(
       @form,
-      @id,
+      @field,
       @opts ++ [class: @input_classes, required: @required, disabled: @disabled]
     ) %>
     """
@@ -328,11 +332,11 @@ defmodule LightningWeb.Components.Form do
     ~H"""
     <div class="flex items-start">
       <div class="flex items-center h-5">
-        <%= checkbox(@form, @id, @checkbox_opts) %>
+        <%= checkbox(@form, @field, @checkbox_opts) %>
       </div>
       <div class="ml-3 text-sm">
-        <%= error_tag(@form, @id, @error_tag_opts) %>
-        <%= label(@form, @id, @label_opts) %>
+        <%= error_tag(@form, @field, @error_tag_opts) %>
+        <%= label(@form, @field, @label_opts) %>
         <%= if assigns[:inner_block] do %>
           <%= render_slot(@inner_block) %>
         <% end %>

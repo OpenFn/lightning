@@ -64,13 +64,13 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                           <div>
                             <LightningWeb.Components.Form.text_field
                               form={f}
-                              id={:name}
+                              field={:name}
                             />
                           </div>
                           <div>
                             <LightningWeb.Components.Form.check_box
                               form={f}
-                              id={:production}
+                              field={:production}
                             />
                           </div>
                         </div>

@@ -37,12 +37,21 @@ defmodule Lightning.JobsFixtures do
     job
   end
 
+  defp random_name() do
+    suffix =
+      Ecto.UUID.generate() |> String.split_at(5) |> then(fn {x, _} -> x end)
+
+    "Untitled-#{suffix}"
+  end
+
   def workflow_job_fixture(attrs \\ []) do
     workflow =
       Ecto.Changeset.cast(
         %Lightning.Workflows.Workflow{},
         %{
-          "name" => attrs[:workflow_name],
+          "name" =>
+            attrs[:workflow_name] ||
+              random_name(),
           "project_id" => attrs[:project_id] || project_fixture().id,
           "id" => Ecto.UUID.generate()
         },
