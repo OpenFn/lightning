@@ -61,9 +61,18 @@ export default {
       );
 
       this.componentModule.then(({ mount }) => {
-        this.component = mount(this.el, this.workflowStore);
+        this.component = mount(this.el, this.workflowStore, id => {
+          this.selectJob(id);
+        });
       });
     });
+  },
+  selectJob(id) {
+    const url = this.editJobUrl.replace(
+      id ? ':job_id' : '/j/:job_id',
+      id || ''
+    );
+    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
   },
   destroyed() {
     if (this.component) {

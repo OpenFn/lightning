@@ -7,7 +7,8 @@ import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram'
 
 export function mount(
   el: Element | DocumentFragment,
-  workflowStore: ReturnType<typeof createWorkflowStore>
+  workflowStore: ReturnType<typeof createWorkflowStore>,
+  onSelectionChange: (id?: string) => void
 ) {
   const componentRoot = createRoot(el);
 
@@ -22,10 +23,7 @@ export function mount(
 
     const handleSelectionChange = (ids) => {
       const id = ids[0]
-      if (id && !window.location.href.match(id)) {
-        console.log(editJobUrl, id)
-        window.location.href = editJobUrl.replace(':job_id', id)
-      }
+      onSelectionChange?.(id);
     }
 
     componentRoot.render(
