@@ -276,6 +276,17 @@ Docker version 20.10.17, build 100c701
 Docker Compose version v2.6.0
 ```
 
+### Problems with `rambo`
+
+If you're getting this error on Mac M1 chip
+
+```
+sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
+sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
+```
+
+You need to rename `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`
+
 #### Starting from scratch
 
 If you're actively working with docker, you start experiencing issues, and you
