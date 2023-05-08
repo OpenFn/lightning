@@ -2,26 +2,7 @@ defmodule Lightning.Policies.Permissions do
   @moduledoc """
   This module defines a unique interface managing authorizations in Lightning.
 
-  Authorization is a central part of Lightning. Users have different access levels
-  and can do different things depending on their access levels.
-
-  Lightning has 2 types of access levels:
-  1. Instance wide access levels - those are the superuser level and the normal users level.
-  - Superusers are the administrator of the Lightning instance, they can manage projects, manage users,
-  define authentications, access the audit trail, etc.
-  - Normal users are the other users of the Lightning. They are managed by superusers and have full access on their own data.
-  They can manage their accounts and their credentials and can be part of projects.
-  2. Project wide access levels - those are the access levels project members can have. They are viewer, editor, admin, and owner.
-  - viewer is the level 0, it's the lowest access level. It allows actions like accessing the resources of the project in read only
-    mode and editing their own membership configurations (i.e digest alerts, failure alerts)
-  - editor is the level 1. It allows actions like accessing the resources in read / write mode.
-    Project members with editor access level can do what project members with viewer role can do and more.
-    They can create / edit / delete / run / rerun jobs and create workflows
-  - admin is the level 2. It allows administration access to project members.
-    Admins of a project can do what editors can do and more. They can edit the project name and description
-    and also add new project members to the project (collaborators).
-  - owner is the level 3 and the highest level of access in a project. Owners are the creators of project.
-    They can do what all other levels can do and more. Owners can delete projects.
+  Users in Lightning have instance-wide and project-wide roles which determine their level of access to resources in the application. Fo rmore details see the [documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
 
   These authorizations policies are all implemented under the `lib/lightning/policies` folder. In that folder you can find 3 files:
   - The `users.ex` file has all the policies for the instances wide access levels
