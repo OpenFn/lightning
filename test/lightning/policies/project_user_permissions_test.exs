@@ -5,19 +5,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   varying levels of access to the resources (workflows, jobs, triggers, runs)
   within.
 
-  Description of the level of access in a project:
-  - viewer is the level 0, it's the lowest access level.
-    It allows actions like accessing the resources of the project in read only
-    mode and editing their own membership configurations (i.e digest alerts, failure alerts)
-  - editor is the level 1. It allows actions like accessing the resources in read / write mode.
-    Project members with editor access level can do what project members with viewer role can do and more.
-    They can create / edit / delete / run / rerun jobs and create workflows
-  - admin is the level 2. It allows administration access to project members.
-    Admins of a project can do what editors can do and more. They can edit the project name and description
-    and also add new project members to the project (collaborators).
-  - owner is the level 3 and the highest level of access in a project. Owners are the creators of project.
-    They can do what all other levels can do and more. Owners can delete projects.
-
   The tests ensure both that user "Amy" that has been added as an `editor` for project "X",
   _can_ view and edit jobs (for example) in project X, and that they _cannot_ view and edit jobs in project Y.
   """
