@@ -280,8 +280,8 @@ Docker Compose version v2.6.0
 ### Problems with `rambo`
 
 If you are running on Apple silicon (an Apple M1/M2, `macarm`,
-`aarch64-apple-darwin`) and have already compiled rambo explicitly via `mix
-compile.rambo' but still see this error:
+`aarch64-apple-darwin`) and have already compiled rambo explicitly via
+`mix compile.rambo` but still see this error:
 
 ```
 sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
