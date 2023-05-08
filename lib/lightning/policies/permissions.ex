@@ -46,10 +46,37 @@ defmodule Lightning.Policies.Permissions do
   end
   ```
   """
+
+  @doc """
+  checks if user has the permissions to apply action using some policy module
+
+  Returns `:ok` if user can apply action and `{:error, :unauthorized}` otherwise
+
+  ## Examples
+
+      iex> can(Lightning.Policies.Users, :create_workflow, user, project)
+      :ok
+
+      iex> can(Lightning.Policies.Users, :create_project, user, %{})
+      {:error, :unauthorized}
+
+  """
   def can(policy, action, user, params \\ []) do
     Bodyguard.permit(policy, action, user, params)
   end
 
+  @doc """
+  same as can/4 but returns `true` if user can apply action and `false` otherwise
+
+  ## Examples
+
+      iex> can(Lightning.Policies.Users, :create_workflow, user, project)
+      true
+
+      iex> can(Lightning.Policies.Users, :create_project, user, %{})
+      false
+
+  """
   def can?(policy, action, user, params \\ []) do
     case can(policy, action, user, params) do
       :ok -> true
