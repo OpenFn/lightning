@@ -9,15 +9,15 @@ defmodule Lightning.Workorders.SearchParams do
   alias Lightning.Workorders.SearchParams
 
   @type t :: %SearchParams{
-    status: [String.t()],
-    search_fields: [String.t()],
-    search_term: String.t(),
-    workflow_id: Ecto.UUID.t(),
-    date_after: DateTime.t(),
-    date_before: DateTime.t(),
-    wo_date_after: DateTime.t(),
-    wo_date_before: DateTime.t()
-  }
+          status: [String.t()],
+          search_fields: [String.t()],
+          search_term: String.t(),
+          workflow_id: Ecto.UUID.t(),
+          date_after: DateTime.t(),
+          date_before: DateTime.t(),
+          wo_date_after: DateTime.t(),
+          wo_date_before: DateTime.t()
+        }
 
   @primary_key false
   embedded_schema do
@@ -48,13 +48,14 @@ defmodule Lightning.Workorders.SearchParams do
     |> apply_action(:validate)
   end
 
-
   # find where the query is called (like in LiveView), and replace with this
   case params |> SearchParams.new() do
     {:ok, search_params} ->
       # change list_work_orders_for_project_query to take a %SearchParams{} struct
       list_work_orders_for_project_query(project, search_params)
+
     {:error, changeset} ->
+      nil
       # do something with changeset
   end
 end
