@@ -21,7 +21,6 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_digest_alerts
           | :edit_failure_alerts
           | :edit_project_description
-          | :add_project_collaborator
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -55,8 +54,7 @@ defmodule Lightning.Policies.ProjectUsers do
   def authorize(action, %User{} = user, %Project{} = project)
       when action in [
              :edit_project_name,
-             :edit_project_description,
-             :add_project_collaborator
+             :edit_project_description
            ],
       do: Projects.get_project_user_role(user, project) in [:owner, :admin]
 

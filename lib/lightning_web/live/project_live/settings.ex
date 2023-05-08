@@ -48,13 +48,21 @@ defmodule LightningWeb.ProjectLive.Settings do
      )}
   end
 
-  defp can_edit_project_user(
+  defp can_edit_digest_alert(
          %User{} = current_user,
          %ProjectUser{} = project_user
        ),
        do:
          ProjectUsers
          |> Permissions.can?(:edit_digest_alerts, current_user, project_user)
+
+  defp can_edit_failure_alert(
+         %User{} = current_user,
+         %ProjectUser{} = project_user
+       ),
+       do:
+         ProjectUsers
+         |> Permissions.can?(:edit_failure_alerts, current_user, project_user)
 
   defp can_edit_project(socket),
     do:
@@ -157,12 +165,12 @@ defmodule LightningWeb.ProjectLive.Settings do
     assigns =
       assigns
       |> assign(
-        can_edit_project_user:
-          can_edit_project_user(assigns.current_user, assigns.project_user)
+        can_edit_failure_alert:
+          can_edit_failure_alert(assigns.current_user, assigns.project_user)
       )
 
     ~H"""
-    <%= if @can_edit_project_user do %>
+    <%= if @can_edit_failure_alert do %>
       <.form
         :let={form}
         for={%{"failure_alert" => @project_user.failure_alert}}
@@ -188,12 +196,12 @@ defmodule LightningWeb.ProjectLive.Settings do
     assigns =
       assigns
       |> assign(
-        can_edit_project_user:
-          can_edit_project_user(assigns.current_user, assigns.project_user)
+        can_edit_digest_alert:
+          can_edit_digest_alert(assigns.current_user, assigns.project_user)
       )
 
     ~H"""
-    <%= if @can_edit_project_user do %>
+    <%= if @can_edit_digest_alert do %>
       <.form
         :let={form}
         for={%{"digest" => @project_user.digest}}
