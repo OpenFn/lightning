@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Create sample runs when generating sample workflow
+  ([#821](https://github.com/OpenFn/Lightning/issues/821))
+
 ### Changed
 
 ### Fixed
