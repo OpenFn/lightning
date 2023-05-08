@@ -4,6 +4,7 @@ defmodule Lightning.SetupUtils do
   """
 
   alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo, Credentials}
+  alias Lightning.WorkOrderService
 
   import Ecto.Query
 
@@ -11,7 +12,8 @@ defmodule Lightning.SetupUtils do
           jobs: [...],
           projects: [atom | %{:id => any, optional(any) => any}, ...],
           users: [atom | %{:id => any, optional(any) => any}, ...],
-          workflows: [atom | %{:id => any, optional(any) => any}, ...]
+          workflows: [atom | %{:id => any, optional(any) => any}, ...],
+          workorders: [...]
         }
   @doc """
   Creates initial data and returns the created records.
@@ -53,14 +55,24 @@ defmodule Lightning.SetupUtils do
         password: "welcome123"
       })
 
-    %{project: openhie_project, workflow: openhie_workflow, jobs: openhie_jobs} =
+    %{
+      project: openhie_project,
+      workflow: openhie_workflow,
+      jobs: openhie_jobs,
+      workorder: openhie_workorder
+    } =
       create_openhie_project([
         %{user_id: admin.id, role: :admin},
         %{user_id: editor.id, role: :editor},
         %{user_id: viewer.id, role: :viewer}
       ])
 
-    %{project: dhis2_project, workflow: dhis2_workflow, jobs: dhis2_jobs} =
+    %{
+      project: dhis2_project,
+      workflow: dhis2_workflow,
+      jobs: dhis2_jobs,
+      workorder: dhis2_workorder
+    } =
       create_dhis2_project([
         %{user_id: admin.id, role: :admin}
       ])
@@ -69,6 +81,7 @@ defmodule Lightning.SetupUtils do
       users: [super_user, admin, editor, viewer],
       projects: [openhie_project, dhis2_project],
       workflows: [openhie_workflow, dhis2_workflow],
+      workorders: [openhie_workorder, dhis2_workorder],
       jobs: openhie_jobs ++ dhis2_jobs
     }
   end
@@ -101,37 +114,6 @@ defmodule Lightning.SetupUtils do
         enabled: true,
         workflow_id: workflow.id
       })
-
-      {:ok, dataclip} =
-        attrs
-        |> Keyword.put_new_lazy(:project_id, project.id)
-        |> Enum.into(%{
-          body: %{
-            {
-              "data": {
-                "age_in_months": 19,
-                "name": "Genevieve Wimplemews"
-              }
-            }
-          },
-          type: :http_request
-        })
-        |> Lightning.Invocation.create_dataclip()
-
-      {:ok, run} =
-        attrs
-        |> Keyword.put_new_lazy(:job_id, job_1.id)
-        |> Keyword.put_new_lazy(:input_dataclip_id, fn ->
-          dataclip_fixture(project_id: attrs[:project_id]).id
-        end)
-        |> Enum.into(%{
-          exit_code: nil,
-          finished_at: nil,
-          log: [],
-          event_id: nil,
-          started_at: nil
-        })
-        |> Lightning.Invocation.create_run()
 
     {:ok, job_2} =
       Jobs.create_job(%{
@@ -186,6 +168,16 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id,
         project_credential_id: List.first(credential.project_credentials).id
       })
+
+    WorkOrderService.create_webhook_workorder(job_1, %{
+      "age_in_months" => 19,
+      "name" => "Genevieve Wimplemews"
+    })
+
+    WorkOrderService.create_webhook_workorder(job_1, %{
+      "age_in_months" => 17,
+      "name" => "Genevieve Wimplemews"
+    })
 
     %{
       project: project,
@@ -250,9 +242,13 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
+    {:ok, openhie_workorder} =
+      WorkOrderService.create_webhook_workorder(fhir_standard_data, %{})
+
     %{
       project: openhie_project,
       workflow: openhie_workflow,
+      workorder: openhie_workorder,
       jobs: [
         fhir_standard_data,
         send_to_openhim,
@@ -263,6 +259,8 @@ defmodule Lightning.SetupUtils do
   end
 
   def create_dhis2_project(project_users) do
+    user = List.first(project_users).user_id |> Accounts.get_user!()
+
     {:ok, dhis2_project} =
       Projects.create_project(%{
         name: "dhis2-project",
@@ -295,9 +293,15 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id
       })
 
+    job = Jobs.get_job!(get_dhis2_data.id) |> Repo.preload([:workflow])
+
+    {:ok, dhis2_workorder} =
+      WorkOrderService.create_manual_workorder(job, %{}, user)
+
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
+      workorder: dhis2_workorder,
       jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end

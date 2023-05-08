@@ -16,6 +16,7 @@ defmodule Lightning.SetupUtilsTest do
       users: [super_user, admin, editor, viewer] = users,
       projects: [openhie_project, dhis2_project] = projects,
       workflows: [openhie_workflow, dhis2_workflow] = workflows,
+      workorders: [openhie_workorder, dhis2_workorder] = workorders,
       jobs:
         [
           fhir_standard_data,
@@ -30,6 +31,11 @@ defmodule Lightning.SetupUtilsTest do
       assert projects |> Enum.count() == 2
       assert workflows |> Enum.count() == 2
       assert jobs |> Enum.count() == 6
+
+      assert workorders |> Enum.count() == 2
+
+      assert openhie_workorder.work_order.workflow_id == openhie_workflow.id
+      assert dhis2_workorder.work_order.workflow_id == dhis2_workflow.id
 
       assert super_user.email == "super@openfn.org"
       User.valid_password?(super_user, "welcome123")
