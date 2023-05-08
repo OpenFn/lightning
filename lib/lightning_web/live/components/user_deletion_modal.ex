@@ -4,10 +4,6 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   use Phoenix.LiveComponent
 
-  alias Lightning.Invocation
-  alias Lightning.Credentials
-  alias Lightning.Projects
-  alias Lightning.Accounts.User
   alias Lightning.Accounts
 
   @impl true
@@ -15,8 +11,8 @@ defmodule LightningWeb.Components.UserDeletionModal do
     {:ok,
      socket
      |> assign(
-       :scheduled_deletion_changeset,
-       Accounts.change_scheduled_deletion(user)
+       scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user),
+       has_activity_in_projects: Accounts.has_activity_in_projects?(user)
      )
      |> assign(assigns)}
   end
@@ -69,14 +65,6 @@ defmodule LightningWeb.Components.UserDeletionModal do
   defp logout_after_deletion(%{assigns: %{logout: false}} = socket),
     do: push_redirect(socket, to: socket.assigns.return_to)
 
-  defp has_activity_in_projects?(%User{} = user) do
-    project_credentials_count =
-      Credentials.count_project_credentials_for_user(user)
-
-    invocation_reasons_count = Invocation.count_invocation_reasons_for_user(user)
-    project_credentials_count != 0 or invocation_reasons_count != 0
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -96,7 +84,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
         >
           <span>This user's account and credential data will be deleted</span>
 
-          <%= if has_activity_in_projects?(@user) do %>
+          <%= if @has_activity_in_projects do %>
             <div class="hidden sm:block" aria-hidden="true">
               <div class="py-2"></div>
             </div>
