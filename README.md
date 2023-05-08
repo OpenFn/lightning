@@ -179,6 +179,7 @@ mix deps.get
 mix local.rebar --force
 mix ecto.create # Create a development database in Postgres
 mix ecto.migrate
+[[ $(uname -m) == 'arm64' ]] && mix compile.rambo # Force compile rambo if on M1
 mix lightning.install_runtime
 mix lightning.install_schemas
 npm install --prefix assets
@@ -278,14 +279,18 @@ Docker Compose version v2.6.0
 
 ### Problems with `rambo`
 
-If you're getting this error on Mac M1 chip
+If you are running on Apple silicon (an Apple M1/M2, `macarm`,
+`aarch64-apple-darwin`) and have already compiled rambo explicitly via `mix
+compile.rambo' but still see this error:
 
 ```
 sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
 sh: line 0: exec: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: cannot execute: No such file or directory
 ```
 
-You need to rename `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`
+You can try renaming `deps/rambo/priv/rambo-mac` to `deps/rambo/priv/rambo`.
+
+If neither of the approaches above work, please raise an issue.
 
 #### Starting from scratch
 
