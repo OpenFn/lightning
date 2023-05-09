@@ -1,5 +1,6 @@
-import React, { memo, useState } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import React, { memo } from 'react';
+import { Handle, NodeProps } from 'reactflow';
+import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
 type NodeData = any;
 
@@ -14,7 +15,7 @@ const Node = ({
   selected,
   targetPosition,
   sourcePosition,
-  toolbar
+  toolbar,
 }: NodeProps<NodeData>) => {
   return (
     <div
@@ -32,7 +33,7 @@ const Node = ({
         selected ? 'ring-indigo-500' : 'ring-black',
         selected ? 'ring-opacity-20' : 'ring-opacity-5',
       ].join(' ')}
-      style={{ width: '150px', height: '40px' }}
+      style={{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }}
       title={tooltip || label}
     >
       {targetPosition && <Handle

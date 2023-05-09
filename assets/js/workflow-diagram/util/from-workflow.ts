@@ -1,3 +1,4 @@
+import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Node, Edge, Workflow } from '../types';
 import { isPlaceholder } from './add-placeholder';
 
@@ -32,6 +33,9 @@ const fromWorkflow = (
           // console.log('adding position for ' + item.id, positions[item.id]);
           model.position = positions[item.id];
         }
+
+        model.width = NODE_WIDTH;
+        model.height = NODE_HEIGHT;
       } else {
         let edge = item as Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;

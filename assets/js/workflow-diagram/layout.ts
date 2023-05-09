@@ -1,7 +1,12 @@
 import { getRectOfNodes, Node, Edge } from 'reactflow';
 import { stratify, tree } from 'd3-hierarchy';
 import { timer } from 'd3-timer';
-import { FIT_DURATION, FIT_PADDING } from './constants';
+import {
+  FIT_DURATION,
+  FIT_PADDING,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+} from './constants';
 
 const layout = tree<Node>()
   // the node size configures the spacing between the nodes ([width, height])
@@ -31,8 +36,8 @@ const calculateLayout = (
     ...d.data,
     position: { x: d.x, y: d.y },
     // Ensure nodes have a width/height so that we can later do a fit to bounds
-    width: d.width || 150,
-    height: d.height || 40,
+    width: d.width || NODE_WIDTH,
+    height: d.height || NODE_HEIGHT,
   }));
 
   const newModel = { nodes: newNodes, edges };
