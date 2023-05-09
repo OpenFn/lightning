@@ -103,8 +103,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   useEffect(() => {
     if (ref && flow) {
       const resizeOb = new ResizeObserver(function (_entries) {
-        // Animate? I think I prefer it without...
-        flow.fitView();
+        flow.fitView({ duration: 180 });
       });
       resizeOb.observe(ref);
       return () => {
