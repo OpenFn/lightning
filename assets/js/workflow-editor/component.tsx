@@ -22,7 +22,7 @@ export function mount(
 
 
     const handleSelectionChange = (id) => {
-      // onSelectionChange?.(id);
+      onSelectionChange?.(id);
     }
 
     const handleRequestChange = (diff) => {
