@@ -106,7 +106,7 @@ defmodule LightningWeb.WorkflowNewLive do
         "name" => nil,
         "project_id" => socket.assigns.project.id,
         "jobs" => [
-          %{"id" => job_1_id, "name" => ""},
+          %{"id" => job_1_id, "name" => "job-1"},
           %{"id" => job_2_id, "name" => "job-2"}
         ],
         "triggers" => [

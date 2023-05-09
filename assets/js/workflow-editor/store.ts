@@ -113,6 +113,14 @@ export const createWorkflowStore = (
         })
       );
     },
+    change: (id, type, diff) => {
+      set(state =>
+        proposeChanges(state, draft => {
+          const item = draft[type].find(i => i.id === id);
+          Object.assign(item, diff);
+        })
+      );
+    },
     addJob: job => {
       const newJob = buildJob(job);
       set(state =>

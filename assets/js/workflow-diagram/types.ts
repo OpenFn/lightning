@@ -1,3 +1,5 @@
+// This all describes the lightning view of a workflow
+
 export interface Node {
   id: string;
   name: string;

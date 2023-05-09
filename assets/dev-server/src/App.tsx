@@ -7,12 +7,19 @@ import workflows from './workflows';
 import './main.css'
 import 'reactflow/dist/style.css';
 
-const Form = ({ node }) => {
-  if (!node) {
+const Form = ({ nodeId, store, onChange }) => {
+  if (!nodeId) {
     return <div>No node selected</div>
   }
+  const node = store.getState().jobs.find(({ id }) => id == nodeId)
   return  (<>
-            <p>{`name: ${node.label || node.id}`}</p>
+            <p>
+              <span>Name</span>
+              <input
+                value={node.label || node.id}
+                className="border-1 border-slate-200 ml-2 p-2"
+                onChange={(evt) => onChange({ label: evt.target.value })} />
+            </p>
             {node.adaptor && <p>{`adaptor: ${node.adaptor}`}</p>}
             {node.type && <p>{`type: ${node.type}`}</p>}
             <p>{`expression: ${node.cronExpression || node.expression}`}</p>
@@ -69,6 +76,22 @@ export default () => {
     }
   }
 
+  const handleNameChange = useCallback(({ label }) => {
+    const { jobs, edges, change } = store.getState();
+    const diff = { label, placeholder: false };
+
+    const node = jobs.find(j => j.id === selectedNode.id);
+    if (node.placeholder) {
+      diff.placeholder = false;
+
+      const edge = edges.find(e => e.target_job_id === selectedNode.id);
+      change(edge.id, 'edges', { placeholder: false } );
+    }
+
+    change(selectedNode.id, 'jobs', diff);
+
+  }, [store, selectedNode])
+
   // Adding a job in the store will push the new workflow structure through to the inner component
   // Selection should be preserved (but probably isn't right now)
   // At the moment this doesn't animate, which is fine and expected
@@ -92,19 +115,6 @@ export default () => {
     add(diff)
   }, [store]);
 
-  // Right now the diagram just supports the adding and removing of nodes,
-  // so lets respect that
-  const onNodeAdded = (from, data) => {
-    // Add a node and a link to the store
-  }
-
-  const onNodeRemoved = (id) => {
-    // remove a node and link from the store
-  }
-  const onChanged = () => {
-    // notify when the model has changed
-  }
-
   return (<div className="flex flex-row h-full w-full">
     <div className="flex-1 border-2 border-slate-200 m-2 bg-secondary-100" ref={ref}>
       <WorkflowDiagram 
@@ -126,7 +136,7 @@ export default () => {
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2">
         <h2 className="text-center">Selected Node</h2>
-        <Form node={selectedNode} />
+        <Form store={store} nodeId={selectedNode?.id} onChange={handleNameChange}/>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2 overflow-y-auto">
         <h2 className="text-center">Change Events</h2>
