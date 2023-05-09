@@ -3,11 +3,10 @@ import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges,
 import layout, { animate } from './layout'
 import nodeTypes from './nodes';
 import { Workflow } from './types';
+import { FIT_DURATION, FIT_PADDING } from './constants';
 import * as placeholder from './util/add-placeholder';
 import fromWorkflow from './util/from-workflow';
 import toWorkflow from './util/to-workflow';
-
-const FIT_DURATION = 180;
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
@@ -29,6 +28,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   const fitRef = useRef({
     isFitting: false,
     fitAgain: false,
+    lastSize: undefined
   });
 
   const [flow, setFlow] = useState<ReactFlowInstance>();
@@ -115,18 +115,20 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   // TODO this is super intricate because I was trying some stuff
   // We can probably replace it with a nice debounce or throttle now
   const doFit = useCallback(() => {
-    if (fitRef.current.isFitting) {
-      fitRef.current.fitAgain = true;
-    } else {
-      fitRef.current.isFitting = true;
-      fitRef.current.fitAgain = false;
-      flow.fitView({ duration: FIT_DURATION });
-      fitRef.current.timeout = setTimeout(() => {
-        fitRef.current.isFitting = false;
-        if (fitRef.current.fitAgain) {
-          doFit();
-        }
-      }, FIT_DURATION * 2);
+    if (flow) {
+      if (fitRef.current.isFitting) {
+        fitRef.current.fitAgain = true;
+      } else {
+        fitRef.current.isFitting = true;
+        fitRef.current.fitAgain = false;
+        flow.fitView({ duration: FIT_DURATION, padding: FIT_PADDING });
+        fitRef.current.timeout = setTimeout(() => {
+          fitRef.current.isFitting = false;
+          if (fitRef.current.fitAgain) {
+            doFit();
+          }
+        }, FIT_DURATION * 2);
+      }
     }
 
     return () => {
@@ -134,14 +136,15 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     }
   }, [flow, fitRef]);
 
-  // Observe any changes to the parent div, and trigger
-  // a `fitView` to recenter the diagram.
-  // TODO if a request comes in during a resize, wait for the previous to finish
-  // (and add a delay) before resuming
+  // Trigger a fit when the parent div changes size
   useEffect(() => {
-    if (ref) {
-      const resizeOb = new ResizeObserver(function (_entries) {
-        doFit()
+    if (flow && ref) {
+      const resizeOb = new ResizeObserver(function (entries) {
+        if (fitRef.current.lastSize) {
+          // Don't fit when the listener attaches (it callsback immediately)
+          doFit()
+        }
+        fitRef.current.lastSize = entries[0];
       });
       resizeOb.observe(ref);
     
@@ -149,7 +152,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
         resizeOb.unobserve(ref);
       };
     }
-  }, [ref, doFit]);
+  }, [flow, ref]);
   
   return <ReactFlowProvider>
       <ReactFlow
@@ -163,6 +166,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
         onNodeClick={handleNodeClick}
         onInit={setFlowInstance}
         fitView
+      fitViewOptions={{ padding: FIT_PADDING }}
       />
     </ReactFlowProvider>
 })

@@ -1,8 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { getRectOfNodes } from 'reactflow';
-import type { Node, Edge } from 'reactflow';
+import { getRectOfNodes, Node, Edge } from 'reactflow';
 import { stratify, tree } from 'd3-hierarchy';
 import { timer } from 'd3-timer';
+import { FIT_DURATION, FIT_PADDING } from './constants';
 
 const layout = tree<Node>()
   // the node size configures the spacing between the nodes ([width, height])
@@ -45,10 +44,6 @@ const calculateLayout = (
     animate(model, newModel, update, flow, duration, onComplete);
   } else {
     update(newModel);
-    setTimeout(() => {
-      // also update the view
-      flow.fitView({ duration: 250 });
-    }, 100);
 
     // TODO deal with this
     if (onComplete) {
@@ -110,8 +105,9 @@ export const animate = (
     setModel({ edges: to.edges, nodes: currNodes });
 
     if (isFirst) {
+      // Synchronise a fit to the final position with the same duration
       const bounds = getRectOfNodes(to.nodes);
-      flowInstance.fitBounds(bounds, { duration });
+      flowInstance.fitBounds(bounds, { duration, padding: FIT_PADDING });
       isFirst = false;
     }
 
