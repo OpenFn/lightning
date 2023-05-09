@@ -7,6 +7,8 @@ import * as placeholder from './util/add-placeholder';
 import fromWorkflow from './util/from-workflow';
 import toWorkflow from './util/to-workflow';
 
+const FIT_DURATION = 180;
+
 type WorkflowDiagramProps = {
   workflow: Workflow;
   onSelectionChange: (id: string) => void;
@@ -24,6 +26,11 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     ignoreNextSelection: undefined, // awful workaround because I can't control selection
   })
 
+  const fitRef = useRef({
+    isFitting: false,
+    fitAgain: false,
+  });
+
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
   const setFlowInstance = useCallback((s) => {
@@ -39,7 +46,15 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
 
     console.log('UPDATING WORKFLOW', newModel);
     if (flow && newModel.nodes.length) {
+      fitRef.isFitting = true;
       layout(newModel, setModel, flow, 200, (positions) => {
+        
+        // trigger selection on new nodes once they've been passed back through to us
+        if (chartCache.current.deferSelection) {
+          onSelectionChange(chartCache.current.deferSelection)
+          delete chartCache.current.deferSelection;
+        }
+
         // Bit of a hack - don't update positions until the animation has finished
         chartCache.current.positions = positions;
       });
@@ -73,15 +88,14 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     // We essentially want to ignore that change and set the new placeholder as the selection
     chartCache.current.ignoreNextSelection = true
     chartCache.current.selectedId = newNode.id;
-    requestChange?.(toWorkflow(diff));
 
-    // Trigger selection change
-    // This is behind a timeout because:
-    // a) the server needs to receive the new node before we can select it
-    // b) the layout animation must finish before we open the side panel
-    setTimeout(() => {
-      onSelectionChange(newNode.id)
-    }, 400)
+    // Request a selection change when the node is passed back in
+    // We have to do this because of how Lightning handles selection through the URL
+    // (if we send the change too early, Lightning won't see the node and can't select it)
+    chartCache.current.deferSelection = newNode.id;
+
+    // Push the changes to Lightning
+    requestChange?.(toWorkflow(diff));
   }, [requestChange]);
 
   // Note that we only support a single selection
@@ -98,21 +112,44 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     chartCache.current.ignoreNextSelection = undefined;
   }, [onSelectionChange]);
 
+  // TODO this is super intricate because I was trying some stuff
+  // We can probably replace it with a nice debounce or throttle now
+  const doFit = useCallback(() => {
+    if (fitRef.current.isFitting) {
+      fitRef.current.fitAgain = true;
+    } else {
+      fitRef.current.isFitting = true;
+      fitRef.current.fitAgain = false;
+      flow.fitView({ duration: FIT_DURATION });
+      fitRef.current.timeout = setTimeout(() => {
+        fitRef.current.isFitting = false;
+        if (fitRef.current.fitAgain) {
+          doFit();
+        }
+      }, FIT_DURATION * 2);
+    }
+
+    return () => {
+      clearTimeout(fitRef.current.timeout)
+    }
+  }, [flow, fitRef]);
+
   // Observe any changes to the parent div, and trigger
   // a `fitView` to recenter the diagram.
   // TODO if a request comes in during a resize, wait for the previous to finish
   // (and add a delay) before resuming
   useEffect(() => {
-    if (ref && flow) {
+    if (ref) {
       const resizeOb = new ResizeObserver(function (_entries) {
-        flow.fitView({ duration: 180 });
+        doFit()
       });
       resizeOb.observe(ref);
+    
       return () => {
         resizeOb.unobserve(ref);
       };
     }
-  }, [ref, flow]);
+  }, [ref, doFit]);
   
   return <ReactFlowProvider>
       <ReactFlow
