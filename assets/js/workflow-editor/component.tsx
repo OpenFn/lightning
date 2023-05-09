@@ -26,7 +26,6 @@ export function mount(
     }
 
     const handleRequestChange = (diff) => {
-      console.log('diff', diff)
       add(diff)
     }
 
