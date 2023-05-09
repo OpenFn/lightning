@@ -279,9 +279,27 @@ Docker Compose version v2.6.0
 
 ### Problems with `rambo`
 
-If you are running on Apple silicon (an Apple M1/M2, `macarm`,
-`aarch64-apple-darwin`) and have already compiled rambo explicitly via
-`mix compile.rambo` but still see this error:
+When running `mix compile.rambo` on Apple Silicon (an Apple M1/M2, `macarm`,
+`aarch64-apple-darwin`) and encountering the following error:
+
+```
+** (RuntimeError) Rambo does not ship with binaries for your environment.
+
+    aarch64-apple-darwin22.3.0 detected
+
+Install the Rust compiler so a binary can be prepared for you.
+
+    lib/mix/tasks/compile.rambo.ex:89: Mix.Tasks.Compile.Rambo.compile!/0
+    lib/mix/tasks/compile.rambo.ex:51: Mix.Tasks.Compile.Rambo.run/1
+    (mix 1.14.2) lib/mix/task.ex:421: anonymous fn/3 in Mix.Task.run_task/4
+    (mix 1.14.2) lib/mix/cli.ex:84: Mix.CLI.run_task/2
+```
+
+You can resolve this error by installing the Rust compiler using Homebrew. Run
+the following command in your terminal: `brew install rust`
+
+If you have already compiled Rambo explicitly via `mix compile.rambo`, and you
+are still seeing the following error:
 
 ```
 sh: /path_to_directory/Lightning/_build/dev/lib/rambo/priv/rambo: No such file or directory
