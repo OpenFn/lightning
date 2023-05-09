@@ -4,7 +4,7 @@ import { createStore } from 'zustand';
 
 enablePatches();
 
-type WorkflowProps = {
+export type WorkflowProps = {
   triggers: {}[];
   jobs: {}[];
   edges: {}[];
@@ -12,6 +12,7 @@ type WorkflowProps = {
 };
 
 export interface WorkflowState extends WorkflowProps {
+  add: (data: Partial<WorkflowProps>) => void;
   addEdge: (edge: any) => void;
   addJob: (job: any) => void;
   addTrigger: (node: any) => void;
