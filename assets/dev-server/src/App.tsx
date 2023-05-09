@@ -13,17 +13,17 @@ const Form = ({ nodeId, store, onChange }) => {
   }
   const node = store.getState().jobs.find(({ id }) => id == nodeId)
   return  (<>
-            <p>
-              <span>Name</span>
-              <input
-                value={node.label || node.id}
-                className="border-1 border-slate-200 ml-2 p-2"
-                onChange={(evt) => onChange({ label: evt.target.value })} />
-            </p>
-            {node.adaptor && <p>{`adaptor: ${node.adaptor}`}</p>}
-            {node.type && <p>{`type: ${node.type}`}</p>}
-            <p>{`expression: ${node.cronExpression || node.expression}`}</p>
-          </>);
+    <p>
+      <span>Name</span>
+      <input
+        value={node.name || node.id}
+        className="border-1 border-slate-200 ml-2 p-2"
+        onChange={(evt) => onChange({ name: evt.target.value })} />
+    </p>
+    {node.adaptor && <p>{`adaptor: ${node.adaptor}`}</p>}
+    {node.type && <p>{`type: ${node.type}`}</p>}
+    <p>{`expression: ${node.cronExpression || node.expression}`}</p>
+  </>);
 }
 
 export default () => {
@@ -76,9 +76,9 @@ export default () => {
     }
   }
 
-  const handleNameChange = useCallback(({ label }) => {
+  const handleNameChange = useCallback(({ name }) => {
     const { jobs, edges, change } = store.getState();
-    const diff = { label, placeholder: false };
+    const diff = { name, placeholder: false };
 
     const node = jobs.find(j => j.id === selectedNode.id);
     if (node.placeholder) {

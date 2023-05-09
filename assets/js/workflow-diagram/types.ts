@@ -27,7 +27,7 @@ export interface Edge {
   source_job_id?: string;
   source_trigger_id?: string;
   target_job_id?: string;
-  label: string;
+  name: string;
   condition?: string;
   error_path?: boolean;
   errors: any;

@@ -4,6 +4,7 @@ const workflows = {
     jobs: [
       {
         id: 'a',
+        name: 'Do the thing',
         adaptor: 'common',
         expression: 'fn(s => s)',
       },
@@ -28,19 +29,19 @@ const workflows = {
     edges: [
       {
         id: 'z-a',
-        label: 'on success',
+        name: 'on success',
         source_trigger_id: 'z',
         target_job_id: 'a',
       },
       {
         id: 'a-b',
-        label: 'on success',
+        name: 'on success',
         source_job_id: 'a',
         target_job_id: 'b',
       },
       {
         id: 'a-c',
-        label: 'on success',
+        name: 'on success',
         source_job_id: 'a',
         target_job_id: 'c',
       },

@@ -36,7 +36,7 @@ const fromWorkflow = (
         let edge = item as Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
-        model.label = item.label;
+        model.label = item.name;
         model.labelBgStyle = {
           fill: 'rgb(243, 244, 246)',
         };
@@ -51,7 +51,7 @@ const fromWorkflow = (
 
       model.data = {
         ...item,
-        label: item.label || item.id,
+        label: item.name || item.id,
         // TMP
         trigger: {
           type: 'webhook',
