@@ -30,7 +30,7 @@ export default () => {
   const [workflowId, setWorkflowId] = useState('chart1');
   const [history, setHistory ] = useState([])
   const [store, setStore ] = useState({});
-  const [selectedNode, setSelectedNode ] = useState(null)
+  const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const ref = useRef(null)
 
   const [workflow, setWorkflow] = useState({ jobs: [], triggers: [], edges: [] })
@@ -66,31 +66,25 @@ export default () => {
     return () => unsubscribe();
   }, [workflowId])
 
-  const handleSelectionChange = (id: string ) => {
-    if (id) {
-      const node = workflow.triggers.find(t => t.id === id) ||
-        workflow.jobs.find(w => w.id === id);
-      setSelectedNode(node)
-    } else {
-      setSelectedNode(null)
-    }
-  }
+  const handleSelectionChange = useCallback((id: string) => {
+    setSelectedNodeId(id)
+  }, [])
 
   const handleNameChange = useCallback(({ name }) => {
     const { jobs, edges, change } = store.getState();
     const diff = { name, placeholder: false };
 
-    const node = jobs.find(j => j.id === selectedNode.id);
+    const node = jobs.find(j => j.id === selectedNodeId);
     if (node.placeholder) {
       diff.placeholder = false;
 
-      const edge = edges.find(e => e.target_job_id === selectedNode.id);
+      const edge = edges.find(e => e.target_job_id === selectedNodeId);
       change(edge.id, 'edges', { placeholder: false } );
     }
 
-    change(selectedNode.id, 'jobs', diff);
+    change(selectedNodeId, 'jobs', diff);
 
-  }, [store, selectedNode])
+  }, [store, selectedNodeId])
 
   // Adding a job in the store will push the new workflow structure through to the inner component
   // Selection should be preserved (but probably isn't right now)
@@ -105,10 +99,10 @@ export default () => {
         type: 'job',
       }],
       edges: [{
-        source_job_id: selectedNode?.id ?? 'a', target_job_id: newNodeId
+        source_job_id: selectedNodeId?.id ?? 'a', target_job_id: newNodeId
       }]
     })
-  }, [store, selectedNode]);
+  }, [store, selectedNodeId]);
 
   const handleRequestChange = useCallback((diff) => {
     const { add } = store.getState();
@@ -136,7 +130,7 @@ export default () => {
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2">
         <h2 className="text-center">Selected Node</h2>
-        <Form store={store} nodeId={selectedNode?.id} onChange={handleNameChange}/>
+        <Form store={store} nodeId={selectedNodeId} onChange={handleNameChange}/>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2 overflow-y-auto">
         <h2 className="text-center">Change Events</h2>

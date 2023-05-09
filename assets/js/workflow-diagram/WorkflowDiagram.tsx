@@ -12,14 +12,6 @@ type WorkflowDiagramProps = {
   onSelectionChange: (id: string) => void;
   requestChange: (id: string) => void;
 }
-
-// Not sure on the relationship to the store
-// I kinda just want the component to do visalusation and fir eevents
-// Does it even know about zustand? Any benefit?
-
-// So in controlled mode things get difficult
-// the component has to track internal chart state, like selection,
-// as well as incoming changes from the server (like node state change)
 export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   const { workflow, requestChange, onSelectionChange } = props;
   const [model, setModel] = useState({ nodes: [], edges: [] });
@@ -82,6 +74,14 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     chartCache.current.ignoreNextSelection = true
     chartCache.current.selectedId = newNode.id;
     requestChange?.(toWorkflow(diff));
+
+    // Trigger selection change
+    // This is behind a timeout because:
+    // a) the server needs to receive the new node before we can select it
+    // b) the layout animation must finish before we open the side panel
+    setTimeout(() => {
+      onSelectionChange(newNode.id)
+    }, 400)
   }, [requestChange]);
 
   // Note that we only support a single selection
@@ -98,8 +98,10 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     chartCache.current.ignoreNextSelection = undefined;
   }, [onSelectionChange]);
 
-    // Observe any changes to the parent div, and trigger
+  // Observe any changes to the parent div, and trigger
   // a `fitView` to recenter the diagram.
+  // TODO if a request comes in during a resize, wait for the previous to finish
+  // (and add a delay) before resuming
   useEffect(() => {
     if (ref && flow) {
       const resizeOb = new ResizeObserver(function (_entries) {
