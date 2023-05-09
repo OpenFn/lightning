@@ -54,6 +54,8 @@ defmodule Lightning.Jobs.Job do
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
 
+    field :delete, :boolean, virtual: true
+
     timestamps()
   end
 
@@ -75,21 +77,12 @@ defmodule Lightning.Jobs.Job do
         :workflow_id,
         :trigger_id
       ])
-      |> validate_required([
-        :name,
-        :body,
-        :enabled,
-        :adaptor
-      ])
 
     change
     |> cast_assoc(:trigger,
       with: {Trigger, :changeset, [change |> get_field(:workflow_id)]}
     )
-    |> assoc_constraint(:trigger)
-    |> assoc_constraint(:workflow)
-    |> validate_length(:name, max: 100)
-    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
+    |> validate()
   end
 
   def changeset(job, attrs, workflow_id) do
@@ -98,6 +91,20 @@ defmodule Lightning.Jobs.Job do
     job
     |> changeset(attrs)
     |> validate_required(:workflow_id)
+  end
+
+  def validate(changeset) do
+    changeset
+    |> validate_required([
+      :name,
+      :body,
+      :enabled,
+      :adaptor
+    ])
+    |> assoc_constraint(:trigger)
+    |> assoc_constraint(:workflow)
+    |> validate_length(:name, max: 100)
+    |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end
 
   @doc """

@@ -44,16 +44,17 @@ defmodule Lightning.Workflows.Workflow do
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name, :project_id])
+    |> validate_required([:name, :project_id])
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Trigger.changeset/2)
     |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> validate()
   end
 
-  defp validate(changeset) do
+  def validate(changeset) do
     changeset
     |> assoc_constraint(:project)
-    |> validate_required([:name, :project_id])
+    |> validate_required([:name])
     |> unique_constraint([:name, :project_id],
       message: "A workflow with this name does already exist in this project."
     )

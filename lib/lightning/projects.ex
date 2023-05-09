@@ -82,8 +82,10 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project_with_users!(id),
-    do: Repo.get!(Project |> preload(project_users: [:user]), id)
+  def get_project_with_users!(id) do
+    from(p in Project, where: p.id == ^id, preload: [project_users: :user])
+    |> Repo.one!()
+  end
 
   @doc """
   Creates a project.

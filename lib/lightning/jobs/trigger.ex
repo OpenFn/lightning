@@ -39,6 +39,8 @@ defmodule Lightning.Jobs.Trigger do
 
     field :type, Ecto.Enum, values: @trigger_types, default: :webhook
 
+    field :delete, :boolean, virtual: true
+
     timestamps()
   end
 
@@ -60,15 +62,20 @@ defmodule Lightning.Jobs.Trigger do
     |> cast_assoc(:jobs,
       with: {Job, :changeset, [changeset |> get_field(:workflow_id)]}
     )
-    |> validate_required([:type])
-    |> assoc_constraint(:workflow)
-    |> validate_by_type()
+    |> validate()
   end
 
   def changeset(job, attrs, workflow_id) do
     changeset(job, attrs)
     |> put_change(:workflow_id, workflow_id)
     |> validate_required(:workflow_id)
+  end
+
+  def validate(changeset) do
+    changeset
+    |> validate_required([:type])
+    |> assoc_constraint(:workflow)
+    |> validate_by_type()
   end
 
   defp validate_cron(changeset, _options \\ []) do
