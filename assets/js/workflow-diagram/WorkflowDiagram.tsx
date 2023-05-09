@@ -93,9 +93,9 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   }, [requestChange]);
 
   // Note that we only support a single selection
-  const handleSelectionChange = useCallback(({ nodes }) => {
+  const handleSelectionChange = useCallback(({ nodes, edges }) => {
     const { selectedId, ignoreNextSelection } = chartCache.current;
-    const newSelectedId = nodes.length ? nodes[0].id : undefined
+    const newSelectedId = nodes.length ? nodes[0].id : (edges.length ? edges[0].id : undefined)
     if (ignoreNextSelection) {
       // do nothing as the ignore flag was set
     }

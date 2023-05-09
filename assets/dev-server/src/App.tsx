@@ -9,20 +9,23 @@ import 'reactflow/dist/style.css';
 
 const Form = ({ nodeId, store, onChange }) => {
   if (!nodeId) {
-    return <div>No node selected</div>
+    return <div>Nothing selected</div>
   }
-  const node = store.getState().jobs.find(({ id }) => id == nodeId)
+  const { jobs, edges, triggers } = store.getState();
+  const item = jobs.find(({ id }) => id == nodeId) || edges.find(({ id }) => id == nodeId) || triggers.find(({ id }) => id == nodeId) ;
   return  (<>
     <p>
       <span>Name</span>
       <input
-        value={node.name || node.id}
+        value={item.name || item.id}
         className="border-1 border-slate-200 ml-2 p-2"
         onChange={(evt) => onChange({ name: evt.target.value })} />
     </p>
-    {node.adaptor && <p>{`adaptor: ${node.adaptor}`}</p>}
-    {node.type && <p>{`type: ${node.type}`}</p>}
-    <p>{`expression: ${node.cronExpression || node.expression}`}</p>
+    {item.adaptor && <p>{`adaptor: ${item.adaptor}`}</p>}
+    {item.type && <p>{`type: ${item.type}`}</p>}
+    {item.target_job_id ?
+     <p>{`condition: ${item.condition}`}</p>
+     : <p>{`expression: ${item.cronExpression || item.expression}`}</p>}
   </>);
 }
 
@@ -30,7 +33,7 @@ export default () => {
   const [workflowId, setWorkflowId] = useState('chart1');
   const [history, setHistory ] = useState([])
   const [store, setStore ] = useState({});
-  const [selectedNodeId, setSelectedNodeId] = useState<string>();
+  const [selectedId, setSelectedId] = useState<string>();
   const ref = useRef(null)
 
   const [workflow, setWorkflow] = useState({ jobs: [], triggers: [], edges: [] })
@@ -67,24 +70,24 @@ export default () => {
   }, [workflowId])
 
   const handleSelectionChange = useCallback((id: string) => {
-    setSelectedNodeId(id)
+    setSelectedId(id)
   }, [])
 
   const handleNameChange = useCallback(({ name }) => {
     const { jobs, edges, change } = store.getState();
     const diff = { name, placeholder: false };
 
-    const node = jobs.find(j => j.id === selectedNodeId);
+    const node = jobs.find(j => j.id === selectedId);
     if (node.placeholder) {
       diff.placeholder = false;
 
-      const edge = edges.find(e => e.target_job_id === selectedNodeId);
+      const edge = edges.find(e => e.target_job_id === selectedId);
       change(edge.id, 'edges', { placeholder: false } );
     }
 
-    change(selectedNodeId, 'jobs', diff);
+    change(selectedId, 'jobs', diff);
 
-  }, [store, selectedNodeId])
+  }, [store, selectedId])
 
   // Adding a job in the store will push the new workflow structure through to the inner component
   // Selection should be preserved (but probably isn't right now)
@@ -99,10 +102,10 @@ export default () => {
         type: 'job',
       }],
       edges: [{
-        source_job_id: selectedNodeId?.id ?? 'a', target_job_id: newNodeId
+        source_job_id: selectedId?.id ?? 'a', target_job_id: newNodeId
       }]
     })
-  }, [store, selectedNodeId]);
+  }, [store, selectedId]);
 
   const handleRequestChange = useCallback((diff) => {
     const { add } = store.getState();
@@ -129,8 +132,8 @@ export default () => {
         <button className="bg-primary-500 mx-2 py-2 px-4 border border-transparent shadow-sm rounded-md text-white" onClick={() => addJob()}>Add Job</button>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2">
-        <h2 className="text-center">Selected Node</h2>
-        <Form store={store} nodeId={selectedNodeId} onChange={handleNameChange}/>
+        <h2 className="text-center">Selected</h2>
+        <Form store={store} nodeId={selectedId} onChange={handleNameChange}/>
       </div>
       <div className="flex-1 border-2 border-slate-200 m-2 p-2 overflow-y-auto">
         <h2 className="text-center">Change Events</h2>
