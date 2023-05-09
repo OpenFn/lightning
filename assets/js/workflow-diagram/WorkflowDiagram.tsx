@@ -1,12 +1,13 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges, ReactFlowInstance } from 'reactflow';
-import layout, { animate } from './layout'
+import layout from './layout'
 import nodeTypes from './nodes';
 import { Workflow } from './types';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import * as placeholder from './util/add-placeholder';
 import fromWorkflow from './util/from-workflow';
 import toWorkflow from './util/to-workflow';
+import throttle from './util/throttle';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
@@ -25,12 +26,6 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     ignoreNextSelection: undefined, // awful workaround because I can't control selection
   })
 
-  const fitRef = useRef({
-    isFitting: false,
-    fitAgain: false,
-    lastSize: undefined
-  });
-
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
   const setFlowInstance = useCallback((s) => {
@@ -46,7 +41,6 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
 
     console.log('UPDATING WORKFLOW', newModel);
     if (flow && newModel.nodes.length) {
-      fitRef.isFitting = true;
       layout(newModel, setModel, flow, 200, (positions) => {
         
         // trigger selection on new nodes once they've been passed back through to us
@@ -112,43 +106,26 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     chartCache.current.ignoreNextSelection = undefined;
   }, [onSelectionChange]);
 
-  // TODO this is super intricate because I was trying some stuff
-  // We can probably replace it with a nice debounce or throttle now
-  const doFit = useCallback(() => {
-    if (flow) {
-      if (fitRef.current.isFitting) {
-        fitRef.current.fitAgain = true;
-      } else {
-        fitRef.current.isFitting = true;
-        fitRef.current.fitAgain = false;
-        flow.fitView({ duration: FIT_DURATION, padding: FIT_PADDING });
-        fitRef.current.timeout = setTimeout(() => {
-          fitRef.current.isFitting = false;
-          if (fitRef.current.fitAgain) {
-            doFit();
-          }
-        }, FIT_DURATION * 2);
-      }
-    }
-
-    return () => {
-      clearTimeout(fitRef.current.timeout)
-    }
-  }, [flow, fitRef]);
-
   // Trigger a fit when the parent div changes size
   useEffect(() => {
     if (flow && ref) {
+      let isFirstCallback = true;
+
+      const throttledResize = throttle(() => {
+        flow.fitView({ duration: FIT_DURATION, padding: FIT_PADDING })
+      }, FIT_DURATION * 2);
+
       const resizeOb = new ResizeObserver(function (entries) {
-        if (fitRef.current.lastSize) {
+        if (!isFirstCallback) {
           // Don't fit when the listener attaches (it callsback immediately)
-          doFit()
+          throttledResize();
         }
-        fitRef.current.lastSize = entries[0];
+        isFirstCallback = false;
       });
       resizeOb.observe(ref);
     
       return () => {
+        throttledResize.cancel();
         resizeOb.unobserve(ref);
       };
     }
