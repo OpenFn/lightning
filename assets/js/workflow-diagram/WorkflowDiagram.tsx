@@ -143,7 +143,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
         onNodeClick={handleNodeClick}
         onInit={setFlowInstance}
         fitView
-      fitViewOptions={{ padding: FIT_PADDING }}
+        fitViewOptions={{ padding: FIT_PADDING }}
       />
     </ReactFlowProvider>
 })
