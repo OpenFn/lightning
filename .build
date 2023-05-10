@@ -1,5 +1,4 @@
 404.html
-Lightning.Accounts.Policy.html
 Lightning.Accounts.User.RolesEnum.html
 Lightning.Accounts.User.html
 Lightning.Accounts.UserNotifier.html
@@ -12,13 +11,11 @@ Lightning.Attempt.html
 Lightning.AttemptRun.html
 Lightning.AttemptService.html
 Lightning.Auditing.Model.html
-Lightning.Auditing.Policy.html
 Lightning.Auditing.html
 Lightning.AuthProviders.AuthConfig.html
 Lightning.AuthProviders.CacheWarmer.html
 Lightning.AuthProviders.Google.html
 Lightning.AuthProviders.Handler.html
-Lightning.AuthProviders.Policy.html
 Lightning.AuthProviders.Store.html
 Lightning.AuthProviders.WellKnown.html
 Lightning.AuthProviders.html
@@ -35,14 +32,12 @@ Lightning.ExportUtils.html
 Lightning.FailureNotifierView.html
 Lightning.Helpers.html
 Lightning.Invocation.Dataclip.html
-Lightning.Invocation.Policy.html
 Lightning.Invocation.Query.html
 Lightning.Invocation.Run.html
 Lightning.Invocation.html
 Lightning.InvocationReason.html
 Lightning.InvocationReasons.html
 Lightning.Jobs.Job.html
-Lightning.Jobs.Policy.html
 Lightning.Jobs.Query.html
 Lightning.Jobs.Scheduler.html
 Lightning.Jobs.Trigger.html
@@ -58,7 +53,6 @@ Lightning.Policies.Permissions.html
 Lightning.Policies.ProjectUsers.html
 Lightning.Policies.Users.html
 Lightning.Projects.Importer.html
-Lightning.Projects.Policy.html
 Lightning.Projects.Project.html
 Lightning.Projects.ProjectCredential.html
 Lightning.Projects.ProjectUser.DigestEnum.html
@@ -137,7 +131,6 @@ LightningWeb.RunLive.Index.html
 LightningWeb.RunLive.RunViewerLive.html
 LightningWeb.RunLive.Show.html
 LightningWeb.RunLive.WorkOrderComponent.html
-LightningWeb.SettingsLive.Index.html
 LightningWeb.Telemetry.html
 LightningWeb.TokensLive.Index.html
 LightningWeb.UserAuth.html
@@ -186,8 +179,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-DE9C0315.js
-dist/sidebar_items-F1CE86A1.js
+dist/search_items-4284389D.js
+dist/sidebar_items-D39A98C9.js
 index.html
 readme.html
 search.html

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-F1CE86A1.js"></script>
+    <script src="dist/sidebar_items-D39A98C9.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -114,7 +114,14 @@ Lightning
 
 
   <section id="moduledoc">
-<p>The Bodyguard permissions module.</p>
+<p>This module defines a unique interface managing authorizations in Lightning.</p><p>Users in Lightning have instance-wide and project-wide roles which determine their level of access to resources in the application. Fo rmore details see the <a href="https://docs.openfn.org/documentation/about-lightning#roles-and-permissions">documentation</a>.</p><p>These authorizations policies are all implemented under the <code class="inline">lib/lightning/policies</code> folder. In that folder you can find 3 files:</p><ul><li>The <code class="inline">users.ex</code> file has all the policies for the instances wide access levels</li><li>The <code class="inline">project_users.ex</code> file has all the policies for the project wide access levels</li><li>The <code class="inline">permissions.ex</code> file defines the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface. Which is a wrapper around the <a href="https://hexdocs.pm/bodyguard/2.4.2/Bodyguard.html#permit/4"><code class="inline">Bodyguard.permit/4</code></a> function.
+We use that interface to be able to harmonize the use of policies accross the entire app.</li></ul><p>All the policies are tested in the <code class="inline">test/lightning/policies</code> folder. And the test are written in a way that allows the reader to quickly who can do what in the app.</p><p>We have two variants of the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface:</p><ul><li><code class="inline">Lightning.Policies.Permissions.can(policy, action, actor, resource)</code> returns <code class="inline">:ok</code> if the actor can perform the action on the resource and <code class="inline">{:error, :unauthorized}</code> otherwise.</li><li><code class="inline">Lightning.Policies.Permissions.can?(policy, action, actor, resource)</code> returns <code class="inline">true</code> if the actor can perform the action on the resource and <code class="inline">false</code> otherwise.</li></ul><p>Here is an example of how we the <a href="#can/4"><code class="inline">Lightning.Policies.Permissions.can/4</code></a> interface to check if the a user can edit a job or not</p><pre><code class="makeup elixir" translate="no"><span class="n">can_edit_job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Lightning.Policies.ProjectUsers</span><span class="w"> </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Lightning.Policies.Permissions</span><span class="o">.</span><span class="n">can?</span><span class="p" data-group-id="2527380371-1">(</span><span class="ss">:edit_job</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">current_user</span><span class="p">,</span><span class="w"> </span><span class="n">socket</span><span class="o">.</span><span class="n">assigns</span><span class="o">.</span><span class="n">project</span><span class="p" data-group-id="2527380371-1">)</span><span class="w">
+
+</span><span class="k">if</span><span class="w"> </span><span class="n">can_edit_job</span><span class="w"> </span><span class="k" data-group-id="2527380371-2">do</span><span class="w">
+  </span><span class="c1"># allow user to edit the job</span><span class="w">
+</span><span class="k" data-group-id="2527380371-2">else</span><span class="w">
+  </span><span class="c1"># quick user out</span><span class="w">
+</span><span class="k" data-group-id="2527380371-2">end</span></code></pre>
   </section>
 
 
@@ -136,6 +143,18 @@ Lightning
         <a href="#can/4" translate="no">can(policy, action, user, params \\ [])</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>checks if user has the permissions to apply action using some policy module</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#can?/4" translate="no">can?(policy, action, user, params \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p></div>
 
     </div>
 
@@ -164,7 +183,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">can(policy, action, user, params \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L45" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -174,7 +193,51 @@ Functions
 
   <section class="docstring">
 
+<p>checks if user has the permissions to apply action using some policy module</p><p>Returns <code class="inline">:ok</code> if user can apply action and <code class="inline">{:error, :unauthorized}</code> otherwise</p><h2 id="can/4-examples" class="section-heading">
+  <a href="#can/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="2885899171-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="2885899171-1">)</span><span class="w">
+</span><span class="ss">:ok</span><span class="w">
 
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="2885899171-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="2885899171-3">%{</span><span class="p" data-group-id="2885899171-3">}</span><span class="p" data-group-id="2885899171-2">)</span><span class="w">
+</span><span class="p" data-group-id="2885899171-4">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="ss">:unauthorized</span><span class="p" data-group-id="2885899171-4">}</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="can?/4">
+
+    <span id="can?/3"></span>
+
+  <div class="detail-header">
+    <a href="#can?/4" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">can?(policy, action, user, params \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/permissions.ex#L61" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>same as can/4 but returns <code class="inline">true</code> if user can apply action and <code class="inline">false</code> otherwise</p><h2 id="can?/4-examples" class="section-heading">
+  <a href="#can?/4-examples" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">examples</p>
+  </a>
+  Examples
+</h2>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="8426359720-1">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_workflow</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="n">project</span><span class="p" data-group-id="8426359720-1">)</span><span class="w">
+</span><span class="no">true</span><span class="w">
+
+</span><span class="gp unselectable">iex&gt; </span><span class="n">can</span><span class="p" data-group-id="8426359720-2">(</span><span class="nc">Lightning.Policies.Users</span><span class="p">,</span><span class="w"> </span><span class="ss">:create_project</span><span class="p">,</span><span class="w"> </span><span class="n">user</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="8426359720-3">%{</span><span class="p" data-group-id="8426359720-3">}</span><span class="p" data-group-id="8426359720-2">)</span><span class="w">
+</span><span class="no">false</span></code></pre>
   </section>
 </section>
 
