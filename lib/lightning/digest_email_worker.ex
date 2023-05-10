@@ -112,21 +112,22 @@ defmodule Lightning.DigestEmailWorker do
     )
   end
 
-  defp failed_workorders(workflow, start_date, end_date) do
-    Lightning.Invocation.list_work_orders_for_project(
-      Projects.get_project!(workflow.project_id),
-      [
-        status: [:failure, :crash, :timeout],
-        search_fields: [:body, :log],
-        search_term: "",
-        workflow_id: workflow.id,
-        date_after: start_date,
-        date_before: end_date,
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
-      %{}
-    )
+  defp failed_workorders(search_params) do
+    # find where the query is called (like in LiveView), and replace with this
+
+    case search_params |> Lightning.Workorders.SearchParams.new() do
+      {:ok, search_params} ->
+        project = Projects.get_project!(workflow.project_id)
+
+        Lightning.Invocation.list_work_orders_for_project_query(
+          project,
+          search_params
+        )
+        |> Lightning.Repo.paginate()
+
+      {:error, _changeset} ->
+        nil
+    end
   end
 
   # TODO: This currently doesn't work as expected. And it is taking longer than expected. We decided to address it properly as a new feature in the issue #795.
