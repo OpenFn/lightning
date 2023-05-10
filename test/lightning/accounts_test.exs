@@ -270,7 +270,7 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "purge user" do
-    test "purging user removes that user from projects they are members and delete them from the system" do
+    test "purging a user removes that user from projects they are members of and deletes them from the system" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
@@ -311,7 +311,7 @@ defmodule Lightning.AccountsTest do
              |> Enum.any?(fn x -> x.id == user_1.id end)
     end
 
-    test "purging user sets all project credentials that use this user's credentials with nil" do
+    test "purging a user sets all project credentials that use their credentials to nil" do
       user = user_fixture()
       project = Lightning.ProjectsFixtures.project_fixture()
 
@@ -355,7 +355,7 @@ defmodule Lightning.AccountsTest do
       assert Credentials.count_project_credentials_for_user(user) == 0
     end
 
-    test "purging user deletes all the credentials of that user" do
+    test "purging a user deletes all of that user's credentials" do
       user_1 = user_fixture()
       user_2 = user_fixture()
 
@@ -378,7 +378,7 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "The default Oban function Accounts.perform/1" do
-    test "users that are still linked to an invocation reason are not deleted" do
+    test "prevents users that are still linked to an invocation reason from being deleted" do
       user =
         user_fixture(
           scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)

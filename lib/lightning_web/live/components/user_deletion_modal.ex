@@ -89,7 +89,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
               <div class="py-2"></div>
             </div>
             <p>
-              *Note that this user has activity in some projects. We may not be able to delete them entirely from the app, until those projects are alive.
+              *Note that this user still has activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
             </p>
           <% end %>
           <div class="hidden sm:block" aria-hidden="true">
