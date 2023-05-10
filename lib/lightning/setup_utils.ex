@@ -13,7 +13,7 @@ defmodule Lightning.SetupUtils do
           projects: [atom | %{:id => any, optional(any) => any}, ...],
           users: [atom | %{:id => any, optional(any) => any}, ...],
           workflows: [atom | %{:id => any, optional(any) => any}, ...],
-          workorders: [...]
+          workorders: [atom | %{:id => any, optional(any) => any}, ...]
         }
   @doc """
   Creates initial data and returns the created records.
@@ -78,11 +78,11 @@ defmodule Lightning.SetupUtils do
       ])
 
     %{
+      jobs: openhie_jobs ++ dhis2_jobs,
       users: [super_user, admin, editor, viewer],
       projects: [openhie_project, dhis2_project],
       workflows: [openhie_workflow, dhis2_workflow],
-      workorders: [openhie_workorder, dhis2_workorder],
-      jobs: openhie_jobs ++ dhis2_jobs
+      workorders: [openhie_workorder, dhis2_workorder]
     }
   end
 
