@@ -1,8 +1,9 @@
 defmodule LightningWeb.API.JobController do
   use LightningWeb, :controller
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Jobs
-  # alias Lightning.Jobs.Job
 
   action_fallback LightningWeb.FallbackController
 
@@ -11,9 +12,9 @@ defmodule LightningWeb.API.JobController do
 
     with project <- Lightning.Projects.get_project(project_id),
          :ok <-
-           Bodyguard.permit(
-             Jobs.Policy,
-             :list,
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
              conn.assigns.current_user,
              project
            ) do

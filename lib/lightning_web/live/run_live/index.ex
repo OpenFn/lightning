@@ -38,7 +38,7 @@ defmodule LightningWeb.RunLive.Index do
 
     can_rerun_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :rerun_job,
         socket.assigns.current_user,
         socket.assigns.project

@@ -169,8 +169,8 @@ environments. Included in the repo is a `.tool-versions` file that is read by
 asdf in order to dynamically make the specified versions of Elixir and Erlang
 available. You'll need asdf plugins for
 [Erlang](https://github.com/asdf-vm/asdf-erlang),
-[NodeJs](https://github.com/asdf-vm/asdf-nodejs), and
-[Elixir](https://github.com/asdf-vm/asdf-elixir).
+[NodeJs](https://github.com/asdf-vm/asdf-nodejs)
+[Elixir](https://github.com/asdf-vm/asdf-elixir) and [k6](https://github.com/grimoh/asdf-k6).
 
 ```sh
 asdf install  # Install language versions
@@ -226,6 +226,12 @@ We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
 folder you can find a script for benchmarking Webhook Workflows.
 
 See [Benchmarking](benchmarking/BENCHMARKING.md) for more detailed information.
+
+## **Roles and permissions**
+
+Authorization is a central part of Lightning. As such, users are given different roles which determine what level of access they have for resources in the application. For more details
+about roles and permissions in Lightning, please refer to our
+[documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
 
 ## Troubleshooting
 

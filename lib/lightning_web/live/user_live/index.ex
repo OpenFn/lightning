@@ -11,7 +11,7 @@ defmodule LightningWeb.UserLive.Index do
   def mount(_params, _session, socket) do
     can_access_admin_space =
       Users
-      |> Permissions.can(:access_admin_space, socket.assigns.current_user, {})
+      |> Permissions.can?(:access_admin_space, socket.assigns.current_user, {})
 
     if can_access_admin_space do
       {:ok,

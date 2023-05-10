@@ -1,19 +1,23 @@
 defmodule LightningWeb.API.RunController do
   use LightningWeb, :controller
 
+  alias Lightning.Repo
+  alias Lightning.Projects.Project
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Invocation
-  # alias Lightning.Jobs.Job
 
   action_fallback LightningWeb.FallbackController
 
   def index(conn, %{"project_id" => project_id} = params) do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
-    with project <- Lightning.Projects.get_project(project_id),
+    with project = %Project{} <-
+           Lightning.Projects.get_project(project_id) || {:error, :not_found},
          :ok <-
-           Bodyguard.permit(
-             Invocation.Policy,
-             :list_runs,
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
              conn.assigns.current_user,
              project
            ) do
@@ -34,13 +38,13 @@ defmodule LightningWeb.API.RunController do
   end
 
   def show(conn, %{"id" => id}) do
-    with run <- Invocation.get_run!(id),
+    with run <- Invocation.get_run_with_job!(id),
          :ok <-
-           Bodyguard.permit(
-             Invocation.Policy,
-             :read_run,
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
              conn.assigns.current_user,
-             run
+             Repo.preload(run.job, :project).project
            ) do
       render(conn, "show.json", %{run: run, conn: conn})
     end

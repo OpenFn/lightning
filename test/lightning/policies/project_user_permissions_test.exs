@@ -1,23 +1,18 @@
-defmodule Lightning.ProjectUserPermissionsTest do
+defmodule Lightning.Policies.ProjectUserPermissionsTest do
   @moduledoc """
   Project user permissions determine what a user can and cannot do within a
   project. Projects (i.e., "workspaces") can have multiple collaborators with
   varying levels of access to the resources (workflows, jobs, triggers, runs)
   within.
 
-  The tests ensure both that user "Amy" that has been added as an `editor` for
-  project "X", via the creation of a
-
-    %ProjectUser{ user: "Amy", role: "editor", project: "X"}
-
-  _can_ view and edit jobs (for example) in project X, and that they _cannot_
-  view and edit jobs in project Y.
+  The tests ensure both that user "Amy" that has been added as an `editor` for project "X",
+  _can_ view and edit jobs (for example) in project X, and that they _cannot_ view and edit jobs in project Y.
   """
   use Lightning.DataCase, async: true
 
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
-
+  alias Lightning.Accounts
   alias Lightning.Policies.{Permissions, ProjectUsers}
 
   setup do
@@ -25,7 +20,7 @@ defmodule Lightning.ProjectUserPermissionsTest do
     admin = user_fixture()
     owner = user_fixture()
     editor = user_fixture()
-    thief = user_fixture()
+    intruder = user_fixture()
 
     project =
       project_fixture(
@@ -43,344 +38,153 @@ defmodule Lightning.ProjectUserPermissionsTest do
       admin: admin,
       owner: owner,
       editor: editor,
-      thief: thief
+      intruder: intruder
     }
   end
 
+  describe "Users that are not members to a project" do
+    test "cannot access that project", %{project: project, intruder: intruder} do
+      refute ProjectUsers |> Permissions.can?(:access_project, intruder, project)
+    end
+  end
+
+  describe "Members of a project (viewer, editor, admin or owner)" do
+    test "can access that project", %{
+      project: project,
+      viewer: viewer
+    } do
+      assert ProjectUsers |> Permissions.can?(:access_project, viewer, project)
+    end
+
+    test "can edit their own digest and failure alerts for that project",
+         %{project: project} do
+      project_user_1 = project.project_users |> Enum.at(0)
+      user_1 = Accounts.get_user!(project_user_1.user_id)
+
+      ~w(
+        edit_digest_alerts
+        edit_failure_alerts
+      )a |> (&assert_can(ProjectUsers, &1, user_1, project_user_1)).()
+    end
+
+    test "cannot edit other members digest and failure alerts",
+         %{project: project} do
+      project_user_1 = project.project_users |> Enum.at(0)
+      project_user_2 = project.project_users |> Enum.at(1)
+      user_1 = Accounts.get_user!(project_user_1.user_id)
+
+      ~w(
+        edit_digest_alerts
+        edit_failure_alerts
+      )a |> (&refute_can(ProjectUsers, &1, user_1, project_user_2)).()
+    end
+  end
+
   describe "Project users with the :viewer role" do
-    test "can see but not edit resources", %{project: project, viewer: viewer} do
-      refute ProjectUsers |> Permissions.can(:create_workflow, viewer, project)
-      refute ProjectUsers |> Permissions.can(:edit_job, viewer, project)
-      refute ProjectUsers |> Permissions.can(:create_job, viewer, project)
-      refute ProjectUsers |> Permissions.can(:delete_job, viewer, project)
-      refute ProjectUsers |> Permissions.can(:run_job, viewer, project)
-      refute ProjectUsers |> Permissions.can(:rerun_job, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_last_job_inputs, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_input, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_run, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_history, viewer, project)
-
-      assert ProjectUsers |> Permissions.can(:view_project_name, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_description, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_credentials, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_collaborators, viewer, project)
-
-      refute ProjectUsers |> Permissions.can(:delete_project, viewer, project)
-
-      assert ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               viewer,
-               project.project_users |> Enum.at(0)
-             )
-
-      refute ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               viewer,
-               project.project_users |> Enum.at(1)
-             )
-
-      refute ProjectUsers |> Permissions.can(:edit_project_name, viewer, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_description, viewer, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:add_project_collaborator, viewer, project)
-
-      viewer_project_user = project.project_users |> Enum.at(0)
-      editor_project_user = project.project_users |> Enum.at(1)
-
-      assert ProjectUsers
-             |> Permissions.can(:edit_project_user, viewer, viewer_project_user)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_user, viewer, editor_project_user)
+    test "cannot create workflows, create / edit / delete / run / rerun jobs, delete the project, and edit the project name or description",
+         %{
+           project: project,
+           viewer: viewer
+         } do
+      ~w(
+        create_workflow
+        create_job
+        edit_job
+        delete_job
+        run_job
+        rerun_job
+        delete_project
+        edit_project_name
+        edit_project_description
+      )a |> (&refute_can(ProjectUsers, &1, viewer, project)).()
     end
   end
 
   describe "Project users with the :editor role" do
-    test "can edit resources in their project", %{
-      project: project,
-      editor: editor
-    } do
-      assert ProjectUsers |> Permissions.can(:create_workflow, editor, project)
-      assert ProjectUsers |> Permissions.can(:edit_job, editor, project)
-      assert ProjectUsers |> Permissions.can(:create_job, editor, project)
-      assert ProjectUsers |> Permissions.can(:delete_job, editor, project)
-      assert ProjectUsers |> Permissions.can(:run_job, editor, project)
-      assert ProjectUsers |> Permissions.can(:rerun_job, editor, project)
+    test "can create workflows and create / edit / delete / run / rerun jobs in the project",
+         %{
+           project: project,
+           editor: editor
+         } do
+      ~w(
+        create_workflow
+        create_job
+        edit_job
+        delete_job
+        run_job
+        rerun_job
+      )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
+    end
 
-      assert ProjectUsers
-             |> Permissions.can(:view_last_job_inputs, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_input, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_run, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_history, editor, project)
-
-      assert ProjectUsers |> Permissions.can(:view_project_name, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_description, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_credentials, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_collaborators, editor, project)
-
-      refute ProjectUsers |> Permissions.can(:delete_project, editor, project)
-
-      assert ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               editor,
-               project.project_users |> Enum.at(1)
-             )
-
-      refute ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               editor,
-               project.project_users |> Enum.at(0)
-             )
-
-      refute ProjectUsers |> Permissions.can(:edit_project_name, editor, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_description, editor, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:add_project_collaborator, editor, project)
-
-      viewer_project_user = project.project_users |> Enum.at(0)
-      editor_project_user = project.project_users |> Enum.at(1)
-
-      assert ProjectUsers
-             |> Permissions.can(:edit_project_user, editor, editor_project_user)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_user, editor, viewer_project_user)
+    test "cannot delete the project, edit the project name, and edit the project description",
+         %{
+           project: project,
+           editor: editor
+         } do
+      ~w(
+          delete_project
+          edit_project_name
+          edit_project_description
+        )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
   end
 
   describe "Project users with the :admin role" do
-    test "can do everything that editors can do, plus...", %{
-      project: project,
-      admin: admin
-    } do
-      assert ProjectUsers |> Permissions.can(:create_workflow, admin, project)
-      assert ProjectUsers |> Permissions.can(:edit_job, admin, project)
-      assert ProjectUsers |> Permissions.can(:create_job, admin, project)
-      assert ProjectUsers |> Permissions.can(:delete_job, admin, project)
-      assert ProjectUsers |> Permissions.can(:run_job, admin, project)
-      assert ProjectUsers |> Permissions.can(:rerun_job, admin, project)
+    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
+         %{
+           project: project,
+           admin: admin
+         } do
+      ~w(
+          create_workflow
+          create_job
+          edit_job
+          delete_job
+          run_job
+          rerun_job
+          edit_project_name
+          edit_project_description
+        )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
+    end
 
-      assert ProjectUsers
-             |> Permissions.can(:view_last_job_inputs, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_input, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_run, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_history, admin, project)
-
-      assert ProjectUsers |> Permissions.can(:view_project_name, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_description, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_credentials, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_collaborators, admin, project)
-
-      refute ProjectUsers |> Permissions.can(:delete_project, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               admin,
-               project.project_users |> Enum.at(2)
-             )
-
-      refute ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               admin,
-               project.project_users |> Enum.at(0)
-             )
-
-      assert ProjectUsers |> Permissions.can(:edit_project_name, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:edit_project_description, admin, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:add_project_collaborator, admin, project)
-
-      viewer_project_user = project.project_users |> Enum.at(0)
-      admin_project_user = project.project_users |> Enum.at(2)
-
-      assert ProjectUsers
-             |> Permissions.can(:edit_project_user, admin, admin_project_user)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_user, admin, viewer_project_user)
+    test "cannot delete the project", %{project: project, admin: admin} do
+      refute ProjectUsers |> Permissions.can?(:delete_project, admin, project)
     end
   end
 
   describe "Project users with the :owner role" do
-    test "can do everything that admins can do, plus...", %{
-      project: project,
-      owner: owner
-    } do
-      assert ProjectUsers |> Permissions.can(:create_workflow, owner, project)
-      assert ProjectUsers |> Permissions.can(:edit_job, owner, project)
-      assert ProjectUsers |> Permissions.can(:create_job, owner, project)
-      assert ProjectUsers |> Permissions.can(:delete_job, owner, project)
-      assert ProjectUsers |> Permissions.can(:run_job, owner, project)
-      assert ProjectUsers |> Permissions.can(:rerun_job, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_last_job_inputs, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_input, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_run, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_workorder_history, owner, project)
-
-      assert ProjectUsers |> Permissions.can(:view_project_name, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_description, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_credentials, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:view_project_collaborators, owner, project)
-
-      assert ProjectUsers |> Permissions.can(:delete_project, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               owner,
-               project.project_users |> Enum.at(3)
-             )
-
-      refute ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               owner,
-               project.project_users |> Enum.at(0)
-             )
-
-      assert ProjectUsers |> Permissions.can(:edit_project_name, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:edit_project_description, owner, project)
-
-      assert ProjectUsers
-             |> Permissions.can(:add_project_collaborator, owner, project)
-
-      viewer_project_user = project.project_users |> Enum.at(0)
-      owner_project_user = project.project_users |> Enum.at(3)
-
-      assert ProjectUsers
-             |> Permissions.can(:edit_project_user, owner, owner_project_user)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_user, owner, viewer_project_user)
+    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, edit the project description, and delete the project.",
+         %{
+           project: project,
+           owner: owner
+         } do
+      ~w(
+        create_workflow
+        create_job
+        edit_job
+        delete_job
+        run_job
+        rerun_job
+        edit_project_name
+        edit_project_description
+        delete_project
+      )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
     end
   end
 
-  describe "Thieves (users without any project_user for a given project)" do
-    # For things like :view_job we should be able to show that people who do not
-    # have access to a project cannot view the jobs in that project.
-    test "cannot view or modify anything...", %{project: project, thief: thief} do
-      refute ProjectUsers |> Permissions.can(:create_workflow, thief, project)
-      refute ProjectUsers |> Permissions.can(:create_job, thief, project)
-      refute ProjectUsers |> Permissions.can(:delete_job, thief, project)
-      refute ProjectUsers |> Permissions.can(:edit_job, thief, project)
-      refute ProjectUsers |> Permissions.can(:run_job, thief, project)
-      refute ProjectUsers |> Permissions.can(:rerun_job, thief, project)
+  defp assert_can(module, actions, user, subject) when is_list(actions) do
+    Enum.each(actions, &assert_can(module, &1, user, subject))
+  end
 
-      refute ProjectUsers
-             |> Permissions.can(:view_last_job_inputs, thief, project)
+  defp assert_can(module, action, user, subject) when is_atom(action) do
+    assert module |> Permissions.can?(action, user, subject)
+  end
 
-      refute ProjectUsers
-             |> Permissions.can(:view_workorder_input, thief, project)
+  defp refute_can(module, actions, user, subject) when is_list(actions) do
+    Enum.each(actions, &refute_can(module, &1, user, subject))
+  end
 
-      refute ProjectUsers
-             |> Permissions.can(:view_workorder_run, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:view_workorder_history, thief, project)
-
-      refute ProjectUsers |> Permissions.can(:view_project_name, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:view_project_description, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:view_project_credentials, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:view_project_collaborators, thief, project)
-
-      refute ProjectUsers |> Permissions.can(:delete_project, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               thief,
-               project.project_users |> Enum.at(3)
-             )
-
-      refute ProjectUsers
-             |> Permissions.can(
-               :edit_digest_alerts,
-               thief,
-               project.project_users |> Enum.at(0)
-             )
-
-      refute ProjectUsers |> Permissions.can(:edit_project_name, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:edit_project_description, thief, project)
-
-      refute ProjectUsers
-             |> Permissions.can(:add_project_collaborator, thief, project)
-    end
+  defp refute_can(module, action, user, subject) when is_atom(action) do
+    refute module |> Permissions.can?(action, user, subject)
   end
 end

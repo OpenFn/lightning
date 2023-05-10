@@ -49,6 +49,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
   attr :return_to, :string, required: true
   attr :params, :map, default: %{}
   attr :can_edit_job, :boolean, required: true
+  attr :can_run_job, :boolean, required: true
 
   @impl true
   def render(assigns) do
@@ -170,7 +171,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
                 on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
                 project={@project}
                 builder_state={@builder_state}
-                can_run_job={@can_edit_job}
+                can_run_job={@can_run_job}
                 return_to={@return_to}
               />
             <% else %>
@@ -428,6 +429,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
           current_user: current_user,
           return_to: return_to,
           can_edit_job: can_edit_job,
+          can_run_job: can_run_job,
           can_delete_job: can_delete_job,
           builder_state: builder_state
         } = assigns,
@@ -464,6 +466,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
        upstream_jobs: upstream_jobs,
        is_deletable: is_deletable(job),
        can_edit_job: can_edit_job,
+       can_run_job: can_run_job,
        can_delete_job: can_delete_job
      )
      |> assign_new(:params, fn -> params end)

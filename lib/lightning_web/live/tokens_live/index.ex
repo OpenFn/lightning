@@ -4,6 +4,8 @@ defmodule LightningWeb.TokensLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Users
   alias Lightning.Accounts
 
   @impl true
@@ -25,10 +27,21 @@ defmodule LightningWeb.TokensLive.Index do
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Personal Access Tokens")
-    |> assign(:token_id, id)
-    |> assign(:new_token, nil)
+    api_token = Accounts.get_token!(id).token
+    current_user = socket.assigns.current_user
+
+    can_delete_api_token =
+      Users |> Permissions.can?(:delete_api_token, current_user, api_token)
+
+    if can_delete_api_token do
+      socket
+      |> assign(:page_title, "Personal Access Tokens")
+      |> assign(:token_id, id)
+      |> assign(:new_token, nil)
+    else
+      put_flash(socket, :error, "You can't perform this action")
+      |> push_patch(to: ~p"/profile/tokens")
+    end
   end
 
   @impl true

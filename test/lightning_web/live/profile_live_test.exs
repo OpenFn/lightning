@@ -126,21 +126,6 @@ defmodule LightningWeb.ProfileLiveTest do
              |> form("#email_form", user: %{email: "oops email"})
              |> render_change() =~ "must have the @ sign and no spaces"
 
-      # {:ok, conn} =
-      #   profile_live
-      #   |> form("#email_form", user: @update_email_attrs)
-      #   |> render_submit()
-      #   |> follow_redirect(conn)
-
-      # assert "/" = redirected_path = redirected_to(conn, 302)
-
-      # html =
-      #   get(recycle(conn), redirected_path)
-      #   |> html_response(200)
-
-      # assert html =~ "Email changed successfully."
-      # assert html =~ "Projects"
-
       assert profile_live
              |> form("#email_form", user: @update_email_attrs)
              |> render_submit() =~ "Sending confirmation email..."
@@ -184,6 +169,19 @@ defmodule LightningWeb.ProfileLiveTest do
       |> follow_redirect(conn, Routes.user_session_path(conn, :delete))
 
       assert_email_sent(subject: "Lightning Account Deletion", to: user.email)
+    end
+
+    test "users can't schedule deletion for other users", %{
+      conn: conn,
+      user: _user
+    } do
+      another_user = user_fixture()
+
+      {:ok, _profile_live, html} =
+        live(conn, ~p"/profile/#{another_user.id}/delete")
+        |> follow_redirect(conn)
+
+      assert html =~ "You can&#39;t perform this action"
     end
 
     test "user cancels deletion", %{

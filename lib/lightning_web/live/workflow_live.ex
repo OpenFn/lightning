@@ -72,6 +72,7 @@ defmodule LightningWeb.WorkflowLive do
                       ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
                     }
                     can_delete_job={@can_delete_job}
+                    can_run_job={@can_run_job}
                     can_edit_job={@can_edit_job}
                   />
                 </div>
@@ -101,6 +102,7 @@ defmodule LightningWeb.WorkflowLive do
                       ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
                     }
                     can_delete_job={@can_delete_job}
+                    can_run_job={@can_run_job}
                     can_edit_job={@can_edit_job}
                   />
                 </div>
@@ -160,7 +162,7 @@ defmodule LightningWeb.WorkflowLive do
 
     can_create_workflow =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :create_workflow,
         socket.assigns.current_user,
         socket.assigns.project
@@ -168,7 +170,7 @@ defmodule LightningWeb.WorkflowLive do
 
     can_create_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :create_job,
         socket.assigns.current_user,
         socket.assigns.project
@@ -176,15 +178,23 @@ defmodule LightningWeb.WorkflowLive do
 
     can_edit_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :edit_job,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
+    can_run_job =
+      ProjectUsers
+      |> Permissions.can?(
+        :run_job,
         socket.assigns.current_user,
         socket.assigns.project
       )
 
     can_delete_job =
       ProjectUsers
-      |> Permissions.can(
+      |> Permissions.can?(
         :delete_job,
         socket.assigns.current_user,
         socket.assigns.project
@@ -196,6 +206,7 @@ defmodule LightningWeb.WorkflowLive do
        can_create_workflow: can_create_workflow,
        can_create_job: can_create_job,
        can_edit_job: can_edit_job,
+       can_run_job: can_run_job,
        can_delete_job: can_delete_job,
        active_menu_item: :projects,
        new_credential: false,

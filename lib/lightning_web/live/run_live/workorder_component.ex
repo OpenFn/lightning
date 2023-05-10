@@ -15,7 +15,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         socket
       ) do
     can_rerun_job =
-      Permissions.can(ProjectUsers, :rerun_job, current_user, project)
+      Permissions.can?(ProjectUsers, :rerun_job, current_user, project)
 
     {:ok,
      socket

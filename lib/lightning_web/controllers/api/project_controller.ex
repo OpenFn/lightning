@@ -1,6 +1,8 @@
 defmodule LightningWeb.API.ProjectController do
   use LightningWeb, :controller
 
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
   # alias Lightning.Jobs.Job
 
@@ -19,9 +21,9 @@ defmodule LightningWeb.API.ProjectController do
   def show(conn, %{"id" => id}) do
     with project <- Projects.get_project(id),
          :ok <-
-           Bodyguard.permit(
-             Projects.Policy,
-             :read,
+           ProjectUsers
+           |> Permissions.can(
+             :access_project,
              conn.assigns.current_user,
              project
            ) do

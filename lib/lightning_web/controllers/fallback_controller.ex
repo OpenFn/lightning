@@ -16,9 +16,9 @@ defmodule LightningWeb.FallbackController do
 
   def call(conn, {:error, :unauthorized}) do
     conn
-    |> put_status(:forbidden)
+    |> put_status(:not_found)
     |> put_view(LightningWeb.ErrorView)
-    |> render(:"403")
+    |> render(:"404")
   end
 
   def call(conn, {:error, error}) when is_map(error) do
