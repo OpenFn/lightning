@@ -174,11 +174,6 @@ defmodule Lightning.SetupUtils do
       "name" => "Genevieve Wimplemews"
     })
 
-    WorkOrderService.create_webhook_workorder(job_1, %{
-      "age_in_months" => 17,
-      "name" => "Genevieve Wimplemews"
-    })
-
     %{
       project: project,
       workflow: workflow,
