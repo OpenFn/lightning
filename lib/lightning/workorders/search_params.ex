@@ -12,8 +12,8 @@ defmodule Lightning.Workorders.SearchParams do
   @search_fields ~w(body log)
 
   @type t :: %SearchParams{
-          status: [Atom.t()],
-          search_fields: [Atom.t()],
+          status: [String.t()],
+          search_fields: [String.t()],
           search_term: String.t(),
           workflow_id: Ecto.UUID.t(),
           date_after: DateTime.t(),
