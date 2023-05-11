@@ -128,6 +128,6 @@ defmodule LightningWeb.ProjectLive.Index do
   def can_request_project_deletion(current_user, project) do
     is_nil(project.scheduled_deletion) and
       (can_delete_project(current_user, project) or
-         Lightning.Policies.Projects |> Permissions.can(:delete, current_user))
+         Users |> Permissions.can(:delete, current_user))
   end
 end
