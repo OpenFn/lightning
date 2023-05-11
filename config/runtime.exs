@@ -243,5 +243,5 @@ if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
   config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:logical_processors_available) + 2
+    pool_size: :erlang.system_info(:schedulers_online) + 4
 end
