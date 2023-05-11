@@ -242,8 +242,18 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
+    {:ok, empty_dataclip} =
+      Lightning.Invocation.create_dataclip(%{
+        "project_id" => openhie_project.id,
+        "type" => :http_request,
+        "body" => %{}
+      })
+
     {:ok, openhie_workorder} =
-      WorkOrderService.create_webhook_workorder(fhir_standard_data, %{})
+      WorkOrderService.create_webhook_workorder(
+        fhir_standard_data,
+        empty_dataclip
+      )
 
     %{
       project: openhie_project,
