@@ -163,6 +163,10 @@ defmodule Lightning.Projects do
 
       project_workorders_query(project) |> Repo.delete_all()
 
+      # TODO: @Mtuchi refactor project_users_invocation_reasons(project) |> Repo.delete_all()
+      # We can not delete invocation reasons for project users
+      # Because project_users belongs to many projects instead delete invocation reasons per activity
+      # Workorder ir, dataclip ir, etc
       project_users_invocation_reasons(project) |> Repo.delete_all()
 
       project_runs_query(project) |> Repo.delete_all()
