@@ -207,7 +207,7 @@ defmodule Lightning.SetupUtils do
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
-        body: "fn(state => state);",
+        body: "fn(state => x);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         trigger: %{
@@ -329,10 +329,10 @@ defmodule Lightning.SetupUtils do
       Lightning.AuthProviders.AuthConfig,
       Lightning.Credentials.Audit,
       Lightning.Projects.ProjectCredential,
-      Lightning.Credentials.Credential,
       Lightning.WorkOrder,
       Lightning.InvocationReason,
       Lightning.Invocation.Run,
+      Lightning.Credentials.Credential,
       Lightning.Jobs.Job,
       Lightning.Jobs.Trigger,
       Lightning.Workflows.Workflow,
