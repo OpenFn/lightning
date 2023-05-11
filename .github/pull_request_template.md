@@ -6,7 +6,7 @@
 
 Fixes #
 
-## Checklist before requesting a review
+## Review checklist
 
 - [ ] I have performed a **self-review** of my code
 - [ ] I have verified that all appropriate **authorization policies** have been implemented and tested

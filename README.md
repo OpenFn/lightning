@@ -128,7 +128,9 @@ If there isn't already an issue for the feature you would like to contribute, pl
 
 2. Run through [setting up your environment](#set-up-your-environment) and make your changes. 
 
-3. Open a draft PR, fill out the pull request template (this will be added automatically for you) then make sure to self-review your code and go through the 'Review checklist'. Leave any notes for the reviewer in the 'Details' section.
+3. Make sure you have written your tests and updated /CHANGELOG.md (in the 'Unreleased' section, add a short description of the changes you are making, along with a link to your issue).
+
+3. Open a draft PR, fill out the pull request template (this will be added automatically for you) then make sure to self-review your code and go through the 'Review checklist'. Don't worry about the QA checkbox, our product manager Amber will tick that once she has reviewed your PR. You can leave any notes for the reviewer in a comment. 
 
 4. Once you're ready to submit a pull request, you can click the "compare across
 forks" link on GitHub's
