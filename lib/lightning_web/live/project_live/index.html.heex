@@ -49,7 +49,7 @@
                 </.link>
               </span>
 
-              <%= if can_request_project_deletion(@current_user, project)  do %>
+              <%= if request_project_deletion(@current_user, project)  do %>
                 |
                 <span>
                   <%= link(
@@ -78,7 +78,7 @@
                   <% end %>
                 </span>
               <% end %>
-              <%= if can_delete_now(@current_user, project) do %>
+              <%= if delete_project_now(@current_user, project) do %>
                 |
                 <span>
                   <%= link(

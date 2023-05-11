@@ -122,15 +122,20 @@ defmodule LightningWeb.ProjectLive.Index do
   # TODO: this results in n+1 queries, we need to precalculate the permissions
   # and have zipped list of projects and the permissions so when we iterate
   # over them in the templace we don't generate n number of queries
-  def can_delete_project(current_user, project),
-    do: ProjectUsers |> Permissions.can?(:delete_project, current_user, project)
+  def can_request_delete_project(current_user, project),
+    do:
+      ProjectUsers
+      |> Permissions.can?(:request_delete_project, current_user, project)
 
-  def can_request_project_deletion(current_user, project) do
+  def can_delete_project(current_user),
+    do: Users |> Permissions.can?(:delete_project, current_user)
+
+  def request_project_deletion(current_user, project) do
     is_nil(project.scheduled_deletion) and
-      (can_delete_project(current_user, project) or
-         Users |> Permissions.can?(:access_admin_space, current_user))
+      (can_request_delete_project(current_user, project) or
+         can_delete_project(current_user))
   end
 
-  def can_delete_now(current_user, project),
-    do: !is_nil(project.scheduled_deletion) and current_user.role == :superuser
+  def delete_project_now(current_user, project),
+    do: !is_nil(project.scheduled_deletion) and can_delete_project(current_user)
 end
