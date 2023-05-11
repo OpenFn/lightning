@@ -78,7 +78,7 @@
                   <% end %>
                 </span>
               <% end %>
-              <%= if can_delete_project(@current_user, project) do %>
+              <%= if can_delete_now(@current_user, project) do %>
                 |
                 <span>
                   <%= link(
