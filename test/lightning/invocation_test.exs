@@ -306,7 +306,7 @@ defmodule Lightning.InvocationTest do
         |> Lightning.Repo.insert!()
 
       simplified_result =
-        Invocation.list_work_orders_for_project(
+        Invocation.search_workorders(
           %Lightning.Projects.Project{
             id: workflow.project_id
           },
@@ -411,7 +411,7 @@ defmodule Lightning.InvocationTest do
         |> Repo.insert!()
 
       [%{id: id} | _] =
-        Invocation.list_work_orders_for_project(
+        Invocation.search_workorders(
           %Lightning.Projects.Project{
             id: workflow.project_id
           },
@@ -449,7 +449,7 @@ defmodule Lightning.InvocationTest do
         })
 
       [%{id: id} | _] =
-        Invocation.list_work_orders_for_project(
+        Invocation.search_workorders(
           %Lightning.Projects.Project{
             id: workflow.project_id
           },
@@ -491,7 +491,7 @@ defmodule Lightning.InvocationTest do
       end)
 
       wos =
-        Invocation.list_work_orders_for_project(
+        Invocation.search_workorders(
           %Lightning.Projects.Project{
             id: project.id
           },
@@ -1100,7 +1100,7 @@ defmodule Lightning.InvocationTest do
   end
 
   defp actual_filter_by_status(project, status) do
-    Invocation.list_work_orders_for_project(
+    Invocation.search_workorders(
       %Lightning.Projects.Project{
         id: project.id
       },
@@ -1147,7 +1147,7 @@ defmodule Lightning.InvocationTest do
   end
 
   defp get_simplified_page(project, page, filter) do
-    Invocation.list_work_orders_for_project(
+    Invocation.search_workorders(
       %Lightning.Projects.Project{
         id: project.id
       },

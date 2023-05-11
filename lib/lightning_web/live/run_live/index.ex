@@ -130,7 +130,7 @@ defmodule LightningWeb.RunLive.Index do
     socket
     |> assign(
       page:
-        Invocation.list_work_orders_for_project(
+        Invocation.search_workorders(
           socket.assigns.project,
           filters,
           params

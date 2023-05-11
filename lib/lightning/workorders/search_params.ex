@@ -1,11 +1,14 @@
 defmodule Lightning.Workorders.SearchParams do
-  use Ecto.Schema
-  import Ecto.Changeset
-
   @moduledoc """
   This module is used to parse search parameters for workorders and provide
   a query to the database.
   """
+
+  # What should be defaults
+
+  use Ecto.Schema
+  import Ecto.Changeset
+
   alias Lightning.Workorders.SearchParams
 
   @statuses ~w(success failure pending timeout crash)
@@ -24,14 +27,14 @@ defmodule Lightning.Workorders.SearchParams do
 
   @primary_key false
   embedded_schema do
-    field(:status, {:array, :string}, default: [])
-    field(:search_fields, {:array, :string}, default: [])
-    field(:search_term, :string)
-    field(:workflow_id, :binary_id)
-    field(:date_after, :utc_datetime)
-    field(:date_before, :utc_datetime)
-    field(:wo_date_after, :utc_datetime)
-    field(:wo_date_before, :utc_datetime)
+    field :status, {:array, :string}, default: @statuses
+    field :search_fields, {:array, :string}, default: @search_fields
+    field :search_term, :string
+    field :workflow_id, :binary_id
+    field :date_after, :utc_datetime
+    field :date_before, :utc_datetime
+    field :wo_date_after, :utc_datetime
+    field :wo_date_before, :utc_datetime
   end
 
   def new(params) do
@@ -80,5 +83,9 @@ defmodule Lightning.Workorders.SearchParams do
     params
     |> Map.put_new("status", statuses)
     |> Map.put_new("search_fields", search_fields)
+  end
+
+  def build_url(params) do
+    # ~p"/projects/#{workflow.project_id}/runs?#{uri_params}"
   end
 end

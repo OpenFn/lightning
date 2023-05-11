@@ -518,11 +518,12 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project) do
-    list_work_orders_for_project(project, SearchParams.new(%{}), %{})
+  def search_workorders(%Project{} = project) do
+    search_params = SearchParams.new(%{})
+    search_workorders(project, search_params, %{})
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter, params \\ %{}) do
+  def search_workorders(%Project{} = project, filter, params \\ %{}) do
     # TODO: The "get_and_update" below is only necessary because of the fragment
     # on line 461 of this file. See other "TODO".
     list_work_orders_for_project_query(project, filter)
