@@ -10,6 +10,7 @@ defmodule Lightning.Policies.Users do
 
   @type actions ::
           :access_admin_space
+          | :delete_project
           | :edit_credential
           | :delete_credential
           | :delete_account
@@ -25,7 +26,8 @@ defmodule Lightning.Policies.Users do
   for a particular action they are denied.
   """
   @spec authorize(actions(), Lightning.Accounts.User.t(), any) :: boolean
-  def authorize(:access_admin_space, %User{role: role}, _params) do
+  def authorize(action, %User{role: role}, _params)
+      when action in [:access_admin_space, :delete_project] do
     role in [:superuser]
   end
 
