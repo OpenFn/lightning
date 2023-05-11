@@ -115,18 +115,25 @@ FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
 [Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
 unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
 
-### Set up your environment
+If you'd like to contribute to this projects, follow the steps below: 
 
-If you have push access to this repository (are you an authorized maintainer?)
-then you'll be able to make changes and push them to a feature branch before
-submitting a pull request. If you're new to OpenFn, you'll need to
-[**make a fork**](https://github.com/OpenFn/Lightning/fork) and push your
-changes there.
+### Assign yourself to an issue
+Read through the existing [issues](https://github.com/OpenFn/Lightning/issues), assign yourself to the issue you have chosen. Leave a comment on the issue to let us know you'll be working on it, and if you have any questions of clarifications that would help you get started ask them there - we will get back to you as soon as possible. 
 
-Once you're ready to submit a pull request, you can click the "compare across
+If there isn't already an issue for the feature you would like to contribute, please start a discussion in our [community forum](https://community.openfn.org/c/feature-requests/12).
+
+### Open a pull request
+
+1. Clone the Lightning repository, then [fork it](https://docs.github.com/en/get-started/quickstart/fork-a-repo). 
+
+2. Run through [setting up your environment](#set-up-your-environment) and make your changes. 
+
+3. Open a draft PR, fill out the pull request template (this will be added automatically for you) then make sure to self-review your code and go through the 'Review checklist'. Leave any notes for the reviewer in the 'Details' section.
+
+4. Once you're ready to submit a pull request, you can click the "compare across
 forks" link on GitHub's
 [pull request](https://github.com/OpenFn/Lightning/compare) interface and then
-open one for review.
+open one for review. Assign @stu or @taylor.
 
 ### Clone the repo and optionally set ENVs
 
