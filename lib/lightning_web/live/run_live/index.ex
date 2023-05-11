@@ -4,6 +4,7 @@ defmodule LightningWeb.RunLive.Index do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Workorders.SearchParams
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrderService
@@ -123,65 +124,8 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  defp prepare_filters(socket, params) do
-    filters = Map.get(params, "filters")
-
-    if filters do
-      filters =
-        Enum.map(filters, fn {key, value} ->
-          {String.to_existing_atom(key), value}
-        end)
-
-      statuses = Enum.map(socket.assigns.statuses, fn status -> status.id end)
-
-      statuses =
-        Enum.map(filters, fn {key, value} ->
-          if key in statuses and String.to_existing_atom(value) do
-            key
-          end
-        end)
-        |> Enum.filter(fn v -> v end)
-
-      search_fields =
-        Enum.map(socket.assigns.search_fields, fn search_field ->
-          search_field.id
-        end)
-
-      search_fields =
-        Enum.map(filters, fn {key, value} ->
-          if key in search_fields and String.to_existing_atom(value) do
-            key
-          end
-        end)
-        |> Enum.filter(fn v -> v end)
-
-      remainder =
-        Enum.map(filters, fn {key, value} ->
-          kw = statuses ++ search_fields
-
-          if is_nil(kw[key]) do
-            {key, value}
-          end
-        end)
-        |> Enum.filter(fn v -> v end)
-
-      [
-        status: statuses,
-        search_fields: search_fields,
-        search_term: remainder[:search_term],
-        workflow_id: remainder[:workflow_id],
-        date_after: remainder[:date_after],
-        date_before: remainder[:date_before],
-        wo_date_after: remainder[:wo_date_after],
-        wo_date_before: remainder[:wo_date_before]
-      ]
-    else
-      nil
-    end
-  end
-
   defp apply_action(socket, :index, params) do
-    filters = prepare_filters(socket, params)
+    filters = Map.get(params, "filters") |> SearchParams.new()
 
     socket
     |> assign(

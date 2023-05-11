@@ -403,7 +403,7 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project_query(
         %Project{id: project_id},
-        %Lightning.Workorders.SearchParams{} = search_params
+        %SearchParams{} = search_params
       ) do
     last_attempts =
       from(att in Lightning.Attempt,
@@ -518,18 +518,11 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter, params)
-      when filter in [nil, []] do
-    {:ok, filter} = SearchParams.new(%{})
-
-    list_work_orders_for_project(
-      project,
-      filter,
-      params
-    )
+  def list_work_orders_for_project(%Project{} = project) do
+    list_work_orders_for_project(project, SearchParams.new(%{}), %{})
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter, params) do
+  def list_work_orders_for_project(%Project{} = project, filter, params \\ %{}) do
     # TODO: The "get_and_update" below is only necessary because of the fragment
     # on line 461 of this file. See other "TODO".
     list_work_orders_for_project_query(project, filter)
@@ -552,15 +545,5 @@ defmodule Lightning.Invocation do
       end
     )
     |> elem(1)
-  end
-
-  def list_work_orders_for_project(%Project{} = project) do
-    {:ok, filter} = SearchParams.new(%{})
-
-    list_work_orders_for_project(
-      project,
-      filter,
-      %{}
-    )
   end
 end

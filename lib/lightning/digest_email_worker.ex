@@ -113,16 +113,10 @@ defmodule Lightning.DigestEmailWorker do
   end
 
   defp search_workorders(project, params) do
-    case Lightning.Workorders.SearchParams.new(params) do
-      {:ok, search_params} ->
-        Lightning.Invocation.list_work_orders_for_project_query(
-          project,
-          search_params
-        )
-        |> Lightning.Repo.paginate()
-
-      {:error, _changeset} ->
-        nil
-    end
+    Lightning.Invocation.list_work_orders_for_project_query(
+      project,
+      Lightning.Workorders.SearchParams.new(params)
+    )
+    |> Lightning.Repo.paginate()
   end
 end
