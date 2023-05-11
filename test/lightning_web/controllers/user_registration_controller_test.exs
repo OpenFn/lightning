@@ -73,7 +73,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       assert project
              |> Lightning.Projects.project_workorders_query()
-             |> Lightning.Repo.aggregate(:count, :id) == 2
+             |> Lightning.Repo.aggregate(:count, :id) == 1
 
       assert project
              |> Lightning.Projects.project_runs_query()
