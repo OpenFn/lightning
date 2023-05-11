@@ -295,10 +295,17 @@ defmodule Lightning.SetupUtils do
 
     job = Jobs.get_job!(get_dhis2_data.id) |> Repo.preload([:workflow])
 
+    {:ok, empty_dataclip} =
+      Lightning.Invocation.create_dataclip(%{
+        "project_id" => dhis2_project.id,
+        "type" => :global,
+        "body" => %{}
+      })
+
     {:ok, dhis2_workorder} =
       WorkOrderService.create_manual_workorder(
         job,
-        %Lightning.Invocation.Dataclip{},
+        empty_dataclip,
         user
       )
 
@@ -320,13 +327,13 @@ defmodule Lightning.SetupUtils do
       Lightning.Credentials.Credential,
       Lightning.WorkOrder,
       Lightning.InvocationReason,
-      Lightning.Invocation.Dataclip,
       Lightning.Invocation.Run,
       Lightning.Jobs.Job,
       Lightning.Jobs.Trigger,
+      Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,
-      Lightning.Projects.Project,
-      Lightning.Workflows.Workflow
+      Lightning.Invocation.Dataclip,
+      Lightning.Projects.Project
     ])
 
     delete_other_tables(["oban_jobs", "oban_peers"])
