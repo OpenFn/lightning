@@ -81,7 +81,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :viewer role" do
-    test "cannot create workflows, create / edit / delete / run / rerun jobs, delete the project, and edit the project name or description",
+    test "cannot create workflows, create / edit / delete / run / rerun jobs, request project deletion, and edit the project name or description",
          %{
            project: project,
            viewer: viewer
@@ -118,7 +118,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
-    test "cannot delete the project, edit the project name, and edit the project description",
+    test "cannot request project deletion, edit the project name, and edit the project description",
          %{
            project: project,
            editor: editor
@@ -150,13 +150,14 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
     end
 
-    test "cannot delete the project", %{project: project, admin: admin} do
-      refute ProjectUsers |> Permissions.can?(:delete_project, admin, project)
+    test "cannot request project deletion", %{project: project, admin: admin} do
+      refute ProjectUsers
+             |> Permissions.can?(:request_delete_project, admin, project)
     end
   end
 
   describe "Project users with the :owner role" do
-    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, edit the project description, and delete the project.",
+    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, edit the project description, and request project deletion.",
          %{
            project: project,
            owner: owner
