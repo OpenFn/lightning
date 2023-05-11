@@ -296,7 +296,11 @@ defmodule Lightning.SetupUtils do
     job = Jobs.get_job!(get_dhis2_data.id) |> Repo.preload([:workflow])
 
     {:ok, dhis2_workorder} =
-      WorkOrderService.create_manual_workorder(job, %{}, user)
+      WorkOrderService.create_manual_workorder(
+        job,
+        %Lightning.Invocation.Dataclip{},
+        user
+      )
 
     %{
       project: dhis2_project,
