@@ -13,7 +13,7 @@ defmodule Lightning.Workorders.SearchParamsTest do
         "failure" => "true",
         "log" => "true",
         "pending" => "true",
-        "search_term" => "",
+        "search_term" => "hello",
         "success" => "true",
         "timeout" => "true",
         "wo_date_after" => "2023-05-09T12:54",
@@ -21,7 +21,23 @@ defmodule Lightning.Workorders.SearchParamsTest do
         "workflow_id" => "babd29f7-bf15-4a66-af21-51209217ebd4"
       }
 
-      assert %SearchParams{} = SearchParams.new(params) |> IO.inspect()
+      assert {:ok,
+              %SearchParams{
+                date_after: ~U[2023-05-16 12:54:00Z],
+                date_before: ~U[2023-05-23 12:55:00Z],
+                search_fields: [:body, :log],
+                search_term: "hello",
+                status: [
+                  :crash,
+                  :failure,
+                  :pending,
+                  :success,
+                  :timeout
+                ],
+                wo_date_after: ~U[2023-05-09 12:54:00Z],
+                wo_date_before: ~U[2023-05-16 12:54:00Z],
+                workflow_id: "babd29f7-bf15-4a66-af21-51209217ebd4"
+              }} == SearchParams.new(params)
     end
   end
 end

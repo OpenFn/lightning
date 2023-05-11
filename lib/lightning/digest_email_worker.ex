@@ -85,8 +85,25 @@ defmodule Lightning.DigestEmailWorker do
   Get a map of counts for successful, rerun and failed Workorders for a given workflow in a given timeframe.
   """
   def get_digest_data(workflow, start_date, end_date) do
-    successful_workorders = successful_workorders(workflow, start_date, end_date)
-    failed_workorders = failed_workorders(workflow, start_date, end_date)
+    project = Projects.get_project!(workflow.project_id)
+
+    successful_workorders =
+      search_workorders(project, %{
+        "success" => true,
+        "date_after" => start_date,
+        "date_before" => end_date,
+        "workflow_id" => workflow.id
+      })
+
+    failed_workorders =
+      search_workorders(project, %{
+        "crash" => true,
+        "failure" => true,
+        "timeout" => true,
+        "date_after" => start_date,
+        "date_before" => end_date,
+        "workflow_id" => workflow.id
+      })
 
     %{
       workflow: workflow,
@@ -95,30 +112,9 @@ defmodule Lightning.DigestEmailWorker do
     }
   end
 
-  defp successful_workorders(workflow, start_date, end_date) do
-    Lightning.Invocation.list_work_orders_for_project(
-      Projects.get_project!(workflow.project_id),
-      [
-        status: [:success],
-        search_fields: [:body, :log],
-        search_term: "",
-        workflow_id: workflow.id,
-        date_after: start_date,
-        date_before: end_date,
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
-      %{}
-    )
-  end
-
-  defp failed_workorders(search_params) do
-    # find where the query is called (like in LiveView), and replace with this
-
-    case search_params |> Lightning.Workorders.SearchParams.new() do
+  defp search_workorders(project, params) do
+    case Lightning.Workorders.SearchParams.new(params) do
       {:ok, search_params} ->
-        project = Projects.get_project!(workflow.project_id)
-
         Lightning.Invocation.list_work_orders_for_project_query(
           project,
           search_params
@@ -129,38 +125,4 @@ defmodule Lightning.DigestEmailWorker do
         nil
     end
   end
-
-  # TODO: This currently doesn't work as expected. And it is taking longer than expected. We decided to address it properly as a new feature in the issue #795.
-  # defp rerun_workorders(workflow, start_date, end_date) do
-  #   probably_reruns =
-  #     from(wo in Lightning.WorkOrder,
-  #       join: workflow in Lightning.Workflows.Workflow,
-  #       where: workflow.id == ^workflow.id,
-  #       join: a in Lightning.Attempt,
-  #       on: a.work_order_id == wo.id,
-  #       join: ar in Lightning.AttemptRun,
-  #       on: ar.attempt_id == a.id,
-  #       join: r in Lightning.Invocation.Run,
-  #       on: r.id == ar.run_id,
-  #       where:
-  #         r.exit_code == 0 and r.finished_at >= ^start_date and
-  #           r.finished_at < ^end_date,
-  #       group_by: [wo.id, wo.workflow_id],
-  #       order_by: [desc: wo.inserted_at],
-  #       select: wo.id
-  #     )
-
-  #   from(wo in Lightning.WorkOrder,
-  #     where:
-  #       wo.workflow_id == ^workflow.id and wo.id in subquery(probably_reruns),
-  #     join: a in Lightning.Attempt,
-  #     on: a.work_order_id == wo.id,
-  #     join: ar in Lightning.AttemptRun,
-  #     on: ar.attempt_id == a.id,
-  #     join: r in Lightning.Invocation.Run,
-  #     on: r.id == ar.run_id,
-  #     where: r.exit_code != 0
-  #   )
-  #   |> Repo.paginate(%{})
-  # end
 end

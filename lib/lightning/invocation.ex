@@ -5,6 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Run}
@@ -519,18 +520,11 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project(%Project{} = project, filter, params)
       when filter in [nil, []] do
+    {:ok, filter} = SearchParams.new(%{})
+
     list_work_orders_for_project(
       project,
-      [
-        status: [:success, :failure, :timeout, :crash, :pending],
-        search_fields: [],
-        search_term: "",
-        workflow_id: "",
-        date_after: "",
-        date_before: "",
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
+      filter,
       params
     )
   end
@@ -561,18 +555,11 @@ defmodule Lightning.Invocation do
   end
 
   def list_work_orders_for_project(%Project{} = project) do
+    {:ok, filter} = SearchParams.new(%{})
+
     list_work_orders_for_project(
       project,
-      [
-        status: [:success, :failure, :timeout, :crash, :pending],
-        search_fields: [],
-        search_term: "",
-        workflow_id: "",
-        date_after: "",
-        date_before: "",
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
+      filter,
       %{}
     )
   end
