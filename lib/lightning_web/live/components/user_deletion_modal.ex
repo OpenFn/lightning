@@ -7,12 +7,13 @@ defmodule LightningWeb.Components.UserDeletionModal do
   alias Lightning.Accounts
 
   @impl true
-  def update(%{user: user} = assigns, socket) do
+  def update(%{user: user, action: action} = assigns, socket) do
     {:ok,
      socket
      |> assign(
        scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user),
-       has_activity_in_projects: Accounts.has_activity_in_projects?(user)
+       has_activity_in_projects: Accounts.has_activity_in_projects?(user),
+       action: action
      )
      |> assign(assigns)}
   end
@@ -42,15 +43,34 @@ defmodule LightningWeb.Components.UserDeletionModal do
         } = _user_params,
         socket
       ) do
-    case Accounts.schedule_user_deletion(socket.assigns.user, email) do
-      {:ok, _user} ->
+    if socket.assigns.action == :delete do
+      case Accounts.schedule_user_deletion(socket.assigns.user, email) do
+        {:ok, _user} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "User scheduled for deletion")
+           |> logout_after_deletion()}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+      end
+    else
+      if Accounts.has_activity_in_projects?(socket.assigns.user) do
         {:noreply,
          socket
-         |> put_flash(:info, "User scheduled for deletion")
-         |> logout_after_deletion()}
+         |> put_flash(
+           :error,
+           "You can't delete users that have activities in projects"
+         )
+         |> push_navigate(to: ~p"/settings/users")}
+      else
+        Accounts.delete_user(socket.assigns.user)
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+        {:noreply,
+         socket
+         |> put_flash(:info, "User deleted")
+         |> push_navigate(to: ~p"/settings/users")}
+      end
     end
   end
 
@@ -82,7 +102,9 @@ defmodule LightningWeb.Components.UserDeletionModal do
           phx-target={@myself}
           id="scheduled_deletion_form"
         >
-          <span>This user's account and credential data will be deleted</span>
+          <span>
+            This user's account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
+          </span>
 
           <%= if @has_activity_in_projects do %>
             <div class="hidden sm:block" aria-hidden="true">
