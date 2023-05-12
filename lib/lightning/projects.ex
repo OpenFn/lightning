@@ -156,36 +156,40 @@ defmodule Lightning.Projects do
   """
 
   def delete_project(%Project{} = project) do
-    Repo.transaction(fn ->
-      project_attempts_query(project) |> Repo.delete_all()
+    if is_nil(project.scheduled_deletion) do
+      {:error, %Ecto.Changeset{}}
+    else
+      Repo.transaction(fn ->
+        project_attempts_query(project) |> Repo.delete_all()
 
-      project_attempt_run_query(project) |> Repo.delete_all()
+        project_attempt_run_query(project) |> Repo.delete_all()
 
-      project_workorders_query(project) |> Repo.delete_all()
+        project_workorders_query(project) |> Repo.delete_all()
 
-      project_run_invocation_reasons(project) |> Repo.delete_all()
+        project_run_invocation_reasons(project) |> Repo.delete_all()
 
-      project_runs_query(project) |> Repo.delete_all()
+        project_runs_query(project) |> Repo.delete_all()
 
-      project_jobs_query(project) |> Repo.delete_all()
+        project_jobs_query(project) |> Repo.delete_all()
 
-      project_trigger_invocation_reason(project) |> Repo.delete_all()
+        project_trigger_invocation_reason(project) |> Repo.delete_all()
 
-      project_triggers_query(project) |> Repo.delete_all()
+        project_triggers_query(project) |> Repo.delete_all()
 
-      project_workflows_query(project) |> Repo.delete_all()
+        project_workflows_query(project) |> Repo.delete_all()
 
-      project_users_query(project) |> Repo.delete_all()
+        project_users_query(project) |> Repo.delete_all()
 
-      project_credentials_query(project) |> Repo.delete_all()
+        project_credentials_query(project) |> Repo.delete_all()
 
-      project_dataclip_invocation_reason(project) |> Repo.delete_all()
+        project_dataclip_invocation_reason(project) |> Repo.delete_all()
 
-      project_dataclips_query(project) |> Repo.delete_all()
+        project_dataclips_query(project) |> Repo.delete_all()
 
-      {:ok, project} = Repo.delete(project)
-      project
-    end)
+        {:ok, project} = Repo.delete(project)
+        project
+      end)
+    end
   end
 
   def project_trigger_invocation_reason(project) do
