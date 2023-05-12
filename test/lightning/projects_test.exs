@@ -210,10 +210,12 @@ defmodule Lightning.ProjectsTest do
 
       attempt_run_query = Lightning.Projects.project_attempt_run_query(p1)
 
-      workflows_ir_query =
-        Lightning.Projects.project_workflows_invocation_reason(p1)
+      trigger_ir_query = Lightning.Projects.project_trigger_invocation_reason(p1)
 
-      pu_ir_query = Lightning.Projects.project_users_invocation_reasons(p1)
+      run_ir_query = Lightning.Projects.project_run_invocation_reasons(p1)
+
+      dataclip_ir_query =
+        Lightning.Projects.project_dataclip_invocation_reason(p1)
 
       pu_query = Lightning.Projects.project_users_query(p1)
 
@@ -231,9 +233,11 @@ defmodule Lightning.ProjectsTest do
 
       assert attempt_run_query |> Repo.aggregate(:count, :id) == 3
 
-      assert workflows_ir_query |> Repo.aggregate(:count, :id) == 1
+      assert trigger_ir_query |> Repo.aggregate(:count, :id) == 1
 
-      assert pu_ir_query |> Repo.aggregate(:count, :id) == 1
+      assert dataclip_ir_query |> Repo.aggregate(:count, :id) == 1
+
+      assert run_ir_query |> Repo.aggregate(:count, :id) == 1
 
       assert pu_query |> Repo.aggregate(:count, :id) == 1
 
@@ -263,9 +267,11 @@ defmodule Lightning.ProjectsTest do
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
 
-      assert workflows_ir_query |> Repo.aggregate(:count, :id) == 0
+      assert trigger_ir_query |> Repo.aggregate(:count, :id) == 0
 
-      assert pu_ir_query |> Repo.aggregate(:count, :id) == 0
+      assert run_ir_query |> Repo.aggregate(:count, :id) == 0
+
+      assert dataclip_ir_query |> Repo.aggregate(:count, :id) == 0
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(p1.id)

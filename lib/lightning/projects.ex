@@ -163,17 +163,13 @@ defmodule Lightning.Projects do
 
       project_workorders_query(project) |> Repo.delete_all()
 
-      # TODO: @Mtuchi refactor project_users_invocation_reasons(project) |> Repo.delete_all()
-      # We can not delete invocation reasons for project users
-      # Because project_users belongs to many projects instead delete invocation reasons per activity
-      # Workorder ir, dataclip ir, etc
-      project_users_invocation_reasons(project) |> Repo.delete_all()
+      project_run_invocation_reasons(project) |> Repo.delete_all()
 
       project_runs_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
 
-      project_workflows_invocation_reason(project) |> Repo.delete_all()
+      project_trigger_invocation_reason(project) |> Repo.delete_all()
 
       project_triggers_query(project) |> Repo.delete_all()
 
@@ -183,6 +179,8 @@ defmodule Lightning.Projects do
 
       project_credentials_query(project) |> Repo.delete_all()
 
+      project_dataclip_invocation_reason(project) |> Repo.delete_all()
+
       project_dataclips_query(project) |> Repo.delete_all()
 
       {:ok, project} = Repo.delete(project)
@@ -190,21 +188,27 @@ defmodule Lightning.Projects do
     end)
   end
 
-  def project_workflows_invocation_reason(project) do
+  def project_trigger_invocation_reason(project) do
     from(ir in InvocationReason,
       join: tr in assoc(ir, :trigger),
       join: w in assoc(tr, :workflow),
-      join: d in assoc(ir, :dataclip),
-      where: w.project_id == ^project.id or d.project_id == ^project.id
+      where: w.project_id == ^project.id
     )
   end
 
-  def project_users_invocation_reasons(project) do
+  def project_dataclip_invocation_reason(project) do
     from(ir in InvocationReason,
-      join: u in assoc(ir, :user),
-      join: pu in assoc(u, :project_users),
-      join: p in assoc(pu, :project),
-      where: p.id == ^project.id
+      join: d in assoc(ir, :dataclip),
+      where: d.project_id == ^project.id
+    )
+  end
+
+  def project_run_invocation_reasons(project) do
+    from(ir in InvocationReason,
+      join: r in assoc(ir, :run),
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
     )
   end
 
@@ -418,7 +422,7 @@ defmodule Lightning.Projects do
     |> Repo.update()
   end
 
-  def cancel_scheduled_deletion(project, attrs \\ %{}) do
+  def cancel_scheduled_deletion(project) do
     Project.scheduled_deletion_changeset(project, %{
       "scheduled_deletion" => nil
     })
