@@ -38,9 +38,6 @@ and this project adheres to
 
 =======
 
-- Incorrect project digest queries
-  [#768](https://github.com/OpenFn/Lightning/issues/768)]
-
 ## [0.5.1] - 2023-04-12
 
 ### Added
