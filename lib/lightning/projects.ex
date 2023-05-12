@@ -350,7 +350,7 @@ defmodule Lightning.Projects do
   def first_project_for_user(user) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user.id,
+      where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion),
       limit: 1
     )
     |> Repo.one()
@@ -415,6 +415,14 @@ defmodule Lightning.Projects do
         nil -> DateTime.utc_now()
         integer -> DateTime.utc_now() |> Timex.shift(days: integer)
       end
+
+    jobs = project_jobs_query(project) |> Repo.all()
+
+    Enum.map(jobs, fn job ->
+      Lightning.Jobs.update_job(job, %{
+        "enabled" => false
+      })
+    end)
 
     Project.scheduled_deletion_changeset(project, %{
       "scheduled_deletion" => date
