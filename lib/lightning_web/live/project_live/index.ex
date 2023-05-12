@@ -60,24 +60,29 @@ defmodule LightningWeb.ProjectLive.Index do
       ) do
     project = Projects.get_project(project_id)
 
-    Projects.delete_project(project)
-    |> case do
-      {:ok, _} ->
-        {:noreply,
-         socket
-         |> assign(
-           active_menu_item: :projects,
-           projects: Projects.list_projects(),
-           page_title: "Projects"
-         )
-         |> put_flash(:info, "Project deleted successfully")
-         |> push_patch(to: ~p"/settings/projects")}
+    if can_delete_project(socket.assigns.current_user, project) do
+      Projects.delete_project(project)
+      |> case do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> assign(
+             active_menu_item: :projects,
+             projects: Projects.list_projects(),
+             page_title: "Projects"
+           )
+           |> put_flash(:info, "Project deleted successfully")
+           |> push_patch(to: ~p"/settings/projects")}
 
-      {:error, changeset} ->
-        {:noreply,
-         socket
-         |> assign(changeset: changeset)
-         |> put_flash(:error, "Can't delete project")}
+        {:error, changeset} ->
+          {:noreply,
+           socket
+           |> assign(changeset: changeset)
+           |> put_flash(:error, "Can't delete project")}
+      end
+    else
+      put_flash(socket, :error, "You can't perform this action")
+      |> push_patch(to: ~p"/profile/projects")
     end
   end
 
@@ -88,20 +93,15 @@ defmodule LightningWeb.ProjectLive.Index do
       ) do
     project = Projects.get_project(project_id)
 
-    if can_delete_project(socket.assigns.current_user, project) do
-      case Projects.cancel_scheduled_deletion(project) do
-        {:ok, _project} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Canceled project deletion schedule")
-           |> push_patch(to: ~p"/settings/projects")}
+    case Projects.cancel_scheduled_deletion(project) do
+      {:ok, _project} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Canceled project deletion schedule")
+         |> push_patch(to: ~p"/settings/projects")}
 
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-      end
-    else
-      put_flash(socket, :error, "You can't perform this action")
-      |> push_patch(to: ~p"/profile/projects")
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
     end
   end
 
