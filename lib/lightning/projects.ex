@@ -418,7 +418,8 @@ defmodule Lightning.Projects do
 
     jobs = project_jobs_query(project) |> Repo.all()
 
-    Enum.map(jobs, fn job ->
+    jobs
+    |> Enum.each(fn job ->
       Lightning.Jobs.update_job(job, %{
         "enabled" => false
       })

@@ -88,7 +88,7 @@ defmodule LightningWeb.ProjectLive.Index do
       ) do
     project = Projects.get_project(project_id)
 
-    if can_delete_project(socket.assign.current_user, project) do
+    if can_delete_project(socket.assigns.current_user, project) do
       case Projects.cancel_scheduled_deletion(project) do
         {:ok, _project} ->
           {:noreply,
