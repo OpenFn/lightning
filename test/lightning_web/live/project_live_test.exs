@@ -165,6 +165,16 @@ defmodule LightningWeb.ProjectLiveTest do
 
       refute view |> element(cancel_delete_button) |> has_element?(),
              "Should not show cancel deletion button"
+
+      project = project_fixture(scheduled_deletion: nil)
+
+      assert view
+             |> render_click("delete_now", %{
+               "id" => project.id
+             }) =~
+               "You are not authorized to perform this action."
+
+      assert_patched(view, ~p"/settings/projects")
     end
 
     test "Edits a project", %{conn: conn} do

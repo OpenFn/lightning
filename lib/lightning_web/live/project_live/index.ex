@@ -81,8 +81,13 @@ defmodule LightningWeb.ProjectLive.Index do
            |> put_flash(:error, "Can't delete project")}
       end
     else
-      put_flash(socket, :error, "You can't perform this action")
-      |> push_patch(to: ~p"/profile/projects")
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )
+       |> push_patch(to: ~p"/settings/projects")}
     end
   end
 
