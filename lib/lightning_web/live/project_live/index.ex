@@ -88,15 +88,20 @@ defmodule LightningWeb.ProjectLive.Index do
       ) do
     project = Projects.get_project(project_id)
 
-    case Projects.cancel_scheduled_deletion(project) do
-      {:ok, _project} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Canceled project deletion schedule")
-         |> push_patch(to: ~p"/settings/projects")}
+    if can_delete_project(socket.assign.current_user, project) do
+      case Projects.cancel_scheduled_deletion(project) do
+        {:ok, _project} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Canceled project deletion schedule")
+           |> push_patch(to: ~p"/settings/projects")}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+      end
+    else
+      put_flash(socket, :error, "You can't perform this action")
+      |> push_patch(to: ~p"/profile/projects")
     end
   end
 
@@ -127,15 +132,12 @@ defmodule LightningWeb.ProjectLive.Index do
       ProjectUsers
       |> Permissions.can?(:request_delete_project, current_user, project)
 
-  def can_delete_project(current_user),
-    do: Users |> Permissions.can?(:delete_project, current_user)
+  def can_delete_project(current_user, project),
+    do: Users |> Permissions.can?(:delete_project, current_user, project)
 
   def request_project_deletion(current_user, project) do
     is_nil(project.scheduled_deletion) and
       (can_request_delete_project(current_user, project) or
-         can_delete_project(current_user))
+         current_user.role == :superuser)
   end
-
-  def delete_project_now(current_user, project),
-    do: !is_nil(project.scheduled_deletion) and can_delete_project(current_user)
 end
