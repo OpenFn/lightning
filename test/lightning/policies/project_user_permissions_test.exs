@@ -21,6 +21,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     owner = user_fixture()
     editor = user_fixture()
     intruder = user_fixture()
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     project =
       project_fixture(
@@ -32,8 +33,20 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         ]
       )
 
+    marked_project =
+      project_fixture(
+        project_users: [
+          %{user_id: viewer.id, role: :viewer},
+          %{user_id: editor.id, role: :editor},
+          %{user_id: admin.id, role: :admin},
+          %{user_id: owner.id, role: :owner}
+        ],
+        scheduled_deletion: now
+      )
+
     %{
       project: project,
+      marked_project: marked_project,
       viewer: viewer,
       admin: admin,
       owner: owner,
@@ -54,6 +67,14 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       viewer: viewer
     } do
       assert ProjectUsers |> Permissions.can?(:access_project, viewer, project)
+    end
+
+    test "can not access that scheduled deletion project", %{
+      marked_project: marked_project,
+      viewer: viewer
+    } do
+      refute ProjectUsers
+             |> Permissions.can?(:access_project, viewer, marked_project)
     end
 
     test "can edit their own digest and failure alerts for that project",
@@ -174,6 +195,12 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         rerun_job
         run_job
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
+    end
+
+    test "can not request delete on a project that is already marked for deletion",
+         %{marked_project: marked_project, owner: owner} do
+      refute ProjectUsers
+             |> Permissions.can?(:request_delete_project, owner, marked_project)
     end
   end
 

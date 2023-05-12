@@ -15,6 +15,7 @@ defmodule Lightning.Policies.UserPermissionsTest do
   use Lightning.DataCase, async: true
 
   import Lightning.AccountsFixtures
+  import Lightning.ProjectsFixtures
 
   alias Lightning.CredentialsFixtures
   alias Lightning.Policies.{Permissions, Users}
@@ -76,14 +77,21 @@ defmodule Lightning.Policies.UserPermissionsTest do
   end
 
   describe "Superusers" do
-    test "can access admin space, edit their own credentials, and delete their own accounts, api tokens, and credentials.",
+    test "can access admin space, delete project scheduled for deletion, edit their own credentials, and delete their own accounts, api tokens, and credentials.",
          %{
            superuser: superuser
          } do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      marked_project = project_fixture(scheduled_deletion: now)
+
       api_token = api_token_fixture(superuser).token
       credential = CredentialsFixtures.credential_fixture(user_id: superuser.id)
 
       assert Users |> Permissions.can?(:access_admin_space, superuser, {})
+
+      assert Users
+             |> Permissions.can?(:delete_project, superuser, marked_project)
+
       assert Users |> Permissions.can?(:edit_credential, superuser, credential)
       assert Users |> Permissions.can?(:delete_account, superuser, superuser)
 
@@ -95,6 +103,15 @@ defmodule Lightning.Policies.UserPermissionsTest do
              )
 
       assert Users |> Permissions.can?(:delete_credential, superuser, credential)
+    end
+
+    test "cannot delete a project that is not scheduled for deletion", %{
+      superuser: superuser
+    } do
+      project = project_fixture()
+
+      refute Users
+             |> Permissions.can?(:delete_project, superuser, project)
     end
 
     test "cannot edit other users credentials, and delete other users accounts, api tokens, and credentials",

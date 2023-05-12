@@ -26,9 +26,13 @@ defmodule Lightning.Policies.Users do
   for a particular action they are denied.
   """
   @spec authorize(actions(), Lightning.Accounts.User.t(), any) :: boolean
-  def authorize(action, %User{role: role}, _params)
-      when action in [:access_admin_space, :delete_project] do
+  def authorize(:access_admin_space, %User{role: role}, _params) do
     role in [:superuser]
+  end
+
+  # You can only delete project that are scheduled for deletion
+  def authorize(:delete_project, %User{role: role}, project) do
+    role in [:superuser] and !is_nil(project.scheduled_deletion)
   end
 
   # You can only delete an account if the id in the URL is matching your id

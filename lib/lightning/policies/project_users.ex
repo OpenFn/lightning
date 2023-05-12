@@ -39,7 +39,9 @@ defmodule Lightning.Policies.ProjectUsers do
           Lightning.Projects.Project.t()
         ) :: boolean
   def authorize(:access_project, %User{} = user, %Project{} = project),
-    do: Projects.is_member_of?(project, user)
+    do:
+      is_nil(project.scheduled_deletion) and
+        Projects.is_member_of?(project, user)
 
   def authorize(
         action,
@@ -50,7 +52,9 @@ defmodule Lightning.Policies.ProjectUsers do
       do: id == user_id
 
   def authorize(:request_delete_project, %User{} = user, %Project{} = project),
-    do: Projects.get_project_user_role(user, project) in [:owner]
+    do:
+      is_nil(project.scheduled_deletion) and
+        Projects.get_project_user_role(user, project) in [:owner]
 
   def authorize(action, %User{} = user, %Project{} = project)
       when action in [
