@@ -2,8 +2,9 @@ defmodule LightningWeb.DashboardLive.Index do
   @moduledoc false
   use LightningWeb, :live_view
   alias Lightning.Projects
+  alias Lightning.Policies.{Permissions, ProjectUsers}
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(_params, _session, socket) do
@@ -24,10 +25,22 @@ defmodule LightningWeb.DashboardLive.Index do
     project = Projects.first_project_for_user(socket.assigns.current_user)
 
     if project != nil do
-      socket
-      |> push_redirect(
-        to: Routes.project_workflow_path(socket, :index, project.id)
-      )
+      can_access_project =
+        ProjectUsers
+        |> Permissions.can?(
+          :access_project,
+          socket.assigns.current_user,
+          project
+        )
+
+      if can_access_project do
+        socket
+        |> push_redirect(
+          to: Routes.project_workflow_path(socket, :index, project.id)
+        )
+      else
+        {:halt, redirect(socket, to: "/") |> put_flash(:nav, :no_access)}
+      end
     else
       socket
       |> assign(:page_title, "Projects")
