@@ -7,6 +7,7 @@ defmodule Lightning.Accounts.UserNotifier do
 
   import Swoosh.Email
 
+  alias Lightning.Workorders.SearchParams
   alias Lightning.Projects
   alias Lightning.Mailer
   alias Lightning.Helpers
@@ -157,25 +158,14 @@ defmodule Lightning.Accounts.UserNotifier do
   end
 
   def build_digest_url(workflow, start_date, end_date) do
-    uri_params = %{
-      "filters" => %{
-        "body" => true,
-        "crash" => true,
-        "failure" => true,
-        "log" => true,
-        "pending" => true,
-        "search_term" => true,
-        "success" => true,
-        "timeout" => true,
-        "wo_date_after" => "",
-        "wo_date_before" => "",
-        "date_after" => start_date |> DateTime.to_string(),
-        "date_before" => end_date |> DateTime.to_string(),
+    uri_params =
+      SearchParams.to_uri_params(%{
+        "date_after" => start_date,
+        "date_before" => end_date,
         "workflow_id" => workflow.id
-      }
-    }
+      })
 
-    ~p"/projects/#{workflow.project_id}/runs?#{uri_params}"
+    ~p"/projects/#{workflow.project_id}/runs?#{%{"filters" => uri_params}}"
   end
 
   defp build_email(%{

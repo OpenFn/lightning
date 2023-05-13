@@ -27,18 +27,18 @@ defmodule Lightning.Workorders.SearchParams do
 
   @primary_key false
   embedded_schema do
-    field :status, {:array, :string}, default: @statuses
-    field :search_fields, {:array, :string}, default: @search_fields
-    field :search_term, :string
-    field :workflow_id, :binary_id
-    field :date_after, :utc_datetime
-    field :date_before, :utc_datetime
-    field :wo_date_after, :utc_datetime
-    field :wo_date_before, :utc_datetime
+    field(:status, {:array, :string}, default: @statuses)
+    field(:search_fields, {:array, :string}, default: @search_fields)
+    field(:search_term, :string)
+    field(:workflow_id, :binary_id)
+    field(:date_after, :utc_datetime_usec)
+    field(:date_before, :utc_datetime_usec)
+    field(:wo_date_after, :utc_datetime_usec)
+    field(:wo_date_before, :utc_datetime_usec)
   end
 
   def new(params) do
-    params = handle_params(params)
+    params = from_uri(params)
 
     Ecto.Changeset.cast(%__MODULE__{}, params, [
       :status,
@@ -63,7 +63,7 @@ defmodule Lightning.Workorders.SearchParams do
     end)
   end
 
-  defp handle_params(params) do
+  defp from_uri(params) do
     statuses =
       Enum.map(params, fn {key, value} ->
         if key in @statuses and value in [true, "true"] do
@@ -85,7 +85,33 @@ defmodule Lightning.Workorders.SearchParams do
     |> Map.put_new("search_fields", search_fields)
   end
 
-  def build_url(params) do
-    # ~p"/projects/#{workflow.project_id}/runs?#{uri_params}"
+  def to_uri_params(search_params) do
+    search_params
+    |> merge_fields(@statuses)
+    |> merge_fields(@search_fields)
+    |> dates_to_string()
+  end
+
+  defp merge_fields(search_params, defaults) do
+    (defaults -- Map.keys(search_params))
+    |> Enum.map(fn x -> {x, true} end)
+    |> Enum.into(%{})
+    |> Map.merge(search_params)
+  end
+
+  defp dates_to_string(search_params) do
+    ~w(date_after date_before wo_date_after wo_date_before)a
+    |> Enum.map(fn key ->
+      key = Atom.to_string(key)
+      value = Map.get(search_params, key)
+
+      if value do
+        {key, DateTime.to_string(value)}
+      else
+        {key, value}
+      end
+    end)
+    |> Enum.into(%{})
+    |> Map.merge(search_params, fn _key, v1, _v2 -> v1 end)
   end
 end

@@ -82,17 +82,24 @@ defmodule Lightning.Accounts.UserNotifierTest do
       start_date = Timex.now()
       end_date = Timex.now() |> Timex.shift(days: 2)
 
-      query =
-        UserNotifier.build_digest_url(workflow, start_date, end_date)
-        |> URI.decode_query()
+      digest_url = UserNotifier.build_digest_url(workflow, start_date, end_date)
 
-      assert Map.get(query, "filters[date_after]") ==
-               start_date |> DateTime.to_string()
+      assert digest_url
+             |> URI.decode_query(%{}, :rfc3986)
+             |> Map.get("filters[date_after]") ==
+               start_date |> DateTime.to_string() |> String.replace(" ", "+")
 
-      assert Map.get(query, "filters[date_before]") ==
-               end_date |> DateTime.to_string()
+      assert digest_url
+             |> URI.decode_query(%{}, :rfc3986)
+             |> Map.get("filters[date_before]") ==
+               end_date |> DateTime.to_string() |> String.replace(" ", "+")
 
-      assert Map.get(query, "filters[workflow_id]") == workflow.id
+      assert digest_url
+             |> URI.decode_query(%{}, :rfc3986)
+             |> Map.get("filters[workflow_id]") == workflow.id
+
+      assert digest_url |> URI.parse() |> Map.get(:path) ==
+               "/projects/#{workflow.project_id}/runs"
     end
 
     test "Daily project digest email" do
