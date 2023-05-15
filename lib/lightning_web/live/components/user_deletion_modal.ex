@@ -8,11 +8,10 @@ defmodule LightningWeb.Components.UserDeletionModal do
   alias Lightning.Accounts
 
   @impl true
-  def update(%{user: user, action: action} = assigns, socket) do
+  def update(%{user: user} = assigns, socket) do
     {:ok,
      socket
      |> assign(
-       action: action,
        delete_now?: !is_nil(user.scheduled_deletion),
        has_activity_in_projects?: Accounts.has_activity_in_projects?(user),
        scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user)

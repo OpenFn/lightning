@@ -1,6 +1,7 @@
 defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.AccountsFixtures
   alias Lightning.InvocationFixtures
   alias Lightning.Credentials
   alias Lightning.Jobs
