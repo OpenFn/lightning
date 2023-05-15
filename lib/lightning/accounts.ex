@@ -397,7 +397,12 @@ defmodule Lightning.Accounts do
 
   """
   def delete_user(%User{} = user) do
-    Repo.delete(user)
+    user
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.foreign_key_constraint(:invocation_reasons_user_id_fkey,
+      message: "This user has activity related to active projects."
+    )
+    |> Repo.delete()
   end
 
   @doc """

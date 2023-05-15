@@ -48,6 +48,7 @@ defmodule LightningWeb.UserLive.Index do
     |> assign(:user, Accounts.get_user!(id))
   end
 
+  @impl true
   def handle_event(
         "cancel_deletion",
         %{"id" => user_id},
@@ -82,7 +83,7 @@ defmodule LightningWeb.UserLive.Index do
       </span>
       |
       <span>
-        <.link navigate={Routes.user_index_path(@socket, :delete_now, @user)}>
+        <.link navigate={Routes.user_index_path(@socket, :delete, @user)}>
           Delete now
         </.link>
       </span>

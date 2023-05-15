@@ -4,6 +4,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   use Phoenix.LiveComponent
 
+  alias Lightning.Accounts.User
   alias Lightning.Accounts
 
   @impl true
@@ -11,6 +12,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
     {:ok,
      socket
      |> assign(
+       delete_now?: !is_nil(user.scheduled_deletion),
        scheduled_deletion_changeset: Accounts.change_scheduled_deletion(user),
        has_activity_in_projects: Accounts.has_activity_in_projects?(user),
        action: action
@@ -20,7 +22,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   @impl true
   def handle_event(
-        "validate_scheduled_deletion",
+        "validate",
         %{"user" => user_params},
         socket
       ) do
@@ -33,44 +35,28 @@ defmodule LightningWeb.Components.UserDeletionModal do
   end
 
   @impl true
-  def handle_event(
-        "save_scheduled_deletion",
-        %{
-          "user" => %{
-            "id" => _id,
-            "scheduled_deletion_email" => email
-          }
-        } = _user_params,
-        socket
-      ) do
-    if socket.assigns.action == :delete do
-      case Accounts.schedule_user_deletion(socket.assigns.user, email) do
-        {:ok, _user} ->
+  def handle_event("delete", %{"user" => user_params}, socket) do
+    with {:error, %Ecto.Changeset{} = changeset} <-
+           Accounts.schedule_user_deletion(
+             socket.assigns.user,
+             user_params["scheduled_deletion_email"]
+           ) do
+      {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+    else
+      {:ok, %User{}} ->
+        if socket.assigns.delete_now? do
+          Accounts.delete_user(socket.assigns.user) |> IO.inspect()
+
+          {:noreply,
+           socket
+           |> put_flash(:info, "User deleted")
+           |> push_navigate(to: ~p"/settings/users")}
+        else
           {:noreply,
            socket
            |> put_flash(:info, "User scheduled for deletion")
            |> logout_after_deletion()}
-
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-      end
-    else
-      if Accounts.has_activity_in_projects?(socket.assigns.user) do
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "You can't delete users that have activities in projects"
-         )
-         |> push_navigate(to: ~p"/settings/users")}
-      else
-        Accounts.delete_user(socket.assigns.user)
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "User deleted")
-         |> push_navigate(to: ~p"/settings/users")}
-      end
+        end
     end
   end
 
@@ -97,8 +83,8 @@ defmodule LightningWeb.Components.UserDeletionModal do
         <.form
           :let={f}
           for={@scheduled_deletion_changeset}
-          phx-change="validate_scheduled_deletion"
-          phx-submit="save_scheduled_deletion"
+          phx-change="validate"
+          phx-submit="delete"
           phx-target={@myself}
           id="scheduled_deletion_form"
         >
