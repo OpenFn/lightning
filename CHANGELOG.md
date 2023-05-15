@@ -8,6 +8,9 @@ and this project adheres to
 
 ## [Unreleased]
 
+- Finish implementation of "delete user"
+  [#747](https://github.com/OpenFn/Lightning/issues/747)
+
 ### Added
 
 ### Changed
@@ -28,8 +31,6 @@ and this project adheres to
   [#800](https://github.com/OpenFn/Lightning/issues/800)
 - Better errors when using magic functions: "no magic yet" and "check
   credential" [#812](https://github.com/OpenFn/Lightning/issues/812)
-- Finish implementation of "delete user"
-  [#747](https://github.com/OpenFn/Lightning/issues/747)
 
 ### Changed
 
