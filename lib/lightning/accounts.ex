@@ -8,15 +8,21 @@ defmodule Lightning.Accounts do
     max_attempts: 1
 
   import Ecto.Query, warn: false
-  alias Lightning.Invocation
   alias Lightning.Repo
   alias Lightning.Accounts.{User, UserToken, UserNotifier}
   alias Lightning.Credentials
 
   require Logger
 
-  def has_activity_in_projects?(%User{} = user) do
-    Invocation.count_invocation_reasons_for_user(user) != 0
+  def has_activity_in_projects?(%User{id: id} = _user) do
+    count =
+      from(invocation_reason in Lightning.InvocationReason,
+        where: invocation_reason.user_id == ^id,
+        select: count(invocation_reason.id)
+      )
+      |> Repo.one()
+
+    count > 0
   end
 
   @spec purge_user(id :: Ecto.UUID.t()) :: :ok

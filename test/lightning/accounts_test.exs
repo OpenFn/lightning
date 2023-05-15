@@ -13,6 +13,16 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts.{User, UserToken}
   import Lightning.AccountsFixtures
 
+  test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
+    user = AccountsFixtures.user_fixture()
+    another_user = AccountsFixtures.user_fixture()
+
+    InvocationFixtures.reason_fixture(user_id: user.id)
+
+    assert Accounts.has_activity_in_projects?(user)
+    refute Accounts.has_activity_in_projects?(another_user)
+  end
+
   test "list_users/0 returns all users" do
     user = user_fixture()
     assert Accounts.list_users() == [user]

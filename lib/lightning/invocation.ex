@@ -253,14 +253,6 @@ defmodule Lightning.Invocation do
     |> Repo.insert()
   end
 
-  def count_invocation_reasons_for_user(%User{id: id}) do
-    from(invocation_reason in Lightning.InvocationReason,
-      where: invocation_reason.user_id == ^id,
-      select: count(invocation_reason.id)
-    )
-    |> Repo.one()
-  end
-
   @doc """
   Updates a run.
 

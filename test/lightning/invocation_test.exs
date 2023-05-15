@@ -220,14 +220,6 @@ defmodule Lightning.InvocationTest do
       assert_raise Ecto.NoResultsError, fn -> Invocation.get_run!(run.id) end
     end
 
-    test "count_invocation_reasons_for_user/1" do
-      user = AccountsFixtures.user_fixture()
-      another_user = AccountsFixtures.user_fixture()
-      InvocationFixtures.reason_fixture(user_id: user.id)
-      assert Invocation.count_invocation_reasons_for_user(user) == 1
-      assert Invocation.count_invocation_reasons_for_user(another_user) == 0
-    end
-
     test "change_run/1 returns a run changeset" do
       run = run_fixture()
       assert %Ecto.Changeset{} = Invocation.change_run(run)
