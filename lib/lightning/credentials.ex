@@ -5,8 +5,6 @@ defmodule Lightning.Credentials do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
-  alias Lightning.Projects.ProjectCredential
-  alias Lightning.Accounts.User
   alias Lightning.Repo
   alias Ecto.Multi
 

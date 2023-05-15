@@ -12,6 +12,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   """
   use LightningWeb, :live_component
 
+  alias Lightning.Accounts.User
   alias Lightning.Repo
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
@@ -27,10 +28,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       ) do
     changeset = Projects.change_project(project)
 
-    all_users =
-      users
-      |> Enum.filter(fn user -> not user.disabled end)
-      |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
+    all_users = users |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
 
     {:ok,
      socket
