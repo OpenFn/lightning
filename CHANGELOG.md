@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Generate a random name for Workflows when creating one via the UI.
+  [#828](https://github.com/OpenFn/Lightning/issues/828)
+
 ## [0.5.2]
 
 ### Added
