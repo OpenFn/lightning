@@ -35,6 +35,7 @@ lightning-*.tar
 # In case you use Node.js/npm, you want to ignore these.
 npm-debug.log
 /assets/node_modules/
+/examples/**/node_modules/
 
 # coveralls output file
 /excoveralls.json

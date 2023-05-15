@@ -1,8 +1,8 @@
 import React, { memo, useState } from 'react';
 
 import cc from 'classcat';
-import type { NodeProps } from 'react-flow-renderer';
-import { Handle, Position } from 'react-flow-renderer';
+import type { NodeProps } from 'reactflow';
+import { Handle, Position } from 'reactflow';
 import { NodeData } from '../layout/types';
 
 function PlusButton() {
@@ -56,7 +56,7 @@ const JobNode = ({
         type="target"
         position={targetPosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', height: 0, top: 0 }}
       />
 
       <div
@@ -88,7 +88,7 @@ const JobNode = ({
         type="source"
         position={sourcePosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', height: 0, bottom: 0 }}
       />
     </div>
   );

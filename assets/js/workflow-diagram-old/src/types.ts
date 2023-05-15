@@ -1,4 +1,4 @@
-import { Edge, Node } from 'react-flow-renderer';
+import { Edge, Node } from 'reactflow';
 
 export type CronTrigger = {
   type: 'cron';

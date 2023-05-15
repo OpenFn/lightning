@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 
-import { Handle, Position } from 'react-flow-renderer';
-import type { NodeProps } from 'react-flow-renderer';
+import { Handle, Position } from 'reactflow';
+import type { NodeProps } from 'reactflow';
 import type { Trigger, Workflow } from '../types';
 import cronstrue from 'cronstrue';
 
@@ -52,7 +52,7 @@ const TriggerWorkflowNode = ({
         type="source"
         position={sourcePosition}
         isConnectable={isConnectable}
-        style={{ border: 'none', height: 0, top: 0 }}
+        style={{ visibility: 'hidden', border: 'none', bottom: 0 }}
       />
     </div>
   );

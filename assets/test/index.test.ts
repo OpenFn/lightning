@@ -1,15 +1,15 @@
 import test from 'ava';
 
-import { ProjectSpace } from '../js/workflow-diagram/src/types';
+import { ProjectSpace } from '../js/workflow-diagram-old/src/types';
 import {
   toElkNode,
   toFlow,
   doLayout,
-} from '../js/workflow-diagram/src/layout/index';
+} from '../js/workflow-diagram-old/src/layout/index';
 import {
   FlowElkNode,
   FlowNodeEdges,
-} from '../js/workflow-diagram/src/layout/types';
+} from '../js/workflow-diagram-old/src/layout/types';
 import { getFixture } from './helpers';
 
 test('toElkNode should convert a project space to a workflow', async t => {
