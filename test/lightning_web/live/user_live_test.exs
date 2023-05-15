@@ -118,9 +118,10 @@ defmodule LightningWeb.UserLiveTest do
       refute_redirected(form_live, Routes.user_index_path(conn, :index))
     end
 
-    test "allows a superuser to delete users in the users list", %{
-      conn: conn
-    } do
+    test "allows a superuser to schedule users for deletion in the users list",
+         %{
+           conn: conn
+         } do
       user = user_fixture()
 
       {:ok, index_live, html} = live(conn, Routes.user_index_path(conn, :index))
@@ -161,7 +162,7 @@ defmodule LightningWeb.UserLiveTest do
                "#{DateTime.utc_now() |> Timex.shift(days: 7) |> Map.fetch!(:year)}"
     end
 
-    test "superuser cancels deletion", %{
+    test "allows superuser to click cancel for closing user deletion modal", %{
       conn: conn,
       user: user
     } do
@@ -185,6 +186,52 @@ defmodule LightningWeb.UserLiveTest do
         )
 
       assert has_element?(index_live, "#user-#{user.id}")
+    end
+
+    test "allows a superuser to cancel scheduled deletion on users", %{
+      conn: conn
+    } do
+      user =
+        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, _index_live, html} =
+        index_live
+        |> element("#user-#{user.id} a", "Cancel deletion")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "User deletion canceled"
+    end
+
+    test "allows a superuser to perform delete now action on users", %{
+      conn: conn
+    } do
+      user =
+        user_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
+
+      {:ok, form_live, _html} =
+        index_live
+        |> element("#user-#{user.id} a", "Delete now")
+        |> render_click()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :delete, user))
+
+      {:ok, index_live, html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          user: %{
+            scheduled_deletion_email: user.email
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
+
+      assert html =~ "User deleted"
+
+      refute index_live |> element("user-#{user.id}") |> has_element?()
     end
   end
 

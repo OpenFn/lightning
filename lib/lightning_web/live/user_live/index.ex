@@ -42,12 +42,6 @@ defmodule LightningWeb.UserLive.Index do
     |> assign(:user, Accounts.get_user!(id))
   end
 
-  defp apply_action(socket, :delete_now, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Users")
-    |> assign(:user, Accounts.get_user!(id))
-  end
-
   @impl true
   def handle_event(
         "cancel_deletion",
@@ -78,12 +72,16 @@ defmodule LightningWeb.UserLive.Index do
         <%= link("Cancel deletion",
           to: "#",
           phx_click: "cancel_deletion",
-          phx_value_id: @user.id
+          phx_value_id: @user.id,
+          id: "cancel-deletion-#{@user.id}"
         ) %>
       </span>
       |
       <span>
-        <.link navigate={Routes.user_index_path(@socket, :delete, @user)}>
+        <.link
+          id={"delete-now-#{@user.id}"}
+          navigate={Routes.user_index_path(@socket, :delete, @user)}
+        >
           Delete now
         </.link>
       </span>
@@ -91,7 +89,10 @@ defmodule LightningWeb.UserLive.Index do
     else
       ~H"""
       <span>
-        <.link navigate={Routes.user_index_path(@socket, :delete, @user)}>
+        <.link
+          id={"delete-#{@user.id}"}
+          navigate={Routes.user_index_path(@socket, :delete, @user)}
+        >
           Delete
         </.link>
       </span>
