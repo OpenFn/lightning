@@ -61,9 +61,20 @@ export default {
       );
 
       this.componentModule.then(({ mount }) => {
-        this.component = mount(this.el, this.workflowStore);
+        const onSelectionChange = (id?: string) => {
+          this.selectJob(id);
+        };
+        this.component = mount(this.el, this.workflowStore, onSelectionChange);
+        this.component.render(this.workflowStore.getState());
       });
     });
+  },
+  selectJob(id?: string) {
+    const url = this.editJobUrl.replace(
+      id ? ':job_id' : '/j/:job_id',
+      id || ''
+    );
+    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
   },
   destroyed() {
     if (this.component) {
@@ -78,20 +89,18 @@ export default {
     // Ensure that changes are pushed in order
     // TODO: on the event of a change failing do we collect up all the
     // pending changes and revert them?
-    this._pendingWorker = this._pendingWorker.then(
-      (async () => {
-        while (
-          this.pendingChanges.length > 0 &&
-          !this.abortController!.signal.aborted
-        ) {
-          const pendingChange = this.pendingChanges.shift()!;
+    this._pendingWorker = this._pendingWorker.then(async () => {
+      while (
+        this.pendingChanges.length > 0 &&
+        !this.abortController!.signal.aborted
+      ) {
+        const pendingChange = this.pendingChanges.shift()!;
 
-          // TODO: if this fails or times out, we need to undo the change
-          // Immer's patch callback also produces a list of inverse patches.
-          await this.pushPendingChange(pendingChange, this.abortController!);
-        }
-      })
-    );
+        // TODO: if this fails or times out, we need to undo the change
+        // Immer's patch callback also produces a list of inverse patches.
+        await this.pushPendingChange(pendingChange, this.abortController!);
+      }
+    });
   },
   pushPendingChange(pendingChange, abortController?) {
     return new Promise((resolve, reject) => {

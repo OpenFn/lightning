@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 
-import { Handle, Position } from "react-flow-renderer";
-import type { NodeProps } from "react-flow-renderer";
+import { Handle, Position } from "reactflow";
+import type { NodeProps } from "reactflow";
 
 // background:#fff
 // border:1px solid #1a192b
