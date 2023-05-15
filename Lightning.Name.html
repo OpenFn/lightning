@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.5.2">
 
-    <title>LightningWeb.UserSessionController — Lightning v0.5.2</title>
+    <title>Lightning.Name — Lightning v0.5.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -102,16 +102,20 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/name.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.UserSessionController</span> 
+  <span translate="no">Lightning.Name</span> 
   <small class="app-vsn" translate="no">(Lightning v0.5.2)</small>
 
 </h1>
 
+
+  <section id="moduledoc">
+<p>Generates a random names.</p>
+  </section>
 
 
   <section id="summary" class="details-list">
@@ -129,39 +133,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#auth_handler_url/0" translate="no">auth_handler_url()</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#create/2" translate="no">create(conn, map)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#delete/2" translate="no">delete(conn, params)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#exchange_token/2" translate="no">exchange_token(conn, map)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#new/2" translate="no">new(conn, params)</a>
+        <a href="#generate/1" translate="no">generate(max_id \\ 9999)</a>
 
       </div>
 
@@ -181,104 +153,18 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="auth_handler_url/0">
+<section class="detail" id="generate/1">
+
+    <span id="generate/0"></span>
 
   <div class="detail-header">
-    <a href="#auth_handler_url/0" class="detail-link" title="Link to this function">
+    <a href="#generate/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">auth_handler_url()</h1>
+    <h1 class="signature" translate="no">generate(max_id \\ 9999)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L62" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="create/2">
-
-  <div class="detail-header">
-    <a href="#create/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">create(conn, map)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L15" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="delete/2">
-
-  <div class="detail-header">
-    <a href="#delete/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">delete(conn, params)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L56" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="exchange_token/2">
-
-  <div class="detail-header">
-    <a href="#exchange_token/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">exchange_token(conn, map)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L43" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="new/2">
-
-  <div class="detail-header">
-    <a href="#new/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">new(conn, params)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_session_controller.ex#L8" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/name.ex#L28" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
