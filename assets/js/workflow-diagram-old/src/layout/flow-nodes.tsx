@@ -2,7 +2,7 @@
  * A collection of functions used to convert ELK Node objects into
  * React Flow Nodes.
  */
-import { Edge, Node } from "react-flow-renderer";
+import { Edge, Node } from "reactflow";
 import { FlowElkEdge, FlowElkNode } from "./types";
 import cc from "classcat";
 import { ElkLabel } from "elkjs";
