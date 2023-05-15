@@ -92,7 +92,15 @@ defmodule LightningWeb.Components.UserDeletionModal do
         close_modal_target={@myself}
       >
         <%= if @delete_now? and @has_activity_in_projects do %>
-          <p>Can't delete users that have activities related active projects.</p>
+          <p>
+            This user cannot be deleted until their auditable activities have also been purged.
+          </p>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <p>
+            Audit trails are removed on a project-basis and may be controlled by the project owner or a superuser.
+          </p>
           <div class="flex justify-end">
             <PetalComponents.Button.button
               label="Cancel"
