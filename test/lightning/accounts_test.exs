@@ -1100,7 +1100,7 @@ defmodule Lightning.AccountsTest do
     assert Accounts.has_one_superuser?()
   end
 
-  defp count_credentials_for_user(user) do
+  defp count_project_credentials_for_user(user) do
     from(pc in Ecto.assoc(user, [:credentials, :project_credentials]))
     |> Repo.aggregate(:count, :id)
   end
