@@ -10,7 +10,7 @@ import {
   OnNodesChange,
   OnSelectionChangeFunc,
   ReactFlowInstance,
-} from 'react-flow-renderer';
+} from 'reactflow';
 import { ProjectSpace, Workflow } from './types';
 import create from 'zustand';
 import { doLayout, toElkNode, toFlow } from './layout';

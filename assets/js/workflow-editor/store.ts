@@ -4,7 +4,7 @@ import { createStore } from 'zustand';
 
 enablePatches();
 
-type WorkflowProps = {
+export type WorkflowProps = {
   triggers: {}[];
   jobs: {}[];
   edges: {}[];
@@ -12,6 +12,7 @@ type WorkflowProps = {
 };
 
 export interface WorkflowState extends WorkflowProps {
+  add: (data: Partial<WorkflowProps>) => void;
   addEdge: (edge: any) => void;
   addJob: (job: any) => void;
   addTrigger: (node: any) => void;
@@ -33,19 +34,19 @@ export interface PendingAction {
   patches: Patch[];
 }
 
-// Build a new node, with the bare minimum properties.
-function buildNode() {
-  return { id: crypto.randomUUID() };
+// Build a new job, with the bare minimum properties.
+function buildJob(job = {}) {
+  return { id: crypto.randomUUID(), ...job };
 }
 
 // Build a new trigger, with the bare minimum properties.
-function buildTrigger() {
-  return { id: crypto.randomUUID() };
+function buildTrigger(trigger = {}) {
+  return { id: crypto.randomUUID(), ...trigger };
 }
 
 // Build a new edge, with the bare minimum properties.
-function buildEdge() {
-  return { id: crypto.randomUUID() };
+function buildEdge(edge = {}) {
+  return { id: crypto.randomUUID(), ...edge };
 }
 
 function toRFC6902Patch(patch: ImmerPatch): Patch {
@@ -92,13 +93,42 @@ export const createWorkflowStore = (
   return createStore<WorkflowState>()(set => ({
     ...DEFAULT_PROPS,
     ...initProps,
-    addJob: job => {
+    // Bulk update API
+    // (We rarely, if ever, only add one thing)
+    // Uh that's not true, I think the store doesn't update until we apply?
+    // So a change event will be published, but the store won't reflect the patch
+    add: data => {
       set(state =>
         proposeChanges(state, draft => {
-          const newJob = buildNode();
+          ['jobs', 'triggers', 'edges'].forEach(key => {
+            if (data[key]) {
+              data[key].forEach(item => {
+                if (!item.id) {
+                  item.id = crypto.randomUUID();
+                }
+                draft[key].push(item);
+              });
+            }
+          });
+        })
+      );
+    },
+    change: (id, type, diff) => {
+      set(state =>
+        proposeChanges(state, draft => {
+          const item = draft[type].find(i => i.id === id);
+          Object.assign(item, diff);
+        })
+      );
+    },
+    addJob: job => {
+      const newJob = buildJob(job);
+      set(state =>
+        proposeChanges(state, draft => {
           draft.jobs.push(newJob);
         })
       );
+      return newJob;
     },
     addTrigger: trigger => {
       set(state =>
@@ -109,12 +139,13 @@ export const createWorkflowStore = (
       );
     },
     addEdge: edge => {
+      const newEdge = buildEdge(edge);
       set(state =>
         proposeChanges(state, draft => {
-          const newEdge = buildEdge();
           draft.edges.push(newEdge);
         })
       );
+      return newEdge;
     },
     applyPatches: patches => {
       const immerPatches: ImmerPatch[] = patches.map(patch => ({

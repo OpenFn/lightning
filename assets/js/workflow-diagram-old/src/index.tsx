@@ -4,7 +4,7 @@ import OperationNode from './nodes/OperationNode';
 import TriggerWorkflowNode from './nodes/TriggerWorkflowNode';
 
 import EmptyWorkflowNode from './nodes/EmptyWorkflowNode';
-import ReactFlow, { Node, ReactFlowProvider } from 'react-flow-renderer';
+import ReactFlow, { Node, ReactFlowProvider } from 'reactflow';
 import './main.css';
 import * as Store from './store';
 import { NodeData } from './layout/types';

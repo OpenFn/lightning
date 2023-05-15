@@ -2,6 +2,7 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 @import './monaco-style-overrides.css';
+@import 'reactflow/dist/style.css';
 /* This file is for your main application CSS */
 
 /* Alerts and form errors used by phx.new */
