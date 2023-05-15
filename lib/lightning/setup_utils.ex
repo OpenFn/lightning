@@ -3,6 +3,8 @@ defmodule Lightning.SetupUtils do
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
 
+  # alias Lightning.InvocationReasons
+  alias Lightning.Invocation
   alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo, Credentials}
   alias Lightning.WorkOrderService
 
@@ -169,10 +171,11 @@ defmodule Lightning.SetupUtils do
         project_credential_id: List.first(credential.project_credentials).id
       })
 
-    WorkOrderService.create_webhook_workorder(job_1, %{
-      "age_in_months" => 19,
-      "name" => "Genevieve Wimplemews"
-    })
+    create_workorder(
+      :webhook,
+      job_1,
+      ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}]
+    )
 
     %{
       project: project,
@@ -237,17 +240,11 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    {:ok, empty_dataclip} =
-      Lightning.Invocation.create_dataclip(%{
-        "project_id" => openhie_project.id,
-        "type" => :http_request,
-        "body" => %{}
-      })
-
     {:ok, openhie_workorder} =
-      WorkOrderService.create_webhook_workorder(
+      create_workorder(
+        :webhook,
         fhir_standard_data,
-        empty_dataclip
+        ~s[{}]
       )
 
     %{
@@ -298,21 +295,38 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id
       })
 
-    job = Jobs.get_job!(get_dhis2_data.id) |> Repo.preload([:workflow])
-
-    {:ok, empty_dataclip} =
-      Lightning.Invocation.create_dataclip(%{
-        "project_id" => dhis2_project.id,
-        "type" => :global,
-        "body" => %{}
-      })
-
     {:ok, dhis2_workorder} =
-      WorkOrderService.create_manual_workorder(
-        job,
-        empty_dataclip,
-        user
+      create_workorder(
+        :cron,
+        get_dhis2_data,
+        ~s[{}]
       )
+
+    #  # project_id: ,
+    #  exit_code: 0,
+    #  finished_at: Timex.now(),
+    #  # log: [],
+    #  # started_at: ~U[2022-02-02 11:49:00.000000Z]
+    #  job_id: job.id,
+    #  input_dataclip_id: dataclip.id
+
+    Invocation.create_run(%{
+      # project_id: dhis2_project.id,
+      job_id: upload_to_google_sheet.id,
+      input_dataclip_id: dhis2_workorder.reason.dataclip_id,
+      exit_code: 0,
+      finished_at: Timex.now()
+    })
+
+    # create_run(dhis2_workorder, %{
+    #   project_id: dhis2_project.id,
+    #   job_id: get_dhis2_data.id,
+    #   input_dataclip_id: dhis2_workorder.reason.dataclip_id,
+    #   exit_code: 0,
+    #   finished_at: Timex.now()
+    # })
+
+    # IO.inspect(dhis2_workorder.attempt)
 
     %{
       project: dhis2_project,
@@ -359,5 +373,68 @@ defmodule Lightning.SetupUtils do
     Enum.each(tables_names, fn name ->
       Ecto.Adapters.SQL.query!(Repo, "DELETE FROM #{name}")
     end)
+  end
+
+  defp create_workorder(trigger, job, dataclip) do
+    # WorkOrderService.multi_for_manual(job, dataclip, user)
+    WorkOrderService.multi_for(
+      trigger,
+      job,
+      dataclip
+      |> Jason.decode!()
+    )
+    |> Repo.transaction()
+  end
+
+  defp create_run(workorder, run_params) do
+    %{
+      work_order: work_order,
+      reason: reason,
+      attempt: attempt,
+      dataclip: dataclip,
+      job: job
+    } = workorder
+
+    # workflow =
+    #   dataclip = ~s[{}] |> jsonde
+    #     reason = trigger, dataclip
+    #       work_order =
+    # {%{
+    #   project_id: "28d99d31-36b8-431c-b03b-391780340062",
+    #   reason_id: "4ca33fbc-cb4a-48d6-9c2a-ee6ca936649f",
+    #   workflow_id: "7e42eb2b-3b81-4d67-b2f5-09b3e500b296"
+    # }} = workorder
+    # Workorder
+    # use multi_for or multi_for_manual
+    # create_workorder(trigger, job, dataclip)
+
+    # Reason
+    # %{
+    #   type: :webhook,
+    #   user_id: user_fixture().id,
+    #   run_id: run_fixture().id,
+    #   dataclip_id: dataclip_fixture().id,
+    #   trigger_id: job_fixture().trigger.id
+    # }
+
+    # run_params
+    # %{
+    #   project_id: project.id,
+    #   job_id: job.id,
+    #   input_dataclip_id: reason.dataclip_id,
+    #   exit_code: 0,
+    #   finished_at: Timex.now()
+    # }
+
+    # attempt = Lightning.AttemptService.get_last_attempt_for()
+    # attempt
+    Lightning.AttemptService.build_attempt(work_order, reason)
+    |> IO.inspect()
+    |> Ecto.Changeset.put_assoc(:runs, [
+      Lightning.Invocation.Run.changeset(%Lightning.Invocation.Run{}, run_params)
+    ])
+    |> Repo.insert()
+
+    # Invocation.create_run(run_params)
   end
 end
