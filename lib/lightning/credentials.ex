@@ -282,15 +282,4 @@ defmodule Lightning.Credentials do
 
     project_credentials -- project_users
   end
-
-  def count_project_credentials_for_user(%User{id: id}) do
-    from(project_credential in ProjectCredential,
-      join: credential in Credential,
-      on:
-        credential.id == project_credential.credential_id and
-          credential.user_id == ^id,
-      select: count(project_credential.id)
-    )
-    |> Repo.one()
-  end
 end

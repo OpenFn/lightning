@@ -348,11 +348,11 @@ defmodule Lightning.AccountsTest do
       CredentialsFixtures.project_credential_fixture(user_id: user.id)
       CredentialsFixtures.project_credential_fixture()
 
-      assert Credentials.count_project_credentials_for_user(user) == 2
+      assert count_project_credentials_for_user(user) == 2
 
       :ok = Accounts.purge_user(user.id)
 
-      assert Credentials.count_project_credentials_for_user(user) == 0
+      assert count_project_credentials_for_user(user) == 0
     end
 
     test "purging a user deletes all of that user's credentials" do
@@ -1088,5 +1088,10 @@ defmodule Lightning.AccountsTest do
 
     superuser_fixture()
     assert Accounts.has_one_superuser?()
+  end
+
+  defp count_credentials_for_user(user) do
+    from(pc in Ecto.assoc(user, [:credentials, :project_credentials]))
+    |> Repo.aggregate(:count, :id)
   end
 end
