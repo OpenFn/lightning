@@ -3,7 +3,7 @@ defmodule Lightning.InvocationTest do
 
   alias Lightning.Workorders.SearchParams
   alias Lightning.Invocation
-  alias Lightning.Invocation.{Run}
+  alias Lightning.Invocation.Run
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures

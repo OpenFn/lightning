@@ -1,12 +1,28 @@
 defmodule Lightning.AccountsTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.AccountsFixtures
+  alias Lightning.InvocationFixtures
+  alias Lightning.Credentials
+  alias Lightning.Jobs
+  alias Lightning.JobsFixtures
+  alias Lightning.CredentialsFixtures
+  alias Lightning.Projects
   alias Lightning.Accounts
-  alias Lightning.Credentials.Credential
   alias Lightning.Projects.ProjectUser
 
   alias Lightning.Accounts.{User, UserToken}
-  import Lightning.{CredentialsFixtures, AccountsFixtures}
+  import Lightning.AccountsFixtures
+
+  test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
+    user = AccountsFixtures.user_fixture()
+    another_user = AccountsFixtures.user_fixture()
+
+    InvocationFixtures.reason_fixture(user_id: user.id)
+
+    assert Accounts.has_activity_in_projects?(user)
+    refute Accounts.has_activity_in_projects?(another_user)
+  end
 
   test "list_users/0 returns all users" do
     user = user_fixture()
@@ -265,12 +281,9 @@ defmodule Lightning.AccountsTest do
   end
 
   describe "purge user" do
-    test "purging user removes only that user, their credentials and their projects" do
+    test "purging a user removes that user from projects they are members of and deletes them from the system" do
       user_1 = user_fixture()
       user_2 = user_fixture()
-
-      credential_fixture(user_id: user_1.id)
-      credential_fixture(user_id: user_2.id)
 
       Lightning.Projects.create_project(%{
         name: "some-name",
@@ -282,36 +295,120 @@ defmodule Lightning.AccountsTest do
         project_users: [%{user_id: user_2.id}]
       })
 
-      assert 2 == Repo.all(Credential) |> Enum.count()
       assert 2 == Repo.all(ProjectUser) |> Enum.count()
       assert 2 == Repo.all(User) |> Enum.count()
 
       :ok = Accounts.purge_user(user_1.id)
 
-      assert 1 == Repo.all(Credential) |> Enum.count()
       assert 1 == Repo.all(ProjectUser) |> Enum.count()
       assert 1 == Repo.all(User) |> Enum.count()
 
-      remaining_creds = Repo.all(Credential)
       remaining_projs = Repo.all(ProjectUser)
       remaining_users = Repo.all(User)
 
-      assert 1 == Enum.count(remaining_creds)
       assert 1 == Enum.count(remaining_projs)
       assert 1 == Enum.count(remaining_users)
-
-      assert remaining_creds
-             |> Enum.any?(fn x -> x.user_id == user_2.id end)
 
       assert remaining_projs
              |> Enum.any?(fn x -> x.user_id == user_2.id end)
 
+      refute remaining_projs
+             |> Enum.any?(fn x -> x.user_id == user_1.id end)
+
       assert remaining_users
              |> Enum.any?(fn x -> x.id == user_2.id end)
+
+      refute remaining_users
+             |> Enum.any?(fn x -> x.id == user_1.id end)
+    end
+
+    test "purging a user sets all project credentials that use their credentials to nil" do
+      user = user_fixture()
+      project = Lightning.ProjectsFixtures.project_fixture()
+
+      project_credential_1 =
+        CredentialsFixtures.project_credential_fixture(
+          project_id: project.id,
+          user_id: user.id
+        )
+
+      project_credential_2 = CredentialsFixtures.project_credential_fixture()
+
+      job_1 =
+        JobsFixtures.job_fixture(project_credential_id: project_credential_1.id)
+
+      job_2 =
+        JobsFixtures.job_fixture(project_credential_id: project_credential_2.id)
+
+      refute job_1.project_credential_id |> is_nil()
+      refute job_2.project_credential_id |> is_nil()
+
+      :ok = Accounts.purge_user(user.id)
+
+      # job_1 project_credential_id is now set to nil
+      assert Jobs.get_job!(job_1.id).project_credential_id |> is_nil()
+
+      # while job_2 project_credential_id remain with a value
+      refute Jobs.get_job!(job_2.id).project_credential_id |> is_nil()
+    end
+
+    test "purging user deletes all project credentials that involve this user's credentials" do
+      user = user_fixture()
+
+      CredentialsFixtures.project_credential_fixture(user_id: user.id)
+      CredentialsFixtures.project_credential_fixture(user_id: user.id)
+      CredentialsFixtures.project_credential_fixture()
+
+      assert count_project_credentials_for_user(user) == 2
+
+      :ok = Accounts.purge_user(user.id)
+
+      assert count_project_credentials_for_user(user) == 0
+    end
+
+    test "purging a user deletes all of that user's credentials" do
+      user_1 = user_fixture()
+      user_2 = user_fixture()
+
+      CredentialsFixtures.credential_fixture(user_id: user_1.id)
+      CredentialsFixtures.credential_fixture(user_id: user_1.id)
+      CredentialsFixtures.credential_fixture(user_id: user_2.id)
+
+      assert 3 == Repo.all(Credentials.Credential) |> Enum.count()
+
+      :ok = Accounts.purge_user(user_1.id)
+
+      assert 1 == Repo.all(Credentials.Credential) |> Enum.count()
+
+      refute Repo.all(Credentials.Credential)
+             |> Enum.any?(fn x -> x.user_id == user_1.id end)
+
+      assert Repo.all(Credentials.Credential)
+             |> Enum.any?(fn x -> x.user_id == user_2.id end)
     end
   end
 
   describe "The default Oban function Accounts.perform/1" do
+    test "prevents users that are still linked to an invocation reason from being deleted" do
+      user =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+        )
+
+      InvocationFixtures.reason_fixture(user_id: user.id)
+
+      assert 1 = Repo.all(User) |> Enum.count()
+
+      {:ok, %{users_deleted: users_deleted}} =
+        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      # We still have one user in database
+      assert 1 == Repo.all(User) |> Enum.count()
+
+      # No user has been deleted
+      assert 0 == users_deleted |> Enum.count()
+    end
+
     test "removes all users past deletion date when called with type 'purge_deleted'" do
       user_to_delete =
         user_fixture(
@@ -331,6 +428,40 @@ defmodule Lightning.AccountsTest do
       assert 1 == users_deleted |> Enum.count()
 
       assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
+    end
+
+    test "removes user from project users before deleting them" do
+      user_to_delete =
+        user_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+        )
+
+      another_user = user_fixture()
+
+      project =
+        Lightning.ProjectsFixtures.project_fixture(
+          project_users: [
+            %{user_id: user_to_delete.id},
+            %{user_id: another_user.id}
+          ]
+        )
+
+      {:ok, %{users_deleted: users_deleted}} =
+        Accounts.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert 1 == users_deleted |> Enum.count()
+
+      assert user_to_delete.id == users_deleted |> Enum.at(0) |> Map.get(:id)
+
+      project = Projects.get_project!(project.id) |> Repo.preload(:project_users)
+
+      refute Enum.any?(project.project_users, fn project_user ->
+               project_user.user_id == user_to_delete.id
+             end)
+
+      assert Enum.any?(project.project_users, fn project_user ->
+               project_user.user_id == another_user.id
+             end)
     end
   end
 
@@ -968,5 +1099,10 @@ defmodule Lightning.AccountsTest do
 
     superuser_fixture()
     assert Accounts.has_one_superuser?()
+  end
+
+  defp count_project_credentials_for_user(user) do
+    from(pc in Ecto.assoc(user, [:credentials, :project_credentials]))
+    |> Repo.aggregate(:count, :id)
   end
 end

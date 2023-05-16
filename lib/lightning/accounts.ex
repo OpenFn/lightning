@@ -9,12 +9,21 @@ defmodule Lightning.Accounts do
 
   import Ecto.Query, warn: false
   alias Lightning.Repo
+  alias Lightning.Accounts.{User, UserToken, UserNotifier}
+  alias Lightning.Credentials
 
   require Logger
 
-  alias Lightning.Accounts.{User, UserToken, UserNotifier}
-  alias Lightning.Credentials
-  alias Lightning.Projects
+  def has_activity_in_projects?(%User{id: id} = _user) do
+    count =
+      from(invocation_reason in Lightning.InvocationReason,
+        where: invocation_reason.user_id == ^id,
+        select: count(invocation_reason.id)
+      )
+      |> Repo.one()
+
+    count > 0
+  end
 
   @spec purge_user(id :: Ecto.UUID.t()) :: :ok
   def purge_user(id) do
@@ -24,33 +33,15 @@ defmodule Lightning.Accounts do
       # coveralls-ignore-stop
     end)
 
-    # Remove credentials
+    # Remove user from projects
+    Ecto.assoc(%User{id: id}, :project_users) |> Repo.delete_all()
+
+    # Delete the credentials of the user.
+    # Note that there's a nilify constraint that set all project_credentials associated to this user to nil
     Credentials.list_credentials_for_user(id)
     |> Enum.each(&Credentials.delete_credential/1)
 
-    # Revoke access to projects
-    Projects.get_projects_for_user(%User{id: id})
-    |> Repo.preload(:project_users)
-    |> Enum.each(fn p ->
-      Projects.update_project(
-        p,
-        %{
-          "project_users" => %{
-            "0" => %{
-              "delete" => "true",
-              "user_id" => id,
-              "id" =>
-                Enum.find(p.project_users, fn pu -> pu.user_id == id end)
-                |> Map.get(:id)
-            }
-          }
-        }
-      )
-    end)
-
-    User
-    |> Repo.get(id)
-    |> delete_user()
+    Repo.get(User, id) |> delete_user()
 
     Logger.debug(fn ->
       # coveralls-ignore-start
@@ -66,16 +57,25 @@ defmodule Lightning.Accounts do
   """
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    users =
-      Repo.all(
-        from(u in User,
-          where: u.scheduled_deletion <= ago(0, "second")
-        )
+    users_with_activities =
+      from(invocation_reason in Lightning.InvocationReason,
+        join: user in Lightning.Accounts.User,
+        on: invocation_reason.user_id == user.id,
+        select: user.id,
+        distinct: true
       )
 
-    :ok = Enum.each(users, fn u -> purge_user(u.id) end)
+    users_to_delete =
+      from(u in User,
+        where:
+          u.scheduled_deletion <= ago(0, "second") and
+            u.id not in subquery(users_with_activities)
+      )
+      |> Repo.all()
 
-    {:ok, %{users_deleted: users}}
+    :ok = Enum.each(users_to_delete, fn u -> purge_user(u.id) end)
+
+    {:ok, %{users_deleted: users_to_delete}}
   end
 
   @doc """
