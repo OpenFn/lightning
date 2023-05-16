@@ -8,15 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
-- Finish implementation of "delete user"
-  [#747](https://github.com/OpenFn/Lightning/issues/747)
-
 ### Added
 
 ### Changed
 
 ### Fixed
 
+- Fix issue when purging deleted users
+  [#747](https://github.com/OpenFn/Lightning/issues/747)
 - Generate a random name for Workflows when creating one via the UI.
   [#828](https://github.com/OpenFn/Lightning/issues/828)
 

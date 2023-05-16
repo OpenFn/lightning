@@ -12,7 +12,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   """
   use LightningWeb, :live_component
 
-  alias Lightning.Accounts.User
   alias Lightning.Repo
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects

@@ -35,25 +35,8 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   @impl true
   def handle_event("delete", %{"user" => user_params}, socket) do
-    with true <- socket.assigns.delete_now?,
-         false <- socket.assigns.has_activity_in_projects? do
-      Accounts.purge_user(socket.assigns.user.id)
-
-      {:noreply,
-       socket
-       |> put_flash(:info, "User deleted")
-       |> push_navigate(to: ~p"/settings/users")}
-    else
-      true ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Cannot delete user that has activities in other projects"
-         )
-         |> push_navigate(to: ~p"/settings/users")}
-
-      false ->
+    cond do
+      not socket.assigns.delete_now? ->
         case Accounts.schedule_user_deletion(
                socket.assigns.user,
                user_params["scheduled_deletion_email"]
@@ -67,6 +50,23 @@ defmodule LightningWeb.Components.UserDeletionModal do
           {:error, %Ecto.Changeset{} = changeset} ->
             {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
         end
+
+      socket.assigns.has_activity_in_projects? ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete user that has activities in other projects"
+         )
+         |> push_navigate(to: ~p"/settings/users")}
+
+      true ->
+        Accounts.purge_user(socket.assigns.user.id)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "User deleted")
+         |> push_navigate(to: ~p"/settings/users")}
     end
   end
 
