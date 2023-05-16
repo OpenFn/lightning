@@ -42,7 +42,61 @@ defmodule LightningWeb.UserLive.Index do
     |> assign(:user, Accounts.get_user!(id))
   end
 
+  @impl true
+  def handle_event(
+        "cancel_deletion",
+        %{"id" => user_id},
+        socket
+      ) do
+    user = Accounts.get_user!(user_id)
+
+    Accounts.update_user_details(user, %{
+      scheduled_deletion: nil,
+      disabled: false
+    })
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "User deletion canceled")
+     |> push_navigate(to: ~p"/settings/users")}
+  end
+
   defp list_users do
     Accounts.list_users()
+  end
+
+  def delete_action(assigns) do
+    if assigns.user.scheduled_deletion do
+      ~H"""
+      <span>
+        <%= link("Cancel deletion",
+          to: "#",
+          phx_click: "cancel_deletion",
+          phx_value_id: @user.id,
+          id: "cancel-deletion-#{@user.id}"
+        ) %>
+      </span>
+      |
+      <span>
+        <.link
+          id={"delete-now-#{@user.id}"}
+          navigate={Routes.user_index_path(@socket, :delete, @user)}
+        >
+          Delete now
+        </.link>
+      </span>
+      """
+    else
+      ~H"""
+      <span>
+        <.link
+          id={"delete-#{@user.id}"}
+          navigate={Routes.user_index_path(@socket, :delete, @user)}
+        >
+          Delete
+        </.link>
+      </span>
+      """
+    end
   end
 end

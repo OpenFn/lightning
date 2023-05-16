@@ -2,7 +2,7 @@ defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
   alias Lightning.Invocation
-  alias Lightning.Invocation.{Run}
+  alias Lightning.Invocation.Run
   alias Lightning.Repo
   import Lightning.InvocationFixtures
   import Lightning.ProjectsFixtures

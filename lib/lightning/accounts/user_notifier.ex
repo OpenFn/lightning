@@ -79,6 +79,16 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
+  defp permanent_deletion_grace() do
+    grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
+
+    if grace_period <= 0 do
+      "a few minutes"
+    else
+      "#{grace_period} days"
+    end
+  end
+
   @doc """
   Deliver an email to notify the user about their account being deleted
   """
@@ -88,7 +98,11 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    Your Lightning account has been scheduled for permanent deletion.
+    Your Lightning account has been scheduled for deletion. From now on your account is disabled and you are no longer able to access it.
+
+    It will be permanently deleted in #{permanent_deletion_grace()}. This will delete all of your credentials and remove you from all projects you are participating.
+
+    Note that if you have some ongoing activities in some projects, your account won't be deleted until that activity expires.
 
     If you don't want this to happen, please contact #{admin()} as soon as possible.
 
