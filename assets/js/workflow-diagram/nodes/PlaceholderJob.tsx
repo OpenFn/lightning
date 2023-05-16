@@ -17,14 +17,23 @@ const PlaceholderJobNode = ({
 
   const textRef = useRef()
 
+  const commit = () => {
+    // Dispatch an event up to the WorkflowDiagram
+    // This works better than interfacing to the store correctly
+    // because the Workflow Diagram can control selection
+    const e = new CustomEvent('commit-placeholder', {
+      bubbles: true,
+      detail: {
+        id,
+        name:  textRef.current.value
+      }
+    });
+    textRef.current.dispatchEvent(e);
+  }
+
   const handleKeyDown = (evt) => {
     if (evt.code === 'Enter') {
-      evt.sourceNodeId = id;
-      // Have to do this after render else the event won't propagate (?)
-      // What if I was to use a CustomEvent?
-      setTimeout(() => {
-        handleCommit();
-      }, 150) // what is the magic number?
+      commit();  
     }
     if (evt.code === 'Escape') {
       handleCancel();
@@ -33,15 +42,10 @@ const PlaceholderJobNode = ({
 
   // TODO what if a name hasn't been entered?
   const handleCommit = () => {
-    console.log('commit')
-    const { change } = store?.getState()
-    change(id, 'jobs', {
-      name: textRef.current.value
-    })
+    commit()
   }
 
   const handleCancel = () => {
-    console.log('cancel')
     const { remove, edges } = store?.getState()
     const e = edges.find(({ target_job_id }) => target_job_id === id)
     remove({ jobs: [id], edges: [e.id] });
