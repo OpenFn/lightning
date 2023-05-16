@@ -31,6 +31,27 @@ interface WorkflowEditorEntrypoint extends PhoenixHook {
   selectJob(id: string): void;
 }
 
+const createNewWorkflow = () => {
+  const triggers = [
+    {
+      id: crypto.randomUUID(),
+    },
+  ];
+  const jobs = [
+    {
+      id: crypto.randomUUID(),
+    },
+  ];
+  const edges = [
+    {
+      id: crypto.randomUUID(),
+      source_trigger_id: triggers[0].id,
+      target_job_id: jobs[0].id,
+    },
+  ];
+  return { triggers, jobs, edges };
+};
+
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
     this._pendingWorker = Promise.resolve();
@@ -51,6 +72,7 @@ export default {
 
     // Get the initial data from the server
     this.pushEventTo(this.el, 'get-initial-state', {}, (payload: any) => {
+      console.log(payload);
       this.workflowStore = createWorkflowStore(
         { ...payload, editJobUrl: this.editJobUrl },
         pendingChange => {
@@ -59,6 +81,12 @@ export default {
           this.processPendingChanges();
         }
       );
+
+      if (!payload.triggers.length && !payload.jobs.length) {
+        // Create a placeholder chart and push it back up to the server
+        const diff = createNewWorkflow();
+        this.workflowStore.getState().add(diff);
+      }
 
       this.componentModule.then(({ mount }) => {
         const onSelectionChange = (id?: string) => {
