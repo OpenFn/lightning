@@ -105,6 +105,7 @@ defmodule LightningWeb.Components.Common do
   slot :inner_block, required: false
   attr :disabled, :boolean, default: false
   attr :color, :string, default: "primary", values: ["primary", "red", "green"]
+  attr :type, :string, default: "button", values: ["button", "submit"]
   attr :rest, :global
 
   def button(assigns) do
@@ -122,7 +123,7 @@ defmodule LightningWeb.Components.Common do
       end)
 
     ~H"""
-    <button type="button" class={@class} {@rest}>
+    <button type={@type} class={@class} {@rest}>
       <%= if assigns.inner_block |> Enum.any?(),
         do: render_slot(@inner_block),
         else: @text %>
