@@ -59,14 +59,19 @@ export function mount(
   }
 
   function render(model: Workflow) {
-    const { add } = workflowStore.getState();
+    const { add, change } = workflowStore.getState();
 
     const handleSelectionChange = (id: string) => {
       onSelectionChange?.(id);
     }
 
-    const handleRequestChange = (diff) => {
-      add(diff)
+    const handleRequestChange = (type: 'add' | 'update', diff) => {
+      if (type === 'add') {
+        add(diff)
+      } else {
+        // TODO this needs cleaning up
+        change(...diff)
+      }
     }
 
     componentRoot.render(
