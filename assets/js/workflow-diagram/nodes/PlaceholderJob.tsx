@@ -17,12 +17,16 @@ const PlaceholderJobNode = ({
 
   const textRef = useRef()
 
-  const handleKeyDown = ({ code }) => {
-    console.log('keydown', code)
-    if (code === 'Enter') {
-      handleCommit();
+  const handleKeyDown = (evt) => {
+    if (evt.code === 'Enter') {
+      evt.sourceNodeId = id;
+      // Have to do this after render else the event won't propagate (?)
+      // What if I was to use a CustomEvent?
+      setTimeout(() => {
+        handleCommit();
+      }, 150) // what is the magic number?
     }
-    if (code === 'Escape') {
+    if (evt.code === 'Escape') {
       handleCancel();
     }
   };
@@ -89,6 +93,7 @@ const PlaceholderJobNode = ({
             type="text"
             ref={textRef}
             autoFocus
+            data-placeholder={id}
             className={['line-clamp-2', 'align-middle','focus:outline-none','focus:ring-0', 'border-none', 'bg-transparent', 'text-center', 'text-xs'].join(' ')}
             onKeyDown={handleKeyDown}
           />
