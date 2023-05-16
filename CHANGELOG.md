@@ -40,8 +40,6 @@ and this project adheres to
 
 ### Fixed
 
-=======
-
 ## [0.5.1] - 2023-04-12
 
 ### Added
