@@ -39,7 +39,7 @@ base_oban_cron = [
   {"* * * * *", ObanPruner},
   {"0 10 * * *", Lightning.DigestEmailWorker,
    args: %{"type" => "daily_project_digest"}},
-  {"0 10 * * MON", Lightning.DigestEmailWorker,
+  {"0 10 * * 1", Lightning.DigestEmailWorker,
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
    args: %{"type" => "monthly_project_digest"}}

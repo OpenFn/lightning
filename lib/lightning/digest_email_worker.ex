@@ -71,13 +71,13 @@ defmodule Lightning.DigestEmailWorker do
   def digest_to_date(digest) do
     case digest do
       :daily ->
-        Timex.now() |> Timex.beginning_of_day()
+        Timex.now() |> Timex.shift(days: -1)
 
       :weekly ->
-        Timex.now() |> Timex.shift(days: -7) |> Timex.beginning_of_week()
+        Timex.now() |> Timex.shift(days: -7)
 
       :monthly ->
-        Timex.now() |> Timex.shift(months: -1) |> Timex.beginning_of_month()
+        Timex.now() |> Timex.shift(months: -1)
     end
   end
 
@@ -100,6 +100,7 @@ defmodule Lightning.DigestEmailWorker do
         "crash" => true,
         "failure" => true,
         "timeout" => true,
+        "pending" => true,
         "date_after" => start_date,
         "date_before" => end_date,
         "workflow_id" => workflow.id
