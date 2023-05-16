@@ -5,6 +5,8 @@ import { WorkflowState, createWorkflowStore, WorkflowProps } from './store';
 
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram'
 
+export const WorkflowContext = createContext<StoreApi<WorkflowState> | null>(null);
+
 type Store = ReturnType<typeof createWorkflowStore>;
 type Workflow = Pick<WorkflowProps, 'jobs' | 'edges' | 'triggers'>;
 
@@ -68,12 +70,13 @@ export function mount(
     }
 
     componentRoot.render(
-      // TODO listen to change events from the diagram and upadte the store accordingly
-      <WorkflowDiagram
-        ref={el}
-        workflow={identifyPlaceholders(model)}
-        onSelectionChange={handleSelectionChange}
-        requestChange={handleRequestChange}/>
+      <WorkflowContext.Provider value={workflowStore}>
+        <WorkflowDiagram
+          ref={el}
+          workflow={identifyPlaceholders(model)}
+          onSelectionChange={handleSelectionChange}
+          requestChange={handleRequestChange}/>
+      </WorkflowContext.Provider>
     );
   }
 

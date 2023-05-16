@@ -113,6 +113,25 @@ export const createWorkflowStore = (
         })
       );
     },
+    // remove one or more things by id
+    remove: data => {
+      set(state =>
+        proposeChanges(state, draft => {
+          ['jobs', 'triggers', 'edges'].forEach(key => {
+            if (data[key]) {
+              const newCollection = [];
+              draft[key].forEach(item => {
+                if (!data[key].includes(item.id)) {
+                  newCollection.push(item);
+                }
+              });
+              console.log(newCollection);
+              draft[key] = newCollection;
+            }
+          });
+        })
+      );
+    },
     change: (id, type, diff) => {
       set(state =>
         proposeChanges(state, draft => {
