@@ -63,16 +63,15 @@ export function mount(
 
     const handleSelectionChange = (id: string) => {
       onSelectionChange?.(id);
-    }
+    };
 
-    const handleRequestChange = (type: 'add' | 'update', diff) => {
-      if (type === 'add') {
-        add(diff)
-      } else {
-        // TODO this needs cleaning up
-        change(...diff)
-      }
-    }
+    const handleAdd = (diff: Partial<Workflow>) => {
+      add(diff)
+    };
+
+    const handleChange = (diff: Partial<Workflow>) => {
+      change(diff)
+    };
 
     componentRoot.render(
       <WorkflowContext.Provider value={workflowStore}>
@@ -80,7 +79,9 @@ export function mount(
           ref={el}
           workflow={identifyPlaceholders(model)}
           onSelectionChange={handleSelectionChange}
-          requestChange={handleRequestChange}/>
+          onAdd={handleAdd}
+          onChange={handleChange}
+        />
       </WorkflowContext.Provider>
     );
   }
