@@ -41,8 +41,7 @@ defmodule Lightning.Jobs.Job do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "jobs" do
-    field :body, :string,
-      default: "// Get started by adding operations from your adaptor here"
+    field :body, :string
 
     field :enabled, :boolean, default: true
     field :name, :string
