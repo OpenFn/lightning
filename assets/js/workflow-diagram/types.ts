@@ -24,7 +24,7 @@ export namespace Lightning {
   export type TriggerNode = CronTrigger | WebhookTrigger;
 
   export interface JobNode extends Node {
-    body: string;
+    body?: string;
   }
 
   export interface Edge {
