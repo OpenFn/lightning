@@ -8,6 +8,8 @@ import { WorkflowContext } from '../../workflow-editor/component';
 
 type NodeData = any;
 
+const iconStyle = "mx-1 text-primary-500 hover:text-primary-900"
+
 const PlaceholderJobNode = ({
   id,
   selected,
@@ -92,7 +94,7 @@ const PlaceholderJobNode = ({
             'text-center',
           ].filter(Boolean).join(' ')}
         >
-          <XMarkIcon className="mx-1 text-primary-600" onClick={handleCancel}/>
+          <XMarkIcon className={`${iconStyle}`} title="Cancel creation of this job" onClick={handleCancel}/>
           <input
             type="text"
             ref={textRef}
@@ -101,7 +103,7 @@ const PlaceholderJobNode = ({
             className={['line-clamp-2', 'align-middle','focus:outline-none','focus:ring-0', 'border-none', 'bg-transparent', 'text-center', 'text-xs'].join(' ')}
             onKeyDown={handleKeyDown}
           />
-          <CheckCircleIcon className="mx-1 text-primary-600" onClick={handleCommit}/>
+          <CheckCircleIcon className={`${iconStyle}`} title="Create this job" onClick={handleCommit}/>
         </div>
       </div>
     </div>

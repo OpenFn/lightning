@@ -88,11 +88,8 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
 
 
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
-    event.stopPropagation();
-    event.preventDefault()
     if (event.target.closest('[name=add-node]')) {
       addNode(node);
-      // TODO how do I stop selection changing here?
     }
   }, [model])
   
