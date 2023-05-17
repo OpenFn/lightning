@@ -65,6 +65,10 @@ defmodule Lightning.Jobs.Trigger do
     |> validate()
   end
 
+  @doc """
+  DEPRECATED: Triggers are now created via the workflow, this function is only
+  used when creating a Trigger via a Job.
+  """
   def changeset(job, attrs, workflow_id) do
     changeset(job, attrs)
     |> put_change(:workflow_id, workflow_id)

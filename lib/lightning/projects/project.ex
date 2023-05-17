@@ -38,13 +38,6 @@ defmodule Lightning.Projects.Project do
     |> validate()
   end
 
-  def changeset_for_import(project, attrs) do
-    project
-    |> cast(attrs, [:id, :name, :description])
-    |> validate_required([:id])
-    |> validate()
-  end
-
   def validate(changeset) do
     changeset
     |> validate_length(:description, max: 240)

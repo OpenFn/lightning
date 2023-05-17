@@ -41,9 +41,8 @@ defmodule Lightning.Projects.Provisioner do
   @spec parse_document(Project.t(), map()) :: Ecto.Changeset.t(Project.t())
   def parse_document(%Project{} = project, data) when is_map(data) do
     project
-    |> Project.changeset_for_import(data)
+    |> project_changeset(data)
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
-    |> validate_required([:id])
   end
 
   @doc """
@@ -69,11 +68,20 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
+  defp project_changeset(project, attrs) do
+    project
+    |> cast(attrs, [:id, :name, :description])
+    |> validate_required([:id])
+    |> validate_extraneous_params()
+    |> Project.validate()
+  end
+
   defp workflow_changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:id, :name, :delete])
     |> validate_required([:id])
     |> maybe_mark_for_deletion()
+    |> validate_extraneous_params()
     |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)

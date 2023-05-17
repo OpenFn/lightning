@@ -85,13 +85,17 @@ defmodule Lightning.Jobs.Job do
     |> validate()
   end
 
-  def changeset(job, attrs, workflow_id) do
-    attrs = Map.put(attrs, :workflow_id, workflow_id)
-
-    job
-    |> changeset(attrs)
-    |> validate_required(:workflow_id)
-  end
+  # DEPRECATED: Jobs are now created via the workflow, this function is only
+  # used when creating a Job via a Trigger.
+  # Uncomment if this causes issues before fully removing other changeset/3
+  # functions.
+  # def changeset(job, attrs, workflow_id) do
+  #   attrs = Map.put(attrs, :workflow_id, workflow_id)
+  #
+  #   job
+  #   |> changeset(attrs)
+  #   |> validate_required(:workflow_id)
+  # end
 
   def validate(changeset) do
     changeset

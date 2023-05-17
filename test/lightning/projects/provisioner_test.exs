@@ -46,6 +46,20 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
+    test "with extraneous fields" do
+      changeset =
+        Provisioner.parse_document(%Lightning.Projects.Project{}, %{
+          "foo" => "bar",
+          "baz" => "qux"
+        })
+
+      assert flatten_errors(changeset) == %{
+               id: ["can't be blank"],
+               name: ["can't be blank"],
+               base: ["extraneous parameters: baz, foo"]
+             }
+    end
+
     test "with valid data" do
       %{
         body: body,
@@ -312,9 +326,10 @@ defmodule Lightning.Projects.ProvisionerTest do
   end
 
   defp flatten_errors(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {field, _message} ->
-      field
-    end)
+    Ecto.Changeset.traverse_errors(
+      changeset,
+      &LightningWeb.CoreComponents.translate_error/1
+    )
   end
 
   defp add_job_to_document(document, job_params) do
