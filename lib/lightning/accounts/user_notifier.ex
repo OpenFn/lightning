@@ -3,8 +3,11 @@ defmodule Lightning.Accounts.UserNotifier do
   The UserNotifier module.
   """
 
+  use LightningWeb, :html
+
   import Swoosh.Email
 
+  alias Lightning.Workorders.SearchParams
   alias Lightning.Projects
   alias Lightning.Mailer
   alias Lightning.Helpers
@@ -65,8 +68,7 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_project_addition_notification(user, project) do
     role = Projects.get_project_user_role(user, project) |> Atom.to_string()
 
-    url =
-      "#{LightningWeb.Router.Helpers.url(LightningWeb.Endpoint)}/projects/#{project.id}/w"
+    url = ~p"/projects/#{project.id}/w"
 
     deliver(user.email, "Project #{project.name}", """
 
@@ -169,26 +171,72 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
-  defp build_email_body(data, digest) do
-    digest_lookup = %{daily: "day", monthly: "month", weekly: "week"}
+  def build_digest_url(workflow, start_date, end_date) do
+    uri_params =
+      SearchParams.to_uri_params(%{
+        "date_after" => start_date,
+        "date_before" => end_date,
+        "workflow_id" => workflow.id
+      })
+
+    url(~p"/projects/#{workflow.project_id}/runs?#{%{"filters" => uri_params}}")
+  end
+
+  defp build_email(%{
+         start_date: start_date,
+         end_date: end_date,
+         digest: digest,
+         workflow: workflow,
+         successful_workorders: successful_workorders,
+         failed_workorders: failed_workorders
+       }) do
+    digest_lookup = %{daily: "today", monthly: "this month", weekly: "this week"}
 
     """
-    #{data.workflow_name}:
-    - #{data.successful_workorders} workorders correctly processed this #{digest_lookup[digest]}
-    - #{data.rerun_workorders} failed work orders that were rerun and then processed correctly
-    - #{data.failed_workorders} work orders that failed/still need addressing
+    #{workflow.name}:
+    - #{successful_workorders} workorders correctly processed #{digest_lookup[digest]}
+    - #{failed_workorders} work orders that failed, crashed or timed out
+    Click the link below to view this in the history page:
+    #{build_digest_url(workflow, start_date, end_date)}
 
     """
   end
 
   @doc """
-  Deliver a digest for a project to a user.
+  Deliver a project digest of daily/weekly or monthly activity to a user.
   """
-  def deliver_project_digest(user, project, data, digest) do
-    email = user.email
-    title = "Weekly digest for project #{project.name}"
-    body = Enum.map_join(data, fn d -> build_email_body(d, digest) end)
+  def deliver_project_digest(
+        digest_data,
+        %{
+          user: user,
+          project: project,
+          digest: digest,
+          start_date: start_date,
+          end_date: end_date
+        } = _params
+      ) do
+    title =
+      "#{Atom.to_string(digest) |> String.capitalize()} digest for project #{project.name}"
 
-    deliver(email, title, body)
+    body =
+      Enum.map_join(digest_data, fn data ->
+        build_email(
+          Map.merge(data, %{
+            start_date: start_date,
+            end_date: end_date,
+            digest: digest
+          })
+        )
+      end)
+
+    body = """
+    Hi #{user.first_name},
+
+    Here's a #{Atom.to_string(digest)} digest for "#{project.name}" project activity since #{start_date |> Calendar.strftime("%a %B %d %Y at %H:%M %Z")}.
+
+    #{body}
+    """
+
+    deliver(user.email, title, body)
   end
 end

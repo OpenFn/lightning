@@ -306,7 +306,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       })
       |> Lightning.Repo.insert!()
 
-      Lightning.Invocation.list_work_orders_for_project(project).entries()
+      Lightning.Invocation.search_workorders(project).entries()
 
       {:ok, view, _html} =
         live(
@@ -1301,7 +1301,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         Map.get(attempt, :runs)
         |> List.first()
 
-      Lightning.Invocation.list_work_orders_for_project(project).entries()
+      Lightning.Invocation.search_workorders(project).entries()
 
       {:ok, view, _html} =
         live(
@@ -1367,7 +1367,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         Map.get(attempt, :runs)
         |> List.first()
 
-      Lightning.Invocation.list_work_orders_for_project(project).entries()
+      Lightning.Invocation.search_workorders(project).entries()
 
       {:ok, view, _html} =
         live(

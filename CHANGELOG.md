@@ -14,6 +14,8 @@ and this project adheres to
 
 ### Fixed
 
+- Incorrect project digest queries
+  [#768](https://github.com/OpenFn/Lightning/issues/768)]
 - Fix issue when purging deleted users
   [#747](https://github.com/OpenFn/Lightning/issues/747)
 - Generate a random name for Workflows when creating one via the UI.

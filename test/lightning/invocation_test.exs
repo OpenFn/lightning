@@ -1,6 +1,7 @@
 defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Workorders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Repo
@@ -305,9 +306,18 @@ defmodule Lightning.InvocationTest do
         |> Lightning.Repo.insert!()
 
       simplified_result =
-        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
-          id: workflow.project_id
-        }).entries()
+        Invocation.search_workorders(
+          %Lightning.Projects.Project{
+            id: workflow.project_id
+          },
+          SearchParams.new(%{
+            "crash" => "true",
+            "failure" => "true",
+            "pending" => "true",
+            "timeout" => "true",
+            "success" => "true"
+          })
+        ).entries()
 
       expected_order = [
         %{id: wo_four.id, last_finished_at: run_four.finished_at},
@@ -401,9 +411,18 @@ defmodule Lightning.InvocationTest do
         |> Repo.insert!()
 
       [%{id: id} | _] =
-        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
-          id: workflow.project_id
-        }).entries()
+        Invocation.search_workorders(
+          %Lightning.Projects.Project{
+            id: workflow.project_id
+          },
+          SearchParams.new(%{
+            "crash" => "true",
+            "failure" => "true",
+            "pending" => "true",
+            "success" => "true",
+            "timeout" => "true"
+          })
+        ).entries()
 
       [actual_wo] =
         Invocation.get_workorders_by_ids([id])
@@ -430,9 +449,18 @@ defmodule Lightning.InvocationTest do
         })
 
       [%{id: id} | _] =
-        Invocation.list_work_orders_for_project(%Lightning.Projects.Project{
-          id: workflow.project_id
-        }).entries()
+        Invocation.search_workorders(
+          %Lightning.Projects.Project{
+            id: workflow.project_id
+          },
+          SearchParams.new(%{
+            "crash" => "true",
+            "failure" => "true",
+            "pending" => "true",
+            "timeout" => "true",
+            "success" => "true"
+          })
+        ).entries()
 
       [actual_wo] =
         Invocation.get_workorders_by_ids([id])
@@ -463,11 +491,17 @@ defmodule Lightning.InvocationTest do
       end)
 
       wos =
-        Invocation.list_work_orders_for_project(
+        Invocation.search_workorders(
           %Lightning.Projects.Project{
             id: project.id
           },
-          nil,
+          SearchParams.new(%{
+            "success" => true,
+            "pending" => true,
+            "crash" => true,
+            "failure" => true,
+            "timeout" => true
+          }),
           %{"page" => 1, "page_size" => 3}
         ).entries()
 
@@ -541,7 +575,17 @@ defmodule Lightning.InvocationTest do
       ### PAGE 1 -----------------------------------------------------------------------
 
       page_one_result =
-        get_simplified_page(project, %{"page" => 1, "page_size" => 3}, [])
+        get_simplified_page(
+          project,
+          %{"page" => 1, "page_size" => 3},
+          SearchParams.new(%{
+            "crash" => "true",
+            "failure" => "true",
+            "pending" => "true",
+            "timeout" => "true",
+            "success" => "true"
+          })
+        )
 
       # all work_orders in page_one are ordered by finished_at
 
@@ -556,7 +600,17 @@ defmodule Lightning.InvocationTest do
       ### PAGE 2 -----------------------------------------------------------------------
 
       page_two_result =
-        get_simplified_page(project, %{"page" => 2, "page_size" => 3}, [])
+        get_simplified_page(
+          project,
+          %{"page" => 2, "page_size" => 3},
+          SearchParams.new(%{
+            "crash" => "true",
+            "failure" => "true",
+            "pending" => "true",
+            "timeout" => "true",
+            "success" => "true"
+          })
+        )
 
       # all work_orders in page_two are ordered by finished_at
       expected_order = [
@@ -570,7 +624,17 @@ defmodule Lightning.InvocationTest do
       ### PAGE 3 -----------------------------------------------------------------------
 
       page_three_result =
-        get_simplified_page(project, %{"page" => 3, "page_size" => 3}, [])
+        get_simplified_page(
+          project,
+          %{"page" => 3, "page_size" => 3},
+          SearchParams.new(%{
+            "crash" => "true",
+            "failure" => "true",
+            "pending" => "true",
+            "timeout" => "true",
+            "success" => "true"
+          })
+        )
 
       # all work_orders in page_three are ordered by finished_at
       expected_order = [
@@ -596,21 +660,22 @@ defmodule Lightning.InvocationTest do
 
       [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
-      assert [%{id: ^id}] = actual_filter_by_status(project, [:failure])
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, %{"failure" => true})
 
-      assert [] == actual_filter_by_status(project, [:success])
-      assert [] == actual_filter_by_status(project, [:pending])
-      assert [] == actual_filter_by_status(project, [:timeout])
-      assert [] == actual_filter_by_status(project, [:crash])
+      assert [] == actual_filter_by_status(project, %{"success" => true})
+      assert [] == actual_filter_by_status(project, %{"pending" => true})
+      assert [] == actual_filter_by_status(project, %{"timeout" => true})
+      assert [] == actual_filter_by_status(project, %{"crash" => true})
 
       assert [%{id: ^id}] =
-               actual_filter_by_status(project, [
-                 :success,
-                 :failure,
-                 :pending,
-                 :timeout,
-                 :crash
-               ])
+               actual_filter_by_status(project, %{
+                 "success" => true,
+                 "failure" => true,
+                 "pending" => true,
+                 "timeout" => true,
+                 "crash" => true
+               })
     end
 
     test "Filtering by status :pending exit_code = nil" do
@@ -627,21 +692,22 @@ defmodule Lightning.InvocationTest do
 
       [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
-      assert [%{id: ^id}] = actual_filter_by_status(project, [:pending])
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, %{"pending" => true})
 
-      assert [] == actual_filter_by_status(project, [:success])
-      assert [] == actual_filter_by_status(project, [:timeout])
-      assert [] == actual_filter_by_status(project, [:failure])
-      assert [] == actual_filter_by_status(project, [:crash])
+      assert [] == actual_filter_by_status(project, %{"success" => true})
+      assert [] == actual_filter_by_status(project, %{"timeout" => true})
+      assert [] == actual_filter_by_status(project, %{"failure" => true})
+      assert [] == actual_filter_by_status(project, %{"crash" => true})
 
       assert [%{id: ^id}] =
-               actual_filter_by_status(project, [
-                 :success,
-                 :failure,
-                 :pending,
-                 :timeout,
-                 :crash
-               ])
+               actual_filter_by_status(project, %{
+                 "success" => true,
+                 "failure" => true,
+                 "crash" => true,
+                 "timeout" => true,
+                 "pending" => true
+               })
     end
 
     test "Filtering by status :timeout exit_code = 2" do
@@ -659,21 +725,22 @@ defmodule Lightning.InvocationTest do
 
       [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
-      assert [%{id: ^id}] = actual_filter_by_status(project, [:timeout])
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, %{"timeout" => true})
 
-      assert [] == actual_filter_by_status(project, [:success])
-      assert [] == actual_filter_by_status(project, [:pending])
-      assert [] == actual_filter_by_status(project, [:failure])
-      assert [] == actual_filter_by_status(project, [:crash])
+      assert [] == actual_filter_by_status(project, %{"success" => true})
+      assert [] == actual_filter_by_status(project, %{"pending" => true})
+      assert [] == actual_filter_by_status(project, %{"failure" => true})
+      assert [] == actual_filter_by_status(project, %{"crash" => true})
 
       assert [%{id: ^id}] =
-               actual_filter_by_status(project, [
-                 :success,
-                 :failure,
-                 :pending,
-                 :timeout,
-                 :crash
-               ])
+               actual_filter_by_status(project, %{
+                 "success" => true,
+                 "timeout" => true,
+                 "pending" => true,
+                 "failure" => true,
+                 "crash" => true
+               })
     end
 
     test "Filtering by status :crash exit_code > 2" do
@@ -690,21 +757,21 @@ defmodule Lightning.InvocationTest do
 
       [%{id: id}] = apply_scenario(project, workflow_map, scenario)
 
-      assert [%{id: ^id}] = actual_filter_by_status(project, [:crash])
+      assert [%{id: ^id}] = actual_filter_by_status(project, %{"crash" => true})
 
-      assert [] == actual_filter_by_status(project, [:success])
-      assert [] == actual_filter_by_status(project, [:pending])
-      assert [] == actual_filter_by_status(project, [:failure])
-      assert [] == actual_filter_by_status(project, [:timeout])
+      assert [] == actual_filter_by_status(project, %{"success" => true})
+      assert [] == actual_filter_by_status(project, %{"pending" => true})
+      assert [] == actual_filter_by_status(project, %{"failure" => true})
+      assert [] == actual_filter_by_status(project, %{"timeout" => true})
 
       assert [%{id: ^id}] =
-               actual_filter_by_status(project, [
-                 :success,
-                 :failure,
-                 :pending,
-                 :timeout,
-                 :crash
-               ])
+               actual_filter_by_status(project, %{
+                 "success" => true,
+                 "failure" => true,
+                 "crash" => true,
+                 "timeout" => true,
+                 "pending" => true
+               })
     end
 
     test "Filtering by status :success exit_code = 0" do
@@ -736,28 +803,29 @@ defmodule Lightning.InvocationTest do
 
       [_, _, _, %{id: id}] = apply_scenario(project, workflow_map, scenario)
 
-      assert [%{id: ^id}] = actual_filter_by_status(project, [:success])
+      assert [%{id: ^id}] =
+               actual_filter_by_status(project, %{"success" => true})
 
-      refute actual_filter_by_status(project, [:failure])
+      refute actual_filter_by_status(project, %{"failure" => true})
              |> Enum.any?(fn wo -> wo.id == id end)
 
-      refute actual_filter_by_status(project, [:pending])
+      refute actual_filter_by_status(project, %{"pending" => true})
              |> Enum.any?(fn wo -> wo.id == id end)
 
-      refute actual_filter_by_status(project, [:timeout])
+      refute actual_filter_by_status(project, %{"timeout" => true})
              |> Enum.any?(fn wo -> wo.id == id end)
 
-      refute actual_filter_by_status(project, [:crash])
+      refute actual_filter_by_status(project, %{"crash" => true})
              |> Enum.any?(fn wo -> wo.id == id end)
 
       assert [%{id: ^id} | _] =
-               actual_filter_by_status(project, [
-                 :success,
-                 :failure,
-                 :pending,
-                 :timeout,
-                 :crash
-               ])
+               actual_filter_by_status(project, %{
+                 "success" => true,
+                 "failure" => true,
+                 "timeout" => true,
+                 "pending" => true,
+                 "crash" => true
+               })
     end
 
     test "Filtering by status complex all" do
@@ -800,11 +868,20 @@ defmodule Lightning.InvocationTest do
         %{id: id_success}
       ] = apply_scenario(project, workflow_map, scenario)
 
-      assert [%{id: ^id_failure}] = actual_filter_by_status(project, [:failure])
-      assert [%{id: ^id_success}] = actual_filter_by_status(project, [:success])
-      assert [%{id: ^id_pending}] = actual_filter_by_status(project, [:pending])
-      assert [%{id: ^id_timeout}] = actual_filter_by_status(project, [:timeout])
-      assert [%{id: ^id_crash}] = actual_filter_by_status(project, [:crash])
+      assert [%{id: ^id_failure}] =
+               actual_filter_by_status(project, %{"failure" => true})
+
+      assert [%{id: ^id_success}] =
+               actual_filter_by_status(project, %{"success" => true})
+
+      assert [%{id: ^id_pending}] =
+               actual_filter_by_status(project, %{"pending" => true})
+
+      assert [%{id: ^id_timeout}] =
+               actual_filter_by_status(project, %{"timeout" => true})
+
+      assert [%{id: ^id_crash}] =
+               actual_filter_by_status(project, %{"crash" => true})
 
       assert [
                %{id: ^id_pending},
@@ -813,13 +890,13 @@ defmodule Lightning.InvocationTest do
                %{id: ^id_crash},
                %{id: ^id_failure}
              ] =
-               actual_filter_by_status(project, [
-                 :failure,
-                 :success,
-                 :pending,
-                 :timeout,
-                 :crash
-               ])
+               actual_filter_by_status(project, %{
+                 "success" => true,
+                 "failure" => true,
+                 "crash" => true,
+                 "timeout" => true,
+                 "pending" => true
+               })
     end
 
     test "Filtering by workorder inserted_at" do
@@ -872,59 +949,48 @@ defmodule Lightning.InvocationTest do
 
       # after wo inserted_at
       assert [%{id: ^id_pending}, %{id: ^id_success}, %{id: ^id_timeout}] =
-               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
-                 status: [
-                   :success,
-                   :failure,
-                   :pending,
-                   :timeout,
-                   :crash
-                 ],
-                 search_fields: [],
-                 search_term: "",
-                 workflow_id: "",
-                 date_after: "",
-                 date_before: "",
-                 wo_date_after: ~N[2022-03-01 00:00:10],
-                 wo_date_before: ""
+               get_simplified_page(
+                 project,
+                 %{"page" => 1, "page_size" => 10},
+                 SearchParams.new(%{
+                   "crash" => "true",
+                   "failure" => "true",
+                   "pending" => "true",
+                   "timeout" => "true",
+                   "success" => "true",
+                   "wo_date_after" => "2022-03-01 00:00:10"
+                 })
                )
 
       # before wo inserted_at
       assert [%{id: ^id_crash}, %{id: ^id_failure}] =
-               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
-                 status: [
-                   :success,
-                   :failure,
-                   :pending,
-                   :timeout,
-                   :crash
-                 ],
-                 search_fields: [],
-                 search_term: "",
-                 workflow_id: "",
-                 date_after: "",
-                 date_before: "",
-                 wo_date_after: "",
-                 wo_date_before: ~N[2022-03-01 00:00:10]
+               get_simplified_page(
+                 project,
+                 %{"page" => 1, "page_size" => 10},
+                 SearchParams.new(%{
+                   "crash" => "true",
+                   "failure" => "true",
+                   "pending" => "true",
+                   "timeout" => "true",
+                   "success" => "true",
+                   "wo_date_before" => "2022-03-01 00:00:10"
+                 })
                )
 
       # between wo inserted_at
       assert [%{id: ^id_pending}, %{id: ^id_crash}] =
-               get_simplified_page(project, %{"page" => 1, "page_size" => 10},
-                 status: [
-                   :success,
-                   :failure,
-                   :pending,
-                   :timeout,
-                   :crash
-                 ],
-                 search_fields: [],
-                 search_term: "",
-                 workflow_id: "",
-                 date_after: "",
-                 date_before: "",
-                 wo_date_after: ~N[2022-02-01 00:00:10],
-                 wo_date_before: ~N[2022-04-01 00:00:10]
+               get_simplified_page(
+                 project,
+                 %{"page" => 1, "page_size" => 10},
+                 SearchParams.new(%{
+                   "crash" => "true",
+                   "failure" => "true",
+                   "pending" => "true",
+                   "timeout" => "true",
+                   "success" => "true",
+                   "wo_date_after" => "2022-02-01 00:00:10",
+                   "wo_date_before" => "2022-04-01 00:00:10"
+                 })
                )
     end
   end
@@ -1034,20 +1100,11 @@ defmodule Lightning.InvocationTest do
   end
 
   defp actual_filter_by_status(project, status) do
-    Invocation.list_work_orders_for_project(
+    Invocation.search_workorders(
       %Lightning.Projects.Project{
         id: project.id
       },
-      [
-        status: status,
-        search_fields: [],
-        search_term: "",
-        workflow_id: "",
-        date_after: "",
-        date_before: "",
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
+      SearchParams.new(status),
       %{"page" => 1, "page_size" => 10}
     ).entries()
   end
@@ -1090,7 +1147,7 @@ defmodule Lightning.InvocationTest do
   end
 
   defp get_simplified_page(project, page, filter) do
-    Invocation.list_work_orders_for_project(
+    Invocation.search_workorders(
       %Lightning.Projects.Project{
         id: project.id
       },

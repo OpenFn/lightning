@@ -1,45 +1,62 @@
 version: 2.1
 
-default_version: &default_version 1.14.1
-
 orbs:
   codecov: codecov/codecov@1.0.5
 
 commands:
   install_node:
+    description: "Install NodeJS"
+    parameters:
+      version:
+        type: string
     steps:
+      - restore_cache:
+          key: v4-nodejs-<< parameters.version >>
+
       - run:
           name: 'Install Node.js and npm'
           command: |
-            curl -sSL "https://nodejs.org/dist/v18.12.0/node-v18.12.0-linux-x64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
+            ./bin/install_node --no-cleanup << parameters.version >>
+
+      - save_cache:
+          key: v4-nodejs-<< parameters.version >>
+          paths:
+            - ./node-v<< parameters.version >>-linux-x64.tar.gz
+
       - run:
-          name: Check current version of node
-          command: node -v
+          name: 'Cleanup NodeJS install files'
+          command: |
+            rm ./node-v*.tar.gz
 
 jobs:
   build:
     parameters:
-      version:
+      elixir_version:
         description: Elixir version
         type: string
-        default: *default_version
+        default: "1.14.1"
+      nodejs_version:
+        description: NodeJS version
+        type: string
+        default: "18.12.0"
       execute:
         description: What steps to execute after build
         type: steps
 
     parallelism: 1
     docker:
-      - image: elixir:<< parameters.version >>
+      - image: elixir:<< parameters.elixir_version >>
       - image: cimg/postgres:14.2
 
     steps:
-      - install_node
       - checkout
+      - install_node:
+          version: << parameters.nodejs_version >>
 
       - restore_cache:
           keys:
-            - v1-deps-<< parameters.version >>-{{ checksum "mix.lock" }}
-            - v1-deps-<< parameters.version >>-
+            - v1-deps-<< parameters.elixir_version >>-{{ checksum "mix.lock" }}
+            - v1-deps-<< parameters.elixir_version >>-
 
       - run: mix local.hex --force
       - run: mix local.rebar --force
@@ -47,7 +64,7 @@ jobs:
       - run: MIX_ENV=test mix lightning.install_runtime
 
       - save_cache:
-          key: v1-deps-<< parameters.version >>-{{ checksum "mix.lock" }}
+          key: v1-deps-<< parameters.elixir_version >>-{{ checksum "mix.lock" }}
           paths:
             - _build
             - deps
@@ -55,11 +72,11 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-plt-<< parameters.version >>-{{ checksum "mix.lock" }}
-            - v1-plt-<< parameters.version >>-
+            - v1-plt-<< parameters.elixir_version >>-{{ checksum "mix.lock" }}
+            - v1-plt-<< parameters.elixir_version >>-
       - run: MIX_ENV=test mix dialyzer --plt
       - save_cache:
-          key: v1-plt-<< parameters.version >>-{{ checksum "mix.lock" }}
+          key: v1-plt-<< parameters.elixir_version >>-{{ checksum "mix.lock" }}
           paths:
             - priv/plts
             - ~/.mix

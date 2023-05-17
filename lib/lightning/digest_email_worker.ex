@@ -1,9 +1,10 @@
 defmodule Lightning.DigestEmailWorker do
   @moduledoc false
 
+  alias Lightning.Projects
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects.ProjectUser
-  alias Lightning.{Workflows, Workorders, Repo}
+  alias Lightning.{Workflows, Repo}
 
   import Ecto.Query, warn: false
 
@@ -18,20 +19,26 @@ defmodule Lightning.DigestEmailWorker do
   """
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "daily_project_digest"}}) do
-    project_digest(:daily)
+    start_date = digest_to_date(:daily)
+    end_date = Timex.now()
+    project_digest(:daily, start_date, end_date)
   end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "weekly_project_digest"}}) do
-    project_digest(:weekly)
+    start_date = digest_to_date(:weekly)
+    end_date = Timex.now()
+    project_digest(:weekly, start_date, end_date)
   end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "monthly_project_digest"}}) do
-    project_digest(:monthly)
+    start_date = digest_to_date(:monthly)
+    end_date = Timex.now()
+    project_digest(:monthly, start_date, end_date)
   end
 
-  defp project_digest(digest) do
+  defp project_digest(digest, start_date, end_date) do
     project_users =
       from(pu in ProjectUser,
         where: pu.digest == ^digest,
@@ -43,17 +50,75 @@ defmodule Lightning.DigestEmailWorker do
       digest_data =
         Workflows.get_workflows_for(pu.project)
         |> Enum.map(fn workflow ->
-          Workorders.get_digest_data(workflow, digest)
+          get_digest_data(workflow, start_date, end_date)
         end)
 
       UserNotifier.deliver_project_digest(
-        pu.user,
-        pu.project,
         digest_data,
-        digest
+        %{
+          user: pu.user,
+          project: pu.project,
+          digest: digest,
+          start_date: start_date,
+          end_date: end_date
+        }
       )
     end)
 
-    {:ok, %{project_users: project_users}}
+    {:ok, project_users}
+  end
+
+  def digest_to_date(digest) do
+    case digest do
+      :daily ->
+        Timex.now() |> Timex.shift(days: -1)
+
+      :weekly ->
+        Timex.now() |> Timex.shift(days: -7)
+
+      :monthly ->
+        Timex.now() |> Timex.shift(months: -1)
+    end
+  end
+
+  @doc """
+  Get a map of counts for successful, rerun and failed Workorders for a given workflow in a given timeframe.
+  """
+  def get_digest_data(workflow, start_date, end_date) do
+    project = Projects.get_project!(workflow.project_id)
+
+    successful_workorders =
+      search_workorders(project, %{
+        "success" => true,
+        "date_after" => start_date,
+        "date_before" => end_date,
+        "workflow_id" => workflow.id
+      })
+
+    failed_workorders =
+      search_workorders(project, %{
+        "crash" => true,
+        "failure" => true,
+        "timeout" => true,
+        "pending" => true,
+        "date_after" => start_date,
+        "date_before" => end_date,
+        "workflow_id" => workflow.id
+      })
+
+    %{
+      workflow: workflow,
+      successful_workorders: successful_workorders.total_entries,
+      failed_workorders: failed_workorders.total_entries
+    }
+  end
+
+  defp search_workorders(project, params) do
+    search_params = Lightning.Workorders.SearchParams.new(params)
+
+    Lightning.Invocation.search_workorders(
+      project,
+      search_params
+    )
   end
 end
