@@ -13,6 +13,7 @@ const fromWorkflow = (
   if (workflow.jobs.length == 0) {
     return { nodes: [], edges: [] };
   }
+  const allowPlaceholder = workflow.jobs.every(j => !isPlaceholder(j));
 
   const process = (
     items: Array<Node | Edge>,
@@ -22,7 +23,12 @@ const fromWorkflow = (
     items.forEach(item => {
       const model: any = {
         id: item.id,
+        data: {
+          name: item.name || item.id,
+          item: item,
+        },
       };
+
       if (item.id === selectedNodeId) {
         model.selected = true;
       }
@@ -30,12 +36,19 @@ const fromWorkflow = (
         model.type = isPlaceholder(item) ? 'placeholder' : type;
 
         if (positions && positions[item.id]) {
-          // console.log('adding position for ' + item.id, positions[item.id]);
           model.position = positions[item.id];
         }
 
         model.width = NODE_WIDTH;
         model.height = NODE_HEIGHT;
+
+        model.data.allowPlaceholder = allowPlaceholder;
+
+        if (type === 'trigger') {
+          model.data.trigger = {
+            type: item.type,
+          };
+        }
       } else {
         let edge = item as Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
@@ -53,14 +66,6 @@ const fromWorkflow = (
         }
       }
 
-      model.data = {
-        ...item,
-        label: item.name || item.id,
-        // TMP
-        trigger: {
-          type: 'webhook',
-        },
-      };
       collection.push(model);
     });
   };
