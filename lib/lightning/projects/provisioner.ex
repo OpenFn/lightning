@@ -46,6 +46,12 @@ defmodule Lightning.Projects.Provisioner do
     |> validate_required([:id])
   end
 
+  @doc """
+  Load a project by ID, including all workflows and their associated jobs,
+  triggers and edges.
+
+  Returns `nil` if the project does not exist.
+  """
   @spec load_project(Ecto.UUID.t()) :: Project.t() | nil
   def load_project(id) do
     from(p in Project,
@@ -78,6 +84,7 @@ defmodule Lightning.Projects.Provisioner do
     job
     |> cast(attrs, [:id, :name, :body, :enabled, :adaptor, :delete])
     |> validate_required([:id])
+    |> unique_constraint(:id, name: :jobs_pkey)
     |> Job.validate()
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
@@ -95,6 +102,7 @@ defmodule Lightning.Projects.Provisioner do
       :delete
     ])
     |> validate_required([:id])
+    |> unique_constraint(:id, name: :triggers_pkey)
     |> Trigger.validate()
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()
@@ -112,6 +120,7 @@ defmodule Lightning.Projects.Provisioner do
       :delete
     ])
     |> validate_required([:id])
+    |> unique_constraint(:id, name: :workflow_edges_pkey)
     |> Edge.validate()
     |> validate_extraneous_params()
     |> maybe_mark_for_deletion()

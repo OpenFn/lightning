@@ -8,9 +8,10 @@ defmodule Lightning.Projects.ProvisionerTest do
     test "with invalid data" do
       changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, %{})
 
-      assert {:id, {"can't be blank", [validation: :required]}} in changeset.errors
-
-      assert {:name, {"can't be blank", [validation: :required]}} in changeset.errors
+      assert flatten_errors(changeset) == %{
+               id: ["can't be blank"],
+               name: ["can't be blank"]
+             }
 
       %{body: body} = valid_document()
 
@@ -33,12 +34,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       refute changeset.valid?
 
-      nested_errors =
-        Ecto.Changeset.traverse_errors(changeset, fn {field, _message} ->
-          field
-        end)
-
-      assert nested_errors == %{
+      assert flatten_errors(changeset) == %{
                workflows: [
                  %{
                    jobs: [
@@ -116,6 +112,61 @@ defmodule Lightning.Projects.ProvisionerTest do
              |> then(fn w -> w.jobs end)
              |> Enum.any?(&(&1.id == third_job_id)),
              "The third job should be added"
+    end
+
+    test "adding a record from another project or workflow", %{project: project} do
+      %{body: body, workflow_id: workflow_id} = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, body)
+
+      assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 1
+
+      %{id: third_job_id} = Lightning.Factories.insert(:job)
+
+      {:error, changeset} =
+        Provisioner.import_document(
+          project,
+          body
+          |> add_entity_to_workflow(workflow_id, "jobs", %{
+            "id" => third_job_id,
+            "name" => "third-job",
+            "adaptor" => "@openfn/language-common@latest"
+          })
+        )
+
+      assert flatten_errors(changeset) == %{
+               workflows: [%{jobs: [%{id: ["has already been taken"]}]}]
+             }
+
+      %{id: other_trigger_id} = Lightning.Factories.insert(:trigger)
+
+      {:error, changeset} =
+        Provisioner.import_document(
+          project,
+          body
+          |> add_entity_to_workflow(workflow_id, "triggers", %{
+            "id" => other_trigger_id
+          })
+        )
+
+      assert flatten_errors(changeset) == %{
+               workflows: [%{triggers: [%{id: ["has already been taken"]}]}]
+             }
+
+      %{id: other_edge_id} = Lightning.Factories.insert(:edge)
+
+      {:error, changeset} =
+        Provisioner.import_document(
+          project,
+          body
+          |> add_entity_to_workflow(workflow_id, "edges", %{
+            "id" => other_edge_id
+          })
+        )
+
+      assert flatten_errors(changeset) == %{
+               workflows: [%{edges: [%{id: ["has already been taken"]}]}]
+             }
     end
 
     test "removing a record", %{project: project} do
@@ -198,13 +249,11 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       refute changeset.valid?
 
-      workflow_errors =
-        changeset
-        |> Ecto.Changeset.get_change(:workflows)
-        |> Enum.at(0)
-        |> then(& &1.errors)
-
-      assert {:delete, {"cannot change or add a record while deleting", []}} in workflow_errors
+      assert flatten_errors(changeset) == %{
+               workflows: [
+                 %{delete: ["cannot change or add a record while deleting"]}
+               ]
+             }
     end
   end
 
@@ -262,6 +311,12 @@ defmodule Lightning.Projects.ProvisionerTest do
     }
   end
 
+  defp flatten_errors(changeset) do
+    Ecto.Changeset.traverse_errors(changeset, fn {field, _message} ->
+      field
+    end)
+  end
+
   defp add_job_to_document(document, job_params) do
     document
     |> Map.update!("workflows", fn workflows ->
@@ -271,6 +326,22 @@ defmodule Lightning.Projects.ProvisionerTest do
       end)
       |> then(fn workflow ->
         List.replace_at(workflows, 0, workflow)
+      end)
+    end)
+  end
+
+  defp add_entity_to_workflow(document, workflow_id, key, params) do
+    document
+    |> Map.update!("workflows", fn workflows ->
+      i = Enum.find_index(workflows, &match?(%{"id" => ^workflow_id}, &1))
+
+      workflows
+      |> Enum.at(i)
+      |> Map.update!(key, fn es ->
+        [params | es]
+      end)
+      |> then(fn workflow ->
+        List.replace_at(workflows, i, workflow)
       end)
     end)
   end
