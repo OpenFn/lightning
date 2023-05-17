@@ -1,21 +1,28 @@
 import type { Patch as ImmerPatch } from 'immer';
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore } from 'zustand';
+import type { Lightning } from '../workflow-diagram/types';
 
 enablePatches();
 
 export type WorkflowProps = {
-  triggers: {}[];
-  jobs: {}[];
-  edges: {}[];
+  triggers: Lightning.TriggerNode[];
+  jobs: Lightning.JobNode[];
+  edges: Lightning.Edge[];
   editJobUrl: string;
 };
 
 export interface WorkflowState extends WorkflowProps {
   add: (data: Partial<WorkflowProps>) => void;
-  addEdge: (edge: any) => void;
-  addJob: (job: any) => void;
-  addTrigger: (node: any) => void;
+  change: (data: Partial<WorkflowProps>) => void;
+  remove: (data: {
+    jobs?: string[];
+    triggers?: string[];
+    edges?: string[];
+  }) => void;
+  addEdge: (edge: Lightning.Edge) => void;
+  addJob: (job: Lightning.JobNode) => void;
+  addTrigger: (node: Lightning.TriggerNode) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
 }
@@ -36,17 +43,17 @@ export interface PendingAction {
 
 // Build a new job, with the bare minimum properties.
 function buildJob(job = {}) {
-  return { id: crypto.randomUUID(), ...job };
+  return { id: crypto.randomUUID(), ...job } as Lightning.JobNode;
 }
 
 // Build a new trigger, with the bare minimum properties.
 function buildTrigger(trigger = {}) {
-  return { id: crypto.randomUUID(), ...trigger };
+  return { id: crypto.randomUUID(), ...trigger } as Lightning.TriggerNode;
 }
 
 // Build a new edge, with the bare minimum properties.
 function buildEdge(edge = {}) {
-  return { id: crypto.randomUUID(), ...edge };
+  return { id: crypto.randomUUID(), ...edge } as Lightning.Edge;
 }
 
 function toRFC6902Patch(patch: ImmerPatch): Patch {
@@ -100,13 +107,14 @@ export const createWorkflowStore = (
     add: data => {
       set(state =>
         proposeChanges(state, draft => {
-          ['jobs', 'triggers', 'edges'].forEach(key => {
+          ['jobs', 'triggers', 'edges'].forEach(k => {
+            const key = k as keyof Omit<WorkflowProps, 'editJobUrl'>;
             if (data[key]) {
-              data[key].forEach(item => {
+              data[key]!.forEach(item => {
                 if (!item.id) {
                   item.id = crypto.randomUUID();
                 }
-                draft[key].push(item);
+                draft[key].push(item as any);
               });
             }
           });
@@ -117,15 +125,15 @@ export const createWorkflowStore = (
     remove: data => {
       set(state =>
         proposeChanges(state, draft => {
-          ['jobs', 'triggers', 'edges'].forEach(key => {
+          ['jobs', 'triggers', 'edges'].forEach(k => {
+            const key = k as keyof Omit<WorkflowProps, 'editJobUrl'>;
             if (data[key]) {
-              const newCollection = [];
+              const newCollection: any[] = [];
               draft[key].forEach(item => {
-                if (!data[key].includes(item.id)) {
+                if (!data[key]!.includes(item.id)) {
                   newCollection.push(item);
                 }
               });
-              console.log(newCollection);
               draft[key] = newCollection;
             }
           });

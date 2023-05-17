@@ -1,6 +1,6 @@
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Lightning, Flow, Positions } from '../types';
-import { isPlaceholder } from './add-placeholder';
+import { isPlaceholder } from './placeholder';
 
 // TODO pass in the currently selected items so that we can maintain selection
 const fromWorkflow = (
