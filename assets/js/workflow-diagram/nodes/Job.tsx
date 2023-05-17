@@ -10,11 +10,11 @@ const JobNode = ({
   sourcePosition = Position.Bottom,
   ...props
 }: NodeProps<NodeData>) => {
-  const toolbar = () => <PlusButton />
+  const toolbar = () => props.data?.allowPlaceholder && <PlusButton />
 
   return (<Node
     {...props}
-    label={props.data?.label}
+    label={props.data?.name}
     targetPosition={targetPosition}
     sourcePosition={sourcePosition}
     toolbar={toolbar}
