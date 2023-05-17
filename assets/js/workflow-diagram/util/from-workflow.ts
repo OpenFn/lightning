@@ -24,7 +24,7 @@ const fromWorkflow = (
       const model: any = {
         id: item.id,
         data: {
-          name: item.name || item.id,
+          name: item.name,
           item: item,
         },
       };
