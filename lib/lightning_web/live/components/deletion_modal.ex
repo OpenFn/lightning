@@ -98,29 +98,27 @@ defmodule LightningWeb.Components.DeletionModal do
 
   @impl true
   def handle_event("delete", %{"project" => project_params}, socket) do
-    cond do
-      not socket.assigns.delete_now? ->
-        case Projects.schedule_project_deletion(
-               socket.assigns.project,
-               project_params["scheduled_deletion_name"]
-             ) do
-          {:ok, %Project{}} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, "Project scheduled for deletion")
-             |> push_navigate(to: socket.assigns.return_to)}
+    if socket.assigns.delete_now? do
+      Projects.delete_project(socket.assigns.project)
 
-          {:error, %Ecto.Changeset{} = changeset} ->
-            {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-        end
+      {:noreply,
+       socket
+       |> put_flash(:info, "Project deleted")
+       |> push_navigate(to: socket.assigns.return_to)}
+    else
+      case Projects.schedule_project_deletion(
+             socket.assigns.project,
+             project_params["scheduled_deletion_name"]
+           ) do
+        {:ok, %Project{}} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Project scheduled for deletion")
+           |> push_navigate(to: socket.assigns.return_to)}
 
-      true ->
-        Projects.delete_project(socket.assigns.project)
-
-        {:noreply,
-         socket
-         |> put_flash(:info, "Project deleted")
-         |> push_navigate(to: socket.assigns.return_to)}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+      end
     end
   end
 
