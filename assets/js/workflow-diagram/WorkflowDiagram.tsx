@@ -3,7 +3,7 @@ import ReactFlow, { Node, ReactFlowProvider,  applyNodeChanges, ReactFlowInstanc
 
 import layout from './layout'
 import nodeTypes from './nodes';
-import * as placeholder from './util/add-placeholder';
+import * as placeholder from './util/placeholder';
 import fromWorkflow from './util/from-workflow';
 import toWorkflow from './util/to-workflow';
 import throttle from './util/throttle';
