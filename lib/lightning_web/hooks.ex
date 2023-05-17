@@ -20,6 +20,7 @@ defmodule LightningWeb.Hooks do
 
     projects =
       Lightning.Projects.get_projects_for_user(socket.assigns.current_user)
+      |> Enum.filter(fn project -> is_nil(project.scheduled_deletion) end)
 
     can_access_project =
       ProjectUsers

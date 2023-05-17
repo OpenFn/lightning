@@ -272,6 +272,14 @@ defmodule Lightning.Accounts do
     User.scheduled_deletion_changeset(user, attrs)
   end
 
+  def cancel_scheduled_deletion(user_id) do
+    get_user!(user_id)
+    |> update_user_details(%{
+      scheduled_deletion: nil,
+      disabled: false
+    })
+  end
+
   @doc """
   Emulates that the email will change without actually changing
   it in the database.

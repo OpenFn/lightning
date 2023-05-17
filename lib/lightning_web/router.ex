@@ -92,6 +92,7 @@ defmodule LightningWeb.Router do
       live "/settings/projects", ProjectLive.Index, :index
       live "/settings/projects/new", ProjectLive.Index, :new
       live "/settings/projects/:id", ProjectLive.Index, :edit
+      live "/settings/projects/:id/delete", ProjectLive.Index, :delete
 
       live "/settings/audit", AuditLive.Index, :index
 

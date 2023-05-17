@@ -413,7 +413,7 @@ defmodule Lightning.Projects do
   set, this date defaults to NOW but the automatic project purge cronjob will never
   run. (Note that subsequent logins will be blocked for projects pending deletion.)
   """
-  def schedule_project_deletion(project) do
+  def schedule_project_deletion(project, name) do
     date =
       case Application.get_env(:lightning, :purge_deleted_after_days) do
         nil -> DateTime.utc_now()
@@ -430,15 +430,29 @@ defmodule Lightning.Projects do
     end)
 
     Project.scheduled_deletion_changeset(project, %{
-      "scheduled_deletion" => date
+      "scheduled_deletion" => date,
+      "scheduled_deletion_name" => name
     })
     |> Repo.update()
   end
 
-  def cancel_scheduled_deletion(project) do
-    Project.scheduled_deletion_changeset(project, %{
-      "scheduled_deletion" => nil
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the project scheduled_deletion.
+
+  ## Examples
+
+      iex> change_scheduled_deletion(project)
+      %Ecto.Changeset{data: %Project{}}
+
+  """
+  def change_scheduled_deletion(project, attrs \\ %{}) do
+    Project.scheduled_deletion_changeset(project, attrs)
+  end
+
+  def cancel_scheduled_deletion(project_id) do
+    get_project!(project_id)
+    |> update_project(%{
+      scheduled_deletion: nil
     })
-    |> Repo.update()
   end
 end

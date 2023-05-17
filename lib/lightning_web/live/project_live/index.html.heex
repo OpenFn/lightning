@@ -13,6 +13,14 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
+    <%= if @live_action == :delete do %>
+      <.live_component
+        module={LightningWeb.Components.DeletionModal}
+        id={@project.id}
+        project={@project}
+        return_to={Routes.project_index_path(@socket, :index)}
+      />
+    <% end %>
     <%= if @live_action in [:new, :edit] do %>
       <.live_component
         module={LightningWeb.ProjectLive.FormComponent}
@@ -47,52 +55,8 @@
                 }>
                   Edit
                 </.link>
+                | <.delete_action socket={@socket} project={project} />
               </span>
-
-              <%= if request_project_deletion(@current_user, project)  do %>
-                |
-                <span>
-                  <%= link(
-                  to: "#",
-                  id: "schedule-delete-#{project.id}",
-                  phx_click: "schedule_delete",
-                  phx_value_id: project.id,
-                  class: "inline-block align-middle"
-                ) do %>
-                    Schedule Delete
-                  <% end %>
-                </span>
-              <% end %>
-              <%= if project.scheduled_deletion do %>
-                <span>
-                  |
-                  <%= link(
-                  to: "#",
-                  id: "cancel-delete-#{project.id}",
-                  phx_click: "cancel_delete",
-                  phx_value_id: project.id,
-                  data: [confirm: "Are you sure?"],
-                  class: "inline-block align-middle"
-                ) do %>
-                    Cancel Deletion
-                  <% end %>
-                </span>
-              <% end %>
-              <%= if can_delete_project(@current_user, project) do %>
-                |
-                <span>
-                  <%= link(
-                  to: "#",
-                  id: "delete-#{project.id}",
-                  phx_click: "delete_now",
-                  phx_value_id: project.id,
-                  data: [confirm: "Are you sure?"],
-                  class: "inline-block align-middle"
-                ) do %>
-                    Delete Now
-                  <% end %>
-                </span>
-              <% end %>
             </.td>
           </.tr>
         <% end %>
