@@ -37,7 +37,6 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
 
         // Update the store (TODO signature is awful)
         requestChange?.('change', [id, 'jobs', { name }]);
-
       };
       root.current.addEventListener('commit-placeholder', fn);
 
@@ -99,11 +98,14 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   const addNode = useCallback((parentNode: Node) => {
     // Generate a placeholder node and edge
     const diff = placeholder.add(model, parentNode);
-    
+
     // reactflow will fire a selection change event after the click
     // (regardless of whether the node is selected)
     // We nee to ignore this
     chartCache.current.ignoreNextSelection = true
+
+    // Mark the new node as selected for the next render
+    chartCache.current.selectedId = diff.nodes[0].id
 
     // Push the changes
     requestChange?.('add', toWorkflow(diff));
