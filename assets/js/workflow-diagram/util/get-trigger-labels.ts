@@ -7,6 +7,13 @@ type TriggerLabels = {
 };
 
 export default ({ trigger }: TriggerNode): TriggerLabels => {
+  if (!trigger.webhookUrl && !trigger.cronExpression) {
+    return {
+      label: 'New Trigger',
+      tooltip: '',
+    };
+  }
+
   switch (trigger.type) {
     case 'webhook':
       return {
