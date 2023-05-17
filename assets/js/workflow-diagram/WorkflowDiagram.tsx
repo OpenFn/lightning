@@ -8,6 +8,7 @@ import * as placeholder from './util/add-placeholder';
 import fromWorkflow from './util/from-workflow';
 import toWorkflow from './util/to-workflow';
 import throttle from './util/throttle';
+import { DEFAULT_TEXT } from '../editor/Editor';
 
 type WorkflowDiagramProps = {
   workflow: Workflow;
@@ -29,26 +30,6 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
 
   const root = useRef()
 
-  useEffect(() => {
-    if (root.current) {
-      const fn = (evt) => {
-        const { id, name } = evt.detail;
-        // Select the placeholder on next render
-        chartCache.current.deferSelection = id;
-
-        // Update the store
-        onChange?.({ jobs: [{ id, name }]});
-      };
-      root.current.addEventListener('commit-placeholder', fn);
-
-      return () => {
-        if (root.current) {
-          root.current.removeEventListener('commit-placeholder', fn);
-        }
-      }
-    }
-  }, [root])
-
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
   const setFlowInstance = useCallback((s) => {
@@ -62,7 +43,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     const { positions, selectedId } = chartCache.current;
     const newModel = fromWorkflow(workflow, positions, selectedId);
 
-    console.log('UPDATING WORKFLOW', newModel, selectedId);
+    //console.log('UPDATING WORKFLOW', newModel, selectedId);
     if (flow && newModel.nodes.length) {
       layout(newModel, setModel, flow, 200, (positions) => {
         
@@ -113,6 +94,28 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     // Push the changes
     onAdd?.(toWorkflow(diff));
   }, [onAdd]);
+
+  const commitNode = useCallback((evt) => {
+    const { id, name } = evt.detail;
+    // Select the placeholder on next render
+    chartCache.current.deferSelection = id;
+
+    // Update the store
+    onChange?.({ jobs: [{ id, name, body: DEFAULT_TEXT }]});
+  }, [onChange]);
+
+  useEffect(() => {
+    if (root.current) {
+      
+      root.current.addEventListener('commit-placeholder', commitNode);
+
+      return () => {
+        if (root.current) {
+          root.current.removeEventListener('commit-placeholder', commitNode);
+        }
+      }
+    }
+  }, [commitNode, root])
 
   // Note that we only support a single selection
   const handleSelectionChange = useCallback(({ nodes, edges }) => {

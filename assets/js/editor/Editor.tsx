@@ -8,7 +8,7 @@ import createCompletionProvider from './magic-completion';
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
 
-const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
+export const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
 
 type EditorProps = {
   source?: string;
