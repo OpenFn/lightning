@@ -14,7 +14,6 @@ defmodule Lightning.Policies.ProjectUsers do
           | :rerun_job
           | :create_job
           | :delete_job
-          | :request_delete_project
           | :access_project
           | :create_workflow
           | :edit_project_name
@@ -50,15 +49,6 @@ defmodule Lightning.Policies.ProjectUsers do
       )
       when action in [:edit_digest_alerts, :edit_failure_alerts],
       do: id == user_id
-
-  def authorize(
-        :request_delete_project,
-        %User{} = user,
-        %Project{} = project
-      ),
-      do:
-        is_nil(project.scheduled_deletion) and
-          Projects.get_project_user_role(user, project) in [:owner]
 
   def authorize(action, %User{} = user, %Project{} = project)
       when action in [

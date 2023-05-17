@@ -4,7 +4,8 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.{Users, ProjectUsers, Permissions}
+  alias Lightning.Policies.Users
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
 
   @impl true
@@ -52,97 +53,60 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(:users, Lightning.Accounts.list_users())
   end
 
+  defp apply_action(socket, :delete, %{"id" => id}) do
+    socket
+    |> assign(:page_title, "Projects")
+    |> assign(active_menu_item: :settings)
+    |> assign(:projects, Projects.list_projects())
+    |> assign(:project, Projects.get_project!(id))
+  end
+
   @impl true
   def handle_event(
-        "delete_now",
+        "cancel_deletion",
         %{"id" => project_id},
         socket
       ) do
-    project = Projects.get_project(project_id)
+    Projects.cancel_scheduled_deletion(project_id)
 
-    if can_delete_project(socket.assigns.current_user, project) do
-      Projects.delete_project(project)
-      |> case do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> assign(
-             active_menu_item: :projects,
-             projects: Projects.list_projects(),
-             page_title: "Projects"
-           )
-           |> put_flash(:info, "Project deleted successfully")
-           |> push_patch(to: ~p"/settings/projects")}
+    {:noreply,
+     socket
+     |> put_flash(:info, "Canceled project deletion schedule")
+     |> push_patch(to: ~p"/settings/projects")}
+  end
 
-        {:error, changeset} ->
-          {:noreply,
-           socket
-           |> assign(changeset: changeset)
-           |> put_flash(:error, "Can't delete project")}
-      end
+  def delete_action(assigns) do
+    if assigns.project.scheduled_deletion do
+      ~H"""
+      <span>
+        <%= link("Cancel deletion",
+          to: "#",
+          phx_click: "cancel_deletion",
+          phx_value_id: @project.id,
+          id: "cancel-deletion-#{@project.id}"
+        ) %>
+      </span>
+      |
+      <span>
+        <.link
+          id={"delete-now-#{@project.id}"}
+          navigate={Routes.project_index_path(@socket, :delete, @project)}
+        >
+          Delete now
+        </.link>
+      </span>
+      """
     else
-      {:noreply,
-       put_flash(
-         socket,
-         :error,
-         "You are not authorized to perform this action."
-       )
-       |> push_patch(to: ~p"/settings/projects")}
+      ~H"""
+      <span>
+        <.link
+          id={"delete-#{@project.id}"}
+          navigate={Routes.project_index_path(@socket, :delete, @project)}
+        >
+          Delete
+        </.link>
+      </span>
+      """
     end
-  end
-
-  def handle_event(
-        "cancel_delete",
-        %{"id" => project_id},
-        socket
-      ) do
-    project = Projects.get_project(project_id)
-
-    case Projects.cancel_scheduled_deletion(project) do
-      {:ok, _project} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Canceled project deletion schedule")
-         |> push_patch(to: ~p"/settings/projects")}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-    end
-  end
-
-  def handle_event(
-        "schedule_delete",
-        %{"id" => project_id},
-        socket
-      ) do
-    project = Projects.get_project(project_id)
-
-    case Projects.schedule_project_deletion(project) do
-      {:ok, _project} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Project scheduled for deletion")
-         |> push_patch(to: ~p"/settings/projects")}
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-    end
-  end
-
-  # TODO: this results in n+1 queries, we need to precalculate the permissions
-  # and have zipped list of projects and the permissions so when we iterate
-  # over them in the templace we don't generate n number of queries
-  def can_request_delete_project(current_user, project),
-    do:
-      ProjectUsers
-      |> Permissions.can?(:request_delete_project, current_user, project)
-
-  def can_delete_project(current_user, project),
-    do: Users |> Permissions.can?(:delete_project, current_user, project)
-
-  def request_project_deletion(current_user, project) do
-    is_nil(project.scheduled_deletion) and
-      (can_request_delete_project(current_user, project) or
-         current_user.role == :superuser)
   end
 end

@@ -6,12 +6,10 @@ defmodule Lightning.Policies.Users do
 
   alias Lightning.Accounts
   alias Lightning.Accounts.User
-  alias Lightning.Projects.Project
   alias Lightning.Credentials.Credential
 
   @type actions ::
           :access_admin_space
-          | :delete_project
           | :edit_credential
           | :delete_credential
           | :delete_account
@@ -29,13 +27,6 @@ defmodule Lightning.Policies.Users do
   @spec authorize(actions(), Lightning.Accounts.User.t(), any) :: boolean
   def authorize(:access_admin_space, %User{role: role}, _params) do
     role in [:superuser]
-  end
-
-  # You can only delete project that are scheduled for deletion
-  def authorize(:delete_project, %User{role: role}, %Project{
-        scheduled_deletion: scheduled_deletion
-      }) do
-    role in [:superuser] and !is_nil(scheduled_deletion)
   end
 
   # You can only delete an account if the id in the URL is matching your id

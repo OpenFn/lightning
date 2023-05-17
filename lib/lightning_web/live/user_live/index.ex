@@ -48,12 +48,7 @@ defmodule LightningWeb.UserLive.Index do
         %{"id" => user_id},
         socket
       ) do
-    user = Accounts.get_user!(user_id)
-
-    Accounts.update_user_details(user, %{
-      scheduled_deletion: nil,
-      disabled: false
-    })
+    Accounts.cancel_scheduled_deletion(user_id)
 
     {:noreply,
      socket

@@ -1,7 +1,7 @@
 <div id={"user-#{@user.id}"} class="md:col-span-2">
   <%= if @action == :delete do %>
     <.live_component
-      module={LightningWeb.Components.UserDeletionModal}
+      module={LightningWeb.Components.DeletionModal}
       id={@user.id}
       user={@user}
       logout={true}
