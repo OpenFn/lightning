@@ -24,7 +24,6 @@ const calculateLayout = (
   onComplete
 ) => {
   const { nodes, edges } = model;
-  console.log(model);
   const hierarchy = stratify<Node>()
     .id(d => d.id)
     // get the id of each node by searching through the edges
