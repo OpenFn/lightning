@@ -79,11 +79,8 @@ defmodule Lightning.Projects.ProvisionerTest do
       %{project: ProjectsFixtures.project_fixture()}
     end
 
-    test "changing, adding and removing records", %{project: project} do
-      %{
-        body: body,
-        second_job_id: second_job_id
-      } = valid_document(project.id)
+    test "changing, adding records", %{project: project} do
+      %{body: body} = valid_document(project.id)
 
       {:ok, project} = Provisioner.import_document(project, body)
 
@@ -114,6 +111,21 @@ defmodule Lightning.Projects.ProvisionerTest do
 
       {:ok, project} = Provisioner.import_document(project, body)
 
+      assert project.workflows
+             |> Enum.at(0)
+             |> then(fn w -> w.jobs end)
+             |> Enum.any?(&(&1.id == third_job_id)),
+             "The third job should be added"
+    end
+
+    test "removing a record", %{project: project} do
+      %{
+        body: body,
+        second_job_id: second_job_id
+      } = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, body)
+
       body = body |> remove_job_from_document(second_job_id)
 
       changeset = Provisioner.parse_document(project, body)
@@ -136,14 +148,63 @@ defmodule Lightning.Projects.ProvisionerTest do
       workflow_job_ids =
         project.workflows
         |> Enum.at(0)
-        |> Map.get(:jobs)
+        |> then(fn w -> w.jobs end)
         |> Enum.into([], & &1.id)
 
       refute second_job_id in workflow_job_ids
-      assert third_job_id in workflow_job_ids
 
-      assert project.workflows |> Enum.at(0) |> Map.get(:edges) == [],
+      assert project.workflows
+             |> Enum.at(0)
+             |> then(fn w -> w.edges end) == [],
              "The edge associated with the deleted job should be removed"
+    end
+
+    test "removing a workflow", %{project: project} do
+      %{
+        body: body,
+        workflow_id: workflow_id
+      } = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, body)
+      body = body |> remove_workflow_from_document(workflow_id)
+
+      changeset = Provisioner.parse_document(project, body)
+
+      assert %{action: :delete} =
+               changeset
+               |> Ecto.Changeset.get_change(:workflows)
+               |> Enum.find(fn workflow_changeset ->
+                 workflow_changeset |> Ecto.Changeset.get_field(:id) ==
+                   workflow_id
+               end),
+             "The workflow should be marked for deletion"
+
+      {:ok, project} = Provisioner.import_document(project, body)
+
+      assert project.workflows == [],
+             "The workflow should be removed from the project"
+    end
+
+    test "marking a new/changed record for deletion", %{project: project} do
+      body = %{
+        "id" => project.id,
+        "name" => "test-project",
+        "workflows" => [
+          %{"delete" => true, "name" => "default", "id" => Ecto.UUID.generate()}
+        ]
+      }
+
+      {:error, changeset} = Provisioner.import_document(project, body)
+
+      refute changeset.valid?
+
+      workflow_errors =
+        changeset
+        |> Ecto.Changeset.get_change(:workflows)
+        |> Enum.at(0)
+        |> then(& &1.errors)
+
+      assert {:delete, {"cannot change or add a record while deleting", []}} in workflow_errors
     end
   end
 
@@ -230,6 +291,20 @@ defmodule Lightning.Projects.ProvisionerTest do
       end)
       |> then(fn workflow ->
         List.replace_at(workflows, 0, workflow)
+      end)
+    end)
+  end
+
+  defp remove_workflow_from_document(document, id) do
+    document
+    |> Map.update!("workflows", fn workflows ->
+      workflows
+      |> Enum.map(fn workflow ->
+        if workflow["id"] == id do
+          Map.put(workflow, "delete", true)
+        else
+          workflow
+        end
       end)
     end)
   end

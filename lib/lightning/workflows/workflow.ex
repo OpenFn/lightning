@@ -37,6 +37,8 @@ defmodule Lightning.Workflows.Workflow do
 
     field :deleted_at, :utc_datetime
 
+    field :delete, :boolean, virtual: true
+
     timestamps()
   end
 

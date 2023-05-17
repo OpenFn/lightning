@@ -64,8 +64,9 @@ defmodule Lightning.Projects.Provisioner do
 
   defp workflow_changeset(workflow, attrs) do
     workflow
-    |> cast(attrs, [:id, :name])
+    |> cast(attrs, [:id, :name, :delete])
     |> validate_required([:id])
+    |> maybe_mark_for_deletion()
     |> cast_assoc(:jobs, with: &job_changeset/2)
     |> cast_assoc(:triggers, with: &trigger_changeset/2)
     |> cast_assoc(:edges, with: &edge_changeset/2)
@@ -130,12 +131,17 @@ defmodule Lightning.Projects.Provisioner do
   end
 
   defp maybe_mark_for_deletion(changeset) do
-    changeset
+    changeset.changes
+    |> Map.pop(:delete)
     |> case do
-      %{changes: %{delete: true}} = changeset ->
+      {true, others} when map_size(others) == 0 ->
         %{changeset | action: :delete}
 
-      changeset ->
+      {true, others} when map_size(others) > 0 ->
+        changeset
+        |> add_error(:delete, "cannot change or add a record while deleting")
+
+      _ ->
         changeset
     end
   end
