@@ -48,9 +48,9 @@ const PlaceholderJobNode = ({
   }
 
   const handleCancel = () => {
-    const { remove, edges } = store?.getState()
+    const { remove, edges } = store?.getState()!
     const e = edges.find(({ target_job_id }) => target_job_id === id)
-    remove({ jobs: [id], edges: [e.id] });
+    remove({ jobs: [id], edges: [e!.id] });
   }
 
   return (
