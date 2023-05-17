@@ -16,8 +16,7 @@ const identifyPlaceholders = (store: Store) => {
   const { jobs, triggers, edges } = store;
   
   const newJobs = jobs.map((item) => {
-    // TODO placeholder triggers don't have a cron/webhook type yet
-    if (!item.name && !item.expression) {
+    if (!item.name && !item.body) {
       return {
         ...item,
         placeholder: true

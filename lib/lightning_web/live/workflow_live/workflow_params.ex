@@ -78,7 +78,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         jobs:
           changeset
           |> Ecto.Changeset.get_change(:jobs)
-          |> to_serializable([:id, :name, :adaptor, :enabled]),
+          |> to_serializable([:id, :name, :adaptor, :body, :enabled]),
         triggers:
           changeset
           |> Ecto.Changeset.get_change(:triggers)
