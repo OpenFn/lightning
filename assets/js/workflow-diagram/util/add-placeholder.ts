@@ -16,13 +16,11 @@ export const add = (model: any, node: Node) => {
   newModel.nodes.push({
     id,
     position: node.position,
-    placeholder: true,
   });
   newModel.edges.push({
     id: `${node.id}-${id}`,
     source: node.id,
     target: id,
-    placeholder: true,
   });
   return newModel;
 };
