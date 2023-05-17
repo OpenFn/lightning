@@ -12,10 +12,11 @@ import throttle from './util/throttle';
 type WorkflowDiagramProps = {
   workflow: Workflow;
   onSelectionChange: (id: string) => void;
-  requestChange: () => void;
+  onAdd: (diff: Partial<Workflow>) => void;
+  onChange: (diff: Partial<Workflow>) => void;
 }
 export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
-  const { workflow, requestChange, onSelectionChange } = props;
+  const { workflow, onAdd, onChange, onSelectionChange } = props;
   const [model, setModel] = useState({ nodes: [], edges: [] });
   
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
@@ -35,8 +36,8 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
         // Select the placeholder on next render
         chartCache.current.deferSelection = id;
 
-        // Update the store (TODO signature is awful)
-        requestChange?.('change', [id, 'jobs', { name }]);
+        // Update the store
+        onChange?.({ jobs: [{ id, name }]});
       };
       root.current.addEventListener('commit-placeholder', fn);
 
@@ -108,8 +109,8 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     chartCache.current.selectedId = diff.nodes[0].id
 
     // Push the changes
-    requestChange?.('add', toWorkflow(diff));
-  }, [requestChange]);
+    onAdd?.(toWorkflow(diff));
+  }, [onAdd]);
 
   // Note that we only support a single selection
   const handleSelectionChange = useCallback(({ nodes, edges }) => {
