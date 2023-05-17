@@ -80,6 +80,7 @@ Lightning.Workflows.Edge.html
 Lightning.Workflows.Graph.html
 Lightning.Workflows.Workflow.html
 Lightning.Workflows.html
+Lightning.Workorders.SearchParams.html
 Lightning.html
 LightningWeb.API.Helpers.html
 LightningWeb.API.JobController.html
@@ -180,8 +181,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-A590C7EF.js
-dist/sidebar_items-D7F0BA2B.js
+dist/search_items-5246B2DD.js
+dist/sidebar_items-AC8AB9E6.js
 index.html
 readme.html
 search.html
