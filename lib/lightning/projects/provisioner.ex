@@ -63,7 +63,6 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-
   defp workflow_changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:id, :name, :delete])
@@ -92,7 +91,6 @@ defmodule Lightning.Projects.Provisioner do
       :comment,
       :custom_path,
       :type,
-      :workflow_id,
       :cron_expression,
       :delete
     ])
@@ -107,7 +105,6 @@ defmodule Lightning.Projects.Provisioner do
     edge
     |> cast(attrs, [
       :id,
-      :workflow_id,
       :source_job_id,
       :source_trigger_id,
       :condition,

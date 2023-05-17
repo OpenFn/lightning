@@ -3,11 +3,20 @@ defmodule LightningWeb.API.ProvisioningController do
 
   alias Lightning.Projects
   alias Lightning.Projects.{Provisioner, Project}
+  alias Lightning.Policies.Permissions
+  alias Lightning.Policies.Provisioning
 
   action_fallback LightningWeb.FallbackController
 
   def create(conn, params) do
     with project <- get_or_build_project(params),
+         :ok <-
+           Permissions.can(
+             Provisioning,
+             :provision_project,
+             conn.assigns.current_user,
+             project
+           ),
          {:ok, project} <- Provisioner.import_document(project, params) do
       # TODO: check if the user is allowed to update this project
       # TODO: check if the user is allowed to provision a project
@@ -20,11 +29,15 @@ defmodule LightningWeb.API.ProvisioningController do
   end
 
   def show(conn, params) do
-    with project <-
-           Provisioner.load_project(params["id"]) || {:error, :not_found} do
-      # TODO: check if the user is allowed to update this project
-      # TODO: check if the user is allowed to provision a project
-
+    with project = %Project{} <-
+           Provisioner.load_project(params["id"]) || {:error, :not_found},
+         :ok <-
+           Permissions.can(
+             Provisioning,
+             :provision_project,
+             conn.assigns.current_user,
+             project
+           ) do
       conn
       |> put_status(:ok)
       |> render("create.json", project: project)

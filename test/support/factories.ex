@@ -60,6 +60,10 @@ defmodule Lightning.Factories do
     |> Lightning.Repo.insert!()
   end
 
+  def insert(f) when is_atom(f) do
+    build(f, []) |> insert()
+  end
+
   def insert(f, attrs) when is_atom(f) do
     build(f, attrs) |> insert()
   end

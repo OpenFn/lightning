@@ -19,8 +19,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   describe "post" do
     setup [:assign_bearer_for_api]
 
-    test "fails on validation errors", %{conn: conn} do
+    test "fails on validation errors", %{conn: conn, user: user} do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
       body = %{
+        "id" => project.id,
         "workflows" => [%{"name" => "default"}]
       }
 
@@ -29,14 +35,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{
                "errors" => %{
-                 "id" => ["can't be blank"],
                  "name" => ["can't be blank"],
                  "workflows" => [%{"id" => ["can't be blank"]}]
                }
              }
 
       body = %{
-        "id" => Ecto.UUID.generate(),
+        "id" => project.id,
         "name" => "test-project",
         "workflows" => [
           %{
@@ -75,55 +80,17 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              }
     end
 
-    test "creates a new project", %{conn: conn} do
-      %{
-        body: body,
-        project_id: project_id,
-        first_job_id: first_job_id,
-        second_job_id: second_job_id,
-        trigger_id: trigger_id,
-        workflow_id: workflow_id,
-        job_edge_id: job_edge_id
-      } = valid_payload()
-
-      conn = post(conn, ~p"/api/provision", body)
-      response = json_response(conn, 201)
-
-      assert %{
-               "id" => ^project_id,
-               "name" => "test-project",
-               "workflows" => workflows
-             } = response["data"]
-
-      project = Lightning.Projects.get_project!(project_id)
-
-      assert project.name == "test-project"
-
-      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
-             "All workflows should belong to the same project"
-
-      workflow =
-        from(w in Workflow,
-          preload: [:jobs, :triggers, :edges],
-          where: w.id == ^workflow_id
+    test "updates an existing project", %{conn: conn, user: user} do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
         )
-        |> Lightning.Repo.one!()
 
-      assert workflow.name == "default"
-      assert workflow.edges |> MapSet.new(& &1.id) == MapSet.new([job_edge_id])
-
-      assert workflow.jobs |> MapSet.new(& &1.id) ==
-               MapSet.new([first_job_id, second_job_id])
-
-      assert workflow.triggers |> MapSet.new(& &1.id) == MapSet.new([trigger_id])
-    end
-
-    test "updates an existing project", %{conn: conn} do
       %{
         project_id: project_id,
         body: body,
         second_job_id: second_job_id
-      } = valid_payload()
+      } = valid_payload(project.id)
 
       conn = post(conn, ~p"/api/provision", body)
       response = json_response(conn, 201)
@@ -180,19 +147,65 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert workflows |> Enum.at(0) |> Map.get("edges") == [],
              "The edge associated with the deleted job should be removed"
     end
+
+    @tag login_as: "superuser"
+    test "creating a new project", %{conn: conn} do
+      %{
+        body: body,
+        project_id: project_id,
+        first_job_id: first_job_id,
+        second_job_id: second_job_id,
+        trigger_id: trigger_id,
+        workflow_id: workflow_id,
+        job_edge_id: job_edge_id
+      } = valid_payload()
+
+      conn = post(conn, ~p"/api/provision", body)
+      response = json_response(conn, 201)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => "test-project",
+               "workflows" => workflows
+             } = response["data"]
+
+      project = Lightning.Projects.get_project!(project_id)
+
+      assert project.name == "test-project"
+
+      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
+             "All workflows should belong to the same project"
+
+      workflow =
+        from(w in Workflow,
+          preload: [:jobs, :triggers, :edges],
+          where: w.id == ^workflow_id
+        )
+        |> Lightning.Repo.one!()
+
+      assert workflow.name == "default"
+      assert workflow.edges |> MapSet.new(& &1.id) == MapSet.new([job_edge_id])
+
+      assert workflow.jobs |> MapSet.new(& &1.id) ==
+               MapSet.new([first_job_id, second_job_id])
+
+      assert workflow.triggers |> MapSet.new(& &1.id) == MapSet.new([trigger_id])
+    end
   end
 
   describe "get" do
     setup [:assign_bearer_for_api]
 
-    test "returns a project", %{conn: conn} do
+    test "returns a project if authorized", %{conn: conn, user: user} do
       %{id: project_id, name: project_name} =
-        project = Lightning.ProjectsFixtures.project_fixture()
+        project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
 
       conn = get(conn, ~p"/api/provision/#{project.id}")
       response = json_response(conn, 200)
 
-      IO.inspect(response)
       assert %{
                "id" => ^project_id,
                "name" => ^project_name,
@@ -202,10 +215,19 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
              "All workflows should belong to the same project"
     end
+
+    test "returns a 404 if not authorized", %{conn: conn} do
+      %{id: project_id} = Lightning.Factories.insert(:project)
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 404)
+
+      assert response == %{"error" => "Not Found"}
+    end
   end
 
-  defp valid_payload() do
-    project_id = Ecto.UUID.generate()
+  defp valid_payload(project_id \\ nil) do
+    project_id = project_id || Ecto.UUID.generate()
     first_job_id = Ecto.UUID.generate()
     second_job_id = Ecto.UUID.generate()
     trigger_id = Ecto.UUID.generate()
