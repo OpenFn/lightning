@@ -26,7 +26,7 @@ type ChartCache = {
   deferSelection?: string;
 }
 
-export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
+export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) => {
   const { workflow, onAdd, onChange, onSelectionChange } = props;
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   
@@ -37,8 +37,6 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     selectedId: undefined,
     ignoreNextSelection: false,
   })
-
-  const root = useRef<HTMLElement>()
 
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
@@ -54,11 +52,8 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     const newModel = fromWorkflow(workflow, positions, selectedId);
 
     //console.log('UPDATING WORKFLOW', newModel, selectedId);
-    console.log(workflow)
     if (flow && newModel.nodes.length) {
       layout(newModel, setModel, flow, 200).then((positions) => {
-        console.log(positions)
-        
         // trigger selection on new nodes once they've been passed back through to us
         if (chartCache.current.deferSelection) {
           onSelectionChange(chartCache.current.deferSelection)
@@ -117,17 +112,16 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   }, [onChange]);
 
   useEffect(() => {
-    if (root.current) {
-      
-      root.current.addEventListener<any>('commit-placeholder', commitNode);
+    if (ref) {
+      ref.addEventListener<any>('commit-placeholder', commitNode);
 
       return () => {
-        if (root.current) {
-          root.current.removeEventListener<any>('commit-placeholder', commitNode);
+        if (ref) {
+          ref.removeEventListener<any>('commit-placeholder', commitNode);
         }
       }
     }
-  }, [commitNode, root])
+  }, [commitNode, ref])
 
   // Note that we only support a single selection
   const handleSelectionChange = useCallback(({ nodes, edges }: Flow.Model) => {
@@ -171,22 +165,20 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
   
   return (
     <ReactFlowProvider>
-      <div className="relative h-full flex" ref={root}> 
-        <ReactFlow
-          proOptions={{ account: 'paid-pro', hideAttribution: true }}
-          nodes={model.nodes}
-          edges={model.edges}
-          onSelectionChange={handleSelectionChange}
-          onNodesChange={onNodesChange}
-          nodesDraggable={false}
-          nodeTypes={nodeTypes}
-          onNodeClick={handleNodeClick}
-          onInit={setFlowInstance}
-          deleteKeyCode={null}
-          fitView
-          fitViewOptions={{ padding: FIT_PADDING }}
-        />
-      </div>
+      <ReactFlow
+        proOptions={{ account: 'paid-pro', hideAttribution: true }}
+        nodes={model.nodes}
+        edges={model.edges}
+        onSelectionChange={handleSelectionChange}
+        onNodesChange={onNodesChange}
+        nodesDraggable={false}
+        nodeTypes={nodeTypes}
+        onNodeClick={handleNodeClick}
+        onInit={setFlowInstance}
+        deleteKeyCode={null}
+        fitView
+        fitViewOptions={{ padding: FIT_PADDING }}
+      />
     </ReactFlowProvider>
   );
 })
