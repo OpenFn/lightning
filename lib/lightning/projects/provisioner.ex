@@ -46,6 +46,15 @@ defmodule Lightning.Projects.Provisioner do
     |> validate_required([:id])
   end
 
+  @spec load_project(Ecto.UUID.t()) :: Project.t() | nil
+  def load_project(id) do
+    from(p in Project,
+      where: p.id == ^id,
+      preload: [workflows: [:jobs, :triggers, :edges]]
+    )
+    |> Repo.one()
+  end
+
   defp maybe_reload_project(project) do
     if project.id do
       load_project(project.id)
@@ -54,13 +63,6 @@ defmodule Lightning.Projects.Provisioner do
     end
   end
 
-  defp load_project(id) do
-    from(p in Project,
-      where: p.id == ^id,
-      preload: [workflows: [:jobs, :triggers, :edges]]
-    )
-    |> Repo.one()
-  end
 
   defp workflow_changeset(workflow, attrs) do
     workflow

@@ -47,7 +47,7 @@ defmodule LightningWeb.Router do
       :require_authenticated_user
     ]
 
-    resources "/provision", API.ProvisioningController, only: [:create]
+    resources "/provision", API.ProvisioningController, only: [:create, :show]
 
     resources "/projects", API.ProjectController, only: [:index, :show] do
       resources "/jobs", API.JobController, only: [:index, :show]

@@ -182,6 +182,28 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     end
   end
 
+  describe "get" do
+    setup [:assign_bearer_for_api]
+
+    test "returns a project", %{conn: conn} do
+      %{id: project_id, name: project_name} =
+        project = Lightning.ProjectsFixtures.project_fixture()
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      IO.inspect(response)
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => workflows
+             } = response["data"]
+
+      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
+             "All workflows should belong to the same project"
+    end
+  end
+
   defp valid_payload() do
     project_id = Ecto.UUID.generate()
     first_job_id = Ecto.UUID.generate()
