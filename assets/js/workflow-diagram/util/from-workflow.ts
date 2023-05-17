@@ -1,23 +1,21 @@
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
-import { Node, Edge, Workflow } from '../types';
+import { Lightning, Flow, Positions } from '../types';
 import { isPlaceholder } from './add-placeholder';
-
-type Positions = Record<string, { x: number; y: number }>;
 
 // TODO pass in the currently selected items so that we can maintain selection
 const fromWorkflow = (
-  workflow: Workflow,
+  workflow: Lightning.Workflow,
   positions: Positions,
   selectedNodeId?: string
-) => {
+): Flow.Model => {
   if (workflow.jobs.length == 0) {
     return { nodes: [], edges: [] };
   }
   const allowPlaceholder = workflow.jobs.every(j => !isPlaceholder(j));
 
   const process = (
-    items: Array<Node | Edge>,
-    collection: any[],
+    items: Array<Lightning.Node | Lightning.Edge>,
+    collection: Array<Flow.Node | Flow.Edge>,
     type: 'job' | 'trigger' | 'edge'
   ) => {
     items.forEach(item => {
@@ -33,10 +31,11 @@ const fromWorkflow = (
         model.selected = true;
       }
       if (/(job|trigger)/.test(type)) {
-        model.type = isPlaceholder(item) ? 'placeholder' : type;
+        const node = item as Lightning.Node;
+        model.type = isPlaceholder(node) ? 'placeholder' : type;
 
-        if (positions && positions[item.id]) {
-          model.position = positions[item.id];
+        if (positions && positions[node.id]) {
+          model.position = positions[node.id];
         }
 
         model.width = NODE_WIDTH;
@@ -46,11 +45,11 @@ const fromWorkflow = (
 
         if (type === 'trigger') {
           model.data.trigger = {
-            type: item.type,
+            type: (node as Lightning.TriggerNode).type,
           };
         }
       } else {
-        let edge = item as Edge;
+        const edge = item as Lightning.Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.label = item.name;
@@ -70,8 +69,8 @@ const fromWorkflow = (
     });
   };
 
-  const nodes = [] as any[];
-  const edges = [] as any[];
+  const nodes = [] as Flow.Node[];
+  const edges = [] as Flow.Edge[];
 
   process(workflow.jobs, nodes, 'job');
   process(workflow.triggers, nodes, 'trigger');
