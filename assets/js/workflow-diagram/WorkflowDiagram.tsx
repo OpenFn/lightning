@@ -102,6 +102,11 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     // We nee to ignore this
     chartCache.current.ignoreNextSelection = true
 
+    // If the editor is currently open, update the selection to show the new node
+    if (chartCache.current.selectedId) {
+      chartCache.current.deferSelection = diff.nodes[0].id
+    }
+
     // Mark the new node as selected for the next render
     chartCache.current.selectedId = diff.nodes[0].id
 
