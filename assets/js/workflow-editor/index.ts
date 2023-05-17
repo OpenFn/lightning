@@ -72,7 +72,6 @@ export default {
 
     // Get the initial data from the server
     this.pushEventTo(this.el, 'get-initial-state', {}, (payload: any) => {
-      console.log(payload);
       this.workflowStore = createWorkflowStore(
         { ...payload, editJobUrl: this.editJobUrl },
         pendingChange => {
