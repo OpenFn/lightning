@@ -58,18 +58,22 @@ export function mount(
   }
 
   function render(model: Workflow) {
-    const { add, change } = workflowStore.getState();
+    const { add, change, remove } = workflowStore.getState();
 
     const handleSelectionChange = (id: string) => {
       onSelectionChange?.(id);
     };
 
     const handleAdd = (diff: Partial<Workflow>) => {
-      add(diff)
+      add(diff);
     };
 
     const handleChange = (diff: Partial<Workflow>) => {
-      change(diff)
+      change(diff);
+    };
+
+    const handleRemove = (diff: Partial<Workflow>) => {
+      remove(diff);
     };
 
     componentRoot.render(
@@ -80,6 +84,7 @@ export function mount(
           onSelectionChange={handleSelectionChange}
           onAdd={handleAdd}
           onChange={handleChange}
+          onRemove={handleRemove}
         />
       </WorkflowContext.Provider>
     );

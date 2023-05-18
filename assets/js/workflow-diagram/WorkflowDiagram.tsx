@@ -11,12 +11,14 @@ import { DEFAULT_TEXT } from '../editor/Editor';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import type { Lightning, Flow, Positions } from './types';
+import { RemoveArgs } from '../workflow-editor/store';
 
 type WorkflowDiagramProps = {
   workflow: Lightning.Workflow;
   onSelectionChange: (id?: string) => void;
   onAdd: (diff: Partial<Lightning.Workflow>) => void;
   onChange: (diff: { jobs: Array<Partial<Lightning.JobNode>>}) => void;
+  onRemove: (diff: RemoveArgs) => void;
 }
 
 type ChartCache = {
@@ -27,7 +29,7 @@ type ChartCache = {
 }
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) => {
-  const { workflow, onAdd, onChange, onSelectionChange } = props;
+  const { workflow, onAdd, onChange, onRemove, onSelectionChange } = props;
   const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
@@ -102,7 +104,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) 
     onAdd?.(toWorkflow(diff));
   }, [onAdd]);
 
-  const commitNode = useCallback((evt: CustomEvent<any>) => {
+  const commitPlaceholder = useCallback((evt: CustomEvent<any>) => {
     const { id, name } = evt.detail;
     // Select the placeholder on next render
     chartCache.current.deferSelection = id;
@@ -111,17 +113,25 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) 
     onChange?.({ jobs: [{ id, name, body: DEFAULT_TEXT }]});
   }, [onChange]);
 
+  const cancelPlaceholder = useCallback((evt: CustomEvent<any>) => {
+    const { id } = evt.detail;
+    const e = model.edges.find(({ target }) => target === id)
+    onRemove({ jobs: [id], edges: [e!.id] });
+  }, [onChange])
+
   useEffect(() => {
     if (ref) {
-      ref.addEventListener<any>('commit-placeholder', commitNode);
+      ref.addEventListener<any>('commit-placeholder', commitPlaceholder);
+      ref.addEventListener<any>('cancel-placeholder', cancelPlaceholder);      
 
       return () => {
         if (ref) {
-          ref.removeEventListener<any>('commit-placeholder', commitNode);
+          ref.removeEventListener<any>('commit-placeholder', commitPlaceholder);
+          ref.removeEventListener<any>('cancel-placeholder', cancelPlaceholder);      
         }
       }
     }
-  }, [commitNode, ref])
+  }, [commitPlaceholder, ref])
 
   // Note that we only support a single selection
   const handleSelectionChange = useCallback(({ nodes, edges }: Flow.Model) => {
