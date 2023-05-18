@@ -1,4 +1,4 @@
-import { Lightning, Flow } from '../types';
+import { Flow } from '../types';
 
 // adds a placeholder node as child of the target
 // A node can only have one placeholder at a time
@@ -6,7 +6,7 @@ import { Lightning, Flow } from '../types';
 // created, we replace the placeholder with the real thing
 
 // Model is a react-flow chart model
-export const add = (model: Flow.Model, node: Flow.Node) => {
+export const add = (model: Flow.Model, parentNode: Flow.Node) => {
   const newModel: any = {
     nodes: [],
     edges: [],
@@ -15,11 +15,11 @@ export const add = (model: Flow.Model, node: Flow.Node) => {
   const id = crypto.randomUUID();
   newModel.nodes.push({
     id,
-    position: node.position,
+    position: parentNode.position,
   });
   newModel.edges.push({
-    id: `${node.id}-${id}`,
-    source: node.id,
+    id: `${parentNode.id}-${id}`,
+    source: parentNode.id,
     target: id,
   });
   return newModel;

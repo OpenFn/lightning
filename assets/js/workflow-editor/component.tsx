@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { createRoot } from 'react-dom/client';
 import { StoreApi, useStore } from 'zustand';
-import { WorkflowState, createWorkflowStore, WorkflowProps } from './store';
+import { WorkflowState, createWorkflowStore, WorkflowProps, RemoveArgs, ChangeArgs, AddArgs } from './store';
 
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram'
 
@@ -12,7 +12,7 @@ type Workflow = Pick<WorkflowProps, 'jobs' | 'edges' | 'triggers'>;
 
 // This will take a store passed from the server and do some light transformation
 // Specifically it identifies placeholder nodes
-const identifyPlaceholders = (store: Store) => {
+const identifyPlaceholders = (store: Workflow) => {
   const { jobs, triggers, edges } = store;
   
   const newJobs = jobs.map((item) => {
@@ -60,31 +60,15 @@ export function mount(
   function render(model: Workflow) {
     const { add, change, remove } = workflowStore.getState();
 
-    const handleSelectionChange = (id: string) => {
-      onSelectionChange?.(id);
-    };
-
-    const handleAdd = (diff: Partial<Workflow>) => {
-      add(diff);
-    };
-
-    const handleChange = (diff: Partial<Workflow>) => {
-      change(diff);
-    };
-
-    const handleRemove = (diff: Partial<Workflow>) => {
-      remove(diff);
-    };
-
     componentRoot.render(
       <WorkflowContext.Provider value={workflowStore}>
         <WorkflowDiagram
           ref={el}
           workflow={identifyPlaceholders(model)}
-          onSelectionChange={handleSelectionChange}
-          onAdd={handleAdd}
-          onChange={handleChange}
-          onRemove={handleRemove}
+          onSelectionChange={onSelectionChange}
+          onAdd={add}
+          onChange={change}
+          onRemove={remove}
         />
       </WorkflowContext.Provider>
     );

@@ -11,6 +11,10 @@ export type RemoveArgs = {
   edges?: string[];
 };
 
+export type ChangeArgs = Partial<Omit<WorkflowProps, 'editJobUrl'>>;
+
+export type AddArgs = ChangeArgs;
+
 export type WorkflowProps = {
   triggers: Lightning.TriggerNode[];
   jobs: Lightning.JobNode[];
@@ -19,8 +23,8 @@ export type WorkflowProps = {
 };
 
 export interface WorkflowState extends WorkflowProps {
-  add: (data: Partial<Omit<WorkflowProps, 'editJobUrl'>>) => void;
-  change: (data: Partial<Omit<WorkflowProps, 'editJobUrl'>>) => void;
+  add: (data: AddArgs) => void;
+  change: (data: ChangeArgs) => void;
   remove: (data: RemoveArgs) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;

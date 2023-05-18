@@ -11,13 +11,13 @@ import { DEFAULT_TEXT } from '../editor/Editor';
 
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import type { Lightning, Flow, Positions } from './types';
-import { RemoveArgs } from '../workflow-editor/store';
+import { AddArgs, ChangeArgs, RemoveArgs } from '../workflow-editor/store';
 
 type WorkflowDiagramProps = {
   workflow: Lightning.Workflow;
   onSelectionChange: (id?: string) => void;
-  onAdd: (diff: Partial<Lightning.Workflow>) => void;
-  onChange: (diff: { jobs: Array<Partial<Lightning.JobNode>>}) => void;
+  onAdd: (diff: AddArgs) => void;
+  onChange: (diff: ChangeArgs) => void;
   onRemove: (diff: RemoveArgs) => void;
 }
 
@@ -77,13 +77,13 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) 
     }, [setModel, model]);
 
 
-  const handleNodeClick = useCallback((event: React.MouseEvent, node: Lightning.Node) => {
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Flow.Node) => {
     if ((event.target as HTMLElement).closest('[name=add-node]')) {
       addNode(node);
     }
   }, [model])
   
-  const addNode = useCallback((parentNode: Lightning.Node) => {
+  const addNode = useCallback((parentNode: Flow.Node) => {
     // Generate a placeholder node and edge
     const diff = placeholder.add(model, parentNode);
 
