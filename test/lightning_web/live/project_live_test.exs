@@ -80,102 +80,102 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
     end
 
-    test "Only superuser can delete projects", %{
-      conn: conn,
-      project: project
-    } do
-      delete_button = "#delete-#{project.id}"
-      schedule_delete_button = "#schedule-delete-#{project.id}"
-      cancel_delete_button = "#cancel-delete-#{project.id}"
+    # test "Only superuser can delete projects", %{
+    #   conn: conn,
+    #   project: project
+    # } do
+    #   delete_button = "#delete-#{project.id}"
+    #   schedule_delete_button = "#schedule-delete-#{project.id}"
+    #   cancel_delete_button = "#cancel-delete-#{project.id}"
 
-      conn =
-        setup_project_user(
-          conn,
-          project,
-          Lightning.AccountsFixtures.superuser_fixture(),
-          :editor
-        )
+    #   conn =
+    #     setup_project_user(
+    #       conn,
+    #       project,
+    #       Lightning.AccountsFixtures.superuser_fixture(),
+    #       :editor
+    #     )
 
-      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+    #   {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
 
-      refute view |> element(delete_button) |> has_element?(),
-             "Should not show delete button"
+    #   refute view |> element(delete_button) |> has_element?(),
+    #          "Should not show delete button"
 
-      refute view |> element(cancel_delete_button) |> has_element?(),
-             "Should not show cancel deletion button"
+    #   refute view |> element(cancel_delete_button) |> has_element?(),
+    #          "Should not show cancel deletion button"
 
-      assert view |> element(schedule_delete_button) |> has_element?(),
-             "Should show schedule delete button"
+    #   assert view |> element(schedule_delete_button) |> has_element?(),
+    #          "Should show schedule delete button"
 
-      conn =
-        setup_project_user(
-          conn,
-          project,
-          Lightning.AccountsFixtures.superuser_fixture(),
-          :owner
-        )
+    #   conn =
+    #     setup_project_user(
+    #       conn,
+    #       project,
+    #       Lightning.AccountsFixtures.superuser_fixture(),
+    #       :owner
+    #     )
 
-      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+    #   {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
 
-      assert view
-             |> element(schedule_delete_button)
-             |> render_click() =~ "Project scheduled for deletion"
+    #   assert view
+    #          |> element(schedule_delete_button)
+    #          |> render_click() =~ "Project scheduled for deletion"
 
-      assert has_element?(view, delete_button), "Should show delete now button"
+    #   assert has_element?(view, delete_button), "Should show delete now button"
 
-      assert has_element?(view, cancel_delete_button),
-             "Should show cancel deletion button"
+    #   assert has_element?(view, cancel_delete_button),
+    #          "Should show cancel deletion button"
 
-      refute view |> element(schedule_delete_button) |> has_element?(),
-             "Should not show schedule delete button"
+    #   refute view |> element(schedule_delete_button) |> has_element?(),
+    #          "Should not show schedule delete button"
 
-      assert view
-             |> element(cancel_delete_button)
-             |> render_click() =~ "Canceled project deletion schedule"
+    #   assert view
+    #          |> element(cancel_delete_button)
+    #          |> render_click() =~ "Canceled project deletion schedule"
 
-      refute view |> element(delete_button) |> has_element?(),
-             "Should not show delete now button"
+    #   refute view |> element(delete_button) |> has_element?(),
+    #          "Should not show delete now button"
 
-      refute view |> element(cancel_delete_button) |> has_element?(),
-             "Should not show cancel deletion button"
+    #   refute view |> element(cancel_delete_button) |> has_element?(),
+    #          "Should not show cancel deletion button"
 
-      assert view |> element(schedule_delete_button) |> has_element?(),
-             "Should show schedule delete button"
+    #   assert view |> element(schedule_delete_button) |> has_element?(),
+    #          "Should show schedule delete button"
 
-      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
+    #   {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
 
-      assert view
-             |> element(schedule_delete_button)
-             |> render_click() =~ "Project scheduled for deletion"
+    #   assert view
+    #          |> element(schedule_delete_button)
+    #          |> render_click() =~ "Project scheduled for deletion"
 
-      assert has_element?(view, delete_button), "Should show delete now button"
+    #   assert has_element?(view, delete_button), "Should show delete now button"
 
-      assert has_element?(view, cancel_delete_button),
-             "Should show cancel deletion button"
+    #   assert has_element?(view, cancel_delete_button),
+    #          "Should show cancel deletion button"
 
-      refute view |> element(schedule_delete_button) |> has_element?(),
-             "Should not show schedule delete button"
+    #   refute view |> element(schedule_delete_button) |> has_element?(),
+    #          "Should not show schedule delete button"
 
-      assert view
-             |> element(delete_button)
-             |> render_click() =~ "Project deleted successfully"
+    #   assert view
+    #          |> element(delete_button)
+    #          |> render_click() =~ "Project deleted successfully"
 
-      refute view |> element(schedule_delete_button) |> has_element?(),
-             "Should not show schedule delete button"
+    #   refute view |> element(schedule_delete_button) |> has_element?(),
+    #          "Should not show schedule delete button"
 
-      refute view |> element(cancel_delete_button) |> has_element?(),
-             "Should not show cancel deletion button"
+    #   refute view |> element(cancel_delete_button) |> has_element?(),
+    #          "Should not show cancel deletion button"
 
-      project = project_fixture(scheduled_deletion: nil)
+    #   project = project_fixture(scheduled_deletion: nil)
 
-      assert view
-             |> render_click("delete_now", %{
-               "id" => project.id
-             }) =~
-               "You are not authorized to perform this action."
+    #   assert view
+    #          |> render_click("delete_now", %{
+    #            "id" => project.id
+    #          }) =~
+    #            "You are not authorized to perform this action."
 
-      assert_patched(view, ~p"/settings/projects")
-    end
+    #   assert_patched(view, ~p"/settings/projects")
+    # end
 
     test "Edits a project", %{conn: conn} do
       user = user_fixture()

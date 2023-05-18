@@ -351,7 +351,7 @@ defmodule Lightning.ProjectsTest do
       assert project.scheduled_deletion == nil
 
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, project} = Projects.schedule_project_deletion(project)
+      {:ok, project} = Projects.schedule_project_deletion(project, project.name)
 
       project_jobs = Projects.project_jobs_query(project) |> Repo.all()
 
@@ -362,22 +362,16 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "cancel_scheduled_deletion/2" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      project =
+        project_fixture(
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
 
-      project = project_fixture(scheduled_deletion: now)
+      assert project.scheduled_deletion
 
-      assert project.scheduled_deletion != nil
+      {:ok, project} = Projects.cancel_scheduled_deletion(project.id)
 
-      {:ok, project} = Projects.cancel_scheduled_deletion(project)
-      assert project.scheduled_deletion == nil
-
-      errors =
-        Project.scheduled_deletion_changeset(project, %{
-          "scheduled_deletion" => nil
-        })
-        |> errors_on()
-
-      assert errors[:scheduled_deletion] == nil
+      refute project.scheduled_deletion
     end
 
     test "schedule deletion changeset" do

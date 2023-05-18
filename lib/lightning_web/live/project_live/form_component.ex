@@ -184,7 +184,19 @@ defmodule LightningWeb.ProjectLive.FormComponent do
     end
   end
 
-  defp filter_users_to_notify(socket, project_params) do
+  defp filter_users_to_notify(
+         _socket,
+         project_params
+       )
+       when not is_map_key(project_params, "project_users") do
+    []
+  end
+
+  defp filter_users_to_notify(
+         socket,
+         project_params
+       )
+       when is_map_key(project_params, "project_users") do
     project = Repo.preload(socket.assigns.project, :project_users)
 
     existing_project_users =
