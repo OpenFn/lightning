@@ -19,8 +19,8 @@ export type WorkflowProps = {
 };
 
 export interface WorkflowState extends WorkflowProps {
-  add: (data: Partial<WorkflowProps>) => void;
-  change: (data: Partial<WorkflowProps>) => void;
+  add: (data: Partial<Omit<WorkflowProps, 'editJobUrl'>>) => void;
+  change: (data: Partial<Omit<WorkflowProps, 'editJobUrl'>>) => void;
   remove: (data: RemoveArgs) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
@@ -122,10 +122,16 @@ export const createWorkflowStore = (
     change: data => {
       set(state =>
         proposeChanges(state, draft => {
-          for (const type in data) {
-            for (const change of data[type]) {
-              const item = draft[type].find(i => i.id === change.id);
-              Object.assign(item, change);
+          for (const [t, changes] of Object.entries(data)) {
+            const type = t as 'jobs' | 'triggers' | 'edges';
+            for (const change of changes) {
+              const current = draft[type] as Array<
+                Lightning.Node | Lightning.Edge
+              >;
+              const item = current.find(i => i.id === change.id);
+              if (item) {
+                Object.assign(item, change);
+              }
             }
           }
         })
