@@ -87,7 +87,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) 
 
     // reactflow will fire a selection change event after the click
     // (regardless of whether the node is selected)
-    // We nee to ignore this
+    // We need to ignore this
     chartCache.current.ignoreNextSelection = true
 
     // If the editor is currently open, update the selection to show the new node
