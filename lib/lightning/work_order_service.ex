@@ -165,39 +165,6 @@ defmodule Lightning.WorkOrderService do
     end)
   end
 
-  def multi_for(type, job, dataclip_body) when type in [:webhook, :cron] do
-    Multi.new()
-    |> put_job(job)
-    |> put_dataclip(dataclip_body)
-    |> Multi.insert(:reason, fn %{dataclip: dataclip, job: job} ->
-      InvocationReasons.build(job.trigger, dataclip)
-    end)
-    |> Multi.insert(:work_order, fn %{reason: reason, job: job} ->
-      build(job.workflow, reason)
-    end)
-    |> Multi.insert(:attempt, fn %{work_order: work_order, reason: reason} ->
-      AttemptService.build_attempt(work_order, reason)
-    end)
-    |> Multi.insert(:attempt_run, fn %{
-                                       attempt: attempt,
-                                       dataclip: dataclip,
-                                       job: job
-                                     } ->
-      AttemptRun.new()
-      |> Ecto.Changeset.put_assoc(:attempt, attempt)
-      |> Ecto.Changeset.put_assoc(
-        :run,
-        # have access to this in the multi
-        # we can update it and add more
-        Run.new(%{
-          job_id: job.id,
-          input_dataclip_id: dataclip.id
-        })
-      )
-    end)
-
-  end
-
   defp put_job(multi, job) do
     multi |> Multi.put(:job, Repo.preload(job, [:trigger, :workflow]))
   end

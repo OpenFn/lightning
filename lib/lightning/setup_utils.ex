@@ -2,11 +2,19 @@ defmodule Lightning.SetupUtils do
   @moduledoc """
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
+  alias Lightning.{
+    Projects,
+    Accounts,
+    Jobs,
+    Workflows,
+    Repo,
+    Credentials,
+    AttemptRun
+  }
 
-  # alias Lightning.InvocationReasons
-  alias Lightning.Invocation
-  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo, Credentials}
   alias Lightning.WorkOrderService
+  alias Lightning.Invocation.Run
+  alias Ecto.Multi
 
   import Ecto.Query
 
@@ -171,10 +179,26 @@ defmodule Lightning.SetupUtils do
         project_credential_id: List.first(credential.project_credentials).id
       })
 
+    run_params = [
+      %{
+        job_id: job_2.id,
+        exit_code: 1,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      },
+      %{
+        job_id: job_3.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
     create_workorder(
       :webhook,
       job_1,
-      ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}]
+      ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
+      run_params
     )
 
     %{
@@ -240,11 +264,27 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
+    run_params = [
+      %{
+        job_id: send_to_openhim.id,
+        exit_code: 1,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      },
+      %{
+        job_id: notify_upload_failed.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
     {:ok, openhie_workorder} =
       create_workorder(
         :webhook,
         fhir_standard_data,
-        ~s[{}]
+        ~s[{}],
+        run_params
       )
 
     %{
@@ -261,8 +301,6 @@ defmodule Lightning.SetupUtils do
   end
 
   def create_dhis2_project(project_users) do
-    user = List.first(project_users).user_id |> Accounts.get_user!()
-
     {:ok, dhis2_project} =
       Projects.create_project(%{
         name: "dhis2-project",
@@ -295,30 +333,22 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id
       })
 
+    run_params = [
+      %{
+        job_id: upload_to_google_sheet.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
     {:ok, dhis2_workorder} =
       create_workorder(
         :cron,
         get_dhis2_data,
-        ~s[{}]
+        ~s[{}],
+        run_params
       )
-
-    #  # project_id: ,
-    #  exit_code: 0,
-    #  finished_at: Timex.now(),
-    #  # log: [],
-    #  # started_at: ~U[2022-02-02 11:49:00.000000Z]
-    #  job_id: job.id,
-    #  input_dataclip_id: dataclip.id
-
-    # create_run(dhis2_workorder, %{
-    #   project_id: dhis2_project.id,
-    #   job_id: get_dhis2_data.id,
-    #   input_dataclip_id: dhis2_workorder.reason.dataclip_id,
-    #   exit_code: 0,
-    #   finished_at: Timex.now()
-    # })
-
-    # IO.inspect(dhis2_workorder.attempt)
 
     %{
       project: dhis2_project,
@@ -367,45 +397,17 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_workorder(trigger, job, dataclip) do
-    # WorkOrderService.multi_for_manual(job, dataclip, user)
+  defp create_workorder(trigger, job, dataclip, run_params) do
     WorkOrderService.multi_for(
       trigger,
       job,
       dataclip
       |> Jason.decode!()
     )
-    |> add_and_update_runs([], Timex.now() |> Timex.shift(seconds: -10))
+    |> add_and_update_runs(run_params)
     |> Repo.transaction()
   end
 
-  defp create_run(first_job, dataclip, run_params) do
-    # run_params = [
-    #   %{
-    #     job_id: 2nd_job,
-    #     input_dataclip_id: reason.dataclip_id,
-    #     exit_code: 0,
-    #     finished_at: Timex.now()
-    #   },
-    #   %{
-    #     job_id: 3rd_job,
-    #     input_dataclip_id: reason.dataclip_id,
-    #     exit_code: 0,
-    #     finished_at: Timex.now()
-    #   }
-    # ]
-
-    # Lightning.AttemptService.build_attempt(work_order, reason)
-    # |> Ecto.Changeset.put_assoc(:runs, [
-    #   Lightning.Invocation.Run.changeset(%Lightning.Invocation.Run{}, run_params)
-    # ])
-    # |> Repo.insert()
-  end
-
-  # [
-  #   %{finished_at: Timex.now(), logs: ["a", "b", "c"]},
-  #   %{finished_at: Timex.now(), logs: ["a", "b", "c"]},
-  # ]
   def add_and_update_runs(multi, run_params) when is_list(run_params) do
     multi
     |> Multi.put(:run, fn %{attempt_run: attempt_run} ->
@@ -414,7 +416,10 @@ defmodule Lightning.SetupUtils do
     |> Multi.update("update_run", fn %{run: run} ->
       # Change the timestamps, logs, exit_code etc
       run
-      |> Run.changeset(% {})
+      |> Run.changeset(%{
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      })
     end)
     |> then(fn multi ->
       run_params
