@@ -49,7 +49,13 @@ defmodule LightningWeb.WorkflowNewLive do
           <.resize_component id={"resizer-#{@workflow.id}"} />
           <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
             <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
-              <.form :let={f} for={@changeset} phx-change="validate" class="h-full">
+              <.form
+                :let={f}
+                for={@changeset}
+                phx-submit="save"
+                phx-change="validate"
+                class="h-full"
+              >
                 <%= for job_form <- inputs_for(f, :jobs) do %>
                   <!-- Show only the currently selected one -->
                   <.job_form
@@ -157,6 +163,18 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
+    initial_params = socket.assigns.workflow_params
+
+    next_params =
+      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+
+    {:noreply,
+     socket
+     |> apply_params(next_params)
+     |> push_patches_applied(initial_params)}
+  end
+
+  def handle_event("save", %{"workflow" => params}, socket) do
     initial_params = socket.assigns.workflow_params
 
     next_params =
