@@ -1,34 +1,48 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
-import ReactFlow, { Node, ReactFlowProvider, applyEdgeChanges, applyNodeChanges, ReactFlowInstance } from 'reactflow';
+import ReactFlow, { Node, ReactFlowProvider,  applyNodeChanges, ReactFlowInstance, NodeChange } from 'reactflow';
+
 import layout from './layout'
 import nodeTypes from './nodes';
-import { Workflow } from './types';
-import { FIT_DURATION, FIT_PADDING } from './constants';
-import * as placeholder from './util/add-placeholder';
+import * as placeholder from './util/placeholder';
 import fromWorkflow from './util/from-workflow';
 import toWorkflow from './util/to-workflow';
 import throttle from './util/throttle';
+import { DEFAULT_TEXT } from '../editor/Editor';
+
+import { FIT_DURATION, FIT_PADDING } from './constants';
+import type { Lightning, Flow, Positions } from './types';
+import { AddArgs, ChangeArgs, RemoveArgs } from '../workflow-editor/store';
 
 type WorkflowDiagramProps = {
-  workflow: Workflow;
-  onSelectionChange: (id: string) => void;
-  requestChange: (id: string) => void;
+  workflow: Lightning.Workflow;
+  onSelectionChange: (id?: string) => void;
+  onAdd: (diff: AddArgs) => void;
+  onChange: (diff: ChangeArgs) => void;
+  onRemove: (diff: RemoveArgs) => void;
 }
-export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
-  const { workflow, requestChange, onSelectionChange } = props;
-  const [model, setModel] = useState({ nodes: [], edges: [] });
+
+type ChartCache = {
+  positions: Positions;
+  selectedId?: string;
+  ignoreNextSelection: boolean;
+  deferSelection?: string;
+}
+
+export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) => {
+  const { workflow, onAdd, onChange, onRemove, onSelectionChange } = props;
+  const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
   
   // Track positions and selection on a ref, as a passive cache, to prevent re-renders
   // If I push the store in here and use it more, will I have to do this less...?
-  const chartCache = useRef({
+  const chartCache = useRef<ChartCache>({
     positions: {},
     selectedId: undefined,
-    ignoreNextSelection: undefined, // awful workaround because I can't control selection
+    ignoreNextSelection: false,
   })
 
   const [flow, setFlow] = useState<ReactFlowInstance>();
 
-  const setFlowInstance = useCallback((s) => {
+  const setFlowInstance = useCallback((s: ReactFlowInstance) => {
     setFlow(s)
   }, [setFlow])
 
@@ -39,10 +53,9 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     const { positions, selectedId } = chartCache.current;
     const newModel = fromWorkflow(workflow, positions, selectedId);
 
-    console.log('UPDATING WORKFLOW', newModel);
+    //console.log('UPDATING WORKFLOW', newModel, selectedId);
     if (flow && newModel.nodes.length) {
-      layout(newModel, setModel, flow, 200, (positions) => {
-        
+      layout(newModel, setModel, flow, 200).then((positions) => {
         // trigger selection on new nodes once they've been passed back through to us
         if (chartCache.current.deferSelection) {
           onSelectionChange(chartCache.current.deferSelection)
@@ -55,45 +68,74 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     } else {
       chartCache.current.positions = {}
     }
-  }, [workflow, flow])
+  }, [chartCache, workflow, flow])
   
   const onNodesChange = useCallback(
-    (changes) => {
+    (changes: NodeChange[]) => {
       const newNodes = applyNodeChanges(changes, model.nodes);
       setModel({ nodes: newNodes, edges: model.edges });
     }, [setModel, model]);
 
-  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
-    event.stopPropagation();
-    event.preventDefault()
-    if (event.target.closest('[name=add-node]')) {
+
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Flow.Node) => {
+    if ((event.target as HTMLElement).closest('[name=add-node]')) {
       addNode(node);
-      // TODO how do I stop selection changing here?
     }
   }, [model])
   
-  const addNode = useCallback((parentNode: Node) => {
+  const addNode = useCallback((parentNode: Flow.Node) => {
     // Generate a placeholder node and edge
     const diff = placeholder.add(model, parentNode);
-    const newNode = diff.nodes[0];
-    
+
     // reactflow will fire a selection change event after the click
     // (regardless of whether the node is selected)
-    // We essentially want to ignore that change and set the new placeholder as the selection
+    // We need to ignore this
     chartCache.current.ignoreNextSelection = true
-    chartCache.current.selectedId = newNode.id;
 
-    // Request a selection change when the node is passed back in
-    // We have to do this because of how Lightning handles selection through the URL
-    // (if we send the change too early, Lightning won't see the node and can't select it)
-    chartCache.current.deferSelection = newNode.id;
+    // If the editor is currently open, update the selection to show the new node
+    if (chartCache.current.selectedId) {
+      chartCache.current.deferSelection = diff.nodes[0].id
+    }
 
-    // Push the changes to Lightning
-    requestChange?.(toWorkflow(diff));
-  }, [requestChange]);
+    // Mark the new node as selected for the next render
+    chartCache.current.selectedId = diff.nodes[0].id
+
+    // Push the changes
+    onAdd?.(toWorkflow(diff));
+  }, [onAdd]);
+
+  const commitPlaceholder = useCallback((evt: CustomEvent<any>) => {
+    const { id, name } = evt.detail;
+    // Select the placeholder on next render
+    chartCache.current.deferSelection = id;
+
+    // Update the store
+    onChange?.({ jobs: [{ id, name, body: DEFAULT_TEXT }]});
+  }, [onChange]);
+
+  const cancelPlaceholder = useCallback((evt: CustomEvent<any>) => {
+    const { id } = evt.detail;
+    const e = model.edges.find(({ target }) => target === id)
+    onRemove({ jobs: [id], edges: [e!.id] });
+  }, [onChange])
+
+  useEffect(() => {
+    if (ref) {
+      ref.addEventListener<any>('commit-placeholder', commitPlaceholder);
+      ref.addEventListener<any>('cancel-placeholder', cancelPlaceholder);      
+
+      return () => {
+        if (ref) {
+          ref.removeEventListener<any>('commit-placeholder', commitPlaceholder);
+          ref.removeEventListener<any>('cancel-placeholder', cancelPlaceholder);      
+        }
+      }
+    }
+  }, [commitPlaceholder, ref])
 
   // Note that we only support a single selection
-  const handleSelectionChange = useCallback(({ nodes, edges }) => {
+  const handleSelectionChange = useCallback(({ nodes, edges }: Flow.Model) => {
+    // console.log('> handleSelectionChange', nodes.map(({ id }) => id))
     const { selectedId, ignoreNextSelection } = chartCache.current;
     const newSelectedId = nodes.length ? nodes[0].id : (edges.length ? edges[0].id : undefined)
     if (ignoreNextSelection) {
@@ -103,7 +145,7 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
       chartCache.current.selectedId = newSelectedId;
       onSelectionChange(newSelectedId);
     }
-    chartCache.current.ignoreNextSelection = undefined;
+    chartCache.current.ignoreNextSelection = false;
   }, [onSelectionChange]);
 
   // Trigger a fit when the parent div changes size
@@ -131,7 +173,8 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
     }
   }, [flow, ref]);
   
-  return <ReactFlowProvider>
+  return (
+    <ReactFlowProvider>
       <ReactFlow
         proOptions={{ account: 'paid-pro', hideAttribution: true }}
         nodes={model.nodes}
@@ -142,8 +185,10 @@ export default React.forwardRef<Element, WorkflowDiagramProps>((props, ref) => {
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
         onInit={setFlowInstance}
+        deleteKeyCode={null}
         fitView
         fitViewOptions={{ padding: FIT_PADDING }}
       />
     </ReactFlowProvider>
+  );
 })

@@ -1,21 +1,22 @@
 import React, { createContext, useContext } from 'react';
 import { createRoot } from 'react-dom/client';
 import { StoreApi, useStore } from 'zustand';
-import { WorkflowState, createWorkflowStore, WorkflowProps } from './store';
+import { WorkflowState, createWorkflowStore, WorkflowProps, RemoveArgs, ChangeArgs, AddArgs } from './store';
 
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram'
+
+export const WorkflowContext = createContext<StoreApi<WorkflowState> | null>(null);
 
 type Store = ReturnType<typeof createWorkflowStore>;
 type Workflow = Pick<WorkflowProps, 'jobs' | 'edges' | 'triggers'>;
 
 // This will take a store passed from the server and do some light transformation
 // Specifically it identifies placeholder nodes
-const identifyPlaceholders = (store: Store) => {
+const identifyPlaceholders = (store: Workflow) => {
   const { jobs, triggers, edges } = store;
   
   const newJobs = jobs.map((item) => {
-    // TODO placeholder triggers don't have a cron/webhook type yet
-    if (!item.name && !item.expression) {
+    if (!item.name && !item.body) {
       return {
         ...item,
         placeholder: true
@@ -57,23 +58,19 @@ export function mount(
   }
 
   function render(model: Workflow) {
-    const { add } = workflowStore.getState();
-
-    const handleSelectionChange = (id: string) => {
-      onSelectionChange?.(id);
-    }
-
-    const handleRequestChange = (diff) => {
-      add(diff)
-    }
+    const { add, change, remove } = workflowStore.getState();
 
     componentRoot.render(
-      // TODO listen to change events from the diagram and upadte the store accordingly
-      <WorkflowDiagram
-        ref={el}
-        workflow={identifyPlaceholders(model)}
-        onSelectionChange={handleSelectionChange}
-        requestChange={handleRequestChange}/>
+      <WorkflowContext.Provider value={workflowStore}>
+        <WorkflowDiagram
+          ref={el}
+          workflow={identifyPlaceholders(model)}
+          onSelectionChange={onSelectionChange}
+          onAdd={add}
+          onChange={change}
+          onRemove={remove}
+        />
+      </WorkflowContext.Provider>
     );
   }
 

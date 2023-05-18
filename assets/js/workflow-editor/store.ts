@@ -1,21 +1,31 @@
 import type { Patch as ImmerPatch } from 'immer';
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore } from 'zustand';
+import type { Lightning } from '../workflow-diagram/types';
 
 enablePatches();
 
+export type RemoveArgs = {
+  jobs?: string[];
+  triggers?: string[];
+  edges?: string[];
+};
+
+export type ChangeArgs = Partial<Omit<WorkflowProps, 'editJobUrl'>>;
+
+export type AddArgs = ChangeArgs;
+
 export type WorkflowProps = {
-  triggers: {}[];
-  jobs: {}[];
-  edges: {}[];
+  triggers: Lightning.TriggerNode[];
+  jobs: Lightning.JobNode[];
+  edges: Lightning.Edge[];
   editJobUrl: string;
 };
 
 export interface WorkflowState extends WorkflowProps {
-  add: (data: Partial<WorkflowProps>) => void;
-  addEdge: (edge: any) => void;
-  addJob: (job: any) => void;
-  addTrigger: (node: any) => void;
+  add: (data: AddArgs) => void;
+  change: (data: ChangeArgs) => void;
+  remove: (data: RemoveArgs) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
 }
@@ -32,21 +42,6 @@ export interface PendingAction {
   id: string;
   fn: (draft: WorkflowState) => void;
   patches: Patch[];
-}
-
-// Build a new job, with the bare minimum properties.
-function buildJob(job = {}) {
-  return { id: crypto.randomUUID(), ...job };
-}
-
-// Build a new trigger, with the bare minimum properties.
-function buildTrigger(trigger = {}) {
-  return { id: crypto.randomUUID(), ...trigger };
-}
-
-// Build a new edge, with the bare minimum properties.
-function buildEdge(edge = {}) {
-  return { id: crypto.randomUUID(), ...edge };
 }
 
 function toRFC6902Patch(patch: ImmerPatch): Patch {
@@ -93,59 +88,58 @@ export const createWorkflowStore = (
   return createStore<WorkflowState>()(set => ({
     ...DEFAULT_PROPS,
     ...initProps,
-    // Bulk update API
-    // (We rarely, if ever, only add one thing)
-    // Uh that's not true, I think the store doesn't update until we apply?
-    // So a change event will be published, but the store won't reflect the patch
     add: data => {
       set(state =>
         proposeChanges(state, draft => {
-          ['jobs', 'triggers', 'edges'].forEach(key => {
+          ['jobs', 'triggers', 'edges'].forEach(k => {
+            const key = k as keyof Omit<WorkflowProps, 'editJobUrl'>;
             if (data[key]) {
-              data[key].forEach(item => {
+              data[key]!.forEach(item => {
                 if (!item.id) {
                   item.id = crypto.randomUUID();
                 }
-                draft[key].push(item);
+                draft[key].push(item as any);
               });
             }
           });
         })
       );
     },
-    change: (id, type, diff) => {
+    remove: data => {
       set(state =>
         proposeChanges(state, draft => {
-          const item = draft[type].find(i => i.id === id);
-          Object.assign(item, diff);
+          ['jobs', 'triggers', 'edges'].forEach(k => {
+            const key = k as keyof Omit<WorkflowProps, 'editJobUrl'>;
+            if (data[key]) {
+              const newCollection: any[] = [];
+              draft[key].forEach(item => {
+                if (!data[key]!.includes(item.id)) {
+                  newCollection.push(item);
+                }
+              });
+              draft[key] = newCollection;
+            }
+          });
         })
       );
     },
-    addJob: job => {
-      const newJob = buildJob(job);
+    change: data => {
       set(state =>
         proposeChanges(state, draft => {
-          draft.jobs.push(newJob);
+          for (const [t, changes] of Object.entries(data)) {
+            const type = t as 'jobs' | 'triggers' | 'edges';
+            for (const change of changes) {
+              const current = draft[type] as Array<
+                Lightning.Node | Lightning.Edge
+              >;
+              const item = current.find(i => i.id === change.id);
+              if (item) {
+                Object.assign(item, change);
+              }
+            }
+          }
         })
       );
-      return newJob;
-    },
-    addTrigger: trigger => {
-      set(state =>
-        proposeChanges(state, draft => {
-          const newTrigger = buildTrigger();
-          draft.triggers.push(newTrigger);
-        })
-      );
-    },
-    addEdge: edge => {
-      const newEdge = buildEdge(edge);
-      set(state =>
-        proposeChanges(state, draft => {
-          draft.edges.push(newEdge);
-        })
-      );
-      return newEdge;
     },
     applyPatches: patches => {
       const immerPatches: ImmerPatch[] = patches.map(patch => ({

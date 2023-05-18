@@ -7,7 +7,6 @@ type NodeData = any;
 const Node = ({
   label,
   labelClass = '',
-  outerClass,
   tooltip,
   interactive = true,
   data,
@@ -19,7 +18,7 @@ const Node = ({
 }: NodeProps<NodeData>) => {
   return (
     <div
-      className={outerClass || [
+      className={[
         'group',
         'bg-white',
         interactive ? 'cursor-pointer' : 'cursor-default',
