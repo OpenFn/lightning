@@ -3,39 +3,31 @@ import { Handle, NodeProps } from 'reactflow';
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
-// Sketchy dep
-import { WorkflowContext } from '../../workflow-editor/component';
-
 type NodeData = any;
 
 const iconStyle = "mx-1 text-primary-500 hover:text-primary-900"
+
+// Dispatch an event up to the WorkflowDiagram
+// This works better than interfacing to the store correctly
+// because the Workflow Diagram can control selection
+const dispatch = (el: HTMLElement, eventName: 'commit-placeholder' | 'cancel-placeholder', data: Record<string, unknown>) => {
+  const e = new CustomEvent(eventName, {
+    bubbles: true,
+    detail: data
+  });
+  el.dispatchEvent(e);
+}
 
 const PlaceholderJobNode = ({
   id,
   selected,
   targetPosition,
 }: NodeProps<NodeData>) => {
-  const store = useContext(WorkflowContext)
-
   const textRef = useRef()
-
-  const commit = () => {
-    // Dispatch an event up to the WorkflowDiagram
-    // This works better than interfacing to the store correctly
-    // because the Workflow Diagram can control selection
-    const e = new CustomEvent('commit-placeholder', {
-      bubbles: true,
-      detail: {
-        id,
-        name:  textRef.current.value
-      }
-    });
-    textRef.current.dispatchEvent(e);
-  }
 
   const handleKeyDown = (evt) => {
     if (evt.code === 'Enter') {
-      commit();  
+      handleCommit();  
     }
     if (evt.code === 'Escape') {
       handleCancel();
@@ -44,13 +36,14 @@ const PlaceholderJobNode = ({
 
   // TODO what if a name hasn't been entered?
   const handleCommit = () => {
-    commit()
+    dispatch(textRef.current, 'commit-placeholder', { id,  name:  textRef.current.value })
   }
 
   const handleCancel = () => {
-    const { remove, edges } = store?.getState()!
-    const e = edges.find(({ target_job_id }) => target_job_id === id)
-    remove({ jobs: [id], edges: [e!.id] });
+    dispatch(textRef.current, 'cancel-placeholder', { id })
+    // const { remove, edges } = store?.getState()!
+    // const e = edges.find(({ target_job_id }) => target_job_id === id)
+    // remove({ jobs: [id], edges: [e!.id] });
   }
 
   return (
