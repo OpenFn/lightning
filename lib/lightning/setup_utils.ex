@@ -310,14 +310,6 @@ defmodule Lightning.SetupUtils do
     #  job_id: job.id,
     #  input_dataclip_id: dataclip.id
 
-    Invocation.create_run(%{
-      # project_id: dhis2_project.id,
-      job_id: upload_to_google_sheet.id,
-      input_dataclip_id: dhis2_workorder.reason.dataclip_id,
-      exit_code: 0,
-      finished_at: Timex.now()
-    })
-
     # create_run(dhis2_workorder, %{
     #   project_id: dhis2_project.id,
     #   job_id: get_dhis2_data.id,
@@ -383,58 +375,58 @@ defmodule Lightning.SetupUtils do
       dataclip
       |> Jason.decode!()
     )
+    |> add_and_update_runs([], Timex.now() |> Timex.shift(seconds: -10))
     |> Repo.transaction()
   end
 
-  defp create_run(workorder, run_params) do
-    %{
-      work_order: work_order,
-      reason: reason,
-      attempt: attempt,
-      dataclip: dataclip,
-      job: job
-    } = workorder
+  defp create_run(first_job, dataclip, run_params) do
+    # run_params = [
+    #   %{
+    #     job_id: 2nd_job,
+    #     input_dataclip_id: reason.dataclip_id,
+    #     exit_code: 0,
+    #     finished_at: Timex.now()
+    #   },
+    #   %{
+    #     job_id: 3rd_job,
+    #     input_dataclip_id: reason.dataclip_id,
+    #     exit_code: 0,
+    #     finished_at: Timex.now()
+    #   }
+    # ]
 
-    # workflow =
-    #   dataclip = ~s[{}] |> jsonde
-    #     reason = trigger, dataclip
-    #       work_order =
-    # {%{
-    #   project_id: "28d99d31-36b8-431c-b03b-391780340062",
-    #   reason_id: "4ca33fbc-cb4a-48d6-9c2a-ee6ca936649f",
-    #   workflow_id: "7e42eb2b-3b81-4d67-b2f5-09b3e500b296"
-    # }} = workorder
-    # Workorder
-    # use multi_for or multi_for_manual
-    # create_workorder(trigger, job, dataclip)
+    # Lightning.AttemptService.build_attempt(work_order, reason)
+    # |> Ecto.Changeset.put_assoc(:runs, [
+    #   Lightning.Invocation.Run.changeset(%Lightning.Invocation.Run{}, run_params)
+    # ])
+    # |> Repo.insert()
+  end
 
-    # Reason
-    # %{
-    #   type: :webhook,
-    #   user_id: user_fixture().id,
-    #   run_id: run_fixture().id,
-    #   dataclip_id: dataclip_fixture().id,
-    #   trigger_id: job_fixture().trigger.id
-    # }
-
-    # run_params
-    # %{
-    #   project_id: project.id,
-    #   job_id: job.id,
-    #   input_dataclip_id: reason.dataclip_id,
-    #   exit_code: 0,
-    #   finished_at: Timex.now()
-    # }
-
-    # attempt = Lightning.AttemptService.get_last_attempt_for()
-    # attempt
-    Lightning.AttemptService.build_attempt(work_order, reason)
-    |> IO.inspect()
-    |> Ecto.Changeset.put_assoc(:runs, [
-      Lightning.Invocation.Run.changeset(%Lightning.Invocation.Run{}, run_params)
-    ])
-    |> Repo.insert()
-
-    # Invocation.create_run(run_params)
+  # [
+  #   %{finished_at: Timex.now(), logs: ["a", "b", "c"]},
+  #   %{finished_at: Timex.now(), logs: ["a", "b", "c"]},
+  # ]
+  def add_and_update_runs(multi, run_params) when is_list(run_params) do
+    multi
+    |> Multi.put(:run, fn %{attempt_run: attempt_run} ->
+      Ecto.assoc(attempt_run, :run) |> Repo.one()
+    end)
+    |> Multi.update("update_run", fn %{run: run} ->
+      # Change the timestamps, logs, exit_code etc
+      run
+      |> Run.changeset(% {})
+    end)
+    |> then(fn multi ->
+      run_params
+      |> Enum.with_index()
+      |> Enum.reduce(multi, fn {params, i}, multi ->
+        multi
+        |> Multi.insert("attempt_run_#{i}", fn %{attempt: attempt} ->
+          AttemptRun.new()
+          |> Ecto.Changeset.put_assoc(:attempt, attempt)
+          |> Ecto.Changeset.put_assoc(:run, Run.new(params))
+        end)
+      end)
+    end)
   end
 end
