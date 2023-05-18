@@ -15,7 +15,6 @@ defmodule Lightning.Policies.UserPermissionsTest do
   use Lightning.DataCase, async: true
 
   import Lightning.AccountsFixtures
-  import Lightning.ProjectsFixtures
 
   alias Lightning.CredentialsFixtures
   alias Lightning.Policies.{Permissions, Users}
@@ -81,9 +80,6 @@ defmodule Lightning.Policies.UserPermissionsTest do
          %{
            superuser: superuser
          } do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      marked_project = project_fixture(scheduled_deletion: now)
-
       api_token = api_token_fixture(superuser).token
       credential = CredentialsFixtures.credential_fixture(user_id: superuser.id)
 
