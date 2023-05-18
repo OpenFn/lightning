@@ -1,5 +1,5 @@
-import React, { memo, useContext, useRef } from 'react';
-import { Handle, NodeProps } from 'reactflow';
+import React, { memo, useCallback, useRef } from 'react';
+import { Handle, NodeProps, Position } from 'reactflow';
 import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
@@ -21,9 +21,8 @@ const dispatch = (el: HTMLElement, eventName: 'commit-placeholder' | 'cancel-pla
 const PlaceholderJobNode = ({
   id,
   selected,
-  targetPosition,
 }: NodeProps<NodeData>) => {
-  const textRef = useRef()
+  const textRef = useRef<HTMLInputElement>()
 
   const handleKeyDown = (evt) => {
     if (evt.code === 'Enter') {
@@ -35,16 +34,17 @@ const PlaceholderJobNode = ({
   };
 
   // TODO what if a name hasn't been entered?
-  const handleCommit = () => {
-    dispatch(textRef.current, 'commit-placeholder', { id,  name:  textRef.current.value })
-  }
+  const handleCommit = useCallback(() => {
+    if (textRef.current) {
+      dispatch(textRef.current, 'commit-placeholder', { id,  name:  textRef.current.value })
+    }
+  }, [textRef])
 
-  const handleCancel = () => {
-    dispatch(textRef.current, 'cancel-placeholder', { id })
-    // const { remove, edges } = store?.getState()!
-    // const e = edges.find(({ target_job_id }) => target_job_id === id)
-    // remove({ jobs: [id], edges: [e!.id] });
-  }
+  const handleCancel = useCallback(() => {
+    if (textRef.current) {
+      dispatch(textRef.current, 'cancel-placeholder', { id })
+    }
+  }, [textRef])
 
   return (
     <div
@@ -67,7 +67,7 @@ const PlaceholderJobNode = ({
     >
       <Handle
         type="target"
-        position={targetPosition}
+        position={Position.Top}
         isConnectable
         style={{ visibility: 'hidden', border: 'none', height: 0, top: 0 }}
       />
