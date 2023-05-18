@@ -22,9 +22,6 @@ export interface WorkflowState extends WorkflowProps {
   add: (data: Partial<WorkflowProps>) => void;
   change: (data: Partial<WorkflowProps>) => void;
   remove: (data: RemoveArgs) => void;
-  addEdge: (edge: Lightning.Edge) => void;
-  addJob: (job: Lightning.JobNode) => void;
-  addTrigger: (node: Lightning.TriggerNode) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
 }
@@ -41,21 +38,6 @@ export interface PendingAction {
   id: string;
   fn: (draft: WorkflowState) => void;
   patches: Patch[];
-}
-
-// Build a new job, with the bare minimum properties.
-function buildJob(job = {}) {
-  return { id: crypto.randomUUID(), ...job } as Lightning.JobNode;
-}
-
-// Build a new trigger, with the bare minimum properties.
-function buildTrigger(trigger = {}) {
-  return { id: crypto.randomUUID(), ...trigger } as Lightning.TriggerNode;
-}
-
-// Build a new edge, with the bare minimum properties.
-function buildEdge(edge = {}) {
-  return { id: crypto.randomUUID(), ...edge } as Lightning.Edge;
 }
 
 function toRFC6902Patch(patch: ImmerPatch): Patch {
@@ -102,10 +84,6 @@ export const createWorkflowStore = (
   return createStore<WorkflowState>()(set => ({
     ...DEFAULT_PROPS,
     ...initProps,
-    // Bulk update API
-    // (We rarely, if ever, only add one thing)
-    // Uh that's not true, I think the store doesn't update until we apply?
-    // So a change event will be published, but the store won't reflect the patch
     add: data => {
       set(state =>
         proposeChanges(state, draft => {
@@ -123,7 +101,6 @@ export const createWorkflowStore = (
         })
       );
     },
-    // remove one or more things by id
     remove: data => {
       set(state =>
         proposeChanges(state, draft => {
@@ -153,32 +130,6 @@ export const createWorkflowStore = (
           }
         })
       );
-    },
-    addJob: job => {
-      const newJob = buildJob(job);
-      set(state =>
-        proposeChanges(state, draft => {
-          draft.jobs.push(newJob);
-        })
-      );
-      return newJob;
-    },
-    addTrigger: trigger => {
-      set(state =>
-        proposeChanges(state, draft => {
-          const newTrigger = buildTrigger();
-          draft.triggers.push(newTrigger);
-        })
-      );
-    },
-    addEdge: edge => {
-      const newEdge = buildEdge(edge);
-      set(state =>
-        proposeChanges(state, draft => {
-          draft.edges.push(newEdge);
-        })
-      );
-      return newEdge;
     },
     applyPatches: patches => {
       const immerPatches: ImmerPatch[] = patches.map(patch => ({
