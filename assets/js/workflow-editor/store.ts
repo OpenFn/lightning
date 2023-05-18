@@ -5,6 +5,12 @@ import type { Lightning } from '../workflow-diagram/types';
 
 enablePatches();
 
+export type RemoveArgs = {
+  jobs?: string[];
+  triggers?: string[];
+  edges?: string[];
+};
+
 export type WorkflowProps = {
   triggers: Lightning.TriggerNode[];
   jobs: Lightning.JobNode[];
@@ -15,11 +21,7 @@ export type WorkflowProps = {
 export interface WorkflowState extends WorkflowProps {
   add: (data: Partial<WorkflowProps>) => void;
   change: (data: Partial<WorkflowProps>) => void;
-  remove: (data: {
-    jobs?: string[];
-    triggers?: string[];
-    edges?: string[];
-  }) => void;
+  remove: (data: RemoveArgs) => void;
   addEdge: (edge: Lightning.Edge) => void;
   addJob: (job: Lightning.JobNode) => void;
   addTrigger: (node: Lightning.TriggerNode) => void;
