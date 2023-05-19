@@ -2,6 +2,9 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
 
   import Ecto.Query, warn: false
   alias Lightning.Attempt
@@ -18,6 +21,26 @@ defmodule Lightning.Projects do
   alias Lightning.InvocationReason
   alias Lightning.Invocation.{Run, Dataclip}
   alias Lightning.WorkOrder
+
+  require Logger
+
+  @doc """
+  Perform, when called with %{"type" => "purge_deleted"}
+  will find projects that are ready for permanent deletion and purge them.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    projects_to_delete =
+      from(p in Project,
+        where: p.scheduled_deletion <= ago(0, "second")
+      )
+      |> Repo.all()
+
+    :ok =
+      Enum.each(projects_to_delete, fn project -> delete_project(project) end)
+
+    {:ok, %{users_deleted: projects_to_delete}}
+  end
 
   @doc """
   Returns the list of projects.
@@ -156,40 +179,49 @@ defmodule Lightning.Projects do
   """
 
   def delete_project(%Project{} = project) do
-    if is_nil(project.scheduled_deletion) do
-      {:error, %Ecto.Changeset{}}
-    else
-      Repo.transaction(fn ->
-        project_attempts_query(project) |> Repo.delete_all()
+    Logger.debug(fn ->
+      # coveralls-ignore-start
+      "Deleting project ##{project.id}..."
+      # coveralls-ignore-stop
+    end)
 
-        project_attempt_run_query(project) |> Repo.delete_all()
+    Repo.transaction(fn ->
+      project_attempts_query(project) |> Repo.delete_all()
 
-        project_workorders_query(project) |> Repo.delete_all()
+      project_attempt_run_query(project) |> Repo.delete_all()
 
-        project_run_invocation_reasons(project) |> Repo.delete_all()
+      project_workorders_query(project) |> Repo.delete_all()
 
-        project_runs_query(project) |> Repo.delete_all()
+      project_run_invocation_reasons(project) |> Repo.delete_all()
 
-        project_jobs_query(project) |> Repo.delete_all()
+      project_runs_query(project) |> Repo.delete_all()
 
-        project_trigger_invocation_reason(project) |> Repo.delete_all()
+      project_jobs_query(project) |> Repo.delete_all()
 
-        project_triggers_query(project) |> Repo.delete_all()
+      project_trigger_invocation_reason(project) |> Repo.delete_all()
 
-        project_workflows_query(project) |> Repo.delete_all()
+      project_triggers_query(project) |> Repo.delete_all()
 
-        project_users_query(project) |> Repo.delete_all()
+      project_workflows_query(project) |> Repo.delete_all()
 
-        project_credentials_query(project) |> Repo.delete_all()
+      project_users_query(project) |> Repo.delete_all()
 
-        project_dataclip_invocation_reason(project) |> Repo.delete_all()
+      project_credentials_query(project) |> Repo.delete_all()
 
-        project_dataclips_query(project) |> Repo.delete_all()
+      project_dataclip_invocation_reason(project) |> Repo.delete_all()
 
-        {:ok, project} = Repo.delete(project)
-        project
+      project_dataclips_query(project) |> Repo.delete_all()
+
+      {:ok, project} = Repo.delete(project)
+
+      Logger.debug(fn ->
+        # coveralls-ignore-start
+        "Project ##{project.id} deleted."
+        # coveralls-ignore-stop
       end)
-    end
+
+      project
+    end)
   end
 
   def project_trigger_invocation_reason(project) do

@@ -49,7 +49,10 @@ conditional_cron =
   if System.get_env("PURGE_DELETED_AFTER_DAYS") != 0,
     do:
       base_oban_cron ++
-        [{"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}}],
+        [
+          {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+          {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
+        ],
     else: base_oban_cron
 
 config :lightning, Oban,
