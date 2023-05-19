@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.5.2">
 
-    <title>LightningWeb.ErrorHelpers — Lightning v0.5.2</title>
+    <title>LightningWeb.ChangesetJSON — Lightning v0.5.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-AC8AB9E6.js"></script>
+    <script src="dist/sidebar_items-5389C8E5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -102,19 +102,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_helpers.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/changeset_json.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.ErrorHelpers</span> 
+  <span translate="no">LightningWeb.ChangesetJSON</span> 
   <small class="app-vsn" translate="no">(Lightning v0.5.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Conveniences for translating and building error messages.</p>
+<p>Renders changesets as JSON.</p>
   </section>
 
 
@@ -133,29 +133,9 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#error_tag/2" translate="no">error_tag(form, field)</a>
+        <a href="#error/1" translate="no">error(map)</a>
 
       </div>
-
-        <div class="summary-synopsis"><p>Generates tag for inlined form input errors.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#error_tag/3" translate="no">error_tag(form, field, attrs)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#translate_error/1" translate="no">translate_error(arg)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Translates an error message using gettext.</p></div>
 
     </div>
 
@@ -173,38 +153,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="error_tag/2">
+<section class="detail" id="error/1">
 
   <div class="detail-header">
-    <a href="#error_tag/2" class="detail-link" title="Link to this function">
+    <a href="#error/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">error_tag(form, field)</h1>
+    <h1 class="signature" translate="no">error(map)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_helpers.ex#L11" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Generates tag for inlined form input errors.</p>
-  </section>
-</section>
-<section class="detail" id="error_tag/3">
-
-  <div class="detail-header">
-    <a href="#error_tag/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">error_tag(form, field, attrs)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_helpers.ex#L13" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/changeset_json.ex#L6" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -215,28 +173,6 @@ Functions
   <section class="docstring">
 
 
-  </section>
-</section>
-<section class="detail" id="translate_error/1">
-
-  <div class="detail-header">
-    <a href="#translate_error/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">translate_error(arg)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/views/error_helpers.ex#L26" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Translates an error message using gettext.</p>
   </section>
 </section>
 

@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.5.2">
 
-    <title>LightningWeb.WorkflowNewLive.WorkflowParams — Lightning v0.5.2</title>
+    <title>Lightning.Policies.Provisioning — Lightning v0.5.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -102,19 +102,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/workflow_params.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.WorkflowNewLive.WorkflowParams</span> 
+  <span translate="no">Lightning.Policies.Provisioning</span> 
   <small class="app-vsn" translate="no">(Lightning v0.5.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Various function for reconciling changes to a workflow params map.</p><p>The front end editor uses JSON patches to represent changes to the workflow.</p>
+<p>The Bodyguard Policy module for users roles.</p>
   </section>
 
 
@@ -126,6 +126,20 @@ Lightning
       </a>
       Summary
     </h1>
+<div class="summary-types summary">
+  <h2>
+    <a href="#types">Types</a>
+  </h2>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#t:actions/0" translate="no">actions()</a>
+
+      </div>
+
+    </div>
+
+</div>
 <div class="summary-functions summary">
   <h2>
     <a href="#functions">Functions</a>
@@ -133,44 +147,13 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#apply_form_params/2" translate="no">apply_form_params(current_params, form_params)</a>
+        <a href="#authorize/3" translate="no">authorize(arg1, user, project)</a>
 
       </div>
 
-        <div class="summary-synopsis"><p>Produce a new set of params by applying the given form params to the current
-params.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#apply_patches/2" translate="no">apply_patches(current_params, patches)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Produce a new set of params by applying the given patches to the current parms</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#to_map/1" translate="no">to_map(changeset)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Convert a changeset to a serializable map of workflow params, suitable for
-sending to the front end editor.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#to_patches/2" translate="no">to_patches(initial_params, target_params)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Produce a set of patches that represent the difference between the initial
-params and the target params.</p></div>
+        <div class="summary-synopsis"><p>authorize/3 takes an action, a user, and a project. It checks the user's role
+for this project and returns <code class="inline">true</code> if the user can perform the action and
+false if they cannot.</p></div>
 
     </div>
 
@@ -178,6 +161,47 @@ params and the target params.</p></div>
 
   </section>
 
+
+  <section id="types" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#types">
+        <i class="ri-link-m" aria-hidden="true"></i>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Types
+    </h1>
+    <div class="types-list">
+<section class="detail" id="t:actions/0">
+
+  <div class="detail-header">
+    <a href="#t:actions/0" class="detail-link" title="Link to this type">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this type</span>
+    </a>
+    <h1 class="signature" translate="no">actions()</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L11" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@type</span> actions() :: :provision_project</pre>
+
+      </div>
+
+
+  </section>
+</section>
+
+    </div>
+  </section>
 
   <section id="functions" class="details-list">
     <h1 class="section-heading">
@@ -188,16 +212,16 @@ params and the target params.</p></div>
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="apply_form_params/2">
+<section class="detail" id="authorize/3">
 
   <div class="detail-header">
-    <a href="#apply_form_params/2" class="detail-link" title="Link to this function">
+    <a href="#authorize/3" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">apply_form_params(current_params, form_params)</h1>
+    <h1 class="signature" translate="no">authorize(arg1, user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/workflow_params.ex#L12" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/policies/provisioning.ex#L24" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -207,79 +231,20 @@ Functions
 
   <section class="docstring">
 
-<p>Produce a new set of params by applying the given form params to the current
-params.</p>
-  </section>
-</section>
-<section class="detail" id="apply_patches/2">
+      <div class="specs">
 
-  <div class="detail-header">
-    <a href="#apply_patches/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">apply_patches(current_params, patches)</h1>
+          <pre translate="no"><span class="attribute">@spec</span> authorize(
+  <a href="#t:actions/0">actions</a>(),
+  <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>(),
+  <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()
+) :: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>()</pre>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/workflow_params.ex#L45" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
+      </div>
 
-
-  </div>
-
-  <section class="docstring">
-
-<p>Produce a new set of params by applying the given patches to the current parms</p>
-  </section>
-</section>
-<section class="detail" id="to_map/1">
-
-  <div class="detail-header">
-    <a href="#to_map/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">to_map(changeset)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/workflow_params.ex#L72" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Convert a changeset to a serializable map of workflow params, suitable for
-sending to the front end editor.</p><p>It uses <a href="Lightning.Helpers.html#json_safe/1"><code class="inline">Lightning.Helpers.json_safe/1</code></a> to ensure that the map is safe to
-serialize to JSON. This is necessary because the underlying model may
-contain atom values.</p>
-  </section>
-</section>
-<section class="detail" id="to_patches/2">
-
-  <div class="detail-header">
-    <a href="#to_patches/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">to_patches(initial_params, target_params)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/workflow_params.ex#L59" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<p>Produce a set of patches that represent the difference between the initial
-params and the target params.</p><p>This usually is used to produce a set of patches that represent the changes
-introduced by a changeset.</p>
+<p>authorize/3 takes an action, a user, and a project. It checks the user's role
+for this project and returns <code class="inline">true</code> if the user can perform the action and
+false if they cannot.</p><p>Note that permissions are grouped by action.</p><p>We deny by default, so if a user's role is not added to the allow roles list
+for a particular action they are denied.</p>
   </section>
 </section>
 

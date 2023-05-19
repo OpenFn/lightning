@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.5.2">
 
-    <title>Lightning.Projects.Importer — Lightning v0.5.2</title>
+    <title>Lightning.Projects.Provisioner — Lightning v0.5.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-AC8AB9E6.js"></script>
+    <script src="dist/sidebar_items-5389C8E5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -102,19 +102,22 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Projects.Importer</span> 
+  <span translate="no">Lightning.Projects.Provisioner</span> 
   <small class="app-vsn" translate="no">(Lightning v0.5.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Module that expose a function building a multi for importing a project yaml (via a map)</p>
+<p>Provides functions for importing projects. This module is used by the
+provisioning HTTP API.</p><p>When providing a project to import, all records must have an <code class="inline">id</code> field.
+It's up to the caller to ensure that the <code class="inline">id</code> is unique and generated
+ahead of time in the case of new records.</p>
   </section>
 
 
@@ -133,7 +136,28 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#import_job_changeset/4" translate="no">import_job_changeset(job, attrs, workflow_id, import_transaction)</a>
+        <a href="#import_document/2" translate="no">import_document(project, data)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Import a project.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#load_project/1" translate="no">load_project(id)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Load a project by ID, including all workflows and their associated jobs,
+triggers and edges.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#parse_document/2" translate="no">parse_document(project, data)</a>
 
       </div>
 
@@ -141,17 +165,11 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#import_multi_for_project/2" translate="no">import_multi_for_project(project_data, user)</a>
+        <a href="#validate_extraneous_params/1" translate="no">validate_extraneous_params(changeset)</a>
 
       </div>
 
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#import_workflow_changeset/3" translate="no">import_workflow_changeset(workflow, map, import_transaction)</a>
-
-      </div>
+        <div class="summary-synopsis"><p>Validate that there are no extraneous parameters in the changeset.</p></div>
 
     </div>
 
@@ -169,16 +187,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="import_job_changeset/4">
+<section class="detail" id="import_document/2">
 
   <div class="detail-header">
-    <a href="#import_job_changeset/4" class="detail-link" title="Link to this function">
+    <a href="#import_document/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">import_job_changeset(job, attrs, workflow_id, import_transaction)</h1>
+    <h1 class="signature" translate="no">import_document(project, data)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L63" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L25" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -187,20 +205,86 @@ Functions
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> import_document(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | nil, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  {:error, <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())}
+  | {:ok, <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>()}</pre>
+
+      </div>
+
+<p>Import a project.</p>
+  </section>
+</section>
+<section class="detail" id="load_project/1">
+
+  <div class="detail-header">
+    <a href="#load_project/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">load_project(id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L55" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> load_project(<a href="https://hexdocs.pm/ecto/3.9.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) :: <a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>() | nil</pre>
+
+      </div>
+
+<p>Load a project by ID, including all workflows and their associated jobs,
+triggers and edges.</p><p>Returns <code class="inline">nil</code> if the project does not exist.</p>
+  </section>
+</section>
+<section class="detail" id="parse_document/2">
+
+  <div class="detail-header">
+    <a href="#parse_document/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">parse_document(project, data)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L42" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> parse_document(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>(), <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>()) ::
+  <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Projects.Project.html#t:t/0">Lightning.Projects.Project.t</a>())</pre>
+
+      </div>
 
 
   </section>
 </section>
-<section class="detail" id="import_multi_for_project/2">
+<section class="detail" id="validate_extraneous_params/1">
 
   <div class="detail-header">
-    <a href="#import_multi_for_project/2" class="detail-link" title="Link to this function">
+    <a href="#validate_extraneous_params/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">import_multi_for_project(project_data, user)</h1>
+    <h1 class="signature" translate="no">validate_extraneous_params(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L15" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/provisioner.ex#L171" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -210,29 +294,8 @@ Functions
 
   <section class="docstring">
 
-
-  </section>
-</section>
-<section class="detail" id="import_workflow_changeset/3">
-
-  <div class="detail-header">
-    <a href="#import_workflow_changeset/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">import_workflow_changeset(workflow, map, import_transaction)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/importer.ex#L42" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
+<p>Validate that there are no extraneous parameters in the changeset.</p><p>For all params in the changeset, ensure that the param is in the list of
+known fields in the schema.</p>
   </section>
 </section>
 

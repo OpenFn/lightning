@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-AC8AB9E6.js"></script>
+    <script src="dist/sidebar_items-5389C8E5.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -156,14 +156,6 @@ See <a href="Lightning.Jobs.Trigger.html"><code class="inline">Lightning.Jobs.Tr
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#changeset/3" translate="no">changeset(job, attrs, workflow_id)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
         <a href="#new/1" translate="no">new(attrs \\ %{})</a>
 
       </div>
@@ -186,6 +178,14 @@ See <a href="Lightning.Jobs.Trigger.html"><code class="inline">Lightning.Jobs.Tr
 
         <div class="summary-synopsis"><p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#validate/1" translate="no">validate(changeset)</a>
+
+      </div>
 
     </div>
 
@@ -230,6 +230,7 @@ Types
   body: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
   credential:
     nil | <a href="Lightning.Credentials.Credential.html#t:t/0">Lightning.Credentials.Credential.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  delete: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">boolean</a>(),
   id: <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -263,28 +264,6 @@ Types
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="changeset/3">
-
-  <div class="detail-header">
-    <a href="#changeset/3" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">changeset(job, attrs, workflow_id)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L95" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
 <section class="detail" id="new/1">
 
     <span id="new/0"></span>
@@ -296,7 +275,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">new(attrs \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L60" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L62" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -318,7 +297,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">put_project_credential(job, project_credential)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L140" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L151" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -340,7 +319,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">put_workflow(changeset, workflow)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L131" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L142" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -362,17 +341,39 @@ Functions
 <p>Attaches a workflow to a job, this is useful when you have an unpersisted
 Workflow changeset - and want it to be created at the same time as a Job.</p><p>Be sure to pass the return of this function into <code class="inline">changeset/2</code> in order to
 have this jobs trigger get the workflows id.</p><p>Example:</p><pre><code class="makeup elixir" translate="no"><span class="n">workflow</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="3170247202-1">(</span><span class="w">
-    </span><span class="p" data-group-id="3170247202-2">%</span><span class="nc" data-group-id="3170247202-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="3170247202-2">{</span><span class="p" data-group-id="3170247202-2">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="3170247202-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="3170247202-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="3170247202-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="3170247202-5">(</span><span class="p" data-group-id="3170247202-5">)</span><span class="w"> </span><span class="p" data-group-id="3170247202-3">}</span><span class="p">,</span><span class="w">
-    </span><span class="p" data-group-id="3170247202-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="3170247202-6">]</span><span class="w">
-  </span><span class="p" data-group-id="3170247202-1">)</span><span class="w">
+  </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">cast</span><span class="p" data-group-id="7075654737-1">(</span><span class="w">
+    </span><span class="p" data-group-id="7075654737-2">%</span><span class="nc" data-group-id="7075654737-2">Lightning.Workflows.Workflow</span><span class="p" data-group-id="7075654737-2">{</span><span class="p" data-group-id="7075654737-2">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="7075654737-3">%{</span><span class="w"> </span><span class="s">&quot;project_id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="n">attrs</span><span class="p" data-group-id="7075654737-4">[</span><span class="ss">:project_id</span><span class="p" data-group-id="7075654737-4">]</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;id&quot;</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="nc">Ecto.UUID</span><span class="o">.</span><span class="n">generate</span><span class="p" data-group-id="7075654737-5">(</span><span class="p" data-group-id="7075654737-5">)</span><span class="w"> </span><span class="p" data-group-id="7075654737-3">}</span><span class="p">,</span><span class="w">
+    </span><span class="p" data-group-id="7075654737-6">[</span><span class="ss">:project_id</span><span class="p">,</span><span class="w"> </span><span class="ss">:id</span><span class="p" data-group-id="7075654737-6">]</span><span class="w">
+  </span><span class="p" data-group-id="7075654737-1">)</span><span class="w">
 
 </span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w">
-  </span><span class="p" data-group-id="3170247202-7">%</span><span class="nc" data-group-id="3170247202-7">Job</span><span class="p" data-group-id="3170247202-7">{</span><span class="p" data-group-id="3170247202-7">}</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="3170247202-8">(</span><span class="p" data-group-id="3170247202-8">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="3170247202-9">(</span><span class="n">workflow</span><span class="p" data-group-id="3170247202-9">)</span><span class="w">
-  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="3170247202-10">(</span><span class="n">attrs</span><span class="p" data-group-id="3170247202-10">)</span></code></pre>
+  </span><span class="p" data-group-id="7075654737-7">%</span><span class="nc" data-group-id="7075654737-7">Job</span><span class="p" data-group-id="7075654737-7">{</span><span class="p" data-group-id="7075654737-7">}</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Ecto.Changeset</span><span class="o">.</span><span class="n">change</span><span class="p" data-group-id="7075654737-8">(</span><span class="p" data-group-id="7075654737-8">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">put_workflow</span><span class="p" data-group-id="7075654737-9">(</span><span class="n">workflow</span><span class="p" data-group-id="7075654737-9">)</span><span class="w">
+  </span><span class="o">|&gt;</span><span class="w"> </span><span class="nc">Job</span><span class="o">.</span><span class="n">changeset</span><span class="p" data-group-id="7075654737-10">(</span><span class="n">attrs</span><span class="p" data-group-id="7075654737-10">)</span></code></pre>
+  </section>
+</section>
+<section class="detail" id="validate/1">
+
+  <div class="detail-header">
+    <a href="#validate/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">validate(changeset)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/jobs/job.ex#L100" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 
