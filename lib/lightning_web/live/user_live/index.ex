@@ -53,7 +53,7 @@ defmodule LightningWeb.UserLive.Index do
     {:noreply,
      socket
      |> put_flash(:info, "User deletion canceled")
-     |> push_navigate(to: ~p"/settings/users")}
+     |> push_patch(to: ~p"/settings/users")}
   end
 
   defp list_users do
