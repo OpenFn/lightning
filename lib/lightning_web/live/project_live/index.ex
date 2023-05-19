@@ -71,7 +71,7 @@ defmodule LightningWeb.ProjectLive.Index do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Canceled project deletion schedule")
+     |> put_flash(:info, "Project deletion canceled")
      |> push_patch(to: ~p"/settings/projects")}
   end
 

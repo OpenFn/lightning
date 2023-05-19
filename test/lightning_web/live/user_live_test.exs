@@ -198,13 +198,9 @@ defmodule LightningWeb.UserLiveTest do
 
       {:ok, index_live, _html} = live(conn, Routes.user_index_path(conn, :index))
 
-      {:ok, _index_live, html} =
-        index_live
-        |> element("#user-#{user.id} a", "Cancel deletion")
-        |> render_click()
-        |> follow_redirect(conn, Routes.user_index_path(conn, :index))
-
-      assert html =~ "User deletion canceled"
+      assert index_live
+             |> element("#user-#{user.id} a", "Cancel deletion")
+             |> render_click() =~ "User deletion canceled"
     end
 
     test "allows a superuser to perform delete now action on users", %{
