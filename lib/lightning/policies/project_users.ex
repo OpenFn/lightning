@@ -21,6 +21,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :edit_digest_alerts
           | :edit_failure_alerts
           | :edit_project_description
+          | :provision_project
 
   @doc """
   authorize/3 takes an action, a user, and a project. It checks the user's role
@@ -65,7 +66,8 @@ defmodule Lightning.Policies.ProjectUsers do
              :create_job,
              :delete_job,
              :run_job,
-             :rerun_job
+             :rerun_job,
+             :provision_project
            ],
       do:
         Projects.get_project_user_role(user, project) in [

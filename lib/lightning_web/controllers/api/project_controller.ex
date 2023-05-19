@@ -4,7 +4,6 @@ defmodule LightningWeb.API.ProjectController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects
-  # alias Lightning.Jobs.Job
 
   action_fallback LightningWeb.FallbackController
 

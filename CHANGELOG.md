@@ -10,6 +10,10 @@ and this project adheres to
 
 ### Added
 
+- Added a provisioning api for creating and updating projects and their
+  workflows See: [PROVISIONING.md](./PROVISIONING.md)
+  [#641](https://github.com/OpenFn/Lightning/issues/641)
+
 ### Changed
 
 ### Fixed

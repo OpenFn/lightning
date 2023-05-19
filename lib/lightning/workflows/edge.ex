@@ -25,6 +25,8 @@ defmodule Lightning.Workflows.Edge do
 
     field :condition, :string
 
+    field :delete, :boolean, virtual: true
+
     timestamps()
   end
 
@@ -38,6 +40,11 @@ defmodule Lightning.Workflows.Edge do
       :condition,
       :target_job_id
     ])
+    |> validate()
+  end
+
+  def validate(changeset) do
+    changeset
     |> validate_node_in_same_workflow()
     |> foreign_key_constraint(:workflow_id)
     |> validate_exclusive(
@@ -47,8 +54,10 @@ defmodule Lightning.Workflows.Edge do
     |> validate_different_nodes()
   end
 
-  # Ensure that only one of the fields is set at a time
-  defp validate_exclusive(changeset, fields, message) do
+  @doc """
+  Validate that only one of the fields is set at a time.
+  """
+  def validate_exclusive(changeset, fields, message) do
     fields
     |> Enum.map(&get_field(changeset, &1))
     |> Enum.reject(&is_nil/1)

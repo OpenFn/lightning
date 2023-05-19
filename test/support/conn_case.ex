@@ -77,7 +77,23 @@ defmodule LightningWeb.ConnCase do
 
   It stores an updated connection and a registered user in the
   test context.
+
+  You can also specify a `login_as` tag in the context to log in as a specific user.
+
+      @tag login_as: "superuser"
+      test "..." do
+        # ...
+      end
   """
+  def assign_bearer_for_api(%{conn: conn, login_as: "superuser"}) do
+    user = Lightning.AccountsFixtures.superuser_fixture()
+
+    token = Lightning.Accounts.generate_api_token(user)
+    conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
+
+    %{conn: conn, user: user}
+  end
+
   def assign_bearer_for_api(%{conn: conn}) do
     user = Lightning.AccountsFixtures.user_fixture()
 

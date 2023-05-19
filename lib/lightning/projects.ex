@@ -11,7 +11,7 @@ defmodule Lightning.Projects do
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo
 
-  alias Lightning.Projects.{Importer, Project, ProjectCredential}
+  alias Lightning.Projects.{Project, ProjectCredential}
   alias Lightning.Accounts.User
   alias Lightning.ExportUtils
   alias Lightning.Workflows.Workflow
@@ -82,8 +82,10 @@ defmodule Lightning.Projects do
       ** (Ecto.NoResultsError)
 
   """
-  def get_project_with_users!(id),
-    do: Repo.get!(Project |> preload(project_users: [:user]), id)
+  def get_project_with_users!(id) do
+    from(p in Project, where: p.id == ^id, preload: [project_users: :user])
+    |> Repo.one!()
+  end
 
   @doc """
   Creates a project.
@@ -391,20 +393,5 @@ defmodule Lightning.Projects do
     {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
 
     {:ok, yaml}
-  end
-
-  @spec import_project(any, any) :: {:ok, binary}
-  @doc """
-  Imports a project as map.
-
-  ## Examples
-
-      iex> import_project(:yaml, project_id)
-      {:ok, string}
-
-  """
-  def import_project(project_data, user) do
-    Importer.import_multi_for_project(project_data, user)
-    |> Repo.transaction()
   end
 end

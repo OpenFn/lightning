@@ -109,7 +109,6 @@ defmodule LightningWeb do
       # Import basic rendering functionality (render, render_layout, etc)
       import Phoenix.View
 
-      import LightningWeb.ErrorHelpers
       import LightningWeb.FormHelpers
       import LightningWeb.Gettext
       alias LightningWeb.Router.Helpers, as: Routes
