@@ -39,7 +39,7 @@ defmodule Lightning.Projects do
     :ok =
       Enum.each(projects_to_delete, fn project -> delete_project(project) end)
 
-    {:ok, %{users_deleted: projects_to_delete}}
+    {:ok, %{projects_deleted: projects_to_delete}}
   end
 
   @doc """

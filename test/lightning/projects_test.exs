@@ -401,4 +401,28 @@ defmodule Lightning.ProjectsTest do
       assert errors[:scheduled_deletion] == nil
     end
   end
+
+  describe "The default Oban function Projects.perform/1" do
+    test "removes all projects past deletion date when called with type 'purge_deleted'" do
+      project_to_delete =
+        project_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+        )
+
+      project_fixture(
+        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+      )
+
+      count_before = Repo.all(Project) |> Enum.count()
+
+      {:ok, %{projects_deleted: projects_deleted}} =
+        Projects.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert count_before - 1 == Repo.all(Project) |> Enum.count()
+      assert 1 == projects_deleted |> Enum.count()
+
+      assert project_to_delete.id ==
+               projects_deleted |> Enum.at(0) |> Map.get(:id)
+    end
+  end
 end
