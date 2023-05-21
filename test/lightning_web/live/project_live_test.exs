@@ -45,6 +45,27 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ project.name
     end
 
+    test "saves new project with no members", %{conn: conn} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
+
+      assert index_live |> element("a", "New Project") |> render_click() =~
+               "Projects"
+
+      assert_patch(index_live, Routes.project_index_path(conn, :new))
+
+      index_live
+      |> form("#project-form", project: @create_attrs)
+      |> render_change()
+
+      index_live
+      |> form("#project-form")
+      |> render_submit()
+
+      assert_patch(index_live, Routes.project_index_path(conn, :index))
+      assert render(index_live) =~ "Project created successfully"
+    end
+
     test "saves new project", %{conn: conn} do
       user = user_fixture()
 
