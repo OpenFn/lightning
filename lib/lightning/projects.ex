@@ -382,8 +382,8 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  @spec first_project_for_user(user :: User.t()) :: Project.t() | nil
-  def first_project_for_user(user) do
+  @spec select_project_for_user(user :: User.t()) :: Project.t() | nil
+  def select_project_for_user(user) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion),
@@ -446,26 +446,31 @@ defmodule Lightning.Projects do
   run. (Note that subsequent logins will be blocked for projects pending deletion.)
   """
   def schedule_project_deletion(project, name) do
-    date =
-      case Application.get_env(:lightning, :purge_deleted_after_days) do
-        nil -> DateTime.utc_now()
-        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
-      end
+    Repo.transaction(fn ->
+      date =
+        case Application.get_env(:lightning, :purge_deleted_after_days) do
+          nil -> DateTime.utc_now()
+          integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+        end
 
-    jobs = project_jobs_query(project) |> Repo.all()
+      jobs = project_jobs_query(project) |> Repo.all()
 
-    jobs
-    |> Enum.each(fn job ->
-      Lightning.Jobs.update_job(job, %{
-        "enabled" => false
-      })
+      jobs
+      |> Enum.each(fn job ->
+        Lightning.Jobs.update_job(job, %{
+          "enabled" => false
+        })
+      end)
+
+      {_status, result} =
+        Project.scheduled_deletion_changeset(project, %{
+          "scheduled_deletion" => date,
+          "scheduled_deletion_name" => name
+        })
+        |> Repo.update()
+
+      result
     end)
-
-    Project.scheduled_deletion_changeset(project, %{
-      "scheduled_deletion" => date,
-      "scheduled_deletion_name" => name
-    })
-    |> Repo.update()
   end
 
   @doc """
