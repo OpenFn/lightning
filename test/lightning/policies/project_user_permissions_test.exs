@@ -69,7 +69,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       assert ProjectUsers |> Permissions.can?(:access_project, viewer, project)
     end
 
-    test "can not access that scheduled deletion project", %{
+    test "can not access a project that is scheduled for deletion", %{
       marked_project: marked_project,
       viewer: viewer
     } do
@@ -139,7 +139,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
-    test "cannot request project deletion, edit the project name, and edit the project description",
+    test "cannot edit the project name, and edit the project description",
          %{
            project: project,
            editor: editor
@@ -173,7 +173,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :owner role" do
-    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, edit the project description, and request project deletion.",
+    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
          %{
            project: project,
            owner: owner

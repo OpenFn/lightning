@@ -251,7 +251,7 @@ defmodule LightningWeb.Components.DeletionModal do
           id="scheduled_deletion_form"
         >
           <span>
-            This project and all data associated to it (workflows, jobs, project users, project credentials, ...) will be deleted.
+            This project and all data associated to it (workflows, jobs, project users, project credentials, ...) will be deleted. Please make sure none of the workflows in it are still in use.
           </span>
 
           <div class="hidden sm:block" aria-hidden="true">
