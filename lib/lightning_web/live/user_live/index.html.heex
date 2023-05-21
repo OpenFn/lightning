@@ -15,7 +15,7 @@
   <LayoutComponents.centered>
     <%= if @live_action == :delete do %>
       <.live_component
-        module={LightningWeb.Components.DeletionModal}
+        module={LightningWeb.Components.UserDeletionModal}
         id={@user.id}
         user={@user}
         logout={false}
