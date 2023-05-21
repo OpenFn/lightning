@@ -58,7 +58,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
            :error,
            "Cannot delete user that has activities in other projects"
          )
-         |> push_patch(to: ~p"/settings/users")}
+         |> push_navigate(to: ~p"/settings/users")}
 
       true ->
         Accounts.purge_user(socket.assigns.user.id)
@@ -66,7 +66,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
         {:noreply,
          socket
          |> put_flash(:info, "User deleted")
-         |> push_patch(to: ~p"/settings/users")}
+         |> push_navigate(to: ~p"/settings/users")}
     end
   end
 

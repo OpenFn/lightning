@@ -40,7 +40,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
       {:noreply,
        socket
        |> put_flash(:info, "Project deleted")
-       |> push_patch(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.return_to)}
     else
       case Projects.schedule_project_deletion(
              socket.assigns.project,
@@ -50,7 +50,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
           {:noreply,
            socket
            |> put_flash(:info, "Project scheduled for deletion")
-           |> push_patch(to: socket.assigns.return_to)}
+           |> push_navigate(to: socket.assigns.return_to)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
