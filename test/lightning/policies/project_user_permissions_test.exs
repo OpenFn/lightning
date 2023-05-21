@@ -111,7 +111,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         create_job
         create_workflow
         delete_job
-        delete_project
         edit_job
         edit_project_description
         edit_project_name
@@ -145,7 +144,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-          delete_project
           edit_project_description
           edit_project_name
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
@@ -182,7 +180,6 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         create_job
         create_workflow
         delete_job
-        delete_project
         edit_job
         edit_project_description
         edit_project_name
