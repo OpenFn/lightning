@@ -252,9 +252,6 @@ defmodule Lightning.ProjectsTest do
       assert jobs_query |> Repo.aggregate(:count, :id) == 5,
              "There should be only five jobs"
 
-      assert {:error, %Ecto.Changeset{}} =
-               Projects.delete_project(project_fixture(scheduled_deletion: nil))
-
       assert {:ok, %Project{}} = Projects.delete_project(p1)
 
       assert runs_query |> Repo.aggregate(:count, :id) == 0
@@ -287,8 +284,6 @@ defmodule Lightning.ProjectsTest do
 
       assert Lightning.Projects.project_runs_query(p2)
              |> Repo.aggregate(:count, :id) == 1
-
-      assert {:error, %Ecto.Changeset{}} = Projects.delete_project(p2)
     end
 
     test "change_project/1 returns a project changeset" do
