@@ -10,7 +10,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(_params, _session, socket) do
@@ -18,6 +18,14 @@ defmodule LightningWeb.ProjectLive.Settings do
       Projects.get_project_with_users!(socket.assigns.project.id).project_users
 
     credentials = Credentials.list_credentials(socket.assigns.project)
+
+    can_delete_project =
+      ProjectUsers
+      |> Permissions.can?(
+        :delete_project,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
 
     can_edit_project_name =
       ProjectUsers
@@ -43,6 +51,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_users: project_users,
        current_user: socket.assigns.current_user,
        project_changeset: Projects.change_project(socket.assigns.project),
+       can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
        can_edit_project_description: can_edit_project_description
      )}
@@ -75,6 +84,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   defp apply_action(socket, :index, _params) do
+    socket |> assign(:page_title, "Project settings")
+  end
+
+  defp apply_action(socket, :delete, _params) do
     socket |> assign(:page_title, "Project settings")
   end
 
