@@ -1,11 +1,9 @@
-defmodule LightningWeb.Components.DeletionModal do
+defmodule LightningWeb.Components.UserDeletionModal do
   @moduledoc false
   use LightningWeb, :component
 
   use Phoenix.LiveComponent
 
-  alias Lightning.Projects
-  alias Lightning.Projects.Project
   alias Lightning.Accounts
   alias Lightning.Accounts.User
 
@@ -21,16 +19,6 @@ defmodule LightningWeb.Components.DeletionModal do
      |> assign(assigns)}
   end
 
-  def update(%{project: project} = assigns, socket) do
-    {:ok,
-     socket
-     |> assign(
-       delete_now?: !is_nil(project.scheduled_deletion),
-       scheduled_deletion_changeset: Projects.change_scheduled_deletion(project)
-     )
-     |> assign(assigns)}
-  end
-
   @impl true
   def handle_event(
         "validate",
@@ -40,20 +28,6 @@ defmodule LightningWeb.Components.DeletionModal do
     changeset =
       socket.assigns.user
       |> Accounts.change_scheduled_deletion(user_params)
-      |> Map.put(:action, :validate_scheduled_deletion)
-
-    {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-  end
-
-  @impl true
-  def handle_event(
-        "validate",
-        %{"project" => project_params},
-        socket
-      ) do
-    changeset =
-      socket.assigns.project
-      |> Projects.change_scheduled_deletion(project_params)
       |> Map.put(:action, :validate_scheduled_deletion)
 
     {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
@@ -84,7 +58,7 @@ defmodule LightningWeb.Components.DeletionModal do
            :error,
            "Cannot delete user that has activities in other projects"
          )
-         |> push_navigate(to: ~p"/settings/users")}
+         |> push_patch(to: ~p"/settings/users")}
 
       true ->
         Accounts.purge_user(socket.assigns.user.id)
@@ -92,33 +66,7 @@ defmodule LightningWeb.Components.DeletionModal do
         {:noreply,
          socket
          |> put_flash(:info, "User deleted")
-         |> push_navigate(to: ~p"/settings/users")}
-    end
-  end
-
-  @impl true
-  def handle_event("delete", %{"project" => project_params}, socket) do
-    if socket.assigns.delete_now? do
-      Projects.delete_project(socket.assigns.project)
-
-      {:noreply,
-       socket
-       |> put_flash(:info, "Project deleted")
-       |> push_navigate(to: socket.assigns.return_to)}
-    else
-      case Projects.schedule_project_deletion(
-             socket.assigns.project,
-             project_params["scheduled_deletion_name"]
-           ) do
-        {:ok, %Project{}} ->
-          {:noreply,
-           socket
-           |> put_flash(:info, "Project scheduled for deletion")
-           |> push_navigate(to: socket.assigns.return_to)}
-
-        {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
-      end
+         |> push_patch(to: ~p"/settings/users")}
     end
   end
 
@@ -162,7 +110,7 @@ defmodule LightningWeb.Components.DeletionModal do
     """
   end
 
-  def render(%{user: %User{}} = assigns) do
+  def render(assigns) do
     ~H"""
     <div id={"user-#{@id}"}>
       <PetalComponents.Modal.modal
@@ -226,70 +174,6 @@ defmodule LightningWeb.Components.DeletionModal do
               disabled={!@scheduled_deletion_changeset.valid?}
             >
               Delete account
-            </LightningWeb.Components.Common.button>
-          </div>
-        </.form>
-      </PetalComponents.Modal.modal>
-    </div>
-    """
-  end
-
-  def render(%{project: %Project{}} = assigns) do
-    ~H"""
-    <div id={"project-#{@id}"}>
-      <PetalComponents.Modal.modal
-        max_width="sm"
-        title="Delete project"
-        close_modal_target={@myself}
-      >
-        <.form
-          :let={f}
-          for={@scheduled_deletion_changeset}
-          phx-change="validate"
-          phx-submit="delete"
-          phx-target={@myself}
-          id="scheduled_deletion_form"
-        >
-          <span>
-            This project and all data associated to it (workflows, jobs, project users, project credentials, ...) will be deleted. Please make sure none of the workflows in it are still in use.
-          </span>
-
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
-          <div class="grid grid-cols-12 gap-12">
-            <div class="col-span-8">
-              <%= label(f, :scheduled_deletion_name, "Project name",
-                class: "block text-sm font-medium text-secondary-700"
-              ) %>
-              <%= text_input(f, :scheduled_deletion_name,
-                class: "block w-full rounded-md",
-                phx_debounce: "blur"
-              ) %>
-              <%= error_tag(f, :scheduled_deletion_name,
-                class:
-                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-              ) %>
-            </div>
-          </div>
-
-          <%= hidden_input(f, :id) %>
-
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-5"></div>
-          </div>
-          <div class="flex justify-end">
-            <PetalComponents.Button.button
-              label="Cancel"
-              phx-click={PetalComponents.Modal.hide_modal(@myself)}
-            /> &nbsp;
-            <LightningWeb.Components.Common.button
-              type="submit"
-              color="red"
-              phx-disable-with="Deleting..."
-              disabled={!@scheduled_deletion_changeset.valid?}
-            >
-              Delete project
             </LightningWeb.Components.Common.button>
           </div>
         </.form>

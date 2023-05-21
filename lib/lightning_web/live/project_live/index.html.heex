@@ -15,7 +15,7 @@
   <LayoutComponents.centered>
     <%= if @live_action == :delete do %>
       <.live_component
-        module={LightningWeb.Components.DeletionModal}
+        module={LightningWeb.Components.ProjectDeletionModal}
         id={@project.id}
         project={@project}
         return_to={Routes.project_index_path(@socket, :index)}
