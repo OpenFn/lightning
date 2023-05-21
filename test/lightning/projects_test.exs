@@ -339,7 +339,27 @@ defmodule Lightning.ProjectsTest do
       assert generated_yaml == expected_yaml
     end
 
-    test "schedule_project_deletion/1" do
+    test "schedule_project_deletion/1 schedules a project for deletion to now when purge_deleted_after_days is nil" do
+      prev_purge_deleted_after_days =
+        Application.get_env(:lightning, :purge_deleted_after_days)
+
+      Application.put_env(:lightning, :purge_deleted_after_days, nil)
+
+      %{project: project} = full_project_fixture()
+
+      {:ok, project} = Projects.schedule_project_deletion(project, project.name)
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      assert Timex.diff(project.scheduled_deletion, now, :seconds) == 0
+
+      Application.put_env(
+        :lightning,
+        :purge_deleted_after_days,
+        prev_purge_deleted_after_days
+      )
+    end
+
+    test "schedule_project_deletion/1 schedules a project for deletion to purge_deleted_after_days days from now" do
       days = Application.get_env(:lightning, :purge_deleted_after_days)
 
       %{project: project} = full_project_fixture()
