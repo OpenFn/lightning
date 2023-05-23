@@ -11,6 +11,27 @@ defmodule Lightning.DigestEmailWorkerTest do
   }
 
   describe "perform/1" do
+    test "projects that are scheduled for deletion are not part of the projects for which digest alerts are sent" do
+      user = AccountsFixtures.user_fixture()
+
+      project =
+        ProjectsFixtures.project_fixture(
+          scheduled_deletion: Timex.now(),
+          project_users: [
+            %{user_id: user.id, digest: :daily}
+          ]
+        )
+
+      assert project.project_users |> length() == 1
+
+      {:ok, notified_project_users} =
+        DigestEmailWorker.perform(%Oban.Job{
+          args: %{"type" => "daily_project_digest"}
+        })
+
+      assert notified_project_users |> length() == 0
+    end
+
     test "all project users of different project that have a digest of :daily, :weekly, and :monthly" do
       user_1 = AccountsFixtures.user_fixture()
       user_2 = AccountsFixtures.user_fixture()

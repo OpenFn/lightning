@@ -2,6 +2,7 @@ defmodule Lightning.DigestEmailWorker do
   @moduledoc false
 
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects.ProjectUser
   alias Lightning.{Workflows, Repo}
@@ -41,6 +42,8 @@ defmodule Lightning.DigestEmailWorker do
   defp project_digest(digest, start_date, end_date) do
     project_users =
       from(pu in ProjectUser,
+        join: p in Project,
+        on: p.id == pu.project_id and is_nil(p.scheduled_deletion),
         where: pu.digest == ^digest,
         preload: [:project, :user]
       )
