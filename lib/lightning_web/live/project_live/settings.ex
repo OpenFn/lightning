@@ -83,11 +83,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, socket |> apply_action(socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
-    socket |> assign(:page_title, "Project settings")
-  end
-
-  defp apply_action(socket, :delete, _params) do
+  defp apply_action(socket, action, _params) when action in [:index, :delete] do
     socket |> assign(:page_title, "Project settings")
   end
 

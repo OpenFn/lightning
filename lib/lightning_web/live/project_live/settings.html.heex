@@ -109,10 +109,12 @@
             <div id="project-settings-#" class="bg-white p-4 rounded-md">
               <div>
                 <h6 class="font-medium text-black">The danger zone</h6>
-                <br />
                 <small class="block my-1 text-xs text-gray-600">
                   Deleting your project is irreversible
                 </small>
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-2"></div>
+                </div>
                 <.link navigate={
                   Routes.project_project_settings_path(
                     @socket,
@@ -136,7 +138,13 @@
               module={LightningWeb.Components.ProjectDeletionModal}
               id={@project.id}
               project={@project}
-              return_to="/"
+              return_to={
+                Routes.project_project_settings_path(
+                  @socket,
+                  :index,
+                  @project.id
+                )
+              }
             />
           <% end %>
         </LightningWeb.Components.Common.panel_content>

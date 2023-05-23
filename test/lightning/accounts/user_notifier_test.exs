@@ -9,6 +9,25 @@ defmodule Lightning.Accounts.UserNotifierTest do
   alias Lightning.Projects.Project
 
   describe "Notification emails" do
+    test "notify_project_deletion/2" do
+      user =
+        Lightning.AccountsFixtures.user_fixture(
+          email: "user@openfn.org",
+          first_name: "User"
+        )
+
+      project = Lightning.ProjectsFixtures.project_fixture(name: "project-a")
+
+      UserNotifier.notify_project_deletion(user, project)
+
+      assert_email_sent(
+        subject: "Project scheduled for deletion",
+        to: "user@openfn.org",
+        text_body:
+          "Hi User,\n\nproject-a project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00. If this doesn't sound right, please email\ninstance_admin to cancel the deletion.\n"
+      )
+    end
+
     test "deliver_project_addition_notification/2" do
       user = Lightning.AccountsFixtures.user_fixture(email: "user@openfn.org")
 

@@ -63,6 +63,11 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
     {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
   end
 
+  defp human_readable_grace_period() do
+    grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
+    if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -72,6 +77,20 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         title="Delete project"
         close_modal_target={@myself}
       >
+        <.p>
+          Enter the project name to confirm it's deletion
+        </.p>
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
+        </div>
+        <.p>
+          Deleting this project will disable access
+          for all users, and disable all jobs in the project. The whole project will be deleted
+          along with all workflows and work order history, <%= human_readable_grace_period() %>.
+        </.p>
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
+        </div>
         <.form
           :let={f}
           for={@scheduled_deletion_changeset}
@@ -80,13 +99,6 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
           phx-target={@myself}
           id="scheduled_deletion_form"
         >
-          <span>
-            This project and all data associated to it (workflows, jobs, project users, project credentials, ...) will be deleted. Please make sure none of the workflows in it are still in use.
-          </span>
-
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
           <div class="grid grid-cols-12 gap-12">
             <div class="col-span-8">
               <%= label(f, :scheduled_deletion_name, "Project name",
