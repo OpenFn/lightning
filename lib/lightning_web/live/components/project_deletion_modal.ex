@@ -40,7 +40,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
       {:noreply,
        socket
        |> put_flash(:info, "Project deleted")
-       |> push_navigate(to: socket.assigns.return_to)}
+       |> push_navigate(to: socket.assigns.save_return_to)}
     else
       case Projects.schedule_project_deletion(
              socket.assigns.project,
@@ -50,7 +50,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
           {:noreply,
            socket
            |> put_flash(:info, "Project scheduled for deletion")
-           |> push_navigate(to: socket.assigns.return_to)}
+           |> push_navigate(to: socket.assigns.save_return_to)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
@@ -60,7 +60,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
 
   @impl true
   def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: socket.assigns.return_to)}
+    {:noreply, push_redirect(socket, to: socket.assigns.cancel_return_to)}
   end
 
   defp human_readable_grace_period() do

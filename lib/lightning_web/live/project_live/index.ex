@@ -31,31 +31,31 @@ defmodule LightningWeb.ProjectLive.Index do
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(
+      page_title: "Projects",
       active_menu_item: :projects,
-      projects: Projects.list_projects(),
-      page_title: "Projects"
+      projects: Projects.list_projects()
     )
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     socket
-    |> assign(:page_title, "New Project")
-    |> assign(active_menu_item: :settings)
+    |> assign(page_title: "Edit Project")
+    |> assign(active_menu_item: :projects)
     |> assign(:project, Projects.get_project_with_users!(id))
     |> assign(:users, Lightning.Accounts.list_users())
   end
 
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(:page_title, "New Project")
-    |> assign(active_menu_item: :settings)
+    |> assign(page_title: "New Project")
+    |> assign(active_menu_item: :projects)
     |> assign(:project, %Lightning.Projects.Project{})
     |> assign(:users, Lightning.Accounts.list_users())
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
     socket
-    |> assign(:page_title, "Projects")
+    |> assign(page_title: "Projects")
     |> assign(active_menu_item: :settings)
     |> assign(:projects, Projects.list_projects())
     |> assign(:project, Projects.get_project!(id))

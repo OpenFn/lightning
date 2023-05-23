@@ -1,7 +1,7 @@
 <LayoutComponents.page_content>
   <:header>
     <LayoutComponents.header socket={@socket} current_user={@current_user}>
-      <:title>Projects</:title>
+      <:title><%= @page_title %></:title>
       <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
         <Common.button>
           <div class="h-full">
@@ -18,14 +18,14 @@
         module={LightningWeb.Components.ProjectDeletionModal}
         id={@project.id}
         project={@project}
-        return_to={Routes.project_index_path(@socket, :index)}
+        save_return_to={~p"/settings/projects"}
+        cancel_return_to={~p"/settings/projects"}
       />
     <% end %>
     <%= if @live_action in [:new, :edit] do %>
       <.live_component
         module={LightningWeb.ProjectLive.FormComponent}
         id={@project.id || :new}
-        title={@page_title}
         action={@live_action}
         project={@project}
         users={@users}

@@ -133,12 +133,13 @@
             </div>
           <% end %>
 
-          <%= if @live_action == :delete do %>
+          <%= if @live_action == :delete and @can_delete_project do %>
             <.live_component
               module={LightningWeb.Components.ProjectDeletionModal}
               id={@project.id}
               project={@project}
-              return_to={~p"/"}
+              save_return_to={~p"/"}
+              cancel_return_to={~p"/projects/#{@project.id}/settings"}
             />
           <% end %>
         </LightningWeb.Components.Common.panel_content>
