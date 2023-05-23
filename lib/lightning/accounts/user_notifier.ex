@@ -252,7 +252,7 @@ defmodule Lightning.Accounts.UserNotifier do
     Hi #{user.first_name},
 
     #{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,
-    and the resources will be deleted in #{human_readable_grace_period()} at 02:00. If this doesn't sound right, please email
+    and the resources will be deleted in #{human_readable_grace_period()} at 02:00 UTC. If this doesn't sound right, please email
     instance_admin to cancel the deletion.
     """)
   end

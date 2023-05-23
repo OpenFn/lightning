@@ -24,7 +24,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
         subject: "Project scheduled for deletion",
         to: "user@openfn.org",
         text_body:
-          "Hi User,\n\nproject-a project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00. If this doesn't sound right, please email\ninstance_admin to cancel the deletion.\n"
+          "Hi User,\n\nproject-a project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\ninstance_admin to cancel the deletion.\n"
       )
     end
 

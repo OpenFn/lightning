@@ -463,28 +463,24 @@ defmodule Lightning.Projects do
         })
       end)
 
-      Project.scheduled_deletion_changeset(project, %{
-        "scheduled_deletion" => date,
-        "scheduled_deletion_name" => name
-      })
-      |> Repo.update()
-      |> case do
-        {:ok, project} ->
-          project
-          |> Repo.preload(:users)
-          |> Map.get(:users, [])
-          |> Enum.each(fn user ->
-            UserNotifier.notify_project_deletion(
-              user,
-              project
-            )
-          end)
+      project =
+        Project.scheduled_deletion_changeset(project, %{
+          "scheduled_deletion" => date,
+          "scheduled_deletion_name" => name
+        })
+        |> Repo.update!()
 
-          project
+      :ok =
+        Repo.preload(project, :users)
+        |> Map.get(:users, [])
+        |> Enum.each(fn user ->
+          UserNotifier.notify_project_deletion(
+            user,
+            project
+          )
+        end)
 
-        {:error, changeset} ->
-          changeset
-      end
+      project
     end)
   end
 
