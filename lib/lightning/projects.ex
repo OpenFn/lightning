@@ -7,6 +7,7 @@ defmodule Lightning.Projects do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Attempt
   alias Lightning.AttemptRun
   alias Lightning.Jobs.Trigger
@@ -462,14 +463,28 @@ defmodule Lightning.Projects do
         })
       end)
 
-      {_status, result} =
-        Project.scheduled_deletion_changeset(project, %{
-          "scheduled_deletion" => date,
-          "scheduled_deletion_name" => name
-        })
-        |> Repo.update()
+      Project.scheduled_deletion_changeset(project, %{
+        "scheduled_deletion" => date,
+        "scheduled_deletion_name" => name
+      })
+      |> Repo.update()
+      |> case do
+        {:ok, project} ->
+          project
+          |> Repo.preload(:users)
+          |> Map.get(:users)
+          |> Enum.each(fn user ->
+            UserNotifier.notify_project_deletion(
+              user,
+              project
+            )
+          end)
 
-      result
+          project
+
+        {:error, changeset} ->
+          changeset
+      end
     end)
   end
 

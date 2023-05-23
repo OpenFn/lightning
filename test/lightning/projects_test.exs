@@ -1,6 +1,8 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: true
 
+  import Swoosh.TestAssertions
+
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -332,6 +334,33 @@ defmodule Lightning.ProjectsTest do
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml == expected_yaml
+    end
+
+    test "schedule_project_deletion/1 schedules a project for deletion and notify all project users via email." do
+      user_1 = user_fixture(email: "user_1@openfn.org", first_name: "user_1")
+      user_2 = user_fixture(email: "user_2@openfn.org", first_name: "user_2")
+
+      project =
+        project_fixture(
+          name: "project-to-delete",
+          project_users: [%{user_id: user_1.id}, %{user_id: user_2.id}]
+        )
+
+      assert project.scheduled_deletion == nil
+
+      Projects.schedule_project_deletion(project, project.name)
+
+      project = Projects.get_project!(project.id) |> Repo.preload(:users)
+      assert project.scheduled_deletion != nil
+
+      Enum.each(project.users, fn user ->
+        assert_email_sent(
+          subject: "Project scheduled for deletion",
+          to: user.email,
+          text_body:
+            "Hi #{user.first_name},\n\n#{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00. If this doesn't sound right, please email\ninstance_admin to cancel the deletion.\n"
+        )
+      end)
     end
 
     test "schedule_project_deletion/1 schedules a project for deletion to now when purge_deleted_after_days is nil" do
