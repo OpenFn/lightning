@@ -472,7 +472,7 @@ defmodule Lightning.Projects do
         {:ok, project} ->
           project
           |> Repo.preload(:users)
-          |> Map.get(:users)
+          |> Map.get(:users, [])
           |> Enum.each(fn user ->
             UserNotifier.notify_project_deletion(
               user,
