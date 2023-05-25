@@ -22,7 +22,7 @@ defmodule LightningWeb.DashboardLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    project = Projects.select_project_for_user(socket.assigns.current_user)
+    project = Projects.select_first_project_for_user(socket.assigns.current_user)
 
     if project != nil do
       can_access_project =

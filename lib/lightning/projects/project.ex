@@ -49,21 +49,9 @@ defmodule Lightning.Projects.Project do
   @doc """
   A project changeset for changing the scheduled_deletion property.
   """
-  def scheduled_deletion_changeset(project, attrs) do
+  def deletion_changeset(project, attrs) do
     project
-    |> cast(attrs, [:scheduled_deletion])
-    |> validate_name_for_deletion(attrs["scheduled_deletion_name"])
-  end
-
-  defp validate_name_for_deletion(changeset, name) do
-    if name == changeset.data.name do
-      changeset
-    else
-      add_error(
-        changeset,
-        :scheduled_deletion_name,
-        "This name doesn't match the project name"
-      )
-    end
+    |> cast(attrs, [:name])
+    |> validate_confirmation(:name, message: "doesn't match the project name")
   end
 end

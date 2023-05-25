@@ -90,11 +90,11 @@ defmodule LightningWeb.ProjectLive.Settings do
   defp apply_action(socket, :delete, %{"project_id" => id}) do
     if not socket.assigns.can_delete_project do
       socket
-      |> assign(:page_title, "Project settings")
       |> put_flash(:error, "You are not authorize to perform this action")
       |> push_patch(to: ~p"/projects/#{id}/settings")
+    else
+      socket |> assign(:page_title, "Project settings")
     end
-    |> assign(:page_title, "Project settings")
   end
 
   @impl true

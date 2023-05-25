@@ -339,7 +339,7 @@ defmodule Lightning.Projects do
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id
+      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
     )
   end
 
@@ -383,8 +383,8 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  @spec select_project_for_user(user :: User.t()) :: Project.t() | nil
-  def select_project_for_user(user) do
+  @spec select_first_project_for_user(user :: User.t()) :: Project.t() | nil
+  def select_first_project_for_user(user) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
       where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion),
@@ -446,7 +446,7 @@ defmodule Lightning.Projects do
   set, this date defaults to NOW but the automatic project purge cronjob will never
   run. (Note that subsequent logins will be blocked for projects pending deletion.)
   """
-  def schedule_project_deletion(project, name) do
+  def schedule_project_deletion(project) do
     Repo.transaction(fn ->
       date =
         case Application.get_env(:lightning, :purge_deleted_after_days) do
@@ -464,15 +464,15 @@ defmodule Lightning.Projects do
       end)
 
       project =
-        Project.scheduled_deletion_changeset(project, %{
-          "scheduled_deletion" => date,
-          "scheduled_deletion_name" => name
+        project
+        |> Ecto.Changeset.change(%{
+          scheduled_deletion: DateTime.truncate(date, :second)
         })
         |> Repo.update!()
 
       :ok =
-        Repo.preload(project, :users)
-        |> Map.get(:users, [])
+        Ecto.assoc(project, :users)
+        |> Repo.all()
         |> Enum.each(fn user ->
           UserNotifier.notify_project_deletion(
             user,
@@ -493,8 +493,8 @@ defmodule Lightning.Projects do
       %Ecto.Changeset{data: %Project{}}
 
   """
-  def change_scheduled_deletion(project, attrs \\ %{}) do
-    Project.scheduled_deletion_changeset(project, attrs)
+  def change_scheduled_deletion(project, attrs) do
+    Project.deletion_changeset(project, attrs)
   end
 
   def cancel_scheduled_deletion(project_id) do

@@ -293,6 +293,22 @@ defmodule Lightning.ProjectsTest do
       assert %Ecto.Changeset{} = Projects.change_project(project)
     end
 
+    test "get_projects_for_user/1 won't get scheduled for deletion projects" do
+      user = user_fixture()
+
+      project_1 =
+        project_fixture(project_users: [%{user_id: user.id}])
+        |> Repo.reload()
+
+      project_fixture(
+        project_users: [%{user_id: user.id}],
+        scheduled_deletion: Timex.now()
+      )
+      |> Repo.reload()
+
+      assert [project_1] == Projects.get_projects_for_user(user)
+    end
+
     test "get projects for a given user" do
       user = user_fixture()
       other_user = user_fixture()
@@ -348,7 +364,7 @@ defmodule Lightning.ProjectsTest do
 
       assert project.scheduled_deletion == nil
 
-      Projects.schedule_project_deletion(project, project.name)
+      Projects.schedule_project_deletion(project)
 
       project = Projects.get_project!(project.id) |> Repo.preload(:users)
       assert project.scheduled_deletion != nil
@@ -374,7 +390,7 @@ defmodule Lightning.ProjectsTest do
 
       %{project: project} = full_project_fixture()
 
-      {:ok, project} = Projects.schedule_project_deletion(project, project.name)
+      {:ok, project} = Projects.schedule_project_deletion(project)
 
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       assert Timex.diff(project.scheduled_deletion, now, :seconds) == 0
@@ -398,7 +414,7 @@ defmodule Lightning.ProjectsTest do
       assert project.scheduled_deletion == nil
 
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, project} = Projects.schedule_project_deletion(project, project.name)
+      {:ok, project} = Projects.schedule_project_deletion(project)
 
       project_jobs = Projects.project_jobs_query(project) |> Repo.all()
 
@@ -425,7 +441,7 @@ defmodule Lightning.ProjectsTest do
       project = project_fixture()
 
       errors =
-        Project.scheduled_deletion_changeset(project, %{
+        Project.deletion_changeset(project, %{
           "scheduled_deletion" => nil
         })
         |> errors_on()

@@ -5,15 +5,14 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   use Phoenix.LiveComponent
 
   alias Lightning.Projects
-  alias Lightning.Projects.Project
 
   @impl true
   def update(%{project: project} = assigns, socket) do
     {:ok,
      socket
      |> assign(
-       delete_now?: !is_nil(project.scheduled_deletion),
-       scheduled_deletion_changeset: Projects.change_scheduled_deletion(project)
+       :deletion_changeset,
+       Projects.change_scheduled_deletion(project, %{})
      )
      |> assign(assigns)}
   end
@@ -27,40 +26,67 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
     changeset =
       socket.assigns.project
       |> Projects.change_scheduled_deletion(project_params)
-      |> Map.put(:action, :validate_scheduled_deletion)
+      |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+    {:noreply, assign(socket, :deletion_changeset, changeset)}
   end
 
   @impl true
   def handle_event("delete", %{"project" => project_params}, socket) do
-    if socket.assigns.delete_now? do
-      Projects.delete_project(socket.assigns.project)
+    changeset =
+      socket.assigns.project
+      |> Projects.change_scheduled_deletion(project_params)
+      |> Map.put(:action, :validate)
 
-      {:noreply,
-       socket
-       |> put_flash(:info, "Project deleted")
-       |> push_navigate(to: socket.assigns.save_return_to)}
-    else
-      case Projects.schedule_project_deletion(
-             socket.assigns.project,
-             project_params["scheduled_deletion_name"]
-           ) do
-        {:ok, %Project{}} ->
+    if changeset.valid? do
+      delete_project(socket.assigns.project)
+      |> case do
+        {:deleted, _project} ->
+          {:noreply,
+           socket
+           |> put_flash(:info, "Project deleted")
+           |> push_navigate(to: socket.assigns.save_return_to)}
+
+        {:scheduled, _project} ->
           {:noreply,
            socket
            |> put_flash(:info, "Project scheduled for deletion")
            |> push_navigate(to: socket.assigns.save_return_to)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
-          {:noreply, assign(socket, :scheduled_deletion_changeset, changeset)}
+          {:noreply, assign(socket, :deletion_changeset, changeset)}
       end
+    else
+      {:noreply, assign(socket, deletion_changeset: changeset)}
     end
   end
 
   @impl true
   def handle_event("close_modal", _, socket) do
     {:noreply, push_redirect(socket, to: socket.assigns.cancel_return_to)}
+  end
+
+  # TODO: This should be moved into the Projects module
+  defp delete_project(project) do
+    if project.scheduled_deletion do
+      Projects.delete_project(project)
+      |> case do
+        {:ok, project} ->
+          {:deleted, project}
+
+        any ->
+          any
+      end
+    else
+      Projects.schedule_project_deletion(project)
+      |> case do
+        {:ok, project} ->
+          {:scheduled, project}
+
+        any ->
+          any
+      end
+    end
   end
 
   defp human_readable_grace_period() do
@@ -93,7 +119,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         </div>
         <.form
           :let={f}
-          for={@scheduled_deletion_changeset}
+          for={@deletion_changeset}
           phx-change="validate"
           phx-submit="delete"
           phx-target={@myself}
@@ -101,14 +127,14 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         >
           <div class="grid grid-cols-12 gap-12">
             <div class="col-span-8">
-              <%= label(f, :scheduled_deletion_name, "Project name",
+              <%= label(f, :name_confirmation, "Project name",
                 class: "block text-sm font-medium text-secondary-700"
               ) %>
-              <%= text_input(f, :scheduled_deletion_name,
+              <%= text_input(f, :name_confirmation,
                 class: "block w-full rounded-md",
                 phx_debounce: "blur"
               ) %>
-              <%= error_tag(f, :scheduled_deletion_name,
+              <%= error_tag(f, :name_confirmation,
                 class:
                   "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
               ) %>
@@ -116,6 +142,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
           </div>
 
           <%= hidden_input(f, :id) %>
+          <%= hidden_input(f, :name) %>
 
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-5"></div>
@@ -129,7 +156,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
               type="submit"
               color="red"
               phx-disable-with="Deleting..."
-              disabled={!@scheduled_deletion_changeset.valid?}
+              disabled={!@deletion_changeset.valid?}
             >
               Delete project
             </LightningWeb.Components.Common.button>

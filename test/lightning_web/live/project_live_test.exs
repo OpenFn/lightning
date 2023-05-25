@@ -101,6 +101,61 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
     end
 
+    test "project owners can delete a project from the settings page",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {conn, _user} = setup_project_user(conn, project, :owner)
+      {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
+
+      assert html =~ "Deleting your project is irreversible"
+      assert index_live |> element("button", "Delete project") |> has_element?()
+
+      {:ok, delete_project_modal, html} =
+        live(conn, ~p"/projects/#{project.id}/settings/delete")
+
+      assert html =~ "Enter the project name to confirm it&#39;s deletion"
+
+      {:ok, _delete_project_modal, html} =
+        delete_project_modal
+        |> form("#scheduled_deletion_form",
+          project: %{
+            name_confirmation: project.name
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/")
+
+      assert html =~ "Project scheduled for deletion"
+    end
+
+    test "project members with role other than owner can't delete a project from the settings page",
+         %{
+           conn: conn,
+           project: project
+         } do
+      ~w(editor admin viewer)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, index_live, html} =
+          live(conn, ~p"/projects/#{project.id}/settings")
+
+        refute html =~ "Deleting your project is irreversible"
+
+        refute index_live
+               |> element("button", "Delete project")
+               |> has_element?()
+
+        {:ok, _delete_project_modal, html} =
+          live(conn, ~p"/projects/#{project.id}/settings/delete")
+          |> follow_redirect(conn, ~p"/projects/#{project.id}/settings")
+
+        assert html =~ "You are not authorize to perform this action"
+      end)
+    end
+
     test "allows a superuser to schedule projects for deletion in the projects list",
          %{
            conn: conn,
@@ -122,16 +177,16 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert form_live
              |> form("#scheduled_deletion_form",
-               project: %{scheduled_deletion_name: "invalid name"}
+               project: %{name_confirmation: "invalid name"}
              )
              |> render_change() =~
-               "This name doesn&#39;t match the project name"
+               "Enter the project name to confirm it&#39;s deletion"
 
       {:ok, _index_live, html} =
         form_live
         |> form("#scheduled_deletion_form",
           project: %{
-            scheduled_deletion_name: project.name
+            name_confirmation: project.name
           }
         )
         |> render_submit()
@@ -207,7 +262,7 @@ defmodule LightningWeb.ProjectLiveTest do
         form_live
         |> form("#scheduled_deletion_form",
           project: %{
-            scheduled_deletion_name: project.name
+            name_confirmation: project.name
           }
         )
         |> render_submit()

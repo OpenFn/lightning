@@ -58,7 +58,7 @@ defmodule LightningWeb.ProjectLive.Index do
     |> assign(page_title: "Projects")
     |> assign(active_menu_item: :settings)
     |> assign(:projects, Projects.list_projects())
-    |> assign(:project, Projects.get_project!(id))
+    |> assign(:project, Projects.get_project(id))
   end
 
   @impl true
@@ -90,7 +90,7 @@ defmodule LightningWeb.ProjectLive.Index do
       <span>
         <.link
           id={"delete-now-#{@project.id}"}
-          navigate={Routes.project_index_path(@socket, :delete, @project)}
+          navigate={~p"/settings/projects/#{@project.id}/delete"}
         >
           Delete now
         </.link>
