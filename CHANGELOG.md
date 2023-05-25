@@ -38,6 +38,8 @@ and this project adheres to
   credential" [#812](https://github.com/OpenFn/Lightning/issues/812)
 - Add ability for a `superuser` to schedule deletion, cancel deletion, and
   delete projects [#757](https://github.com/OpenFn/Lightning/issues/757)
+- Add ability for a `project owner` to schedule deletion, cancel deletion, and
+  delete projects [#746](https://github.com/OpenFn/Lightning/issues/746)
 
 ### Changed
 
