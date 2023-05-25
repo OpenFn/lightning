@@ -410,8 +410,8 @@ defmodule Lightning.SetupUtils do
 
   def add_and_update_runs(multi, run_params) when is_list(run_params) do
     multi
-    |> Multi.put(:run, fn %{attempt_run: attempt_run} ->
-      Ecto.assoc(attempt_run, :run) |> Repo.one()
+    |> Multi.run(:run, fn repo, %{attempt_run: attempt_run} ->
+      {:ok, Ecto.assoc(attempt_run, :run) |> repo.one!()}
     end)
     |> Multi.update("update_run", fn %{run: run} ->
       # Change the timestamps, logs, exit_code etc
@@ -426,10 +426,15 @@ defmodule Lightning.SetupUtils do
       |> Enum.with_index()
       |> Enum.reduce(multi, fn {params, i}, multi ->
         multi
-        |> Multi.insert("attempt_run_#{i}", fn %{attempt: attempt} ->
-          AttemptRun.new()
-          |> Ecto.Changeset.put_assoc(:attempt, attempt)
-          |> Ecto.Changeset.put_assoc(:run, Run.new(params))
+        |> Multi.insert("attempt_run_#{i}", fn %{
+                                                 attempt: attempt,
+                                                 dataclip: dataclip
+                                               } ->
+          run =
+            Run.new(params)
+            |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
+
+          AttemptRun.new(attempt, run)
         end)
       end)
     end)
