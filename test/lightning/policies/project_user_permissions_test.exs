@@ -87,15 +87,16 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            viewer: viewer
          } do
       ~w(
-        create_workflow
         create_job
-        edit_job
+        create_workflow
         delete_job
-        run_job
-        rerun_job
         delete_project
-        edit_project_name
+        edit_job
         edit_project_description
+        edit_project_name
+        provision_project
+        rerun_job
+        run_job
       )a |> (&refute_can(ProjectUsers, &1, viewer, project)).()
     end
   end
@@ -107,12 +108,13 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-        create_workflow
         create_job
-        edit_job
+        create_workflow
         delete_job
-        run_job
+        edit_job
+        provision_project
         rerun_job
+        run_job
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
@@ -123,8 +125,8 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
          } do
       ~w(
           delete_project
-          edit_project_name
           edit_project_description
+          edit_project_name
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
   end
@@ -136,14 +138,15 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            admin: admin
          } do
       ~w(
-          create_workflow
           create_job
-          edit_job
+          create_workflow
           delete_job
-          run_job
-          rerun_job
-          edit_project_name
+          edit_job
           edit_project_description
+          edit_project_name
+          provision_project
+          rerun_job
+          run_job
         )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
     end
 
@@ -159,15 +162,16 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            owner: owner
          } do
       ~w(
-        create_workflow
         create_job
-        edit_job
+        create_workflow
         delete_job
-        run_job
-        rerun_job
-        edit_project_name
-        edit_project_description
         delete_project
+        edit_job
+        edit_project_description
+        edit_project_name
+        provision_project
+        rerun_job
+        run_job
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
     end
   end

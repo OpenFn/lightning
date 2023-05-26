@@ -12,10 +12,20 @@ and this project adheres to
 
 - Create sample runs when generating sample workflow
   ([#821](https://github.com/OpenFn/Lightning/issues/821))
+- Added a provisioning api for creating and updating projects and their
+  workflows See: [PROVISIONING.md](./PROVISIONING.md)
+  [#641](https://github.com/OpenFn/Lightning/issues/641)
 
 ### Changed
 
 ### Fixed
+
+- Incorrect project digest queries
+  [#768](https://github.com/OpenFn/Lightning/issues/768)]
+- Fix issue when purging deleted users
+  [#747](https://github.com/OpenFn/Lightning/issues/747)
+- Generate a random name for Workflows when creating one via the UI.
+  [#828](https://github.com/OpenFn/Lightning/issues/828)
 
 ## [0.5.2]
 

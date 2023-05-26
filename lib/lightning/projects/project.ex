@@ -35,8 +35,13 @@ defmodule Lightning.Projects.Project do
     project
     |> cast(attrs, [:name, :description])
     |> cast_assoc(:project_users)
-    |> validate_required([:name])
+    |> validate()
+  end
+
+  def validate(changeset) do
+    changeset
     |> validate_length(:description, max: 240)
+    |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
   end
 end

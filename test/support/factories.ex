@@ -15,6 +15,11 @@ defmodule Lightning.Factories do
     |> merge_attributes(attrs)
   end
 
+  def build(:edge, attrs) do
+    struct!(Lightning.Workflows.Edge, %{workflow: build(:workflow)})
+    |> merge_attributes(attrs)
+  end
+
   def build(:dataclip, attrs) do
     struct!(Lightning.Invocation.Dataclip, %{project: build(:project)})
     |> merge_attributes(attrs)
@@ -58,6 +63,10 @@ defmodule Lightning.Factories do
     |> put_fields(record)
     |> put_assocs(record)
     |> Lightning.Repo.insert!()
+  end
+
+  def insert(f) when is_atom(f) do
+    build(f, []) |> insert()
   end
 
   def insert(f, attrs) when is_atom(f) do
