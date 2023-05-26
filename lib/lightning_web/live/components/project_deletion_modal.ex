@@ -10,10 +10,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   def update(%{project: project} = assigns, socket) do
     {:ok,
      socket
-     |> assign(
-       :deletion_changeset,
-       Projects.change_scheduled_deletion(project, %{})
-     )
+     |> assign(deletion_changeset: Projects.validate_for_deletion(project, %{}))
      |> assign(assigns)}
   end
 
@@ -25,7 +22,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
       ) do
     changeset =
       socket.assigns.project
-      |> Projects.change_scheduled_deletion(project_params)
+      |> Projects.validate_for_deletion(project_params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :deletion_changeset, changeset)}
@@ -35,7 +32,7 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
   def handle_event("delete", %{"project" => project_params}, socket) do
     changeset =
       socket.assigns.project
-      |> Projects.change_scheduled_deletion(project_params)
+      |> Projects.validate_for_deletion(project_params)
       |> Map.put(:action, :validate)
 
     if changeset.valid? do

@@ -1,5 +1,5 @@
 defmodule Lightning.ProjectsTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   import Swoosh.TestAssertions
 

@@ -447,13 +447,13 @@ defmodule Lightning.Projects do
   run. (Note that subsequent logins will be blocked for projects pending deletion.)
   """
   def schedule_project_deletion(project) do
-    Repo.transaction(fn ->
-      date =
-        case Application.get_env(:lightning, :purge_deleted_after_days) do
-          nil -> DateTime.utc_now()
-          integer -> DateTime.utc_now() |> Timex.shift(days: integer)
-        end
+    date =
+      case Application.get_env(:lightning, :purge_deleted_after_days) do
+        nil -> DateTime.utc_now()
+        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+      end
 
+    Repo.transaction(fn ->
       jobs = project_jobs_query(project) |> Repo.all()
 
       jobs
@@ -489,18 +489,17 @@ defmodule Lightning.Projects do
 
   ## Examples
 
-      iex> change_scheduled_deletion(project)
+      iex> validate_for_deletion(project)
       %Ecto.Changeset{data: %Project{}}
 
   """
-  def change_scheduled_deletion(project, attrs) do
+  def validate_for_deletion(project, attrs) do
     Project.deletion_changeset(project, attrs)
   end
 
   def cancel_scheduled_deletion(project_id) do
     get_project!(project_id)
-    |> update_project(%{
-      scheduled_deletion: nil
-    })
+    |> Ecto.Changeset.change(%{scheduled_deletion: nil})
+    |> Repo.update()
   end
 end

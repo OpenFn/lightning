@@ -20,6 +20,7 @@ defmodule Lightning.Projects.Project do
     field :name, :string
     field :description, :string
     field :scheduled_deletion, :utc_datetime
+
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
     has_many :project_credentials, ProjectCredential
@@ -32,6 +33,7 @@ defmodule Lightning.Projects.Project do
   end
 
   @doc false
+  # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
     project
     |> cast(attrs, [:name, :description, :scheduled_deletion])
@@ -47,7 +49,8 @@ defmodule Lightning.Projects.Project do
   end
 
   @doc """
-  A project changeset for changing the scheduled_deletion property.
+  Changeset to validate a project deletion request, the user must enter the
+  projects name to confirm.
   """
   def deletion_changeset(project, attrs) do
     project
