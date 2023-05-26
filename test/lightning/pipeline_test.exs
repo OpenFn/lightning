@@ -39,16 +39,11 @@ defmodule Lightning.PipelineTest do
         )
 
       {:ok, attempt_run} =
-        AttemptRun.new()
-        |> Ecto.Changeset.put_assoc(
-          :attempt,
+        AttemptRun.new(
           Attempt.changeset(%Attempt{}, %{
             work_order_id: work_order.id,
             reason_id: reason.id
-          })
-        )
-        |> Ecto.Changeset.put_assoc(
-          :run,
+          }),
           Run.changeset(%Run{}, %{
             project_id: job.workflow.project_id,
             job_id: job.id,
@@ -118,16 +113,11 @@ defmodule Lightning.PipelineTest do
         )
 
       {:ok, attempt_run} =
-        AttemptRun.new()
-        |> Ecto.Changeset.put_assoc(
-          :attempt,
+        AttemptRun.new(
           Attempt.changeset(%Attempt{}, %{
             work_order_id: work_order.id,
             reason_id: reason.id
-          })
-        )
-        |> Ecto.Changeset.put_assoc(
-          :run,
+          }),
           Run.changeset(%Run{}, %{
             project_id: job.workflow.project_id,
             job_id: job.id,

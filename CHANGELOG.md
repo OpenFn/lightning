@@ -10,6 +10,8 @@ and this project adheres to
 
 ### Added
 
+- Create sample runs when generating sample workflow
+  ([#821](https://github.com/OpenFn/Lightning/issues/821))
 - Added a provisioning api for creating and updating projects and their
   workflows See: [PROVISIONING.md](./PROVISIONING.md)
   [#641](https://github.com/OpenFn/Lightning/issues/641)

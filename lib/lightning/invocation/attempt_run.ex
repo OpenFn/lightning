@@ -24,13 +24,32 @@ defmodule Lightning.AttemptRun do
   end
 
   def new(attrs \\ %{}) do
+    change(%__MODULE__{}, %{id: Ecto.UUID.generate()} |> Map.merge(attrs))
+    |> validate()
+  end
+
+  # make a changeset,
+  # then use the internal style function like put_change, put_assoc,
+  # and validate it when you need
+
+  # or
+
+  # make a changeset with _cast_ and do your validation right then
+
+  @spec new(
+          attempt :: Attempt.t() | Ecto.Changeset.t(Attempt.t()),
+          run :: Run.t() | Ecto.Changeset.t(Run.t())
+        ) :: Ecto.Changeset.t(__MODULE__.t())
+  def new(attempt, run) do
     change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
-    |> changeset(attrs)
+    |> put_assoc(:attempt, attempt)
+    |> put_assoc(:run, run)
+    |> validate()
   end
 
   @doc false
-  def changeset(attempt, attrs) do
-    attempt
+  def changeset(attempt_run, attrs) do
+    attempt_run
     |> cast(attrs, [:attempt_id, :run_id])
     |> cast_assoc(:run, required: false)
     |> cast_assoc(:attempt, required: false)
