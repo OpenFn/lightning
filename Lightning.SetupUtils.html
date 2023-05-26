@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-5389C8E5.js"></script>
+    <script src="dist/sidebar_items-80B88D8F.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,6 +133,14 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#add_and_update_runs/2" translate="no">add_and_update_runs(multi, run_params)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#create_dhis2_project/1" translate="no">create_dhis2_project(project_users)</a>
 
       </div>
@@ -187,6 +195,28 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="add_and_update_runs/2">
+
+  <div class="detail-header">
+    <a href="#add_and_update_runs/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">add_and_update_runs(multi, run_params)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L411" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="create_dhis2_project/1">
 
   <div class="detail-header">
@@ -196,7 +226,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_dhis2_project(project_users)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L234" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L303" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -218,7 +248,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_openhie_project(project_users)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L166" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L211" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -240,7 +270,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_starter_project(name, project_users)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L76" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L99" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -264,7 +294,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">setup_demo(opts \\ [create_super: false])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L19" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L31" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -280,7 +310,8 @@ Functions
   jobs: [...],
   projects: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
   users: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
-  workflows: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...]
+  workflows: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...],
+  workorders: [<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">atom</a>() | %{:id =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}, ...]
 }</pre>
 
       </div>
@@ -299,7 +330,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">tear_down(opts \\ [destroy_super: false])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L274" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/setup_utils.ex#L361" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
