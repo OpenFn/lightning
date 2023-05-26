@@ -1,8 +1,6 @@
 defmodule Lightning.ProjectsTest do
   use Lightning.DataCase, async: false
 
-  import Swoosh.TestAssertions
-
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
   alias Lightning.Projects.Project
@@ -374,12 +372,17 @@ defmodule Lightning.ProjectsTest do
 
       [user_2, user_1]
       |> Enum.each(fn user ->
-        assert_email_sent(
-          subject: "Project scheduled for deletion",
-          to: [user.email],
-          text_body:
-            "Hi #{user.first_name},\n\n#{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\n#{admin_email} to cancel the deletion.\n"
-        )
+        to = [{"", user.email}]
+
+        text_body =
+          "Hi #{user.first_name},\n\n#{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\n#{admin_email} to cancel the deletion.\n"
+
+        assert_receive {:email,
+                        %Swoosh.Email{
+                          subject: "Project scheduled for deletion",
+                          to: ^to,
+                          text_body: ^text_body
+                        }}
       end)
     end
 
