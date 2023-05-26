@@ -409,33 +409,33 @@ defmodule Lightning.SetupUtils do
   end
 
   def add_and_update_runs(multi, run_params) when is_list(run_params) do
-    multi
-    |> Multi.run(:run, fn repo, %{attempt_run: attempt_run} ->
-      {:ok, Ecto.assoc(attempt_run, :run) |> repo.one!()}
-    end)
-    |> Multi.update("update_run", fn %{run: run} ->
-      # Change the timestamps, logs, exit_code etc
-      run
-      |> Run.changeset(%{
-        started_at: Timex.now() |> Timex.shift(seconds: 10),
-        finished_at: Timex.now() |> Timex.shift(seconds: 20)
-      })
-    end)
-    |> then(fn multi ->
-      run_params
-      |> Enum.with_index()
-      |> Enum.reduce(multi, fn {params, i}, multi ->
-        multi
-        |> Multi.insert("attempt_run_#{i}", fn %{
-                                                 attempt: attempt,
-                                                 dataclip: dataclip
-                                               } ->
-          run =
-            Run.new(params)
-            |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
+    multi =
+      multi
+      |> Multi.run(:run, fn repo, %{attempt_run: attempt_run} ->
+        {:ok, Ecto.assoc(attempt_run, :run) |> repo.one!()}
+      end)
+      |> Multi.update("update_run", fn %{run: run} ->
+        # Change the timestamps, logs, exit_code etc
+        run
+        |> Run.changeset(%{
+          started_at: Timex.now() |> Timex.shift(seconds: 10),
+          finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        })
+      end)
 
-          AttemptRun.new(attempt, run)
-        end)
+    run_params
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {params, i}, multi ->
+      multi
+      |> Multi.insert("attempt_run_#{i}", fn %{
+                                               attempt: attempt,
+                                               dataclip: dataclip
+                                             } ->
+        run =
+          Run.new(params)
+          |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
+
+        AttemptRun.new(attempt, run)
       end)
     end)
   end
