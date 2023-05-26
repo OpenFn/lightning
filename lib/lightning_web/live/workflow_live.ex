@@ -262,7 +262,7 @@ defmodule LightningWeb.WorkflowLive do
            socket
            |> put_flash(
              :error,
-             "Unable to delete this job because it has downstream jobs"
+             "Unable to delete jobs with downstream jobs or runs."
            )}
       end
     else
