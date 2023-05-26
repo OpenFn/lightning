@@ -30,6 +30,8 @@ and this project adheres to
   [#747](https://github.com/OpenFn/Lightning/issues/747)
 - Generate a random name for Workflows when creating one via the UI.
   [#828](https://github.com/OpenFn/Lightning/issues/828)
+- Handle error when deleting a job with runs.
+  [#814](https://github.com/OpenFn/Lightning/issues/814)
 
 ## [0.5.2]
 
