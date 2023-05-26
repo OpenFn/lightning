@@ -366,16 +366,17 @@ defmodule Lightning.ProjectsTest do
 
       Projects.schedule_project_deletion(project)
 
-      project = Projects.get_project!(project.id) |> Repo.preload(:users)
+      project = Projects.get_project!(project.id)
       assert project.scheduled_deletion != nil
 
       admin_email =
         Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
 
-      Enum.each(project.users, fn user ->
+      [user_2, user_1]
+      |> Enum.each(fn user ->
         assert_email_sent(
           subject: "Project scheduled for deletion",
-          to: user.email,
+          to: [user.email],
           text_body:
             "Hi #{user.first_name},\n\n#{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\n#{admin_email} to cancel the deletion.\n"
         )
