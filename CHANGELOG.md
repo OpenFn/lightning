@@ -15,6 +15,10 @@ and this project adheres to
 - Added a provisioning api for creating and updating projects and their
   workflows See: [PROVISIONING.md](./PROVISIONING.md)
   [#641](https://github.com/OpenFn/Lightning/issues/641)
+- Add ability for a `superuser` to schedule deletion, cancel deletion, and
+  delete projects [#757](https://github.com/OpenFn/Lightning/issues/757)
+- Add ability for a `project owner` to schedule deletion, cancel deletion, and
+  delete projects [#746](https://github.com/OpenFn/Lightning/issues/746)
 
 ### Changed
 

@@ -34,7 +34,7 @@ defmodule LightningWeb.ProjectLiveTest do
     end
   end
 
-  describe "Index" do
+  describe "Index as a super user" do
     setup [:register_and_log_in_superuser, :create_project]
 
     test "lists all projects", %{conn: conn, project: project} do
@@ -43,6 +43,27 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert html =~ "Projects"
       assert html =~ project.name
+    end
+
+    test "saves new project with no members", %{conn: conn} do
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
+
+      assert index_live |> element("a", "New Project") |> render_click() =~
+               "Projects"
+
+      assert_patch(index_live, Routes.project_index_path(conn, :new))
+
+      index_live
+      |> form("#project-form", project: @create_attrs)
+      |> render_change()
+
+      index_live
+      |> form("#project-form")
+      |> render_submit()
+
+      assert_patch(index_live, Routes.project_index_path(conn, :index))
+      assert render(index_live) =~ "Project created successfully"
     end
 
     test "saves new project", %{conn: conn} do
@@ -80,33 +101,176 @@ defmodule LightningWeb.ProjectLiveTest do
       assert render(index_live) =~ "Project created successfully"
     end
 
-    test "Only project owners can delete projects", %{
+    test "project owners can delete a project from the settings page",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {conn, _user} = setup_project_user(conn, project, :owner)
+      {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
+
+      assert html =~ "Deleting your project is irreversible"
+      assert index_live |> element("button", "Delete project") |> has_element?()
+
+      {:ok, delete_project_modal, html} =
+        live(conn, ~p"/projects/#{project.id}/settings/delete")
+
+      assert html =~ "Enter the project name to confirm it&#39;s deletion"
+
+      {:ok, _delete_project_modal, html} =
+        delete_project_modal
+        |> form("#scheduled_deletion_form",
+          project: %{
+            name_confirmation: project.name
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, ~p"/")
+
+      assert html =~ "Project scheduled for deletion"
+    end
+
+    test "project members with role other than owner can't delete a project from the settings page",
+         %{
+           conn: conn,
+           project: project
+         } do
+      ~w(editor admin viewer)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, index_live, html} =
+          live(conn, ~p"/projects/#{project.id}/settings")
+
+        refute html =~ "Deleting your project is irreversible"
+
+        refute index_live
+               |> element("button", "Delete project")
+               |> has_element?()
+
+        {:ok, _delete_project_modal, html} =
+          live(conn, ~p"/projects/#{project.id}/settings/delete")
+          |> follow_redirect(conn, ~p"/projects/#{project.id}/settings")
+
+        assert html =~ "You are not authorize to perform this action"
+      end)
+    end
+
+    test "allows a superuser to schedule projects for deletion in the projects list",
+         %{
+           conn: conn,
+           project: project
+         } do
+      {:ok, index_live, html} =
+        live(conn, Routes.project_index_path(conn, :index))
+
+      assert html =~ "Projects"
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#delete-#{project.id}", "Delete")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_index_path(conn, :delete, project)
+        )
+
+      assert form_live
+             |> form("#scheduled_deletion_form",
+               project: %{name_confirmation: "invalid name"}
+             )
+             |> render_change() =~
+               "Enter the project name to confirm it&#39;s deletion"
+
+      {:ok, _index_live, html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          project: %{
+            name_confirmation: project.name
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.project_index_path(conn, :index))
+
+      assert html =~ "Project scheduled for deletion"
+    end
+
+    test "allows superuser to click cancel for closing user deletion modal", %{
       conn: conn,
       project: project
     } do
-      delete_button = "#delete-#{project.id}"
+      {:ok, index_live, html} =
+        live(conn, Routes.project_index_path(conn, :index))
 
-      conn =
-        setup_project_user(
+      assert html =~ "Projects"
+
+      {:ok, form_live, _} =
+        index_live
+        |> element("#delete-#{project.id}", "Delete")
+        |> render_click()
+        |> follow_redirect(
           conn,
-          project,
-          Lightning.AccountsFixtures.superuser_fixture(),
-          :editor
+          Routes.project_index_path(conn, :delete, project)
         )
 
-      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
-      refute view |> element(delete_button) |> has_element?()
-
-      conn =
-        setup_project_user(
+      {:ok, index_live, _html} =
+        form_live
+        |> element("button", "Cancel")
+        |> render_click()
+        |> follow_redirect(
           conn,
-          project,
-          Lightning.AccountsFixtures.superuser_fixture(),
-          :owner
+          Routes.project_index_path(conn, :index)
         )
 
-      {:ok, view, _html} = live(conn, Routes.project_index_path(conn, :index))
-      assert view |> element(delete_button) |> has_element?()
+      assert has_element?(index_live, "#project-#{project.id}")
+    end
+
+    test "allows a superuser to cancel scheduled deletion on a project", %{
+      conn: conn
+    } do
+      project =
+        project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
+
+      assert index_live
+             |> element("#project-#{project.id} a", "Cancel deletion")
+             |> render_click() =~ "Project deletion canceled"
+    end
+
+    test "allows a superuser to perform delete now action on a scheduled for deletion project",
+         %{
+           conn: conn
+         } do
+      project =
+        project_fixture(scheduled_deletion: Timex.now() |> Timex.shift(days: 7))
+
+      {:ok, index_live, _html} =
+        live(conn, Routes.project_index_path(conn, :index))
+
+      {:ok, form_live, _html} =
+        index_live
+        |> element("#project-#{project.id} a", "Delete now")
+        |> render_click()
+        |> follow_redirect(
+          conn,
+          Routes.project_index_path(conn, :delete, project)
+        )
+
+      {:ok, index_live, html} =
+        form_live
+        |> form("#scheduled_deletion_form",
+          project: %{
+            name_confirmation: project.name
+          }
+        )
+        |> render_submit()
+        |> follow_redirect(conn, Routes.project_index_path(conn, :index))
+
+      assert html =~ "Project deleted"
+
+      refute index_live |> element("project-#{project.id}") |> has_element?()
     end
 
     test "Edits a project", %{conn: conn} do

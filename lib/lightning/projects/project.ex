@@ -19,6 +19,8 @@ defmodule Lightning.Projects.Project do
   schema "projects" do
     field :name, :string
     field :description, :string
+    field :scheduled_deletion, :utc_datetime
+
     has_many :project_users, ProjectUser
     has_many :users, through: [:project_users, :user]
     has_many :project_credentials, ProjectCredential
@@ -31,9 +33,10 @@ defmodule Lightning.Projects.Project do
   end
 
   @doc false
+  # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
     project
-    |> cast(attrs, [:name, :description])
+    |> cast(attrs, [:name, :description, :scheduled_deletion])
     |> cast_assoc(:project_users)
     |> validate()
   end
@@ -43,5 +46,15 @@ defmodule Lightning.Projects.Project do
     |> validate_length(:description, max: 240)
     |> validate_required([:name])
     |> validate_format(:name, ~r/^[a-z\-\d]+$/)
+  end
+
+  @doc """
+  Changeset to validate a project deletion request, the user must enter the
+  projects name to confirm.
+  """
+  def deletion_changeset(project, attrs) do
+    project
+    |> cast(attrs, [:name])
+    |> validate_confirmation(:name, message: "doesn't match the project name")
   end
 end

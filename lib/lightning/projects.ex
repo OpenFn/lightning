@@ -2,8 +2,12 @@ defmodule Lightning.Projects do
   @moduledoc """
   The Projects context.
   """
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
 
   import Ecto.Query, warn: false
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Attempt
   alias Lightning.AttemptRun
   alias Lightning.Jobs.Trigger
@@ -18,6 +22,26 @@ defmodule Lightning.Projects do
   alias Lightning.InvocationReason
   alias Lightning.Invocation.{Run, Dataclip}
   alias Lightning.WorkOrder
+
+  require Logger
+
+  @doc """
+  Perform, when called with %{"type" => "purge_deleted"}
+  will find projects that are ready for permanent deletion and purge them.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    projects_to_delete =
+      from(p in Project,
+        where: p.scheduled_deletion <= ago(0, "second")
+      )
+      |> Repo.all()
+
+    :ok =
+      Enum.each(projects_to_delete, fn project -> delete_project(project) end)
+
+    {:ok, %{projects_deleted: projects_to_delete}}
+  end
 
   @doc """
   Returns the list of projects.
@@ -156,6 +180,12 @@ defmodule Lightning.Projects do
   """
 
   def delete_project(%Project{} = project) do
+    Logger.debug(fn ->
+      # coveralls-ignore-start
+      "Deleting project ##{project.id}..."
+      # coveralls-ignore-stop
+    end)
+
     Repo.transaction(fn ->
       project_attempts_query(project) |> Repo.delete_all()
 
@@ -163,13 +193,13 @@ defmodule Lightning.Projects do
 
       project_workorders_query(project) |> Repo.delete_all()
 
-      project_users_invocation_reasons(project) |> Repo.delete_all()
+      project_run_invocation_reasons(project) |> Repo.delete_all()
 
       project_runs_query(project) |> Repo.delete_all()
 
       project_jobs_query(project) |> Repo.delete_all()
 
-      project_workflows_invocation_reason(project) |> Repo.delete_all()
+      project_trigger_invocation_reason(project) |> Repo.delete_all()
 
       project_triggers_query(project) |> Repo.delete_all()
 
@@ -179,28 +209,43 @@ defmodule Lightning.Projects do
 
       project_credentials_query(project) |> Repo.delete_all()
 
+      project_dataclip_invocation_reason(project) |> Repo.delete_all()
+
       project_dataclips_query(project) |> Repo.delete_all()
 
       {:ok, project} = Repo.delete(project)
+
+      Logger.debug(fn ->
+        # coveralls-ignore-start
+        "Project ##{project.id} deleted."
+        # coveralls-ignore-stop
+      end)
+
       project
     end)
   end
 
-  def project_workflows_invocation_reason(project) do
+  def project_trigger_invocation_reason(project) do
     from(ir in InvocationReason,
       join: tr in assoc(ir, :trigger),
       join: w in assoc(tr, :workflow),
-      join: d in assoc(ir, :dataclip),
-      where: w.project_id == ^project.id or d.project_id == ^project.id
+      where: w.project_id == ^project.id
     )
   end
 
-  def project_users_invocation_reasons(project) do
+  def project_dataclip_invocation_reason(project) do
     from(ir in InvocationReason,
-      join: u in assoc(ir, :user),
-      join: pu in assoc(u, :project_users),
-      join: p in assoc(pu, :project),
-      where: p.id == ^project.id
+      join: d in assoc(ir, :dataclip),
+      where: d.project_id == ^project.id
+    )
+  end
+
+  def project_run_invocation_reasons(project) do
+    from(ir in InvocationReason,
+      join: r in assoc(ir, :run),
+      join: j in assoc(r, :job),
+      join: w in assoc(j, :workflow),
+      where: w.project_id == ^project.id
     )
   end
 
@@ -294,7 +339,7 @@ defmodule Lightning.Projects do
   def projects_for_user_query(%User{id: user_id}) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user_id
+      where: pu.user_id == ^user_id and is_nil(p.scheduled_deletion)
     )
   end
 
@@ -338,11 +383,11 @@ defmodule Lightning.Projects do
     |> Repo.one()
   end
 
-  @spec first_project_for_user(user :: User.t()) :: Project.t() | nil
-  def first_project_for_user(user) do
+  @spec select_first_project_for_user(user :: User.t()) :: Project.t() | nil
+  def select_first_project_for_user(user) do
     from(p in Project,
       join: pu in assoc(p, :project_users),
-      where: pu.user_id == ^user.id,
+      where: pu.user_id == ^user.id and is_nil(p.scheduled_deletion),
       limit: 1
     )
     |> Repo.one()
@@ -393,5 +438,68 @@ defmodule Lightning.Projects do
     {:ok, yaml} = ExportUtils.generate_new_yaml(project_id)
 
     {:ok, yaml}
+  end
+
+  @doc """
+  Given a project, this function sets a scheduled deletion
+  date based on the PURGE_DELETED_AFTER_DAYS environment variable. If no ENV is
+  set, this date defaults to NOW but the automatic project purge cronjob will never
+  run. (Note that subsequent logins will be blocked for projects pending deletion.)
+  """
+  def schedule_project_deletion(project) do
+    date =
+      case Application.get_env(:lightning, :purge_deleted_after_days) do
+        nil -> DateTime.utc_now()
+        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+      end
+
+    Repo.transaction(fn ->
+      jobs = project_jobs_query(project) |> Repo.all()
+
+      jobs
+      |> Enum.each(fn job ->
+        Lightning.Jobs.update_job(job, %{
+          "enabled" => false
+        })
+      end)
+
+      project =
+        project
+        |> Ecto.Changeset.change(%{
+          scheduled_deletion: DateTime.truncate(date, :second)
+        })
+        |> Repo.update!()
+
+      :ok =
+        Ecto.assoc(project, :users)
+        |> Repo.all()
+        |> Enum.each(fn user ->
+          UserNotifier.notify_project_deletion(
+            user,
+            project
+          )
+        end)
+
+      project
+    end)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for changing the project scheduled_deletion.
+
+  ## Examples
+
+      iex> validate_for_deletion(project)
+      %Ecto.Changeset{data: %Project{}}
+
+  """
+  def validate_for_deletion(project, attrs) do
+    Project.deletion_changeset(project, attrs)
+  end
+
+  def cancel_scheduled_deletion(project_id) do
+    get_project!(project_id)
+    |> Ecto.Changeset.change(%{scheduled_deletion: nil})
+    |> Repo.update()
   end
 end

@@ -84,6 +84,7 @@ defmodule Lightning.Policies.UserPermissionsTest do
       credential = CredentialsFixtures.credential_fixture(user_id: superuser.id)
 
       assert Users |> Permissions.can?(:access_admin_space, superuser, {})
+
       assert Users |> Permissions.can?(:edit_credential, superuser, credential)
       assert Users |> Permissions.can?(:delete_account, superuser, superuser)
 

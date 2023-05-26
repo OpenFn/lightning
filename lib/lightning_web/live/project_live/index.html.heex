@@ -1,7 +1,7 @@
 <LayoutComponents.page_content>
   <:header>
     <LayoutComponents.header socket={@socket} current_user={@current_user}>
-      <:title>Projects</:title>
+      <:title><%= @page_title %></:title>
       <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
         <Common.button>
           <div class="h-full">
@@ -13,42 +13,54 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
+    <%= if @live_action == :delete do %>
+      <.live_component
+        module={LightningWeb.Components.ProjectDeletionModal}
+        id={@project.id}
+        project={@project}
+        save_return_to={~p"/settings/projects"}
+        cancel_return_to={~p"/settings/projects"}
+      />
+    <% end %>
     <%= if @live_action in [:new, :edit] do %>
       <.live_component
         module={LightningWeb.ProjectLive.FormComponent}
         id={@project.id || :new}
-        title={@page_title}
         action={@live_action}
         project={@project}
         users={@users}
         return_to={Routes.project_index_path(@socket, :index)}
       />
     <% else %>
-      <%= for project <- @projects do %>
-        <Common.item_bar id={"project-#{project.id}"}>
-          <%= live_patch(project.name,
-            to: Routes.project_index_path(@socket, :edit, project.id),
-            class: "p-4 h-14 flex w-64 text-primary-500"
-          ) %>
-          <div class="grow h-14 border-r border-slate-100"></div>
-          <%= if can_delete_project(@current_user, project) do %>
-            <div class="flex h-14 w-12 items-center justify-center">
-              <div class="h-14 inline-block"></div>
-              <%= link(
-                  to: "#",
-                  id: "delete-#{project.id}",
-                  phx_click: "delete",
-                  phx_value_id: project.id,
-                  data: [confirm: "Are you sure?"],
-                  class: "inline-block align-middle"
-
-                ) do %>
-                <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
-              <% end %>
-            </div>
-          <% end %>
-        </Common.item_bar>
-      <% end %>
+      <.table id="projects">
+        <.tr>
+          <.th>Name</.th>
+          <%!-- <.th>Owner</.th> --%>
+          <.th>Created At</.th>
+          <.th>Description</.th>
+          <.th>Scheduled Deletion</.th>
+          <.th>Actions</.th>
+        </.tr>
+        <%= for project <- @projects do %>
+          <.tr id={"project-#{project.id}"}>
+            <.td><%= project.name %></.td>
+            <%!-- <.td><%= project.owner %></.td> --%>
+            <.td><%= project.inserted_at %></.td>
+            <.td><%= project.description %></.td>
+            <.td><%= project.scheduled_deletion %></.td>
+            <.td>
+              <span>
+                <.link navigate={
+                  Routes.project_index_path(@socket, :edit, project.id)
+                }>
+                  Edit
+                </.link>
+                | <.delete_action socket={@socket} project={project} />
+              </span>
+            </.td>
+          </.tr>
+        <% end %>
+      </.table>
     <% end %>
   </LayoutComponents.centered>
 </LayoutComponents.page_content>

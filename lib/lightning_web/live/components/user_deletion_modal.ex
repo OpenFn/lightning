@@ -4,8 +4,8 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   use Phoenix.LiveComponent
 
-  alias Lightning.Accounts.User
   alias Lightning.Accounts
+  alias Lightning.Accounts.User
 
   @impl true
   def update(%{user: user} = assigns, socket) do
@@ -84,7 +84,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
-    <div id={"user-#{@user.id}"}>
+    <div id={"user-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
         title="Delete user"
@@ -112,7 +112,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
 
   def render(assigns) do
     ~H"""
-    <div id={"user-#{@user.id}"}>
+    <div id={"user-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
         title="Delete user"

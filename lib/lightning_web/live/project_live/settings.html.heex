@@ -102,6 +102,46 @@
               </div>
             </.form>
           </div>
+          <%= if @can_delete_project do %>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
+            <div id="project-settings-#" class="bg-white p-4 rounded-md">
+              <div>
+                <h6 class="font-medium text-black">The danger zone</h6>
+                <small class="block my-1 text-xs text-gray-600">
+                  Deleting your project is irreversible
+                </small>
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-2"></div>
+                </div>
+                <.link navigate={
+                  Routes.project_project_settings_path(
+                    @socket,
+                    :delete,
+                    @project.id
+                  )
+                }>
+                  <button
+                    type="button"
+                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
+                  >
+                    Delete project
+                  </button>
+                </.link>
+              </div>
+            </div>
+          <% end %>
+
+          <%= if @live_action == :delete and @can_delete_project do %>
+            <.live_component
+              module={LightningWeb.Components.ProjectDeletionModal}
+              id={@project.id}
+              project={@project}
+              save_return_to={~p"/"}
+              cancel_return_to={~p"/projects/#{@project.id}/settings"}
+            />
+          <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="credentials">
           <div>

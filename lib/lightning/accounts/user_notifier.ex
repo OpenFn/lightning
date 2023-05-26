@@ -7,8 +7,10 @@ defmodule Lightning.Accounts.UserNotifier do
 
   import Swoosh.Email
 
+  alias Lightning.Accounts.User
   alias Lightning.Workorders.SearchParams
   alias Lightning.Projects
+  alias Lightning.Projects.Project
   alias Lightning.Mailer
   alias Lightning.Helpers
 
@@ -238,5 +240,24 @@ defmodule Lightning.Accounts.UserNotifier do
     """
 
     deliver(user.email, title, body)
+  end
+
+  defp human_readable_grace_period() do
+    grace_period = Application.get_env(:lightning, :purge_deleted_after_days)
+    if grace_period > 0, do: "#{grace_period} day(s) from today", else: "today"
+  end
+
+  defp instance_admin_email() do
+    Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
+  end
+
+  def notify_project_deletion(%User{} = user, %Project{} = project) do
+    deliver(user.email, "Project scheduled for deletion", """
+    Hi #{user.first_name},
+
+    #{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,
+    and the resources will be deleted in #{human_readable_grace_period()} at 02:00 UTC. If this doesn't sound right, please email
+    #{instance_admin_email()} to cancel the deletion.
+    """)
   end
 end

@@ -25,7 +25,8 @@ defmodule Lightning.ProjectsFixtures do
   def full_project_fixture(attrs \\ []) when is_list(attrs) do
     user = Lightning.AccountsFixtures.user_fixture()
 
-    project = project_fixture(project_users: [%{user_id: user.id}])
+    project =
+      project_fixture(Keyword.merge(attrs, project_users: [%{user_id: user.id}]))
 
     w1 =
       WorkflowsFixtures.workflow_fixture(
