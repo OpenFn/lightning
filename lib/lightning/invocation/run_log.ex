@@ -11,7 +11,7 @@ defmodule Lightning.Invocation.RunLog do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           body: String.t(),
-          timestamp: Integer.t(),
+          timestamp: integer(),
           run: Run.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
