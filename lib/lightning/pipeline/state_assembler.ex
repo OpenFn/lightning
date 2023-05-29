@@ -52,7 +52,6 @@ defmodule Lightning.Pipeline.StateAssembler do
       select: rl.body
     )
     |> Repo.all()
-    |> IO.inspect()
 
     query =
       from(r in Run,
