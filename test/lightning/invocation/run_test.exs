@@ -11,13 +11,14 @@ defmodule Lightning.Invocation.RunTest do
           exit_code: 1,
           started_at: DateTime.utc_now(),
           finished_at: DateTime.utc_now(),
-          log: ["log", "line"]
+          logs: [%{body: "log"}, %{body: "line"}]
         )
+        |> Repo.preload(:logs)
 
       new_run = Run.new_from(run)
 
       refute get_field(new_run, :id) == run.id
-      refute get_field(new_run, :log) == run.log
+      refute get_field(new_run, :logs) == run.logs
       assert get_field(new_run, :job_id) == run.job_id
       assert get_field(new_run, :input_dataclip_id) == run.input_dataclip_id
       assert get_field(new_run, :previous_id) == run.previous_id

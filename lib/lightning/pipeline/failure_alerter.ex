@@ -64,7 +64,7 @@ defmodule Lightning.FailureAlerter do
           count: count,
           time_scale: time_scale,
           rate_limit: rate_limit,
-          run: run,
+          run: run |> Repo.preload(:logs),
           workflow_name: workflow_name,
           workflow_id: workflow_id,
           run_url: run_url,

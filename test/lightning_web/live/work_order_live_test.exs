@@ -1041,10 +1041,10 @@ defmodule LightningWeb.RunWorkOrderTest do
                 DateTime.from_naive!(~N[2022-08-29 00:00:10.123456], "Etc/UTC"),
               exit_code: 1,
               input_dataclip_id: dataclip.id,
-              log: [
-                "Hi mom!",
-                "Log me something fun.",
-                "It's another great log."
+              logs: [
+                %{body: "Hi mom!"},
+                %{body: "Log me something fun."},
+                %{body: "It's another great log."}
               ]
             }
           ]

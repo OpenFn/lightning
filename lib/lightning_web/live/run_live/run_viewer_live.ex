@@ -1,4 +1,5 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
+  alias Lightning.Repo
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import Ecto.Query, only: [from: 2]
@@ -12,7 +13,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
 
   @impl true
   def mount(_params, %{"run_id" => run_id}, socket) do
-    run = get_run_with_output(run_id)
+    run = get_run_with_output(run_id) |> Repo.preload(:logs)
 
     LightningWeb.Endpoint.subscribe("run:#{run.id}")
 
@@ -41,5 +42,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
       preload: :output_dataclip
     )
     |> Lightning.Repo.one()
+    |> Repo.preload(:logs)
   end
 end

@@ -8,6 +8,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
   import Lightning.CredentialsFixtures
   import Lightning.InvocationFixtures
 
+  alias Lightning.Repo
   alias Lightning.Attempt
 
   setup :register_and_log_in_user
@@ -73,12 +74,16 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
   test "output messages" do
     assert render_component(
              &LightningWeb.RunLive.Components.run_viewer/1,
-             run: run_fixture(exit_code: 1, output_dataclip_id: nil)
+             run:
+               run_fixture(exit_code: 1, output_dataclip_id: nil)
+               |> Repo.preload(:logs)
            ) =~
              "This run failed"
 
     assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
-             run: run_fixture(exit_code: 0, output_dataclip_id: nil)
+             run:
+               run_fixture(exit_code: 0, output_dataclip_id: nil)
+               |> Repo.preload(:logs)
            ) =~
              "There is no output for this run"
 
@@ -94,7 +99,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
       |> Lightning.Repo.preload(:output_dataclip)
 
     assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
-             run: run
+             run: run |> Repo.preload(:logs)
            ) =~
              "dataclip_body"
   end

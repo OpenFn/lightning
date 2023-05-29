@@ -76,6 +76,7 @@ defmodule Lightning.Invocation.Run do
       :output_dataclip_id
     ])
     |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
+    |> cast_assoc(:logs, with: &RunLog.changeset/2, required: false)
     |> validate_required([:job_id, :input_dataclip_id])
     |> validate()
   end

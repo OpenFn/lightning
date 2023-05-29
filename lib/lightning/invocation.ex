@@ -383,9 +383,9 @@ defmodule Lightning.Invocation do
     Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
         dynamic(
-          [runs: r],
+          [logs: l],
           ^query or
-            fragment("cast(?  as VARCHAR) ilike ?", r.log, ^"%#{search_term}%")
+            fragment("cast(?  as VARCHAR) ilike ?", l.body, ^"%#{search_term}%")
         )
 
       :body, query ->
@@ -436,6 +436,9 @@ defmodule Lightning.Invocation do
         last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
       join: r in assoc(att, :runs),
       as: :runs,
+      join: l in Lightning.Invocation.RunLog,
+      on: l.run_id == r.id,
+      as: :logs,
       join: last_run in subquery(last_runs),
       on:
         (att.id == last_run.attempt_id and

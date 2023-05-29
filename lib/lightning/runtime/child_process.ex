@@ -49,7 +49,9 @@ defmodule Lightning.Runtime.ChildProcess do
          Result.new(
            exit_reason: msg,
            exit_code: res.status,
-           log: String.split(res.out <> res.err, "\n"),
+           logs:
+             String.split(res.out <> res.err, "\n")
+             |> Enum.map(fn body -> %{body: body} end),
            final_state_path: runspec.final_state_path
          )}
 

@@ -8,6 +8,7 @@ defmodule LightningWeb.EndToEndTest do
     ProjectsFixtures
   }
 
+  alias Lightning.Repo
   alias Lightning.Invocation
 
   setup :register_and_log_in_superuser
@@ -76,7 +77,12 @@ defmodule LightningWeb.EndToEndTest do
 
       [run_3, run_2, run_1] = Invocation.list_runs_for_project(project).entries
 
-      log = run_1.log |> Enum.join("\n")
+      log =
+        run_1
+        |> Repo.preload(:logs)
+        |> Map.get(:logs)
+        |> Enum.map_join("\n", fn log -> log.body end)
+
       # Run 1 should succeed and use the appropriate packages
       assert run_1.finished_at != nil
       assert run_1.exit_code == 0

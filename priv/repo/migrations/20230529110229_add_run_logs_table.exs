@@ -11,6 +11,6 @@ defmodule Lightning.Repo.Migrations.AddRunLogsTable do
       timestamps()
     end
 
-    create unique_index(:run_logs, [:run_id])
+    create index(:run_logs, [:run_id])
   end
 end

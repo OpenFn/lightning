@@ -53,7 +53,7 @@ defmodule Lightning.Pipeline.Runner do
         update_run(run, %{
           finished_at: DateTime.utc_now(),
           exit_code: result.exit_code,
-          log: scrubbed_log
+          logs: scrubbed_log
         })
 
       dataclip_result = Runner.create_dataclip_from_result(result, run)

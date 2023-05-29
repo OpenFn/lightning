@@ -169,7 +169,7 @@ defmodule Lightning.InvocationTest do
 
       assert run.exit_code == 42
       assert run.finished_at == ~U[2022-02-02 11:49:00.000000Z]
-      assert run.log == []
+      assert run |> Repo.preload(:logs) |> Map.get(:logs) == []
       assert run.started_at == ~U[2022-02-02 11:49:00.000000Z]
     end
 
@@ -200,7 +200,7 @@ defmodule Lightning.InvocationTest do
       assert {:ok, %Run{} = run} = Invocation.update_run(run, update_attrs)
       assert run.exit_code == 43
       assert run.finished_at == ~U[2022-02-03 11:49:00.000000Z]
-      assert run.log == []
+      assert run |> Repo.preload(:logs) |> Map.get(:logs) == []
       assert run.started_at == ~U[2022-02-03 11:49:00.000000Z]
     end
 

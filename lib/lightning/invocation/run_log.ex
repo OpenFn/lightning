@@ -26,17 +26,11 @@ defmodule Lightning.Invocation.RunLog do
     timestamps type: :utc_datetime_usec
   end
 
-  def new(attrs \\ %{}) do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
-    |> change(attrs)
-    |> assoc_constraint(:run)
-  end
-
   @doc false
   def changeset(run, attrs) do
     run
     |> cast(attrs, [:body, :timestamp, :run_id])
-    |> validate_required([:run_id])
+    |> validate_required([:body])
     |> assoc_constraint(:run)
   end
 end

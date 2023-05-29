@@ -4,11 +4,12 @@ defmodule LightningWeb.RunLive.Show do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.Repo
   alias Lightning.Invocation.Run
 
   import Ecto.Query
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
   @impl true
   def mount(_params, _session, socket) do
@@ -32,6 +33,7 @@ defmodule LightningWeb.RunLive.Show do
         preload: [:output_dataclip, :input_dataclip, :job, [credential: [:user]]]
       )
       |> Lightning.Repo.one()
+      |> Repo.preload(:logs)
 
     socket
     |> assign(run: run)
