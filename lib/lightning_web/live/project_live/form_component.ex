@@ -27,10 +27,7 @@ defmodule LightningWeb.ProjectLive.FormComponent do
       ) do
     changeset = Projects.change_project(project)
 
-    all_users =
-      users
-      |> Enum.filter(fn user -> not user.disabled end)
-      |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
+    all_users = users |> Enum.map(&{"#{&1.first_name} #{&1.last_name}", &1.id})
 
     {:ok,
      socket
@@ -154,10 +151,14 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :edit, project_params) do
-    users_to_notify = filter_users_to_notify(socket, project_params)
-
     case Projects.update_project(socket.assigns.project, project_params) do
       {:ok, project} ->
+        users_to_notify =
+          filter_users_to_notify(
+            project,
+            project_params |> Map.get("project_users", %{})
+          )
+
         notify_project_users(project, users_to_notify)
 
         {:noreply,
@@ -171,10 +172,14 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   end
 
   defp save_project(socket, :new, project_params) do
-    users_to_notify = filter_users_to_notify(socket, project_params)
-
     case Projects.create_project(project_params) do
       {:ok, project} ->
+        users_to_notify =
+          filter_users_to_notify(
+            project,
+            project_params |> Map.get("project_users", %{})
+          )
+
         notify_project_users(project, users_to_notify)
 
         {:noreply,
@@ -187,16 +192,17 @@ defmodule LightningWeb.ProjectLive.FormComponent do
     end
   end
 
-  defp filter_users_to_notify(socket, project_params) do
-    project = Repo.preload(socket.assigns.project, :project_users)
+  # TODO: Determine the list of users to notify into the Project context
+  # by using the changeset to determine what records are going to be added/removed
+  defp filter_users_to_notify(project, project_users_params) do
+    project = Repo.preload(project, :project_users)
 
     existing_project_users =
       project.project_users
       |> Enum.map(fn pu -> pu.user_id end)
 
     added_project_users =
-      project_params
-      |> Map.get("project_users")
+      project_users_params
       |> Map.values()
       |> Enum.filter(fn pu -> pu["delete"] != "true" end)
       |> Enum.map(fn pu -> pu["user_id"] end)

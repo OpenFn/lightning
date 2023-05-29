@@ -6,64 +6,81 @@ if [[ -z "$1" ]]; then
 	exit 1
 fi
 
-download_only=false
-
-if [[ "$1" = "--download-only" ]] && [[ -n "$2" ]]; then
-	download_only=true
-	node_version=$2
-	echo "Downloading NodeJS ${node_version}..."
+if [[ $* == *--no-cleanup* ]]; then
+  cleanup=false
 else
-	node_version=$1
-	echo "Installing NodeJS ${node_version}..."
+  cleanup=true
 fi
+
+if [[ $* == *--download-only* ]]; then
+  download_only=false
+else
+  download_only=true
+fi
+
+for node_version in $@; do :; done
+
+echo "Downloading NodeJS ${node_version}..."
 
 tarball=node-v${node_version}-linux-x64.tar.gz
 sumfiles=SHASUMS256{.txt,.txt.sig}
 
-echo "- Getting validation files"
-curl -fO "https://nodejs.org/dist/v${node_version}/${sumfiles}"
-echo "- Getting binary tarball"
-curl -fO https://nodejs.org/dist/v${node_version}/${tarball} 
-echo "- Checking SHASUMS256"
-grep node-v${node_version}-linux-x64.tar.gz SHASUMS256.txt | sha256sum -c -
+# if $tarball file already exists, don't download it again
+if [[ -f $tarball ]]; then
+  echo "- $tarball already exists, skipping download"
+else
+  echo "- Getting validation files"
+  curl -fO "https://nodejs.org/dist/v${node_version}/${sumfiles}"
 
-echo "- Getting keys from openpgp.org"
-# In case future versions are signed by someone not on this list, see: 
-# https://github.com/nodejs/node#release-keys
-# and update accordingly
-gpg --keyserver hkps://keys.openpgp.org --recv-keys \
- 4ED778F539E3634C779C87C6D7062848A1AB005C \
- 141F07595B7B3FFE74309A937405533BE57C7D57 \
- 94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
- 74F12602B6F1C4E913FAA37AD3A89613643B6201 \
- 71DCFD284A79C3B38668286BC97EC7A07EDE3FC1 \
- 61FC681DFB92A079F1685E77973F295594EC4689 \
- 8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
- C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
- 890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
- C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
- DD8F2338BAE7501E3DD5AC78C273792F7D83545D \
- A48C2BEE680E841632CD4E44F07496B3EB3C1762 \
- 108F52B48DB57BB0CC439B2997B01419BD92F80A \
- B9E2F5981AA6E0CD28160D9FF13993A75599653C
+  echo "- Getting binary tarball"
+  curl -fO https://nodejs.org/dist/v${node_version}/${tarball} 
 
-echo "- Validating SHASUMS256 against keys"
-gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
+  echo "- Checking SHASUMS256"
+  grep $tarball SHASUMS256.txt | sha256sum -c -
 
-if [[ $download_only = "false" ]]; then
+  echo "- Getting keys from openpgp.org"
+  # In case future versions are signed by someone not on this list, see: 
+  # https://github.com/nodejs/node#release-keys
+  # and update accordingly
+  gpg --keyserver hkps://keys.openpgp.org --recv-keys \
+  4ED778F539E3634C779C87C6D7062848A1AB005C \
+  141F07595B7B3FFE74309A937405533BE57C7D57 \
+  94AE36675C464D64BAFA68DD7434390BDBE9B9C5 \
+  74F12602B6F1C4E913FAA37AD3A89613643B6201 \
+  71DCFD284A79C3B38668286BC97EC7A07EDE3FC1 \
+  61FC681DFB92A079F1685E77973F295594EC4689 \
+  8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
+  C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
+  890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
+  C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
+  DD8F2338BAE7501E3DD5AC78C273792F7D83545D \
+  A48C2BEE680E841632CD4E44F07496B3EB3C1762 \
+  108F52B48DB57BB0CC439B2997B01419BD92F80A \
+  B9E2F5981AA6E0CD28160D9FF13993A75599653C
+
+  echo "- Validating SHASUMS256 against keys"
+  gpg --verify SHASUMS256.txt.sig SHASUMS256.txt
+fi
+
+if [ "$download_only" = false ] 
+then
+	echo "🆗 NodeJS ${node_version} downloaded and verified."
+	echo "   Install by running:"
+	echo "   $ tar xzf $(pwd)/${tarball} --strip-components=1 -C /usr/local"
+else
 	echo "- Extracting to /usr/local"
-	tar xzf node-v${node_version}-linux-x64.tar.gz --strip-components=1 -C /usr/local
+	tar xzf $tarball --strip-components=1 -C /usr/local
 
 	echo "- Checking for existence of binaries in PATH"
 	which node
 	which npm
 
-	rm -f $tarball $sumfiles
-	echo "- Cleaning up."
+  if [ "$cleanup" = true ]
+  then
+    echo "- Cleaning up"
+    rm -f $tarball $sumfiles
+  fi
+
 	echo "🆗 NodeJS ${node_version} installed."
-else
-	echo "🆗 NodeJS ${node_version} downloaded and verified."
-	echo "   Install by running:"
-	echo "   $ tar xzf $(pwd)/node-v${node_version}-linux-x64.tar.gz --strip-components=1 -C /usr/local"
 fi
 

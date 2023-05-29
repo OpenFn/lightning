@@ -2,8 +2,19 @@ defmodule Lightning.SetupUtils do
   @moduledoc """
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
+  alias Lightning.{
+    Projects,
+    Accounts,
+    Jobs,
+    Workflows,
+    Repo,
+    Credentials,
+    AttemptRun
+  }
 
-  alias Lightning.{Projects, Accounts, Jobs, Workflows, Repo, Credentials}
+  alias Lightning.WorkOrderService
+  alias Lightning.Invocation.Run
+  alias Ecto.Multi
 
   import Ecto.Query
 
@@ -11,7 +22,8 @@ defmodule Lightning.SetupUtils do
           jobs: [...],
           projects: [atom | %{:id => any, optional(any) => any}, ...],
           users: [atom | %{:id => any, optional(any) => any}, ...],
-          workflows: [atom | %{:id => any, optional(any) => any}, ...]
+          workflows: [atom | %{:id => any, optional(any) => any}, ...],
+          workorders: [atom | %{:id => any, optional(any) => any}, ...]
         }
   @doc """
   Creates initial data and returns the created records.
@@ -53,23 +65,34 @@ defmodule Lightning.SetupUtils do
         password: "welcome123"
       })
 
-    %{project: openhie_project, workflow: openhie_workflow, jobs: openhie_jobs} =
+    %{
+      project: openhie_project,
+      workflow: openhie_workflow,
+      jobs: openhie_jobs,
+      workorder: openhie_workorder
+    } =
       create_openhie_project([
         %{user_id: admin.id, role: :admin},
         %{user_id: editor.id, role: :editor},
         %{user_id: viewer.id, role: :viewer}
       ])
 
-    %{project: dhis2_project, workflow: dhis2_workflow, jobs: dhis2_jobs} =
+    %{
+      project: dhis2_project,
+      workflow: dhis2_workflow,
+      jobs: dhis2_jobs,
+      workorder: dhis2_workorder
+    } =
       create_dhis2_project([
         %{user_id: admin.id, role: :admin}
       ])
 
     %{
+      jobs: openhie_jobs ++ dhis2_jobs,
       users: [super_user, admin, editor, viewer],
       projects: [openhie_project, dhis2_project],
       workflows: [openhie_workflow, dhis2_workflow],
-      jobs: openhie_jobs ++ dhis2_jobs
+      workorders: [openhie_workorder, dhis2_workorder]
     }
   end
 
@@ -156,6 +179,28 @@ defmodule Lightning.SetupUtils do
         project_credential_id: List.first(credential.project_credentials).id
       })
 
+    run_params = [
+      %{
+        job_id: job_2.id,
+        exit_code: 1,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      },
+      %{
+        job_id: job_3.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
+    create_workorder(
+      :webhook,
+      job_1,
+      ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
+      run_params
+    )
+
     %{
       project: project,
       workflow: workflow,
@@ -189,7 +234,7 @@ defmodule Lightning.SetupUtils do
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
-        body: "fn(state => state);",
+        body: "fn(state => x);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         trigger: %{
@@ -219,9 +264,33 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
+    run_params = [
+      %{
+        job_id: send_to_openhim.id,
+        exit_code: 1,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      },
+      %{
+        job_id: notify_upload_failed.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
+    {:ok, openhie_workorder} =
+      create_workorder(
+        :webhook,
+        fhir_standard_data,
+        ~s[{}],
+        run_params
+      )
+
     %{
       project: openhie_project,
       workflow: openhie_workflow,
+      workorder: openhie_workorder,
       jobs: [
         fhir_standard_data,
         send_to_openhim,
@@ -264,9 +333,27 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id
       })
 
+    run_params = [
+      %{
+        job_id: upload_to_google_sheet.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
+    {:ok, dhis2_workorder} =
+      create_workorder(
+        :cron,
+        get_dhis2_data,
+        ~s[{}],
+        run_params
+      )
+
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
+      workorder: dhis2_workorder,
       jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end
@@ -278,16 +365,16 @@ defmodule Lightning.SetupUtils do
       Lightning.AuthProviders.AuthConfig,
       Lightning.Credentials.Audit,
       Lightning.Projects.ProjectCredential,
-      Lightning.Credentials.Credential,
       Lightning.WorkOrder,
       Lightning.InvocationReason,
-      Lightning.Invocation.Dataclip,
       Lightning.Invocation.Run,
+      Lightning.Credentials.Credential,
       Lightning.Jobs.Job,
       Lightning.Jobs.Trigger,
+      Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,
-      Lightning.Projects.Project,
-      Lightning.Workflows.Workflow
+      Lightning.Invocation.Dataclip,
+      Lightning.Projects.Project
     ])
 
     delete_other_tables(["oban_jobs", "oban_peers"])
@@ -307,6 +394,49 @@ defmodule Lightning.SetupUtils do
   defp delete_other_tables(tables_names) do
     Enum.each(tables_names, fn name ->
       Ecto.Adapters.SQL.query!(Repo, "DELETE FROM #{name}")
+    end)
+  end
+
+  defp create_workorder(trigger, job, dataclip, run_params) do
+    WorkOrderService.multi_for(
+      trigger,
+      job,
+      dataclip
+      |> Jason.decode!()
+    )
+    |> add_and_update_runs(run_params)
+    |> Repo.transaction()
+  end
+
+  def add_and_update_runs(multi, run_params) when is_list(run_params) do
+    multi =
+      multi
+      |> Multi.run(:run, fn repo, %{attempt_run: attempt_run} ->
+        {:ok, Ecto.assoc(attempt_run, :run) |> repo.one!()}
+      end)
+      |> Multi.update("update_run", fn %{run: run} ->
+        # Change the timestamps, logs, exit_code etc
+        run
+        |> Run.changeset(%{
+          started_at: Timex.now() |> Timex.shift(seconds: 10),
+          finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        })
+      end)
+
+    run_params
+    |> Enum.with_index()
+    |> Enum.reduce(multi, fn {params, i}, multi ->
+      multi
+      |> Multi.insert("attempt_run_#{i}", fn %{
+                                               attempt: attempt,
+                                               dataclip: dataclip
+                                             } ->
+        run =
+          Run.new(params)
+          |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
+
+        AttemptRun.new(attempt, run)
+      end)
     end)
   end
 end

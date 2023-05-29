@@ -1,5 +1,5 @@
 defmodule Lightning.ProjectsTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   alias Lightning.Projects.ProjectUser
   alias Lightning.Projects
@@ -171,7 +171,10 @@ defmodule Lightning.ProjectsTest do
       %{
         project: p1,
         w1_job: w1_job
-      } = full_project_fixture()
+      } =
+        full_project_fixture(
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
 
       %{
         project: p2,
@@ -210,10 +213,12 @@ defmodule Lightning.ProjectsTest do
 
       attempt_run_query = Lightning.Projects.project_attempt_run_query(p1)
 
-      workflows_ir_query =
-        Lightning.Projects.project_workflows_invocation_reason(p1)
+      trigger_ir_query = Lightning.Projects.project_trigger_invocation_reason(p1)
 
-      pu_ir_query = Lightning.Projects.project_users_invocation_reasons(p1)
+      run_ir_query = Lightning.Projects.project_run_invocation_reasons(p1)
+
+      dataclip_ir_query =
+        Lightning.Projects.project_dataclip_invocation_reason(p1)
 
       pu_query = Lightning.Projects.project_users_query(p1)
 
@@ -231,9 +236,11 @@ defmodule Lightning.ProjectsTest do
 
       assert attempt_run_query |> Repo.aggregate(:count, :id) == 3
 
-      assert workflows_ir_query |> Repo.aggregate(:count, :id) == 1
+      assert trigger_ir_query |> Repo.aggregate(:count, :id) == 1
 
-      assert pu_ir_query |> Repo.aggregate(:count, :id) == 1
+      assert dataclip_ir_query |> Repo.aggregate(:count, :id) == 1
+
+      assert run_ir_query |> Repo.aggregate(:count, :id) == 1
 
       assert pu_query |> Repo.aggregate(:count, :id) == 1
 
@@ -263,9 +270,11 @@ defmodule Lightning.ProjectsTest do
 
       assert jobs_query |> Repo.aggregate(:count, :id) == 0
 
-      assert workflows_ir_query |> Repo.aggregate(:count, :id) == 0
+      assert trigger_ir_query |> Repo.aggregate(:count, :id) == 0
 
-      assert pu_ir_query |> Repo.aggregate(:count, :id) == 0
+      assert run_ir_query |> Repo.aggregate(:count, :id) == 0
+
+      assert dataclip_ir_query |> Repo.aggregate(:count, :id) == 0
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(p1.id)
@@ -280,6 +289,22 @@ defmodule Lightning.ProjectsTest do
     test "change_project/1 returns a project changeset" do
       project = project_fixture()
       assert %Ecto.Changeset{} = Projects.change_project(project)
+    end
+
+    test "get_projects_for_user/1 won't get scheduled for deletion projects" do
+      user = user_fixture()
+
+      project_1 =
+        project_fixture(project_users: [%{user_id: user.id}])
+        |> Repo.reload()
+
+      project_fixture(
+        project_users: [%{user_id: user.id}],
+        scheduled_deletion: Timex.now()
+      )
+      |> Repo.reload()
+
+      assert [project_1] == Projects.get_projects_for_user(user)
     end
 
     test "get projects for a given user" do
@@ -323,6 +348,133 @@ defmodule Lightning.ProjectsTest do
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml == expected_yaml
+    end
+
+    test "schedule_project_deletion/1 schedules a project for deletion and notify all project users via email." do
+      user_1 = user_fixture(email: "user_1@openfn.org", first_name: "user_1")
+      user_2 = user_fixture(email: "user_2@openfn.org", first_name: "user_2")
+
+      project =
+        project_fixture(
+          name: "project-to-delete",
+          project_users: [%{user_id: user_1.id}, %{user_id: user_2.id}]
+        )
+
+      assert project.scheduled_deletion == nil
+
+      Projects.schedule_project_deletion(project)
+
+      project = Projects.get_project!(project.id)
+      assert project.scheduled_deletion != nil
+
+      admin_email =
+        Application.get_env(:lightning, :email_addresses) |> Keyword.get(:admin)
+
+      [user_2, user_1]
+      |> Enum.each(fn user ->
+        to = [{"", user.email}]
+
+        text_body =
+          "Hi #{user.first_name},\n\n#{project.name} project has been scheduled for deletion. All of the workflows in this project have been disabled,\nand the resources will be deleted in 7 day(s) from today at 02:00 UTC. If this doesn't sound right, please email\n#{admin_email} to cancel the deletion.\n"
+
+        assert_receive {:email,
+                        %Swoosh.Email{
+                          subject: "Project scheduled for deletion",
+                          to: ^to,
+                          text_body: ^text_body
+                        }}
+      end)
+    end
+
+    test "schedule_project_deletion/1 schedules a project for deletion to now when purge_deleted_after_days is nil" do
+      prev_purge_deleted_after_days =
+        Application.get_env(:lightning, :purge_deleted_after_days)
+
+      Application.put_env(:lightning, :purge_deleted_after_days, nil)
+
+      %{project: project} = full_project_fixture()
+
+      {:ok, project} = Projects.schedule_project_deletion(project)
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      assert Timex.diff(project.scheduled_deletion, now, :seconds) == 0
+
+      Application.put_env(
+        :lightning,
+        :purge_deleted_after_days,
+        prev_purge_deleted_after_days
+      )
+    end
+
+    test "schedule_project_deletion/1 schedules a project for deletion to purge_deleted_after_days days from now" do
+      days = Application.get_env(:lightning, :purge_deleted_after_days)
+
+      %{project: project} = full_project_fixture()
+
+      project_jobs = Projects.project_jobs_query(project) |> Repo.all()
+
+      assert Enum.all?(project_jobs, fn job -> job.enabled == true end)
+
+      assert project.scheduled_deletion == nil
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      {:ok, project} = Projects.schedule_project_deletion(project)
+
+      project_jobs = Projects.project_jobs_query(project) |> Repo.all()
+
+      assert Enum.all?(project_jobs, fn job -> job.enabled == false end)
+
+      assert project.scheduled_deletion != nil
+      assert Timex.diff(project.scheduled_deletion, now, :days) == days
+    end
+
+    test "cancel_scheduled_deletion/2" do
+      project =
+        project_fixture(
+          scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      assert project.scheduled_deletion
+
+      {:ok, project} = Projects.cancel_scheduled_deletion(project.id)
+
+      refute project.scheduled_deletion
+    end
+
+    test "schedule deletion changeset" do
+      project = project_fixture()
+
+      errors =
+        Project.deletion_changeset(project, %{
+          "scheduled_deletion" => nil
+        })
+        |> errors_on()
+
+      assert errors[:scheduled_deletion] == nil
+    end
+  end
+
+  describe "The default Oban function Projects.perform/1" do
+    test "removes all projects past deletion date when called with type 'purge_deleted'" do
+      project_to_delete =
+        project_fixture(
+          scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: -10)
+        )
+
+      project_fixture(
+        scheduled_deletion: DateTime.utc_now() |> Timex.shift(seconds: 10)
+      )
+
+      count_before = Repo.all(Project) |> Enum.count()
+
+      {:ok, %{projects_deleted: projects_deleted}} =
+        Projects.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert count_before - 1 == Repo.all(Project) |> Enum.count()
+      assert 1 == projects_deleted |> Enum.count()
+
+      assert project_to_delete.id ==
+               projects_deleted |> Enum.at(0) |> Map.get(:id)
     end
   end
 end

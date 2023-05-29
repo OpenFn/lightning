@@ -63,10 +63,21 @@ defmodule LightningWeb.UserRegistrationControllerTest do
           "/"
         )
 
-      assert conn.assigns.current_user
-             |> Ecto.assoc(:projects)
-             |> Lightning.Repo.one!()
+      project =
+        conn.assigns.current_user
+        |> Ecto.assoc(:projects)
+        |> Lightning.Repo.one!()
+
+      assert project
              |> Map.get(:name) == "emory-demo"
+
+      assert project
+             |> Lightning.Projects.project_workorders_query()
+             |> Lightning.Repo.aggregate(:count, :id) == 1
+
+      assert project
+             |> Lightning.Projects.project_runs_query()
+             |> Lightning.Repo.aggregate(:count, :id) == 3
 
       # Set this back to the default "false" before finishing the test
       Application.put_env(:lightning, :init_project_for_new_user, false)

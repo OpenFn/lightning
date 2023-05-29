@@ -1,0 +1,38 @@
+defmodule LightningWeb.API.ProvisioningJSON do
+  @moduledoc false
+
+  alias Lightning.Projects.Project
+  alias Lightning.Workflows.{Workflow, Edge}
+  alias Lightning.Jobs.{Job, Trigger}
+
+  def render("create.json", %{project: project, conn: _conn}) do
+    %{"data" => as_json(project)}
+  end
+
+  def as_json(%Project{} = project) do
+    Ecto.embedded_dump(project, :json)
+    |> Map.put("workflows", Enum.map(project.workflows, &as_json/1))
+  end
+
+  def as_json(%Workflow{} = workflow) do
+    Ecto.embedded_dump(workflow, :json)
+    |> Map.put("jobs", Enum.map(workflow.jobs, &as_json/1))
+    |> Map.put("triggers", Enum.map(workflow.triggers, &as_json/1))
+    |> Map.put("edges", Enum.map(workflow.edges, &as_json/1))
+  end
+
+  def as_json(%Job{} = job) do
+    Ecto.embedded_dump(job, :json)
+    |> Map.take(~w(id adaptor enabled name)a)
+  end
+
+  def as_json(%Trigger{} = trigger) do
+    Ecto.embedded_dump(trigger, :json)
+    |> Map.take(~w(id type)a)
+  end
+
+  def as_json(%Edge{} = edge) do
+    Ecto.embedded_dump(edge, :json)
+    |> Map.take(~w(id source_job_id source_trigger_id condition target_job_id)a)
+  end
+end

@@ -50,12 +50,7 @@
                 Edit
               </.link>
             </span>
-            |
-            <span>
-              <.link navigate={Routes.user_index_path(@socket, :delete, user)}>
-                Delete
-              </.link>
-            </span>
+            | <.delete_action socket={@socket} user={user} />
           </.td>
         </.tr>
       <% end %>

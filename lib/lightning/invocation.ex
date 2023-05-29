@@ -5,6 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Run}
@@ -402,25 +403,19 @@ defmodule Lightning.Invocation do
 
   def list_work_orders_for_project_query(
         %Project{id: project_id},
-        status: status,
-        search_fields: search_fields,
-        search_term: search_term,
-        workflow_id: workflow_id,
-        date_after: date_after,
-        date_before: date_before,
-        wo_date_after: wo_date_after,
-        wo_date_before: wo_date_before
+        %SearchParams{} = search_params
       ) do
     last_attempts =
-      from att in Lightning.Attempt,
+      from(att in Lightning.Attempt,
         group_by: att.work_order_id,
         select: %{
           work_order_id: att.work_order_id,
           last_inserted_at: max(att.inserted_at)
         }
+      )
 
     last_runs =
-      from r in Lightning.Invocation.Run,
+      from(r in Lightning.Invocation.Run,
         join: att in assoc(r, :attempts),
         distinct: att.id,
         order_by: [desc_nulls_first: r.finished_at],
@@ -428,6 +423,7 @@ defmodule Lightning.Invocation do
           attempt_id: att.id,
           last_finished_at: r.finished_at
         }
+      )
 
     # TODO: Refactor to remove the fragment used here; it causes timezone issues
     from(wo in Lightning.WorkOrder,
@@ -448,13 +444,17 @@ defmodule Lightning.Invocation do
       join: d in assoc(r, :input_dataclip),
       as: :input,
       where: w.project_id == ^project_id,
-      where: ^filter_run_status_where(status),
-      where: ^filter_workflow_where(workflow_id),
-      where: ^filter_workorder_insert_after_where(wo_date_after),
-      where: ^filter_workorder_insert_before_where(wo_date_before),
-      where: ^filter_run_finished_after_where(date_after),
-      where: ^filter_run_finished_before_where(date_before),
-      where: ^filter_run_body_and_logs_where(search_term, search_fields),
+      where: ^filter_run_status_where(search_params.status),
+      where: ^filter_workflow_where(search_params.workflow_id),
+      where: ^filter_workorder_insert_after_where(search_params.wo_date_after),
+      where: ^filter_workorder_insert_before_where(search_params.wo_date_before),
+      where: ^filter_run_finished_after_where(search_params.date_after),
+      where: ^filter_run_finished_before_where(search_params.date_before),
+      where:
+        ^filter_run_body_and_logs_where(
+          search_params.search_term,
+          search_params.search_fields
+        ),
       select: %{
         id: wo.id,
         last_finished_at:
@@ -518,25 +518,12 @@ defmodule Lightning.Invocation do
     )
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter, params)
-      when filter in [nil, []] do
-    list_work_orders_for_project(
-      project,
-      [
-        status: [:success, :failure, :timeout, :crash, :pending],
-        search_fields: [],
-        search_term: "",
-        workflow_id: "",
-        date_after: "",
-        date_before: "",
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
-      params
-    )
+  def search_workorders(%Project{} = project) do
+    search_params = SearchParams.new(%{})
+    search_workorders(project, search_params, %{})
   end
 
-  def list_work_orders_for_project(%Project{} = project, filter, params) do
+  def search_workorders(%Project{} = project, filter, params \\ %{}) do
     # TODO: The "get_and_update" below is only necessary because of the fragment
     # on line 461 of this file. See other "TODO".
     list_work_orders_for_project_query(project, filter)
@@ -559,22 +546,5 @@ defmodule Lightning.Invocation do
       end
     )
     |> elem(1)
-  end
-
-  def list_work_orders_for_project(%Project{} = project) do
-    list_work_orders_for_project(
-      project,
-      [
-        status: [:success, :failure, :timeout, :crash, :pending],
-        search_fields: [],
-        search_term: "",
-        workflow_id: "",
-        date_after: "",
-        date_before: "",
-        wo_date_after: "",
-        wo_date_before: ""
-      ],
-      %{}
-    )
   end
 end

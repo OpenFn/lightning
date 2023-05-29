@@ -47,6 +47,8 @@ defmodule LightningWeb.Router do
       :require_authenticated_user
     ]
 
+    resources "/provision", API.ProvisioningController, only: [:create, :show]
+
     resources "/projects", API.ProjectController, only: [:index, :show] do
       resources "/jobs", API.JobController, only: [:index, :show]
       resources "/runs", API.RunController, only: [:index, :show]
@@ -90,6 +92,7 @@ defmodule LightningWeb.Router do
       live "/settings/projects", ProjectLive.Index, :index
       live "/settings/projects/new", ProjectLive.Index, :new
       live "/settings/projects/:id", ProjectLive.Index, :edit
+      live "/settings/projects/:id/delete", ProjectLive.Index, :delete
 
       live "/settings/audit", AuditLive.Index, :index
 
@@ -102,6 +105,7 @@ defmodule LightningWeb.Router do
         live "/jobs", JobLive.Index, :index
 
         live "/settings", ProjectLive.Settings, :index
+        live "/settings/delete", ProjectLive.Settings, :delete
 
         live "/runs", RunLive.Index, :index
         live "/runs/:id", RunLive.Show, :show

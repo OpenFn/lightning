@@ -119,10 +119,8 @@ defmodule Lightning.WorkOrderService do
                                        dataclip: dataclip,
                                        job: job
                                      } ->
-      AttemptRun.new()
-      |> Ecto.Changeset.put_assoc(:attempt, attempt)
-      |> Ecto.Changeset.put_assoc(
-        :run,
+      AttemptRun.new(
+        attempt,
         Run.new(%{job_id: job.id, input_dataclip_id: dataclip.id})
       )
     end)
@@ -153,10 +151,8 @@ defmodule Lightning.WorkOrderService do
                                        dataclip: dataclip,
                                        job: job
                                      } ->
-      AttemptRun.new()
-      |> Ecto.Changeset.put_assoc(:attempt, attempt)
-      |> Ecto.Changeset.put_assoc(
-        :run,
+      AttemptRun.new(
+        attempt,
         Run.new(%{
           job_id: job.id,
           input_dataclip_id: dataclip.id

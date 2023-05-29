@@ -21,6 +21,13 @@ defmodule LightningWeb.FallbackController do
     |> render(:"404")
   end
 
+  def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> put_view(json: LightningWeb.ChangesetJSON)
+    |> render("error.json", changeset: changeset)
+  end
+
   def call(conn, {:error, error}) when is_map(error) do
     conn
     |> put_status(:unauthorized)

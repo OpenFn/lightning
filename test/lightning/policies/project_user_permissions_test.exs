@@ -21,6 +21,7 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
     owner = user_fixture()
     editor = user_fixture()
     intruder = user_fixture()
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     project =
       project_fixture(
@@ -32,8 +33,20 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
         ]
       )
 
+    marked_project =
+      project_fixture(
+        project_users: [
+          %{user_id: viewer.id, role: :viewer},
+          %{user_id: editor.id, role: :editor},
+          %{user_id: admin.id, role: :admin},
+          %{user_id: owner.id, role: :owner}
+        ],
+        scheduled_deletion: now
+      )
+
     %{
       project: project,
+      marked_project: marked_project,
       viewer: viewer,
       admin: admin,
       owner: owner,
@@ -54,6 +67,14 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
       viewer: viewer
     } do
       assert ProjectUsers |> Permissions.can?(:access_project, viewer, project)
+    end
+
+    test "can not access a project that is scheduled for deletion", %{
+      marked_project: marked_project,
+      viewer: viewer
+    } do
+      refute ProjectUsers
+             |> Permissions.can?(:access_project, viewer, marked_project)
     end
 
     test "can edit their own digest and failure alerts for that project",
@@ -81,21 +102,21 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
   end
 
   describe "Project users with the :viewer role" do
-    test "cannot create workflows, create / edit / delete / run / rerun jobs, delete the project, and edit the project name or description",
+    test "cannot create workflows, create / edit / delete / run / rerun jobs, and edit the project name or description",
          %{
            project: project,
            viewer: viewer
          } do
       ~w(
-        create_workflow
         create_job
-        edit_job
+        create_workflow
         delete_job
-        run_job
-        rerun_job
-        delete_project
-        edit_project_name
+        edit_job
         edit_project_description
+        edit_project_name
+        provision_project
+        rerun_job
+        run_job
       )a |> (&refute_can(ProjectUsers, &1, viewer, project)).()
     end
   end
@@ -107,24 +128,24 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            editor: editor
          } do
       ~w(
-        create_workflow
         create_job
-        edit_job
+        create_workflow
         delete_job
-        run_job
+        edit_job
+        provision_project
         rerun_job
+        run_job
       )a |> (&assert_can(ProjectUsers, &1, editor, project)).()
     end
 
-    test "cannot delete the project, edit the project name, and edit the project description",
+    test "cannot edit the project name, and edit the project description",
          %{
            project: project,
            editor: editor
          } do
       ~w(
-          delete_project
-          edit_project_name
           edit_project_description
+          edit_project_name
         )a |> (&refute_can(ProjectUsers, &1, editor, project)).()
     end
   end
@@ -136,38 +157,35 @@ defmodule Lightning.Policies.ProjectUserPermissionsTest do
            admin: admin
          } do
       ~w(
-          create_workflow
           create_job
-          edit_job
+          create_workflow
           delete_job
-          run_job
-          rerun_job
-          edit_project_name
+          edit_job
           edit_project_description
+          edit_project_name
+          provision_project
+          rerun_job
+          run_job
         )a |> (&assert_can(ProjectUsers, &1, admin, project)).()
-    end
-
-    test "cannot delete the project", %{project: project, admin: admin} do
-      refute ProjectUsers |> Permissions.can?(:delete_project, admin, project)
     end
   end
 
   describe "Project users with the :owner role" do
-    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, edit the project description, and delete the project.",
+    test "can create workflows, create / edit / delete / run / rerun jobs, edit the project name, and edit the project description.",
          %{
            project: project,
            owner: owner
          } do
       ~w(
-        create_workflow
         create_job
-        edit_job
+        create_workflow
         delete_job
-        run_job
-        rerun_job
-        edit_project_name
+        edit_job
         edit_project_description
-        delete_project
+        edit_project_name
+        provision_project
+        rerun_job
+        run_job
       )a |> (&assert_can(ProjectUsers, &1, owner, project)).()
     end
   end

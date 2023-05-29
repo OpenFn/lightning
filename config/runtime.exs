@@ -39,7 +39,7 @@ base_oban_cron = [
   {"* * * * *", ObanPruner},
   {"0 10 * * *", Lightning.DigestEmailWorker,
    args: %{"type" => "daily_project_digest"}},
-  {"0 10 * * MON", Lightning.DigestEmailWorker,
+  {"0 10 * * 1", Lightning.DigestEmailWorker,
    args: %{"type" => "weekly_project_digest"}},
   {"0 10 1 * *", Lightning.DigestEmailWorker,
    args: %{"type" => "monthly_project_digest"}}
@@ -49,7 +49,10 @@ conditional_cron =
   if System.get_env("PURGE_DELETED_AFTER_DAYS") != 0,
     do:
       base_oban_cron ++
-        [{"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}}],
+        [
+          {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
+          {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
+        ],
     else: base_oban_cron
 
 config :lightning, Oban,
@@ -243,5 +246,5 @@ if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
   config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:logical_processors_available) + 2
+    pool_size: :erlang.system_info(:schedulers_online) + 4
 end

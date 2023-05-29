@@ -1,5 +1,6 @@
 defmodule Lightning.SetupUtilsTest do
   use Lightning.DataCase, async: true
+  # use Mimic
 
   alias Lightning.Accounts
   alias Lightning.Projects
@@ -9,6 +10,17 @@ defmodule Lightning.SetupUtilsTest do
 
   describe "Setup demo site seed data" do
     setup do
+      # stub(Lightning.WorkOrderService, :create_webhook_workorder, fn _job,
+      #                                                                _dataclip_body ->
+      #   {:ok, %{}}
+      # end)
+
+      # stub(Lightning.WorkOrderService, :create_manual_workorder, fn _job,
+      #                                                               _dataclip_body,
+      #                                                               _user ->
+      #   {:ok, %{}}
+      # end)
+
       Lightning.SetupUtils.setup_demo(create_super: true)
     end
 

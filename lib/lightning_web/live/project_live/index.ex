@@ -4,7 +4,8 @@ defmodule LightningWeb.ProjectLive.Index do
   """
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.{Users, ProjectUsers, Permissions}
+  alias Lightning.Policies.Users
+  alias Lightning.Policies.Permissions
   alias Lightning.Projects
 
   @impl true
@@ -30,31 +31,88 @@ defmodule LightningWeb.ProjectLive.Index do
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(
+      page_title: "Projects",
       active_menu_item: :projects,
-      projects: Projects.list_projects(),
-      page_title: "Projects"
+      projects: Projects.list_projects()
     )
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
     socket
-    |> assign(:page_title, "New Project")
-    |> assign(active_menu_item: :settings)
-    |> assign(:project, Projects.get_project_with_users!(id))
-    |> assign(:users, Lightning.Accounts.list_users())
+    |> assign(
+      page_title: "Edit Project",
+      active_menu_item: :projects,
+      project: Projects.get_project_with_users!(id),
+      users: Lightning.Accounts.list_users()
+    )
   end
 
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(:page_title, "New Project")
-    |> assign(active_menu_item: :settings)
-    |> assign(:project, %Lightning.Projects.Project{})
-    |> assign(:users, Lightning.Accounts.list_users())
+    |> assign(
+      page_title: "New Project",
+      active_menu_item: :projects,
+      project: %Lightning.Projects.Project{},
+      users: Lightning.Accounts.list_users()
+    )
   end
 
-  # TODO: this results in n+1 queries, we need to precalculate the permissions
-  # and have zipped list of projects and the permissions so when we iterate
-  # over them in the templace we don't generate n number of queries
-  def can_delete_project(current_user, project),
-    do: ProjectUsers |> Permissions.can?(:delete_project, current_user, project)
+  defp apply_action(socket, :delete, %{"id" => id}) do
+    socket
+    |> assign(
+      page_title: "Projects",
+      active_menu_item: :settings,
+      projects: Projects.list_projects(),
+      project: Projects.get_project(id)
+    )
+  end
+
+  @impl true
+  def handle_event(
+        "cancel_deletion",
+        %{"id" => project_id},
+        socket
+      ) do
+    Projects.cancel_scheduled_deletion(project_id)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Project deletion canceled")
+     |> push_patch(to: ~p"/settings/projects")}
+  end
+
+  def delete_action(assigns) do
+    if assigns.project.scheduled_deletion do
+      ~H"""
+      <span>
+        <%= link("Cancel deletion",
+          to: "#",
+          phx_click: "cancel_deletion",
+          phx_value_id: @project.id,
+          id: "cancel-deletion-#{@project.id}"
+        ) %>
+      </span>
+      |
+      <span>
+        <.link
+          id={"delete-now-#{@project.id}"}
+          navigate={~p"/settings/projects/#{@project.id}/delete"}
+        >
+          Delete now
+        </.link>
+      </span>
+      """
+    else
+      ~H"""
+      <span>
+        <.link
+          id={"delete-#{@project.id}"}
+          navigate={Routes.project_index_path(@socket, :delete, @project)}
+        >
+          Delete
+        </.link>
+      </span>
+      """
+    end
+  end
 end
