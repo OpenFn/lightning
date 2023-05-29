@@ -27,8 +27,9 @@ Use Lightning to visually build, execute and manage workflows.
 - [Getting started](#getting-started)
   - [Run Lightning via Docker](#run-via-docker)
   - [Deploy Lightning on Docker or Kubernetes](#deploy-on-external-infrastructure)
-  - [Run Lightning on your local machine (contributors)](#contribute-to-this-project)
+  - [Run Lightning on your local machine (contributors)](#run-lightning-locally)
   - [Troubleshooting](#troubleshooting)
+  - [Contribute](#contribute-to-this-project)
   - [Project Configuration Quickstart](#project-configuration-quickstart)
 - [Generate the documentation](#generating-documentation)
 - [Security and standards](#security-and-standards)
@@ -74,6 +75,12 @@ Monitor all workflow activity in one place.
 Manage users and access by project
 ![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
+### **Roles and permissions**
+
+Authorization is a central part of Lightning. As such, users are given different roles which determine what level of access they have for resources in the application. For more details
+about roles and permissions in Lightning, please refer to our
+[documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
+
 ## Getting Started
 
 - If you only want to [_**RUN**_](#run-via-docker) Lightning on your own server,
@@ -81,7 +88,7 @@ Manage users and access by project
 - If you want to [_**DEPLOY**_](#deploy-on-external-infrastructure) Lightning,
   we recommend Docker builds and Kubernetes.
 - If you want to [_**CONTRIBUTE**_](#contribute-to-this-project) to the project,
-  we recommend setting up Elixir on your local machine.
+  we recommend [running Lightning on your local machine](#run-lightning-locally).
 
 ## **Run** via Docker
 
@@ -105,28 +112,7 @@ from Dockerhub.
 
 See [Deployment](DEPLOYMENT.md) for more detailed information.
 
-## **Contribute** to this project
-
-First, thanks for being here! You're contributing to a digital public good that
-will always be free and open source and aimed at serving innovative NGOs,
-governments, and social impact organizations the world over! You rock. ❤️
-
-FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
-[Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
-unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
-
-### Set up your environment
-
-If you have push access to this repository (are you an authorized maintainer?)
-then you'll be able to make changes and push them to a feature branch before
-submitting a pull request. If you're new to OpenFn, you'll need to
-[**make a fork**](https://github.com/OpenFn/Lightning/fork) and push your
-changes there.
-
-Once you're ready to submit a pull request, you can click the "compare across
-forks" link on GitHub's
-[pull request](https://github.com/OpenFn/Lightning/compare) interface and then
-open one for review.
+## Run Lightning locally
 
 ### Clone the repo and optionally set ENVs
 
@@ -220,18 +206,12 @@ MIX_ENV=test mix test
 We also have `test.watch` installed which can be used to rerun the tests on file
 changes.
 
-## **Benchmarking**
+## Benchmarking
 
 We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
 folder you can find a script for benchmarking Webhook Workflows.
 
 See [Benchmarking](benchmarking/BENCHMARKING.md) for more detailed information.
-
-## **Roles and permissions**
-
-Authorization is a central part of Lightning. As such, users are given different roles which determine what level of access they have for resources in the application. For more details
-about roles and permissions in Lightning, please refer to our
-[documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
 
 ## Troubleshooting
 
@@ -341,6 +321,35 @@ For help getting started with your OpenFn/Lightning Project and Workflows
 configuration, check out the
 [Lightning Quickstart Guidance](https://docs.openfn.org/documentation/build/lightning-quick-start)
 on OpenFn/Docs.
+
+## **Contribute** to this project
+
+First, thanks for being here! You're contributing to a digital public good that
+will always be free and open source and aimed at serving innovative NGOs,
+governments, and social impact organizations the world over! You rock. ❤️
+
+FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
+[Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
+unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
+
+If you'd like to contribute to this projects, follow the steps below: 
+
+### Assign yourself to an issue
+Read through the existing [issues](https://github.com/OpenFn/Lightning/issues), assign yourself to the issue you have chosen. Leave a comment on the issue to let us know you'll be working on it, and if you have any questions of clarifications that would help you get started ask them there - we will get back to you as soon as possible. 
+
+If there isn't already an issue for the feature you would like to contribute, please start a discussion in our [community forum](https://community.openfn.org/c/feature-requests/12).
+
+### Open a pull request
+
+1. Clone the Lightning repository, then [fork it](https://docs.github.com/en/get-started/quickstart/fork-a-repo). 
+
+2. Run through [setting up your environment](#set-up-your-environment) and make your changes. 
+
+3. Make sure you have written your tests and updated /CHANGELOG.md (in the 'Unreleased' section, add a short description of the changes you are making, along with a link to your issue).
+
+3. Open a draft pull request by clicking "Contribute > Open Pull Request" from your forked repository. Fill out the pull request template (this will be added automatically for you), then make sure to self-review your code and go through the 'Review checklist'. Don't worry about the QA checkbox, our product manager Amber will tick that once she has reviewed your PR. You can leave any notes for the reviewer in a comment. 
+
+4. Once you're ready to submit a pull request, you can mark your draft PR as 'Ready for review' and assign @stuartc or @taylordowns2000.
 
 ## Generating Documentation
 
