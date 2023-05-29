@@ -349,10 +349,7 @@ If there isn't already an issue for the feature you would like to contribute, pl
 
 3. Open a draft pull request by clicking "Contribute > Open Pull Request" from your forked repository. Fill out the pull request template (this will be added automatically for you), then make sure to self-review your code and go through the 'Review checklist'. Don't worry about the QA checkbox, our product manager Amber will tick that once she has reviewed your PR. You can leave any notes for the reviewer in a comment. 
 
-4. Once you're ready to submit a pull request, you can click the "compare across
-forks" link on GitHub's
-[pull request](https://github.com/OpenFn/Lightning/compare) interface and then
-open one for review. Assign @stuartc or @taylordowns2000.
+4. Once you're ready to submit a pull request, you can mark your draft PR as 'Ready for review' and assign @stuartc or @taylordowns2000.
 
 ## Generating Documentation
 
