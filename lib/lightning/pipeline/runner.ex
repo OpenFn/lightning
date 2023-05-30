@@ -48,15 +48,9 @@ defmodule Lightning.Pipeline.Runner do
         # coveralls-ignore-stop
       end)
 
-      scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
-
       {:ok, run} =
         Repo.transaction(fn ->
-          Enum.map(scrubbed_log, fn log ->
-            if log != "" do
-              Invocation.create_run_log(%{body: log, run_id: run.id})
-            end
-          end)
+          :ok = Lightning.Scrubber.scrub(scrubber, result.log) |> save_run_logs()
 
           {:ok, run} =
             update_run(run, %{
@@ -72,6 +66,14 @@ defmodule Lightning.Pipeline.Runner do
       Lightning.FailureAlerter.alert_on_failure(run)
 
       dataclip_result
+    end
+
+    defp save_run_logs(logs) do
+      Enum.each(logs, fn log ->
+        if log != "" do
+          Invocation.create_run_log(%{body: log, run_id: run.id})
+        end
+      end)
     end
   end
 
