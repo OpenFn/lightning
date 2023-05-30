@@ -39,7 +39,7 @@ defmodule Lightning.Pipeline.StateAssembler do
   import Ecto.Query, warn: false
 
   require Jason.Helpers
-  alias Lightning.Repo
+  alias Lightning.Pipeline
   alias Lightning.Invocation.Run
 
   @doc """
@@ -47,12 +47,6 @@ defmodule Lightning.Pipeline.StateAssembler do
   """
   @spec assemble(run :: Lightning.Invocation.Run.t()) :: String.t()
   def assemble(%Run{} = run) do
-    from(rl in Lightning.Invocation.RunLog,
-      where: rl.run_id == ^run.id,
-      select: rl.body
-    )
-    |> Repo.all()
-
     query =
       from(r in Run,
         join: d in assoc(r, :input_dataclip),
@@ -60,24 +54,21 @@ defmodule Lightning.Pipeline.StateAssembler do
         left_join: p in assoc(r, :previous),
         on: p.exit_code > 0,
         as: :previous,
-        left_join: l in Lightning.Invocation.RunLog,
-        on: l.run_id == p.id,
-        as: :previous_logs,
         join: j in assoc(r, :job),
         left_join: c in assoc(j, :credential),
         as: :credential,
         where: r.id == ^run.id
       )
 
-    {dataclip_type, dataclip_body, credential, error} =
+    {dataclip_type, dataclip_body, credential, previous_run} =
       query
       |> select(
-        [dataclip: d, credential: c, previous: p, previous_logs: pl],
-        {d.type, d.body, c.body, pl.body}
+        [dataclip: d, credential: c, previous: p],
+        {d.type, d.body, c.body, p}
       )
       |> Lightning.Repo.one!()
 
-    case {dataclip_type, error} do
+    case {dataclip_type, Pipeline.assemble_logs_for_run(previous_run)} do
       {:run_result, error} when not is_nil(error) ->
         Jason.encode_to_iodata!(
           dataclip_body

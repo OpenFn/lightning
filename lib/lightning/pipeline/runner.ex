@@ -53,7 +53,7 @@ defmodule Lightning.Pipeline.Runner do
         update_run(run, %{
           finished_at: DateTime.utc_now(),
           exit_code: result.exit_code,
-          logs: scrubbed_log
+          logs: prepare_run_logs(scrubbed_log)
         })
 
       dataclip_result = Runner.create_dataclip_from_result(result, run)
@@ -61,6 +61,11 @@ defmodule Lightning.Pipeline.Runner do
       Lightning.FailureAlerter.alert_on_failure(run)
 
       dataclip_result
+    end
+
+    defp prepare_run_logs(logs) do
+      Enum.map(logs, fn log -> %{body: log} end)
+      |> Enum.filter(fn %{body: body} -> body != "" end)
     end
   end
 
@@ -83,7 +88,8 @@ defmodule Lightning.Pipeline.Runner do
   @spec start(run :: Invocation.Run.t(), opts :: []) ::
           Lightning.Runtime.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
-    run = Lightning.Repo.preload(run, [:output_dataclip, job: :credential])
+    run =
+      Lightning.Repo.preload(run, [:logs, :output_dataclip, job: :credential])
 
     %{body: expression, adaptor: adaptor} = run.job
 

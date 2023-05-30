@@ -72,7 +72,7 @@ defmodule Lightning.PipelineTest do
                "error" => error
              } = expected_run.output_dataclip.body
 
-      assert error |> Enum.join("\n") =~ "Error: I'm supposed to fail"
+      assert error =~ "Error: I'm supposed to fail"
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
@@ -152,6 +152,40 @@ defmodule Lightning.PipelineTest do
                "data" => %{},
                "extra" => "data"
              } = expected_run.output_dataclip.body
+    end
+  end
+
+  describe "run logs" do
+    test "logs_for_run/1 returns an array of the logs for a given run" do
+      run =
+        run_fixture(logs: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}])
+
+      logs = Pipeline.logs_for_run(run)
+
+      assert logs |> Enum.count() == 3
+
+      assert logs |> Enum.map(fn log -> log.body end) == [
+               "Hello",
+               "I am a",
+               "log"
+             ]
+    end
+
+    test "logs_for_run/1 returns nil when given a nil run" do
+      assert Pipeline.logs_for_run(nil) == nil
+    end
+
+    test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
+      run =
+        run_fixture(logs: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}])
+
+      log_string = Pipeline.assemble_logs_for_run(run)
+
+      assert log_string == "Hello\nI am a\nlog"
+    end
+
+    test "assemble_logs_for_run/1 returns nil when given a nil run" do
+      assert Pipeline.assemble_logs_for_run(nil) == nil
     end
   end
 end
