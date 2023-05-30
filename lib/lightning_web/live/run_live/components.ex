@@ -2,6 +2,7 @@ defmodule LightningWeb.RunLive.Components do
   @moduledoc false
   use LightningWeb, :component
   import LightningWeb.RouteHelpers
+  alias Lightning.Pipeline
   alias Phoenix.LiveView.JS
 
   attr(:project, :map, required: true)
@@ -137,17 +138,15 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   def run_log_viewer(assigns) do
-    log =
-      if assigns.run.logs |> length() > 0 do
-        Enum.map_join(assigns.run.logs, "\n", fn log -> log.body end)
-      else
-        false
-      end
-
-    assigns = assign(assigns, :log, log)
+    assigns =
+      assign(
+        assigns,
+        :log,
+        Pipeline.logs_for_run(assigns.run) |> Enum.map(fn log -> log.body end)
+      )
 
     ~H"""
-    <%= if @log do %>
+    <%= if length(@log) > 0 do %>
       <.log_view log={@log} />
     <% else %>
       <.no_log_message />

@@ -8,7 +8,7 @@ defmodule LightningWeb.EndToEndTest do
     ProjectsFixtures
   }
 
-  alias Lightning.Repo
+  alias Lightning.Pipeline
   alias Lightning.Invocation
 
   setup :register_and_log_in_superuser
@@ -77,22 +77,16 @@ defmodule LightningWeb.EndToEndTest do
 
       [run_3, run_2, run_1] = Invocation.list_runs_for_project(project).entries
 
-      log =
-        run_1
-        |> Repo.preload(:logs)
-        |> Map.get(:logs)
-        |> Enum.map_join("\n", fn log -> log.body end)
-
       # Run 1 should succeed and use the appropriate packages
       assert run_1.finished_at != nil
       assert run_1.exit_code == 0
-      assert log =~ "Done in"
+      assert Pipeline.assemble_logs_for_run(run_1) =~ "Done in"
 
       #  Run 2 should fail but not expose a secret
       assert run_2.finished_at != nil
       assert run_2.exit_code == 1
 
-      log = run_2.log |> Enum.join("\n")
+      log = Pipeline.assemble_logs_for_run(run_2)
 
       assert log =~
                ~S[{"password":"***","username":"quux"}]
@@ -100,7 +94,7 @@ defmodule LightningWeb.EndToEndTest do
       #  Run 3 should succeed and log "6"
       assert run_3.finished_at != nil
       assert run_3.exit_code == 0
-      log = run_3.log |> Enum.join("\n")
+      log = Pipeline.assemble_logs_for_run(run_3)
       assert log =~ "[JOB] ℹ 6"
     end)
   end

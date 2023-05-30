@@ -5,8 +5,11 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Pipeline
+  alias Lightning.Invocation.RunLog
   alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
+  alias Lightning.Invocation.RunLog
 
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Projects.Project
@@ -286,6 +289,12 @@ defmodule Lightning.Invocation do
     end
   end
 
+  def create_run_log(attrs \\ %{}) do
+    %RunLog{}
+    |> RunLog.changeset(attrs)
+    |> Repo.insert!()
+  end
+
   @doc """
   Deletes a run.
 
@@ -383,9 +392,13 @@ defmodule Lightning.Invocation do
     Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
         dynamic(
-          [logs: l],
+          [run_logs: rl],
           ^query or
-            fragment("cast(?  as VARCHAR) ilike ?", l.body, ^"%#{search_term}%")
+            fragment(
+              "cast(?  as VARCHAR) ilike ?",
+              rl.body,
+              ^"%#{search_term}%"
+            )
         )
 
       :body, query ->
@@ -436,9 +449,6 @@ defmodule Lightning.Invocation do
         last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
       join: r in assoc(att, :runs),
       as: :runs,
-      join: l in Lightning.Invocation.RunLog,
-      on: l.run_id == r.id,
-      as: :logs,
       join: last_run in subquery(last_runs),
       on:
         (att.id == last_run.attempt_id and
@@ -446,6 +456,8 @@ defmodule Lightning.Invocation do
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
+      join: rl in assoc(r, :logs),
+      as: :run_logs,
       where: w.project_id == ^project_id,
       where: ^filter_run_status_where(search_params.status),
       where: ^filter_workflow_where(search_params.workflow_id),

@@ -75,11 +75,11 @@ defmodule Lightning.Pipeline.RunnerTest do
     refute is_nil(run.finished_at)
     assert run.exit_code == 0
 
-    log = Enum.join(run.log, "\n")
+    log = Pipeline.assemble_logs_for_run(run)
     # assert log =~ "@openfn/language-common"
     refute log =~ ~S(password":"immasecret")
 
-    assert length(run.log) > 0
+    assert Pipeline.logs_for_run(run) |> length() > 0
 
     refute Repo.all(Lightning.Invocation.Dataclip)
            |> Enum.any?(fn result ->

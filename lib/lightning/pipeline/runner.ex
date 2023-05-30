@@ -15,6 +15,7 @@ defmodule Lightning.Pipeline.Runner do
     Custom handler callbacks for Lightnings use of Engine to execute runs.
     """
     use Lightning.Runtime.Handler
+    alias Lightning.Repo
     alias Lightning.Pipeline.Runner
     import Lightning.Invocation, only: [update_run: 2]
 
@@ -50,22 +51,27 @@ defmodule Lightning.Pipeline.Runner do
       scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
 
       {:ok, run} =
-        update_run(run, %{
-          finished_at: DateTime.utc_now(),
-          exit_code: result.exit_code,
-          logs: prepare_run_logs(scrubbed_log)
-        })
+        Repo.transaction(fn ->
+          Enum.map(scrubbed_log, fn log ->
+            if log != "" do
+              Invocation.create_run_log(%{body: log, run_id: run.id})
+            end
+          end)
+
+          {:ok, run} =
+            update_run(run, %{
+              finished_at: DateTime.utc_now(),
+              exit_code: result.exit_code
+            })
+
+          run
+        end)
 
       dataclip_result = Runner.create_dataclip_from_result(result, run)
 
       Lightning.FailureAlerter.alert_on_failure(run)
 
       dataclip_result
-    end
-
-    defp prepare_run_logs(logs) do
-      Enum.map(logs, fn log -> %{body: log} end)
-      |> Enum.filter(fn %{body: body} -> body != "" end)
     end
   end
 

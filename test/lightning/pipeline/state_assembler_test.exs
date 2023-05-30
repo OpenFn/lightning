@@ -74,7 +74,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
       assert StateAssembler.assemble(run) |> Jason.decode!() == %{
                "configuration" => %{"other" => "credential"},
-               "error" => ["I've failed, log log"],
+               "error" => "I've failed, log log",
                "data" => %{"foo" => "bar"}
              }
     end
