@@ -382,12 +382,12 @@ defmodule Lightning.Invocation do
   end
 
   def filter_run_body_and_logs_where(_search_term, search_fields)
-      when length(search_fields) == 0 do
+      when search_fields == [] do
     dynamic(true)
   end
 
   def filter_run_body_and_logs_where(search_term, search_fields)
-      when length(search_fields) > 0 do
+      when search_fields != [] do
     Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
         dynamic(
