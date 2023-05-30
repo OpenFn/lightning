@@ -5,7 +5,6 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
-  alias Lightning.Pipeline
   alias Lightning.Invocation.RunLog
   alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
@@ -409,7 +408,6 @@ defmodule Lightning.Invocation do
         )
 
       _, query ->
-        # Not a where parameter
         query
     end)
   end
@@ -456,7 +454,8 @@ defmodule Lightning.Invocation do
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
-      join: rl in assoc(r, :logs),
+      left_join: rl in RunLog,
+      on: rl.run_id == r.id,
       as: :run_logs,
       where: w.project_id == ^project_id,
       where: ^filter_run_status_where(search_params.status),
