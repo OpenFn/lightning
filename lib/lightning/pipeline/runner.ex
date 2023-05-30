@@ -50,7 +50,8 @@ defmodule Lightning.Pipeline.Runner do
 
       {:ok, run} =
         Repo.transaction(fn ->
-          :ok = Lightning.Scrubber.scrub(scrubber, result.log) |> save_run_logs()
+          :ok =
+            Lightning.Scrubber.scrub(scrubber, result.log) |> save_run_logs(run)
 
           {:ok, run} =
             update_run(run, %{
@@ -68,7 +69,7 @@ defmodule Lightning.Pipeline.Runner do
       dataclip_result
     end
 
-    defp save_run_logs(logs) do
+    defp save_run_logs(logs, run) do
       Enum.each(logs, fn log ->
         if log != "" do
           Invocation.create_run_log(%{body: log, run_id: run.id})
