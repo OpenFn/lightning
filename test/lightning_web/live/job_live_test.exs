@@ -139,7 +139,7 @@ defmodule LightningWeb.JobLiveTest do
              )
 
       assert view |> render_click("delete_job", %{"id" => job.id}) =~
-               "Unable to delete this job because it has downstream jobs"
+               "Unable to delete jobs with downstream jobs or runs."
     end
 
     test "project viewers can't delete jobs", %{

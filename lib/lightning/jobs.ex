@@ -197,7 +197,12 @@ defmodule Lightning.Jobs do
     job
     |> Ecto.Changeset.change()
     |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
+      name: :jobs_trigger_id_fkey,
       message: "This job is associated with downstream jobs"
+    )
+    |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
+      name: :invocation_reasons_run_id_fkey,
+      message: "This job is associated with runs"
     )
     |> Repo.delete()
   end
