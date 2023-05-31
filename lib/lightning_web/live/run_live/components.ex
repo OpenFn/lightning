@@ -5,9 +5,9 @@ defmodule LightningWeb.RunLive.Components do
   alias Lightning.Pipeline
   alias Phoenix.LiveView.JS
 
-  attr(:project, :map, required: true)
-  attr(:attempt, :map, required: true)
-  attr(:can_rerun_job, :boolean, required: true)
+  attr :project, :map, required: true
+  attr :attempt, :map, required: true
+  attr :can_rerun_job, :boolean, required: true
 
   def attempt_item(%{attempt: attempt} = assigns) do
     runs = attempt.runs
@@ -75,10 +75,10 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:run, :map, required: true)
-  attr(:attempt, :map, required: true)
-  attr(:project_id, :string, required: true)
-  attr(:can_rerun_job, :boolean, required: true)
+  attr :run, :map, required: true
+  attr :attempt, :map, required: true
+  attr :project_id, :string, required: true
+  attr :can_rerun_job, :boolean, required: true
 
   def run_list_item(assigns) do
     ~H"""
@@ -155,8 +155,8 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   # --------------- Run Details ---------------
-  attr(:run, :any, required: true)
-  attr(:show_input_dataclip, :boolean)
+  attr :run, :any, required: true
+  attr :show_input_dataclip, :boolean
 
   @spec run_viewer(map) :: Phoenix.LiveView.Rendered.t()
   def run_viewer(assigns) do
@@ -220,7 +220,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:run, :any, required: true)
+  attr :run, :any, required: true
 
   def run_details(%{run: run} = assigns) do
     run_finished_at =
@@ -298,7 +298,7 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:log, :list, required: true)
+  attr :log, :list, required: true
 
   def log_view(%{log: log} = assigns) do
     assigns = assigns |> assign(log: log |> Enum.with_index(1))
@@ -316,8 +316,8 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:line, :string, required: true)
-  attr(:num, :integer, required: true)
+  attr :line, :string, required: true
+  attr :num, :integer, required: true
 
   def log_line(%{line: line, num: num} = assigns) do
     # Format the log lines replacing single spaces with non-breaking spaces.
@@ -355,8 +355,8 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  attr(:dataclip, :any, required: true)
-  attr(:no_dataclip_message, :any)
+  attr :dataclip, :any, required: true
+  attr :no_dataclip_message, :any
 
   def dataclip_view(%{dataclip: dataclip} = assigns) do
     lines =
@@ -430,9 +430,9 @@ defmodule LightningWeb.RunLive.Components do
   # ------------------- Toggle Bar ---------------------
   # Used to switch between Log and Output
 
-  slot(:inner_block, required: true)
-  attr(:class, :string, default: "items-end")
-  attr(:rest, :global)
+  slot :inner_block, required: true
+  attr :class, :string, default: "items-end"
+  attr :rest, :global
 
   def toggle_bar(assigns) do
     ~H"""
@@ -444,9 +444,9 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  attr(:active, :string, default: "false")
-  slot(:inner_block, required: true)
-  attr(:rest, :global)
+  attr :active, :string, default: "false"
+  slot :inner_block, required: true
+  attr :rest, :global
 
   def toggle_item(assigns) do
     ~H"""
