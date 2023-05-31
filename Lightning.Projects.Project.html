@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-80B88D8F.js"></script>
+    <script src="dist/sidebar_items-2D183191.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -147,6 +147,17 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#deletion_changeset/2" translate="no">deletion_changeset(project, attrs)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Changeset to validate a project deletion request, the user must enter the
+projects name to confirm.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#validate/1" translate="no">validate(changeset)</a>
 
       </div>
@@ -199,6 +210,7 @@ Types
   project_credentials: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_users:
     [<a href="Lightning.Projects.ProjectUser.html#t:t/0">Lightning.Projects.ProjectUser.t</a>()] | <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>(),
+  scheduled_deletion: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   users: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   workflows: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
@@ -222,6 +234,29 @@ Types
 Functions
     </h1>
     <div class="functions-list">
+<section class="detail" id="deletion_changeset/2">
+
+  <div class="detail-header">
+    <a href="#deletion_changeset/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">deletion_changeset(project, attrs)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L55" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Changeset to validate a project deletion request, the user must enter the
+projects name to confirm.</p>
+  </section>
+</section>
 <section class="detail" id="validate/1">
 
   <div class="detail-header">
@@ -231,7 +266,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">validate(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L41" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/projects/project.ex#L44" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

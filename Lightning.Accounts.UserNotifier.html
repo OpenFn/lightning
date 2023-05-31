@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-80B88D8F.js"></script>
+    <script src="dist/sidebar_items-2D183191.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -211,6 +211,14 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#notify_project_deletion/2" translate="no">notify_project_deletion(user, project)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#send_deletion_notification_email/1" translate="no">send_deletion_notification_email(user)</a>
 
       </div>
@@ -242,7 +250,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">build_digest_url(workflow, start_date, end_date)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L174" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L176" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -264,7 +272,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_confirmation_instructions(user, url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L34" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L36" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -286,7 +294,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_confirmation_instructions(enroller, user, url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L51" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L53" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -308,7 +316,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_project_addition_notification(user, project)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L68" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L70" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -330,7 +338,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_project_digest(digest_data, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L208" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L210" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -352,7 +360,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_reset_password_instructions(user, url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L117" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L119" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -374,7 +382,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_update_email_instructions(email, url)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L137" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L139" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -396,7 +404,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">deliver_update_email_warning(email, new_email)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L157" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L159" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -409,6 +417,28 @@ Functions
 <p>Deliver warning to update a user email.</p>
   </section>
 </section>
+<section class="detail" id="notify_project_deletion/2">
+
+  <div class="detail-header">
+    <a href="#notify_project_deletion/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">notify_project_deletion(user, project)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L254" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="send_deletion_notification_email/1">
 
   <div class="detail-header">
@@ -418,7 +448,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">send_deletion_notification_email(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L97" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_notifier.ex#L99" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
