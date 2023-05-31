@@ -98,7 +98,11 @@ defmodule Lightning.Pipeline.Runner do
           Lightning.Runtime.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
     run =
-      Lightning.Repo.preload(run, [:logs, :output_dataclip, job: :credential])
+      Lightning.Repo.preload(run, [
+        :log_lines,
+        :output_dataclip,
+        job: :credential
+      ])
 
     %{body: expression, adaptor: adaptor} = run.job
 

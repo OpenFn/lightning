@@ -5,10 +5,9 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
-  alias Lightning.Invocation.RunLog
+  alias Lightning.Invocation.LogLine
   alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
-  alias Lightning.Invocation.RunLog
 
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Projects.Project
@@ -289,8 +288,8 @@ defmodule Lightning.Invocation do
   end
 
   def create_run_log(attrs \\ %{}) do
-    %RunLog{}
-    |> RunLog.changeset(attrs)
+    %LogLine{}
+    |> LogLine.changeset(attrs)
     |> Repo.insert!()
   end
 
@@ -391,11 +390,11 @@ defmodule Lightning.Invocation do
     Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
         dynamic(
-          [run_logs: rl],
+          [log_lines: l],
           ^query or
             fragment(
               "cast(?  as VARCHAR) ilike ?",
-              rl.body,
+              l.body,
               ^"%#{search_term}%"
             )
         )
@@ -454,9 +453,9 @@ defmodule Lightning.Invocation do
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
-      left_join: rl in RunLog,
-      on: rl.run_id == r.id,
-      as: :run_logs,
+      left_join: l in LogLine,
+      on: l.run_id == r.id,
+      as: :log_lines,
       where: w.project_id == ^project_id,
       where: ^filter_run_status_where(search_params.status),
       where: ^filter_workflow_where(search_params.workflow_id),

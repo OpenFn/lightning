@@ -33,7 +33,7 @@ defmodule LightningWeb.RunLive.Show do
         preload: [:output_dataclip, :input_dataclip, :job, [credential: [:user]]]
       )
       |> Lightning.Repo.one()
-      |> Repo.preload(:logs)
+      |> Repo.preload(:log_lines)
 
     socket
     |> assign(run: run)

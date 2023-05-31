@@ -76,14 +76,14 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
              &LightningWeb.RunLive.Components.run_viewer/1,
              run:
                run_fixture(exit_code: 1, output_dataclip_id: nil)
-               |> Repo.preload(:logs)
+               |> Repo.preload(:log_lines)
            ) =~
              "This run failed"
 
     assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
              run:
                run_fixture(exit_code: 0, output_dataclip_id: nil)
-               |> Repo.preload(:logs)
+               |> Repo.preload(:log_lines)
            ) =~
              "There is no output for this run"
 
@@ -99,7 +99,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
       |> Lightning.Repo.preload(:output_dataclip)
 
     assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
-             run: run |> Repo.preload(:logs)
+             run: run |> Repo.preload(:log_lines)
            ) =~
              "dataclip_body"
   end

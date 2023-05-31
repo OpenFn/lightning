@@ -1,4 +1,4 @@
-defmodule Lightning.Invocation.RunLog do
+defmodule Lightning.Invocation.LogLine do
   @moduledoc """
   Ecto model for run logs.
   """
@@ -17,7 +17,7 @@ defmodule Lightning.Invocation.RunLog do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "run_logs" do
+  schema "log_lines" do
     field :body, :string
     field :timestamp, :integer
 

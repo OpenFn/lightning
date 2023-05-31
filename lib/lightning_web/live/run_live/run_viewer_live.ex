@@ -13,7 +13,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
 
   @impl true
   def mount(_params, %{"run_id" => run_id}, socket) do
-    run = get_run_with_output(run_id) |> Repo.preload(:logs)
+    run = get_run_with_output(run_id)
 
     LightningWeb.Endpoint.subscribe("run:#{run.id}")
 
@@ -42,6 +42,6 @@ defmodule LightningWeb.RunLive.RunViewerLive do
       preload: :output_dataclip
     )
     |> Lightning.Repo.one()
-    |> Repo.preload(:logs)
+    |> Repo.preload(:log_lines)
   end
 end

@@ -1,6 +1,7 @@
 defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
+  alias Lightning.Pipeline
   alias Lightning.Workorders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
@@ -168,8 +169,8 @@ defmodule Lightning.InvocationTest do
                )
 
       assert run.exit_code == 42
+      assert run |> Pipeline.logs_for_run() == []
       assert run.finished_at == ~U[2022-02-02 11:49:00.000000Z]
-      assert run |> Repo.preload(:logs) |> Map.get(:logs) == []
       assert run.started_at == ~U[2022-02-02 11:49:00.000000Z]
     end
 
@@ -188,19 +189,19 @@ defmodule Lightning.InvocationTest do
     end
 
     test "update_run/2 with valid data updates the run" do
-      run = run_fixture()
+      run = run_fixture() |> Repo.preload(:log_lines)
 
       update_attrs = %{
         exit_code: 43,
         finished_at: ~U[2022-02-03 11:49:00.000000Z],
-        log: [],
+        log_lines: [],
         started_at: ~U[2022-02-03 11:49:00.000000Z]
       }
 
       assert {:ok, %Run{} = run} = Invocation.update_run(run, update_attrs)
       assert run.exit_code == 43
       assert run.finished_at == ~U[2022-02-03 11:49:00.000000Z]
-      assert run |> Repo.preload(:logs) |> Map.get(:logs) == []
+      assert Pipeline.logs_for_run(run) == []
       assert run.started_at == ~U[2022-02-03 11:49:00.000000Z]
     end
 

@@ -13,7 +13,7 @@ defmodule Lightning.Invocation.Run do
   alias Lightning.Jobs.Job
   alias Lightning.Credentials.Credential
   alias Lightning.{AttemptRun, Attempt}
-  alias Lightning.Invocation.RunLog
+  alias Lightning.Invocation.LogLine
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -35,7 +35,7 @@ defmodule Lightning.Invocation.Run do
 
     belongs_to :previous, __MODULE__
 
-    has_many :logs, RunLog
+    has_many :log_lines, LogLine
 
     many_to_many :attempts, Attempt, join_through: AttemptRun
 
@@ -76,7 +76,7 @@ defmodule Lightning.Invocation.Run do
       :output_dataclip_id
     ])
     |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
-    |> cast_assoc(:logs, with: &RunLog.changeset/2, required: false)
+    |> cast_assoc(:log_lines, with: &LogLine.changeset/2, required: false)
     |> validate_required([:job_id, :input_dataclip_id])
     |> validate()
   end

@@ -16,8 +16,8 @@
   <% end %>
   <p>
     <pre style="background-color: #ededed; padding: 16px; margin: 8px 0">
-      <%= Enum.map(@run.logs, fn(log) -> %>
-        <%= log.body %>
+      <%= Enum.map(@run.log_lines, fn(log_line) -> %>
+        <%= log_line.body %>
       <% end) %>
     </pre>
   </p>

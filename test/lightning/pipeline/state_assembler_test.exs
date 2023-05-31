@@ -22,7 +22,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 0,
-          logs: [%{body: "I've succeeded, log log"}]
+          log_lines: [%{body: "I've succeeded, log log"}]
         })
         |> Repo.insert!()
 
@@ -50,7 +50,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 1,
-          logs: [%{body: "I've failed, log log"}]
+          log_lines: [%{body: "I've failed, log log"}]
         })
         |> Repo.insert!()
 
@@ -89,7 +89,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
           job_id: job.id,
           input_dataclip_id: dataclip.id,
           exit_code: 0,
-          logs: [%{body: "I've succeeded, log log"}]
+          log_lines: [%{body: "I've succeeded, log log"}]
         })
         |> put_assoc(
           :output_dataclip,

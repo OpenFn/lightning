@@ -83,7 +83,9 @@ defmodule Lightning.Pipeline do
   end
 
   def logs_for_run(nil), do: nil
-  def logs_for_run(%Run{} = run), do: Repo.preload(run, :logs) |> Map.get(:logs)
+
+  def logs_for_run(%Run{} = run),
+    do: Repo.preload(run, :log_lines) |> Map.get(:log_lines)
 
   def assemble_logs_for_run(nil), do: nil
 

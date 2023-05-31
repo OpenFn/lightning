@@ -158,13 +158,15 @@ defmodule Lightning.PipelineTest do
   describe "run logs" do
     test "logs_for_run/1 returns an array of the logs for a given run" do
       run =
-        run_fixture(logs: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}])
+        run_fixture(
+          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+        )
 
-      logs = Pipeline.logs_for_run(run)
+      log_lines = Pipeline.logs_for_run(run)
 
-      assert logs |> Enum.count() == 3
+      assert Enum.count(log_lines) == 3
 
-      assert logs |> Enum.map(fn log -> log.body end) == [
+      assert log_lines |> Enum.map(fn log_line -> log_line.body end) == [
                "Hello",
                "I am a",
                "log"
@@ -177,7 +179,9 @@ defmodule Lightning.PipelineTest do
 
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
-        run_fixture(logs: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}])
+        run_fixture(
+          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+        )
 
       log_string = Pipeline.assemble_logs_for_run(run)
 
