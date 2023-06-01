@@ -72,7 +72,7 @@ defmodule Lightning.PipelineTest do
                "error" => error
              } = expected_run.output_dataclip.body
 
-      assert error =~ "Error: I'm supposed to fail"
+      assert error |> Enum.join("\n") =~ "Error: I'm supposed to fail"
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do

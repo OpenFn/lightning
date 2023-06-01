@@ -30,7 +30,6 @@ defmodule Lightning.Invocation.LogLine do
   def changeset(run, attrs) do
     run
     |> cast(attrs, [:body, :timestamp, :run_id])
-    |> validate_required([:body])
     |> assoc_constraint(:run)
   end
 end

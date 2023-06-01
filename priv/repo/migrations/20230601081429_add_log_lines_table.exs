@@ -5,6 +5,7 @@ defmodule Lightning.Repo.Migrations.AddLogLinesTable do
     create table(:log_lines, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :body, :string
+      add :timestamp, :integer
       add :run_id, references(:runs, on_delete: :delete_all, type: :binary_id), null: false
 
       timestamps()
