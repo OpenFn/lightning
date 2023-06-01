@@ -29,6 +29,7 @@ interface WorkflowEditorEntrypoint extends PhoenixHook {
   abortController: AbortController | null;
   editJobUrl: string;
   selectJob(id: string): void;
+  selectTrigger(id: string): void;
 }
 
 const createNewWorkflow = () => {
@@ -99,6 +100,13 @@ export default {
   selectJob(id?: string) {
     const url = this.editJobUrl.replace(
       id ? ':job_id' : '/j/:job_id',
+      id || ''
+    );
+    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
+  },
+  selectTrigger(id?: string) {
+    const url = this.editJobUrl.replace(
+      id ? ':trigger_id' : '/t/:trigger_id',
       id || ''
     );
     this.liveSocket.pushHistoryPatch(url, 'push', this.el);

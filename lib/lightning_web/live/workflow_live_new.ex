@@ -75,6 +75,52 @@ defmodule LightningWeb.WorkflowNewLive do
           </div>
         </div>
       </div>
+
+      <div class="relative h-full flex">
+        <div
+          class="grow"
+          phx-hook="WorkflowEditor"
+          id={"editor-#{@project.id}"}
+          data-edit-job-url={~p"/projects/#{@project.id}/w-new/new/t/:trigger_id"}
+          phx-update="ignore"
+        >
+          <!-- Before Editor component has mounted -->
+          Loading...
+        </div>
+        <div
+          :if={@selected_trigger}
+          class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
+          lv-keep-style
+        >
+          <.resize_component id={"resizer-#{@workflow.id}"} />
+          <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
+            <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
+              <.form
+                :let={f}
+                for={@changeset}
+                phx-submit="save"
+                phx-change="validate"
+                class="h-full"
+              >
+                <%= for trigger_form <- inputs_for(f, :triggers) do %>
+                  <!-- Show only the currently selected one -->
+                  <.job_form
+                    :if={
+                      Ecto.Changeset.get_field(trigger_form.source, :id) ==
+                        @selected_trigger
+                        |> Ecto.Changeset.get_field(:id)
+                    }
+                    form={trigger_form}
+                    cancel_url={
+                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                    }
+                  />
+                <% end %>
+              </.form>
+            </div>
+          </div>
+        </div>
+      </div>
     </LayoutComponents.page_content>
     """
   end
@@ -88,6 +134,7 @@ defmodule LightningWeb.WorkflowNewLive do
      |> assign(
        project: project,
        selected_job: nil,
+       selected_trigger: nil,
        page_title: "",
        active_menu_item: :projects
      )
@@ -157,6 +204,17 @@ defmodule LightningWeb.WorkflowNewLive do
     socket |> assign(selected_job: selected_job)
   end
 
+  def apply_action(socket, :edit_trigger, %{"trigger_id" => trigger_id}) do
+    selected_trigger =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_change(:triggers, [])
+      |> Enum.find(fn changeset ->
+        changeset |> Ecto.Changeset.get_field(:id) == trigger_id
+      end)
+
+    socket |> assign(selected_trigger: selected_trigger)
+  end
+
   @impl true
   def handle_event("get-initial-state", _params, socket) do
     {:reply, socket.assigns.workflow_params, socket}
@@ -187,6 +245,7 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
+    IO.inspect(patches, label: "WHAAAAAAAAT?")
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
@@ -223,5 +282,9 @@ defmodule LightningWeb.WorkflowNewLive do
 
   defp unselect_job(socket) do
     socket |> assign(selected_job: nil)
+  end
+
+  defp unselect_trigger(socket) do
+    socket |> assign(selected_trigger: nil)
   end
 end

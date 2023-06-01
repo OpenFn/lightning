@@ -2,6 +2,7 @@ defmodule LightningWeb.Router do
   use LightningWeb, :router
 
   import LightningWeb.UserAuth
+  alias LightningWeb.WorkflowLive
   alias ProjectLive
   alias JobLive
   alias CredentialLive
@@ -117,6 +118,7 @@ defmodule LightningWeb.Router do
         live "/w", WorkflowLive, :index
         live "/w-new/:id", WorkflowNewLive, :new
         live "/w-new/:id/j/:job_id", WorkflowNewLive, :edit_job
+        live "/w-new/:id/t/:trigger_id", WorkflowLive, :edit_trigger
       end
 
       live "/credentials", CredentialLive.Index, :index
