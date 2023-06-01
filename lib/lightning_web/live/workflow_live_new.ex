@@ -36,10 +36,13 @@ defmodule LightningWeb.WorkflowNewLive do
           phx-hook="WorkflowEditor"
           id={"editor-#{@project.id}"}
           data-edit-job-url={~p"/projects/#{@project.id}/w-new/new/j/:job_id"}
+          data-edit-trigger-url={
+            ~p"/projects/#{@project.id}/w-new/new/t/:trigger_id"
+          }
+          data-base-url={~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"}
           phx-update="ignore"
         >
-          <!-- Before Editor component has mounted -->
-          Loading...
+          <%!-- Before Editor component has mounted --%> Loading...
         </div>
         <div
           :if={@selected_job}
@@ -74,19 +77,6 @@ defmodule LightningWeb.WorkflowNewLive do
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="relative h-full flex">
-        <div
-          class="grow"
-          phx-hook="WorkflowEditor"
-          id={"editor-#{@project.id}"}
-          data-edit-job-url={~p"/projects/#{@project.id}/w-new/new/t/:trigger_id"}
-          phx-update="ignore"
-        >
-          <!-- Before Editor component has mounted -->
-          Loading...
-        </div>
         <div
           :if={@selected_trigger}
           class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
@@ -95,28 +85,8 @@ defmodule LightningWeb.WorkflowNewLive do
           <.resize_component id={"resizer-#{@workflow.id}"} />
           <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
             <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
-              <.form
-                :let={f}
-                for={@changeset}
-                phx-submit="save"
-                phx-change="validate"
-                class="h-full"
-              >
-                <%= for trigger_form <- inputs_for(f, :triggers) do %>
-                  <!-- Show only the currently selected one -->
-                  <.job_form
-                    :if={
-                      Ecto.Changeset.get_field(trigger_form.source, :id) ==
-                        @selected_trigger
-                        |> Ecto.Changeset.get_field(:id)
-                    }
-                    form={trigger_form}
-                    cancel_url={
-                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
-                    }
-                  />
-                <% end %>
-              </.form>
+              <h1>Triggers</h1>
+              <em><%= @selected_trigger |> inspect() %></em>
             </div>
           </div>
         </div>
@@ -245,7 +215,6 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
-    IO.inspect(patches, label: "WHAAAAAAAAT?")
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
     {:ok, params} =
