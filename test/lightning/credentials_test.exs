@@ -4,6 +4,7 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Repo
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
+  import Lightning.Factories
 
   import Lightning.{
     JobsFixtures,
@@ -287,6 +288,46 @@ defmodule Lightning.CredentialsTest do
 
       assert Credentials.sensitive_values_for(credential) == secrets
       assert Credentials.sensitive_values_for(credential.id) == secrets
+    end
+  end
+
+  describe "refresh_credential/1" do
+    test "doesn't refresh tokens that don't expire" do
+      credential = insert(:credential)
+
+      assert {:ok, ^credential} = Credentials.refresh_credential(credential)
+    end
+
+    test "doesn't refresh tokens that won't expire soon" do
+      # TODO adjust to correct time in future
+      expires_at =
+        DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.to_unix()
+
+      credential =
+        insert(:credential,
+          schema: "googlesheets",
+          body: %{"expires_at" => expires_at}
+        )
+
+      refute Credentials.credential_expired?(credential)
+
+      assert {:ok, ^credential} = Credentials.refresh_credential(credential)
+    end
+
+    test "refreshes tokens that has expired" do
+      # TODO adjust to correct time in future
+      expires_at =
+        DateTime.utc_now() |> DateTime.add(-5, :second) |> DateTime.to_unix()
+
+      credential =
+        insert(:credential,
+          schema: "googlesheets",
+          body: %{"expires_at" => expires_at, "refresh_token" => "some-token"}
+        )
+
+      assert Credentials.credential_expired?(credential)
+
+      assert {:ok, ^credential} = Credentials.refresh_credential(credential)
     end
   end
 end

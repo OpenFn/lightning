@@ -32,4 +32,8 @@ defmodule Lightning.AuthProviders.GoogleTest do
                "#{endpoint_url(bypass)}/userinfo_endpoint"
     end
   end
+
+  describe "refresh_token" do
+    Google.refresh_token(...)
+  end
 end

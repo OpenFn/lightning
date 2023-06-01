@@ -78,9 +78,11 @@ defmodule Lightning.AuthProviders.Google do
     OAuth2.Client.get_token(client, params)
   end
 
+  # Use the the refresh token to get a new access token.
   def refresh_token(client, token) do
     OAuth2.Client.refresh_token(%{client | token: token})
     |> case do
+      # TODO: we should get an expires_in/expires_at from the response?
       {:ok, %{token: token}} ->
         {:ok, token}
 

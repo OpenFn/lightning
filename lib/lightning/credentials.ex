@@ -280,4 +280,32 @@ defmodule Lightning.Credentials do
 
     project_credentials -- project_users
   end
+
+  def refresh_credential(%Credential{schema: "googlesheets"} = credential) do
+    # convert credential.body["expires_at"] to DateTime
+    # if DateTime.utc_now() > credential.body["expires_at"] - 5mins
+    if credential_expired?(credential) do
+      Lightning.AuthProviders.Google.refresh_token(client, token)
+      # refresh it
+      # or {:error, reason} if we can't refresh it
+      {:ok, credential}
+    else
+      # return it
+      {:ok, credential}
+    end
+  end
+
+  def refresh_credential(credential), do: {:ok, credential}
+
+  # A credential is consider expired if it's within 5 minutes of expiring.
+  def credential_expired?(%Credential{schema: "googlesheets"} = credential) do
+    %{"expires_at" => expires_at} = credential.body
+
+    diff_in_seconds =
+      expires_at
+      |> DateTime.from_unix!()
+      |> DateTime.diff(DateTime.utc_now())
+
+    diff_in_seconds < 5 * 60
+  end
 end

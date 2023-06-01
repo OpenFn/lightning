@@ -110,6 +110,16 @@ defmodule Lightning.Pipeline.Runner do
         samples: Lightning.Credentials.sensitive_values_for(run.job.credential)
       )
 
+    # what if this fails? do we want to fail the run?
+    # how would the run fail, if we throw an exception here would that have
+    # good enough logs?
+    # if we silently fail, the job _should_ fail, but we would have to figure out
+    # that renewal was the reason.
+    Lightning.Credentials.refresh_credential(run.job.credential)
+
+    # call a function that checks if the credential is of type "googlesheets"
+    # then check if it needs to be updated.
+
     state = Lightning.Pipeline.StateAssembler.assemble(run)
 
     %{path: path} = find_or_install_adaptor(adaptor)
