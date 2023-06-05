@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowNewLive do
   @moduledoc false
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Policies.Permissions
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
@@ -84,7 +86,7 @@ defmodule LightningWeb.WorkflowNewLive do
         >
           <.resize_component id={"resizer-#{@workflow.id}"} />
           <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
-            <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
+            <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
               <.form
                 :let={f}
                 for={@changeset}
@@ -97,16 +99,19 @@ defmodule LightningWeb.WorkflowNewLive do
                   <.trigger_form
                     :if={
                       Ecto.Changeset.get_field(trigger_form.source, :id) ==
-                        @selected_trigger
-                        |> Ecto.Changeset.get_field(:id)
+                        Ecto.Changeset.get_field(@selected_trigger, :id)
                     }
                     form={trigger_form}
                     on_cron_change={
                       fn cron_expression ->
-                        update_cron_expression(@job_id, cron_expression)
+                        update_cron_expression(@selected_trigger, cron_expression)
                       end
                     }
+                    requires_cron_job={
+                      Ecto.Changeset.get_field(trigger_form.source, :type) == :cron
+                    }
                     disabled={!@can_edit_job}
+                    webhook_url={webhook_url(trigger_form.source)}
                     cancel_url={
                       ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
                     }
@@ -121,36 +126,17 @@ defmodule LightningWeb.WorkflowNewLive do
     """
   end
 
-  defp id(id) do
-    "builder-#{id}"
-  end
-
-  def update_cron_expression(job_id, cron_expression) do
-    send_update(__MODULE__,
-      id: id(job_id),
-      cron_expression: cron_expression,
-      event: :cron_expression_changed
-    )
-  end
-
-  def update(
-        %{event: :cron_expression_changed, cron_expression: cron_expression},
-        socket
-      ) do
-    %{id: trigger_id} =
-      socket.assigns.changeset
-      |> Ecto.Changeset.get_field(:trigger)
-
-    {:ok,
-     socket
-     |> assign_changeset_and_params(%{
-       "trigger" => %{"cron_expression" => cron_expression, "id" => trigger_id}
-     })}
-  end
-
   @impl true
   def mount(_params, _session, socket) do
     project = socket.assigns.project
+
+    can_edit_job =
+      ProjectUsers
+      |> Permissions.can(
+        :edit_job,
+        socket.assigns.current_user,
+        project
+      )
 
     {:ok,
      socket
@@ -159,7 +145,8 @@ defmodule LightningWeb.WorkflowNewLive do
        selected_job: nil,
        selected_trigger: nil,
        page_title: "",
-       active_menu_item: :projects
+       active_menu_item: :projects,
+       can_edit_job: can_edit_job
      )
      |> maybe_assign_workflow()}
   end
@@ -281,6 +268,51 @@ defmodule LightningWeb.WorkflowNewLive do
     patches = WorkflowParams.to_patches(params, socket.assigns.workflow_params)
 
     {:reply, %{patches: patches}, socket}
+  end
+
+  def handle_event("copied_to_clipboard", _, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Copied webhook URL to clipboard")}
+  end
+
+  defp webhook_url(changeset) do
+    if Ecto.Changeset.get_field(changeset, :type) == :webhook do
+      if id = Ecto.Changeset.get_field(changeset, :id) do
+        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+      end
+    end
+  end
+
+  def update_cron_expression(trigger, cron_expression) do
+    send(self(), %{trigger: trigger, cron_expression: cron_expression})
+  end
+
+  @impl true
+  def handle_info(%{trigger: trigger, cron_expression: cron_expression}, socket) do
+    triggers =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_change(:triggers)
+
+    replace_index =
+      Enum.find_index(triggers, fn changeset ->
+        Ecto.Changeset.get_change(changeset, :id) ==
+          Ecto.Changeset.get_change(trigger, :id)
+      end)
+
+    triggers =
+      List.replace_at(
+        triggers,
+        replace_index,
+        Ecto.Changeset.put_change(trigger, :cron_expression, cron_expression)
+      )
+
+    #   assign(
+    #    :changeset,
+    #    Ecto.Changeset.put_change(socket.assigns.changeset, :triggers, triggers)
+    #  )
+
+    {:noreply, socket}
   end
 
   defp apply_params(socket, params) do

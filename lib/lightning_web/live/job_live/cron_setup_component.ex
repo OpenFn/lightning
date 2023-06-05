@@ -22,6 +22,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
           target={@myself}
           values={@initial_values["frequencies"]}
           selected={Map.get(@cron_data, :frequency, "hourly")}
+          disabled={@disabled}
         />
       </div>
       <div class="col-span-4">
@@ -31,6 +32,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
               target={@myself}
               values={@initial_values["minutes"]}
               selected={Map.get(@cron_data, :minute, "00")}
+              disabled={@disabled}
             />
           </div>
         <% end %>
@@ -42,6 +44,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
               hour_values={@initial_values["hours"]}
               selected_minute={Map.get(@cron_data, :minute, "00")}
               selected_hour={Map.get(@cron_data, :hour, "00")}
+              disabled={@disabled}
             />
           </div>
         <% end %>
@@ -51,6 +54,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
               target={@myself}
               values={@initial_values["weekdays"]}
               selected={Map.get(@cron_data, :weekday, 1)}
+              disabled={@disabled}
             />
             <.time_field
               target={@myself}
@@ -58,6 +62,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
               hour_values={@initial_values["hours"]}
               selected_minute={Map.get(@cron_data, :minute, "00")}
               selected_hour={Map.get(@cron_data, :hour, "00")}
+              disabled={@disabled}
             />
           </div>
         <% end %>
@@ -67,6 +72,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
               target={@myself}
               values={@initial_values["minutes"]}
               selected={Map.get(@cron_data, :monthday, "01")}
+              disabled={@disabled}
             />
             <.time_field
               target={@myself}
@@ -74,19 +80,27 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
               hour_values={@initial_values["hours"]}
               selected_minute={Map.get(@cron_data, :minute, "00")}
               selected_hour={Map.get(@cron_data, :hour, "00")}
+              disabled={@disabled}
             />
           </div>
         <% end %>
       </div>
       <%= if Map.get(@cron_data, :frequency) == "custom" do %>
-        <Form.text_field field={:cron_expression} form={@form} />
+        <div class="col-span-6 @md:col-span-4">
+          <Form.text_field
+            field={:cron_expression}
+            label=""
+            form={@form}
+            disabled={@disabled}
+          />
+        </div>
       <% end %>
     </div>
     """
   end
 
   @impl true
-  def update(%{form: form, on_change: on_change}, socket) do
+  def update(%{form: form, on_change: on_change, disabled: disabled}, socket) do
     cron_data =
       Phoenix.HTML.Form.input_value(form, :cron_expression)
       |> get_cron_data()
@@ -106,6 +120,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
      |> assign(:on_change, on_change)
      |> assign(:form, form)
      |> assign(:cron_data, cron_data)
+     |> assign(:disabled, disabled)
      |> assign(:initial_values, %{
        "frequencies" => [
          "Every hour": "hourly",
@@ -267,6 +282,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       phx-change="cron_expression_change"
       phx-target={@target}
       values={@values}
+      disabled={@disabled}
     />
     """
   end
@@ -289,6 +305,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         phx-change="cron_expression_change"
         phx-target={@target}
         values={@values}
+        disabled={@disabled}
       />
     </div>
     """
@@ -307,6 +324,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         phx-change="cron_expression_change"
         phx-target={@target}
         values={@values}
+        disabled={@disabled}
       />
     </div>
     """
@@ -330,6 +348,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         phx-change="cron_expression_change"
         phx-target={@target}
         values={@values}
+        disabled={@disabled}
       />
     </div>
     """
@@ -353,6 +372,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         phx-change="cron_expression_change"
         phx-target={@target}
         values={@values}
+        disabled={@disabled}
       />
     </div>
     """
@@ -360,11 +380,17 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   def time_field(assigns) do
     ~H"""
-    <.hour_field target={@target} values={@hour_values} selected={@selected_hour} />
+    <.hour_field
+      target={@target}
+      values={@hour_values}
+      selected={@selected_hour}
+      disabled={@disabled}
+    />
     <.minute_field
       target={@target}
       values={@minute_values}
       selected={@selected_minute}
+      disabled={@disabled}
     />
     """
   end

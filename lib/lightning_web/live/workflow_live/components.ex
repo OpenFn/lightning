@@ -126,8 +126,8 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:form, :map, required: true)
-  attr(:cancel_url, :string, required: true)
+  attr :form, :map, required: true
+  attr :cancel_url, :string, required: true
 
   def job_form(assigns) do
     ~H"""
@@ -167,27 +167,18 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  import Ecto.Changeset, only: [get_field: 2]
-
-  defp webhook_url(changeset) do
-    if get_field(changeset, :type) == :webhook do
-      if id = get_field(changeset, :id) do
-        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
-      end
-    end
-  end
-
   def trigger_form(assigns) do
-    assigns =
-      assign(assigns,
-        requires_cron_job:
-          Ecto.Changeset.get_field(assigns.form.source, :type) == :cron,
-        webhook_url: webhook_url(assigns.form.source)
-      )
-
     ~H"""
     <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
       <div class="flex sticky top-0 border-b p-2">
+        <div class="grow">
+          <%= @form
+          |> input_value(:type)
+          |> then(fn
+            "" -> "Untitled Trigger"
+            name -> name
+          end) %>
+        </div>
         <div class="flex-none">
           <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
             <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
@@ -217,7 +208,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 "Cron Schedule (UTC)": "cron",
                 "Webhook Event": "webhook"
               ]}
-              disabled={false}
+              disabled={@disabled}
             />
             <%= if @webhook_url do %>
               <div class="col-span-4 @md:col-span-2 text-right text-">
@@ -235,11 +226,15 @@ defmodule LightningWeb.WorkflowLive.Components do
             <% end %>
           <% end %>
           <%= if @requires_cron_job do %>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
             <.live_component
               id="cron-setup"
-              module={LightningWeb.JobLive.CronSetupComponent}
-              on_change={@on_cron_change}
               form={@form}
+              module={LightningWeb.JobLive.CronSetupComponent}
+              disabled={@disabled}
+              on_change={@on_cron_change}
             />
           <% end %>
         </div>
@@ -248,7 +243,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:changeset, :map, required: true)
+  attr :changeset, :map, required: true
 
   def workflow_name_field(assigns) do
     ~H"""
