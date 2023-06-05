@@ -66,10 +66,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :socket, :map, required: true
-  attr :project, :map, required: true
-  attr :workflow, :map, required: true
-  attr :disabled, :boolean, default: true
+  attr(:socket, :map, required: true)
+  attr(:project, :map, required: true)
+  attr(:workflow, :map, required: true)
+  attr(:disabled, :boolean, default: true)
 
   def create_job_panel(assigns) do
     ~H"""
@@ -92,10 +92,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :id, :string, required: true
-  attr :encoded_project_space, :string, required: true
-  attr :selected_node, :string, default: nil
-  attr :base_path, :string, required: true
+  attr(:id, :string, required: true)
+  attr(:encoded_project_space, :string, required: true)
+  attr(:selected_node, :string, default: nil)
+  attr(:base_path, :string, required: true)
 
   def workflow_diagram(assigns) do
     ~H"""
@@ -112,7 +112,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :id, :string, required: true
+  attr(:id, :string, required: true)
 
   def resize_component(assigns) do
     ~H"""
@@ -126,8 +126,8 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :form, :map, required: true
-  attr :cancel_url, :string, required: true
+  attr(:form, :map, required: true)
+  attr(:cancel_url, :string, required: true)
 
   def job_form(assigns) do
     ~H"""
@@ -167,7 +167,88 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :changeset, :map, required: true
+  import Ecto.Changeset, only: [get_field: 2]
+
+  defp webhook_url(changeset) do
+    if get_field(changeset, :type) == :webhook do
+      if id = get_field(changeset, :id) do
+        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+      end
+    end
+  end
+
+  def trigger_form(assigns) do
+    assigns =
+      assign(assigns,
+        requires_cron_job:
+          Ecto.Changeset.get_field(assigns.form.source, :type) == :cron,
+        webhook_url: webhook_url(assigns.form.source)
+      )
+
+    ~H"""
+    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
+      <div class="flex sticky top-0 border-b p-2">
+        <div class="flex-none">
+          <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
+            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+          </.link>
+        </div>
+      </div>
+      <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+        <%= hidden_inputs_for(@form) %>
+        <div class="col-span-6 @md:col-span-4">
+          <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
+            <div class="flex flex-row">
+              <span class="text-sm font-medium text-secondary-700">
+                Type
+              </span>
+              <Common.tooltip
+                id="trigger-tooltip"
+                title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
+                class="inline-block"
+              />
+            </div>
+            <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
+            <Form.select_field
+              form={@form}
+              name={:type}
+              id="triggerType"
+              values={[
+                "Cron Schedule (UTC)": "cron",
+                "Webhook Event": "webhook"
+              ]}
+              disabled={false}
+            />
+            <%= if @webhook_url do %>
+              <div class="col-span-4 @md:col-span-2 text-right text-">
+                <a
+                  id="copyWebhookUrl"
+                  href={@webhook_url}
+                  class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                  target="_blank"
+                  phx-click="copied_to_clipboard"
+                >
+                  Copy webhook url
+                </a>
+              </div>
+            <% end %>
+          <% end %>
+          <%= if @requires_cron_job do %>
+            <.live_component
+              id="cron-setup"
+              module={LightningWeb.JobLive.CronSetupComponent}
+              on_change={@on_cron_change}
+              form={@form}
+            />
+          <% end %>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr(:changeset, :map, required: true)
 
   def workflow_name_field(assigns) do
     ~H"""

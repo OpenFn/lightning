@@ -85,14 +85,67 @@ defmodule LightningWeb.WorkflowNewLive do
           <.resize_component id={"resizer-#{@workflow.id}"} />
           <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
             <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
-              <h1>Triggers</h1>
-              <em><%= @selected_trigger |> inspect() %></em>
+              <.form
+                :let={f}
+                for={@changeset}
+                phx-submit="save"
+                phx-change="validate"
+                class="h-full"
+              >
+                <%= for trigger_form <- inputs_for(f, :triggers) do %>
+                  <!-- Show only the currently selected one -->
+                  <.trigger_form
+                    :if={
+                      Ecto.Changeset.get_field(trigger_form.source, :id) ==
+                        @selected_trigger
+                        |> Ecto.Changeset.get_field(:id)
+                    }
+                    form={trigger_form}
+                    on_cron_change={
+                      fn cron_expression ->
+                        update_cron_expression(@job_id, cron_expression)
+                      end
+                    }
+                    disabled={!@can_edit_job}
+                    cancel_url={
+                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                    }
+                  />
+                <% end %>
+              </.form>
             </div>
           </div>
         </div>
       </div>
     </LayoutComponents.page_content>
     """
+  end
+
+  defp id(id) do
+    "builder-#{id}"
+  end
+
+  def update_cron_expression(job_id, cron_expression) do
+    send_update(__MODULE__,
+      id: id(job_id),
+      cron_expression: cron_expression,
+      event: :cron_expression_changed
+    )
+  end
+
+  def update(
+        %{event: :cron_expression_changed, cron_expression: cron_expression},
+        socket
+      ) do
+    %{id: trigger_id} =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_field(:trigger)
+
+    {:ok,
+     socket
+     |> assign_changeset_and_params(%{
+       "trigger" => %{"cron_expression" => cron_expression, "id" => trigger_id}
+     })}
   end
 
   @impl true
@@ -161,6 +214,7 @@ defmodule LightningWeb.WorkflowNewLive do
     )
     |> maybe_assign_workflow()
     |> unselect_job()
+    |> unselect_trigger()
   end
 
   def apply_action(socket, :edit_job, %{"job_id" => job_id}) do
