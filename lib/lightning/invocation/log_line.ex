@@ -23,7 +23,7 @@ defmodule Lightning.Invocation.LogLine do
 
     belongs_to :run, Run
 
-    timestamps type: :utc_datetime_usec
+    timestamps type: :utc_datetime_usec, updated_at: false
   end
 
   @doc false

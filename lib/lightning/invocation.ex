@@ -287,7 +287,7 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def create_run_log(attrs \\ %{}) do
+  def create_log_line(attrs \\ %{}) do
     %LogLine{}
     |> LogLine.changeset(attrs)
     |> Repo.insert!()

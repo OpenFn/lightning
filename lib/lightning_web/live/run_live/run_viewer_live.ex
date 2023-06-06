@@ -41,7 +41,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
       where: r.id == ^id,
       preload: :output_dataclip
     )
-    |> Lightning.Repo.one()
+    |> Repo.one()
     |> Repo.preload(:log_lines)
   end
 end

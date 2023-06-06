@@ -8,7 +8,7 @@ defmodule Lightning.Repo.Migrations.AddLogLinesTable do
       add :timestamp, :integer
       add :run_id, references(:runs, on_delete: :delete_all, type: :binary_id), null: false
 
-      timestamps()
+      timestamps(updated_at: false)
     end
 
     create index(:log_lines, [:run_id])

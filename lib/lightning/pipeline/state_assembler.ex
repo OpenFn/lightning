@@ -68,21 +68,19 @@ defmodule Lightning.Pipeline.StateAssembler do
       )
       |> Lightning.Repo.one!()
 
-    previous_logs = Pipeline.logs_for_run(previous_run)
-
-    case {dataclip_type, previous_logs} do
-      {:run_result, previous_logs} when not is_nil(previous_logs) ->
+    case {dataclip_type, previous_run} do
+      {:run_result, previous_run} when not is_nil(previous_run) ->
         Jason.encode_to_iodata!(
           dataclip_body
           |> Map.put("configuration", credential)
-          |> Map.put("error", parse_logs(previous_logs))
+          |> Map.put("error", get_and_format_logs(previous_run))
         )
 
-      {_, previous_logs} when not is_nil(previous_logs) ->
+      {_, previous_run} when not is_nil(previous_run) ->
         Jason.Helpers.json_map(
           data: dataclip_body,
           configuration: credential,
-          error: parse_logs(previous_logs)
+          error: get_and_format_logs(previous_run)
         )
         |> Jason.encode_to_iodata!()
 
@@ -104,5 +102,7 @@ defmodule Lightning.Pipeline.StateAssembler do
     end
   end
 
-  defp parse_logs(logs), do: Enum.map(logs, fn log -> log.body end)
+  defp get_and_format_logs(run) do
+    Enum.map(Pipeline.logs_for_run(run), & &1.body)
+  end
 end

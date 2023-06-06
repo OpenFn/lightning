@@ -173,10 +173,6 @@ defmodule Lightning.PipelineTest do
              ]
     end
 
-    test "logs_for_run/1 returns nil when given a nil run" do
-      assert Pipeline.logs_for_run(nil) == nil
-    end
-
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
         run_fixture(

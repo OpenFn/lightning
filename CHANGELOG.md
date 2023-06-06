@@ -19,10 +19,11 @@ and this project adheres to
   delete projects [#757](https://github.com/OpenFn/Lightning/issues/757)
 - Add ability for a `project owner` to schedule deletion, cancel deletion, and
   delete projects [#746](https://github.com/OpenFn/Lightning/issues/746)
-- Ability to store run log lines as rows in a separate table
-  [#514](https://github.com/OpenFn/Lightning/issues/514)
 
 ### Changed
+
+- Ability to store run log lines as rows in a separate table
+  [#514](https://github.com/OpenFn/Lightning/issues/514)
 
 ### Fixed
 
