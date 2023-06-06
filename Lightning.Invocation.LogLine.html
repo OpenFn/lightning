@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.5.2">
 
-    <title>Lightning.Vault — Lightning v0.5.2</title>
+    <title>Lightning.Invocation.LogLine — Lightning v0.5.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -102,19 +102,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.Vault</span> 
+  <span translate="no">Lightning.Invocation.LogLine</span> 
   <small class="app-vsn" translate="no">(Lightning v0.5.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Module for handling the encryption and decryption of database fields.</p>
+<p>Ecto model for run logs.</p>
   </section>
 
 
@@ -126,24 +126,14 @@ Lightning
       </a>
       Summary
     </h1>
-<div class="summary-functions summary">
+<div class="summary-types summary">
   <h2>
-    <a href="#functions">Functions</a>
+    <a href="#types">Types</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#child_spec/1" translate="no">child_spec(init_arg)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns a specification to start this module under a supervisor.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#start_link/1" translate="no">start_link(config \\ [])</a>
+        <a href="#t:t/0" translate="no">t()</a>
 
       </div>
 
@@ -154,25 +144,25 @@ Lightning
   </section>
 
 
-  <section id="functions" class="details-list">
+  <section id="types" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#functions">
+      <a class="hover-link" href="#types">
         <i class="ri-link-m" aria-hidden="true"></i>
         <span class="sr-only">Link to this section</span>
       </a>
-Functions
+Types
     </h1>
-    <div class="functions-list">
-<section class="detail" id="child_spec/1">
+    <div class="types-list">
+<section class="detail" id="t:t/0">
 
   <div class="detail-header">
-    <a href="#child_spec/1" class="detail-link" title="Link to this function">
+    <a href="#t:t/0" class="detail-link" title="Link to this type">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
+      <span class="sr-only">Link to this type</span>
     </a>
-    <h1 class="signature" translate="no">child_spec(init_arg)</h1>
+    <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L5" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/invocation/log_line.ex#L10" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -182,29 +172,19 @@ Functions
 
   <section class="docstring">
 
-<p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
-  </section>
-</section>
-<section class="detail" id="start_link/1">
+      <div class="specs">
 
-    <span id="start_link/0"></span>
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Invocation.LogLine{
+  __meta__: <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
+  body: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>(),
+  id: <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  run: <a href="Lightning.Invocation.Run.html#t:t/0">Lightning.Invocation.Run.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
+  run_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  timestamp: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()
+}</pre>
 
-  <div class="detail-header">
-    <a href="#start_link/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">start_link(config \\ [])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/vault.ex#L5" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
+      </div>
 
 
   </section>
