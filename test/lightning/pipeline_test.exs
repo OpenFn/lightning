@@ -154,4 +154,38 @@ defmodule Lightning.PipelineTest do
              } = expected_run.output_dataclip.body
     end
   end
+
+  describe "run logs" do
+    test "logs_for_run/1 returns an array of the logs for a given run" do
+      run =
+        run_fixture(
+          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+        )
+
+      log_lines = Pipeline.logs_for_run(run)
+
+      assert Enum.count(log_lines) == 3
+
+      assert log_lines |> Enum.map(fn log_line -> log_line.body end) == [
+               "Hello",
+               "I am a",
+               "log"
+             ]
+    end
+
+    test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
+      run =
+        run_fixture(
+          log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
+        )
+
+      log_string = Pipeline.assemble_logs_for_run(run)
+
+      assert log_string == "Hello\nI am a\nlog"
+    end
+
+    test "assemble_logs_for_run/1 returns nil when given a nil run" do
+      assert Pipeline.assemble_logs_for_run(nil) == nil
+    end
+  end
 end

@@ -5,6 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Invocation.LogLine
   alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
 
@@ -286,6 +287,12 @@ defmodule Lightning.Invocation do
     end
   end
 
+  def create_log_line(attrs \\ %{}) do
+    %LogLine{}
+    |> LogLine.changeset(attrs)
+    |> Repo.insert!()
+  end
+
   @doc """
   Deletes a run.
 
@@ -373,8 +380,8 @@ defmodule Lightning.Invocation do
     end)
   end
 
-  def filter_run_body_and_logs_where(search_term, search_fields)
-      when search_term in ["", nil] or search_fields == [] do
+  def filter_run_body_and_logs_where(_search_term, search_fields)
+      when search_fields == [] do
     dynamic(true)
   end
 
@@ -383,9 +390,13 @@ defmodule Lightning.Invocation do
     Enum.reduce(search_fields, dynamic(false), fn
       :log, query ->
         dynamic(
-          [runs: r],
+          [log_lines: l],
           ^query or
-            fragment("cast(?  as VARCHAR) ilike ?", r.log, ^"%#{search_term}%")
+            fragment(
+              "cast(?  as VARCHAR) ilike ?",
+              l.body,
+              ^"%#{search_term}%"
+            )
         )
 
       :body, query ->
@@ -396,7 +407,6 @@ defmodule Lightning.Invocation do
         )
 
       _, query ->
-        # Not a where parameter
         query
     end)
   end
@@ -443,6 +453,9 @@ defmodule Lightning.Invocation do
       join: att_re in assoc(att, :reason),
       join: d in assoc(r, :input_dataclip),
       as: :input,
+      left_join: l in LogLine,
+      on: l.run_id == r.id,
+      as: :log_lines,
       where: w.project_id == ^project_id,
       where: ^filter_run_status_where(search_params.status),
       where: ^filter_workflow_where(search_params.workflow_id),

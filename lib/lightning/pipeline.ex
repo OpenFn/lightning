@@ -81,4 +81,12 @@ defmodule Lightning.Pipeline do
         |> Repo.one()
     end
   end
+
+  def logs_for_run(%Run{} = run),
+    do: Repo.preload(run, :log_lines) |> Map.get(:log_lines, [])
+
+  def assemble_logs_for_run(nil), do: nil
+
+  def assemble_logs_for_run(%Run{} = run),
+    do: logs_for_run(run) |> Enum.map_join("\n", fn log -> log.body end)
 end

@@ -15,6 +15,7 @@ defmodule Lightning.Pipeline.Runner do
     Custom handler callbacks for Lightnings use of Engine to execute runs.
     """
     use Lightning.Runtime.Handler
+    alias Lightning.Repo
     alias Lightning.Pipeline.Runner
     import Lightning.Invocation, only: [update_run: 2]
 
@@ -47,20 +48,31 @@ defmodule Lightning.Pipeline.Runner do
         # coveralls-ignore-stop
       end)
 
-      scrubbed_log = Lightning.Scrubber.scrub(scrubber, result.log)
-
       {:ok, run} =
-        update_run(run, %{
-          finished_at: DateTime.utc_now(),
-          exit_code: result.exit_code,
-          log: scrubbed_log
-        })
+        Repo.transaction(fn ->
+          :ok =
+            Lightning.Scrubber.scrub(scrubber, result.log) |> save_run_logs(run)
+
+          {:ok, run} =
+            update_run(run, %{
+              finished_at: DateTime.utc_now(),
+              exit_code: result.exit_code
+            })
+
+          run
+        end)
 
       dataclip_result = Runner.create_dataclip_from_result(result, run)
 
       Lightning.FailureAlerter.alert_on_failure(run)
 
       dataclip_result
+    end
+
+    defp save_run_logs(logs, run) do
+      Enum.each(logs, fn log ->
+        Invocation.create_log_line(%{body: log, run_id: run.id})
+      end)
     end
   end
 
@@ -83,7 +95,12 @@ defmodule Lightning.Pipeline.Runner do
   @spec start(run :: Invocation.Run.t(), opts :: []) ::
           Lightning.Runtime.Result.t()
   def start(%Invocation.Run{} = run, opts \\ []) do
-    run = Lightning.Repo.preload(run, [:output_dataclip, job: :credential])
+    run =
+      Lightning.Repo.preload(run, [
+        :log_lines,
+        :output_dataclip,
+        job: :credential
+      ])
 
     %{body: expression, adaptor: adaptor} = run.job
 

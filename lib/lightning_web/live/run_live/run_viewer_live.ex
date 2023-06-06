@@ -1,4 +1,5 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
+  alias Lightning.Repo
   use LightningWeb, {:live_view, container: {:div, []}}
 
   import Ecto.Query, only: [from: 2]
@@ -40,6 +41,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
       where: r.id == ^id,
       preload: :output_dataclip
     )
-    |> Lightning.Repo.one()
+    |> Repo.one()
+    |> Repo.preload(:log_lines)
   end
 end

@@ -13,6 +13,7 @@ defmodule Lightning.Invocation.Run do
   alias Lightning.Jobs.Job
   alias Lightning.Credentials.Credential
   alias Lightning.{AttemptRun, Attempt}
+  alias Lightning.Invocation.LogLine
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -25,7 +26,6 @@ defmodule Lightning.Invocation.Run do
   schema "runs" do
     field :exit_code, :integer
     field :finished_at, :utc_datetime_usec
-    field :log, {:array, :string}
     field :started_at, :utc_datetime_usec
     belongs_to :job, Job
     belongs_to :credential, Credential
@@ -34,6 +34,8 @@ defmodule Lightning.Invocation.Run do
     belongs_to :output_dataclip, Dataclip
 
     belongs_to :previous, __MODULE__
+
+    has_many :log_lines, LogLine
 
     many_to_many :attempts, Attempt, join_through: AttemptRun
 
@@ -65,7 +67,6 @@ defmodule Lightning.Invocation.Run do
   def changeset(run, attrs) do
     run
     |> cast(attrs, [
-      :log,
       :exit_code,
       :started_at,
       :finished_at,
@@ -75,6 +76,7 @@ defmodule Lightning.Invocation.Run do
       :output_dataclip_id
     ])
     |> cast_assoc(:output_dataclip, with: &Dataclip.changeset/2, required: false)
+    |> cast_assoc(:log_lines, with: &LogLine.changeset/2, required: false)
     |> validate_required([:job_id, :input_dataclip_id])
     |> validate()
   end

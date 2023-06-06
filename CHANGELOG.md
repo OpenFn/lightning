@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Changed
 
+- Ability to store run log lines as rows in a separate table
+  [#514](https://github.com/OpenFn/Lightning/issues/514)
+
 ### Fixed
 
 - Incorrect project digest queries

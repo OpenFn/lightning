@@ -39,6 +39,7 @@ defmodule Lightning.Pipeline.StateAssembler do
   import Ecto.Query, warn: false
 
   require Jason.Helpers
+  alias Lightning.Pipeline
   alias Lightning.Invocation.Run
 
   @doc """
@@ -59,27 +60,27 @@ defmodule Lightning.Pipeline.StateAssembler do
         where: r.id == ^run.id
       )
 
-    {dataclip_type, dataclip_body, credential, error} =
+    {dataclip_type, dataclip_body, credential, previous_run} =
       query
       |> select(
         [dataclip: d, credential: c, previous: p],
-        {d.type, d.body, c.body, p.log}
+        {d.type, d.body, c.body, p}
       )
       |> Lightning.Repo.one!()
 
-    case {dataclip_type, error} do
-      {:run_result, error} when not is_nil(error) ->
+    case {dataclip_type, previous_run} do
+      {:run_result, previous_run} when not is_nil(previous_run) ->
         Jason.encode_to_iodata!(
           dataclip_body
           |> Map.put("configuration", credential)
-          |> Map.put("error", error)
+          |> Map.put("error", get_and_format_logs(previous_run))
         )
 
-      {_, error} when not is_nil(error) ->
+      {_, previous_run} when not is_nil(previous_run) ->
         Jason.Helpers.json_map(
           data: dataclip_body,
           configuration: credential,
-          error: error
+          error: get_and_format_logs(previous_run)
         )
         |> Jason.encode_to_iodata!()
 
@@ -99,5 +100,9 @@ defmodule Lightning.Pipeline.StateAssembler do
         Jason.Helpers.json_map(data: dataclip_body, configuration: credential)
         |> Jason.encode_to_iodata!()
     end
+  end
+
+  defp get_and_format_logs(run) do
+    Enum.map(Pipeline.logs_for_run(run), & &1.body)
   end
 end
