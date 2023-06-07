@@ -183,14 +183,14 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: job_2.id,
         exit_code: 1,
-        started_at: Timex.now() |> Timex.shift(seconds: 10),
-        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
       },
       %{
         job_id: job_3.id,
         exit_code: 0,
-        started_at: Timex.now() |> Timex.shift(seconds: 10),
-        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
       }
     ]
 
@@ -268,14 +268,14 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: send_to_openhim.id,
         exit_code: 1,
-        started_at: Timex.now() |> Timex.shift(seconds: 10),
-        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
       },
       %{
         job_id: notify_upload_failed.id,
         exit_code: 0,
-        started_at: Timex.now() |> Timex.shift(seconds: 10),
-        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
       }
     ]
 
@@ -337,8 +337,8 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 0,
-        started_at: Timex.now() |> Timex.shift(seconds: 10),
-        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
       }
     ]
 
@@ -418,8 +418,8 @@ defmodule Lightning.SetupUtils do
         # Change the timestamps, logs, exit_code etc
         run
         |> Run.changeset(%{
-          started_at: Timex.now() |> Timex.shift(seconds: 10),
-          finished_at: Timex.now() |> Timex.shift(seconds: 20)
+          started_at: DateTime.utc_now() |> DateTime.add(10, :second),
+          finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
         })
       end)
 
