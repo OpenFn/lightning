@@ -232,6 +232,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <.live_component
               id="cron-setup"
               form={@form}
+              index={@index}
               module={LightningWeb.JobLive.CronSetupComponent}
               disabled={@disabled}
             />

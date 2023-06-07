@@ -89,14 +89,20 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         <div class="py-2"></div>
       </div>
       <div class="col-span-6 @md:col-span-4">
-        <Form.text_field field={:cron_expression} form={@form} disabled={@disabled} />
+        <Form.text_field
+          field={:cron_expression}
+          form={@form}
+          phx-hook="sendCronValue"
+          data-trigger-index={@form_index}
+          disabled={@disabled}
+        />
       </div>
     </div>
     """
   end
 
   @impl true
-  def update(%{form: form, disabled: disabled}, socket) do
+  def update(%{form: form, index: form_index, disabled: disabled}, socket) do
     cron_data =
       Phoenix.HTML.Form.input_value(form, :cron_expression)
       |> get_cron_data()
@@ -114,6 +120,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
     {:ok,
      socket
      |> assign(:form, form)
+     |> assign(:form_index, form_index)
      |> assign(:cron_data, cron_data)
      |> assign(:disabled, disabled)
      |> assign(:initial_values, %{
