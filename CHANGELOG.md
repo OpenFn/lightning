@@ -14,12 +14,17 @@ and this project adheres to
 
 ### Fixed
 
+- Correctly stagger demo runs to maintain order
+  [#856](https://github.com/OpenFn/Lightning/issues/856)
+- Remove `Timex` use from `SetupUtils` in favor of `DateTime` to fix issue when
+  calling it in escript.
+
 ## [0.6.0]
 
 ### Added
 
 - Create sample runs when generating sample workflow
-  ([#821](https://github.com/OpenFn/Lightning/issues/821))
+  [#821](https://github.com/OpenFn/Lightning/issues/821)
 - Added a provisioning api for creating and updating projects and their
   workflows See: [PROVISIONING.md](./PROVISIONING.md)
   [#641](https://github.com/OpenFn/Lightning/issues/641)
