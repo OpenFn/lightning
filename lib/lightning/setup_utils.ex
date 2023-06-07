@@ -274,8 +274,8 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: notify_upload_failed.id,
         exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
+        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
       }
     ]
 
