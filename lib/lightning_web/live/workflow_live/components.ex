@@ -234,7 +234,6 @@ defmodule LightningWeb.WorkflowLive.Components do
               form={@form}
               module={LightningWeb.JobLive.CronSetupComponent}
               disabled={@disabled}
-              on_change={@on_cron_change}
             />
           <% end %>
         </div>

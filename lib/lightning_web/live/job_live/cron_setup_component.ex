@@ -85,22 +85,18 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
           </div>
         <% end %>
       </div>
-      <%= if Map.get(@cron_data, :frequency) == "custom" do %>
-        <div class="col-span-6 @md:col-span-4">
-          <Form.text_field
-            field={:cron_expression}
-            label=""
-            form={@form}
-            disabled={@disabled}
-          />
-        </div>
-      <% end %>
+      <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-2"></div>
+      </div>
+      <div class="col-span-6 @md:col-span-4">
+        <Form.text_field field={:cron_expression} form={@form} disabled={@disabled} />
+      </div>
     </div>
     """
   end
 
   @impl true
-  def update(%{form: form, on_change: on_change, disabled: disabled}, socket) do
+  def update(%{form: form, disabled: disabled}, socket) do
     cron_data =
       Phoenix.HTML.Form.input_value(form, :cron_expression)
       |> get_cron_data()
@@ -117,7 +113,6 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
     {:ok,
      socket
-     |> assign(:on_change, on_change)
      |> assign(:form, form)
      |> assign(:cron_data, cron_data)
      |> assign(:disabled, disabled)
@@ -258,11 +253,16 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         cron_data
       )
 
-    if Map.get(cron_data, :frequency) != "custom" do
-      socket.assigns.on_change.(cron_expression)
-    end
+    changeset =
+      Ecto.Changeset.put_change(
+        socket.assigns.form.source,
+        :cron_expression,
+        cron_expression
+      )
 
-    {:noreply, socket |> assign(:cron_data, cron_data)}
+    form = Map.put(socket.assigns.form, :source, changeset)
+
+    {:noreply, socket |> assign(:cron_data, cron_data) |> assign(:form, form)}
   end
 
   def frequency_field(assigns) do

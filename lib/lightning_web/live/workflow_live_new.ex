@@ -102,11 +102,6 @@ defmodule LightningWeb.WorkflowNewLive do
                         Ecto.Changeset.get_field(@selected_trigger, :id)
                     }
                     form={trigger_form}
-                    on_cron_change={
-                      fn cron_expression ->
-                        update_cron_expression(@selected_trigger, cron_expression)
-                      end
-                    }
                     requires_cron_job={
                       Ecto.Changeset.get_field(trigger_form.source, :type) == :cron
                     }
@@ -284,36 +279,36 @@ defmodule LightningWeb.WorkflowNewLive do
     end
   end
 
-  def update_cron_expression(trigger, cron_expression) do
-    send(self(), %{trigger: trigger, cron_expression: cron_expression})
-  end
+  # def update_cron_expression(trigger, cron_expression) do
+  #   send(self(), %{trigger: trigger, cron_expression: cron_expression})
+  # end
 
-  @impl true
-  def handle_info(%{trigger: trigger, cron_expression: cron_expression}, socket) do
-    triggers =
-      socket.assigns.changeset
-      |> Ecto.Changeset.get_change(:triggers)
+  # @impl true
+  # def handle_info(%{trigger: trigger, cron_expression: cron_expression}, socket) do
+  #   triggers =
+  #     socket.assigns.changeset
+  #     |> Ecto.Changeset.get_change(:triggers)
 
-    replace_index =
-      Enum.find_index(triggers, fn changeset ->
-        Ecto.Changeset.get_change(changeset, :id) ==
-          Ecto.Changeset.get_change(trigger, :id)
-      end)
+  #   replace_index =
+  #     Enum.find_index(triggers, fn changeset ->
+  #       Ecto.Changeset.get_change(changeset, :id) ==
+  #         Ecto.Changeset.get_change(trigger, :id)
+  #     end)
 
-    triggers =
-      List.replace_at(
-        triggers,
-        replace_index,
-        Ecto.Changeset.put_change(trigger, :cron_expression, cron_expression)
-      )
+  #   triggers =
+  #     List.replace_at(
+  #       triggers,
+  #       replace_index,
+  #       Ecto.Changeset.put_change(trigger, :cron_expression, cron_expression)
+  #     )
 
-    #   assign(
-    #    :changeset,
-    #    Ecto.Changeset.put_change(socket.assigns.changeset, :triggers, triggers)
-    #  )
+  #   #   assign(
+  #   #    :changeset,
+  #   #    Ecto.Changeset.put_change(socket.assigns.changeset, :triggers, triggers)
+  #   #  )
 
-    {:noreply, socket}
-  end
+  #   {:noreply, socket}
+  # end
 
   defp apply_params(socket, params) do
     # Build a new changeset from the new params
