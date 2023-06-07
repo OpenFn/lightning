@@ -137,7 +137,9 @@ and this project adheres to
   </a>
   Fixed
 </h3>
-<h2 id="0-6-0" class="section-heading">
+<ul><li>Correctly stagger demo runs to maintain order
+<a href="https://github.com/OpenFn/Lightning/issues/856">#856</a></li><li>Remove <a href="https://hexdocs.pm/timex/3.7.9/Timex.html"><code class="inline">Timex</code></a> use from <code class="inline">SetupUtils</code> in favor of <a href="https://hexdocs.pm/elixir/DateTime.html"><code class="inline">DateTime</code></a> to fix issue when
+calling it in escript.</li></ul><h2 id="0-6-0" class="section-heading">
   <a href="#0-6-0" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">0-6-0</p>
   </a>
@@ -150,7 +152,7 @@ and this project adheres to
   Added
 </h3>
 <ul><li>Create sample runs when generating sample workflow
-(<a href="https://github.com/OpenFn/Lightning/issues/821">#821</a>)</li><li>Added a provisioning api for creating and updating projects and their
+<a href="https://github.com/OpenFn/Lightning/issues/821">#821</a></li><li>Added a provisioning api for creating and updating projects and their
 workflows See: <a href="provisioning.html">PROVISIONING.md</a>
 <a href="https://github.com/OpenFn/Lightning/issues/641">#641</a></li><li>Add ability for a <code class="inline">superuser</code> to schedule deletion, cancel deletion, and
 delete projects <a href="https://github.com/OpenFn/Lightning/issues/757">#757</a></li><li>Add ability for a <code class="inline">project owner</code> to schedule deletion, cancel deletion, and
