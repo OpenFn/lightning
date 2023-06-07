@@ -28,6 +28,9 @@ defmodule Lightning.Pipeline do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
     result = Runner.start(run)
 
+    # rather collect edges collect to this job 
+    # then run those edges after this result 
+    # later in edges compute expressions for a result/state
     jobs = get_jobs_for_result(run.job_id, result)
 
     if length(jobs) > 0 do
