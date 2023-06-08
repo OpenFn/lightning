@@ -23,7 +23,7 @@ defmodule Lightning.Jobs.Job do
 
   alias Lightning.Jobs.Trigger
   alias Lightning.Credentials.Credential
-  alias Lightning.Workflows.{Workflow, Edge}
+  alias Lightning.Workflows.Workflow
   alias Lightning.Projects.{ProjectCredential}
 
   @type t :: %__MODULE__{
@@ -52,7 +52,6 @@ defmodule Lightning.Jobs.Job do
     has_one :credential, through: [:project_credential, :credential]
     belongs_to :workflow, Workflow
     has_one :project, through: [:workflow, :project]
-    has_many :edges, Edge, foreign_key: :source_job_id 
 
     field :delete, :boolean, virtual: true
 
