@@ -14,6 +14,16 @@ and this project adheres to
 
 ### Fixed
 
+## [0.6.1]
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed bug with run logs [#864](https://github.com/OpenFn/Lightning/issues/864)
+
 - Correctly stagger demo runs to maintain order
   [#856](https://github.com/OpenFn/Lightning/issues/856)
 - Remove `Timex` use from `SetupUtils` in favor of `DateTime` to fix issue when
