@@ -65,6 +65,7 @@ defmodule Lightning.Jobs do
   """
   @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
   def get_jobs_for_cron_execution(datetime) do
+    # magic function for staring workflows from crons
     list_active_cron_jobs()
     |> Enum.filter(fn job ->
       cron_expression = job.trigger.cron_expression
@@ -81,6 +82,8 @@ defmodule Lightning.Jobs do
   @doc """
   Returns the list of downstream jobs for a given job, optionally matching a
   specific trigger type.
+  When downstream_jobs_for is called without a trigger that means its between jobs
+  when it called with a trigger that means we are starting from outside the pipeline
   """
   @spec get_downstream_jobs_for(
           Job.t() | Ecto.UUID.t(),
@@ -107,9 +110,9 @@ defmodule Lightning.Jobs do
 
   defp downstream_query(job_id) do
     from(j in Job,
-      join: t in assoc(j, :trigger),
-      where: t.upstream_job_id == ^job_id,
-      preload: [:workflow, trigger: t]
+      join: e in assoc(j, :edges),
+      where: e.source_job_id == ^job_id,
+      preload: [:workflow, edges: e]
     )
   end
 
@@ -140,6 +143,7 @@ defmodule Lightning.Jobs do
     from(j in Job,
       join: t in assoc(j, :trigger),
       where:
+        #based on a trigger can we return all the jobs that downstream from this trigger, accounting for edges
         fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path,
       preload: [:trigger, :workflow]
     )
