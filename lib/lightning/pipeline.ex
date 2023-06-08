@@ -66,7 +66,7 @@ defmodule Lightning.Pipeline do
   end
 
   defp get_jobs_for_result(upstream_job_id, result) do
-    Jobs.get_downstream_jobs_for(upstream_job_id, result_to_trigger_type(result))
+    Jobs.get_downstream_jobs_for(upstream_job_id)
     |> Enum.filter(& &1.enabled)
   end
 
