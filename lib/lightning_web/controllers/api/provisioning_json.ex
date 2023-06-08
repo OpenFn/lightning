@@ -23,7 +23,7 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Job{} = job) do
     Ecto.embedded_dump(job, :json)
-    |> Map.take(~w(id adaptor enabled name)a)
+    |> Map.take(~w(id adaptor enabled body name)a)
   end
 
   def as_json(%Trigger{} = trigger) do

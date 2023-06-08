@@ -216,13 +216,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              "All workflows should belong to the same project"
     end
 
-    test "returns a 404 if not authorized", %{conn: conn} do
+    test "returns a 401 if not authorized", %{conn: conn} do
       %{id: project_id} = Lightning.Factories.insert(:project)
 
       conn = get(conn, ~p"/api/provision/#{project_id}")
-      response = json_response(conn, 404)
+      response = json_response(conn, 401)
 
-      assert response == %{"error" => "Not Found"}
+      assert response == %{"error" => "Unauthorized"}
     end
   end
 

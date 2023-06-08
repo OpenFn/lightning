@@ -25,6 +25,16 @@ defmodule Lightning.Factories do
     |> merge_attributes(attrs)
   end
 
+  def build(:user, attrs) do
+    struct!(Lightning.Accounts.User, %{
+      email: "user#{System.unique_integer()}@example.com",
+      password: "hello world!",
+      first_name: "anna",
+      hashed_password: Bcrypt.hash_pwd_salt("hello world!")
+    })
+    |> merge_attributes(attrs)
+  end
+
   def build(:run, attrs) do
     struct!(Lightning.Invocation.Run, %{
       job: build(:job),

@@ -16,9 +16,16 @@ defmodule LightningWeb.FallbackController do
 
   def call(conn, {:error, :unauthorized}) do
     conn
-    |> put_status(:not_found)
+    |> put_status(:unauthorized)
     |> put_view(LightningWeb.ErrorView)
-    |> render(:"404")
+    |> render(:"401")
+  end
+
+  def call(conn, {:error, :forbidden}) do
+    conn
+    |> put_status(:forbidden)
+    |> put_view(LightningWeb.ErrorView)
+    |> render(:"403")
   end
 
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do

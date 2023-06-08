@@ -82,7 +82,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
     test "with token for other project", %{conn: conn} do
       other_project = project_fixture()
       conn = get(conn, ~p"/api/projects/#{other_project.id}")
-      assert json_response(conn, 404) == %{"error" => "Not Found"}
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
 
     test "shows the project", %{conn: conn, project: project} do

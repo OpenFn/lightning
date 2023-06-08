@@ -17,7 +17,12 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_user,
              project
            ),
-         {:ok, project} <- Provisioner.import_document(project, params) do
+         {:ok, project} <-
+           Provisioner.import_document(
+             project,
+             conn.assigns.current_user,
+             params
+           ) do
       # TODO: check if the user is allowed to update this project
       # TODO: check if the user is allowed to provision a project
 
