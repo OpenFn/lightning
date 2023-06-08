@@ -8,6 +8,7 @@ defmodule Lightning.Jobs do
 
   alias Lightning.Jobs.{Job, Trigger, Query}
   alias Lightning.Projects.Project
+  alias Lightning.Workflows.Edge
 
   @doc """
   Returns the list of jobs.
@@ -86,7 +87,7 @@ defmodule Lightning.Jobs do
   """
   @spec get_downstream_jobs_for(
           Job.t() | Ecto.UUID.t(),
-          Trigger.trigger_type() | nil
+          Edge.trigger_type() | nil
         ) :: [
           Job.t()
         ]
@@ -103,15 +104,20 @@ defmodule Lightning.Jobs do
 
   def get_downstream_jobs_for(job_id, trigger_type) do
     downstream_query(job_id)
-    |> where([_, t], t.type == ^trigger_type)
+    |> where([_, e], e.condition == ^trigger_type)
     |> Repo.all()
   end
 
+  # This query has to jump through some hoops
+  # first we join jobs to edges, this will include the source job 
+  # then we use the 
   defp downstream_query(job_id) do
     from(j in Job,
-      join: e in assoc(j, :edges),
-      where: e.source_job_id == ^job_id,
-      preload: [:workflow, edges: e]
+      join: e in Edge,
+      on: e.source_job_id == ^job_id and 
+        j.id != ^job_id,
+      preload: [:workflow, :trigger]
+
     )
   end
 
