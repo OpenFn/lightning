@@ -24,13 +24,13 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
         %{
           "id" => Ecto.UUID.generate(),
           "source_trigger_id" => trigger_1_id,
-          "condition" => "true",
+          "condition" => "on_job_failure",
           "target_job_id" => job_1_id
         },
         %{
           "id" => Ecto.UUID.generate(),
           "source_job_id" => job_1_id,
-          "condition" => ":on_success",
+          "condition" => "on_job_success",
           "target_job_id" => job_2_id
         }
       ]
@@ -56,7 +56,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       assert %{
                "edges" => [
                  %{
-                   "condition" => "true",
+                   "condition" => "on_job_failure",
                    "errors" => %{},
                    "id" => _,
                    "source_job_id" => nil,
@@ -64,7 +64,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "target_job_id" => ^job_1_id
                  },
                  %{
-                   "condition" => ":on_success",
+                   "condition" => "on_job_success",
                    "errors" => %{},
                    "id" => _,
                    "source_job_id" => ^job_1_id,
