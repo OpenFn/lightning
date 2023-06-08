@@ -12,7 +12,7 @@ defmodule LightningWeb.WorkflowNewLive do
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr(:changeset, :map, required: true)
+  attr :changeset, :map, required: true
 
   @impl true
   def render(assigns) do
@@ -94,7 +94,7 @@ defmodule LightningWeb.WorkflowNewLive do
                 phx-change="validate"
                 class="h-full"
               >
-                <%= for {trigger_form, index} <- inputs_for(f, :triggers) |> Enum.with_index() do %>
+                <%= for trigger_form <- inputs_for(f, :triggers) do %>
                   <!-- Show only the currently selected one -->
                   <.trigger_form
                     :if={
@@ -102,7 +102,7 @@ defmodule LightningWeb.WorkflowNewLive do
                         Ecto.Changeset.get_field(@selected_trigger, :id)
                     }
                     form={trigger_form}
-                    index={index}
+                    on_change={&send_cron_expression/1}
                     requires_cron_job={
                       Ecto.Changeset.get_field(trigger_form.source, :type) == :cron
                     }
@@ -228,6 +228,7 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
+    IO.inspect(params, label: "from validate")
     initial_params = socket.assigns.workflow_params
 
     next_params =
@@ -280,48 +281,51 @@ defmodule LightningWeb.WorkflowNewLive do
     end
   end
 
-  # def send_cron_expression(cron_expression) do
-  #   send(self(), cron_expression)
-  # end
+  def send_cron_expression(cron_expression) do
+    send(self(), %{event: :cron_changed, value: cron_expression})
+  end
 
-  # @impl true
-  # def handle_info(cron_expression, socket) do
-  #   trigger_id =
-  #     socket.assigns.selected_trigger |> Ecto.Changeset.get_change(:id)
+  defp build_cron_params(socket, cron_expression) do
+    index =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_change(:triggers)
+      |> Enum.find_index(fn trigger ->
+        Ecto.Changeset.get_change(trigger, :id) ==
+          Ecto.Changeset.get_change(socket.assigns.selected_trigger, :id)
+      end)
 
-  #   changesets =
-  #     socket.assigns.changeset
-  #     |> Ecto.Changeset.get_change(:triggers)
+    %{
+      "triggers" =>
+        Map.put(%{}, "#{index}", %{
+          "type" => "cron",
+          "cron_expression" => cron_expression
+        })
+    }
+  end
 
-  #   index =
-  #     Enum.find_index(changesets, fn changeset ->
-  #       Ecto.Changeset.get_change(changeset, :id) == trigger_id
-  #     end)
+  @impl true
+  def handle_info(%{event: :cron_changed, value: cron_expression}, socket) do
+    initial_params = socket.assigns.workflow_params
 
-  #   changeset =
-  #     Enum.at(changesets, index)
-  #     |> Ecto.Changeset.put_change(:cron_expression, cron_expression)
+    params =
+      build_cron_params(
+        socket,
+        cron_expression
+      )
 
-  #   changesets = List.update_at(changesets, index, fn _ -> changeset end)
+    next_params = WorkflowParams.apply_form_params(initial_params, params)
 
-  #   assigns =
-  #     Map.update!(socket.assigns, :changeset, fn _ ->
-  #       Ecto.Changeset.put_change(
-  #         socket.assigns.changeset,
-  #         :triggers,
-  #         changesets
-  #       )
-  #     end)
+    socket =
+      socket
+      |> apply_params(next_params)
+      |> push_patches_applied(initial_params)
 
-  #   socket = Map.update!(socket, :assigns, fn _ -> assigns end)
+    IO.inspect(socket.assigns.workflow_params["triggers"],
+      label: "from handle_info"
+    )
 
-  #   {:noreply,
-  #    socket
-  #    |> push_patch(
-  #      to: ~p"/projects/#{socket.assigns.project.id}/w-new/new/t/#{trigger_id}"
-  #    )
-  #    |> push_event("validate", %{"hello" => "world"})}
-  # end
+    {:noreply, socket}
+  end
 
   defp apply_params(socket, params) do
     # Build a new changeset from the new params

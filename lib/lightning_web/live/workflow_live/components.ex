@@ -66,10 +66,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:socket, :map, required: true)
-  attr(:project, :map, required: true)
-  attr(:workflow, :map, required: true)
-  attr(:disabled, :boolean, default: true)
+  attr :socket, :map, required: true
+  attr :project, :map, required: true
+  attr :workflow, :map, required: true
+  attr :disabled, :boolean, default: true
 
   def create_job_panel(assigns) do
     ~H"""
@@ -92,10 +92,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:id, :string, required: true)
-  attr(:encoded_project_space, :string, required: true)
-  attr(:selected_node, :string, default: nil)
-  attr(:base_path, :string, required: true)
+  attr :id, :string, required: true
+  attr :encoded_project_space, :string, required: true
+  attr :selected_node, :string, default: nil
+  attr :base_path, :string, required: true
 
   def workflow_diagram(assigns) do
     ~H"""
@@ -112,7 +112,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr(:id, :string, required: true)
+  attr :id, :string, required: true
 
   def resize_component(assigns) do
     ~H"""
@@ -166,6 +166,13 @@ defmodule LightningWeb.WorkflowLive.Components do
     </div>
     """
   end
+
+  attr :form, :map, required: true
+  attr :cancel_url, :string, required: true
+  attr :disabled, :boolean, required: true
+  attr :webhook_url, :string, required: true
+  attr :requires_cron_job, :boolean, required: true
+  attr :on_change, :any, required: true
 
   def trigger_form(assigns) do
     ~H"""
@@ -230,9 +237,9 @@ defmodule LightningWeb.WorkflowLive.Components do
               <div class="py-2"></div>
             </div>
             <.live_component
-              id="cron-setup"
+              id="cron-setup-component"
               form={@form}
-              index={@index}
+              on_change={@on_change}
               module={LightningWeb.JobLive.CronSetupComponent}
               disabled={@disabled}
             />

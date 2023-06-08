@@ -82,7 +82,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         triggers:
           changeset
           |> Ecto.Changeset.get_change(:triggers)
-          |> to_serializable([:id, :type]),
+          |> to_serializable([:id, :type, :cron_expression]),
         edges:
           changeset
           |> Ecto.Changeset.get_change(:edges)

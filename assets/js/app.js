@@ -39,25 +39,6 @@ let Hooks = {
   WorkflowEditor,
 };
 
-Hooks.sendCronValue = {
-  updated() {
-    const triggerIndex = this.el.getAttribute('data-trigger-index');
-
-    const params = {
-      workflow: {
-        triggers: {
-          [triggerIndex]: {
-            type: 'cron',
-            cron_expression: this.el.value,
-          },
-        },
-      },
-    };
-
-    this.pushEvent('validate', params);
-  },
-};
-
 Hooks.Flash = {
   mounted() {
     let hide = () =>

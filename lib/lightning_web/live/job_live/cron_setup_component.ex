@@ -1,22 +1,49 @@
 defmodule LightningWeb.JobLive.CronSetupComponent do
   @moduledoc """
-  CronSetupComponent
+  A live component for managing cron setup in a form.
+
+  The `CronSetupComponent` provides an interactive form for configuring cron settings. It includes fields for specifying the frequency, minute, hour, weekday, monthday, and cron expression.
+
+  ## Usage
+
+  1. Include the `CronSetupComponent` in your live view or template.
+  2. Pass the necessary assigns to the component, such as `form`, `on_change`, and `disabled`.
+  3. Handle the `cron_expression_change` event to capture changes in the form inputs.
+  4. Use the updated `cron_expression` in your application logic.
+
+  ## Example
+
+  ```elixir
+  defmodule LightningWeb.JobLive.MyLiveView do
+    use LightningWeb.LiveView
+
+    @impl true
+    def render(assigns) do
+      ~H""
+      <CronSetupComponent
+        form={@form}
+        on_change={@on_change}
+        disabled={@disabled}
+      />
+      ""
+    end
+  end
+  ```
   """
 
   use LightningWeb, :live_component
 
   alias LightningWeb.Components.Form
 
+  attr :id, :string, required: true
   attr :form, :map, required: true
   attr :on_change, :any, required: true
+  attr :disabled, :boolean, required: true
 
   @impl true
   def render(assigns) do
     ~H"""
-    <div
-      id="cron-setup-component"
-      class="col-span-4 @md:col-span-2 grid grid-cols-4 gap-2"
-    >
+    <div id={@id} class="col-span-4 @md:col-span-2 grid grid-cols-4 gap-2">
       <div class="col-span-4">
         <.frequency_field
           target={@myself}
@@ -89,20 +116,22 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         <div class="py-2"></div>
       </div>
       <div class="col-span-6 @md:col-span-4">
-        <Form.text_field
-          field={:cron_expression}
-          form={@form}
-          phx-hook="sendCronValue"
-          data-trigger-index={@form_index}
-          disabled={@disabled}
-        />
+        <Form.text_field field={:cron_expression} form={@form} disabled={@disabled} />
       </div>
     </div>
     """
   end
 
   @impl true
-  def update(%{form: form, index: form_index, disabled: disabled}, socket) do
+  def update(
+        %{
+          id: id,
+          form: form,
+          on_change: on_change,
+          disabled: disabled
+        },
+        socket
+      ) do
     cron_data =
       Phoenix.HTML.Form.input_value(form, :cron_expression)
       |> get_cron_data()
@@ -119,8 +148,9 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
     {:ok,
      socket
+     |> assign(:id, id)
+     |> assign(:on_change, on_change)
      |> assign(:form, form)
-     |> assign(:form_index, form_index)
      |> assign(:cron_data, cron_data)
      |> assign(:disabled, disabled)
      |> assign(:initial_values, %{
@@ -260,16 +290,9 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
         cron_data
       )
 
-    changeset =
-      Ecto.Changeset.put_change(
-        socket.assigns.form.source,
-        :cron_expression,
-        cron_expression
-      )
+    socket.assigns.on_change.(cron_expression)
 
-    form = Map.put(socket.assigns.form, :source, changeset)
-
-    {:noreply, socket |> assign(:cron_data, cron_data) |> assign(:form, form)}
+    {:noreply, socket |> assign(:cron_data, cron_data)}
   end
 
   def frequency_field(assigns) do
