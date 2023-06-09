@@ -188,7 +188,8 @@ defmodule LightningWeb.RunLive.Index do
         socket
       ) do
     if socket.assigns.can_rerun_job do
-      AttemptService.get_for_rerun(attempt_id, run_id)
+      attempt_id
+      |> AttemptService.get_for_rerun(run_id)
       |> WorkOrderService.retry_attempt_run(socket.assigns.current_user)
 
       {:noreply, socket}

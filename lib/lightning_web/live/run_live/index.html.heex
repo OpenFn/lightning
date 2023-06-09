@@ -20,6 +20,18 @@
             <div class="py-3 px-4 font-medium">Status</div>
           </div>
         </div>
+        <div>
+          <input
+            type="checkbox"
+            class="left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+          />
+          <button
+            type="button"
+            class="rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white shadow-sm"
+          >
+            Rerun
+          </button>
+        </div>
         <div data-entity="work_order_list" class="bg-gray-100">
           <%= for wo <- @page.entries do %>
             <.live_component

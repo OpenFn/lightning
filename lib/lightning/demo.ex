@@ -12,6 +12,7 @@ defmodule Lightning.Demo do
   """
   def reset_demo do
     Lightning.Release.load_app()
+    Application.ensure_all_started(:timex)
 
     {:ok, _, _} =
       Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
