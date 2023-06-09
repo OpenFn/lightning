@@ -14,6 +14,14 @@ and this project adheres to
 
 ### Fixed
 
+## [0.6.2]
+
+### Added
+
+### Changed
+
+### Fixed
+
 - Fixed viewer permissions for delete workflow
 
 - Fixed bug with workflow cards
