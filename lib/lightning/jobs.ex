@@ -87,14 +87,14 @@ defmodule Lightning.Jobs do
   """
   @spec get_downstream_jobs_for(
           Job.t() | Ecto.UUID.t(),
-          Edge.trigger_type() | nil
+          Edge.edge_condition() | nil
         ) :: [
           Job.t()
         ]
   def get_downstream_jobs_for(job, trigger_type \\ nil)
 
-  def get_downstream_jobs_for(%Job{id: job_id}, trigger_type) do
-    get_downstream_jobs_for(job_id, trigger_type)
+  def get_downstream_jobs_for(%Job{id: job_id}, edge_condition) do
+    get_downstream_jobs_for(job_id, edge_condition)
   end
 
   def get_downstream_jobs_for(job_id, nil) do
@@ -102,9 +102,9 @@ defmodule Lightning.Jobs do
     |> Repo.all()
   end
 
-  def get_downstream_jobs_for(job_id, trigger_type) do
+  def get_downstream_jobs_for(job_id, edge_condition) do
     downstream_query(job_id)
-    |> where([_, e], e.condition == ^trigger_type)
+    |> where([_, e], e.condition == ^edge_condition)
     |> Repo.all()
   end
 
