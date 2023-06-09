@@ -75,7 +75,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <li
       class="col-span-1 flex rounded-md shadow-sm"
       role={@can_create_workflow && "button"}
-      phx-click={"create_workflow"}
+      phx-click="create_workflow"
     >
       <div class={"flex flex-1 items-center justify-between truncate rounded-md
       border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
