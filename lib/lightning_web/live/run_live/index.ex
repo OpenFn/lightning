@@ -68,6 +68,7 @@ defmodule LightningWeb.RunLive.Index do
        search_fields: search_fields,
        active_menu_item: :runs,
        work_orders: [],
+       selected_work_orders: [],
        can_rerun_job: can_rerun_job,
        pagination_path:
          &Routes.project_run_index_path(
@@ -182,6 +183,19 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   @impl true
+  def handle_info(
+        {:selection_toggled, {%{id: id}, selection}},
+        %{assigns: assigns} = socket
+      ) do
+    work_orders =
+      if selection,
+        do: [id | assigns.selected_work_orders],
+        else: assigns.selected_work_orders -- [id]
+
+    {:noreply, assign(socket, selected_work_orders: work_orders)}
+  end
+
+  @impl true
   def handle_event(
         "rerun",
         %{"attempt_id" => attempt_id, "run_id" => run_id},
@@ -198,6 +212,25 @@ defmodule LightningWeb.RunLive.Index do
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
     end
+  end
+
+  def handle_event(
+        "toggle_all_selections",
+        %{"all_selections" => selection},
+        %{assigns: %{page: page}} = socket
+      ) do
+    selection = String.to_existing_atom(selection)
+    work_orders = if selection, do: Enum.map(page.entries, & &1.id), else: []
+
+    for entry <- page.entries do
+      send_update(LightningWeb.RunLive.WorkOrderComponent,
+        id: entry.id,
+        entry_selected: selection,
+        event: :selection_toggled
+      )
+    end
+
+    {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
 
   def handle_event("search", %{"filters" => filters} = _params, socket) do
@@ -218,4 +251,12 @@ defmodule LightningWeb.RunLive.Index do
          to:
            ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
        )}
+
+  defp all_selected?(work_orders, entries) do
+    Enum.count(work_orders) == Enum.count(entries)
+  end
+
+  defp partially_selected?(work_orders, entries) do
+    entries != [] && work_orders != [] && !all_selected?(work_orders, entries)
+  end
 end

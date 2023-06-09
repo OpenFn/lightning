@@ -11,7 +11,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
 
   @impl true
   def update(
-        %{work_order: work_order, project: project, current_user: current_user},
+        %{work_order: work_order, project: project, current_user: current_user} =
+          assigns,
         socket
       ) do
     can_rerun_job =
@@ -21,11 +22,21 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      socket
      |> assign(project: project)
      |> assign(can_rerun_job: can_rerun_job)
+     |> set_entry_selection(assigns)
      |> set_work_order_details(work_order)}
   end
 
-  def update(%{work_order: work_order}, socket) do
-    {:ok, socket |> set_work_order_details(work_order)}
+  def update(%{work_order: work_order} = assigns, socket) do
+    {:ok,
+     socket |> set_work_order_details(work_order) |> set_entry_selection(assigns)}
+  end
+
+  def update(%{event: :selection_toggled, entry_selected: selection}, socket) do
+    {:ok, assign(socket, entry_selected: selection)}
+  end
+
+  defp set_entry_selection(socket, assigns) do
+    assign(socket, entry_selected: assigns[:entry_selected] || false)
   end
 
   defp set_work_order_details(socket, work_order) do
@@ -55,7 +66,20 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     {:noreply, assign(socket, :show_details, !socket.assigns[:show_details])}
   end
 
+  def handle_event("toggle_selection", %{}, %{assigns: assigns} = socket) do
+    send(
+      self(),
+      {:selection_toggled, {assigns.work_order, !assigns[:entry_selected]}}
+    )
+
+    {:noreply, assign(socket, :entry_selected, !socket.assigns[:entry_selected])}
+  end
+
   @impl true
+  def preload([%{event: :selection_toggled}] = assigns) do
+    assigns
+  end
+
   def preload(list_of_assigns) do
     ids = Enum.map(list_of_assigns, & &1.id)
 
@@ -71,6 +95,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   attr :show_details, :boolean, default: false
+  attr :entry_selected, :boolean, default: false
 
   @impl true
   def render(assigns) do
@@ -81,10 +106,18 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     >
       <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white relative flex items-start #{unless @show_details, do: "truncate"}"}>
         <div class="">
-          <input
-            type="checkbox"
-            class="left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-          />
+          <.form
+            :let={f}
+            for={selection_params(@work_order, @entry_selected)}
+            phx-change="toggle_selection"
+            phx-target={@myself}
+          >
+            <%= checkbox(f, :selected,
+              id: "select_#{@work_order.id}",
+              class:
+                "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+            ) %>
+          </.form>
         </div>
         <div class="ml-3">
           <%= @workflow_name %>
@@ -148,5 +181,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <% end %>
     </div>
     """
+  end
+
+  defp selection_params(work_order, selected) do
+    %{"id" => work_order.id, "selected" => selected}
   end
 end

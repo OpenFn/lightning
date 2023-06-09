@@ -75,6 +75,24 @@ Hooks.Copy = {
   },
 };
 
+Hooks.CheckboxState ={
+  mounted() {
+    if (this.el.classList.contains('indeterminate')) {
+      this.el.indeterminate = true;
+    } else {
+      this.el.indeterminate = false;
+    }
+  },
+  updated() {
+    if (this.el.classList.contains('indeterminate')) {
+      this.el.indeterminate = true;
+    } else {
+      this.el.indeterminate = false;
+    }
+  }, 
+  
+}
+
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
