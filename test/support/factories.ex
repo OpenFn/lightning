@@ -76,7 +76,6 @@ defmodule Lightning.Factories do
     struct!(Lightning.Projects.Project, attrs)
   end
 
-
   def insert(%{__struct__: struct} = record) do
     Ecto.Changeset.change(struct!(struct))
     |> put_fields(record)
