@@ -12,21 +12,23 @@ defmodule Lightning.Workflows.Graph do
           jobs: [Lightning.Jobs.Job.t()]
         }
 
-  @spec new(jobs :: [Lightning.Jobs.Job.t()]) :: __MODULE__.t()
-  def new(jobs) when is_list(jobs) do
+  @spec new(workflow :: Lightning.Workflows.Workflow.t()) :: __MODULE__.t()
+  def new(workflow) do
     g = :digraph.new()
 
-    for j <- jobs do
+    for j <- workflow.jobs do
       :digraph.add_vertex(g, to_vertex(j))
     end
 
-    for j <- jobs do
-      if j.trigger.type in [:on_job_failure, :on_job_success] do
-        :digraph.add_edge(g, to_vertex(j.trigger.upstream_job), to_vertex(j))
+    for e <- workflow.edges do
+      if e.condition in [:on_job_failure, :on_job_success] do
+        source_job = find_job(workflow.jobs, e.source_job_id)
+        target_job = find_job(workflow.jobs, e.target_job_id)
+        :digraph.add_edge(g, to_vertex(source_job), to_vertex(target_job))
       end
     end
 
-    %__MODULE__{digraph: g, root: get_root(g), jobs: jobs}
+    %__MODULE__{digraph: g, root: get_root(g), jobs: workflow.jobs}
   end
 
   @spec remove(__MODULE__.t(), Ecto.UUID.t()) :: __MODULE__.t()
@@ -47,6 +49,10 @@ defmodule Lightning.Workflows.Graph do
     |> Enum.map(fn {id} ->
       Enum.find(jobs, &match?(%{id: ^id}, &1))
     end)
+  end
+
+  defp find_job(jobs, id) do
+    Enum.find_value(jobs, fn job -> job.id == id end)
   end
 
   defp get_root(g) do
