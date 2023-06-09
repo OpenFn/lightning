@@ -28,9 +28,11 @@ defmodule Lightning.Pipeline do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
     result = Runner.start(run)
 
-    # rather collect edges collect to this job 
-    # then run those edges after this result 
+
+    # rather collect edges collect to this job
+    # then run those edges after this result
     # later in edges compute expressions for a result/state
+    # build an edge condition
     jobs = get_jobs_for_result(run.job_id, result)
 
     if length(jobs) > 0 do
@@ -57,7 +59,9 @@ defmodule Lightning.Pipeline do
     :ok
   end
 
-  defp result_to_trigger_type(%Lightning.Runtime.Result{exit_reason: reason}) do
+  # this becomes result to edge condition
+  # Add logic to run/pursue edge based on the result
+  defp result_to_edge_condition(%Lightning.Runtime.Result{exit_reason: reason}) do
     case reason do
       :error -> :on_job_failure
       :ok -> :on_job_success
@@ -66,7 +70,7 @@ defmodule Lightning.Pipeline do
   end
 
   defp get_jobs_for_result(upstream_job_id, result) do
-    Jobs.get_downstream_jobs_for(upstream_job_id)
+    Jobs.get_downstream_jobs_for(upstream_job_id, result_to_edge_condition(result))
     |> Enum.filter(& &1.enabled)
   end
 
