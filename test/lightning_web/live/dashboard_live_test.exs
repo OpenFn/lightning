@@ -51,7 +51,7 @@ defmodule LightningWeb.DashboardLiveTest do
         live(conn, ~p"/")
         |> follow_redirect(conn, ~p"/projects/#{project.id}/w")
 
-      assert html =~ "Create a workflow"
+      assert html =~ "Create new workflow"
     end
   end
 end

@@ -300,6 +300,11 @@ defmodule LightningWeb.WorkflowLive do
   end
 
   @impl true
+  def handle_event("goto_workflow", %{"to" => to}, socket) do
+    {:noreply, push_navigate(socket, to: to, replace: false)}
+  end
+
+  @impl true
   def handle_event("create_workflow", _, socket) do
     create_workflow(socket)
   end

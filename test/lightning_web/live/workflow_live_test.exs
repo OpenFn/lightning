@@ -28,17 +28,17 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
-      assert html =~ "Create a workflow"
+      assert html =~ "Create new workflow"
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project.id, workflow_one.id)}']"
+               "li[phx-value-to='#{Routes.project_workflow_path(conn, :show, project.id, workflow_one.id)}']"
              )
              |> has_element?()
 
       assert view
              |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :show, project.id, workflow_two.id)}']"
+               "li[phx-value-to='#{Routes.project_workflow_path(conn, :show, project.id, workflow_two.id)}']"
              )
              |> has_element?()
     end
@@ -49,16 +49,10 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
-      assert html =~ "Create a workflow"
-
-      refute view
-             |> element(
-               "button[disabled='disabled'][phx-click='create_workflow']"
-             )
-             |> has_element?()
+      assert html =~ "Create new workflow"
 
       assert view
-             |> element("button[phx-click='create_workflow']")
+             |> element("li[role='button'][phx-click='create_workflow']")
              |> render_click() =~
                "Create job"
     end
@@ -74,10 +68,13 @@ defmodule LightningWeb.WorkflowLiveTest do
       {:ok, view, html} =
         live(conn, Routes.project_workflow_path(conn, :index, project.id))
 
-      assert html =~ "Create a workflow"
+      assert html =~ "Create new workflow"
 
       assert view
-             |> has_element?("button[disabled][phx-click='create_workflow']")
+             |> has_element?("li[phx-click='create_workflow']")
+
+      refute view
+             |> has_element?("li[role='button'][phx-click='create_workflow']")
 
       assert view
              |> render_click("create_workflow", %{}) =~
