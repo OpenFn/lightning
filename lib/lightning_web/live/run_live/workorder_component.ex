@@ -102,9 +102,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     ~H"""
     <div
       data-entity="work_order"
-      class="my-4 grid grid-cols-6 gap-0 rounded-lg bg-white"
+      class={"my-4 grid grid-cols-6 gap-0 rounded-lg #{if @entry_selected, do: "bg-gray-50", else: "bg-white"}"}
     >
       <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white relative flex items-start #{unless @show_details, do: "truncate"}"}>
+        <%= if @entry_selected do %>
+          <div class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"></div>
+        <% end %>
         <div class="">
           <.form
             :let={f}

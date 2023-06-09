@@ -130,6 +130,7 @@ defmodule LightningWeb.RunLive.Index do
 
     socket
     |> assign(
+      selected_work_orders: [],
       page:
         Invocation.search_workorders(
           socket.assigns.project,
@@ -222,13 +223,7 @@ defmodule LightningWeb.RunLive.Index do
     selection = String.to_existing_atom(selection)
     work_orders = if selection, do: Enum.map(page.entries, & &1.id), else: []
 
-    for entry <- page.entries do
-      send_update(LightningWeb.RunLive.WorkOrderComponent,
-        id: entry.id,
-        entry_selected: selection,
-        event: :selection_toggled
-      )
-    end
+    update_component_selections(page.entries, selection)
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
@@ -241,16 +236,18 @@ defmodule LightningWeb.RunLive.Index do
     apply_filters(Map.merge(socket.assigns.filters, filters), socket)
   end
 
-  defp apply_filters(filters, socket),
-    do:
-      {:noreply,
-       socket
-       |> assign(filters_changeset: filters_changeset(filters))
-       |> assign(filters: filters)
-       |> push_patch(
-         to:
-           ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
-       )}
+  defp apply_filters(filters, %{assigns: assigns} = socket) do
+    update_component_selections(assigns.page.entries, false)
+
+    {:noreply,
+     socket
+     |> assign(filters_changeset: filters_changeset(filters))
+     |> assign(selected_work_orders: [])
+     |> assign(filters: filters)
+     |> push_patch(
+       to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
+     )}
+  end
 
   defp all_selected?(work_orders, entries) do
     Enum.count(work_orders) == Enum.count(entries)
@@ -258,5 +255,15 @@ defmodule LightningWeb.RunLive.Index do
 
   defp partially_selected?(work_orders, entries) do
     entries != [] && work_orders != [] && !all_selected?(work_orders, entries)
+  end
+
+  defp update_component_selections(entries, selection) do
+    for entry <- entries do
+      send_update(LightningWeb.RunLive.WorkOrderComponent,
+        id: entry.id,
+        entry_selected: selection,
+        event: :selection_toggled
+      )
+    end
   end
 end

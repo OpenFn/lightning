@@ -12,7 +12,7 @@
       >
         <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
           <div class="grid grid-cols-6 gap-0">
-            <div class={"py-3 px-4 font-medium relative flex items-start #{if partially_selected?(@selected_work_orders, @page.entries), do: "col-span-2"}"}>
+            <div class={"py-3 px-4 font-medium relative flex items-start #{if @selected_work_orders != [], do: "col-span-2"}"}>
               <div class="">
                 <.form
                   :let={f}
@@ -45,7 +45,7 @@
                 <% end %>
               </div>
             </div>
-            <div class={"py-3 px-4 font-medium #{if partially_selected?(@selected_work_orders, @page.entries), do: "hidden"}"}>
+            <div class={"py-3 px-4 font-medium #{if @selected_work_orders != [], do: "hidden"}"}>
               Reason
             </div>
             <div class="py-3 px-4 font-medium">Input</div>
