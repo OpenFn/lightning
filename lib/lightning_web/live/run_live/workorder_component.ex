@@ -79,13 +79,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       data-entity="work_order"
       class="my-4 grid grid-cols-6 gap-0 rounded-lg bg-white"
     >
-      <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white #{unless @show_details, do: "truncate"}"}>
-        <input
-          type="checkbox"
-          class="left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-          id={@work_order.id}
-        />
-        <label for={@work_order.id}><%= @workflow_name %></label>
+      <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white relative flex items-start #{unless @show_details, do: "truncate"}"}>
+        <div class="">
+          <input
+            type="checkbox"
+            class="left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+          />
+        </div>
+        <div class="ml-3">
+          <%= @workflow_name %>
+        </div>
       </div>
       <div class="my-auto p-4"><%= @work_order.reason.type %></div>
       <div class="my-auto p-4">
