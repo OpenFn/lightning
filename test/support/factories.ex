@@ -68,13 +68,14 @@ defmodule Lightning.Factories do
     |> merge_attributes(attrs)
   end
 
-  def build(:edge, attrs) do 
+  def build(:edge, attrs) do
     struct!(Lightning.Workflows.Edge, attrs)
   end
 
   def build(:project, attrs) do
     struct!(Lightning.Projects.Project, attrs)
   end
+
 
   def insert(%{__struct__: struct} = record) do
     Ecto.Changeset.change(struct!(struct))
