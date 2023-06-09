@@ -7,62 +7,91 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
-      <div class="w-full flex flex-wrap gap-4">
+      <ul
+        role="list"
+        class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4"
+      >
         <.create_workflow_card can_create_workflow={@can_create_workflow} />
         <%= for workflow <- @workflows do %>
           <.workflow_card
+            can_create_workflow={@can_create_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
           />
         <% end %>
-      </div>
+      </ul>
     </div>
     """
   end
 
   def workflow_card(assigns) do
     ~H"""
-    <div class="relative">
-      <.link
-        class="w-72 h-44 bg-white rounded-md border shadow flex h-full justify-center items-center font-bold mb-2 hover:bg-gray-50"
-        navigate={
-          Routes.project_workflow_path(
-            LightningWeb.Endpoint,
-            :show,
-            @project.id,
-            @workflow.id
-          )
-        }
-      >
-        <%= @workflow.name %>
-
-        <%= link(
-          to: "#",
-          phx_click: "delete_workflow",
-          phx_value_id: @workflow.id,
-          data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
-          class: "absolute right-2 bottom-2 p-2") do %>
-          <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
+    <li
+      class="col-span-1 flex rounded-md shadow-sm"
+      role="button"
+      phx-click="goto_workflow"
+      phx-value-to={
+        Routes.project_workflow_path(
+          LightningWeb.Endpoint,
+          :show,
+          @project.id,
+          @workflow.id
+        )
+      }
+    >
+      <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
+        <div class="flex-1 truncate px-4 py-2 text-sm">
+          <span class="font-medium text-gray-900 hover:text-gray-600">
+            <%= @workflow.name %>
+          </span>
+          <p class="text-gray-500 text-xs">
+            Created <%= Timex.Format.DateTime.Formatters.Relative.format!(
+              @workflow.updated_at,
+              "{relative}"
+            ) %>
+          </p>
+        </div>
+        <%= if @can_create_workflow do %>
+          <div class="flex-shrink-0 pr-2">
+            <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+              <%= link(
+              to: "#",
+              phx_click: "delete_workflow",
+              phx_value_id: @workflow.id,
+              data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
+              class: "inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") do %>
+                <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
+              <% end %>
+            </div>
+          </div>
         <% end %>
-      </.link>
-    </div>
+      </div>
+    </li>
     """
   end
 
   def create_workflow_card(assigns) do
     ~H"""
-    <div class="w-72 h-44 bg-white rounded-md border shadow p-4 flex flex-col h-full justify-between">
-      <div class="font-bold mb-2">Create a new workflow</div>
-      <div class="">Create a new workflow for your organisation</div>
-      <div>
-        <LightningWeb.Components.Common.button
-          phx-click="create_workflow"
-          disabled={!@can_create_workflow}
-        >
-          Create a workflow
-        </LightningWeb.Components.Common.button>
+    <li
+      class="col-span-1 flex rounded-md shadow-sm"
+      role={@can_create_workflow && "button"}
+      phx-click="create_workflow"
+    >
+      <div class={"flex flex-1 items-center justify-between truncate rounded-md
+      border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
+        <div class="flex-1 truncate px-4 py-2 text-sm">
+          <span class="font-medium">
+            Create new workflow
+          </span>
+          <p class="text-gray-200 text-xs">Automate a process</p>
+        </div>
+        <div class="flex-shrink-0 pr-2">
+          <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+            <Icon.plus_circle />
+          </div>
+        </div>
       </div>
-    </div>
+    </li>
     """
   end
 
@@ -82,10 +111,10 @@ defmodule LightningWeb.WorkflowLive.Components do
         disabled={@disabled}
       >
         <div class="h-full">
-          <Heroicons.plus class="h-4 w-4 inline-block" />
-          <span class="inline-block align-middle">
+          <span class="inline-block mr-1">
             Create job
           </span>
+          <Icon.plus_circle />
         </div>
       </LightningWeb.Components.Common.button>
     </div>

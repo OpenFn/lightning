@@ -14,6 +14,11 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed viewer permissions for delete workflow
+
+- Fixed bug with workflow cards
+  [#859](https://github.com/OpenFn/Lightning/issues/859)
+
 ## [0.6.1]
 
 ### Added
