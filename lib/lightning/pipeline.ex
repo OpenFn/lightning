@@ -28,7 +28,6 @@ defmodule Lightning.Pipeline do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
     result = Runner.start(run)
 
-
     # rather collect edges collect to this job
     # then run those edges after this result
     # later in edges compute expressions for a result/state
@@ -70,7 +69,10 @@ defmodule Lightning.Pipeline do
   end
 
   defp get_jobs_for_result(upstream_job_id, result) do
-    Jobs.get_downstream_jobs_for(upstream_job_id, result_to_edge_condition(result))
+    Jobs.get_downstream_jobs_for(
+      upstream_job_id,
+      result_to_edge_condition(result)
+    )
     |> Enum.filter(& &1.enabled)
   end
 

@@ -104,16 +104,19 @@ defmodule Lightning.JobsTest do
     test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
       job = job_fixture()
 
-      
       other_job =
         job_fixture(
           trigger: %{type: :on_job_failure, upstream_job_id: job.id},
           workflow_id: job.workflow_id
         )
 
-      #connect other_job to job via an edge
-      insert(:edge, %{source_job_id: job.id, workflow_id: job.workflow_id, target_job_id: other_job.id, condition: :on_job_failure})
-
+      # connect other_job to job via an edge
+      insert(:edge, %{
+        source_job_id: job.id,
+        workflow_id: job.workflow_id,
+        target_job_id: other_job.id,
+        condition: :on_job_failure
+      })
 
       assert Jobs.get_downstream_jobs_for(job) == [
                Jobs.get_job!(other_job.id)
@@ -144,8 +147,7 @@ defmodule Lightning.JobsTest do
 
       {:ok,
        %Job{
-         workflow_id: ^workflow_id,
-         trigger: %{workflow_id: ^workflow_id}
+         workflow_id: ^workflow_id
        }} =
         Jobs.update_job(job, %{
           trigger: %{id: job.trigger.id, type: "webhook"}
