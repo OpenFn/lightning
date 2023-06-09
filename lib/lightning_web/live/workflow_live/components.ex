@@ -159,6 +159,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           <.live_component
             id={"adaptor-picker-#{input_value(@form, :id)}"}
             module={LightningWeb.JobLive.AdaptorPicker}
+            on_change={@on_change}
             form={@form}
           />
         </div>

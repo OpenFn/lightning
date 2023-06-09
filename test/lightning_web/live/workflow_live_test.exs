@@ -326,7 +326,7 @@ defmodule LightningWeb.WorkflowLiveTest do
                '1.1.0'
              ])
 
-      refute view |> has_warning_on_editor_tab?()
+      assert view |> has_warning_on_editor_tab?()
 
       view
       |> element("#job-editor-new")
@@ -602,8 +602,8 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   defp pick_adaptor_version(view, version) do
     view
-    |> element("#adaptor-version")
-    |> render_change(%{adaptor_picker: %{"adaptor_version" => version}})
+    |> form("#job-form", job_form: %{adaptor: version})
+    |> render_change()
   end
 
   defp has_warning_on_editor_tab?(view) do

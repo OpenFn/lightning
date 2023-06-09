@@ -2,7 +2,6 @@ defmodule LightningWeb.Router do
   use LightningWeb, :router
 
   import LightningWeb.UserAuth
-  alias LightningWeb.WorkflowLive
   alias ProjectLive
   alias JobLive
   alias CredentialLive

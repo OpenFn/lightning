@@ -69,6 +69,7 @@ defmodule LightningWeb.WorkflowNewLive do
                         @selected_job
                         |> Ecto.Changeset.get_field(:id)
                     }
+                    on_change={&send_form_changed/1}
                     form={job_form}
                     cancel_url={
                       ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
@@ -102,7 +103,7 @@ defmodule LightningWeb.WorkflowNewLive do
                         Ecto.Changeset.get_field(@selected_trigger, :id)
                     }
                     form={trigger_form}
-                    on_change={&send_cron_expression/1}
+                    on_change={&send_form_changed/1}
                     requires_cron_job={
                       Ecto.Changeset.get_field(trigger_form.source, :type) == :cron
                     }
@@ -280,39 +281,15 @@ defmodule LightningWeb.WorkflowNewLive do
     end
   end
 
-  def send_cron_expression(cron_expression) do
-    send(self(), %{event: :cron_changed, value: cron_expression})
+  def send_form_changed(params) do
+    send(self(), {"form_changed", params})
   end
 
-  defp build_cron_params(socket, cron_expression) do
-    index =
-      socket.assigns.changeset
-      |> Ecto.Changeset.get_change(:triggers)
-      |> Enum.find_index(fn trigger ->
-        Ecto.Changeset.get_change(trigger, :id) ==
-          Ecto.Changeset.get_change(socket.assigns.selected_trigger, :id)
-      end)
-
-    %{
-      "triggers" =>
-        Map.put(%{}, "#{index}", %{
-          "type" => "cron",
-          "cron_expression" => cron_expression
-        })
-    }
-  end
-
-  @impl true
-  def handle_info(%{event: :cron_changed, value: cron_expression}, socket) do
+  def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     initial_params = socket.assigns.workflow_params
 
-    params =
-      build_cron_params(
-        socket,
-        cron_expression
-      )
-
-    next_params = WorkflowParams.apply_form_params(initial_params, params)
+    next_params =
+      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
     {:noreply,
      socket
