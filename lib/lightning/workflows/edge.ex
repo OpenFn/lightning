@@ -15,6 +15,8 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
 
+
+  @flow_types [:on_job_success, :on_job_failure]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
@@ -23,7 +25,7 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :source_trigger, Trigger
     belongs_to :target_job, Job
 
-    field :condition, :string
+    field :condition, Ecto.Enum, values: @flow_types
 
     field :delete, :boolean, virtual: true
 
