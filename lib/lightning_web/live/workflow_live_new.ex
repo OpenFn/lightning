@@ -228,7 +228,6 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
-    IO.inspect(params, label: "from validate")
     initial_params = socket.assigns.workflow_params
 
     next_params =
@@ -315,16 +314,10 @@ defmodule LightningWeb.WorkflowNewLive do
 
     next_params = WorkflowParams.apply_form_params(initial_params, params)
 
-    socket =
-      socket
-      |> apply_params(next_params)
-      |> push_patches_applied(initial_params)
-
-    IO.inspect(socket.assigns.workflow_params["triggers"],
-      label: "from handle_info"
-    )
-
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> apply_params(next_params)
+     |> push_patches_applied(initial_params)}
   end
 
   defp apply_params(socket, params) do
