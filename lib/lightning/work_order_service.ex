@@ -19,7 +19,8 @@ defmodule Lightning.WorkOrderService do
 
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Accounts.User
-  alias Lightning.Jobs.Job
+  alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Workflows.Edge
 
   alias Ecto.Multi
 
@@ -133,12 +134,36 @@ defmodule Lightning.WorkOrderService do
           | Dataclip.t()
           | %{optional(String.t()) => any}
         ) :: Ecto.Multi.t()
+  #  InvocationReasons.build(job.trigger, dataclip)
+
+  # 1,2,3 ==================================================================
+
+  # --JOB TO JOB------------------------------------------------------------
+
+  # 1 - "flow" and this replacing "on_job_success" or "on_job_fail" triggers
+  # with EDGES that go between { source_job_id, condition, target_job_id }
+
+  # --TRIGGER TO JOB--------------------------------------------------------
+
+  # 2 - "cron" - replace job.trigger_id (where trigger.type = cron)
+  # with { source_trigger_id, condition, target_job_id }
+
+  # 3 - "webhook" - replace job.trigger_id (where trigger.type = webhook)
+  # with { source_trigger_id, condition, target_job_id }
+
+  # ========================================================================
+
+  # build trigger
+  # build edge connecting trigger to job
+
   def multi_for(type, job, dataclip_body) when type in [:webhook, :cron] do
     Multi.new()
     |> put_job(job)
     |> put_dataclip(dataclip_body)
-    |> Multi.insert(:reason, fn %{dataclip: dataclip, job: job} ->
-      InvocationReasons.build(job.trigger, dataclip)
+    |> put_trigger(type)
+    |> put_edge()
+    |> Multi.insert(:reason, fn %{dataclip: dataclip, trigger: trigger} ->
+      InvocationReasons.build(trigger, dataclip)
     end)
     |> Multi.insert(:work_order, fn %{reason: reason, job: job} ->
       build(job.workflow, reason)
@@ -162,7 +187,7 @@ defmodule Lightning.WorkOrderService do
   end
 
   defp put_job(multi, job) do
-    multi |> Multi.put(:job, Repo.preload(job, [:trigger, :workflow]))
+    multi |> Multi.put(:job, Repo.preload(job, [:workflow]))
   end
 
   defp put_dataclip(multi, %Dataclip{} = dataclip) do
@@ -182,6 +207,33 @@ defmodule Lightning.WorkOrderService do
           type: :http_request,
           body: dataclip_body,
           project_id: job.workflow.project_id
+        })
+      end
+    )
+  end
+
+  defp put_trigger(multi, type) do
+    multi
+    |> Multi.insert(
+      :trigger,
+      fn %{job: %{workflow: workflow}} ->
+        Trigger.new(%{
+          type: type,
+          workflow_id: workflow.id
+        })
+      end
+    )
+  end
+
+  defp put_edge(multi) do
+    multi
+    |> Multi.insert(
+      :edge,
+      fn %{job: job, trigger: trigger} ->
+        Edge.new(%{
+          source_trigger_id: trigger.id,
+          target_job_id: job.id,
+          type: trigger.type
         })
       end
     )
