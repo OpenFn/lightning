@@ -15,11 +15,10 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
 
-
   @flow_types [:on_job_success, :on_job_failure]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  @type edge_condition :: :on_job_success | :on_job_failure
+  @type edge_condition() :: :webhook | :cron | :on_job_success | :on_job_failure
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
     belongs_to :source_job, Job
@@ -31,6 +30,11 @@ defmodule Lightning.Workflows.Edge do
     field :delete, :boolean, virtual: true
 
     timestamps()
+  end
+
+  def new(attrs) do
+    change(%__MODULE__{}, Map.merge(attrs, %{id: Ecto.UUID.generate()}))
+    |> change(attrs)
   end
 
   def changeset(edge, attrs) do
