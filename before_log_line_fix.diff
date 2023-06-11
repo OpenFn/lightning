@@ -1,0 +1,88 @@
+diff --git a/lib/lightning/invocation.ex b/lib/lightning/invocation.ex
+index a6d64c2f..c1109278 100644
+--- a/lib/lightning/invocation.ex
++++ b/lib/lightning/invocation.ex
+@@ -287,9 +287,10 @@ defmodule Lightning.Invocation do
+     end
+   end
+ 
+-  def create_log_line(attrs \\ %{}) do
++  def create_log_line(run, body) do
+     %LogLine{}
+-    |> LogLine.changeset(attrs)
++    |> Ecto.Changeset.change(%{run: run, body: body |> to_string()})
++    |> LogLine.validate()
+     |> Repo.insert!()
+   end
+ 
+diff --git a/lib/lightning/invocation/log_line.ex b/lib/lightning/invocation/log_line.ex
+index 2acefa4d..1ec3d2d7 100644
+--- a/lib/lightning/invocation/log_line.ex
++++ b/lib/lightning/invocation/log_line.ex
+@@ -30,6 +30,22 @@ defmodule Lightning.Invocation.LogLine do
+   def changeset(run, attrs) do
+     run
+     |> cast(attrs, [:body, :timestamp, :run_id])
++    |> validate()
++  end
++
++  def validate(changeset) do
++    # we make a migration that:
++    # 1. adds a not null constraint to the body column
++    # 2. adds a default value of "" to the body column
++
++    changeset
+     |> assoc_constraint(:run)
++    |> validate_change(:body, fn _, body ->
++      if is_nil(body) do
++        [message: "can't be nil"]
++      else
++        []
++      end
++    end)
+   end
+ end
+diff --git a/lib/lightning_web/live/run_live/components.ex b/lib/lightning_web/live/run_live/components.ex
+index 233dd907..8f556edc 100644
+--- a/lib/lightning_web/live/run_live/components.ex
++++ b/lib/lightning_web/live/run_live/components.ex
+@@ -346,6 +346,9 @@ defmodule LightningWeb.RunLive.Components do
+     """
+   end
+ 
++  # TODO: write a test for `.log_line` that execises `nil`.
++  defp spaces_to_nbsp(str) when is_nil(str), do: nil
++
+   defp spaces_to_nbsp(str) when is_binary(str) do
+     str
+     |> String.codepoints()
+@@ -355,9 +358,6 @@ defmodule LightningWeb.RunLive.Components do
+     end)
+   end
+ 
+-  # TODO - @Elias, @Stu, are we meant to get nils here?
+-  defp spaces_to_nbsp(str) when is_nil(str), do: nil
+-
+   attr :dataclip, :any, required: true
+   attr :no_dataclip_message, :any
+ 
+diff --git a/test/lightning_web/live/run_live/components_test.exs b/test/lightning_web/live/run_live/components_test.exs
+index ee9c176c..664d83be 100644
+--- a/test/lightning_web/live/run_live/components_test.exs
++++ b/test/lightning_web/live/run_live/components_test.exs
+@@ -140,13 +140,13 @@ defmodule LightningWeb.RunLive.ComponentsTest do
+   end
+ 
+   test "log_view component" do
+-    log_lines = ["First line", "Second line"]
++    log_lines = ["First line", "Second line", nil]
+ 
+     html =
+       render_component(&Components.log_view/1, log: log_lines)
+       |> Floki.parse_fragment!()
+ 
+-    assert html |> Floki.find("div[data-line-number]") |> length() == 2
++    assert html |> Floki.find("div[data-line-number]") |> length() == 3
+ 
+     # Check that the log lines are present.
+     # Replace the resulting utf-8 &nbsp; back into a regular space.

@@ -140,13 +140,13 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "log_view component" do
-    log_lines = ["First line", "Second line"]
+    log_lines = ["First line", "Second line", nil]
 
     html =
       render_component(&Components.log_view/1, log: log_lines)
       |> Floki.parse_fragment!()
 
-    assert html |> Floki.find("div[data-line-number]") |> length() == 2
+    assert html |> Floki.find("div[data-line-number]") |> length() == 3
 
     # Check that the log lines are present.
     # Replace the resulting utf-8 &nbsp; back into a regular space.

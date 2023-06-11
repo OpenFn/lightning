@@ -30,6 +30,22 @@ defmodule Lightning.Invocation.LogLine do
   def changeset(run, attrs) do
     run
     |> cast(attrs, [:body, :timestamp, :run_id])
+    |> validate()
+  end
+
+  def validate(changeset) do
+    # we make a migration that:
+    # 1. adds a not null constraint to the body column
+    # 2. adds a default value of "" to the body column
+
+    changeset
     |> assoc_constraint(:run)
+    |> validate_change(:body, fn _, body ->
+      if is_nil(body) do
+        [message: "can't be nil"]
+      else
+        []
+      end
+    end)
   end
 end
