@@ -140,21 +140,31 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "log_view component" do
-    log_lines = ["First line", "Second line", nil]
+    log_lines = ["First line", "Second line"]
 
     html =
       render_component(&Components.log_view/1, log: log_lines)
       |> Floki.parse_fragment!()
 
-    assert html |> Floki.find("div[data-line-number]") |> length() == 3
+    assert html |> Floki.find("div[data-line-number]") |> length() ==
+             length(log_lines)
 
     # Check that the log lines are present.
     # Replace the resulting utf-8 &nbsp; back into a regular space.
-    assert html
-           |> Floki.find("div[data-log-line]")
-           |> Floki.text(sep: "\n")
-           |> String.replace(<<160::utf8>>, " ") ==
-             log_lines |> Enum.join("\n")
+    assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
+  end
+
+  test "log_view component renders empty string when given a null log line" do
+    assert render_component(&Components.log_view/1, log: [nil])
+           |> Floki.parse_fragment!()
+           |> log_lines_from_html() == ""
+  end
+
+  defp log_lines_from_html(html) do
+    html
+    |> Floki.find("div[data-log-line]")
+    |> Floki.text(sep: "\n")
+    |> String.replace(<<160::utf8>>, " ")
   end
 
   describe "run_details component" do

@@ -346,7 +346,6 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  # TODO: write a test for `.log_line` that execises `nil`.
   defp spaces_to_nbsp(str) when is_nil(str), do: nil
 
   defp spaces_to_nbsp(str) when is_binary(str) do
