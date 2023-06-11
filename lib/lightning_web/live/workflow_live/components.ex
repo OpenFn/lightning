@@ -128,6 +128,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
+  attr :on_change, :any, required: true
 
   def job_form(assigns) do
     ~H"""
