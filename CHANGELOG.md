@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Write/run sql script to convert triggers
+  [#875](https://github.com/OpenFn/Lightning/issues/875)
+
 ### Changed
 
 ### Fixed
