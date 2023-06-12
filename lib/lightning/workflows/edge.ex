@@ -15,7 +15,7 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
 
-  @flow_types [:on_job_success, :on_job_failure]
+  @flow_types [:on_job_success, :on_job_failure, :cron, :webhook]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   @type edge_condition() :: :webhook | :cron | :on_job_success | :on_job_failure
