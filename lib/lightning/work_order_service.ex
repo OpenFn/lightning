@@ -280,7 +280,8 @@ defmodule Lightning.WorkOrderService do
         Edge.new(%{
           source_trigger_id: trigger.id,
           target_job_id: job.id,
-          type: trigger.type
+          condition: :always,
+          workflow_id: job.workflow.id
         })
       end
     )
