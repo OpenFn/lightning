@@ -285,6 +285,7 @@ defmodule LightningWeb.WorkflowNewLive do
     send(self(), {"form_changed", params})
   end
 
+  @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     initial_params = socket.assigns.workflow_params
 
