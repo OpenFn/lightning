@@ -22,9 +22,7 @@ defmodule Lightning.Workflows.Graph do
 
     for e <- workflow.edges do
       if e.condition in [:on_job_failure, :on_job_success] do
-        source_job = find_job(workflow.jobs, e.source_job_id)
-        target_job = find_job(workflow.jobs, e.target_job_id)
-        :digraph.add_edge(g, to_vertex(source_job), to_vertex(target_job))
+        :digraph.add_edge(g, to_vertex(e.source_job), to_vertex(e.target_job))
       end
     end
 
@@ -49,10 +47,6 @@ defmodule Lightning.Workflows.Graph do
     |> Enum.map(fn {id} ->
       Enum.find(jobs, &match?(%{id: ^id}, &1))
     end)
-  end
-
-  defp find_job(jobs, id) do
-    Enum.find_value(jobs, fn job -> job.id == id end)
   end
 
   defp get_root(g) do
