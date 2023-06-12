@@ -14,7 +14,6 @@ defmodule Lightning.Jobs.Trigger do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Jobs.Job
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -24,8 +23,7 @@ defmodule Lightning.Jobs.Trigger do
 
   @trigger_types [:webhook, :cron]
 
-  @type trigger_type :: :webhook | :cron | :on_job_success | :on_job_failure
-
+  @type trigger_type :: :webhook | :cron
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "triggers" do
