@@ -221,14 +221,28 @@ defmodule Lightning.SetupUtils do
         project_id: openhie_project.id
       })
 
+    {:ok, openhie_trigger} =
+      Workflows.build_trigger(%{
+        type: :webhook,
+        id: "cae544ab-03dc-4ccc-a09c-fb4edb255d7a",
+        workflow_id: openhie_workflow.id
+      })
+
     {:ok, fhir_standard_data} =
       Jobs.create_job(%{
         name: "Transform data to FHIR standard",
         body: "fn(state => state);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
-        trigger: %{type: "webhook", id: "cae544ab-03dc-4ccc-a09c-fb4edb255d7a"},
         workflow_id: openhie_workflow.id
+      })
+
+    {:ok, _openhie_root_edge} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition: :webhook,
+        source_trigger_id: openhie_trigger.id,
+        target_job_id: fhir_standard_data.id
       })
 
     {:ok, send_to_openhim} =
@@ -237,11 +251,15 @@ defmodule Lightning.SetupUtils do
         body: "fn(state => x);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
-        trigger: %{
-          type: "on_job_success",
-          upstream_job_id: fhir_standard_data.id
-        },
         workflow_id: openhie_workflow.id
+      })
+
+    {:ok, _send_to_openhim_edge} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition: :on_job_success,
+        target_job_id: send_to_openhim.id,
+        source_job_id: fhir_standard_data.id
       })
 
     {:ok, notify_upload_successful} =
@@ -250,8 +268,15 @@ defmodule Lightning.SetupUtils do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
-        trigger: %{type: "on_job_success", upstream_job_id: send_to_openhim.id},
         workflow_id: openhie_workflow.id
+      })
+
+    {:ok, _success_upload} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition: :on_job_success,
+        target_job_id: notify_upload_successful.id,
+        source_job_id: send_to_openhim.id
       })
 
     {:ok, notify_upload_failed} =
@@ -260,32 +285,16 @@ defmodule Lightning.SetupUtils do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
-        trigger: %{type: "on_job_failure", upstream_job_id: send_to_openhim.id},
         workflow_id: openhie_workflow.id
       })
 
-    run_params = [
-      %{
-        job_id: send_to_openhim.id,
-        exit_code: 1,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      },
-      %{
-        job_id: notify_upload_failed.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
-      }
-    ]
-
-    {:ok, openhie_workorder} =
-      create_workorder(
-        :webhook,
-        fhir_standard_data,
-        ~s[{}],
-        run_params
-      )
+    {:ok, _failed_upload} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition: :on_job_failure,
+        target_job_id: notify_upload_failed.id,
+        source_job_id: send_to_openhim.id
+      })
 
     %{
       project: openhie_project,
@@ -319,8 +328,22 @@ defmodule Lightning.SetupUtils do
         body: "fn(state => state);",
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
-        trigger: %{type: "cron", cron_expression: "0 * * * *"},
         workflow_id: dhis2_workflow.id
+      })
+
+    {:ok, dhis_trigger} =
+      Workflows.build_trigger(%{
+        type: :cron,
+        cron_expression: "0 * * * *",
+        workflow_id: dhis2_workflow.id
+      })
+
+    {:ok, _root_edge} =
+      Workflows.create_edge(%{
+        workflow_id: dhis2_workflow.id,
+        condition: :cron,
+        source_trigger_id: dhis_trigger.id,
+        target_job_id: get_dhis2_data.id
       })
 
     {:ok, upload_to_google_sheet} =
@@ -329,26 +352,16 @@ defmodule Lightning.SetupUtils do
         body: "fn(state => state);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
-        trigger: %{type: "on_job_success", upstream_job_id: get_dhis2_data.id},
         workflow_id: dhis2_workflow.id
       })
 
-    run_params = [
-      %{
-        job_id: upload_to_google_sheet.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      }
-    ]
-
-    {:ok, dhis2_workorder} =
-      create_workorder(
-        :cron,
-        get_dhis2_data,
-        ~s[{}],
-        run_params
-      )
+    {:ok, _success_upload} =
+      Workflows.create_edge(%{
+        workflow_id: dhis2_workflow.id,
+        condition: :on_job_success,
+        target_job_id: upload_to_google_sheet.id,
+        source_job_id: get_dhis2_data.id
+      })
 
     %{
       project: dhis2_project,
