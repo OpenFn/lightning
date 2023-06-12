@@ -19,7 +19,7 @@ defmodule Lightning.Jobs do
 
   def list_active_cron_jobs do
     Query.enabled_cron_jobs()
-    |> preload(:workflow)
+    |> preload(target_job: :workflow)
     |> Repo.all()
   end
 
@@ -65,18 +65,18 @@ defmodule Lightning.Jobs do
   """
   @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
   def get_jobs_for_cron_execution(datetime) do
-    # magic function for staring workflows from crons
     list_active_cron_jobs()
-    |> Enum.filter(fn job ->
-      cron_expression = job.trigger.cron_expression
+    |> Enum.filter(fn edge ->
+      cron_expression = edge.source_trigger.cron_expression
 
       with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
            true <- Crontab.DateChecker.matches_date?(cron, datetime) do
-        job
+        edge
       else
         _ -> false
       end
     end)
+    |> Enum.map(fn e -> e.target_job end)
   end
 
   @doc """
@@ -117,6 +117,7 @@ defmodule Lightning.Jobs do
       on:
         e.source_job_id == ^job_id and
           j.id != ^job_id,
+      # TODO - maybe remove trigger preload here?
       preload: [:workflow, :trigger]
     )
   end
@@ -146,6 +147,7 @@ defmodule Lightning.Jobs do
   """
   def get_job_by_webhook(path) when is_binary(path) do
     from(j in Job,
+      # TODO - does this still work now that we have deleted "triggger_id" on job.
       join: t in assoc(j, :trigger),
       # based on a trigger can we return all the jobs that downstream from this trigger, accounting for edges
       where:
