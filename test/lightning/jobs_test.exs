@@ -37,14 +37,30 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
-      _job_0 = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+      t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
+      job_0 = job_fixture(workflow_id: t1.workflow_id)
 
-      job_1 = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
+      _e1 =
+        insert(:edge, %{
+          workflow_id: t1.workflow_id,
+          source_trigger_id: t1.id,
+          target_job_id: job_0.id
+        })
+
+      t2 = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
+      job_1 = job_fixture(workflow_id: t2.workflow_id)
+
+      _e2 =
+        insert(:edge, %{
+          workflow_id: t2.workflow_id,
+          target_job_id: job_1.id,
+          source_trigger_id: t2.id
+        })
 
       _disabled_job =
         job_fixture(
-          trigger: %{type: :cron, cron_expression: "* * * * *"},
-          enabled: false
+          enabled: false,
+          workflow_id: t2.workflow_id
         )
 
       assert Jobs.get_jobs_for_cron_execution(DateTime.utc_now()) == [
@@ -104,11 +120,7 @@ defmodule Lightning.JobsTest do
     test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
       job = job_fixture()
 
-      other_job =
-        job_fixture(
-          trigger: %{type: :on_job_failure, upstream_job_id: job.id},
-          workflow_id: job.workflow_id
-        )
+      other_job = job_fixture(workflow_id: job.workflow_id)
 
       # connect other_job to job via an edge
       insert(:edge, %{
@@ -133,137 +145,12 @@ defmodule Lightning.JobsTest do
 
   describe "update_job/2" do
     test "changing a cron to a webhook trigger does NOT create a new workflow" do
-      workflow_id = workflow_fixture().id
+      trigger = insert(:trigger, %{type: "cron", cron_expression: "* * * *"})
 
-      {:ok, %Job{} = job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron", cron_expression: "* * * *"},
-          workflow_id: workflow_id
-        })
+      workflow_id = trigger.workflow_id
 
-      {:ok,
-       %Job{
-         workflow_id: ^workflow_id
-       }} =
-        Jobs.update_job(job, %{
-          trigger: %{id: job.trigger.id, type: "webhook"}
-        })
-    end
-
-    test "update_job/2 from upstream_job A (in workflow 1) to upstream_job B (in workflow 2) changes the updated job's workflow_id to 2" do
-      workflow = workflow_fixture()
-
-      {:ok, %Job{} = upstream_job_1} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron"},
-          workflow_id: workflow.id
-        })
-
-      {:ok, %Job{} = upstream_job_2} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron"},
-          workflow_id: workflow.id
-        })
-
-      {:ok, %Job{} = downstream_job_a} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: upstream_job_1.id},
-          workflow_id: workflow.id
-        })
-
-      assert downstream_job_a.workflow_id == upstream_job_1.workflow_id
-
-      {:ok, %Job{} = downstream_job_a} =
-        Jobs.update_job(downstream_job_a, %{
-          trigger: %{
-            id: downstream_job_a.trigger.id,
-            type: "on_job_success",
-            upstream_job_id: upstream_job_2.id
-          }
-        })
-
-      assert downstream_job_a.workflow_id == upstream_job_2.workflow_id
-    end
-
-    # With some of the refactoring, we have lost the ability to automatically
-    # determine (easily) if a new Workflow must be made.
-    # We must determine how important this feature is, and deal with it via
-    # a dedicated function - and not automagically.
-    @tag :skip
-    test """
-    update_job/2 from upstream_job A (in workflow 1) to cron or webhook
-    creates a new workflow and changes the updated job's workflow_id
-    to THAT new workflow
-    """ do
-      workflow = workflow_fixture()
-
-      {:ok, %Job{} = cron_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron", cron_expression: "* * * *"},
-          workflow_id: workflow.id
-        })
-
-      {:ok, %Job{} = downstream_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: cron_job.id},
-          workflow_id: workflow.id
-        })
-
-      assert downstream_job.workflow_id == cron_job.workflow_id
-
-      workflows_before = Workflows.list_workflows()
-      count_workflows_before = Enum.count(workflows_before)
-
-      {:ok, %Job{} = downstream_job} =
-        Jobs.update_job(downstream_job, %{
-          trigger: %{
-            id: downstream_job.trigger.id,
-            type: "webhook"
-          }
-        })
-
-      assert downstream_job.trigger.upstream_job_id == nil
-
-      workflows_after = Workflows.list_workflows()
-      count_workflows_after = Enum.count(workflows_after)
-
-      refute downstream_job.workflow_id == cron_job.workflow_id
-      assert count_workflows_after == count_workflows_before + 1
-
-      assert Enum.member?(
-               Enum.map(workflows_before, fn w -> w.id end),
-               downstream_job.workflow_id
-             )
-             |> Kernel.not()
-
-      assert Enum.member?(
-               Enum.map(workflows_after, fn w -> w.id end),
-               downstream_job.workflow_id
-             )
+      {:ok, %{workflow_id: ^workflow_id}} =
+        Workflows.update_trigger(trigger, %{type: "webhook"})
     end
 
     test "update_job/2 with valid data updates the job" do
