@@ -5,7 +5,6 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query, warn: false
   alias Lightning.Repo
-  alias LightningWeb.Router.Helpers
   alias Lightning.Workflows.{Edge, Workflow}
   alias Lightning.Projects.Project
   alias Lightning.Jobs.Trigger
@@ -134,29 +133,6 @@ defmodule Lightning.Workflows do
     )
   end
 
-  defp trigger_for_project_space(edge) do
-    case edge.condition do
-      :webhook ->
-        %{
-          "webhookUrl" =>
-            Helpers.webhooks_url(
-              LightningWeb.Endpoint,
-              :create,
-              [edge.trigger.id]
-            )
-        }
-
-      :cron ->
-        %{"cronExpression" => edge.trigger.cron_expression}
-
-      type when type in [:on_job_failure, :on_job_success] ->
-        %{"upstreamJob" => edge.source_job_id}
-    end
-    |> Enum.into(%{
-      "type" => edge.condition
-    })
-  end
-
   @spec to_project_space([Workflow.t()]) :: %{}
   def to_project_space(workflows) when is_list(workflows) do
     %{
@@ -219,5 +195,14 @@ defmodule Lightning.Workflows do
     attrs
     |> Trigger.new()
     |> Repo.insert()
+  end
+
+  @doc """
+  Updates a trigger
+  """
+  def update_trigger(trigger, attrs) do
+    trigger
+    |> Trigger.changeset(attrs)
+    |> Repo.update()
   end
 end
