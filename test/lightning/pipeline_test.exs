@@ -9,6 +9,7 @@ defmodule Lightning.PipelineTest do
   import Lightning.InvocationFixtures
   import Lightning.JobsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
   describe "process/1" do
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
@@ -28,6 +29,14 @@ defmodule Lightning.PipelineTest do
               body: %{"credential" => "body"}
             ).id
         )
+
+      # add an edge to connect the two jobs
+      insert(:edge, %{
+        source_job_id: job.id,
+        workflow_id: job.workflow_id,
+        target_job_id: downstream_job_id,
+        condition: :on_job_failure
+      })
 
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       dataclip = dataclip_fixture()
@@ -76,9 +85,13 @@ defmodule Lightning.PipelineTest do
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
+      trigger = insert(:trigger, %{})
+
       job =
-        workflow_job_fixture(
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        insert(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "1",
+          workflow: trigger.workflow
         )
 
       %{id: project_credential_id, credential_id: credential_id} =
@@ -87,28 +100,44 @@ defmodule Lightning.PipelineTest do
           body: %{"apiToken" => "secret123"}
         )
 
-      %{id: _downstream_job_id} =
+      %{id: downstream_job_id} =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
           workflow_id: job.workflow_id,
-          project_credential_id: project_credential_id
+          project_credential_id: project_credential_id,
+          name: "2"
         )
 
-      %{id: _disabled_downstream_job_id} =
+      insert(:edge, %{
+        source_job_id: job.id,
+        workflow_id: job.workflow_id,
+        target_job_id: downstream_job_id,
+        condition: :on_job_success
+      })
+
+      %{id: disabled_downstream_job_id} =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           enabled: false,
           body: ~s[fn(state => state)],
-          workflow_id: job.workflow_id
+          workflow_id: job.workflow_id,
+          name: "3"
         )
+
+      insert(:edge, %{
+        source_job_id: job.id,
+        workflow_id: job.workflow_id,
+        target_job_id: disabled_downstream_job_id,
+        condition: :on_job_success
+      })
 
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       dataclip = dataclip_fixture()
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 

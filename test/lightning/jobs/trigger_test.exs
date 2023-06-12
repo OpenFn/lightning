@@ -12,7 +12,6 @@ defmodule Lightning.Jobs.TriggerTest do
       assert errors[:type] == nil
     end
 
-    
     test "must raise an error when cron expression is invalid" do
       errors =
         Trigger.changeset(%Trigger{}, %{
@@ -36,7 +35,6 @@ defmodule Lightning.Jobs.TriggerTest do
 
       assert errors[:cron_expression] == nil
     end
-
 
     test "removes cron expression job when type is :webhook" do
       changeset =
