@@ -15,17 +15,17 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
 
-  @flow_types [:on_job_success, :on_job_failure, :cron, :webhook]
+  @conditions [:on_job_success, :on_job_failure, :always]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  @type edge_condition() :: :webhook | :cron | :on_job_success | :on_job_failure
+  @type edge_condition() :: :always | :on_job_success | :on_job_failure
   schema "workflow_edges" do
     belongs_to :workflow, Workflow
     belongs_to :source_job, Job
     belongs_to :source_trigger, Trigger
     belongs_to :target_job, Job
 
-    field :condition, Ecto.Enum, values: @flow_types
+    field :condition, Ecto.Enum, values: @conditions
 
     field :delete, :boolean, virtual: true
 

@@ -417,7 +417,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _openhie_root_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
-        condition: :webhook,
+        condition: :always,
         source_trigger_id: openhie_trigger.id,
         target_job_id: fhir_standard_data.id
       })
@@ -604,7 +604,7 @@ defmodule Lightning.SetupUtils do
     {:ok, _root_edge} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
-        condition: :cron,
+        condition: :always,
         source_trigger_id: dhis_trigger.id,
         target_job_id: get_dhis2_data.id
       })
