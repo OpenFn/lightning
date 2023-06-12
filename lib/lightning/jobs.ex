@@ -6,7 +6,7 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Trigger, Query}
+  alias Lightning.Jobs.{Job, Query}
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Edge
 
@@ -14,7 +14,7 @@ defmodule Lightning.Jobs do
   Returns the list of jobs.
   """
   def list_jobs do
-    Repo.all(Job |> preload([:trigger, :workflow]))
+    Repo.all(Job |> preload([:workflow]))
   end
 
   def list_active_cron_jobs do
@@ -114,10 +114,10 @@ defmodule Lightning.Jobs do
   defp downstream_query(job_id) do
     from(j in Job,
       join: e in Edge,
-      on: e.source_job_id == ^job_id and 
-        j.id != ^job_id,
+      on:
+        e.source_job_id == ^job_id and
+          j.id != ^job_id,
       preload: [:workflow, :trigger]
-
     )
   end
 
@@ -135,7 +135,7 @@ defmodule Lightning.Jobs do
       ** (Ecto.NoResultsError)
 
   """
-  def get_job!(id), do: Repo.get!(Job |> preload([:trigger, :workflow]), id)
+  def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
   def get_job(id) do
     from(j in Job, preload: [:trigger, :workflow]) |> Repo.get(id)
@@ -147,8 +147,8 @@ defmodule Lightning.Jobs do
   def get_job_by_webhook(path) when is_binary(path) do
     from(j in Job,
       join: t in assoc(j, :trigger),
+      # based on a trigger can we return all the jobs that downstream from this trigger, accounting for edges
       where:
-        #based on a trigger can we return all the jobs that downstream from this trigger, accounting for edges
         fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path,
       preload: [:trigger, :workflow]
     )
