@@ -29,8 +29,7 @@ defmodule Lightning.JobsFixtures do
         body: "fn(state => state)",
         enabled: true,
         name: "some name",
-        adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook"}
+        adaptor: "@openfn/language-common"
       })
       |> Lightning.Jobs.create_job()
 

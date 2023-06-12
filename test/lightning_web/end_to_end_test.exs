@@ -16,6 +16,7 @@ defmodule LightningWeb.EndToEndTest do
   # defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.8 (Node.js v18.12.0"
   # defp expected_adaptor, do: "@openfn/language-http@4.2.3"
 
+  # workflow runs webhook then flow job
   test "the whole thing", %{conn: conn} do
     project = project_fixture()
 
@@ -34,12 +35,15 @@ defmodule LightningWeb.EndToEndTest do
         project_credential_id: project_credential.id
       )
 
+    # add an edge that follows the new rules foe edges 
+    # delete the current trigger for this flow job as it will have an edge
     flow_job =
       job_fixture(
         adaptor: "@openfn/language-http",
         body: flow_expression(),
         project_id: project.id,
         project_credential_id: project_credential.id,
+        # some edge here rather than trigger
         trigger: %{type: :on_job_success, upstream_job_id: webhook_job.id}
       )
 

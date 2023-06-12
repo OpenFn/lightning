@@ -3,10 +3,12 @@ defmodule LightningWeb.WebhooksController do
 
   alias Lightning.{Jobs, WorkOrderService}
 
+  # this gets hit when someone asks to run a workflow by API
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
     path
     |> Enum.join("/")
+    # TODO - this thing returns a job VIA the edge from { THIS_TRIGGER, to, THAT_JOB }
     |> Jobs.get_job_by_webhook()
     |> case do
       nil ->

@@ -225,21 +225,16 @@ defmodule Lightning.WorkflowsTest do
       assert w2.deleted_at == nil
 
       assert (w1
-              |> Repo.preload([:triggers, 
-                jobs: [:credential, :workflow]]
-              )) in results
+              |> Repo.preload([:triggers, jobs: [:credential, :workflow]])) in results
 
       assert (w2
-              |> Repo.preload([:triggers,
-                jobs: [:credential, :workflow]]
-              )) in results
+              |> Repo.preload([:triggers, jobs: [:credential, :workflow]])) in results
 
       assert length(results) == 2
     end
 
     test "to_project_spec/1", %{project: project, w1: w1, w2: w2} do
       workflows = Workflows.get_workflows_for(project)
-
 
       project_space = Workflows.to_project_space(workflows)
 
