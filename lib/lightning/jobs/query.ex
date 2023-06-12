@@ -2,9 +2,10 @@ defmodule Lightning.Jobs.Query do
   @moduledoc """
   Query module for finding Jobs.
   """
-  alias Lightning.Jobs.{Job}
+  alias Lightning.Jobs.{Job, Trigger}
   alias Lightning.Projects.{Project}
   alias Lightning.Accounts.User
+  alias Lightning.Workflows.Edge
   import Ecto.Query
 
   @doc """
@@ -32,11 +33,14 @@ defmodule Lightning.Jobs.Query do
   """
   @spec enabled_cron_jobs() :: Ecto.Queryable.t()
   def enabled_cron_jobs do
-    from(j in Job,
-      join: t in assoc(j, :trigger),
+    from(e in Edge,
+      join: j in Job,
+      on: e.target_job_id == j.id,
+      join: t in Trigger,
+      on: t.id == e.source_trigger_id,
       where: t.type == :cron,
       where: j.enabled,
-      preload: [:trigger]
+      preload: [:target_job, :source_trigger]
     )
   end
 end
