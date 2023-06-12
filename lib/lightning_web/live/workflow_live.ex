@@ -27,6 +27,7 @@ defmodule LightningWeb.WorkflowLive do
                     module={LightningWeb.WorkflowLive.WorkflowNameEditor}
                     id={@current_workflow.id}
                     workflow={@current_workflow}
+                    can_delete={@can_delete_workflow}
                     project={@project}
                     return_to={
                       ~p"/projects/#{@project.id}/w/#{@current_workflow.id}"
@@ -200,6 +201,14 @@ defmodule LightningWeb.WorkflowLive do
         socket.assigns.project
       )
 
+    can_delete_workflow =
+      ProjectUsers
+      |> Permissions.can?(
+        :delete_workflow,
+        socket.assigns.current_user,
+        socket.assigns.project
+      )
+
     {:ok,
      socket
      |> assign(
@@ -208,6 +217,7 @@ defmodule LightningWeb.WorkflowLive do
        can_edit_job: can_edit_job,
        can_run_job: can_run_job,
        can_delete_job: can_delete_job,
+       can_delete_workflow: can_delete_workflow,
        active_menu_item: :projects,
        new_credential: false,
        builder_state: %{}
@@ -311,21 +321,27 @@ defmodule LightningWeb.WorkflowLive do
 
   @impl true
   def handle_event("delete_workflow", %{"id" => id}, socket) do
-    Workflows.get_workflow!(id)
-    |> Workflows.mark_for_deletion()
-    |> case do
-      {:ok, _} ->
-        {
-          :noreply,
-          socket
-          |> assign(
-            workflows: Workflows.get_workflows_for(socket.assigns.project)
-          )
-          |> put_flash(:info, "Workflow deleted successfully")
-        }
+    if socket.assigns.can_delete_workflow do
+      Workflows.get_workflow!(id)
+      |> Workflows.mark_for_deletion()
+      |> case do
+        {:ok, _} ->
+          {
+            :noreply,
+            socket
+            |> assign(
+              workflows: Workflows.get_workflows_for(socket.assigns.project)
+            )
+            |> put_flash(:info, "Workflow deleted successfully")
+          }
 
-      {:error, _changeset} ->
-        {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+        {:error, _changeset} ->
+          {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
+      end
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 

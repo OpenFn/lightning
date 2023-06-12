@@ -16,6 +16,7 @@ defmodule Lightning.Policies.ProjectUsers do
           | :delete_job
           | :access_project
           | :delete_project
+          | :delete_workflow
           | :create_workflow
           | :edit_project_name
           | :edit_digest_alerts
@@ -67,6 +68,7 @@ defmodule Lightning.Policies.ProjectUsers do
              :edit_job,
              :create_job,
              :delete_job,
+             :delete_workflow,
              :run_job,
              :rerun_job,
              :provision_project

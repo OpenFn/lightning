@@ -533,6 +533,22 @@ defmodule LightningWeb.WorkflowLiveTest do
   end
 
   describe "delete_workflow" do
+    test "project viewer can't delete a workflow in that project",
+         %{
+           conn: conn,
+           project: project
+         } do
+      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, _html} =
+        live(conn, Routes.project_workflow_path(conn, :index, project.id))
+
+      assert view
+             |> render_click("delete_workflow", %{"id" => workflow.id}) =~
+               "You are not authorized to perform this action."
+    end
+
     test "delete a workflow on project index page",
          %{
            conn: conn,

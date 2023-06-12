@@ -7,7 +7,12 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
   @impl true
   def update(
-        %{workflow: workflow, return_to: return_to, project: project},
+        %{
+          workflow: workflow,
+          can_delete: can_delete,
+          return_to: return_to,
+          project: project
+        },
         socket
       ) do
     changeset = Workflows.change_workflow(workflow, %{})
@@ -15,6 +20,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
     {:ok,
      socket
      |> assign(
+       can_delete: can_delete,
        workflow: workflow,
        changeset: changeset,
        return_to: return_to,
@@ -48,25 +54,6 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :changeset, changeset)}
-    end
-  end
-
-  def handle_event("delete_workflow", %{"id" => id}, socket) do
-    Workflows.get_workflow!(id)
-    |> Workflows.mark_for_deletion()
-    |> case do
-      {:ok, _} ->
-        {
-          :noreply,
-          socket
-          |> assign(
-            workflows: Workflows.get_workflows_for(socket.assigns.project)
-          )
-          |> put_flash(:info, "Workflow deleted successfully")
-        }
-
-      {:error, _changeset} ->
-        {:noreply, socket |> put_flash(:error, "Can't delete workflow")}
     end
   end
 
@@ -104,7 +91,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
         </.form>
       </div>
 
-      <%= link(
+      <%= if @can_delete do %>
+        <%= link(
             to: Routes.project_workflow_path(
                         @socket,
                         :index,
@@ -119,7 +107,8 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
             class: "p-2 ml-1 mt-1"
 
             ) do %>
-        <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
+          <Icon.trash class="h-6 w-6 text-slate-300 hover:text-rose-700" />
+        <% end %>
       <% end %>
     </div>
     """
