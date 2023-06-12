@@ -65,18 +65,20 @@ defmodule Lightning.Jobs do
   """
   @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
   def get_jobs_for_cron_execution(datetime) do
-    list_active_cron_jobs()
-    |> Enum.filter(fn edge ->
-      cron_expression = edge.source_trigger.cron_expression
+    for e <- list_active_cron_jobs(),
+        is_valid_edge(e, datetime),
+        do: e.target_job
+  end
 
-      with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
-           true <- Crontab.DateChecker.matches_date?(cron, datetime) do
-        edge
-      else
-        _ -> false
-      end
-    end)
-    |> Enum.map(fn e -> e.target_job end)
+  defp is_valid_edge(edge, datetime) do
+    cron_expression = edge.source_trigger.cron_expression
+
+    with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
+         true <- Crontab.DateChecker.matches_date?(cron, datetime) do
+      edge
+    else
+      _ -> false
+    end
   end
 
   @doc """
