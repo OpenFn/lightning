@@ -6,7 +6,7 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Query}
+  alias Lightning.Jobs.{Job, Query, Trigger}
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Edge
 
@@ -149,12 +149,12 @@ defmodule Lightning.Jobs do
   """
   def get_job_by_webhook(path) when is_binary(path) do
     from(j in Job,
-      # TODO - does this still work now that we have deleted "triggger_id" on job.
-      join: t in assoc(j, :trigger),
-      # based on a trigger can we return all the jobs that downstream from this trigger, accounting for edges
+      join: e in Edge,
+        on: j.id == e.target_job_id,
+      join: t in Trigger,
+        on: e.source_trigger_id == t.id,
       where:
-        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path,
-      preload: [:trigger, :workflow]
+        fragment("coalesce(?, ?)", t.custom_path, type(e.source_trigger_id, :string)) == ^path
     )
     |> Repo.one()
   end
