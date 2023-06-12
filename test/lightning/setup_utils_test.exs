@@ -81,7 +81,7 @@ defmodule Lightning.SetupUtilsTest do
              end)
 
       assert Enum.find(loaded_flow.edges, fn e ->
-               e.condition == :webhook &&
+               e.condition == :always &&
                  e.target_job_id == fhir_standard_data.id
              end)
 
@@ -114,7 +114,7 @@ defmodule Lightning.SetupUtilsTest do
         |> Repo.preload([:edges, :triggers])
 
       assert Enum.find(loaded_dhis_flow.edges, fn e ->
-               e.condition == :cron &&
+               e.condition == :always &&
                  e.target_job_id == get_dhis2_data.id
              end)
 
