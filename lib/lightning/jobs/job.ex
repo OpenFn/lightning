@@ -18,7 +18,6 @@ defmodule Lightning.Jobs.Job do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Jobs.Trigger
   alias Lightning.Credentials.Credential
   alias Lightning.Workflows.Workflow
   alias Lightning.Projects.{ProjectCredential}
