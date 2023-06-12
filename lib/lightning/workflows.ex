@@ -127,32 +127,32 @@ defmodule Lightning.Workflows do
 
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
-      preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
+      preload: [:triggers, jobs: [:credential, :workflow,]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
   end
 
-  defp trigger_for_project_space(job) do
-    case job.trigger.type do
+  defp trigger_for_project_space(edge) do
+    case edge.condition do
       :webhook ->
         %{
           "webhookUrl" =>
             Helpers.webhooks_url(
               LightningWeb.Endpoint,
               :create,
-              [job.trigger.id]
+              [edge.trigger.id] 
             )
         }
 
       :cron ->
-        %{"cronExpression" => job.trigger.cron_expression}
+        %{"cronExpression" => edge.trigger.cron_expression}
 
       type when type in [:on_job_failure, :on_job_success] ->
-        %{"upstreamJob" => job.trigger.upstream_job_id}
+        %{"upstreamJob" => edge.source_job_id}
     end
     |> Enum.into(%{
-      "type" => job.trigger.type
+      "type" => edge.condition
     })
   end
 
@@ -168,7 +168,7 @@ defmodule Lightning.Workflows do
             "name" => job.name,
             "adaptor" => job.adaptor,
             "workflowId" => job.workflow_id,
-            "trigger" => trigger_for_project_space(job)
+            #"trigger" => trigger_for_project_space(job)
           }
         end),
       "workflows" =>
