@@ -115,7 +115,7 @@ defmodule Lightning.AttemptService do
   def get_workflow_for(%Attempt{work_order: %{workflow_id: wid}}) do
     from(w in Lightning.Workflows.Workflow,
       where: w.id == ^wid,
-      preload: [:jobs, :edges]
+      preload: [:jobs, edges: [:target_job, :source_job]]
     )
   end
 
