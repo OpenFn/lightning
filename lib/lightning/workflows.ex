@@ -6,8 +6,9 @@ defmodule Lightning.Workflows do
   import Ecto.Query, warn: false
   alias Lightning.Repo
   alias LightningWeb.Router.Helpers
-  alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.{Edge, Workflow}
   alias Lightning.Projects.Project
+  alias Lightning.Jobs.Trigger
 
   @doc """
   Returns the list of workflows.
@@ -127,7 +128,7 @@ defmodule Lightning.Workflows do
 
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
-      preload: [:triggers, jobs: [:credential, :workflow,]],
+      preload: [:triggers, jobs: [:credential, :workflow]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
@@ -141,7 +142,7 @@ defmodule Lightning.Workflows do
             Helpers.webhooks_url(
               LightningWeb.Endpoint,
               :create,
-              [edge.trigger.id] 
+              [edge.trigger.id]
             )
         }
 
@@ -167,8 +168,8 @@ defmodule Lightning.Workflows do
             "id" => job.id,
             "name" => job.name,
             "adaptor" => job.adaptor,
-            "workflowId" => job.workflow_id,
-            #"trigger" => trigger_for_project_space(job)
+            "workflowId" => job.workflow_id
+            # "trigger" => trigger_for_project_space(job)
           }
         end),
       "workflows" =>
@@ -200,5 +201,23 @@ defmodule Lightning.Workflows do
 
       Repo.update_all(workflow_jobs_query, set: [enabled: false])
     end)
+  end
+
+  @doc """
+  Creates an edge
+  """
+  def create_edge(attrs) do
+    attrs
+    |> Edge.new()
+    |> Repo.insert()
+  end
+
+  @doc """
+  Builds a Trigger
+  """
+  def build_trigger(attrs) do
+    attrs
+    |> Trigger.new()
+    |> Repo.insert()
   end
 end
