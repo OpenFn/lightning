@@ -56,8 +56,6 @@ export default {
           this.addJob(node.data.id);
         },
         onNodeClick: (event, node) => {
-          console.log('Whaaaat');
-          console.log(node);
           switch (node.type) {
             case 'trigger':
               if (node.data.trigger.type === 'webhook') {

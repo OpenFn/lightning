@@ -10,25 +10,6 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
   2. Pass the necessary assigns to the component, such as `form`, `on_change`, and `disabled`.
   3. Handle the `cron_expression_change` event to capture changes in the form inputs.
   4. Use the updated `cron_expression` in your application logic.
-
-  ## Example
-
-  ```elixir
-  defmodule LightningWeb.JobLive.MyLiveView do
-    use LightningWeb.LiveView
-
-    @impl true
-    def render(assigns) do
-      ~H""
-      <CronSetupComponent
-        form={@form}
-        on_change={@on_change}
-        disabled={@disabled}
-      />
-      ""
-    end
-  end
-  ```
   """
 
   use LightningWeb, :live_component
