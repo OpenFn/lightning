@@ -132,7 +132,10 @@ defmodule LightningWeb.JobLive.JobBuilder do
                       form={t}
                       upstream_jobs={@upstream_jobs}
                       on_cron_change={
-                        fn cron_expression ->
+                        fn params ->
+                          cron_expression =
+                            get_in(params, ["job_form", "trigger", "cron_expression"])
+
                           update_cron_expression(@job_id, cron_expression)
                         end
                       }
@@ -144,7 +147,12 @@ defmodule LightningWeb.JobLive.JobBuilder do
                   <.live_component
                     id="adaptor-picker"
                     module={LightningWeb.JobLive.AdaptorPicker}
-                    on_change={fn adaptor -> send_adaptor(@job_id, adaptor) end}
+                    on_change={
+                      fn params ->
+                        adaptor = get_in(params, ["job_form", "adaptor"])
+                        send_adaptor(@job_id, adaptor)
+                      end
+                    }
                     form={f}
                     disabled={!@can_edit_job}
                   />

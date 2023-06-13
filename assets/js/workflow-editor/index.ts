@@ -28,7 +28,11 @@ interface WorkflowEditorEntrypoint extends PhoenixHook {
   ): Promise<boolean>;
   abortController: AbortController | null;
   editJobUrl: string;
+  editTriggerUrl: string;
   selectJob(id: string): void;
+  selectTrigger(id: string): void;
+  unselectNode(): void;
+  onSelectionChange(id?: string): void;
 }
 
 const createNewWorkflow = () => {
@@ -57,6 +61,7 @@ export default {
     this._pendingWorker = Promise.resolve();
     // TODO: ensure that this is set
     this.editJobUrl = this.el.dataset.editJobUrl!;
+    this.editTriggerUrl = this.el.dataset.editTriggerUrl!;
     this.pendingChanges = [];
 
     // Setup our abort controller to stop any pending changes.
@@ -88,20 +93,50 @@ export default {
       }
 
       this.componentModule.then(({ mount }) => {
-        const onSelectionChange = (id?: string) => {
-          this.selectJob(id);
-        };
-        this.component = mount(this.el, this.workflowStore, onSelectionChange);
+        this.component = mount(
+          this.el,
+          this.workflowStore,
+          this.onSelectionChange.bind(this)
+        );
         this.component.render(this.workflowStore.getState());
       });
     });
   },
-  selectJob(id?: string) {
-    const url = this.editJobUrl.replace(
-      id ? ':job_id' : '/j/:job_id',
-      id || ''
-    );
+  selectJob(id: string) {
+    const url = this.editJobUrl.replace(':job_id', id);
     this.liveSocket.pushHistoryPatch(url, 'push', this.el);
+  },
+  selectTrigger(id: string) {
+    const url = this.editTriggerUrl.replace(':trigger_id', id);
+    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
+  },
+  unselectNode() {
+    this.liveSocket.pushHistoryPatch('/', 'push', this.el.dataset.baseUrl!);
+  },
+  onSelectionChange(id?: string) {
+    if (!id) {
+      this.unselectNode();
+      return;
+    }
+
+    const type = Object.entries(this.workflowStore.getState()).find(
+      ([_type, nodes]) => {
+        return nodes.find(node => node.id === id);
+      }
+    )?.[0];
+
+    switch (type) {
+      case 'jobs':
+        this.selectJob(id);
+        break;
+      case 'triggers':
+        this.selectTrigger(id);
+        break;
+      case undefined:
+        throw new Error(`Can't find node for id: ${id}`);
+      default:
+        throw new Error(`Unknown type ${type}`);
+    }
   },
   destroyed() {
     if (this.component) {
