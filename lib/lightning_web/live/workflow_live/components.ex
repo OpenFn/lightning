@@ -15,6 +15,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         <%= for workflow <- @workflows do %>
           <.workflow_card
             can_create_workflow={@can_create_workflow}
+            can_delete_workflow={@can_delete_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
           />
@@ -51,7 +52,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             ) %>
           </p>
         </div>
-        <%= if @can_create_workflow do %>
+        <%= if @can_delete_workflow do %>
           <div class="flex-shrink-0 pr-2">
             <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
               <%= link(

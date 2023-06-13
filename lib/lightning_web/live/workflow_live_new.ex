@@ -8,9 +8,9 @@ defmodule LightningWeb.WorkflowNewLive do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
-  attr(:changeset, :map, required: true)
+  attr :changeset, :map, required: true
 
   @impl true
   def render(assigns) do
