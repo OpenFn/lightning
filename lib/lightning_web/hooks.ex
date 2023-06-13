@@ -31,7 +31,7 @@ defmodule LightningWeb.Hooks do
        |> assign_new(:project, fn -> project end)
        |> assign_new(:projects, fn -> projects end)}
     else
-      {:halt, redirect(socket, to: "/") |> put_flash(:nav, :no_access)}
+      {:halt, redirect(socket, to: "/") |> put_flash(:nav, :not_found)}
     end
   end
 

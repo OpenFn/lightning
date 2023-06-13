@@ -26,7 +26,7 @@ defmodule LightningWeb.AuditLive.Index do
        ), layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
-       put_flash(socket, :error, "You can't access that page")
+       put_flash(socket, :nav, :no_access)
        |> push_redirect(to: "/")}
     end
   end

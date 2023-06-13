@@ -94,7 +94,7 @@ defmodule LightningWeb.CredentialLive.Edit do
         users: list_users()
       )
     else
-      put_flash(socket, :error, "You can't access that page")
+      put_flash(socket, :nav, :not_found)
       |> push_redirect(to: "/")
     end
   end

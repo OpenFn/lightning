@@ -31,7 +31,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
         live(conn, ~p"/settings/authentication")
         |> follow_redirect(conn, "/")
 
-      assert html =~ "You can&#39;t access that page"
+      assert html =~ "Sorry, you don&#39;t have access to that."
     end
   end
 
