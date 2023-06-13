@@ -24,14 +24,17 @@ defmodule Lightning.JobsTest do
     test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
       job_fixture()
 
-      enabled_job =
-        job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+      t = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
 
-      _disabled_job =
-        job_fixture(
-          trigger: %{type: :cron, cron_expression: "5 0 * 8 *"},
-          enabled: false
-        )
+      enabled_job = job_fixture(workflow_id: t.workflow_id)
+
+      insert(:edge, %{
+        workflow_id: t.workflow_id,
+        source_trigger_id: t.id,
+        target_job_id: enabled_job.id
+      })
+
+      _disabled_job = job_fixture(enabled: false)
 
       assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
     end
@@ -95,7 +98,6 @@ defmodule Lightning.JobsTest do
         })
 
       assert Jobs.get_job_by_webhook(trigger.id)
-             |> IO.inspect()
              |> unload_relation(:workflow) == job
 
       # TODO continue this logic...
@@ -157,7 +159,7 @@ defmodule Lightning.JobsTest do
 
   describe "update_job/2" do
     test "changing a cron to a webhook trigger does NOT create a new workflow" do
-      trigger = insert(:trigger, %{type: "cron", cron_expression: "* * * *"})
+      trigger = insert(:trigger, %{type: :cron, cron_expression: "* * * *"})
 
       workflow_id = trigger.workflow_id
 
@@ -194,19 +196,25 @@ defmodule Lightning.JobsTest do
     test "delete_job/1 can't delete job with downstream jobs" do
       job = job_fixture()
 
-      {:ok, %Job{} = _} =
+      {:ok, job1} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: job.id},
           workflow_id: job.workflow_id
         })
 
+      insert(:edge, %{
+        condition: :on_job_success,
+        source_job: job,
+        target_job: job1,
+        workflow_id: job.workflow_id
+      })
+
       {:error, changeset} = Jobs.delete_job(job)
 
-      assert %{trigger_id: ["This job is associated with downstream jobs"]} =
+      assert %{workflow: ["This job is associated with downstream jobs"]} =
                errors_on(changeset)
     end
   end
@@ -258,7 +266,6 @@ defmodule Lightning.JobsTest do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook", comment: "foo"},
         workflow_id: workflow_fixture().id
       }
 
@@ -266,8 +273,6 @@ defmodule Lightning.JobsTest do
       assert job.body == "some body"
       assert job.enabled == true
       assert job.name == "some name"
-
-      assert job.trigger.comment == "foo"
     end
 
     test "with an upstream job returns a job with the upstream job's workflow_id" do
@@ -327,7 +332,21 @@ defmodule Lightning.JobsTest do
 
   describe "Scheduler" do
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
-      job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
+      job = insert(:job)
+
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow_id: job.workflow_id,
+          workflow: job.workflow
+        })
+
+      insert(:edge, %{
+        workflow_id: job.workflow_id,
+        source_trigger: trigger,
+        target_job: job
+      })
 
       Scheduler.enqueue_cronjobs()
 
@@ -345,13 +364,34 @@ defmodule Lightning.JobsTest do
       assert run.input_dataclip.type == :global
       assert run.input_dataclip.body == %{}
     end
+  end
 
+  describe "Scheduler repeats" do
     test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
       job =
         job_fixture(
-          body: "fn(state => { console.log(state); return { changed: true }; })",
-          trigger: %{type: :cron, cron_expression: "* * * * *"}
+          body: "fn(state => { console.log(state); return { changed: true }; })"
         )
+
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow_id: job.workflow_id,
+          workflow: job.workflow
+        })
+
+      insert(:edge, %{
+        workflow_id: job.workflow_id,
+        source_trigger: trigger,
+        target_job: job
+      })
+
+      insert(:edge, %{
+        workflow_id: trigger.workflow_id,
+        source_trigger: trigger,
+        target_job: job
+      })
 
       {:ok, %{attempt_run: attempt_run}} =
         Lightning.WorkOrderService.multi_for(:cron, job, dataclip_fixture())

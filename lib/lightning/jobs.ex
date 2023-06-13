@@ -18,9 +18,9 @@ defmodule Lightning.Jobs do
   end
 
   def list_active_cron_jobs do
-    Query.enabled_cron_jobs()
-    |> preload(target_job: :workflow)
+    Query.enabled_cron_jobs_by_edge()
     |> Repo.all()
+    |> Enum.map(fn e -> e.target_job end)
   end
 
   @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
@@ -45,7 +45,7 @@ defmodule Lightning.Jobs do
       [workflow_id, nil] ->
         from(j in Job,
           where: j.workflow_id == ^workflow_id,
-          preload: [:trigger, :workflow]
+          preload: [:workflow]
         )
         |> Repo.all()
 
@@ -53,7 +53,7 @@ defmodule Lightning.Jobs do
         from(j in Job,
           where: j.workflow_id == ^workflow_id,
           where: j.id != ^id,
-          preload: [:trigger, :workflow]
+          preload: [:workflow]
         )
         |> Repo.all()
     end
@@ -65,7 +65,11 @@ defmodule Lightning.Jobs do
   """
   @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
   def get_jobs_for_cron_execution(datetime) do
-    for e <- list_active_cron_jobs(),
+    cron_edges =
+      Query.enabled_cron_jobs_by_edge()
+      |> Repo.all()
+
+    for e <- cron_edges,
         is_valid_edge(e, datetime),
         do: e.target_job
   end
@@ -119,8 +123,7 @@ defmodule Lightning.Jobs do
       on:
         e.source_job_id == ^job_id and
           j.id != ^job_id,
-      # TODO - maybe remove trigger preload here?
-      preload: [:workflow, :trigger]
+      preload: [:workflow]
     )
   end
 
@@ -141,7 +144,7 @@ defmodule Lightning.Jobs do
   def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
   def get_job(id) do
-    from(j in Job, preload: [:trigger, :workflow]) |> Repo.get(id)
+    from(j in Job, preload: [:workflow]) |> Repo.get(id)
   end
 
   @doc """
@@ -150,11 +153,15 @@ defmodule Lightning.Jobs do
   def get_job_by_webhook(path) when is_binary(path) do
     from(j in Job,
       join: e in Edge,
-        on: j.id == e.target_job_id,
+      on: j.id == e.target_job_id,
       join: t in Trigger,
-        on: e.source_trigger_id == t.id,
+      on: e.source_trigger_id == t.id,
       where:
-        fragment("coalesce(?, ?)", t.custom_path, type(e.source_trigger_id, :string)) == ^path
+        fragment(
+          "coalesce(?, ?)",
+          t.custom_path,
+          type(e.source_trigger_id, :string)
+        ) == ^path
     )
     |> Repo.one()
   end
@@ -208,17 +215,24 @@ defmodule Lightning.Jobs do
 
   """
   def delete_job(%Job{} = job) do
-    job
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
-      name: :jobs_trigger_id_fkey,
-      message: "This job is associated with downstream jobs"
-    )
-    |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
-      name: :invocation_reasons_run_id_fkey,
-      message: "This job is associated with runs"
-    )
-    |> Repo.delete()
+    change =
+      job
+      |> Ecto.Changeset.change()
+
+    with [_ | _] = _downstream_jobs <- get_downstream_jobs_for(job) do
+      error =
+        Ecto.Changeset.add_error(
+          change,
+          :workflow,
+          "This job is associated with downstream jobs"
+        )
+
+      {:error, error}
+    else
+      _ ->
+        change
+        |> Repo.delete()
+    end
   end
 
   @doc """
