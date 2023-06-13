@@ -10,16 +10,130 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   end
 
   describe "without a token" do
-    test "gets a 401", %{conn: conn} do
+    test "get returns a 401", %{conn: conn} do
       conn = get(conn, Routes.api_project_path(conn, :index))
+      assert json_response(conn, 401) == %{"error" => "Unauthorized"}
+    end
+
+    test "post returns a 401", %{conn: conn} do
+      body = %{"id" => "abc123", "workflows" => [%{"name" => "default"}]}
+
+      conn = post(conn, ~p"/api/provision", body)
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
   end
 
-  describe "post" do
+  describe "get (with an API token)" do
     setup [:assign_bearer_for_api]
 
-    test "fails on validation errors", %{conn: conn, user: user} do
+    test "returns a project if user has owner access", %{
+      conn: conn,
+      user: user
+    } do
+      %{id: project_id, name: project_name} =
+        project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :owner}]
+        )
+
+      conn = get(conn, ~p"/api/provision/#{project.id}")
+      response = json_response(conn, 200)
+
+      assert %{
+               "id" => ^project_id,
+               "name" => ^project_name,
+               "workflows" => workflows
+             } = response["data"]
+
+      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
+             "All workflows should belong to the same project"
+    end
+
+    test "returns a 200 if user has admin access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 200 if user has editor access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
+
+      response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 200 if user has viewer access", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      response = get(conn, ~p"/api/provision/#{project.id}")
+      assert response.status == 200
+    end
+
+    test "returns a 403 if user does not have access", %{
+      conn: conn
+    } do
+      %{id: project_id} = Lightning.Factories.insert(:project)
+
+      conn = get(conn, ~p"/api/provision/#{project_id}")
+      response = json_response(conn, 403)
+
+      assert response == %{"error" => "Forbidden"}
+    end
+  end
+
+  describe "post (with an API token)" do
+    setup [:assign_bearer_for_api]
+
+    test "is forbidden for a viewer", %{conn: conn, user: user} do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :viewer}]
+        )
+
+      body = %{
+        "id" => project.id,
+        "workflows" => [%{"name" => "default"}]
+      }
+
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 403
+    end
+
+    test "is forbidden for an editor", %{conn: conn, user: user} do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :editor}]
+        )
+
+      body = %{
+        "id" => project.id,
+        "workflows" => [%{"name" => "default"}]
+      }
+
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 403
+    end
+
+    test "fails with a 422 on validation errors", %{conn: conn, user: user} do
       project =
         Lightning.Factories.insert(:project,
           project_users: [%{user_id: user.id, role: :owner}]
@@ -80,7 +194,10 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              }
     end
 
-    test "updates an existing project", %{conn: conn, user: user} do
+    test "allows an owner to update an existing project", %{
+      conn: conn,
+      user: user
+    } do
       project =
         Lightning.Factories.insert(:project,
           project_users: [%{user_id: user.id, role: :owner}]
@@ -148,8 +265,23 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
              "The edge associated with the deleted job should be removed"
     end
 
+    test "allows an admin to update an existing project", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        Lightning.Factories.insert(:project,
+          project_users: [%{user_id: user.id, role: :admin}]
+        )
+
+      %{body: body} = valid_payload(project.id)
+
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 201
+    end
+
     @tag login_as: "superuser"
-    test "creating a new project", %{conn: conn} do
+    test "allows a superuser to create a new project", %{conn: conn} do
       %{
         body: body,
         project_id: project_id,
@@ -191,38 +323,12 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert workflow.triggers |> MapSet.new(& &1.id) == MapSet.new([trigger_id])
     end
-  end
 
-  describe "get" do
-    setup [:assign_bearer_for_api]
+    test "doesn't let a normal user create a new project", %{conn: conn} do
+      %{body: body} = valid_payload()
 
-    test "returns a project if authorized", %{conn: conn, user: user} do
-      %{id: project_id, name: project_name} =
-        project =
-        Lightning.Factories.insert(:project,
-          project_users: [%{user_id: user.id, role: :owner}]
-        )
-
-      conn = get(conn, ~p"/api/provision/#{project.id}")
-      response = json_response(conn, 200)
-
-      assert %{
-               "id" => ^project_id,
-               "name" => ^project_name,
-               "workflows" => workflows
-             } = response["data"]
-
-      assert workflows |> Enum.all?(&match?(%{"project_id" => ^project_id}, &1)),
-             "All workflows should belong to the same project"
-    end
-
-    test "returns a 401 if not authorized", %{conn: conn} do
-      %{id: project_id} = Lightning.Factories.insert(:project)
-
-      conn = get(conn, ~p"/api/provision/#{project_id}")
-      response = json_response(conn, 401)
-
-      assert response == %{"error" => "Unauthorized"}
+      response = post(conn, ~p"/api/provision", body)
+      assert response.status == 403
     end
   end
 
