@@ -64,7 +64,7 @@ defmodule LightningWeb.LiveHelpers do
         :not_found ->
           assign(assigns,
             heading: "Not Found",
-            blurb: "Sorry, we couldn't find what you were looking for.",
+            blurb: "Sorry, we can't find anything here for you.",
             show_nav_error: true
           )
 

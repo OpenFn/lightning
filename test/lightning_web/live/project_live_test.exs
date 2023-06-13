@@ -22,7 +22,7 @@ defmodule LightningWeb.ProjectLiveTest do
       {:ok, _index_live, html} =
         live(conn, ~p"/settings/projects") |> follow_redirect(conn, "/")
 
-      assert html =~ "You can&#39;t access that page"
+      assert html =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "cannot access the new page", %{conn: conn} do
@@ -30,7 +30,7 @@ defmodule LightningWeb.ProjectLiveTest do
         live(conn, ~p"/settings/projects/new")
         |> follow_redirect(conn, "/")
 
-      assert html =~ "You can&#39;t access that page"
+      assert html =~ "Sorry, you don&#39;t have access to that."
     end
   end
 
@@ -390,7 +390,7 @@ defmodule LightningWeb.ProjectLiveTest do
                conn,
                Routes.project_workflow_path(conn, :index, project_3.id)
              ) ==
-               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
   end
 

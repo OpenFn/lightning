@@ -44,14 +44,14 @@ defmodule LightningWeb.API.JobControllerTest do
              ]
     end
 
-    test "responds with a 404 when I don't have access", %{conn: conn} do
+    test "responds with a 401 when I don't have access", %{conn: conn} do
       other_project = project_fixture()
 
       conn = get(conn, ~p"/api/projects/#{other_project.id}/jobs")
 
-      response = json_response(conn, 404)
+      response = json_response(conn, 401)
 
-      assert response == %{"error" => "Not Found"}
+      assert response == %{"error" => "Unauthorized"}
     end
 
     test "lists all jobs", %{conn: conn, job: job} do

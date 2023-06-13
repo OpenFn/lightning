@@ -330,7 +330,7 @@ defmodule LightningWeb.CredentialLiveTest do
         |> follow_redirect(conn)
         |> follow_redirect(conn)
 
-      assert html =~ "You can&#39;t access that page"
+      assert html =~ "Sorry, we can&#39;t find anything here for you."
     end
 
     test "marks a credential for use in a 'production' system", %{

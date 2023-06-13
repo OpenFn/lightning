@@ -6,7 +6,7 @@ defmodule LightningWeb.API.ProvisioningController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.Provisioning
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback(LightningWeb.FallbackController)
 
   def create(conn, params) do
     with project <- get_or_build_project(params),
@@ -17,10 +17,12 @@ defmodule LightningWeb.API.ProvisioningController do
              conn.assigns.current_user,
              project
            ),
-         {:ok, project} <- Provisioner.import_document(project, params) do
-      # TODO: check if the user is allowed to update this project
-      # TODO: check if the user is allowed to provision a project
-
+         {:ok, project} <-
+           Provisioner.import_document(
+             project,
+             conn.assigns.current_user,
+             params
+           ) do
       conn
       |> put_status(:created)
       |> put_resp_header("location", ~p"/api/provision/#{project.id}")
@@ -34,7 +36,7 @@ defmodule LightningWeb.API.ProvisioningController do
          :ok <-
            Permissions.can(
              Provisioning,
-             :provision_project,
+             :describe_project,
              conn.assigns.current_user,
              project
            ) do

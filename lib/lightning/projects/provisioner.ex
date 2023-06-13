@@ -11,23 +11,26 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Changeset
   import Ecto.Query
 
-  alias Lightning.Projects.Project
+  alias Lightning.Projects.{Project, ProjectUser}
   alias Lightning.Jobs.{Job, Trigger}
   alias Lightning.Workflows.{Workflow, Edge}
+  alias Lightning.Accounts.{User}
   alias Lightning.Repo
 
   @doc """
   Import a project.
   """
-  @spec import_document(Project.t() | nil, map()) ::
+  @spec import_document(Project.t() | nil, User.t(), map()) ::
           {:error, Ecto.Changeset.t(Project.t())}
           | {:ok, Project.t()}
-  def import_document(nil, data), do: import_document(%Project{}, data)
+  def import_document(nil, %User{} = user, data),
+    do: import_document(%Project{}, user, data)
 
-  def import_document(project, data) do
+  def import_document(project, %User{} = user, data) do
     project
     |> maybe_reload_project()
     |> parse_document(data)
+    |> maybe_add_project_user(user)
     |> Repo.insert_or_update()
     |> case do
       {:ok, %{id: id}} ->
@@ -45,6 +48,28 @@ defmodule Lightning.Projects.Provisioner do
     |> cast_assoc(:workflows, with: &workflow_changeset/2)
   end
 
+  defp maybe_add_project_user(changeset, user) do
+    if needs_initial_project_user?(changeset) do
+      changeset |> add_owner(user)
+    else
+      changeset
+    end
+  end
+
+  defp needs_initial_project_user?(changeset) do
+    changeset
+    |> get_field(:project_users)
+    |> Enum.empty?()
+  end
+
+  defp add_owner(changeset, user) do
+    changeset
+    |> put_assoc(:project_users, [
+      %ProjectUser{user_id: user.id, role: "owner"}
+      | changeset |> get_field(:project_users)
+    ])
+  end
+
   @doc """
   Load a project by ID, including all workflows and their associated jobs,
   triggers and edges.
@@ -55,7 +80,7 @@ defmodule Lightning.Projects.Provisioner do
   def load_project(id) do
     from(p in Project,
       where: p.id == ^id,
-      preload: [workflows: [:jobs, :triggers, :edges]]
+      preload: [:project_users, workflows: [:jobs, :triggers, :edges]]
     )
     |> Repo.one()
   end

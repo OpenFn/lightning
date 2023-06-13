@@ -3,6 +3,7 @@ defmodule Lightning.Projects.ProvisionerTest do
 
   alias Lightning.Projects.Provisioner
   alias Lightning.ProjectsFixtures
+  import Lightning.Factories
 
   describe "parse_document/2 with a new project" do
     test "with invalid data" do
@@ -59,8 +60,12 @@ defmodule Lightning.Projects.ProvisionerTest do
                base: ["extraneous parameters: baz, foo"]
              }
     end
+  end
 
+  describe "import_document/2 with a new project" do
     test "with valid data" do
+      user = insert(:user)
+
       %{
         body: body,
         project_id: project_id,
@@ -70,7 +75,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       } = valid_document()
 
       {:ok, project} =
-        Provisioner.import_document(%Lightning.Projects.Project{}, body)
+        Provisioner.import_document(%Lightning.Projects.Project{}, user, body)
 
       assert %{id: ^project_id, workflows: [workflow]} = project
 
@@ -81,18 +86,48 @@ defmodule Lightning.Projects.ProvisionerTest do
                MapSet.new([first_job_id, second_job_id])
              ),
              "Should have both the first and second jobs"
+
+      project = project |> Lightning.Repo.preload(:project_users)
+
+      assert project.project_users
+             |> Enum.any?(fn pu ->
+               pu.user_id == user.id && pu.role == :owner
+             end)
     end
   end
 
   describe "import_document/2 with an existing project" do
     setup do
-      %{project: ProjectsFixtures.project_fixture()}
+      %{project: ProjectsFixtures.project_fixture(), user: insert(:user)}
     end
 
-    test "changing, adding records", %{project: project} do
+    test "doesn't add another project user", %{project: project, user: user} do
       %{body: body} = valid_document(project.id)
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
+
+      project = project |> Lightning.Repo.preload(:project_users)
+
+      assert project.project_users
+             |> Enum.any?(fn pu ->
+               pu.user_id == user.id && pu.role == :owner
+             end)
+
+      user2 = insert(:user)
+
+      {:ok, project} = Provisioner.import_document(project, user2, body)
+
+      project = project |> Lightning.Repo.preload(:project_users)
+
+      project_user_ids = project.project_users |> Enum.map(& &1.user_id)
+      assert user.id in project_user_ids
+      refute user2.id in project_user_ids
+    end
+
+    test "changing, adding records", %{project: project, user: user} do
+      %{body: body} = valid_document(project.id)
+
+      {:ok, project} = Provisioner.import_document(project, user, body)
 
       assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 1
 
@@ -119,7 +154,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       assert %{action: :insert, changes: %{id: ^third_job_id}} =
                new_job_changeset
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
 
       assert project.workflows
              |> Enum.at(0)
@@ -128,10 +163,13 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The third job should be added"
     end
 
-    test "adding a record from another project or workflow", %{project: project} do
+    test "adding a record from another project or workflow", %{
+      project: project,
+      user: user
+    } do
       %{body: body, workflow_id: workflow_id} = valid_document(project.id)
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
 
       assert project.workflows |> Enum.at(0) |> Map.get(:edges) |> length() == 1
 
@@ -140,6 +178,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       {:error, changeset} =
         Provisioner.import_document(
           project,
+          user,
           body
           |> add_entity_to_workflow(workflow_id, "jobs", %{
             "id" => third_job_id,
@@ -157,6 +196,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       {:error, changeset} =
         Provisioner.import_document(
           project,
+          user,
           body
           |> add_entity_to_workflow(workflow_id, "triggers", %{
             "id" => other_trigger_id
@@ -172,6 +212,7 @@ defmodule Lightning.Projects.ProvisionerTest do
       {:error, changeset} =
         Provisioner.import_document(
           project,
+          user,
           body
           |> add_entity_to_workflow(workflow_id, "edges", %{
             "id" => other_edge_id
@@ -183,13 +224,13 @@ defmodule Lightning.Projects.ProvisionerTest do
              }
     end
 
-    test "removing a record", %{project: project} do
+    test "removing a record", %{project: project, user: user} do
       %{
         body: body,
         second_job_id: second_job_id
       } = valid_document(project.id)
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
 
       body = body |> remove_job_from_document(second_job_id)
 
@@ -208,7 +249,7 @@ defmodule Lightning.Projects.ProvisionerTest do
                end),
              "The second job should be marked for deletion"
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
 
       workflow_job_ids =
         project.workflows
@@ -224,13 +265,13 @@ defmodule Lightning.Projects.ProvisionerTest do
              "The edge associated with the deleted job should be removed"
     end
 
-    test "removing a workflow", %{project: project} do
+    test "removing a workflow", %{project: project, user: user} do
       %{
         body: body,
         workflow_id: workflow_id
       } = valid_document(project.id)
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
       body = body |> remove_workflow_from_document(workflow_id)
 
       changeset = Provisioner.parse_document(project, body)
@@ -244,13 +285,16 @@ defmodule Lightning.Projects.ProvisionerTest do
                end),
              "The workflow should be marked for deletion"
 
-      {:ok, project} = Provisioner.import_document(project, body)
+      {:ok, project} = Provisioner.import_document(project, user, body)
 
       assert project.workflows == [],
              "The workflow should be removed from the project"
     end
 
-    test "marking a new/changed record for deletion", %{project: project} do
+    test "marking a new/changed record for deletion", %{
+      project: project,
+      user: user
+    } do
       body = %{
         "id" => project.id,
         "name" => "test-project",
@@ -259,7 +303,7 @@ defmodule Lightning.Projects.ProvisionerTest do
         ]
       }
 
-      {:error, changeset} = Provisioner.import_document(project, body)
+      {:error, changeset} = Provisioner.import_document(project, user, body)
 
       refute changeset.valid?
 

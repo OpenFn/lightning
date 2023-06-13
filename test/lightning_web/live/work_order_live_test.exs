@@ -1143,7 +1143,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       assert error ==
-               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
 
     test "log_view component" do

@@ -39,7 +39,7 @@ defmodule LightningWeb.DashboardLive.Index do
           to: Routes.project_workflow_path(socket, :index, project.id)
         )
       else
-        {:halt, redirect(socket, to: "/") |> put_flash(:nav, :no_access)}
+        {:halt, redirect(socket, to: "/") |> put_flash(:nav, :not_found)}
       end
     else
       socket

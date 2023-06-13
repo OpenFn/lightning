@@ -266,7 +266,7 @@ defmodule LightningWeb.UserLiveTest do
         live(conn, Routes.user_index_path(conn, :index))
         |> follow_redirect(conn, "/")
 
-      assert html =~ "You can&#39;t access that page"
+      assert html =~ "Sorry, you don&#39;t have access to that."
     end
 
     test "a regular user cannot access a user edit page", %{
@@ -277,7 +277,7 @@ defmodule LightningWeb.UserLiveTest do
         live(conn, Routes.user_edit_path(conn, :edit, user.id))
         |> follow_redirect(conn, "/")
 
-      assert html =~ "You can&#39;t access that page"
+      assert html =~ "Sorry, you don&#39;t have access to that."
     end
   end
 end

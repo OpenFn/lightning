@@ -22,7 +22,7 @@ defmodule LightningWeb.DataclipLiveTest do
         live(conn, Routes.project_dataclip_index_path(conn, :index, project.id))
 
       assert error ==
-               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
 
     test "lists all dataclips", %{
@@ -155,7 +155,7 @@ defmodule LightningWeb.DataclipLiveTest do
         )
 
       assert error ==
-               {:error, {:redirect, %{flash: %{"nav" => :no_access}, to: "/"}}}
+               {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
   end
 end
