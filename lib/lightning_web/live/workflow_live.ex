@@ -44,6 +44,7 @@ defmodule LightningWeb.WorkflowLive do
             <LayoutComponents.centered>
               <.workflow_list
                 can_create_workflow={@can_create_workflow}
+                can_delete_workflow={@can_delete_workflow}
                 workflows={@workflows}
                 project={@project}
               />
