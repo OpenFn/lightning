@@ -105,12 +105,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
   @impl true
   def update(
-        %{
-          id: id,
-          form: form,
-          on_change: on_change,
-          disabled: disabled
-        },
+        %{id: id, form: form, on_change: on_change, disabled: disabled},
         socket
       ) do
     cron_data =
@@ -129,44 +124,46 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
     {:ok,
      socket
-     |> assign(:id, id)
-     |> assign(:on_change, on_change)
-     |> assign(:form, form)
-     |> assign(:cron_data, cron_data)
-     |> assign(:disabled, disabled)
-     |> assign(:initial_values, %{
-       "frequencies" => [
-         "Every hour": "hourly",
-         "Every day": "daily",
-         "Every week": "weekly",
-         "Every month": "monthly",
-         Custom: "custom"
-       ],
-       "minutes" =>
-         0..59
-         |> Enum.map(fn x ->
-           String.pad_leading(Integer.to_string(x), 2, "0")
-         end),
-       "hours" =>
-         0..23
-         |> Enum.map(fn x ->
-           String.pad_leading(Integer.to_string(x), 2, "0")
-         end),
-       "weekdays" => [
-         Monday: "01",
-         Tuesday: "02",
-         Wednesday: "03",
-         Thursday: "04",
-         Friday: "05",
-         Saturday: "06",
-         Sunday: "07"
-       ],
-       "monthdays" =>
-         1..31
-         |> Enum.map(fn x ->
-           String.pad_leading(Integer.to_string(x), 2, "0")
-         end)
-     })}
+     |> assign(
+       id: id,
+       on_change: on_change,
+       form: form,
+       cron_data: cron_data,
+       disabled: disabled,
+       initial_values: %{
+         "frequencies" => [
+           "Every hour": "hourly",
+           "Every day": "daily",
+           "Every week": "weekly",
+           "Every month": "monthly",
+           Custom: "custom"
+         ],
+         "minutes" =>
+           0..59
+           |> Enum.map(fn x ->
+             String.pad_leading(Integer.to_string(x), 2, "0")
+           end),
+         "hours" =>
+           0..23
+           |> Enum.map(fn x ->
+             String.pad_leading(Integer.to_string(x), 2, "0")
+           end),
+         "weekdays" => [
+           Monday: "01",
+           Tuesday: "02",
+           Wednesday: "03",
+           Thursday: "04",
+           Friday: "05",
+           Saturday: "06",
+           Sunday: "07"
+         ],
+         "monthdays" =>
+           1..31
+           |> Enum.map(fn x ->
+             String.pad_leading(Integer.to_string(x), 2, "0")
+           end)
+       }
+     )}
   end
 
   def get_cron_data(nil), do: %{}
