@@ -39,6 +39,7 @@ defmodule Lightning.Policies.ProjectUsers do
           Lightning.Projects.Project.t()
         ) :: boolean
   def authorize(:access_project, %User{}, nil), do: false
+
   def authorize(:access_project, %User{} = user, %Project{} = project),
     do:
       is_nil(project.scheduled_deletion) and

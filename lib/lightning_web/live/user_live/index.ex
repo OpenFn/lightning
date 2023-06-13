@@ -16,7 +16,8 @@ defmodule LightningWeb.UserLive.Index do
     if can_access_admin_space do
       {:ok,
        assign(socket, :users, list_users())
-       |> assign(:active_menu_item, :users), layout: {LightningWeb.Layouts, :settings}}
+       |> assign(:active_menu_item, :users),
+       layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
        put_flash(socket, :nav, :no_access)

@@ -18,7 +18,8 @@ defmodule LightningWeb.UserLive.Edit do
     if can_access_admin_space do
       {:ok,
        socket
-       |> assign(active_menu_item: :users), layout: {LightningWeb.Layouts, :settings}}
+       |> assign(active_menu_item: :users),
+       layout: {LightningWeb.Layouts, :settings}}
     else
       {:ok,
        put_flash(socket, :nav, :no_access)
