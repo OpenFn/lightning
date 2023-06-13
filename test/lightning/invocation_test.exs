@@ -190,28 +190,22 @@ defmodule Lightning.InvocationTest do
 
     test "create_log_line/2 create log lines for a given run" do
       run = run_fixture()
-      assert Pipeline.logs_for_run(run) == []
-
       Invocation.create_log_line(run, "log")
 
       run_logs = Invocation.get_run!(run.id) |> Pipeline.logs_for_run()
 
       assert length(run_logs) == 1
-
-      assert Enum.any?(run_logs, fn log -> log.body == "log" end)
+      assert [%{body: "log"}] = run_logs
     end
 
     test "create_log_line/2 transform logs with nil body to empty string" do
       run = run_fixture()
-      assert Pipeline.logs_for_run(run) == []
-
       Invocation.create_log_line(run, nil)
 
       run_logs = Invocation.get_run!(run.id) |> Pipeline.logs_for_run()
 
       assert length(run_logs) == 1
-
-      assert Enum.any?(run_logs, fn log -> log.body == "" end)
+      assert [%{body: ""}] = run_logs
     end
 
     test "update_run/2 with valid data updates the run" do
