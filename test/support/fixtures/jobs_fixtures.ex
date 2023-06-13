@@ -75,17 +75,28 @@ defmodule Lightning.JobsFixtures do
         trigger: %{type: "webhook"}
       })
 
-    job = 
-    %Lightning.Jobs.Job{}
-    |> Ecto.Changeset.change()
-    |> Lightning.Jobs.Job.put_workflow(workflow)
-    |> Lightning.Jobs.Job.changeset(attrs)
-    |> Lightning.Repo.insert!()
+    job =
+      %Lightning.Jobs.Job{}
+      |> Ecto.Changeset.change()
+      |> Lightning.Jobs.Job.put_workflow(workflow)
+      |> Lightning.Jobs.Job.changeset(attrs)
+      |> Lightning.Repo.insert!()
 
-    t =  insert(:trigger, %{workflow_id: job.workflow.id, workflow: job.workflow, type: :webhook})
-    insert(:edge, %{source_trigger_id: t.id, target_job_id: job.id, workflow_id: job.workflow.id})
+    t =
+      insert(:trigger, %{
+        workflow_id: job.workflow.id,
+        workflow: job.workflow,
+        type: :webhook
+      })
 
-    job
+    e =
+      insert(:edge, %{
+        source_trigger_id: t.id,
+        target_job_id: job.id,
+        workflow_id: job.workflow.id
+      })
+
+    %{job: job, edge: e, trigger: t}
   end
 
   def workflow_scenario() do
