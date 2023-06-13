@@ -24,7 +24,8 @@ defmodule Lightning.JobsTest do
     test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
       job_fixture()
 
-      enabled_job = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+      enabled_job =
+        job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
 
       _disabled_job =
         job_fixture(
@@ -83,7 +84,8 @@ defmodule Lightning.JobsTest do
     test "get_job_by_webhook/1 returns the job for a path" do
       job = job_fixture()
       # @Stu, why do I need to specify workflow_id _AND_ workflow here???
-      trigger = insert(:trigger, %{workflow: job.workflow, workflow_id: job.workflow_id})
+      trigger =
+        insert(:trigger, %{workflow: job.workflow, workflow_id: job.workflow_id})
 
       _edge =
         insert(:edge, %{
@@ -159,7 +161,8 @@ defmodule Lightning.JobsTest do
 
       workflow_id = trigger.workflow_id
 
-      {:ok, %{workflow_id: ^workflow_id}} = Workflows.update_trigger(trigger, %{type: "webhook"})
+      {:ok, %{workflow_id: ^workflow_id}} =
+        Workflows.update_trigger(trigger, %{type: "webhook"})
     end
 
     test "update_job/2 with valid data updates the job" do
@@ -203,7 +206,8 @@ defmodule Lightning.JobsTest do
 
       {:error, changeset} = Jobs.delete_job(job)
 
-      assert %{trigger_id: ["This job is associated with downstream jobs"]} = errors_on(changeset)
+      assert %{trigger_id: ["This job is associated with downstream jobs"]} =
+               errors_on(changeset)
     end
   end
 
