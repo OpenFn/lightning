@@ -662,13 +662,13 @@ defmodule LightningWeb.RunLive.Components do
   defp humanize_wo_dates(filter) do
     case filter do
       %{wo_date_after: date_after, wo_date_before: date_before} ->
-        "received between #{date_before} and #{date_after}"
+        "received between #{humanize_datetime(date_before)} and #{humanize_datetime(date_after)}"
 
       %{wo_date_after: date_after} ->
-        "received after #{date_after}"
+        "received after #{humanize_datetime(date_after)}"
 
       %{wo_date_before: date_before} ->
-        "received before #{date_before}"
+        "received before #{humanize_datetime(date_before)}"
 
       _other ->
         ""
@@ -678,13 +678,13 @@ defmodule LightningWeb.RunLive.Components do
   defp humanize_run_dates(filter) do
     case filter do
       %{date_after: date_after, date_before: date_before} ->
-        "which was last run between #{date_before} and #{date_after}"
+        "which was last run between #{humanize_datetime(date_before)} and #{humanize_datetime(date_after)}"
 
       %{date_after: date_after} ->
-        "which was last run after #{date_after}"
+        "which was last run after #{humanize_datetime(date_after)}"
 
       %{date_before: date_before} ->
-        "which was last run before #{date_before}"
+        "which was last run before #{humanize_datetime(date_before)}"
 
       _other ->
         ""
@@ -715,7 +715,7 @@ defmodule LightningWeb.RunLive.Components do
   defp humanize_status(filter) do
     case filter do
       %{status: [_1, _2 | _rest] = statuses} ->
-        "having statuses of #{Enum.map_join(statuses, " or ", fn status -> "'#{humanize_field(status)}'" end)}"
+        "having a status of either #{Enum.map_join(statuses, " or ", fn status -> "'#{humanize_field(status)}'" end)}"
 
       %{status: [status]} ->
         "having a status of '#{humanize_field(status)}'"
@@ -731,6 +731,10 @@ defmodule LightningWeb.RunLive.Components do
       :body -> "Input Body"
       other -> other |> to_string |> String.capitalize()
     end
+  end
+
+  defp humanize_datetime(date) do
+    Timex.format!(date, "{D}/{M}/{YY} at {h12}:{m}{am}")
   end
 
   def show_modal(js \\ %JS{}, id) when is_binary(id) do
