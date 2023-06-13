@@ -10,6 +10,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.WorkOrderService
   alias Lightning.{AttemptService, Invocation}
   alias Lightning.Invocation.Run
+  alias LightningWeb.RunLive.Components
   alias Phoenix.LiveView.JS
 
   @filters_types %{
@@ -266,15 +267,5 @@ defmodule LightningWeb.RunLive.Index do
         event: :selection_toggled
       )
     end
-  end
-
-  def show_modal(js \\ %JS{}) do
-    js
-    |> JS.remove_class("hidden", to: "#confirmation-modal")
-  end
-
-  def hide_modal(js \\ %JS{}) do
-    js
-    |> JS.add_class("hidden", to: "#confirmation-modal")
   end
 end

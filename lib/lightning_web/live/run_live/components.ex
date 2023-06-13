@@ -462,8 +462,6 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  alias Phoenix.LiveView.JS
-
   def switch_section(section) do
     JS.hide(to: "[id$=_section]:not([id=#{section}_section])")
     |> JS.set_attribute({"data-active", "false"},
@@ -525,5 +523,252 @@ defmodule LightningWeb.RunLive.Components do
     assign(assigns,
       classes: @base_classes ++ classes ++ List.wrap(assigns[:class])
     )
+  end
+
+  # BULK RERUN
+  attr :id, :string, required: true
+  attr :page_number, :integer, required: true
+  attr :total_entries, :integer, required: true
+  attr :all_selected?, :boolean, required: true
+  attr :selected_count, :integer, required: true
+  attr :show, :boolean, default: false
+
+  def bulk_rerun_modal(assigns) do
+    ~H"""
+    <div
+      class="relative z-10 hidden"
+      aria-labelledby={"#{@id}-title"}
+      id={@id}
+      role="dialog"
+      aria-modal="true"
+      phx-mounted={@show && show_modal(@id)}
+    >
+      <div
+        id={"#{@id}-bg"}
+        class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+      >
+      </div>
+
+      <div
+        aria-labelledby={"#{@id}-title"}
+        class="fixed inset-0 z-10 overflow-y-auto"
+      >
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <.focus_wrap
+            id={"#{@id}-container"}
+            phx-mounted={@show && show_modal(@id)}
+            phx-window-keydown={hide_modal(@id)}
+            phx-key="escape"
+            phx-click-away={hide_modal(@id)}
+            class="hidden relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6"
+          >
+            <div id={"#{@id}-content"} class="mt-3 text-center sm:mt-5">
+              <h3
+                class="text-base font-semibold leading-6 text-gray-900"
+                id={"#{@id}-title"}
+              >
+                Run Selected Workers
+              </h3>
+              <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                  <%= if @all_selected? do %>
+                    You've selected the <%= @selected_count %> work orders from page <%= @page_number %> of results for workorders matching the following query: <%= humanize_search_params(
+                      @filters,
+                      @workflows
+                    ) %>. There are a total of <%= @total_entries %> work orders matching this query.
+                  <% else %>
+                    You've selected <%= @selected_count %> work orders to rerun from the start (first job). This will create a new attempt for these within the same work order
+                  <% end %>
+                </p>
+              </div>
+            </div>
+            <div
+              :if={@all_selected? and @total_entries > 1}
+              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+            >
+              <button
+                type="button"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
+              >
+                Rerun selected (<%= @selected_count %> workorders) from start
+              </button>
+              <button
+                type="button"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+              >
+                Rerun ALL (<%= @total_entries %> ) from start
+              </button>
+              <div class="relative col-start-1 col-end-3">
+                <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center">
+                  <span class="bg-white px-2 text-sm text-gray-500">
+                    OR
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
+                phx-click={hide_modal(@id)}
+              >
+                Cancel
+              </button>
+            </div>
+            <div
+              :if={!@all_selected? or @total_entries == 1}
+              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+            >
+              <button
+                type="button"
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+              >
+                Rerun selected (<%= @selected_count %> workorders) from start
+              </button>
+              <button
+                type="button"
+                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
+                phx-click={hide_modal(@id)}
+              >
+                Cancel
+              </button>
+            </div>
+          </.focus_wrap>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp humanize_search_params(filters, workflows) do
+    filter =
+      filters
+      |> Map.from_struct()
+      |> Enum.reject(fn {_key, val} -> is_nil(val) end)
+      |> Enum.into(%{})
+
+    params = [
+      humanize_wo_dates(filter),
+      humanize_workflow(filter, workflows),
+      humanize_run_dates(filter),
+      humanize_search_term(filter),
+      humanize_status(filter)
+    ]
+
+    params |> Enum.reject(&(&1 == "")) |> Enum.join(", ")
+  end
+
+  defp humanize_wo_dates(filter) do
+    case filter do
+      %{wo_date_after: date_after, wo_date_before: date_before} ->
+        "received between #{date_before} and #{date_after}"
+
+      %{wo_date_after: date_after} ->
+        "received after #{date_after}"
+
+      %{wo_date_before: date_before} ->
+        "received before #{date_before}"
+
+      _other ->
+        ""
+    end
+  end
+
+  defp humanize_run_dates(filter) do
+    case filter do
+      %{date_after: date_after, date_before: date_before} ->
+        "which was last run between #{date_before} and #{date_after}"
+
+      %{date_after: date_after} ->
+        "which was last run after #{date_after}"
+
+      %{date_before: date_before} ->
+        "which was last run before #{date_before}"
+
+      _other ->
+        ""
+    end
+  end
+
+  defp humanize_search_term(filter) do
+    case filter do
+      %{search_term: search_term, search_fields: [_h | _t] = search_fields} ->
+        "whose run #{Enum.map_join(search_fields, " and ", &humanize_field/1)} contain #{search_term}"
+
+      _other ->
+        ""
+    end
+  end
+
+  defp humanize_workflow(filter, workflows) do
+    case filter do
+      %{workflow_id: workflow_id} ->
+        workflow = Enum.find(workflows, &(&1.id == workflow_id))
+        "for #{workflow.name} workflow"
+
+      _other ->
+        ""
+    end
+  end
+
+  defp humanize_status(filter) do
+    case filter do
+      %{status: [_1, _2 | _rest] = statuses} ->
+        "having statuses of #{Enum.map_join(statuses, " or ", fn status -> "'#{humanize_field(status)}'" end)}"
+
+      %{status: [status]} ->
+        "having a status of '#{humanize_field(status)}'"
+
+      _other ->
+        ""
+    end
+  end
+
+  defp humanize_field(search_field) do
+    case search_field do
+      :log -> "Logs"
+      :body -> "Input Body"
+      other -> other |> to_string |> String.capitalize()
+    end
+  end
+
+  def show_modal(js \\ %JS{}, id) when is_binary(id) do
+    js
+    |> JS.show(to: "##{id}")
+    |> JS.show(
+      to: "##{id}-bg",
+      transition:
+        {"transition-all transform ease-out duration-300", "opacity-0",
+         "opacity-100"}
+    )
+    |> JS.show(
+      to: "##{id}-container",
+      transition:
+        {"transition-all transform ease-out duration-300",
+         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+         "opacity-100 translate-y-0 sm:scale-100"}
+    )
+    |> JS.focus_first(to: "##{id}-content")
+  end
+
+  def hide_modal(js \\ %JS{}, id) do
+    js
+    |> JS.hide(
+      to: "##{id}-bg",
+      transition:
+        {"transition-all transform ease-in duration-200", "opacity-100",
+         "opacity-0"}
+    )
+    |> JS.hide(
+      to: "##{id}-container",
+      time: 200,
+      transition:
+        {"transition-all transform ease-in duration-200",
+         "opacity-100 translate-y-0 sm:scale-100",
+         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
+    )
+    |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
+    |> JS.pop_focus()
   end
 end
