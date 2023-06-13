@@ -2,6 +2,8 @@ defmodule Lightning.SetupUtils do
   @moduledoc """
   SetupUtils encapsulates logic for setting up initial data for various sites.
   """
+  alias Lightning.WorkOrder
+
   alias Lightning.{
     Projects,
     Accounts,
@@ -179,27 +181,38 @@ defmodule Lightning.SetupUtils do
         project_credential_id: List.first(credential.project_credentials).id
       })
 
-    run_params = [
-      %{
-        job_id: job_2.id,
-        exit_code: 1,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      },
-      %{
-        job_id: job_3.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      }
-    ]
+    # run_params = [
+    #   %{
+    #     job_id: job_1.id,
+    #     exit_code: 0,
+    #     started_at: DateTime.utc_now() |> DateTime.add(0, :second),
+    #     finished_at: DateTime.utc_now() |> DateTime.add(5, :second)
+    #   },
+    #   %{
+    #     job_id: job_2.id,
+    #     exit_code: 0,
+    #     started_at: DateTime.utc_now() |> DateTime.add(6, :second),
+    #     finished_at: DateTime.utc_now() |> DateTime.add(10, :second)
+    #   },
+    #   %{
+    #     job_id: job_3.id,
+    #     exit_code: 0,
+    #     started_at: DateTime.utc_now() |> DateTime.add(11, :second),
+    #     finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
+    #   }
+    # ]
 
-    create_workorder(
-      :webhook,
+    WorkOrderService.create_webhook_workorder(
       job_1,
-      ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
-      run_params
+      %{"age_in_months" => 19, "name" => "Genevieve Wimplemews"}
     )
+
+    # create_workorder(
+    #   :webhook,
+    #   job_1,
+    #   ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
+    #   run_params
+    # )
 
     %{
       project: project,
@@ -264,33 +277,15 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    run_params = [
-      %{
-        job_id: send_to_openhim.id,
-        exit_code: 1,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      },
-      %{
-        job_id: notify_upload_failed.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
-      }
-    ]
-
-    {:ok, openhie_workorder} =
-      create_workorder(
-        :webhook,
-        fhir_standard_data,
-        ~s[{}],
-        run_params
-      )
+    WorkOrderService.create_webhook_workorder(
+      fhir_standard_data,
+      %{}
+    )
 
     %{
       project: openhie_project,
       workflow: openhie_workflow,
-      workorder: openhie_workorder,
+      workorder: nil,
       jobs: [
         fhir_standard_data,
         send_to_openhim,
