@@ -19,6 +19,7 @@ interface WorkflowDiagramEntrypoint {
   updateProjectSpace(encoded: string): void;
   addJob(upstreamId: string): void;
   selectJob(id: string): void;
+  selectTrigger(id: string): void;
   selectWorkflow(id: string): void;
   setSelectedNode(id: string): void;
   copyWebhookUrl(webhookUrl: string): void;
@@ -123,6 +124,11 @@ export default {
   selectJob(id: string) {
     const selectJobUrl = new URL(this.baseUrl);
     selectJobUrl.pathname += `/j/${id}`;
+    this.liveSocket.pushHistoryPatch(selectJobUrl.toString(), 'push', this.el);
+  },
+  selectTrigger(id: string) {
+    const selectTriggerUrl = new URL(this.baseUrl);
+    selectTriggerUrl.pathname += `/t/${id}`;
     this.liveSocket.pushHistoryPatch(selectJobUrl.toString(), 'push', this.el);
   },
   // Add `w/<id>` to the URL.

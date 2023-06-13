@@ -45,18 +45,6 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           class: "block w-full rounded-md text-sm text-secondary-700 "
         ) %>
         <Form.select_field
-          :if={@on_change}
-          form={:adaptor_picker}
-          name={:adaptor_version}
-          selected={@adaptor_version}
-          id="adaptor-version"
-          values={@versions}
-          phx-change="adaptor_version_change"
-          phx-target={@myself}
-          disabled={@disabled}
-        />
-        <Form.select_field
-          :if={!@on_change}
           form={@form}
           name={:adaptor}
           id="adaptor-version"
@@ -148,24 +136,19 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def handle_event(
         "adaptor_name_change",
-        %{"adaptor_picker" => %{"adaptor_name" => adaptor_name}},
+        %{"adaptor_picker" => %{"adaptor_name" => value}},
         socket
       ) do
-    socket.assigns.on_change.("#{adaptor_name}@latest")
+    params =
+      build_params_for_field(socket.assigns.form, :adaptor, "#{value}@latest")
 
-    {:noreply,
-     socket
-     |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptor_version, "latest")}
+    socket.assigns.on_change.(params)
+
+    {:noreply, socket}
   end
 
-  def handle_event(
-        "adaptor_version_change",
-        %{"adaptor_picker" => %{"adaptor_version" => adaptor_version}},
-        socket
-      ) do
-    socket.assigns.on_change.(adaptor_version)
-
-    {:noreply, socket |> assign(:adaptor_version, adaptor_version)}
+  defp build_params_for_field(form, field, value) do
+    name = Phoenix.HTML.Form.input_name(form, field)
+    Plug.Conn.Query.decode_pair({name, value}, %{})
   end
 end

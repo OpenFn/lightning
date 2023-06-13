@@ -98,6 +98,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
           module={LightningWeb.JobLive.CronSetupComponent}
           on_change={@on_cron_change}
           form={@form}
+          disabled={@disabled}
         />
       <% end %>
     </div>

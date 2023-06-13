@@ -38,7 +38,7 @@ let Hooks = {
   JobEditorResizer,
   WorkflowEditor,
 };
-// console.log(Hooks);
+
 Hooks.Flash = {
   mounted() {
     let hide = () =>
