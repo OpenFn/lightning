@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowNewLive do
   @moduledoc false
   use LightningWeb, :live_view
 
+  alias Lightning.Policies.ProjectUsers
+  alias Lightning.Policies.Permissions
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
@@ -36,10 +38,13 @@ defmodule LightningWeb.WorkflowNewLive do
           phx-hook="WorkflowEditor"
           id={"editor-#{@project.id}"}
           data-edit-job-url={~p"/projects/#{@project.id}/w-new/new/j/:job_id"}
+          data-edit-trigger-url={
+            ~p"/projects/#{@project.id}/w-new/new/t/:trigger_id"
+          }
+          data-base-url={~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"}
           phx-update="ignore"
         >
-          <!-- Before Editor component has mounted -->
-          Loading...
+          <%!-- Before Editor component has mounted --%> Loading...
         </div>
         <div
           :if={@selected_job}
@@ -64,7 +69,46 @@ defmodule LightningWeb.WorkflowNewLive do
                         @selected_job
                         |> Ecto.Changeset.get_field(:id)
                     }
+                    on_change={&send_form_changed/1}
                     form={job_form}
+                    cancel_url={
+                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                    }
+                  />
+                <% end %>
+              </.form>
+            </div>
+          </div>
+        </div>
+        <div
+          :if={@selected_trigger}
+          class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
+          lv-keep-style
+        >
+          <.resize_component id={"resizer-#{@workflow.id}"} />
+          <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
+            <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
+              <.form
+                :let={f}
+                for={@changeset}
+                phx-submit="save"
+                phx-change="validate"
+                class="h-full"
+              >
+                <%= for trigger_form <- inputs_for(f, :triggers) do %>
+                  <!-- Show only the currently selected one -->
+                  <.trigger_form
+                    :if={
+                      Ecto.Changeset.get_field(trigger_form.source, :id) ==
+                        Ecto.Changeset.get_field(@selected_trigger, :id)
+                    }
+                    form={trigger_form}
+                    on_change={&send_form_changed/1}
+                    requires_cron_job={
+                      Ecto.Changeset.get_field(trigger_form.source, :type) == :cron
+                    }
+                    disabled={!@can_edit_job}
+                    webhook_url={webhook_url(trigger_form.source)}
                     cancel_url={
                       ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
                     }
@@ -83,13 +127,23 @@ defmodule LightningWeb.WorkflowNewLive do
   def mount(_params, _session, socket) do
     project = socket.assigns.project
 
+    can_edit_job =
+      ProjectUsers
+      |> Permissions.can(
+        :edit_job,
+        socket.assigns.current_user,
+        project
+      )
+
     {:ok,
      socket
      |> assign(
        project: project,
        selected_job: nil,
+       selected_trigger: nil,
        page_title: "",
-       active_menu_item: :projects
+       active_menu_item: :projects,
+       can_edit_job: can_edit_job
      )
      |> maybe_assign_workflow()}
   end
@@ -144,6 +198,7 @@ defmodule LightningWeb.WorkflowNewLive do
     )
     |> maybe_assign_workflow()
     |> unselect_job()
+    |> unselect_trigger()
   end
 
   def apply_action(socket, :edit_job, %{"job_id" => job_id}) do
@@ -155,6 +210,17 @@ defmodule LightningWeb.WorkflowNewLive do
       end)
 
     socket |> assign(selected_job: selected_job)
+  end
+
+  def apply_action(socket, :edit_trigger, %{"trigger_id" => trigger_id}) do
+    selected_trigger =
+      socket.assigns.changeset
+      |> Ecto.Changeset.get_change(:triggers, [])
+      |> Enum.find(fn changeset ->
+        changeset |> Ecto.Changeset.get_field(:id) == trigger_id
+      end)
+
+    socket |> assign(selected_trigger: selected_trigger)
   end
 
   @impl true
@@ -201,6 +267,37 @@ defmodule LightningWeb.WorkflowNewLive do
     {:reply, %{patches: patches}, socket}
   end
 
+  def handle_event("copied_to_clipboard", _, socket) do
+    {:noreply,
+     socket
+     |> put_flash(:info, "Copied webhook URL to clipboard")}
+  end
+
+  defp webhook_url(changeset) do
+    if Ecto.Changeset.get_field(changeset, :type) == :webhook do
+      if id = Ecto.Changeset.get_field(changeset, :id) do
+        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+      end
+    end
+  end
+
+  def send_form_changed(params) do
+    send(self(), {"form_changed", params})
+  end
+
+  @impl true
+  def handle_info({"form_changed", %{"workflow" => params}}, socket) do
+    initial_params = socket.assigns.workflow_params
+
+    next_params =
+      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+
+    {:noreply,
+     socket
+     |> apply_params(next_params)
+     |> push_patches_applied(initial_params)}
+  end
+
   defp apply_params(socket, params) do
     # Build a new changeset from the new params
     changeset = socket.assigns.workflow |> Workflow.changeset(params)
@@ -223,5 +320,9 @@ defmodule LightningWeb.WorkflowNewLive do
 
   defp unselect_job(socket) do
     socket |> assign(selected_job: nil)
+  end
+
+  defp unselect_trigger(socket) do
+    socket |> assign(selected_trigger: nil)
   end
 end

@@ -12,7 +12,7 @@ defmodule Lightning.AdaptorRegistry do
   # Starting the process
   AdaptorRegistry.start_link()
   # Getting a list of all adaptors
-  AdaptorRegistry.all()
+  Lightning.AdaptorRegistry.AdaptorRegistry.all()
   ```
 
   **Caching**

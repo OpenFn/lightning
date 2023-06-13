@@ -15,32 +15,40 @@ defmodule LightningWeb.WorkflowNewLiveTest do
              |> push_patches_to_view([add_job_patch()])
 
       # The server responds with a patch with any further changes
-      assert_reply(view, %{
-        patches: [
-          %{
-            op: "add",
-            path: "/jobs/0/errors",
-            value: %{"name" => ["can't be blank"]}
-          },
-          %{op: "add", path: "/jobs/0/enabled", value: "true"},
-          %{
-            op: "add",
-            path: "/jobs/0/adaptor",
-            value: "@openfn/language-common@latest"
-          }
-        ]
-      })
+      assert_reply(
+        view,
+        %{
+          patches: [
+            %{
+              op: "add",
+              path: "/jobs/0/errors",
+              value: %{
+                "body" => ["can't be blank"],
+                "name" => ["can't be blank"]
+              }
+            },
+            %{op: "add", path: "/jobs/0/enabled", value: "true"},
+            %{op: "add", path: "/jobs/0/body", value: ""},
+            %{
+              op: "add",
+              path: "/jobs/0/adaptor",
+              value: "@openfn/language-common@latest"
+            }
+          ]
+        }
+      )
     end
   end
 
   defp push_patches_to_view(elem, patches) do
-    elem |> render_hook("push-change", %{patches: patches})
+    elem
+    |> render_hook("push-change", %{patches: patches})
   end
 
-  defp add_job_patch() do
+  defp add_job_patch(name \\ "") do
     Jsonpatch.diff(
       %{jobs: []},
-      %{jobs: [%{id: Ecto.UUID.generate(), name: ""}]}
+      %{jobs: [%{id: Ecto.UUID.generate(), name: name}]}
     )
     |> Jsonpatch.Mapper.to_map()
     |> List.first()

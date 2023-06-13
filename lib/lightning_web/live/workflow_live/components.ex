@@ -158,6 +158,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
+  attr :on_change, :any, required: true
 
   def job_form(assigns) do
     ~H"""
@@ -189,8 +190,92 @@ defmodule LightningWeb.WorkflowLive.Components do
           <.live_component
             id={"adaptor-picker-#{input_value(@form, :id)}"}
             module={LightningWeb.JobLive.AdaptorPicker}
+            on_change={@on_change}
             form={@form}
           />
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :cancel_url, :string, required: true
+  attr :disabled, :boolean, required: true
+  attr :webhook_url, :string, required: true
+  attr :requires_cron_job, :boolean, required: true
+  attr :on_change, :any, required: true
+
+  def trigger_form(assigns) do
+    ~H"""
+    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
+      <div class="flex sticky top-0 border-b p-2">
+        <div class="grow">
+          <%= @form
+          |> input_value(:type)
+          |> then(fn
+            "" -> "Untitled Trigger"
+            name -> name
+          end) %>
+        </div>
+        <div class="flex-none">
+          <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
+            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+          </.link>
+        </div>
+      </div>
+      <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+        <%= hidden_inputs_for(@form) %>
+        <div class="col-span-6 @md:col-span-4">
+          <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
+            <div class="flex flex-row">
+              <span class="text-sm font-medium text-secondary-700">
+                Type
+              </span>
+              <Common.tooltip
+                id="trigger-tooltip"
+                title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
+                class="inline-block"
+              />
+            </div>
+            <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
+            <Form.select_field
+              form={@form}
+              name={:type}
+              id="triggerType"
+              values={[
+                "Cron Schedule (UTC)": "cron",
+                "Webhook Event": "webhook"
+              ]}
+              disabled={@disabled}
+            />
+            <%= if @webhook_url do %>
+              <div class="col-span-4 @md:col-span-2 text-right text-">
+                <a
+                  id="copyWebhookUrl"
+                  href={@webhook_url}
+                  class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                  target="_blank"
+                  phx-click="copied_to_clipboard"
+                >
+                  Copy webhook url
+                </a>
+              </div>
+            <% end %>
+          <% end %>
+          <%= if @requires_cron_job do %>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
+            <.live_component
+              id="cron-setup-component"
+              form={@form}
+              on_change={@on_change}
+              module={LightningWeb.JobLive.CronSetupComponent}
+              disabled={@disabled}
+            />
+          <% end %>
         </div>
       </div>
     </div>

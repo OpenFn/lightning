@@ -100,7 +100,7 @@ defmodule Lightning.WorkflowsTest do
       valid_attrs = %{
         name: "some-other-name",
         project_id: project.id,
-        jobs: [%{id: job_id, name: "some-job"}],
+        jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
         triggers: [%{id: trigger_id, type: :webhook}],
         edges: [%{source_trigger_id: trigger_id, target_job_id: job_id}]
       }
@@ -123,7 +123,7 @@ defmodule Lightning.WorkflowsTest do
       valid_attrs = %{
         name: "some-name",
         project_id: project.id,
-        jobs: [%{id: job_id, name: "some-job"}],
+        jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
         triggers: [%{id: trigger_id, type: :webhook}],
         edges: [%{source_trigger_id: trigger_id, target_job_id: job_id}]
       }
