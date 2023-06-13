@@ -246,12 +246,13 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_work_orders_for_project/1 returns workorders ordered by last run finished at desc, with nulls first" do
-      job = workflow_job_fixture(workflow_name: "chw-help")
+      fixture = workflow_job_fixture(workflow_name: "chw-help")
+      job = fixture.job
+      trigger = fixture.trigger
 
       dataclip = dataclip_fixture()
 
-      reason =
-        reason_fixture(dataclip_id: dataclip.id, trigger_id: job.trigger.id)
+      reason = reason_fixture(dataclip_id: dataclip.id, trigger_id: trigger.id)
 
       workflow = job.workflow
 
@@ -367,16 +368,16 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
-      job_one = workflow_job_fixture(workflow_name: "chw-help")
-      # job_two = workflow_job_fixture(workflow_id: job_one.workflow_id)
+      fixture = workflow_job_fixture(workflow_name: "chw-help")
+      job_one = fixture.job
+      trigger = fixture.trigger
 
       workflow = job_one.workflow
       work_order = work_order_fixture(workflow_id: workflow.id)
 
       dataclip = dataclip_fixture(project_id: workflow.project_id)
 
-      reason =
-        reason_fixture(dataclip_id: dataclip.id, trigger_id: job_one.trigger.id)
+      reason = reason_fixture(dataclip_id: dataclip.id, trigger_id: trigger.id)
 
       ### when inserting in this order
 
@@ -517,14 +518,13 @@ defmodule Lightning.InvocationTest do
       project = project_fixture()
       now = Timex.now()
 
-      job1 =
-        workflow_job_fixture(
-          project_id: project.id,
-          workflow_name: "workflow-1"
-        )
+      fixture =
+        workflow_job_fixture(workflow_name: "chw-help", project_id: project.id)
+
+      job1 = fixture.job
 
       Enum.each(1..10, fn index ->
-        create_work_order(project, job1, now, 10 * index)
+        create_work_order(project, job1, fixture.trigger, now, 10 * index)
       end)
 
       wos =
@@ -564,50 +564,50 @@ defmodule Lightning.InvocationTest do
       project = project_fixture()
       now = Timex.now()
 
-      job1 =
-        workflow_job_fixture(
-          project_id: project.id,
-          workflow_name: "workflow-1"
-        )
+      fixture1 =
+        workflow_job_fixture(workflow_name: "workflow-1", project_id: project.id)
+
+      job1 = fixture1.job
+      trigger1 = fixture1.trigger
 
       %{work_order: wf1_wo1, run: wf1_run1} =
-        create_work_order(project, job1, now, 10)
+        create_work_order(project, job1, trigger1, now, 10)
 
       %{work_order: wf1_wo2, run: wf1_run2} =
-        create_work_order(project, job1, now, 20)
+        create_work_order(project, job1, trigger1, now, 20)
 
       %{work_order: wf1_wo3, run: wf1_run3} =
-        create_work_order(project, job1, now, 30)
+        create_work_order(project, job1, trigger1, now, 30)
 
-      job2 =
-        workflow_job_fixture(
-          project_id: project.id,
-          workflow_name: "workflow-2"
-        )
+      fixture2 =
+        workflow_job_fixture(workflow_name: "workflow-2", project_id: project.id)
+
+      job2 = fixture2.job
+      trigger2 = fixture2.trigger
 
       %{work_order: wf2_wo1, run: wf2_run1} =
-        create_work_order(project, job2, now, 40)
+        create_work_order(project, job2, trigger2, now, 40)
 
       %{work_order: wf2_wo2, run: wf2_run2} =
-        create_work_order(project, job2, now, 50)
+        create_work_order(project, job2, trigger2, now, 50)
 
       %{work_order: wf2_wo3, run: wf2_run3} =
-        create_work_order(project, job2, now, 60)
+        create_work_order(project, job2, trigger2, now, 60)
 
-      job3 =
-        workflow_job_fixture(
-          project_id: project.id,
-          workflow_name: "workflow-3"
-        )
+      fixture3 =
+        workflow_job_fixture(workflow_name: "workflow-3", project_id: project.id)
+
+      job3 = fixture3.job
+      trigger3 = fixture3.trigger
 
       %{work_order: wf3_wo1, run: wf3_run1} =
-        create_work_order(project, job3, now, 70)
+        create_work_order(project, job3, trigger3, now, 70)
 
       %{work_order: wf3_wo2, run: wf3_run2} =
-        create_work_order(project, job3, now, 80)
+        create_work_order(project, job3, trigger3, now, 80)
 
       %{work_order: wf3_wo3, run: wf3_run3} =
-        create_work_order(project, job3, now, 90)
+        create_work_order(project, job3, trigger3, now, 90)
 
       ### PAGE 1 -----------------------------------------------------------------------
 
@@ -1182,14 +1182,14 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
-  defp create_work_order(project, job, now, seconds) do
+  defp create_work_order(project, job, trigger, now, seconds) do
     workflow = job.workflow
     dataclip = dataclip_fixture(project_id: project.id)
 
     reason =
       reason_fixture(
         dataclip_id: dataclip.id,
-        trigger_id: job.trigger.id
+        trigger_id: trigger.id
       )
 
     wo =
