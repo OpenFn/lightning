@@ -157,6 +157,45 @@ defmodule Lightning.AttemptService do
     |> Repo.one()
   end
 
+  def list_for_rerun_from_start(order_ids) when is_list(order_ids) do
+    attempt_run_numbers_query =
+      from(ar in AttemptRun,
+        join: att in assoc(ar, :attempt),
+        where: att.work_order_id in ^order_ids,
+        select: %{
+          id: ar.id,
+          row_num:
+            row_number()
+            |> over(partition_by: att.work_order_id, order_by: ar.inserted_at)
+        }
+      )
+
+    first_attempt_runs_query =
+      from(ar in AttemptRun,
+        join: arn in subquery(attempt_run_numbers_query),
+        on: ar.id == arn.id,
+        where: arn.row_num == 1,
+        order_by: ar.inserted_at,
+        preload: [
+          :attempt,
+          run:
+            ^from(r in Run,
+              select: [
+                :id,
+                :job_id,
+                :started_at,
+                :finished_at,
+                :exit_code,
+                :input_dataclip_id,
+                :output_dataclip_id
+              ]
+            )
+        ]
+      )
+
+    Repo.all(first_attempt_runs_query)
+  end
+
   @doc """
   Get the latest attempt associated to a given run
   """

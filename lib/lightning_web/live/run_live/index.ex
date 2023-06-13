@@ -11,7 +11,6 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.{AttemptService, Invocation}
   alias Lightning.Invocation.Run
   alias LightningWeb.RunLive.Components
-  alias Phoenix.LiveView.JS
 
   @filters_types %{
     search_term: :string,
@@ -208,6 +207,20 @@ defmodule LightningWeb.RunLive.Index do
       attempt_id
       |> AttemptService.get_for_rerun(run_id)
       |> WorkOrderService.retry_attempt_run(socket.assigns.current_user)
+
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
+  def handle_event("bulk-rerun-selected", _attrs, socket) do
+    if socket.assigns.can_rerun_job do
+      socket.assigns.selected_work_orders
+      |> AttemptService.list_for_rerun_from_start()
+      |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
 
       {:noreply, socket}
     else

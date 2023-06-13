@@ -69,35 +69,62 @@ defmodule Lightning.WorkOrderService do
 
   # @spec retry_attempt_run(AttemptRun.t(), User.t()) :: Ecto.Multi.t()
   def retry_attempt_run(attempt_run, user) do
-    %{attempt: attempt, run: run} = attempt_run |> Repo.preload([:attempt, :run])
+    attempt_run
+    |> Repo.preload([:attempt, :run])
+    |> multi_for_retry_attempt_run(user)
+    |> Repo.transaction()
+  end
 
-    multi =
-      Multi.new()
-      |> Multi.insert(:reason, fn _ ->
-        Lightning.InvocationReasons.build(:retry, %{user: user, run: run})
-      end)
-      |> Multi.merge(fn %{reason: reason} ->
-        AttemptService.retry(attempt, run, reason)
-      end)
+  def retry_attempt_runs(attempt_runs, user) when is_list(attempt_runs) do
+    attempt_runs
+    |> Repo.preload([:attempt, :run])
+    |> Enum.reduce(Multi.new(), fn attempt_run, multi ->
+      Multi.run(multi, "retry.#{attempt_run.id}", fn _repo, _changes ->
+        attempt_run
+        |> multi_for_retry_attempt_run(user)
+        |> Repo.transaction()
+        |> case do
+          {:error, failed_operation, failed_value, changes_so_far} ->
+            {:error,
+             %{
+               failed_operation: failed_operation,
+               failed_value: failed_value,
+               changes_so_far: changes_so_far
+             }}
 
-    with {:ok, %{attempt: attempt, attempt_run: attempt_run} = models} <-
-           Repo.transaction(multi) do
+          other ->
+            other
+        end
+      end)
+    end)
+    |> Repo.transaction()
+  end
+
+  defp multi_for_retry_attempt_run(
+         %{attempt: attempt, run: run} = _attempt_run,
+         user
+       ) do
+    Multi.new()
+    |> Multi.insert(:reason, fn _ ->
+      Lightning.InvocationReasons.build(:retry, %{user: user, run: run})
+    end)
+    |> Multi.merge(fn %{reason: reason} ->
+      AttemptService.retry(attempt, run, reason)
+    end)
+    |> Oban.insert(:run, fn %{attempt_run: attempt_run} ->
       Pipeline.new(%{attempt_run_id: attempt_run.id})
-      |> Oban.insert()
-
-      project_id =
-        from(r in Run,
-          join: j in assoc(r, :job),
-          join: p in assoc(j, :project),
-          where: r.id == ^attempt_run.run_id,
-          select: [p.id]
-        )
-        |> Repo.one!()
-
+    end)
+    |> Multi.one(:project_id, fn %{attempt_run: attempt_run} ->
+      from(r in Run,
+        join: j in assoc(r, :job),
+        join: p in assoc(j, :project),
+        where: r.id == ^attempt_run.run_id,
+        select: [p.id]
+      )
+    end)
+    |> Multi.run(:broadcast, fn %{attempt: attempt, project_id: project_id} ->
       broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
-
-      {:ok, models}
-    end
+    end)
   end
 
   @spec multi_for_manual(Job.t(), Dataclip.t(), User.t()) :: Ecto.Multi.t()
