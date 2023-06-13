@@ -31,16 +31,15 @@ defmodule Lightning.Jobs.Query do
   Returns active jobs with their cron triggers for use in the cron scheduling
   service.
   """
-  @spec enabled_cron_jobs() :: Ecto.Queryable.t()
-  def enabled_cron_jobs do
+  @spec enabled_cron_jobs_by_edge() :: Ecto.Queryable.t()
+  def enabled_cron_jobs_by_edge do
     from(e in Edge,
       join: j in Job,
       on: e.target_job_id == j.id,
       join: t in Trigger,
       on: t.id == e.source_trigger_id,
       where: t.type == :cron,
-      where: j.enabled,
-      preload: [:target_job, :source_trigger]
+      preload: [:source_trigger, [target_job: :workflow]]
     )
   end
 end
