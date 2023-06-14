@@ -332,7 +332,7 @@ defmodule Lightning.JobsTest do
 
   describe "Scheduler" do
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
-      job = insert(:job)
+      job = insert(:job, %{})
 
       trigger =
         insert(:trigger, %{
