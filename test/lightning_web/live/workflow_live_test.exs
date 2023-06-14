@@ -799,12 +799,13 @@ defmodule LightningWeb.WorkflowLiveTest do
         )
       )
 
-      due_for_execution =
-        Timex.now()
-        |> Timex.set(hour: 0, minute: 0, second: 0, microsecond: 0)
-        |> Lightning.Jobs.get_jobs_for_cron_execution()
+      flunk("TODO: test that the job is scheduled for execution")
+      # due_for_execution =
+      #   Timex.now()
+      #   |> Timex.set(hour: 0, minute: 0, second: 0, microsecond: 0)
+      #   |> Lightning.Jobs.get_jobs_for_cron_execution()
 
-      assert job in due_for_execution
+      # assert job in due_for_execution
     end
 
     test "cron_setup_component can set trigger to a daily cron", %{

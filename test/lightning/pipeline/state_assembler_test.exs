@@ -143,7 +143,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
         body: "fn(state => state)",
         enabled: true,
         name: "some name",
-        adaptor: "@openfn/language-common",
+        adaptor: "@openfn/language-common"
       })
       |> Repo.insert()
 

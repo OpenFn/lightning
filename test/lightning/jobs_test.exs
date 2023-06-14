@@ -24,17 +24,29 @@ defmodule Lightning.JobsTest do
     test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
       job_fixture()
 
-      t = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
+      workflow = insert(:workflow)
 
-      enabled_job = job_fixture(workflow_id: t.workflow_id)
+      t =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "5 0 * 8 *"
+        )
 
-      insert(:edge, %{
-        workflow_id: t.workflow_id,
+      enabled_job = insert(:job, workflow: workflow)
+
+      insert(:edge,
+        workflow: workflow,
         source_trigger_id: t.id,
         target_job_id: enabled_job.id
-      })
+      )
 
-      _disabled_job = job_fixture(enabled: false)
+      # disabled job
+      insert(:edge,
+        workflow: workflow,
+        source_trigger_id: t.id,
+        target_job: build(:job, workflow: workflow, enabled: false)
+      )
 
       assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
     end
@@ -314,7 +326,7 @@ defmodule Lightning.JobsTest do
   describe "Scheduler repeats" do
     test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
       job =
-        job_fixture(
+        insert(:job,
           body: "fn(state => { console.log(state); return { changed: true }; })"
         )
 
@@ -322,13 +334,12 @@ defmodule Lightning.JobsTest do
         insert(:trigger, %{
           type: :cron,
           cron_expression: "* * * * *",
-          workflow_id: job.workflow_id,
           workflow: job.workflow
         })
 
       edge =
         insert(:edge, %{
-          workflow_id: job.workflow_id,
+          workflow: job.workflow,
           source_trigger: trigger,
           target_job: job
         })
