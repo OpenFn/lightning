@@ -89,26 +89,23 @@ defmodule Lightning.WorkflowsTest do
 
   describe "workflows and edges" do
     test "get_edge_by_webhook/1 returns the job for a path" do
-      job = insert(:job, %{})
-      # @Stu, why do I need to specify workflow_id _AND_ workflow here???
-      trigger =
-        insert(:trigger, %{workflow: job.workflow, workflow_id: job.workflow_id})
-
-      edge =
-        insert(:edge, %{
-          workflow_id: job.workflow_id,
-          source_trigger_id: trigger.id,
-          target_job_id: job.id
-        })
+      %{job: _job, trigger: trigger, edge: edge} =
+        JobsFixtures.workflow_job_fixture()
 
       assert Workflows.get_edge_by_webhook(trigger.id)
-             |> unload_relation(:workflow) == edge
+             |> unload_relation(:workflow)
+             |> unload_relation(:source_trigger)
+             |> unload_relation(:target_job) == edge
 
-      # TODO continue this logic...
-      # job = job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
+      Ecto.Changeset.change(trigger, custom_path: "foo")
+      |> Lightning.Repo.update!()
 
-      # assert Jobs.get_job_by_webhook(job.trigger.id) == nil
-      # assert Jobs.get_job_by_webhook("foo") |> unload_relation(:workflow) == job
+      assert Workflows.get_edge_by_webhook(trigger.id) == nil
+
+      assert Workflows.get_edge_by_webhook("foo")
+             |> unload_relation(:workflow)
+             |> unload_relation(:source_trigger)
+             |> unload_relation(:target_job) == edge
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
