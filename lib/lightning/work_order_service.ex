@@ -122,8 +122,10 @@ defmodule Lightning.WorkOrderService do
         select: [p.id]
       )
     end)
-    |> Multi.run(:broadcast, fn %{attempt: attempt, project_id: project_id} ->
+    |> Multi.run(:broadcast, fn _repo,
+                                %{attempt: attempt, project_id: project_id} ->
       broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
+      {:ok, nil}
     end)
   end
 

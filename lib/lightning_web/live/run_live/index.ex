@@ -216,18 +216,44 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("bulk-rerun-selected", _attrs, socket) do
-    if socket.assigns.can_rerun_job do
-      socket.assigns.selected_work_orders
-      |> AttemptService.list_for_rerun_from_start()
-      |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
-
-      {:noreply, socket}
-    else
+  def handle_event("bulk-rerun", %{"type" => type}, socket) do
+    with true <- socket.assigns.can_rerun_job,
+         {:ok, _changes} <- handle_bulk_rerun(socket, type) do
       {:noreply,
        socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+       |> put_flash(:info, "Jobs have been set for rerun successfully")
+       |> push_navigate(
+         to:
+           ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: socket.assigns.filters}}"
+       )}
+    else
+      false ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      {:error, _changes} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Oops! an error occured during retries.")}
     end
+  end
+
+  defp handle_bulk_rerun(socket, "selected") do
+    socket.assigns.selected_work_orders
+    |> AttemptService.list_for_rerun_from_start()
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+  end
+
+  defp handle_bulk_rerun(socket, "all") do
+    filter = SearchParams.new(socket.assigns.filters)
+
+    socket.assigns.project
+    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Lightning.Repo.all()
+    |> Enum.map(& &1.id)
+    |> AttemptService.list_for_rerun_from_start()
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
 
   def handle_event(
