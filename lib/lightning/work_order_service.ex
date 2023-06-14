@@ -167,7 +167,7 @@ defmodule Lightning.WorkOrderService do
   end
 
   defp put_job(multi, job) do
-    multi |> Multi.put(:job, Repo.preload(job, [:trigger, :workflow]))
+    multi |> Multi.put(:job, Repo.preload(job, [:workflow]))
   end
 
   defp put_dataclip(multi, %Dataclip{} = dataclip) do
