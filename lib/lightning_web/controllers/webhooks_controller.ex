@@ -1,7 +1,7 @@
 defmodule LightningWeb.WebhooksController do
   use LightningWeb, :controller
 
-  alias Lightning.{Jobs, WorkOrderService}
+  alias Lightning.{Workflows, WorkOrderService}
 
   # this gets hit when someone asks to run a workflow by API
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
@@ -9,22 +9,15 @@ defmodule LightningWeb.WebhooksController do
     path
     |> Enum.join("/")
     # TODO - this thing returns a job VIA the edge from { THIS_TRIGGER, to, THAT_JOB }
-    |> Jobs.get_job_by_webhook()
+    |> Workflows.get_edge_by_webhook()
     |> case do
       nil ->
         put_status(conn, :not_found)
         |> json(%{})
 
-      %Jobs.Job{enabled: false} ->
-        put_status(conn, :forbidden)
-        |> json(%{
-          message:
-            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-        })
-
-      job ->
+      edge ->
         {:ok, %{work_order: work_order, attempt_run: attempt_run}} =
-          WorkOrderService.create_webhook_workorder(job, conn.body_params)
+          WorkOrderService.create_webhook_workorder(edge, conn.body_params)
 
         resp = %{
           work_order_id: work_order.id,

@@ -16,6 +16,7 @@ defmodule Lightning.InvocationReasonsTest do
 
     test "with valid data creates a reason" do
       trigger = insert(:trigger, %{type: :webhook})
+
       valid_attrs = %{
         type: :webhook,
         user_id: user_fixture().id,
@@ -30,7 +31,7 @@ defmodule Lightning.InvocationReasonsTest do
   end
 
   describe "build/2" do
-    test "with trigger of type :webhook or :cron returns a valid reason" do 
+    test "with trigger of type :webhook or :cron returns a valid reason" do
       trigger = insert(:trigger, %{type: :webhook})
       cron_trigger = insert(:trigger, %{type: :cron})
       dataclip = dataclip_fixture()
@@ -45,7 +46,7 @@ defmodule Lightning.InvocationReasonsTest do
                InvocationReasons.build(
                  cron_trigger,
                  dataclip
-               ) 
+               )
     end
 
     test "with :manual" do

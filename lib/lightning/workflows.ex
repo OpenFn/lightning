@@ -7,7 +7,7 @@ defmodule Lightning.Workflows do
   alias Lightning.Repo
   alias Lightning.Workflows.{Edge, Workflow}
   alias Lightning.Projects.Project
-  alias Lightning.Jobs.Trigger
+  alias Lightning.{Jobs, Jobs.Trigger, Jobs.Job}
 
   @doc """
   Returns the list of workflows.
@@ -186,6 +186,52 @@ defmodule Lightning.Workflows do
     attrs
     |> Edge.new()
     |> Repo.insert()
+  end
+
+  @doc """
+  Gets a Single Edge by it's webhook trigger.
+  """
+  def get_edge_by_webhook(path) when is_binary(path) do
+    from(e in Edge,
+      join: j in Job,
+      on: j.id == e.target_job_id and j.enabled == true,
+      join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where:
+        fragment(
+          "coalesce(?, ?)",
+          t.custom_path,
+          type(e.source_trigger_id, :string)
+        ) == ^path,
+      preload: [:source_trigger, :target_job]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns a list of edges with jobs to execute, given a current timestamp in Unix. This is
+  used by the scheduler, which calls this function once every minute.
+  """
+  @spec get_edges_for_cron_execution(DateTime.t()) :: [Edge.t()]
+  def get_edges_for_cron_execution(datetime) do
+    cron_edges =
+      Jobs.Query.enabled_cron_jobs_by_edge()
+      |> Repo.all()
+
+    for e <- cron_edges,
+        is_valid_edge(e, datetime),
+        do: e
+  end
+
+  defp is_valid_edge(edge, datetime) do
+    cron_expression = edge.source_trigger.cron_expression
+
+    with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
+         true <- Crontab.DateChecker.matches_date?(cron, datetime) do
+      edge
+    else
+      _ -> false
+    end
   end
 
   @doc """

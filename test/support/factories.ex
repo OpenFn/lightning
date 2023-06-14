@@ -4,7 +4,7 @@ defmodule Lightning.Factories do
 
   def build(:job, attrs) do
     struct!(Lightning.Jobs.Job, %{
-      workflow: build(:workflow),
+      workflow: build(:workflow)
     })
     |> merge_attributes(attrs)
   end
