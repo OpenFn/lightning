@@ -9,6 +9,8 @@ defmodule LightningWeb.EndToEndTest do
   }
 
   alias Lightning.Pipeline
+  import Lightning.Factories
+
   alias Lightning.Invocation
 
   setup :register_and_log_in_superuser
@@ -27,42 +29,61 @@ defmodule LightningWeb.EndToEndTest do
         project_id: project.id
       )
 
-    webhook_job =
-      job_fixture(
+    %{
+      job: first_job = %{workflow_id: workflow_id},
+      trigger: webhook_trigger,
+      edge: _edge
+    } =
+      workflow_job_fixture(
+        name: "1st-job",
         adaptor: "@openfn/language-http",
         body: webhook_expression(),
         project_id: project.id,
         project_credential_id: project_credential.id
       )
 
-    # add an edge that follows the new rules foe edges 
+    # add an edge that follows the new rules foe edges
     # delete the current trigger for this flow job as it will have an edge
     flow_job =
       job_fixture(
+        name: "2nd-job",
         adaptor: "@openfn/language-http",
         body: flow_expression(),
         project_id: project.id,
-        project_credential_id: project_credential.id,
-        # some edge here rather than trigger
-        trigger: %{type: :on_job_success, upstream_job_id: webhook_job.id}
+        workflow_id: workflow_id,
+        project_credential_id: project_credential.id
       )
 
-    _catch_job =
+    insert(:edge, %{
+      workflow_id: workflow_id,
+      source_job_id: first_job.id,
+      target_job_id: flow_job.id,
+      condition: :on_job_success
+    })
+
+    catch_job =
       job_fixture(
+        name: "3rd-job",
         adaptor: "@openfn/language-http",
         body: catch_expression(),
         project_id: project.id,
-        project_credential_id: project_credential.id,
-        trigger: %{type: :on_job_failure, upstream_job_id: flow_job.id}
+        workflow_id: workflow_id,
+        project_credential_id: project_credential.id
       )
+
+    insert(:edge, %{
+      source_job_id: flow_job.id,
+      workflow_id: workflow_id,
+      target_job_id: catch_job.id,
+      condition: :on_job_failure
+    })
 
     Oban.Testing.with_testing_mode(:manual, fn ->
       message = %{"a" => 1}
 
-      conn = post(conn, "/i/#{webhook_job.trigger.id}", message)
+      conn = post(conn, "/i/#{webhook_trigger.id}", message)
 
-      assert %{"run_id" => run_id, "attempt_id" => attempt_id} =
-               json_response(conn, 200)
+      assert %{"run_id" => run_id, "attempt_id" => attempt_id} = json_response(conn, 200)
 
       attempt_run =
         Lightning.Repo.get_by(Lightning.AttemptRun,

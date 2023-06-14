@@ -194,7 +194,7 @@ defmodule Lightning.Workflows do
   def get_edge_by_webhook(path) when is_binary(path) do
     from(e in Edge,
       join: j in Job,
-      on: j.id == e.target_job_id and j.enabled == true,
+      on: j.id == e.target_job_id,
       join: t in Trigger,
       on: e.source_trigger_id == t.id,
       where:
