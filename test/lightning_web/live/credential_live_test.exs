@@ -440,7 +440,8 @@ defmodule LightningWeb.CredentialLiveTest do
 
   describe "New credential from project context " do
     setup %{project: project} do
-      %{job: workflow_job_fixture(project_id: project.id)}
+      %{job: job} = workflow_job_fixture(project_id: project.id)
+      %{job: job}
     end
 
     test "open credential modal from the job inspector (edit_job)", %{
