@@ -133,11 +133,11 @@ defmodule Lightning.WorkflowsTest do
         })
 
       _disabled_job =
-        insert(:job,%{
+        insert(:job, %{
           enabled: false,
           workflow_id: t2.workflow_id,
-          workflow: t2.workflow }
-        )
+          workflow: t2.workflow
+        })
 
       [e | _] = Workflows.get_edges_for_cron_execution(DateTime.utc_now())
 
