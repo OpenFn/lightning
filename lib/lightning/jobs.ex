@@ -71,7 +71,7 @@ defmodule Lightning.Jobs do
         ) :: [
           Job.t()
         ]
-  def get_downstream_jobs_for(job, trigger_type \\ nil)
+  def get_downstream_jobs_for(job, edge_condition \\ nil)
 
   def get_downstream_jobs_for(%Job{id: job_id}, edge_condition) do
     get_downstream_jobs_for(job_id, edge_condition)
@@ -88,15 +88,12 @@ defmodule Lightning.Jobs do
     |> Repo.all()
   end
 
-  # This query has to jump through some hoops
-  # first we join jobs to edges, this will include the source job
-  # then we use the
   defp downstream_query(job_id) do
-    from(j in Job,
+    from(target_job in Job,
       join: e in Edge,
       on:
         e.source_job_id == ^job_id and
-          j.id != ^job_id,
+          target_job.id == e.target_job_id,
       preload: [:workflow]
     )
   end
