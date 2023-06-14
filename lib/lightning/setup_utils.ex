@@ -81,7 +81,7 @@ defmodule Lightning.SetupUtils do
       project: dhis2_project,
       workflow: dhis2_workflow,
       jobs: dhis2_jobs,
-      workorder: dhis2_workorder
+      workorders: [successful_dhis2_workorder, failure_dhis2_workorder]
     } =
       create_dhis2_project([
         %{user_id: admin.id, role: :admin}
@@ -92,8 +92,31 @@ defmodule Lightning.SetupUtils do
       users: [super_user, admin, editor, viewer],
       projects: [openhie_project, dhis2_project],
       workflows: [openhie_workflow, dhis2_workflow],
-      workorders: [openhie_workorder, dhis2_workorder]
+      workorders: [
+        openhie_workorder,
+        successful_dhis2_workorder,
+        failure_dhis2_workorder
+      ]
     }
+  end
+
+  defp create_dhis2_credential(project, user_id) do
+    {:ok, credential} =
+      Credentials.create_credential(%{
+        body: %{
+          username: "admin",
+          password: "district",
+          hostUrl: "https://play.dhis2.org/dev"
+        },
+        name: "DHIS2 play",
+        user_id: user_id,
+        schema: "dhis2",
+        project_credentials: [
+          %{project_id: project.id}
+        ]
+      })
+
+    credential
   end
 
   def create_starter_project(name, project_users) do
@@ -138,22 +161,9 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id
       })
 
-    project_user = List.first(project_users)
+    user_id = List.first(project_users).user_id
 
-    {:ok, credential} =
-      Credentials.create_credential(%{
-        body: %{
-          username: "admin",
-          password: "district",
-          hostUrl: "https://play.dhis2.org/dev"
-        },
-        name: "DHIS2 play",
-        user_id: project_user.user_id,
-        schema: "dhis2",
-        project_credentials: [
-          %{project_id: project.id}
-        ]
-      })
+    dhis2_credential = create_dhis2_credential(project, user_id)
 
     {:ok, job_3} =
       Jobs.create_job(%{
@@ -176,21 +186,22 @@ defmodule Lightning.SetupUtils do
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
         workflow_id: workflow.id,
-        project_credential_id: List.first(credential.project_credentials).id
+        project_credential_id:
+          List.first(dhis2_credential.project_credentials).id
       })
 
     run_params = [
       %{
         job_id: job_2.id,
-        exit_code: 1,
+        exit_code: 0,
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       },
       %{
         job_id: job_3.id,
         exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
+        started_at: DateTime.utc_now() |> DateTime.add(20, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
       }
     ]
 
@@ -234,7 +245,7 @@ defmodule Lightning.SetupUtils do
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
-        body: "fn(state => x);",
+        body: "fn(state => state);",
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         trigger: %{
@@ -267,15 +278,15 @@ defmodule Lightning.SetupUtils do
     run_params = [
       %{
         job_id: send_to_openhim.id,
-        exit_code: 1,
+        exit_code: 0,
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       },
       %{
-        job_id: notify_upload_failed.id,
+        job_id: notify_upload_successful.id,
         exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
+        started_at: DateTime.utc_now() |> DateTime.add(20, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
       }
     ]
 
@@ -313,6 +324,9 @@ defmodule Lightning.SetupUtils do
         project_id: dhis2_project.id
       })
 
+    user_id = List.first(project_users).user_id
+    dhis2_credential = create_dhis2_credential(dhis2_project, user_id)
+
     {:ok, get_dhis2_data} =
       Jobs.create_job(%{
         name: "Get DHIS2 data",
@@ -320,7 +334,9 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
         trigger: %{type: "cron", cron_expression: "0 * * * *"},
-        workflow_id: dhis2_workflow.id
+        workflow_id: dhis2_workflow.id,
+        project_credential_id:
+          List.first(dhis2_credential.project_credentials).id
       })
 
     {:ok, upload_to_google_sheet} =
@@ -338,11 +354,29 @@ defmodule Lightning.SetupUtils do
         job_id: upload_to_google_sheet.id,
         exit_code: 0,
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
     ]
 
-    {:ok, dhis2_workorder} =
+    {:ok, successful_dhis2_workorder} =
+      create_workorder(
+        :cron,
+        get_dhis2_data,
+        ~s[{}],
+        run_params
+      )
+
+    # Make it fail for demo purposes
+    run_params = [
+      %{
+        job_id: upload_to_google_sheet.id,
+        exit_code: 1,
+        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
+      }
+    ]
+
+    {:ok, failure_dhis2_workorder} =
       create_workorder(
         :cron,
         get_dhis2_data,
@@ -353,7 +387,7 @@ defmodule Lightning.SetupUtils do
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
-      workorder: dhis2_workorder,
+      workorders: [successful_dhis2_workorder, failure_dhis2_workorder],
       jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end
@@ -418,8 +452,9 @@ defmodule Lightning.SetupUtils do
         # Change the timestamps, logs, exit_code etc
         run
         |> Run.changeset(%{
-          started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-          finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
+          exit_code: 0,
+          started_at: DateTime.utc_now() |> DateTime.add(0, :second),
+          finished_at: DateTime.utc_now() |> DateTime.add(5, :second)
         })
       end)
 
