@@ -94,7 +94,7 @@ defmodule Lightning.JobsFixtures do
         source_trigger_id: t.id,
         target_job_id: job.id,
         workflow_id: job.workflow.id,
-        condition: :always,
+        condition: :always
       })
 
     %{job: job, edge: e, trigger: t}

@@ -16,7 +16,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
   setup %{project: project} do
     project_credential_fixture(project_id: project.id)
-    job = workflow_job_fixture(project_id: project.id)
+    %{job: job} = workflow_job_fixture(project_id: project.id)
     %{job: job}
   end
 
@@ -177,7 +177,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
     project: project,
     user: user
   } do
-    job =
+    %{job: job, trigger: trigger} =
       workflow_job_fixture(
         project_id: project.id,
         body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -190,7 +190,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
 
     reason =
       reason_fixture(
-        trigger_id: job.trigger.id,
+        trigger_id: trigger.id,
         dataclip_id: d4.id
       )
 
@@ -319,7 +319,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
   } do
     {conn, _user} = setup_project_user(conn, project, :viewer)
 
-    job =
+    %{job: job} =
       workflow_job_fixture(
         project_id: project.id,
         body: ~s[fn(state => { return {...state, extra: "data"} })]
