@@ -10,9 +10,9 @@ defmodule Lightning.AttemptServiceTest do
 
   describe "attempts" do
     test "create_attempt/3 returns a new Attempt, with a new Run" do
-      job = workflow_job_fixture()
+      %{job: job, trigger: trigger} = workflow_job_fixture()
       work_order = work_order_fixture(workflow_id: job.workflow_id)
-      reason = reason_fixture(trigger_id: job.trigger.id)
+      reason = reason_fixture(trigger_id: trigger.id)
 
       job_id = job.id
       work_order_id = work_order.id
@@ -35,13 +35,13 @@ defmodule Lightning.AttemptServiceTest do
 
   describe "append/2" do
     test "adds a run to an existing attempt" do
-      job = workflow_job_fixture()
+      %{job: job, trigger: trigger} = workflow_job_fixture()
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       dataclip = dataclip_fixture()
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 

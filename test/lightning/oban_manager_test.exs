@@ -24,7 +24,7 @@ defmodule Lightning.CrashTest do
 
       project = project_fixture()
 
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           body: ~s[fn(state => {
           return new Promise((resolve, reject) => {
@@ -58,7 +58,7 @@ defmodule Lightning.CrashTest do
             work_order_id: work_order_fixture(workflow_id: job.workflow_id).id,
             reason_id:
               reason_fixture(
-                trigger_id: job.trigger.id,
+                trigger_id: trigger.id,
                 dataclip_id: dataclip.id
               ).id
           })
