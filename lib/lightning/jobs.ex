@@ -6,7 +6,7 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Query, Trigger}
+  alias Lightning.Jobs.{Job, Query}
   alias Lightning.Projects.Project
   alias Lightning.Workflows.{Edge, Workflow}
 
@@ -56,32 +56,6 @@ defmodule Lightning.Jobs do
           preload: [:workflow]
         )
         |> Repo.all()
-    end
-  end
-
-  @doc """
-  Returns a list of jobs to execute, given a current timestamp in Unix. This is
-  used by the scheduler, which calls this function once every minute.
-  """
-  @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
-  def get_jobs_for_cron_execution(datetime) do
-    cron_edges =
-      Query.enabled_cron_jobs_by_edge()
-      |> Repo.all()
-
-    for e <- cron_edges,
-        is_valid_edge(e, datetime),
-        do: e.target_job
-  end
-
-  defp is_valid_edge(edge, datetime) do
-    cron_expression = edge.source_trigger.cron_expression
-
-    with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
-         true <- Crontab.DateChecker.matches_date?(cron, datetime) do
-      edge
-    else
-      _ -> false
     end
   end
 
@@ -145,25 +119,6 @@ defmodule Lightning.Jobs do
 
   def get_job(id) do
     from(j in Job, preload: [:workflow]) |> Repo.get(id)
-  end
-
-  @doc """
-  Gets a single job basic on it's webhook trigger.
-  """
-  def get_job_by_webhook(path) when is_binary(path) do
-    from(j in Job,
-      join: e in Edge,
-      on: j.id == e.target_job_id,
-      join: t in Trigger,
-      on: e.source_trigger_id == t.id,
-      where:
-        fragment(
-          "coalesce(?, ?)",
-          t.custom_path,
-          type(e.source_trigger_id, :string)
-        ) == ^path
-    )
-    |> Repo.one()
   end
 
   @doc """

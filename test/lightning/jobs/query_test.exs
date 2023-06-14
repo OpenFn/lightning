@@ -34,10 +34,10 @@ defmodule Lightning.Jobs.QueryTest do
     _non_cronjob = job_fixture()
 
     jobs =
-    Query.enabled_cron_jobs_by_edge() 
-    |> Repo.all()
-    |> Enum.map(fn e -> e.target_job.id end)
+      Query.enabled_cron_jobs_by_edge()
+      |> Repo.all()
+      |> Enum.map(fn e -> e.target_job.id end)
 
-  assert jobs == [job.id]
+    assert jobs == [job.id]
   end
 end

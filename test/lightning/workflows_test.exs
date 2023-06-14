@@ -1,6 +1,8 @@
 defmodule Lightning.WorkflowsTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.Factories
+
   alias Lightning.{
     Workflows,
     Jobs,
@@ -86,6 +88,62 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "workflows and edges" do
+    test "get_edge_by_webhook/1 returns the job for a path" do
+      job = insert(:job, %{})
+      # @Stu, why do I need to specify workflow_id _AND_ workflow here???
+      trigger =
+        insert(:trigger, %{workflow: job.workflow, workflow_id: job.workflow_id})
+
+      edge =
+        insert(:edge, %{
+          workflow_id: job.workflow_id,
+          source_trigger_id: trigger.id,
+          target_job_id: job.id
+        })
+
+      assert Workflows.get_edge_by_webhook(trigger.id)
+             |> unload_relation(:workflow) == edge
+
+      # TODO continue this logic...
+      # job = job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
+
+      # assert Jobs.get_job_by_webhook(job.trigger.id) == nil
+      # assert Jobs.get_job_by_webhook("foo") |> unload_relation(:workflow) == job
+    end
+
+    test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
+      t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
+      job_0 = insert(:job, %{workflow_id: t1.workflow_id, workflow: t1.workflow})
+
+      _e1 =
+        insert(:edge, %{
+          workflow_id: t1.workflow_id,
+          source_trigger_id: t1.id,
+          target_job_id: job_0.id
+        })
+
+      t2 = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
+      job_1 = insert(:job, %{workflow_id: t2.workflow_id, workflow: t2.workflow})
+
+      e2 =
+        insert(:edge, %{
+          workflow_id: t2.workflow_id,
+          target_job_id: job_1.id,
+          source_trigger_id: t2.id
+        })
+
+      _disabled_job =
+        insert(:job,%{
+          enabled: false,
+          workflow_id: t2.workflow_id,
+          workflow: t2.workflow }
+        )
+
+      [e | _] = Workflows.get_edges_for_cron_execution(DateTime.utc_now())
+
+      assert e.id == e2.id
+    end
+
     test "using create_workflow/1" do
       project = ProjectsFixtures.project_fixture()
       valid_attrs = %{name: "some-name", project_id: project.id}

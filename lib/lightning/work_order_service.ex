@@ -21,22 +21,21 @@ defmodule Lightning.WorkOrderService do
 
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Accounts.User
-  alias Lightning.Jobs.{Job, Trigger}
-  alias Lightning.Workflows.Edge
+  alias Lightning.Jobs.Job
 
   alias Ecto.Multi
 
   @pubsub Lightning.PubSub
 
-  def create_webhook_workorder(job, dataclip_body) do
-    multi_for(:webhook, job, dataclip_body)
+  def create_webhook_workorder(edge, dataclip_body) do
+    multi_for(:webhook, edge, dataclip_body)
     |> Repo.transaction()
     |> case do
       {:ok, models} ->
         Pipeline.new(%{attempt_run_id: models.attempt_run.id})
         |> Oban.insert()
 
-        job = job |> Repo.preload(:workflow)
+        job = edge.target_job |> Repo.preload(:workflow)
 
         broadcast(
           job.workflow.project_id,
@@ -176,7 +175,7 @@ defmodule Lightning.WorkOrderService do
 
   @spec multi_for(
           :webhook | :cron,
-          Lightning.Jobs.Job.t(),
+          Lightning.Workflows.Edge.t(),
           Ecto.Changeset.t(Dataclip.t())
           | Dataclip.t()
           | %{optional(String.t()) => any}
@@ -203,13 +202,12 @@ defmodule Lightning.WorkOrderService do
   # build trigger
   # build edge connecting trigger to job
 
-  def multi_for(type, job, dataclip_body) when type in [:webhook, :cron] do
+  def multi_for(type, %{target_job: job, source_trigger: trigger}, dataclip_body)
+      when type in [:webhook, :cron] do
     Multi.new()
     |> put_job(job)
     |> put_dataclip(dataclip_body)
-    |> put_trigger(type)
-    |> put_edge()
-    |> Multi.insert(:reason, fn %{dataclip: dataclip, trigger: trigger} ->
+    |> Multi.insert(:reason, fn %{dataclip: dataclip} ->
       InvocationReasons.build(trigger, dataclip)
     end)
     |> Multi.insert(:work_order, fn %{reason: reason, job: job} ->
@@ -254,34 +252,6 @@ defmodule Lightning.WorkOrderService do
           type: :http_request,
           body: dataclip_body,
           project_id: job.workflow.project_id
-        })
-      end
-    )
-  end
-
-  defp put_trigger(multi, type) do
-    multi
-    |> Multi.insert(
-      :trigger,
-      fn %{job: %{workflow: workflow}} ->
-        Trigger.new(%{
-          type: type,
-          workflow_id: workflow.id
-        })
-      end
-    )
-  end
-
-  defp put_edge(multi) do
-    multi
-    |> Multi.insert(
-      :edge,
-      fn %{job: job, trigger: trigger} ->
-        Edge.new(%{
-          source_trigger_id: trigger.id,
-          target_job_id: job.id,
-          condition: :always,
-          workflow_id: job.workflow.id
         })
       end
     )
