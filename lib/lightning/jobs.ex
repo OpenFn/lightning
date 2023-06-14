@@ -133,14 +133,21 @@ defmodule Lightning.Jobs do
   end
 
   @doc """
-  Gets a single job basic on it's webhook trigger.
+  Gets a SINGLE edge basic on it's webhook trigger.
   """
-  def get_job_by_webhook(path) when is_binary(path) do
-    from(j in Job,
-      join: t in assoc(j, :trigger),
+  def get_edge_by_webhook(path) when is_binary(path) do
+    from(e in Edge,
+      join: j in Job,
+      on: j.id == e.target_job_id,
+      join: t in Trigger,
+      on: e.source_trigger_id == t.id,
       where:
-        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path,
-      preload: [:trigger, :workflow]
+        fragment(
+          "coalesce(?, ?)",
+          t.custom_path,
+          type(e.source_trigger_id, :string)
+        ) == ^path,
+      preload: [:target_job, :source_trigger]
     )
     |> Repo.one()
   end

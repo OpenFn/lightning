@@ -25,8 +25,8 @@ defmodule Lightning.WorkOrderService do
 
   @pubsub Lightning.PubSub
 
-  def create_webhook_workorder(job, dataclip_body) do
-    multi_for(:webhook, job, dataclip_body)
+  def create_webhook_workorder(job, trigger, dataclip_body) do
+    multi_for(:webhook, job, trigger, dataclip_body)
     |> Repo.transaction()
     |> case do
       {:ok, models} ->
@@ -131,16 +131,17 @@ defmodule Lightning.WorkOrderService do
   @spec multi_for(
           :webhook | :cron,
           Lightning.Jobs.Job.t(),
+          Lightning.Jobs.Trigger.t(),
           Ecto.Changeset.t(Dataclip.t())
           | Dataclip.t()
           | %{optional(String.t()) => any}
         ) :: Ecto.Multi.t()
-  def multi_for(type, job, dataclip_body) when type in [:webhook, :cron] do
+  def multi_for(type, job, trigger, dataclip_body) when type in [:webhook, :cron] do
     Multi.new()
     |> put_job(job)
     |> put_dataclip(dataclip_body)
     |> Multi.insert(:reason, fn %{dataclip: dataclip, job: job} ->
-      InvocationReasons.build(job.trigger, dataclip)
+      InvocationReasons.build(trigger, dataclip)
     end)
     |> Multi.insert(:work_order, fn %{reason: reason, job: job} ->
       build(job.workflow, reason)
