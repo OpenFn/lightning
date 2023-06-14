@@ -13,7 +13,7 @@ defmodule Lightning.PipelineTest do
 
   describe "process/1" do
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
@@ -43,7 +43,7 @@ defmodule Lightning.PipelineTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -93,6 +93,8 @@ defmodule Lightning.PipelineTest do
           name: "1",
           workflow: trigger.workflow
         )
+
+      insert(:edge, %{workflow_id: trigger.workflow_id, source_trigger: trigger, target_job: job})
 
       %{id: project_credential_id, credential_id: credential_id} =
         project_credential_fixture(
