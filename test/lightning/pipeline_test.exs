@@ -94,7 +94,11 @@ defmodule Lightning.PipelineTest do
           workflow: trigger.workflow
         )
 
-      insert(:edge, %{workflow_id: trigger.workflow_id, source_trigger: trigger, target_job: job})
+      insert(:edge, %{
+        workflow_id: trigger.workflow_id,
+        source_trigger: trigger,
+        target_job: job
+      })
 
       %{id: project_credential_id, credential_id: credential_id} =
         project_credential_fixture(
