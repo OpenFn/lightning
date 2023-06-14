@@ -39,38 +39,6 @@ defmodule Lightning.JobsTest do
       assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
     end
 
-    test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
-      t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
-      job_0 = job_fixture(workflow_id: t1.workflow_id)
-
-      _e1 =
-        insert(:edge, %{
-          workflow_id: t1.workflow_id,
-          source_trigger_id: t1.id,
-          target_job_id: job_0.id
-        })
-
-      t2 = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
-      job_1 = job_fixture(workflow_id: t2.workflow_id)
-
-      _e2 =
-        insert(:edge, %{
-          workflow_id: t2.workflow_id,
-          target_job_id: job_1.id,
-          source_trigger_id: t2.id
-        })
-
-      _disabled_job =
-        job_fixture(
-          enabled: false,
-          workflow_id: t2.workflow_id
-        )
-
-      assert Jobs.get_jobs_for_cron_execution(DateTime.utc_now()) == [
-               Jobs.get_job!(job_1.id)
-             ]
-    end
-
     test "get_job!/1 returns the job with given id" do
       job = job_fixture()
 
@@ -82,29 +50,6 @@ defmodule Lightning.JobsTest do
 
       assert Jobs.get_job(job.id) |> unload_relation(:workflow) == job
       assert Jobs.get_job(Ecto.UUID.generate()) == nil
-    end
-
-    test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture()
-      # @Stu, why do I need to specify workflow_id _AND_ workflow here???
-      trigger =
-        insert(:trigger, %{workflow: job.workflow, workflow_id: job.workflow_id})
-
-      _edge =
-        insert(:edge, %{
-          workflow_id: job.workflow_id,
-          source_trigger_id: trigger.id,
-          target_job_id: job.id
-        })
-
-      assert Jobs.get_job_by_webhook(trigger.id)
-             |> unload_relation(:workflow) == job
-
-      # TODO continue this logic...
-      # job = job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
-
-      # assert Jobs.get_job_by_webhook(job.trigger.id) == nil
-      # assert Jobs.get_job_by_webhook("foo") |> unload_relation(:workflow) == job
     end
 
     test "change_job/1 returns a job changeset" do
@@ -381,20 +326,15 @@ defmodule Lightning.JobsTest do
           workflow: job.workflow
         })
 
-      insert(:edge, %{
-        workflow_id: job.workflow_id,
-        source_trigger: trigger,
-        target_job: job
-      })
-
-      insert(:edge, %{
-        workflow_id: trigger.workflow_id,
-        source_trigger: trigger,
-        target_job: job
-      })
+      edge =
+        insert(:edge, %{
+          workflow_id: job.workflow_id,
+          source_trigger: trigger,
+          target_job: job
+        })
 
       {:ok, %{attempt_run: attempt_run}} =
-        Lightning.WorkOrderService.multi_for(:cron, job, dataclip_fixture())
+        Lightning.WorkOrderService.multi_for(:cron, edge, dataclip_fixture())
         |> Repo.transaction()
 
       Lightning.Pipeline.process(attempt_run)
