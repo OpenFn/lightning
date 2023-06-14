@@ -20,8 +20,8 @@ defmodule Lightning.Jobs.QueryTest do
   end
 
   test "enabled_cron_jobs_by_edge/0" do
-    trigger = insert(:trigger, %{type: :cron, cron: "* * * * *"})
-    job = job_fixture(enabled: true)
+    trigger = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
+    job = job_fixture(enabled: true, workflow_id: trigger.workflow_id)
 
     insert(:edge, %{
       source_trigger: trigger,
@@ -33,6 +33,11 @@ defmodule Lightning.Jobs.QueryTest do
 
     _non_cronjob = job_fixture()
 
-    assert Query.enabled_cron_jobs_by_edge() |> Repo.all() == [job]
+    jobs =
+    Query.enabled_cron_jobs_by_edge() 
+    |> Repo.all()
+    |> Enum.map(fn e -> e.target_job.id end)
+
+  assert jobs == [job.id]
   end
 end
