@@ -9,18 +9,12 @@ defmodule LightningWeb.UserRegistrationController do
     render(conn, "new.html", changeset: changeset)
   end
 
-  defp project_name(first_name),
-    do:
-      "#{String.downcase(first_name)}-demo"
-      |> String.replace(" ", "-")
-      # force the user's first name to be acceptable project name
-      |> String.replace(~r/[^a-zA-Z0-9-]/, "")
-
   defp create_initial_project(%Lightning.Accounts.User{
          id: user_id,
          first_name: first_name
        }) do
-    project_name = project_name(first_name)
+    project_name =
+      "#{String.downcase(first_name)}-demo" |> String.replace(" ", "-")
 
     Lightning.SetupUtils.create_starter_project(
       project_name,
@@ -37,9 +31,9 @@ defmodule LightningWeb.UserRegistrationController do
             &Routes.user_confirmation_url(conn, :edit, &1)
           )
 
-        # if Application.get_env(:lightning, :init_project_for_new_user) do
-        # end
-        create_initial_project(user)
+        if Application.get_env(:lightning, :init_project_for_new_user) do
+          create_initial_project(user)
+        end
 
         conn
         |> put_flash(:info, "User created successfully.")
