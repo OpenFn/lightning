@@ -14,7 +14,7 @@ defmodule LightningWeb.JobLiveTest do
 
   setup %{project: project} do
     project_credential_fixture(project_id: project.id)
-    job = workflow_job_fixture(project_id: project.id)
+    %{job: job} = workflow_job_fixture(project_id: project.id)
     %{job: job}
   end
 

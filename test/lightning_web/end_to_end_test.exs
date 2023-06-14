@@ -83,7 +83,8 @@ defmodule LightningWeb.EndToEndTest do
 
       conn = post(conn, "/i/#{webhook_trigger.id}", message)
 
-      assert %{"run_id" => run_id, "attempt_id" => attempt_id} = json_response(conn, 200)
+      assert %{"run_id" => run_id, "attempt_id" => attempt_id} =
+               json_response(conn, 200)
 
       attempt_run =
         Lightning.Repo.get_by(Lightning.AttemptRun,
