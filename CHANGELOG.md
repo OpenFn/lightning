@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Example runs for demo incorrect
+  [#856](https://github.com/OpenFn/Lightning/issues/856)
+
 ## [0.6.3]
 
 ### Added
