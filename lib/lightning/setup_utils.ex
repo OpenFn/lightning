@@ -279,12 +279,85 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: send_to_openhim.id,
         exit_code: 0,
+        log_lines: [
+          %{body: "[CLI] ℹ Versions:"},
+          %{body: "        ▸ node.js                  18.12.0"},
+          %{body: "        ▸ cli                      0.0.32"},
+          %{body: "        ▸ runtime                  0.0.20"},
+          %{body: "        ▸ compiler                 0.0.26"},
+          %{body: "        ▸ @openfn/language-http    4.2.6"},
+          %{
+            body:
+              "[CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json"
+          },
+          %{body: "[CLI] ℹ Loaded typedefs for @openfn/language-http@latest"},
+          %{body: "[CLI] ℹ Loaded typedefs for @openfn/language-http@latest"},
+          %{
+            body: "[CMP] ℹ Added import statement for @openfn/language-http"
+          },
+          %{
+            body: "[CMP] ℹ Added export * statement for @openfn/language-http"
+          },
+          %{
+            body:
+              "[CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js"
+          },
+          %{
+            body:
+              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
+          },
+          %{
+            body: "[R/T] ✔ Operation 1 complete in 0ms"
+          },
+          %{
+            body:
+              "[CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json"
+          },
+          %{
+            body: "[CLI] ✔ Done in 223ms! ✨"
+          }
+        ],
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       },
       %{
         job_id: notify_upload_successful.id,
         exit_code: 0,
+        log_lines: [
+          %{body: "[CLI] ℹ Versions:"},
+          %{body: "        ▸ node.js                  18.12.0"},
+          %{body: "        ▸ cli                      0.0.32"},
+          %{body: "        ▸ runtime                  0.0.20"},
+          %{body: "        ▸ compiler                 0.0.26"},
+          %{body: "        ▸ @openfn/language-http    4.2.6"},
+          %{
+            body:
+              "[CLI] ✔ Loaded state from /tmp/state-1686840747-126941-n44hwo.json"
+          },
+          %{body: "[CLI] ℹ Loaded typedefs for @openfn/language-http@latest"},
+          %{body: "[CMP] ℹ Added import statement for @openfn/language-http"},
+          %{
+            body: "[CMP] ℹ Added export * statement for @openfn/language-http"
+          },
+          %{
+            body:
+              "[CLI] ✔ Compiled job from /tmp/expression-1686840747-126941-1qi9xrb.js"
+          },
+          %{
+            body:
+              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
+          },
+          %{
+            body: "[R/T] ✔ Operation 1 complete in 0ms"
+          },
+          %{
+            body:
+              "[CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json"
+          },
+          %{
+            body: "[CLI] ✔ Done in 209ms! ✨"
+          }
+        ],
         started_at: DateTime.utc_now() |> DateTime.add(20, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
       }
@@ -353,6 +426,42 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 0,
+        log_lines: %{
+          "0" => %{body: "[CLI] ℹ Versions:"},
+          "1" => %{body: "        ▸ node.js                  18.12.0"},
+          "2" => %{body: "        ▸ cli                      0.0.32"},
+          "3" => %{body: "        ▸ runtime                  0.0.21"},
+          "4" => %{body: "        ▸ compiler                 0.0.26"},
+          "5" => %{body: "        ▸ @openfn/language-http    4.2.6"},
+          "6" => %{
+            body:
+              "[CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json"
+          },
+          "7" => %{
+            body: "[CMP] ℹ Added import statement for @openfn/language-http"
+          },
+          "8" => %{
+            body: "[CMP] ℹ Added export * statement for @openfn/language-http"
+          },
+          "9" => %{
+            body:
+              "[CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js"
+          },
+          "10" => %{
+            body:
+              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
+          },
+          "11" => %{
+            body: "[R/T] ✔ Operation 1 complete in 0ms"
+          },
+          "12" => %{
+            body:
+              "[CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json"
+          },
+          "13" => %{
+            body: "[CLI] ✔ Done in 216ms! ✨"
+          }
+        },
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
@@ -371,6 +480,39 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 1,
+        log_lines: %{
+          "0" => %{body: "[CLI] ℹ Versions:"},
+          "1" => %{body: "        ▸ @openfn/language-http    4.2.8"},
+          "2" => %{body: "        ▸ compiler                 0.0.29"},
+          "3" => %{body: "        ▸ runtime                  0.0.21"},
+          "4" => %{body: "        ▸ cli                      0.0.35"},
+          "5" => %{body: "        ▸ node.js                  18.12.0"},
+          "6" => %{
+            body:
+              "[CLI] ✔ Loaded state from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/state-1686240004-30184-1qywkh4.json"
+          },
+          "7" => %{
+            body: "[CLI] ℹ Added import statement for @openfn/language-http"
+          },
+          "8" => %{
+            body: "[CLI] ℹ Added export * statement for @openfn/language-http"
+          },
+          "9" => %{
+            body:
+              "[CLI] ✔ Compiled job from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/expression-1686240004-30184-sd2j6r.js"
+          },
+          "10" => %{
+            body:
+              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.8"
+          },
+          "11" => %{
+            body:
+              "[CLI] ✘ Error: 503 Service Unavailable, please try again later"
+          },
+          "12" => %{
+            body: "[CLI] ✘ Took 1.634s."
+          }
+        },
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
@@ -451,8 +593,61 @@ defmodule Lightning.SetupUtils do
       |> Multi.update("update_run", fn %{run: run} ->
         # Change the timestamps, logs, exit_code etc
         run
+        |> Repo.preload(:log_lines)
         |> Run.changeset(%{
           exit_code: 0,
+          log_lines: %{
+            "0" => %{
+              body: "[CLI] ℹ Versions:"
+            },
+            "1" => %{
+              body: "        ▸ node.js                   18.12.0"
+            },
+            "2" => %{
+              body: "        ▸ cli                       0.0.32"
+            },
+            "3" => %{
+              body: "        ▸ runtime                   0.0.20"
+            },
+            "4" => %{
+              body: "        ▸ compiler                  0.0.26"
+            },
+            "5" => %{
+              body: "        ▸ #{adaptor_for_log(run)}    3.2.11"
+            },
+            "6" => %{
+              body:
+                "[CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json"
+            },
+            "7" => %{
+              body: "[CLI] ℹ Loaded typedefs for #{adaptor_for_log(run)}"
+            },
+            "8" => %{
+              body: "[CMP] ℹ Added import statement for #{adaptor_for_log(run)}"
+            },
+            "9" => %{
+              body:
+                "[CMP] ℹ Added export * statement for #{adaptor_for_log(run)}"
+            },
+            "10" => %{
+              body:
+                "[CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js"
+            },
+            "11" => %{
+              body:
+                "[R/T] ℹ Resolved adaptor #{adaptor_for_log(run)} to version 3.2.11"
+            },
+            "12" => %{
+              body: "[R/T] ✔ Operation 1 complete in 0ms"
+            },
+            "13" => %{
+              body:
+                "[CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json"
+            },
+            "14" => %{
+              body: "[CLI] ✔ Done in 179ms! ✨"
+            }
+          },
           started_at: DateTime.utc_now() |> DateTime.add(0, :second),
           finished_at: DateTime.utc_now() |> DateTime.add(5, :second)
         })
@@ -473,5 +668,10 @@ defmodule Lightning.SetupUtils do
         AttemptRun.new(attempt, run)
       end)
     end)
+  end
+
+  defp adaptor_for_log(run) do
+    run_with_job = Repo.preload(run, :job)
+    run_with_job.job.adaptor
   end
 end

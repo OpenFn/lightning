@@ -3,8 +3,6 @@ defmodule Lightning.Demo do
   Demo encapsulates logic for setting up a demonstration site.
   """
 
-  alias Lightning.SetupUtils
-
   @doc """
   Deletes everything in the database including the superuser and creates a set
   of publicly available users for a demo site via a command that can be run on
@@ -15,8 +13,8 @@ defmodule Lightning.Demo do
 
     {:ok, _, _} =
       Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
-        SetupUtils.tear_down(destroy_super: true)
-        SetupUtils.setup_demo(create_super: true)
+        Lightning.SetupUtils.tear_down(destroy_super: true)
+        Lightning.SetupUtils.setup_demo(create_super: true)
       end)
   end
 end
