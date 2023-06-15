@@ -26,7 +26,14 @@ defmodule Lightning.Workflows.Graph do
       end
     end
 
-    %__MODULE__{digraph: g, root: get_root(g), jobs: workflow.jobs}
+    root =
+      if length(workflow.edges) == 0 do
+        nil
+      else
+        get_root(g)
+      end
+
+    %__MODULE__{digraph: g, root: root, jobs: workflow.jobs}
   end
 
   @spec remove(__MODULE__.t(), Ecto.UUID.t()) :: __MODULE__.t()

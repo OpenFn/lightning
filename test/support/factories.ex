@@ -47,6 +47,13 @@ defmodule Lightning.Factories do
     %Lightning.Credentials.Credential{}
   end
 
+  def project_credential_factory do
+    %Lightning.Projects.ProjectCredential{
+      project: build(:project),
+      credential: build(:credential)
+    }
+  end
+
   def workorder_factory do
     %Lightning.WorkOrder{workflow: build(:workflow)}
   end
