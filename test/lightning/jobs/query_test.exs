@@ -21,12 +21,12 @@ defmodule Lightning.Jobs.QueryTest do
 
   test "enabled_cron_jobs_by_edge/0" do
     trigger = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
-    job = job_fixture(enabled: true, workflow_id: trigger.workflow_id)
+    job = insert(:job, enabled: true, workflow: trigger.workflow)
 
     insert(:edge, %{
       source_trigger: trigger,
       target_job: job,
-      workflow_id: job.workflow_id
+      workflow: job.workflow
     })
 
     _disabled_conjob = job_fixture(enabled: false)

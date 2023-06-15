@@ -557,7 +557,6 @@ defmodule Lightning.SetupUtils do
     %{
       project: openhie_project,
       workflow: openhie_workflow,
-      workorder: openhie_workorder,
       jobs: [
         fhir_standard_data,
         send_to_openhim,

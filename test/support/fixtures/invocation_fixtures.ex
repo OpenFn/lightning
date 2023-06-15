@@ -67,7 +67,7 @@ defmodule Lightning.InvocationFixtures do
       end)
       |> Keyword.put_new_lazy(:trigger_id, fn ->
         # DEPRECATED: remove me
-        insert(:trigger, %{workflow: build(:workflow)}).id
+        insert(:trigger).id
       end)
       |> Enum.into(%{
         type: :webhook

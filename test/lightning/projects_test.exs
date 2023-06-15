@@ -177,16 +177,16 @@ defmodule Lightning.ProjectsTest do
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
-      t1  = insert(:trigger, %{workflow_id: w1_job.workflow_id, type: :webhook, workflow: w1_job.workflow})
-      e1  = insert(:edge, %{ workflow_id: w1_job.workflow_id, source_trigger: t1, target_job: w1_job})
+      t1  = insert(:trigger, %{workflow_id: w1_job.workflow_id, type: :webhook})
+      e1  = insert(:edge, %{ workflow: w1_job.workflow, source_trigger: t1, target_job: w1_job})
 
       %{
         project: p2,
         w2_job: w2_job
       } = full_project_fixture()
 
-      t2  = insert(:trigger, %{workflow_id: w2_job.workflow_id, type: :webhook, workflow: w2_job.workflow})
-      e2  = insert(:edge, %{ workflow_id: w2_job.workflow_id, source_trigger: t2, target_job: w2_job})
+      t2  = insert(:trigger, %{workflow: w2_job.workflow, type: :webhook})
+      e2  = insert(:edge, %{ workflow: w2_job.workflow, source_trigger: t2, target_job: w2_job})
 
 
 

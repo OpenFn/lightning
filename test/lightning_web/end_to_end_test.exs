@@ -30,7 +30,7 @@ defmodule LightningWeb.EndToEndTest do
       )
 
     %{
-      job: first_job = %{workflow_id: workflow_id},
+      job: first_job = %{workflow: workflow},
       trigger: webhook_trigger,
       edge: _edge
     } =
@@ -45,35 +45,35 @@ defmodule LightningWeb.EndToEndTest do
     # add an edge that follows the new rules foe edges
     # delete the current trigger for this flow job as it will have an edge
     flow_job =
-      job_fixture(
+      insert(:job,
         name: "2nd-job",
         adaptor: "@openfn/language-http",
         body: flow_expression(),
         project_id: project.id,
-        workflow_id: workflow_id,
+        workflow: workflow,
         project_credential_id: project_credential.id
       )
 
     insert(:edge, %{
-      workflow_id: workflow_id,
+      workflow: workflow,
       source_job_id: first_job.id,
       target_job_id: flow_job.id,
       condition: :on_job_success
     })
 
     catch_job =
-      job_fixture(
+      insert(:job,
         name: "3rd-job",
         adaptor: "@openfn/language-http",
         body: catch_expression(),
         project_id: project.id,
-        workflow_id: workflow_id,
+        workflow_id: workflow.id,
         project_credential_id: project_credential.id
       )
 
     insert(:edge, %{
       source_job_id: flow_job.id,
-      workflow_id: workflow_id,
+      workflow: workflow,
       target_job_id: catch_job.id,
       condition: :on_job_failure
     })

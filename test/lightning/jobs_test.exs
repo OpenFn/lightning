@@ -89,14 +89,13 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
-      job = job_fixture()
-
-      other_job = job_fixture(workflow_id: job.workflow_id)
+      job = insert(:job)
+      other_job = insert(:job, workflow: job.workflow)
 
       # connect other_job to job via an edge
       insert(:edge, %{
         source_job_id: job.id,
-        workflow_id: job.workflow_id,
+        workflow: job.workflow,
         target_job_id: other_job.id,
         condition: :on_job_failure
       })
@@ -145,13 +144,13 @@ defmodule Lightning.JobsTest do
     end
 
     test "delete_job/1 deletes the job" do
-      job = job_fixture()
+      job = insert(:job)
       assert {:ok, %Job{}} = Jobs.delete_job(job)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
     end
 
     test "delete_job/1 can't delete job with downstream jobs" do
-      job = job_fixture()
+      job = insert(:job)
 
       {:ok, job1} =
         Jobs.create_job(%{
@@ -166,7 +165,7 @@ defmodule Lightning.JobsTest do
         condition: :on_job_success,
         source_job: job,
         target_job: job1,
-        workflow_id: job.workflow_id
+        workflow: job.workflow
       })
 
       {:error, changeset} = Jobs.delete_job(job)
@@ -289,18 +288,17 @@ defmodule Lightning.JobsTest do
 
   describe "Scheduler" do
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
-      job = insert(:job, %{})
+      job = insert(:job)
 
       trigger =
         insert(:trigger, %{
           type: :cron,
           cron_expression: "* * * * *",
-          workflow_id: job.workflow_id,
           workflow: job.workflow
         })
 
       insert(:edge, %{
-        workflow_id: job.workflow_id,
+        workflow: job.workflow,
         source_trigger: trigger,
         target_job: job
       })

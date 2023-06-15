@@ -33,7 +33,7 @@ defmodule Lightning.PipelineTest do
       # add an edge to connect the two jobs
       insert(:edge, %{
         source_job_id: job.id,
-        workflow_id: job.workflow_id,
+        workflow: job.workflow,
         target_job_id: downstream_job_id,
         condition: :on_job_failure
       })
@@ -85,7 +85,7 @@ defmodule Lightning.PipelineTest do
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
-      trigger = insert(:trigger, %{})
+      trigger = insert(:trigger)
 
       job =
         insert(:job,
@@ -95,7 +95,7 @@ defmodule Lightning.PipelineTest do
         )
 
       insert(:edge, %{
-        workflow_id: trigger.workflow_id,
+        workflow: trigger.workflow,
         source_trigger: trigger,
         target_job: job
       })
@@ -106,7 +106,7 @@ defmodule Lightning.PipelineTest do
           body: %{"apiToken" => "secret123"}
         )
 
-      %{id: downstream_job_id} =
+      downstream_job = %{id: downstream_job_id} =
         job_fixture(
           trigger: %{type: :on_job_success, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
@@ -116,9 +116,9 @@ defmodule Lightning.PipelineTest do
         )
 
       insert(:edge, %{
-        source_job_id: job.id,
-        workflow_id: job.workflow_id,
-        target_job_id: downstream_job_id,
+        workflow: job.workflow,
+        source_job: job,
+        target_job: downstream_job,
         condition: :on_job_success
       })
 
@@ -133,7 +133,7 @@ defmodule Lightning.PipelineTest do
 
       insert(:edge, %{
         source_job_id: job.id,
-        workflow_id: job.workflow_id,
+        workflow: job.workflow,
         target_job_id: disabled_downstream_job_id,
         condition: :on_job_success
       })

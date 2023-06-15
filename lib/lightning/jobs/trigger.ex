@@ -58,6 +58,11 @@ defmodule Lightning.Jobs.Trigger do
       ])
 
     changeset
+    |> validate()
+  end
+
+  def validate(changeset) do
+    changeset
     |> validate_required([:type])
     |> assoc_constraint(:workflow)
     |> validate_by_type()
