@@ -139,7 +139,8 @@ defmodule Lightning.Projects.ProvisionerTest do
         |> add_job_to_document(%{
           "id" => third_job_id,
           "name" => "third-job",
-          "adaptor" => "@openfn/language-common@latest"
+          "adaptor" => "@openfn/language-common@latest",
+          "body" => "console.log('hello world');"
         })
 
       changeset = Provisioner.parse_document(project, body)
@@ -183,7 +184,8 @@ defmodule Lightning.Projects.ProvisionerTest do
           |> add_entity_to_workflow(workflow_id, "jobs", %{
             "id" => third_job_id,
             "name" => "third-job",
-            "adaptor" => "@openfn/language-common@latest"
+            "adaptor" => "@openfn/language-common@latest",
+            "body" => "console.log('hello world');"
           })
         )
 
@@ -334,12 +336,14 @@ defmodule Lightning.Projects.ProvisionerTest do
             %{
               "id" => first_job_id,
               "name" => "first-job",
-              "adaptor" => "@openfn/language-common@latest"
+              "adaptor" => "@openfn/language-common@latest",
+              "body" => "console.log('hello world');"
             },
             %{
               "id" => second_job_id,
               "name" => "second-job",
-              "adaptor" => "@openfn/language-common@latest"
+              "adaptor" => "@openfn/language-common@latest",
+              "body" => "console.log('hello world');"
             }
           ],
           "triggers" => [
