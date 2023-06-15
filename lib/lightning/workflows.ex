@@ -219,11 +219,11 @@ defmodule Lightning.Workflows do
       |> Repo.all()
 
     for e <- cron_edges,
-        is_valid_edge(e, datetime),
+        has_matching_trigger(e, datetime),
         do: e
   end
 
-  defp is_valid_edge(edge, datetime) do
+  defp has_matching_trigger(edge, datetime) do
     cron_expression = edge.source_trigger.cron_expression
 
     with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
