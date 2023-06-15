@@ -355,9 +355,6 @@ defmodule LightningWeb.RunLive.Components do
     end)
   end
 
-  # TODO - @Elias, @Stu, are we meant to get nils here?
-  defp spaces_to_nbsp(str) when is_nil(str), do: nil
-
   attr :dataclip, :any, required: true
   attr :no_dataclip_message, :any
 

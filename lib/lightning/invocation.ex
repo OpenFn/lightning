@@ -287,9 +287,10 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def create_log_line(attrs \\ %{}) do
+  def create_log_line(run, body) do
     %LogLine{}
-    |> LogLine.changeset(attrs)
+    |> Ecto.Changeset.change(%{run: run, body: body |> to_string})
+    |> LogLine.validate()
     |> Repo.insert!()
   end
 

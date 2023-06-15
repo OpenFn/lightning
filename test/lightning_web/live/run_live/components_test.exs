@@ -146,15 +146,19 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       render_component(&Components.log_view/1, log: log_lines)
       |> Floki.parse_fragment!()
 
-    assert html |> Floki.find("div[data-line-number]") |> length() == 2
+    assert html |> Floki.find("div[data-line-number]") |> length() ==
+             length(log_lines)
 
     # Check that the log lines are present.
     # Replace the resulting utf-8 &nbsp; back into a regular space.
-    assert html
-           |> Floki.find("div[data-log-line]")
-           |> Floki.text(sep: "\n")
-           |> String.replace(<<160::utf8>>, " ") ==
-             log_lines |> Enum.join("\n")
+    assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
+  end
+
+  defp log_lines_from_html(html) do
+    html
+    |> Floki.find("div[data-log-line]")
+    |> Floki.text(sep: "\n")
+    |> String.replace(<<160::utf8>>, " ")
   end
 
   describe "run_details component" do

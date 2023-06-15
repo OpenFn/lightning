@@ -18,7 +18,7 @@ defmodule Lightning.Invocation.LogLine do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "log_lines" do
-    field :body, :string
+    field :body, :string, default: ""
     field :timestamp, :integer
 
     belongs_to :run, Run
@@ -27,9 +27,21 @@ defmodule Lightning.Invocation.LogLine do
   end
 
   @doc false
-  def changeset(run, attrs) do
-    run
+  def changeset(log_line, attrs) do
+    log_line
     |> cast(attrs, [:body, :timestamp, :run_id])
+    |> validate()
+  end
+
+  def validate(changeset) do
+    changeset
     |> assoc_constraint(:run)
+    |> validate_change(:body, fn _, body ->
+      if is_nil(body) do
+        [message: "can't be nil"]
+      else
+        []
+      end
+    end)
   end
 end
