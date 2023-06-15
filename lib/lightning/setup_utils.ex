@@ -202,6 +202,7 @@ defmodule Lightning.SetupUtils do
         exit_code: 0,
         log_lines:
           to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
           [CLI] ℹ Versions:
                ▸ node.js                    18.12.0
                ▸ cli                        0.0.32
@@ -226,6 +227,7 @@ defmodule Lightning.SetupUtils do
         exit_code: 0,
         log_lines:
           to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
           [CLI] ℹ Versions:
                ▸ node.js                   18.12.0
                ▸ cli                       0.0.32
@@ -254,96 +256,9 @@ defmodule Lightning.SetupUtils do
               "updated": 0,
               "deleted": 0,
               "ignored": 0,
-              "importOptions": {
-                "idSchemes": {},
-                "dryRun": false,
-                "async": false,
-                "importStrategy": "CREATE_AND_UPDATE",
-                "mergeMode": "REPLACE",
-                "reportMode": "FULL",
-                "skipExistingCheck": false,
-                "sharing": false,
-                "skipNotifications": false,
-                "skipAudit": false,
-                "datasetAllowsPeriods": false,
-                "strictPeriods": false,
-                "strictDataElements": false,
-                "strictCategoryOptionCombos": false,
-                "strictAttributeOptionCombos": false,
-                "strictOrganisationUnits": false,
-                "strictDataSetApproval": false,
-                "strictDataSetLocking": false,
-                "strictDataSetInputPeriods": false,
-                "requireCategoryOptionCombo": false,
-                "requireAttributeOptionCombo": false,
-                "skipPatternValidation": false,
-                "ignoreEmptyCollection": false,
-                "force": false,
-                "firstRowIsHeader": true,
-                "skipLastUpdated": true,
-                "mergeDataValues": false,
-                "skipCache": false
-              },
-              "importSummaries": [
-                {
-                  "responseType": "ImportSummary",
-                  "status": "SUCCESS",
-                  "importOptions": {
-                    "idSchemes": {},
-                    "dryRun": false,
-                    "async": false,
-                    "importStrategy": "CREATE_AND_UPDATE",
-                    "mergeMode": "REPLACE",
-                    "reportMode": "FULL",
-                    "skipExistingCheck": false,
-                    "sharing": false,
-                    "skipNotifications": false,
-                    "skipAudit": false,
-                    "datasetAllowsPeriods": false,
-                    "strictPeriods": false,
-                    "strictDataElements": false,
-                    "strictCategoryOptionCombos": false,
-                    "strictAttributeOptionCombos": false,
-                    "strictOrganisationUnits": false,
-                    "strictDataSetApproval": false,
-                    "strictDataSetLocking": false,
-                    "strictDataSetInputPeriods": false,
-                    "requireCategoryOptionCombo": false,
-                    "requireAttributeOptionCombo": false,
-                    "skipPatternValidation": false,
-                    "ignoreEmptyCollection": false,
-                    "force": false,
-                    "firstRowIsHeader": true,
-                    "skipLastUpdated": true,
-                    "mergeDataValues": false,
-                    "skipCache": false
-                  },
-                  "importCount": {
-                    "imported": 1,
-                    "updated": 0,
-                    "ignored": 0,
-                    "deleted": 0
-                  },
-                  "conflicts": [],
-                  "rejectedIndexes": [],
-                  "reference": "TjyGIpuzhqU",
-                  "href": "https://play.dhis2.org/dev/api/trackedEntityInstances/TjyGIpuzhqU",
-                  "enrollments": {
-                    "responseType": "ImportSummaries",
-                    "status": "SUCCESS",
-                    "imported": 0,
-                    "updated": 0,
-                    "deleted": 0,
-                    "ignored": 0,
-                    "importSummaries": [],
-                    "total": 0
-                  }
-                }
-              ],
               "total": 1
             }
           }
-          Record available @ https://play.dhis2.org/dev/api/api/trackedEntityInstances/TjyGIpuzhqU
           [R/T] ✔ Operation 1 complete in 1.775s
           [CLI] ✔ Writing output to /tmp/output-1686850601-169521-1k3hzfw.json
           [CLI] ✔ Done in 2.052s! ✨
@@ -429,6 +344,7 @@ defmodule Lightning.SetupUtils do
         exit_code: 0,
         log_lines:
           to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
           [CLI] ℹ Versions:
                ▸ node.js                  18.12.0
                ▸ cli                      0.0.32
@@ -454,6 +370,7 @@ defmodule Lightning.SetupUtils do
         exit_code: 0,
         log_lines:
           to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
           [CLI] ℹ Versions:
                ▸ node.js                  18.12.0
                ▸ cli                      0.0.32
@@ -540,6 +457,7 @@ defmodule Lightning.SetupUtils do
         exit_code: 0,
         log_lines:
           to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
           [CLI] ℹ Versions:
                ▸ node.js                  18.12.0
                ▸ cli                      0.0.32
@@ -575,6 +493,7 @@ defmodule Lightning.SetupUtils do
         exit_code: 1,
         log_lines:
           to_log_lines("""
+          -- THIS IS ONLY A SAMPLE --
           [CLI] ℹ Versions:
                ▸ @openfn/language-http    4.2.8
                ▸ compiler                 0.0.29
@@ -674,6 +593,7 @@ defmodule Lightning.SetupUtils do
           exit_code: 0,
           log_lines:
             to_log_lines("""
+            -- THIS IS ONLY A SAMPLE --
             [CLI] ℹ Versions:
                  ▸ node.js                   18.12.0
                  ▸ cli                       0.0.32
