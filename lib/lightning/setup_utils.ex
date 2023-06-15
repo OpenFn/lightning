@@ -100,6 +100,12 @@ defmodule Lightning.SetupUtils do
     }
   end
 
+  defp to_log_lines(log) do
+    log
+    |> String.split("\n")
+    |> Enum.map(fn log -> %{body: log} end)
+  end
+
   defp create_dhis2_credential(project, user_id) do
     {:ok, credential} =
       Credentials.create_credential(%{
@@ -194,12 +200,154 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: job_2.id,
         exit_code: 0,
+        log_lines:
+          to_log_lines("""
+          [CLI] ℹ Versions:
+               ▸ node.js                    18.12.0
+               ▸ cli                        0.0.32
+               ▸ runtime                    0.0.20
+               ▸ compiler                   0.0.26
+               ▸ @openfn/language-common    1.7.5
+          [CLI] ✔ Loaded state from /tmp/state-1686850600-169521-e1925t.json
+          [CLI] ℹ Loaded typedefs for @openfn/language-common@latest
+          [CMP] ℹ Added import statement for @openfn/language-common
+          [CMP] ℹ Added export * statement for @openfn/language-common
+          [CLI] ✔ Compiled job from /tmp/expression-1686850600-169521-1sqw0sl.js
+          [R/T] ℹ Resolved adaptor @openfn/language-common to version 1.7.5
+          [R/T] ✔ Operation 1 complete in 0ms
+          [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
+          [CLI] ✔ Done in 304ms! ✨
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       },
       %{
         job_id: job_3.id,
         exit_code: 0,
+        log_lines:
+          to_log_lines("""
+          [CLI] ℹ Versions:
+               ▸ node.js                   18.12.0
+               ▸ cli                       0.0.32
+               ▸ runtime                   0.0.20
+               ▸ compiler                  0.0.26
+               ▸ @openfn/language-dhis2    3.2.11
+          [CLI] ✔ Loaded state from /tmp/state-1686850601-169521-1eyevfx.json
+          [CLI] ℹ Loaded typedefs for @openfn/language-dhis2@latest
+          [CMP] ℹ Added import statement for @openfn/language-dhis2
+          [CMP] ℹ Added export * statement for @openfn/language-dhis2
+          [CLI] ✔ Compiled job from /tmp/expression-1686850601-169521-1i644ux.js
+          [R/T] ℹ Resolved adaptor @openfn/language-dhis2 to version 3.2.11
+          Preparing create operation...
+          Using latest available version of the DHIS2 api on this server.
+          Sending post request to https://play.dhis2.org/dev/api/trackedEntityInstances
+          ✓ Success at Thu Jun 15 2023 17:36:44 GMT+0000 (Greenwich Mean Time):
+          Created trackedEntityInstances with response {
+          "httpStatus": "OK",
+          "httpStatusCode": 200,
+          "status": "OK",
+          "message": "Import was successful.",
+          "response": {
+          "responseType": "ImportSummaries",
+          "status": "SUCCESS",
+          "imported": 1,
+          "updated": 0,
+          "deleted": 0,
+          "ignored": 0,
+          "importOptions": {
+            "idSchemes": {},
+            "dryRun": false,
+            "async": false,
+            "importStrategy": "CREATE_AND_UPDATE",
+            "mergeMode": "REPLACE",
+            "reportMode": "FULL",
+            "skipExistingCheck": false,
+            "sharing": false,
+            "skipNotifications": false,
+            "skipAudit": false,
+            "datasetAllowsPeriods": false,
+            "strictPeriods": false,
+            "strictDataElements": false,
+            "strictCategoryOptionCombos": false,
+            "strictAttributeOptionCombos": false,
+            "strictOrganisationUnits": false,
+            "strictDataSetApproval": false,
+            "strictDataSetLocking": false,
+            "strictDataSetInputPeriods": false,
+            "requireCategoryOptionCombo": false,
+            "requireAttributeOptionCombo": false,
+            "skipPatternValidation": false,
+            "ignoreEmptyCollection": false,
+            "force": false,
+            "firstRowIsHeader": true,
+            "skipLastUpdated": true,
+            "mergeDataValues": false,
+            "skipCache": false
+          },
+          "importSummaries": [
+            {
+              "responseType": "ImportSummary",
+              "status": "SUCCESS",
+              "importOptions": {
+                "idSchemes": {},
+                "dryRun": false,
+                "async": false,
+                "importStrategy": "CREATE_AND_UPDATE",
+                "mergeMode": "REPLACE",
+                "reportMode": "FULL",
+                "skipExistingCheck": false,
+                "sharing": false,
+                "skipNotifications": false,
+                "skipAudit": false,
+                "datasetAllowsPeriods": false,
+                "strictPeriods": false,
+                "strictDataElements": false,
+                "strictCategoryOptionCombos": false,
+                "strictAttributeOptionCombos": false,
+                "strictOrganisationUnits": false,
+                "strictDataSetApproval": false,
+                "strictDataSetLocking": false,
+                "strictDataSetInputPeriods": false,
+                "requireCategoryOptionCombo": false,
+                "requireAttributeOptionCombo": false,
+                "skipPatternValidation": false,
+                "ignoreEmptyCollection": false,
+                "force": false,
+                "firstRowIsHeader": true,
+                "skipLastUpdated": true,
+                "mergeDataValues": false,
+                "skipCache": false
+              },
+              "importCount": {
+                "imported": 1,
+                "updated": 0,
+                "ignored": 0,
+                "deleted": 0
+              },
+              "conflicts": [],
+              "rejectedIndexes": [],
+              "reference": "TjyGIpuzhqU",
+              "href": "https://play.dhis2.org/dev/api/trackedEntityInstances/TjyGIpuzhqU",
+              "enrollments": {
+                "responseType": "ImportSummaries",
+                "status": "SUCCESS",
+                "imported": 0,
+                "updated": 0,
+                "deleted": 0,
+                "ignored": 0,
+                "importSummaries": [],
+                "total": 0
+              }
+            }
+          ],
+          "total": 1
+          }
+          }
+          Record available @ https://play.dhis2.org/dev/api/api/trackedEntityInstances/TjyGIpuzhqU
+          [R/T] ✔ Operation 1 complete in 1.775s
+          [CLI] ✔ Writing output to /tmp/output-1686850601-169521-1k3hzfw.json
+          [CLI] ✔ Done in 2.052s! ✨
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(20, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
       }
@@ -279,85 +427,49 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: send_to_openhim.id,
         exit_code: 0,
-        log_lines: [
-          %{body: "[CLI] ℹ Versions:"},
-          %{body: "        ▸ node.js                  18.12.0"},
-          %{body: "        ▸ cli                      0.0.32"},
-          %{body: "        ▸ runtime                  0.0.20"},
-          %{body: "        ▸ compiler                 0.0.26"},
-          %{body: "        ▸ @openfn/language-http    4.2.6"},
-          %{
-            body:
-              "[CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json"
-          },
-          %{body: "[CLI] ℹ Loaded typedefs for @openfn/language-http@latest"},
-          %{body: "[CLI] ℹ Loaded typedefs for @openfn/language-http@latest"},
-          %{
-            body: "[CMP] ℹ Added import statement for @openfn/language-http"
-          },
-          %{
-            body: "[CMP] ℹ Added export * statement for @openfn/language-http"
-          },
-          %{
-            body:
-              "[CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js"
-          },
-          %{
-            body:
-              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
-          },
-          %{
-            body: "[R/T] ✔ Operation 1 complete in 0ms"
-          },
-          %{
-            body:
-              "[CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json"
-          },
-          %{
-            body: "[CLI] ✔ Done in 223ms! ✨"
-          }
-        ],
+        log_lines:
+          to_log_lines("""
+          [CLI] ℹ Versions:
+               ▸ node.js                  18.12.0
+               ▸ cli                      0.0.32
+               ▸ runtime                  0.0.20
+               ▸ compiler                 0.0.26
+               ▸ @openfn/language-http    4.2.6
+          [CLI] ✔ Loaded state from /tmp/state-1686840746-126941-1hou2fm.json
+          [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+          [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+          [CMP] ℹ Added import statement for @openfn/language-http
+          [CMP] ℹ Added export * statement for @openfn/language-http
+          [CLI] ✔ Compiled job from /tmp/expression-1686840746-126941-1wuk06h.js
+          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+          [R/T] ✔ Operation 1 complete in 0ms
+          [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
+          [CLI] ✔ Done in 223ms! ✨
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       },
       %{
         job_id: notify_upload_successful.id,
         exit_code: 0,
-        log_lines: [
-          %{body: "[CLI] ℹ Versions:"},
-          %{body: "        ▸ node.js                  18.12.0"},
-          %{body: "        ▸ cli                      0.0.32"},
-          %{body: "        ▸ runtime                  0.0.20"},
-          %{body: "        ▸ compiler                 0.0.26"},
-          %{body: "        ▸ @openfn/language-http    4.2.6"},
-          %{
-            body:
-              "[CLI] ✔ Loaded state from /tmp/state-1686840747-126941-n44hwo.json"
-          },
-          %{body: "[CLI] ℹ Loaded typedefs for @openfn/language-http@latest"},
-          %{body: "[CMP] ℹ Added import statement for @openfn/language-http"},
-          %{
-            body: "[CMP] ℹ Added export * statement for @openfn/language-http"
-          },
-          %{
-            body:
-              "[CLI] ✔ Compiled job from /tmp/expression-1686840747-126941-1qi9xrb.js"
-          },
-          %{
-            body:
-              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
-          },
-          %{
-            body: "[R/T] ✔ Operation 1 complete in 0ms"
-          },
-          %{
-            body:
-              "[CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json"
-          },
-          %{
-            body: "[CLI] ✔ Done in 209ms! ✨"
-          }
-        ],
+        log_lines:
+          to_log_lines("""
+          [CLI] ℹ Versions:
+               ▸ node.js                  18.12.0
+               ▸ cli                      0.0.32
+               ▸ runtime                  0.0.20
+               ▸ compiler                 0.0.26
+               ▸ @openfn/language-http    4.2.6
+          [CLI] ✔ Loaded state from /tmp/state-1686840747-126941-n44hwo.json
+          [CLI] ℹ Loaded typedefs for @openfn/language-http@latest
+          [CMP] ℹ Added import statement for @openfn/language-http
+          [CMP] ℹ Added export * statement for @openfn/language-http
+          [CLI] ✔ Compiled job from /tmp/expression-1686840747-126941-1qi9xrb.js
+          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+          [R/T] ✔ Operation 1 complete in 0ms
+          [CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json
+          [CLI] ✔ Done in 209ms! ✨
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(20, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
       }
@@ -426,38 +538,23 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 0,
-        log_lines: [
-          %{body: "[CLI] ℹ Versions:"},
-          %{body: "        ▸ node.js                  18.12.0"},
-          %{body: "        ▸ cli                      0.0.32"},
-          %{body: "        ▸ runtime                  0.0.21"},
-          %{body: "        ▸ compiler                 0.0.26"},
-          %{body: "        ▸ @openfn/language-http    4.2.6"},
-          %{
-            body:
-              "[CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json"
-          },
-          %{body: "[CMP] ℹ Added import statement for @openfn/language-http"},
-          %{body: "[CMP] ℹ Added export * statement for @openfn/language-http"},
-          %{
-            body:
-              "[CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js"
-          },
-          %{
-            body:
-              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
-          },
-          %{
-            body: "[R/T] ✔ Operation 1 complete in 0ms"
-          },
-          %{
-            body:
-              "[CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json"
-          },
-          %{
-            body: "[CLI] ✔ Done in 216ms! ✨"
-          }
-        ],
+        log_lines:
+          to_log_lines("""
+          [CLI] ℹ Versions:
+               ▸ node.js                  18.12.0
+               ▸ cli                      0.0.32
+               ▸ runtime                  0.0.21
+               ▸ compiler                 0.0.26
+               ▸ @openfn/language-http    4.2.6
+          [CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json
+          [CMP] ℹ Added import statement for @openfn/language-http
+          [CMP] ℹ Added export * statement for @openfn/language-http
+          [CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js
+          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6
+          [R/T] ✔ Operation 1 complete in 0ms
+          [CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json
+          [CLI] ✔ Done in 216ms! ✨
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
@@ -476,35 +573,22 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 1,
-        log_lines: [
-          %{body: "[CLI] ℹ Versions:"},
-          %{body: "        ▸ @openfn/language-http    4.2.8"},
-          %{body: "        ▸ compiler                 0.0.29"},
-          %{body: "        ▸ runtime                  0.0.21"},
-          %{body: "        ▸ cli                      0.0.35"},
-          %{body: "        ▸ node.js                  18.12.0"},
-          %{
-            body:
-              "[CLI] ✔ Loaded state from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/state-1686240004-30184-1qywkh4.json"
-          },
-          %{body: "[CLI] ℹ Added import statement for @openfn/language-http"},
-          %{body: "[CLI] ℹ Added export * statement for @openfn/language-http"},
-          %{
-            body:
-              "[CLI] ✔ Compiled job from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/expression-1686240004-30184-sd2j6r.js"
-          },
-          %{
-            body:
-              "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.8"
-          },
-          %{
-            body:
-              "[CLI] ✘ Error: 503 Service Unavailable, please try again later"
-          },
-          %{
-            body: "[CLI] ✘ Took 1.634s."
-          }
-        ],
+        log_lines:
+          to_log_lines("""
+          [CLI] ℹ Versions:
+               ▸ @openfn/language-http    4.2.8
+               ▸ compiler                 0.0.29
+               ▸ runtime                  0.0.21
+               ▸ cli                      0.0.35
+               ▸ node.js                  18.12.0
+          [CLI] ✔ Loaded state from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/state-1686240004-30184-1qywkh4.json
+          [CLI] ℹ Added import statement for @openfn/language-http
+          [CLI] ℹ Added export * statement for @openfn/language-http
+          [CLI] ✔ Compiled job from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/expression-1686240004-30184-sd2j6r.js
+          [R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.8
+          [CLI] ✘ Error: 503 Service Unavailable, please try again later
+          [CLI] ✘ Took 1.634s.
+          """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
@@ -588,58 +672,27 @@ defmodule Lightning.SetupUtils do
         |> Repo.preload(:log_lines)
         |> Run.changeset(%{
           exit_code: 0,
-          log_lines: %{
-            "0" => %{
-              body: "[CLI] ℹ Versions:"
-            },
-            "1" => %{
-              body: "        ▸ node.js                   18.12.0"
-            },
-            "2" => %{
-              body: "        ▸ cli                       0.0.32"
-            },
-            "3" => %{
-              body: "        ▸ runtime                   0.0.20"
-            },
-            "4" => %{
-              body: "        ▸ compiler                  0.0.26"
-            },
-            "5" => %{
-              body: "        ▸ #{adaptor_for_log(run)}    3.2.11"
-            },
-            "6" => %{
-              body:
-                "[CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json"
-            },
-            "7" => %{
-              body: "[CLI] ℹ Loaded typedefs for #{adaptor_for_log(run)}"
-            },
-            "8" => %{
-              body: "[CMP] ℹ Added import statement for #{adaptor_for_log(run)}"
-            },
-            "9" => %{
-              body:
-                "[CMP] ℹ Added export * statement for #{adaptor_for_log(run)}"
-            },
-            "10" => %{
-              body:
-                "[CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js"
-            },
-            "11" => %{
-              body:
-                "[R/T] ℹ Resolved adaptor #{adaptor_for_log(run)} to version 3.2.11"
-            },
-            "12" => %{
-              body: "[R/T] ✔ Operation 1 complete in 0ms"
-            },
-            "13" => %{
-              body:
-                "[CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json"
-            },
-            "14" => %{
-              body: "[CLI] ✔ Done in 179ms! ✨"
-            }
-          },
+          log_lines:
+            to_log_lines("""
+            [CLI] ℹ Versions:
+                 ▸ node.js                   18.12.0
+                 ▸ cli                       0.0.32
+                 ▸ runtime                   0.0.20
+                 ▸ compiler                  0.0.26
+                 ▸ #{adaptor_for_log(run)}            3.2.11
+            [CLI] ✔ Loaded state from /tmp/state-1686836010-94749-17tka8f.json
+            [CLI] ℹ Loaded typedefs for #{adaptor_for_log(run)}
+            [CMP] ℹ Added import statement for #{adaptor_for_log(run)}
+            [CMP] ℹ Added export * statement for #{adaptor_for_log(run)}
+            [CLI] ✔ Compiled job from /tmp/expression-1686836010-94749-1cn5qct.js
+            [R/T] ℹ Resolved adaptor #{adaptor_for_log(run)} to version 3.2.11
+            [R/T] ✔ Operation 1 complete in 0ms
+            [CLI] ✔ Writing output to /tmp/output-1686836010-94749-1v3ppcw.json
+            [CLI] ✔ Done in 179ms! ✨
+            """)
+            |> Enum.with_index()
+            |> Enum.map(fn {log, index} -> {index, log} end)
+            |> Enum.into(%{}),
           started_at: DateTime.utc_now() |> DateTime.add(0, :second),
           finished_at: DateTime.utc_now() |> DateTime.add(5, :second)
         })
@@ -656,6 +709,7 @@ defmodule Lightning.SetupUtils do
         run =
           Run.new(params)
           |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
+          |> Ecto.Changeset.put_assoc(:output_dataclip, dataclip)
 
         AttemptRun.new(attempt, run)
       end)
