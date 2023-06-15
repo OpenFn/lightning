@@ -166,7 +166,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                 "adaptor" => "@openfn/language-common@latest"
               },
               %{
-                "adaptor" => "@openfn/language-common@latest"
+                "adaptor" => "@openfn/language-common@latest",
+                "body" => "console.log('hello world');"
               }
             ]
           }
@@ -181,7 +182,10 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                  "workflows" => [
                    %{
                      "jobs" => [
-                       %{"id" => ["can't be blank"]},
+                       %{
+                         "id" => ["can't be blank"],
+                         "body" => ["can't be blank"]
+                       },
                        %{
                          "name" => ["can't be blank"],
                          "id" => ["can't be blank"]
@@ -227,7 +231,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
         |> add_job_to_document(%{
           "id" => third_job_id,
           "name" => "third-job",
-          "adaptor" => "@openfn/language-common@latest"
+          "adaptor" => "@openfn/language-common@latest",
+          "body" => "console.log('hello world');"
         })
 
       conn = post(conn, ~p"/api/provision", body)
@@ -276,8 +281,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       %{body: body} = valid_payload(project.id)
 
-      response = post(conn, ~p"/api/provision", body)
-      assert response.status == 201
+      assert post(conn, ~p"/api/provision", body) |> json_response(201)
     end
 
     @tag login_as: "superuser"
@@ -351,12 +355,14 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
             %{
               "id" => first_job_id,
               "name" => "first-job",
-              "adaptor" => "@openfn/language-common@latest"
+              "adaptor" => "@openfn/language-common@latest",
+              "body" => "console.log('hello world');"
             },
             %{
               "id" => second_job_id,
               "name" => "second-job",
-              "adaptor" => "@openfn/language-common@latest"
+              "adaptor" => "@openfn/language-common@latest",
+              "body" => "console.log('hello world');"
             }
           ],
           "triggers" => [
