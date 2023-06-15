@@ -139,6 +139,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>((props, ref) 
     const { selectedId, ignoreNextSelection } = chartCache.current;
     const newSelectedId = nodes.length ? nodes[0].id : (edges.length ? edges[0].id : undefined)
     if (ignoreNextSelection) {
+      console.log("ignoring selection change");
+      
       // do nothing as the ignore flag was set
     }
     else if (newSelectedId !== selectedId) {

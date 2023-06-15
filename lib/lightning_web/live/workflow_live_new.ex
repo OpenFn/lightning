@@ -41,6 +41,7 @@ defmodule LightningWeb.WorkflowNewLive do
           data-edit-trigger-url={
             ~p"/projects/#{@project.id}/w-new/new/t/:trigger_id"
           }
+          data-edit-edge-url={~p"/projects/#{@project.id}/w-new/new/e/:edge_id"}
           data-base-url={~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"}
           phx-update="ignore"
         >
@@ -118,9 +119,48 @@ defmodule LightningWeb.WorkflowNewLive do
             </div>
           </div>
         </div>
+        <div
+          :if={@selected_edge}
+          class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
+          lv-keep-style
+        >
+          <.resize_component id={"resizer-#{@workflow.id}"} />
+          <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
+            <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
+              <.form
+                :let={f}
+                for={@changeset}
+                phx-submit="save"
+                phx-change="validate"
+                class="h-full"
+              >
+                <%= for edge_form <- single_inputs_for(f, :edges, @selected_edge |> Ecto.Changeset.get_field(:id)) do %>
+                  <!-- Show only the currently selected one -->
+                  <.edge_form
+                    :if={
+                      Ecto.Changeset.get_field(edge_form.source, :id) ==
+                        Ecto.Changeset.get_field(@selected_edge, :id)
+                    }
+                    form={edge_form}
+                    disabled={!@can_edit_job}
+                    cancel_url={
+                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                    }
+                  />
+                <% end %>
+              </.form>
+            </div>
+          </div>
+        </div>
       </div>
     </LayoutComponents.page_content>
     """
+  end
+
+  defp single_inputs_for(form, field, id) do
+    form
+    |> inputs_for(field)
+    |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == id))
   end
 
   @impl true
@@ -141,6 +181,7 @@ defmodule LightningWeb.WorkflowNewLive do
        project: project,
        selected_job: nil,
        selected_trigger: nil,
+       selected_edge: nil,
        page_title: "",
        active_menu_item: :projects,
        can_edit_job: can_edit_job
@@ -197,35 +238,40 @@ defmodule LightningWeb.WorkflowNewLive do
       page_title: "New Workflow"
     )
     |> maybe_assign_workflow()
-    |> unselect_job()
-    |> unselect_trigger()
-  end
-
-  def apply_action(socket, :edit_job, %{"job_id" => job_id}) do
-    selected_job =
-      socket.assigns.changeset
-      |> Ecto.Changeset.get_change(:jobs, [])
-      |> Enum.find(fn changeset ->
-        changeset |> Ecto.Changeset.get_field(:id) == job_id
-      end)
-
-    socket |> assign(selected_job: selected_job)
-  end
-
-  def apply_action(socket, :edit_trigger, %{"trigger_id" => trigger_id}) do
-    selected_trigger =
-      socket.assigns.changeset
-      |> Ecto.Changeset.get_change(:triggers, [])
-      |> Enum.find(fn changeset ->
-        changeset |> Ecto.Changeset.get_field(:id) == trigger_id
-      end)
-
-    socket |> assign(selected_trigger: selected_trigger)
+    |> unselect_all()
   end
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
     {:reply, socket.assigns.workflow_params, socket}
+  end
+
+  def handle_event("hash-changed", %{"hash" => hash}, socket) do
+    id = Regex.run(~r/^#(.*)$/, hash) |> List.wrap() |> Enum.at(1)
+
+    # find the changeset for the selected item
+    # it could be an edge, a job or a trigger
+    [:jobs, :triggers, :edges]
+    |> Enum.reduce_while(nil, fn field, _ ->
+      Ecto.Changeset.get_change(socket.assigns.changeset, field, [])
+      |> Enum.find(fn changeset ->
+        Ecto.Changeset.get_field(changeset, :id) == id
+      end)
+      |> case do
+        nil ->
+          {:cont, nil}
+
+        changeset ->
+          {:halt, [field, changeset]}
+      end
+    end)
+    |> case do
+      nil ->
+        {:noreply, socket}
+
+      [type, selected] ->
+        {:noreply, socket |> select_node({type, selected})}
+    end
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
@@ -318,11 +364,24 @@ defmodule LightningWeb.WorkflowNewLive do
     |> push_event("patches-applied", %{patches: patches})
   end
 
-  defp unselect_job(socket) do
-    socket |> assign(selected_job: nil)
+  defp unselect_all(socket) do
+    socket
+    |> assign(selected_job: nil, selected_trigger: nil, selected_edge: nil)
   end
 
-  defp unselect_trigger(socket) do
-    socket |> assign(selected_trigger: nil)
+  defp select_node(socket, {type, value}) do
+    case type do
+      :jobs ->
+        socket
+        |> assign(selected_job: value, selected_trigger: nil, selected_edge: nil)
+
+      :triggers ->
+        socket
+        |> assign(selected_job: nil, selected_trigger: value, selected_edge: nil)
+
+      :edges ->
+        socket
+        |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
+    end
   end
 end
