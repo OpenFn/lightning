@@ -214,8 +214,9 @@ defmodule LightningWeb.WorkflowLive.Components do
           <%= @form
           |> input_value(:type)
           |> then(fn
-            "" -> "Untitled Trigger"
-            name -> name
+            "" -> "New Trigger"
+            "webhook" -> "Webhook Trigger"
+            "cron" -> "Cron Trigger"
           end) %>
         </div>
         <div class="flex-none">
@@ -277,6 +278,57 @@ defmodule LightningWeb.WorkflowLive.Components do
             />
           <% end %>
         </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :disabled, :boolean, required: true
+  attr :cancel_url, :string, required: true
+
+  def edge_form(assigns) do
+    assigns =
+      assigns
+      |> assign(:edge_options,
+        "On Success": "on_job_success",
+        "On Failure": "on_job_failure"
+      )
+
+    ~H"""
+    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
+      <div class="flex sticky top-0 border-b p-2">
+        <div class="grow">
+          Edge
+        </div>
+        <div class="flex-none">
+          <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
+            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+          </.link>
+        </div>
+      </div>
+      <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
+        <%= hidden_inputs_for(@form) %>
+        <div class="col-span-6">
+          <Form.label_field
+            form={@form}
+            field={:condition}
+            title="Condition"
+            for={input_id(@form, :condition)}
+          />
+          <%= error_tag(@form, :condition,
+            class: "block w-full rounded-md text-sm text-secondary-700 "
+          ) %>
+          <Form.select_field
+            form={@form}
+            name={:condition}
+            values={@edge_options}
+            disabled={@disabled}
+          />
+        </div>
+        <pre>
+          <%= inspect @form.source %>
+        </pre>
       </div>
     </div>
     """

@@ -4,7 +4,13 @@ import { Patch, PendingAction, createWorkflowStore } from './store';
 
 interface PhoenixHook {
   mounted(): void;
-  el: HTMLElement;
+  el: HTMLElement & {
+    dataset: {
+      editJobUrl?: string;
+      editTriggerUrl?: string;
+      editEdgeUrl?: string;
+    };
+  };
   destroyed(): void;
   handleEvent<T = {}>(eventName: string, callback: (payload: T) => void): void;
   pushEventTo<P = {}, R = any>(
@@ -29,8 +35,8 @@ interface WorkflowEditorEntrypoint extends PhoenixHook {
   abortController: AbortController | null;
   editJobUrl: string;
   editTriggerUrl: string;
-  selectJob(id: string): void;
-  selectTrigger(id: string): void;
+  editEdgeUrl: string;
+  pushHash(id: string): void;
   unselectNode(): void;
   onSelectionChange(id?: string): void;
 }
@@ -62,6 +68,7 @@ export default {
     // TODO: ensure that this is set
     this.editJobUrl = this.el.dataset.editJobUrl!;
     this.editTriggerUrl = this.el.dataset.editTriggerUrl!;
+    this.editEdgeUrl = this.el.dataset.editEdgeUrl!;
     this.pendingChanges = [];
 
     // Setup our abort controller to stop any pending changes.
@@ -74,6 +81,12 @@ export default {
       console.debug('patches-applied', response.patches);
       this.workflowStore.getState().applyPatches(response.patches);
     });
+
+    window.addEventListener('hashchange', (_event) => {
+      this.pushHash(window.location.hash);
+    })
+
+    this.pushHash(window.location.hash);
 
     // Get the initial data from the server
     this.pushEventTo(this.el, 'get-initial-state', {}, (payload: any) => {
@@ -99,44 +112,55 @@ export default {
           this.onSelectionChange.bind(this)
         );
         this.component.render(this.workflowStore.getState());
+
+        console.log(window.location.hash);
       });
     });
   },
-  selectJob(id: string) {
-    const url = this.editJobUrl.replace(':job_id', id);
-    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
-  },
-  selectTrigger(id: string) {
-    const url = this.editTriggerUrl.replace(':trigger_id', id);
-    this.liveSocket.pushHistoryPatch(url, 'push', this.el);
+
+  pushHash(hash: string) {
+    this.pushEventTo(this.el, 'hash-changed', { hash });
   },
   unselectNode() {
-    this.liveSocket.pushHistoryPatch('/', 'push', this.el.dataset.baseUrl!);
+    this.liveSocket.pushHistoryPatch(this.el.dataset.baseUrl!, 'push', this.el);
   },
   onSelectionChange(id?: string) {
     if (!id) {
+      console.log('unselecting');
+      
       this.unselectNode();
       return;
     }
 
-    const type = Object.entries(this.workflowStore.getState()).find(
+    const item = Object.entries(this.workflowStore.getState()).find(
       ([_type, nodes]) => {
         return nodes.find(node => node.id === id);
       }
-    )?.[0];
+    )?.[1];
 
-    switch (type) {
-      case 'jobs':
-        this.selectJob(id);
-        break;
-      case 'triggers':
-        this.selectTrigger(id);
-        break;
-      case undefined:
-        throw new Error(`Can't find node for id: ${id}`);
-      default:
-        throw new Error(`Unknown type ${type}`);
+    if (!item) {
+      throw new Error(`Can't find node for id: ${id}`);
     }
+
+    window.location.hash = id;
+    console.log('selecting', item.type, id);
+    
+
+    // switch (type) {
+    //   case 'jobs':
+    //     this.selectJob(id);
+    //     break;
+    //   case 'triggers':
+    //     this.selectTrigger(id);
+    //     break;
+    //   case 'edges':
+    //     this.selectEdge(id);
+    //     break;
+    //   case undefined:
+    //     throw new Error(`Can't find node for id: ${id}`);
+    //   default:
+    //     throw new Error(`Unknown type ${type}`);
+    // }
   },
   destroyed() {
     if (this.component) {
