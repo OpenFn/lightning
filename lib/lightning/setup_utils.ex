@@ -243,51 +243,17 @@ defmodule Lightning.SetupUtils do
           Sending post request to https://play.dhis2.org/dev/api/trackedEntityInstances
           ✓ Success at Thu Jun 15 2023 17:36:44 GMT+0000 (Greenwich Mean Time):
           Created trackedEntityInstances with response {
-          "httpStatus": "OK",
-          "httpStatusCode": 200,
-          "status": "OK",
-          "message": "Import was successful.",
-          "response": {
-          "responseType": "ImportSummaries",
-          "status": "SUCCESS",
-          "imported": 1,
-          "updated": 0,
-          "deleted": 0,
-          "ignored": 0,
-          "importOptions": {
-            "idSchemes": {},
-            "dryRun": false,
-            "async": false,
-            "importStrategy": "CREATE_AND_UPDATE",
-            "mergeMode": "REPLACE",
-            "reportMode": "FULL",
-            "skipExistingCheck": false,
-            "sharing": false,
-            "skipNotifications": false,
-            "skipAudit": false,
-            "datasetAllowsPeriods": false,
-            "strictPeriods": false,
-            "strictDataElements": false,
-            "strictCategoryOptionCombos": false,
-            "strictAttributeOptionCombos": false,
-            "strictOrganisationUnits": false,
-            "strictDataSetApproval": false,
-            "strictDataSetLocking": false,
-            "strictDataSetInputPeriods": false,
-            "requireCategoryOptionCombo": false,
-            "requireAttributeOptionCombo": false,
-            "skipPatternValidation": false,
-            "ignoreEmptyCollection": false,
-            "force": false,
-            "firstRowIsHeader": true,
-            "skipLastUpdated": true,
-            "mergeDataValues": false,
-            "skipCache": false
-          },
-          "importSummaries": [
-            {
-              "responseType": "ImportSummary",
+            "httpStatus": "OK",
+            "httpStatusCode": 200,
+            "status": "OK",
+            "message": "Import was successful.",
+            "response": {
+              "responseType": "ImportSummaries",
               "status": "SUCCESS",
+              "imported": 1,
+              "updated": 0,
+              "deleted": 0,
+              "ignored": 0,
               "importOptions": {
                 "idSchemes": {},
                 "dryRun": false,
@@ -318,30 +284,64 @@ defmodule Lightning.SetupUtils do
                 "mergeDataValues": false,
                 "skipCache": false
               },
-              "importCount": {
-                "imported": 1,
-                "updated": 0,
-                "ignored": 0,
-                "deleted": 0
-              },
-              "conflicts": [],
-              "rejectedIndexes": [],
-              "reference": "TjyGIpuzhqU",
-              "href": "https://play.dhis2.org/dev/api/trackedEntityInstances/TjyGIpuzhqU",
-              "enrollments": {
-                "responseType": "ImportSummaries",
-                "status": "SUCCESS",
-                "imported": 0,
-                "updated": 0,
-                "deleted": 0,
-                "ignored": 0,
-                "importSummaries": [],
-                "total": 0
-              }
+              "importSummaries": [
+                {
+                  "responseType": "ImportSummary",
+                  "status": "SUCCESS",
+                  "importOptions": {
+                    "idSchemes": {},
+                    "dryRun": false,
+                    "async": false,
+                    "importStrategy": "CREATE_AND_UPDATE",
+                    "mergeMode": "REPLACE",
+                    "reportMode": "FULL",
+                    "skipExistingCheck": false,
+                    "sharing": false,
+                    "skipNotifications": false,
+                    "skipAudit": false,
+                    "datasetAllowsPeriods": false,
+                    "strictPeriods": false,
+                    "strictDataElements": false,
+                    "strictCategoryOptionCombos": false,
+                    "strictAttributeOptionCombos": false,
+                    "strictOrganisationUnits": false,
+                    "strictDataSetApproval": false,
+                    "strictDataSetLocking": false,
+                    "strictDataSetInputPeriods": false,
+                    "requireCategoryOptionCombo": false,
+                    "requireAttributeOptionCombo": false,
+                    "skipPatternValidation": false,
+                    "ignoreEmptyCollection": false,
+                    "force": false,
+                    "firstRowIsHeader": true,
+                    "skipLastUpdated": true,
+                    "mergeDataValues": false,
+                    "skipCache": false
+                  },
+                  "importCount": {
+                    "imported": 1,
+                    "updated": 0,
+                    "ignored": 0,
+                    "deleted": 0
+                  },
+                  "conflicts": [],
+                  "rejectedIndexes": [],
+                  "reference": "TjyGIpuzhqU",
+                  "href": "https://play.dhis2.org/dev/api/trackedEntityInstances/TjyGIpuzhqU",
+                  "enrollments": {
+                    "responseType": "ImportSummaries",
+                    "status": "SUCCESS",
+                    "imported": 0,
+                    "updated": 0,
+                    "deleted": 0,
+                    "ignored": 0,
+                    "importSummaries": [],
+                    "total": 0
+                  }
+                }
+              ],
+              "total": 1
             }
-          ],
-          "total": 1
-          }
           }
           Record available @ https://play.dhis2.org/dev/api/api/trackedEntityInstances/TjyGIpuzhqU
           [R/T] ✔ Operation 1 complete in 1.775s
