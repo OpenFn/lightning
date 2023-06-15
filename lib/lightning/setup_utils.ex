@@ -164,6 +164,20 @@ defmodule Lightning.SetupUtils do
         workflow_id: workflow.id
       })
 
+    {:ok, source_trigger} =
+      Workflows.build_trigger(%{
+        type: :webhook,
+        job_id: job_1.id,
+        workflow_id: workflow.id
+      })
+
+    job_1_edge =
+      Workflows.create_edge(%{
+        workflow_id: workflow.id,
+        source_trigger: source_trigger,
+        target_job: job_1
+      })
+
     {:ok, job_2} =
       Jobs.create_job(%{
         name: "Job 2 - Convert data to DHIS2 format",
@@ -172,12 +186,19 @@ defmodule Lightning.SetupUtils do
   return { ...state, names };
 });",
         adaptor: "@openfn/language-common@latest",
-        trigger: %{type: "on_job_success", upstream_job_id: job_1.id},
         enabled: true,
         workflow_id: workflow.id
       })
 
     user_id = List.first(project_users).user_id
+    Workflows.create_edge(%{
+      workflow_id: workflow.id,
+      source_job: job_1,
+      condition: :on_job_success,
+      target_job_id: job_2.id
+    })
+
+    project_user = List.first(project_users)
 
     dhis2_credential = create_dhis2_credential(project, user_id)
 
@@ -199,12 +220,18 @@ defmodule Lightning.SetupUtils do
   ]
 });",
         adaptor: "@openfn/language-dhis2@latest",
-        trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
         workflow_id: workflow.id,
         project_credential_id:
           List.first(dhis2_credential.project_credentials).id
       })
+
+    Workflows.create_edge(%{
+      workflow_id: workflow.id,
+      source_job: job_2,
+      condition: :on_job_success,
+      target_job_id: job_3.id
+    })
 
     run_params = [
       %{
@@ -372,7 +399,7 @@ defmodule Lightning.SetupUtils do
 
     create_workorder(
       :webhook,
-      job_1,
+      job_1_edge,
       ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
       run_params,
       output_dataclip_id
@@ -414,12 +441,12 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    {:ok, _openhie_root_edge} =
+    {:ok, openhie_root_edge} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
         condition: :always,
-        source_trigger_id: openhie_trigger.id,
-        target_job_id: fhir_standard_data.id
+        source_trigger: openhie_trigger,
+        target_job: fhir_standard_data
       })
 
     {:ok, send_to_openhim} =
@@ -554,9 +581,33 @@ defmodule Lightning.SetupUtils do
         source_job_id: send_to_openhim.id
       })
 
+    run_params = [
+      %{
+        job_id: send_to_openhim.id,
+        exit_code: 1,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      },
+      %{
+        job_id: notify_upload_failed.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
+    {:ok, openhie_workorder} =
+      create_workorder(
+        :webhook,
+        openhie_root_edge,
+        ~s[{}],
+        run_params
+      )
+
     %{
       project: openhie_project,
       workflow: openhie_workflow,
+      workorder: openhie_workorder,
       jobs: [
         fhir_standard_data,
         send_to_openhim,
@@ -600,12 +651,12 @@ defmodule Lightning.SetupUtils do
         workflow_id: dhis2_workflow.id
       })
 
-    {:ok, _root_edge} =
+    {:ok, root_edge} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
         condition: :always,
-        source_trigger_id: dhis_trigger.id,
-        target_job_id: get_dhis2_data.id
+        source_trigger: dhis_trigger,
+        target_job: get_dhis2_data
       })
 
     {:ok, upload_to_google_sheet} =
@@ -793,6 +844,23 @@ defmodule Lightning.SetupUtils do
         source_job_id: get_dhis2_data.id
       })
 
+    run_params = [
+      %{
+        job_id: upload_to_google_sheet.id,
+        exit_code: 0,
+        started_at: Timex.now() |> Timex.shift(seconds: 10),
+        finished_at: Timex.now() |> Timex.shift(seconds: 20)
+      }
+    ]
+
+    {:ok, dhis2_workorder} =
+      create_workorder(
+        :cron,
+        root_edge,
+        ~s[{}],
+        run_params
+      )
+
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
@@ -843,7 +911,7 @@ defmodule Lightning.SetupUtils do
   defp create_workorder(trigger, job, dataclip, run_params, output_dataclip_id) do
     WorkOrderService.multi_for(
       trigger,
-      job,
+      edge,
       dataclip
       |> Jason.decode!()
     )
