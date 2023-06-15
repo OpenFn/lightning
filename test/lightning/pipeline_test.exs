@@ -85,53 +85,55 @@ defmodule Lightning.PipelineTest do
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
-      trigger = insert(:trigger)
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
 
       job =
         insert(:job,
           body: ~s[fn(state => { return {...state, extra: "data"} })],
           name: "1",
-          workflow: trigger.workflow
+          workflow: workflow
         )
 
       insert(:edge, %{
-        workflow: trigger.workflow,
+        workflow: workflow,
         source_trigger: trigger,
         target_job: job
       })
 
-      %{id: project_credential_id, credential_id: credential_id} =
-        project_credential_fixture(
+      credential =
+        insert(:credential,
           name: "my credential",
           body: %{"apiToken" => "secret123"}
         )
 
       downstream_job =
         insert(:job, %{
-          workflow: job.workflow,
-          project_credential_id: project_credential_id
+          workflow: workflow,
+          project_credential:
+            build(:project_credential, project: project, credential: credential)
         })
 
       insert(:edge, %{
-        workflow: job.workflow,
+        workflow: workflow,
         source_job: job,
         target_job: downstream_job,
         condition: :on_job_success
       })
 
-      %{id: disabled_downstream_job_id} =
-        job_fixture(
-          trigger: %{type: :on_job_success, upstream_job_id: job.id},
+      disabled_downstream_job =
+        insert(:job,
           enabled: false,
           body: ~s[fn(state => state)],
-          workflow_id: job.workflow_id,
+          workflow: workflow,
           name: "3"
         )
 
       insert(:edge, %{
-        source_job_id: job.id,
+        source_job: job,
         workflow: job.workflow,
-        target_job_id: disabled_downstream_job_id,
+        target_job: disabled_downstream_job,
         condition: :on_job_success
       })
 
@@ -174,7 +176,7 @@ defmodule Lightning.PipelineTest do
 
       assert expected_run.input_dataclip_id == output_dataclip_id
 
-      assert expected_run.credential_id == credential_id
+      assert expected_run.credential_id == credential.id
 
       assert %{
                "data" => %{}

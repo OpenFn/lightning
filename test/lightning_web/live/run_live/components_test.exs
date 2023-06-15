@@ -12,16 +12,15 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     reason = insert(:reason, type: :webhook)
 
     attempt =
-      build(:attempt,
+      insert(:attempt,
         work_order: build(:workorder, reason: reason),
         runs: [
           build(:run),
-          build(:run, finished_at: Timex.now(), exit_code: 0),
-          build(:run, finished_at: Timex.now())
+          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
+          build(:run, finished_at: DateTime.utc_now())
         ],
         reason: reason
       )
-      |> insert()
 
     first_run = attempt.runs |> List.first()
     second_run = attempt.runs |> Enum.at(1)
@@ -101,8 +100,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         work_order: build(:workorder, reason: reason),
         runs: [
           build(:run),
-          build(:run, finished_at: Timex.now(), exit_code: 0),
-          build(:run, finished_at: Timex.now())
+          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
+          build(:run, finished_at: DateTime.utc_now())
         ],
         reason: reason
       )

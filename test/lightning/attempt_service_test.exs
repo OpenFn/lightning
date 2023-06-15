@@ -3,10 +3,10 @@ defmodule Lightning.AttemptServiceTest do
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
-  import Lightning.AccountsFixtures
   alias Lightning.Attempt
   alias Lightning.AttemptService
   alias Lightning.Invocation.{Run}
+  import Lightning.Factories
 
   describe "attempts" do
     test "create_attempt/3 returns a new Attempt, with a new Run" do
@@ -74,9 +74,14 @@ defmodule Lightning.AttemptServiceTest do
       jobs: jobs,
       workflow: workflow
     } do
-      work_order = work_order_fixture(workflow: workflow)
-      dataclip = dataclip_fixture()
-      user = user_fixture()
+      user = insert(:user)
+      dataclip = insert(:dataclip)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          reason: build(:reason, user: user, type: :manual, dataclip: dataclip)
+        )
 
       # first attempt
       attempt_runs =
@@ -90,12 +95,11 @@ defmodule Lightning.AttemptServiceTest do
           [%{job_id: jobs.d.id, exit_code: 1, input_dataclip_id: dataclip.id}]
 
       attempt =
-        Lightning.Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: work_order.reason_id,
-          runs: attempt_runs
-        })
-        |> Repo.insert!()
+        insert(:attempt,
+          work_order: work_order,
+          runs: attempt_runs,
+          reason_id: work_order.reason_id
+        )
 
       # find the failed run for this attempt
       run =
