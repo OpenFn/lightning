@@ -346,8 +346,6 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  defp spaces_to_nbsp(str) when is_nil(str), do: nil
-
   defp spaces_to_nbsp(str) when is_binary(str) do
     str
     |> String.codepoints()

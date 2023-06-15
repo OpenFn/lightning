@@ -154,12 +154,6 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     assert log_lines_from_html(html) == log_lines |> Enum.join("\n")
   end
 
-  test "log_view component renders empty string when given a null log line" do
-    assert render_component(&Components.log_view/1, log: [nil])
-           |> Floki.parse_fragment!()
-           |> log_lines_from_html() == ""
-  end
-
   defp log_lines_from_html(html) do
     html
     |> Floki.find("div[data-log-line]")
