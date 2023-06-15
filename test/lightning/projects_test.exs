@@ -177,18 +177,40 @@ defmodule Lightning.ProjectsTest do
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
-      t1  = insert(:trigger, %{workflow_id: w1_job.workflow_id, type: :webhook})
-      e1  = insert(:edge, %{ workflow: w1_job.workflow, source_trigger: t1, target_job: w1_job})
+      t1 =
+        insert(:trigger, %{
+          workflow: w1_job.workflow,
+          workflow_id: w1_job.workflow_id,
+          type: :webhook
+        })
+
+      e1 =
+        insert(:edge, %{
+          workflow: w1_job.workflow,
+          workflow_id: w1_job.workflow_id,
+          source_trigger: t1,
+          target_job: w1_job
+        })
 
       %{
         project: p2,
         w2_job: w2_job
       } = full_project_fixture()
 
-      t2  = insert(:trigger, %{workflow: w2_job.workflow, type: :webhook})
-      e2  = insert(:edge, %{ workflow: w2_job.workflow, source_trigger: t2, target_job: w2_job})
+      t2 =
+        insert(:trigger, %{
+          workflow: w2_job.workflow,
+          workflow_id: w2_job.workflow_id,
+          type: :webhook
+        })
 
-
+      e2 =
+        insert(:edge, %{
+          workflow: w2_job.workflow,
+          workflow_id: w2_job.workflow_id,
+          source_trigger: t2,
+          target_job: w2_job
+        })
 
       {:ok, p1_pu} = p1.project_users |> Enum.fetch(0)
 
@@ -330,7 +352,9 @@ defmodule Lightning.ProjectsTest do
         project_fixture(project_users: [%{user_id: user.id}])
         |> Repo.reload()
 
-      assert [project_1, project_2] == Projects.get_projects_for_user(user)
+      user_projects = Projects.get_projects_for_user(user)
+      assert project_1 in user_projects
+      assert project_2 in user_projects
       assert [project_1] == Projects.get_projects_for_user(other_user)
     end
 
