@@ -10,12 +10,20 @@ and this project adheres to
 
 ### Added
 
-- Prevent saving null log lines to the database
-  [#866](https://github.com/OpenFn/Lightning/issues/866)
+### Changed
+
+### Fixed
+
+## [0.6.3]
+
+### Added
 
 ### Changed
 
 ### Fixed
+
+- Prevent saving null log lines to the database, fix issue with run display
+  [#866](https://github.com/OpenFn/Lightning/issues/866)
 
 ## [0.6.2]
 
