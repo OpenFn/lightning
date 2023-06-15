@@ -10,6 +10,8 @@ defmodule Lightning.DigestEmailWorkerTest do
     DigestEmailWorker
   }
 
+  import Lightning.Factories
+
   describe "perform/1" do
     test "projects that are scheduled for deletion are not part of the projects for which digest alerts are sent" do
       user = AccountsFixtures.user_fixture()
@@ -100,6 +102,18 @@ defmodule Lightning.DigestEmailWorkerTest do
           workflow_id: workflow_a.id
         )
 
+      job_a_trigger =
+        insert(:trigger, %{workflow_id: workflow_a.id, workflow: workflow_a})
+
+      _unused_edge =
+        insert(:edge, %{
+          workflow: workflow_a,
+          workflow_id: workflow_a.id,
+          target_job: job_a,
+          source_trigger: job_a_trigger,
+          condition: :always
+        })
+
       job_b =
         JobsFixtures.job_fixture(
           project_id: project.id,
@@ -121,7 +135,7 @@ defmodule Lightning.DigestEmailWorkerTest do
       workorder_e =
         InvocationFixtures.work_order_fixture(workflow_id: workflow_a.id)
 
-      reason = InvocationFixtures.reason_fixture(trigger_id: job_a.trigger.id)
+      reason = InvocationFixtures.reason_fixture(trigger_id: job_a_trigger.id)
 
       finished_at = Timex.now() |> Timex.shift(days: -1)
 
