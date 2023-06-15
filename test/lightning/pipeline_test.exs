@@ -106,14 +106,11 @@ defmodule Lightning.PipelineTest do
           body: %{"apiToken" => "secret123"}
         )
 
-      downstream_job = %{id: downstream_job_id} =
-        job_fixture(
-          trigger: %{type: :on_job_success, upstream_job_id: job.id},
-          body: ~s[fn(state => state)],
-          workflow_id: job.workflow_id,
-          project_credential_id: project_credential_id,
-          name: "2"
-        )
+      downstream_job =
+        insert(:job, %{
+          workflow: job.workflow,
+          project_credential_id: project_credential_id
+        })
 
       insert(:edge, %{
         workflow: job.workflow,

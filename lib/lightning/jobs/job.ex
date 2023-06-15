@@ -72,7 +72,6 @@ defmodule Lightning.Jobs.Job do
 
     change
     |> validate()
-
   end
 
   # DEPRECATED: Jobs are now created via the workflow, this function is only
@@ -89,7 +88,7 @@ defmodule Lightning.Jobs.Job do
 
   def validate(changeset) do
     changeset
-    |> validate_required([ :name, :body, :enabled, :adaptor ])
+    |> validate_required([:name, :body, :enabled, :adaptor])
     |> assoc_constraint(:workflow)
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
