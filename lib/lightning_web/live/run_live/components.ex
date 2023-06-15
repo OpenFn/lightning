@@ -3,6 +3,7 @@ defmodule LightningWeb.RunLive.Components do
   use LightningWeb, :component
   import LightningWeb.RouteHelpers
   alias Lightning.Pipeline
+  alias Lightning.Workorders.SearchParams
   alias Phoenix.LiveView.JS
 
   attr :project, :map, required: true
@@ -531,6 +532,8 @@ defmodule LightningWeb.RunLive.Components do
   attr :total_entries, :integer, required: true
   attr :all_selected?, :boolean, required: true
   attr :selected_count, :integer, required: true
+  attr :filters, SearchParams, required: true
+  attr :workflows, :list, required: true
   attr :show, :boolean, default: false
 
   def bulk_rerun_modal(assigns) do
@@ -714,8 +717,10 @@ defmodule LightningWeb.RunLive.Components do
   defp humanize_workflow(filter, workflows) do
     case filter do
       %{workflow_id: workflow_id} ->
-        workflow = Enum.find(workflows, &(&1.id == workflow_id))
-        "for #{workflow.name} workflow"
+        {workflow, _id} =
+          Enum.find(workflows, fn {_name, id} -> id == workflow_id end)
+
+        "for #{workflow} workflow"
 
       _other ->
         ""

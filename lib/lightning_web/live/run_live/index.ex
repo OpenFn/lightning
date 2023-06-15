@@ -239,23 +239,6 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  defp handle_bulk_rerun(socket, "selected") do
-    socket.assigns.selected_work_orders
-    |> AttemptService.list_for_rerun_from_start()
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
-  end
-
-  defp handle_bulk_rerun(socket, "all") do
-    filter = SearchParams.new(socket.assigns.filters)
-
-    socket.assigns.project
-    |> Invocation.list_work_orders_for_project_query(filter)
-    |> Lightning.Repo.all()
-    |> Enum.map(& &1.id)
-    |> AttemptService.list_for_rerun_from_start()
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
-  end
-
   def handle_event(
         "toggle_all_selections",
         %{"all_selections" => selection},
@@ -288,6 +271,23 @@ defmodule LightningWeb.RunLive.Index do
      |> push_patch(
        to: ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: filters}}"
      )}
+  end
+
+  defp handle_bulk_rerun(socket, "selected") do
+    socket.assigns.selected_work_orders
+    |> AttemptService.list_for_rerun_from_start()
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+  end
+
+  defp handle_bulk_rerun(socket, "all") do
+    filter = SearchParams.new(socket.assigns.filters)
+
+    socket.assigns.project
+    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Lightning.Repo.all()
+    |> Enum.map(& &1.id)
+    |> AttemptService.list_for_rerun_from_start()
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
 
   defp all_selected?(work_orders, entries) do
