@@ -426,42 +426,38 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 0,
-        log_lines: %{
-          "0" => %{body: "[CLI] ℹ Versions:"},
-          "1" => %{body: "        ▸ node.js                  18.12.0"},
-          "2" => %{body: "        ▸ cli                      0.0.32"},
-          "3" => %{body: "        ▸ runtime                  0.0.21"},
-          "4" => %{body: "        ▸ compiler                 0.0.26"},
-          "5" => %{body: "        ▸ @openfn/language-http    4.2.6"},
-          "6" => %{
+        log_lines: [
+          %{body: "[CLI] ℹ Versions:"},
+          %{body: "        ▸ node.js                  18.12.0"},
+          %{body: "        ▸ cli                      0.0.32"},
+          %{body: "        ▸ runtime                  0.0.21"},
+          %{body: "        ▸ compiler                 0.0.26"},
+          %{body: "        ▸ @openfn/language-http    4.2.6"},
+          %{
             body:
               "[CLI] ✔ Loaded state from /tmp/state-1686840343-126941-92qxs9.json"
           },
-          "7" => %{
-            body: "[CMP] ℹ Added import statement for @openfn/language-http"
-          },
-          "8" => %{
-            body: "[CMP] ℹ Added export * statement for @openfn/language-http"
-          },
-          "9" => %{
+          %{body: "[CMP] ℹ Added import statement for @openfn/language-http"},
+          %{body: "[CMP] ℹ Added export * statement for @openfn/language-http"},
+          %{
             body:
               "[CLI] ✔ Compiled job from /tmp/expression-1686840343-126941-1pnt7u5.js"
           },
-          "10" => %{
+          %{
             body:
               "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.6"
           },
-          "11" => %{
+          %{
             body: "[R/T] ✔ Operation 1 complete in 0ms"
           },
-          "12" => %{
+          %{
             body:
               "[CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json"
           },
-          "13" => %{
+          %{
             body: "[CLI] ✔ Done in 216ms! ✨"
           }
-        },
+        ],
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
@@ -480,39 +476,35 @@ defmodule Lightning.SetupUtils do
       %{
         job_id: upload_to_google_sheet.id,
         exit_code: 1,
-        log_lines: %{
-          "0" => %{body: "[CLI] ℹ Versions:"},
-          "1" => %{body: "        ▸ @openfn/language-http    4.2.8"},
-          "2" => %{body: "        ▸ compiler                 0.0.29"},
-          "3" => %{body: "        ▸ runtime                  0.0.21"},
-          "4" => %{body: "        ▸ cli                      0.0.35"},
-          "5" => %{body: "        ▸ node.js                  18.12.0"},
-          "6" => %{
+        log_lines: [
+          %{body: "[CLI] ℹ Versions:"},
+          %{body: "        ▸ @openfn/language-http    4.2.8"},
+          %{body: "        ▸ compiler                 0.0.29"},
+          %{body: "        ▸ runtime                  0.0.21"},
+          %{body: "        ▸ cli                      0.0.35"},
+          %{body: "        ▸ node.js                  18.12.0"},
+          %{
             body:
               "[CLI] ✔ Loaded state from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/state-1686240004-30184-1qywkh4.json"
           },
-          "7" => %{
-            body: "[CLI] ℹ Added import statement for @openfn/language-http"
-          },
-          "8" => %{
-            body: "[CLI] ℹ Added export * statement for @openfn/language-http"
-          },
-          "9" => %{
+          %{body: "[CLI] ℹ Added import statement for @openfn/language-http"},
+          %{body: "[CLI] ℹ Added export * statement for @openfn/language-http"},
+          %{
             body:
               "[CLI] ✔ Compiled job from /var/folders/v9/rvycxf0j6kx8py3m2bw8d1gr0000gn/T/expression-1686240004-30184-sd2j6r.js"
           },
-          "10" => %{
+          %{
             body:
               "[R/T] ℹ Resolved adaptor @openfn/language-http to version 4.2.8"
           },
-          "11" => %{
+          %{
             body:
               "[CLI] ✘ Error: 503 Service Unavailable, please try again later"
           },
-          "12" => %{
+          %{
             body: "[CLI] ✘ Took 1.634s."
           }
-        },
+        ],
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
         finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
       }
