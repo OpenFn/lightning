@@ -127,7 +127,7 @@ defmodule Lightning.Workflows do
 
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
-      preload: [:triggers, jobs: [:credential, :workflow]],
+      preload: [:triggers, :edges, jobs: [:credential, :workflow]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
