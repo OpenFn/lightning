@@ -2,16 +2,14 @@ defmodule LightningWeb.EndToEndTest do
   use LightningWeb.ConnCase, async: true
   use Oban.Testing, repo: Lightning.Repo
 
-  import Lightning.{
-    JobsFixtures,
-    CredentialsFixtures,
-    ProjectsFixtures
-  }
+  import Lightning.JobsFixtures
 
   alias Lightning.Pipeline
   import Lightning.Factories
 
   alias Lightning.Invocation
+
+  import Ecto.Query
 
   setup :register_and_log_in_superuser
 
@@ -20,13 +18,15 @@ defmodule LightningWeb.EndToEndTest do
 
   # workflow runs webhook then flow job
   test "the whole thing", %{conn: conn} do
-    project = project_fixture()
+    project = insert(:project)
 
     project_credential =
-      project_credential_fixture(
-        name: "test credential",
-        body: %{"username" => "quux", "password" => "immasecret"},
-        project_id: project.id
+      insert(:project_credential,
+        credential: %{
+          name: "test credential",
+          body: %{"username" => "quux", "password" => "immasecret"}
+        },
+        project: project
       )
 
     %{
@@ -35,11 +35,11 @@ defmodule LightningWeb.EndToEndTest do
       edge: _edge
     } =
       workflow_job_fixture(
+        project: project,
         name: "1st-job",
         adaptor: "@openfn/language-http",
         body: webhook_expression(),
-        project_id: project.id,
-        project_credential_id: project_credential.id
+        project_credential: project_credential
       )
 
     # add an edge that follows the new rules foe edges
@@ -49,9 +49,8 @@ defmodule LightningWeb.EndToEndTest do
         name: "2nd-job",
         adaptor: "@openfn/language-http",
         body: flow_expression(),
-        project_id: project.id,
         workflow: workflow,
-        project_credential_id: project_credential.id
+        project_credential: project_credential
       )
 
     insert(:edge, %{
@@ -66,9 +65,8 @@ defmodule LightningWeb.EndToEndTest do
         name: "3rd-job",
         adaptor: "@openfn/language-http",
         body: catch_expression(),
-        project_id: project.id,
-        workflow_id: workflow.id,
-        project_credential_id: project_credential.id
+        workflow: workflow,
+        project_credential: project_credential
       )
 
     insert(:edge, %{
@@ -96,6 +94,16 @@ defmodule LightningWeb.EndToEndTest do
         worker: Lightning.Pipeline,
         args: %{attempt_run_id: attempt_run.id}
       )
+
+      from(r in Lightning.Invocation.Run, where: r.id == ^attempt_run.run_id)
+      |> Lightning.Repo.all()
+      |> then(fn [r] ->
+        p =
+          Ecto.assoc(r, [:job, :project])
+          |> Lightning.Repo.one!()
+
+        assert p.id == project.id, "run is associated with a different project"
+      end)
 
       # All runs should use Oban
       assert %{success: 3, cancelled: 0, discard: 0, failure: 0, snoozed: 0} ==
