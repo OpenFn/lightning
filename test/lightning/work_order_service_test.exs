@@ -64,7 +64,8 @@ defmodule Lightning.WorkOrderServiceTest do
       jobs: jobs,
       workflow: workflow
     } do
-      work_order = work_order_fixture(workflow_id: workflow.id)
+      work_order = work_order_fixture(workflow: workflow)
+
       dataclip = dataclip_fixture()
       user = user_fixture()
 

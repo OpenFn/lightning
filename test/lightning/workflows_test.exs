@@ -106,11 +106,11 @@ defmodule Lightning.WorkflowsTest do
       t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
       job_0 = insert(:job, %{workflow: t1.workflow})
 
-        insert(:edge, %{
-          workflow: t1.workflow,
-          source_trigger: t1,
-          target_job: job_0
-        })
+      insert(:edge, %{
+        workflow: t1.workflow,
+        source_trigger: t1,
+        target_job: job_0
+      })
 
       t2 = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
       job_1 = insert(:job, %{workflow: t2.workflow})
@@ -122,11 +122,11 @@ defmodule Lightning.WorkflowsTest do
           target_job: job_1
         })
 
-        # Disabled Job
-        insert(:job, %{
-          enabled: false,
-          workflow: t2.workflow
-        })
+      # Disabled Job
+      insert(:job, %{
+        enabled: false,
+        workflow: t2.workflow
+      })
 
       [e | _] = Workflows.get_edges_for_cron_execution(DateTime.utc_now())
 
