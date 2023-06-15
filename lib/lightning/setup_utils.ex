@@ -299,7 +299,6 @@ defmodule Lightning.SetupUtils do
     %{
       project: openhie_project,
       workflow: openhie_workflow,
-      workorder: openhie_workorder,
       jobs: [
         fhir_standard_data,
         send_to_openhim,
@@ -366,7 +365,6 @@ defmodule Lightning.SetupUtils do
     %{
       project: dhis2_project,
       workflow: dhis2_workflow,
-      workorder: dhis2_workorder,
       jobs: [get_dhis2_data, upload_to_google_sheet]
     }
   end

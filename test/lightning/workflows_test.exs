@@ -92,47 +92,39 @@ defmodule Lightning.WorkflowsTest do
       %{job: _job, trigger: trigger, edge: edge} =
         JobsFixtures.workflow_job_fixture()
 
-      assert Workflows.get_edge_by_webhook(trigger.id)
-             |> unload_relation(:workflow)
-             |> unload_relation(:source_trigger)
-             |> unload_relation(:target_job) == edge
+      assert Workflows.get_edge_by_webhook(trigger.id).id == edge.id
 
       Ecto.Changeset.change(trigger, custom_path: "foo")
       |> Lightning.Repo.update!()
 
       assert Workflows.get_edge_by_webhook(trigger.id) == nil
 
-      assert Workflows.get_edge_by_webhook("foo")
-             |> unload_relation(:workflow)
-             |> unload_relation(:source_trigger)
-             |> unload_relation(:target_job) == edge
+      assert Workflows.get_edge_by_webhook("foo").id == edge.id
     end
 
     test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
       t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
-      job_0 = insert(:job, %{workflow_id: t1.workflow_id, workflow: t1.workflow})
+      job_0 = insert(:job, %{workflow: t1.workflow})
 
-      _e1 =
         insert(:edge, %{
-          workflow_id: t1.workflow_id,
-          source_trigger_id: t1.id,
-          target_job_id: job_0.id
+          workflow: t1.workflow,
+          source_trigger: t1,
+          target_job: job_0
         })
 
       t2 = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
-      job_1 = insert(:job, %{workflow_id: t2.workflow_id, workflow: t2.workflow})
+      job_1 = insert(:job, %{workflow: t2.workflow})
 
       e2 =
         insert(:edge, %{
-          workflow_id: t2.workflow_id,
-          target_job_id: job_1.id,
-          source_trigger_id: t2.id
+          workflow: t2.workflow,
+          source_trigger: t2,
+          target_job: job_1
         })
 
-      _disabled_job =
+        # Disabled Job
         insert(:job, %{
           enabled: false,
-          workflow_id: t2.workflow_id,
           workflow: t2.workflow
         })
 

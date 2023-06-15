@@ -83,19 +83,18 @@ defmodule Lightning.JobsFixtures do
       |> Lightning.Repo.insert!()
 
     t =
-      insert(:trigger, %{
-        workflow_id: job.workflow.id,
+      insert(:trigger,
         workflow: job.workflow,
         type: :webhook
-      })
+      )
 
     e =
-      insert(:edge, %{
-        source_trigger_id: t.id,
-        target_job_id: job.id,
-        workflow_id: job.workflow.id,
+      insert(:edge,
+        source_trigger: t,
+        target_job: job,
+        workflow: job.workflow,
         condition: :always
-      })
+      )
 
     %{job: job, edge: e, trigger: t}
   end
@@ -127,7 +126,6 @@ defmodule Lightning.JobsFixtures do
 
     trigger =
       insert(:trigger, %{
-        workflow_id: workflow.id,
         workflow: workflow,
         type: :webhook
       })
@@ -140,7 +138,7 @@ defmodule Lightning.JobsFixtures do
 
     edge_t_a =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_trigger_id: trigger.id,
         target_job_id: job_a.id
       })
@@ -153,7 +151,7 @@ defmodule Lightning.JobsFixtures do
 
     edge_a_b =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_job_id: job_a.id,
         target_job_id: job_b.id,
         condition: :on_job_success
@@ -162,12 +160,12 @@ defmodule Lightning.JobsFixtures do
     job_c =
       job_fixture(
         name: "job_c",
-        workflow_id: workflow.id
+        workflow: workflow
       )
 
     edge_b_c =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_job_id: job_b.id,
         target_job_id: job_c.id,
         condition: :on_job_success
@@ -176,12 +174,12 @@ defmodule Lightning.JobsFixtures do
     job_d =
       job_fixture(
         name: "job_d",
-        workflow_id: workflow.id
+        workflow: workflow
       )
 
     edge_c_d =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_job_id: job_c.id,
         target_job_id: job_d.id,
         condition: :on_job_success
@@ -190,12 +188,12 @@ defmodule Lightning.JobsFixtures do
     job_e =
       job_fixture(
         name: "job_e",
-        workflow_id: workflow.id
+        workflow: workflow
       )
 
     edge_a_e =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_job_id: job_a.id,
         target_job_id: job_e.id,
         condition: :on_job_success
@@ -204,12 +202,12 @@ defmodule Lightning.JobsFixtures do
     job_f =
       job_fixture(
         name: "job_f",
-        workflow_id: workflow.id
+        workflow: workflow
       )
 
     edge_e_f =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_job_id: job_e.id,
         target_job_id: job_f.id,
         condition: :on_job_success
@@ -218,12 +216,12 @@ defmodule Lightning.JobsFixtures do
     job_g =
       job_fixture(
         name: "job_g",
-        workflow_id: workflow.id
+        workflow: workflow
       )
 
     edge_f_g =
       insert(:edge, %{
-        workflow_id: workflow.id,
+        workflow: workflow,
         source_job_id: job_f.id,
         target_job_id: job_g.id,
         condition: :on_job_success
