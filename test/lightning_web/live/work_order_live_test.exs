@@ -1480,5 +1480,80 @@ defmodule LightningWeb.RunWorkOrderTest do
                  all_enqueued(worker: Lightning.Pipeline)
       end)
     end
+
+    test "selecting all work orders in the page prompts the user to rerun all runs",
+         %{conn: conn, project: project} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      job_b =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_b.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order_b =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_b.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      # Attempt b
+      Attempt.new(%{
+        work_order_id: work_order_b.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
+        )
+
+      # All work orders have been selected
+      html =
+        render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      assert html =~ "Rerun ALL (2 workorders) from start"
+      assert html =~ "Rerun selected (2 workorders) from start"
+
+      view
+      |> form("##{work_order_b.id}-selection-form")
+      |> render_change(%{selected: false})
+
+      # uncheck 1 work order
+      updated_html = render(view)
+      refute updated_html =~ "Rerun ALL (2 workorders) from start"
+      assert updated_html =~ "Rerun selected (1 workorders) from start"
+    end
   end
 end
