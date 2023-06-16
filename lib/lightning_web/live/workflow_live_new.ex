@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowNewLive do
 
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
+  alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
@@ -27,6 +28,7 @@ defmodule LightningWeb.WorkflowNewLive do
             class=""
             phx-disable-with="Saving..."
             disabled={!@changeset.valid?}
+            form="workflow-form"
           >
             Save
           </Form.submit_button>
@@ -37,12 +39,6 @@ defmodule LightningWeb.WorkflowNewLive do
           class="grow"
           phx-hook="WorkflowEditor"
           id={"editor-#{@project.id}"}
-          data-edit-job-url={~p"/projects/#{@project.id}/w-new/new/j/:job_id"}
-          data-edit-trigger-url={
-            ~p"/projects/#{@project.id}/w-new/new/t/:trigger_id"
-          }
-          data-edit-edge-url={~p"/projects/#{@project.id}/w-new/new/e/:edge_id"}
-          data-base-url={~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"}
           phx-update="ignore"
         >
           <%!-- Before Editor component has mounted --%> Loading...
@@ -57,6 +53,7 @@ defmodule LightningWeb.WorkflowNewLive do
             <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
               <.form
                 :let={f}
+                id="workflow-form"
                 for={@changeset}
                 phx-submit="save"
                 phx-change="validate"
@@ -67,8 +64,7 @@ defmodule LightningWeb.WorkflowNewLive do
                   <.job_form
                     :if={
                       Ecto.Changeset.get_field(job_form.source, :id) ==
-                        @selected_job
-                        |> Ecto.Changeset.get_field(:id)
+                        @selected_job.id
                     }
                     on_change={&send_form_changed/1}
                     form={job_form}
@@ -91,6 +87,7 @@ defmodule LightningWeb.WorkflowNewLive do
             <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
               <.form
                 :let={f}
+                id="workflow-form"
                 for={@changeset}
                 phx-submit="save"
                 phx-change="validate"
@@ -101,7 +98,7 @@ defmodule LightningWeb.WorkflowNewLive do
                   <.trigger_form
                     :if={
                       Ecto.Changeset.get_field(trigger_form.source, :id) ==
-                        Ecto.Changeset.get_field(@selected_trigger, :id)
+                        @selected_trigger.id
                     }
                     form={trigger_form}
                     on_change={&send_form_changed/1}
@@ -129,6 +126,7 @@ defmodule LightningWeb.WorkflowNewLive do
             <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
               <.form
                 :let={f}
+                id="workflow-form"
                 for={@changeset}
                 phx-submit="save"
                 phx-change="validate"
@@ -139,7 +137,7 @@ defmodule LightningWeb.WorkflowNewLive do
                   <.edge_form
                     :if={
                       Ecto.Changeset.get_field(edge_form.source, :id) ==
-                        Ecto.Changeset.get_field(@selected_edge, :id)
+                        @selected_edge.id
                     }
                     form={edge_form}
                     disabled={!@can_edit_job}
@@ -185,8 +183,7 @@ defmodule LightningWeb.WorkflowNewLive do
        page_title: "",
        active_menu_item: :projects,
        can_edit_job: can_edit_job
-     )
-     |> maybe_assign_workflow()}
+     )}
   end
 
   @impl true
@@ -194,56 +191,31 @@ defmodule LightningWeb.WorkflowNewLive do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp maybe_assign_workflow(socket) do
-    if socket.assigns[:workflow] do
-      socket
-    else
-      workflow = %Workflow{}
-      job_1_id = Ecto.UUID.generate()
-      job_2_id = Ecto.UUID.generate()
-      trigger_1_id = Ecto.UUID.generate()
-
-      params = %{
-        "name" => nil,
-        "project_id" => socket.assigns.project.id,
-        "jobs" => [
-          %{"id" => job_1_id, "name" => "job-1"},
-          %{"id" => job_2_id, "name" => "job-2"}
-        ],
-        "triggers" => [
-          %{"id" => trigger_1_id, "type" => "webhook"}
-        ],
-        "edges" => [
-          %{
-            "id" => Ecto.UUID.generate(),
-            "source_trigger_id" => trigger_1_id,
-            "condition" => "true",
-            "target_job_id" => job_1_id
-          },
-          %{
-            "id" => Ecto.UUID.generate(),
-            "source_job_id" => job_1_id,
-            "condition" => ":on_success",
-            "target_job_id" => job_2_id
-          }
-        ]
-      }
-
-      socket |> assign(workflow: workflow) |> apply_params(params)
-    end
-  end
-
   def apply_action(socket, :new, _params) do
     assign(socket,
       page_title: "New Workflow"
     )
-    |> maybe_assign_workflow()
+    |> assign_workflow(%Workflow{project: socket.assigns.project})
+    |> unselect_all()
+  end
+
+  def apply_action(socket, :edit, %{"id" => workflow_id}) do
+    workflow =
+      Workflows.get_workflow(workflow_id)
+      |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+    assign(socket,
+      page_title: "New Workflow"
+    )
+    |> assign_workflow(workflow)
     |> unselect_all()
   end
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
-    {:reply, socket.assigns.workflow_params, socket}
+    {:reply,
+     socket.assigns.workflow_params
+     |> IO.inspect(label: "initial-state workflow_params"), socket}
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do
@@ -253,10 +225,8 @@ defmodule LightningWeb.WorkflowNewLive do
     # it could be an edge, a job or a trigger
     [:jobs, :triggers, :edges]
     |> Enum.reduce_while(nil, fn field, _ ->
-      Ecto.Changeset.get_change(socket.assigns.changeset, field, [])
-      |> Enum.find(fn changeset ->
-        Ecto.Changeset.get_field(changeset, :id) == id
-      end)
+      Ecto.Changeset.get_field(socket.assigns.changeset, field, [])
+      |> Enum.find(&(&1.id == id))
       |> case do
         nil ->
           {:cont, nil}
@@ -267,6 +237,7 @@ defmodule LightningWeb.WorkflowNewLive do
     end)
     |> case do
       nil ->
+        IO.inspect("no changeset found for id #{id}")
         {:noreply, socket}
 
       [type, selected] ->
@@ -287,23 +258,48 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("save", %{"workflow" => params}, socket) do
+    # update the changeset
+    # then do the 'normal' insert or update
+
     initial_params = socket.assigns.workflow_params
 
     next_params =
       WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+      |> IO.inspect(label: "next_params")
 
-    {:noreply,
-     socket
-     |> apply_params(next_params)
-     |> push_patches_applied(initial_params)}
+    socket = socket |> apply_params(next_params)
+
+    socket =
+      Lightning.Repo.insert_or_update(socket.assigns.changeset)
+      |> case do
+        {:ok, workflow} ->
+          socket
+          |> assign_workflow(workflow)
+          |> put_flash(:info, "Workflow saved")
+
+        {:error, changeset} ->
+          socket
+          |> assign_changeset(changeset)
+          |> put_flash(:error, "Workflow could not be saved")
+      end
+      |> push_patches_applied(initial_params)
+
+    {:noreply, socket}
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
+    IO.inspect(patches, label: "patches")
+
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
+    IO.inspect(socket.assigns.workflow_params,
+      label: "workflow_params after applying patches"
+    )
+
+    IO.inspect(params, label: "params after applying patches")
     socket = socket |> apply_params(params)
 
     # Calculate the difference between the new params and changes introduced by
@@ -344,15 +340,35 @@ defmodule LightningWeb.WorkflowNewLive do
      |> push_patches_applied(initial_params)}
   end
 
+  defp assign_workflow(socket, workflow) do
+    changeset = Workflow.changeset(workflow, %{})
+    IO.inspect(changeset)
+
+    socket
+    |> assign(
+      workflow: workflow,
+      changeset: changeset,
+      workflow_params: WorkflowParams.to_map(changeset)
+    )
+  end
+
   defp apply_params(socket, params) do
     # Build a new changeset from the new params
-    changeset = socket.assigns.workflow |> Workflow.changeset(params)
+    changeset =
+      socket.assigns.workflow
+      |> Workflow.changeset(
+        params
+        |> Map.put("project_id", socket.assigns.project.id)
+      )
 
+    socket |> assign_changeset(changeset)
+  end
+
+  defp assign_changeset(socket, changeset) do
     # Prepare a new set of workflow params from the changeset
     workflow_params = changeset |> WorkflowParams.to_map()
 
-    socket
-    |> assign(changeset: changeset, workflow_params: workflow_params)
+    socket |> assign(changeset: changeset, workflow_params: workflow_params)
   end
 
   defp push_patches_applied(socket, initial_params) do
