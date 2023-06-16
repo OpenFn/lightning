@@ -69,6 +69,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   serialize to JSON. This is necessary because the underlying model may
   contain atom values.
   """
+  @spec to_map(Ecto.Changeset.t()) :: %{String.t() => any()}
   def to_map(changeset), do: to_serializable(changeset)
 
   defp to_serializable(changeset) do
@@ -77,15 +78,15 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
       %{
         jobs:
           changeset
-          |> Ecto.Changeset.get_change(:jobs)
+          |> Ecto.Changeset.get_change(:jobs, [])
           |> to_serializable([:id, :name, :adaptor, :body, :enabled]),
         triggers:
           changeset
-          |> Ecto.Changeset.get_change(:triggers)
+          |> Ecto.Changeset.get_change(:triggers, [])
           |> to_serializable([:id, :type, :cron_expression]),
         edges:
           changeset
-          |> Ecto.Changeset.get_change(:edges)
+          |> Ecto.Changeset.get_change(:edges, [])
           |> to_serializable([
             :id,
             :source_trigger_id,
@@ -103,6 +104,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   end
 
   defp to_serializable(changeset, fields) do
+    IO.inspect({changeset, fields})
+
     %{__struct__: model} =
       changeset
       |> Ecto.Changeset.apply_changes()
