@@ -167,22 +167,22 @@ defmodule Lightning.Jobs do
 
   """
   def delete_job(%Job{} = job) do
-    change =
-      job
-      |> Ecto.Changeset.change()
+    changeset = job |> Ecto.Changeset.change()
 
-    with [_ | _] = _downstream_jobs <- get_downstream_jobs_for(job) do
-      error =
-        Ecto.Changeset.add_error(
-          change,
-          :workflow,
-          "This job is associated with downstream jobs"
-        )
+    get_downstream_jobs_for(job)
+    |> case do
+      [_ | _] ->
+        error =
+          Ecto.Changeset.add_error(
+            changeset,
+            :workflow,
+            "This job is associated with downstream jobs"
+          )
 
-      {:error, error}
-    else
+        {:error, error}
+
       _ ->
-        change
+        changeset
         |> Repo.delete()
     end
   end
