@@ -1,5 +1,6 @@
 defmodule LightningWeb.RunWorkOrderTest do
   use LightningWeb.ConnCase, async: true
+  use Oban.Testing, repo: Lightning.Repo
 
   import Phoenix.LiveViewTest
 
@@ -1254,10 +1255,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   describe "rerun" do
-    test "Project editors can rerun runs",
-         %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
-
+    setup %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
           project_id: project.id,
@@ -1297,20 +1295,23 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      run =
-        Map.get(attempt, :runs)
-        |> List.first()
+      [attempt: attempt, work_order: work_order, project: project, conn: conn]
+    end
 
-      Lightning.Invocation.search_workorders(project).entries()
+    test "Project editors can rerun runs",
+         %{conn: conn, project: project, attempt: attempt} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      [run | _rest] = attempt.runs
 
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+          Routes.project_run_index_path(conn, :index, project.id)
         )
         |> follow_redirect(
           conn,
-          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
         )
 
       assert view
@@ -1321,10 +1322,33 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
 
     test "Project viewers can't rerun runs",
+         %{conn: conn, project: project, attempt: attempt} do
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+      [run | _rest] = attempt.runs
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
+
+      assert view
+             |> render_click("rerun", %{
+               "attempt_id" => attempt.id,
+               "run_id" => run.id
+             }) =~
+               "You are not authorized to perform this action."
+    end
+
+    test "Project viewers can't rerun runs in bulk",
          %{conn: conn, project: project} do
       {conn, _user} = setup_project_user(conn, project, :viewer)
 
-      job_a =
+      job_b =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -1334,57 +1358,127 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: job_b.trigger.id,
           dataclip_id: dataclip.id
         )
 
-      work_order =
+      work_order_b =
         work_order_fixture(
           project_id: project.id,
-          workflow_id: job_a.workflow_id,
+          workflow_id: job_b.workflow_id,
           reason_id: reason.id
         )
 
       now = Timex.now()
 
-      attempt =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_a.id,
-              started_at: now |> Timex.shift(seconds: -25),
-              finished_at: now |> Timex.shift(seconds: -20),
-              exit_code: 0,
-              input_dataclip_id: dataclip.id
-            }
-          ]
-        })
-        |> Lightning.Repo.insert!()
-
-      run =
-        Map.get(attempt, :runs)
-        |> List.first()
-
-      Lightning.Invocation.search_workorders(project).entries()
+      # Attempt b
+      Attempt.new(%{
+        work_order_id: work_order_b.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
-        )
-        |> follow_redirect(
-          conn,
-          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
         )
 
-      assert view
-             |> render_click("rerun", %{
-               "attempt_id" => attempt.id,
-               "run_id" => run.id
-             }) =~
+      render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      assert render_click(view, "bulk-rerun", %{type: "all"}) =~
                "You are not authorized to perform this action."
+    end
+
+    test "Project editors can rerun runs in bulk",
+         %{conn: conn, project: project} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      job_b =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_b.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order_b =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_b.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      # Attempt b
+      Attempt.new(%{
+        work_order_id: work_order_b.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
+        )
+
+      render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert [] == all_enqueued(worker: Lightning.Pipeline)
+
+        assert view
+               |> render_click("bulk-rerun", %{type: "all"})
+               |> follow_redirect(conn) =~
+                 "Jobs have been set for rerun successfully."
+
+        assert [%Oban.Job{}, %Oban.Job{}] ==
+                 all_enqueued(worker: Lightning.Pipeline)
+      end)
     end
   end
 end

@@ -217,7 +217,7 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   def handle_event("bulk-rerun", %{"type" => type}, socket) do
-    with true <- socket.assigns.can_rerun_job,
+    with true <- socket.assigns.can_rerun_job |> IO.inspect(),
          {:ok, _changes} <- handle_bulk_rerun(socket, type) do
       {:noreply,
        socket

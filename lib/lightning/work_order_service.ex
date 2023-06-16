@@ -73,15 +73,43 @@ defmodule Lightning.WorkOrderService do
     |> Repo.preload([:attempt, :run])
     |> multi_for_retry_attempt_run(user)
     |> Repo.transaction()
+    |> case do
+      {:ok, %{attempt_run: attempt_run, attempt: attempt} = changes} ->
+        Pipeline.new(%{attempt_run_id: attempt_run.id})
+        |> Oban.insert()
+
+        project_id =
+          from(r in Run,
+            join: j in assoc(r, :job),
+            join: p in assoc(j, :project),
+            where: r.id == ^attempt_run.run_id,
+            select: [p.id]
+          )
+          |> Repo.one!()
+
+        broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
+        {:ok, changes}
+
+      other ->
+        other
+    end
   end
 
   def retry_attempt_runs(attempt_runs, user) when is_list(attempt_runs) do
     attempt_runs
-    |> Repo.preload([:attempt, :run])
+    |> Repo.preload([:attempt, run: [job: :workflow]])
     |> Enum.reduce(Multi.new(), fn attempt_run, multi ->
       Multi.run(multi, "retry.#{attempt_run.id}", fn _repo, _changes ->
         attempt_run
         |> multi_for_retry_attempt_run(user)
+        |> Oban.insert(:run, fn %{attempt_run: attempt_run} ->
+          Pipeline.new(%{attempt_run_id: attempt_run.id})
+        end)
+        |> Multi.run(:broadcast, fn _repo, %{attempt: attempt} ->
+          project_id = attempt_run.run.job.workflow.project_id
+          broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
+          {:ok, nil}
+        end)
         |> Repo.transaction()
         |> case do
           {:error, failed_operation, failed_value, changes_so_far} ->
@@ -110,22 +138,6 @@ defmodule Lightning.WorkOrderService do
     end)
     |> Multi.merge(fn %{reason: reason} ->
       AttemptService.retry(attempt, run, reason)
-    end)
-    |> Oban.insert(:run, fn %{attempt_run: attempt_run} ->
-      Pipeline.new(%{attempt_run_id: attempt_run.id})
-    end)
-    |> Multi.one(:project_id, fn %{attempt_run: attempt_run} ->
-      from(r in Run,
-        join: j in assoc(r, :job),
-        join: p in assoc(j, :project),
-        where: r.id == ^attempt_run.run_id,
-        select: [p.id]
-      )
-    end)
-    |> Multi.run(:broadcast, fn _repo,
-                                %{attempt: attempt, project_id: project_id} ->
-      broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
-      {:ok, nil}
     end)
   end
 
