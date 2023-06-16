@@ -104,7 +104,7 @@ config :lightning,
 
 config :lightning,
        :init_project_for_new_user,
-       System.get_env("INIT_PROJECT_FOR_NEW_USER", "true")
+       System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
        |> String.to_atom()
 
 # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
