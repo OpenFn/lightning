@@ -72,27 +72,61 @@ defmodule Lightning.SetupUtilsTest do
       assert get_dhis2_data.workflow_id == dhis2_workflow.id
       assert upload_to_google_sheet.workflow_id == dhis2_workflow.id
 
-      assert fhir_standard_data.trigger.type == :webhook
+      loaded_flow =
+        Repo.get(Workflows.Workflow, openhie_workflow.id)
+        |> Repo.preload([:edges, :triggers])
 
-      assert fhir_standard_data.trigger.id ==
-               "cae544ab-03dc-4ccc-a09c-fb4edb255d7a"
+      assert Enum.find(loaded_flow.triggers, fn t ->
+               t.type == :webhook
+             end)
 
-      assert send_to_openhim.trigger.type == :on_job_success
-      assert send_to_openhim.trigger.upstream_job_id == fhir_standard_data.id
+      assert Enum.find(loaded_flow.edges, fn e ->
+               e.condition == :always &&
+                 e.target_job_id == fhir_standard_data.id
+             end)
 
-      assert notify_upload_successful.trigger.type == :on_job_success
+      assert Enum.find(loaded_flow.edges, fn e ->
+               e.condition == :on_job_success &&
+                 e.source_job_id == fhir_standard_data.id &&
+                 e.target_job_id == send_to_openhim.id
+             end)
 
-      assert notify_upload_successful.trigger.upstream_job_id ==
-               send_to_openhim.id
+      assert Enum.find(loaded_flow.edges, fn e ->
+               e.condition == :on_job_success &&
+                 e.source_job_id == fhir_standard_data.id &&
+                 e.target_job_id == send_to_openhim.id
+             end)
 
-      assert notify_upload_failed.trigger.type == :on_job_failure
-      assert notify_upload_failed.trigger.upstream_job_id == send_to_openhim.id
+      assert Enum.find(loaded_flow.edges, fn e ->
+               e.condition == :on_job_success &&
+                 e.target_job_id == notify_upload_successful.id &&
+                 e.source_job_id == send_to_openhim.id
+             end)
 
-      assert get_dhis2_data.trigger.type == :cron
-      assert get_dhis2_data.trigger.cron_expression == "0 * * * *"
+      assert Enum.find(loaded_flow.edges, fn e ->
+               e.condition == :on_job_failure &&
+                 e.target_job_id == notify_upload_failed.id &&
+                 e.source_job_id == send_to_openhim.id
+             end)
 
-      assert upload_to_google_sheet.trigger.type == :on_job_success
-      assert upload_to_google_sheet.trigger.upstream_job_id == get_dhis2_data.id
+      loaded_dhis_flow =
+        Repo.get(Workflows.Workflow, dhis2_workflow.id)
+        |> Repo.preload([:edges, :triggers])
+
+      assert Enum.find(loaded_dhis_flow.edges, fn e ->
+               e.condition == :always &&
+                 e.target_job_id == get_dhis2_data.id
+             end)
+
+      assert Enum.find(loaded_dhis_flow.edges, fn e ->
+               e.condition == :on_job_success &&
+                 e.source_job_id == get_dhis2_data.id &&
+                 e.target_job_id == upload_to_google_sheet.id
+             end)
+
+      assert Enum.find(loaded_dhis_flow.triggers, fn t ->
+               t.cron_expression == "0 * * * *"
+             end)
 
       assert (Enum.map(users, fn user -> user.id end) --
                 Enum.map(Accounts.list_users(), fn user -> user.id end))

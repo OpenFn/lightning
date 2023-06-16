@@ -10,14 +10,16 @@ defmodule Lightning.Workflows.GraphTest do
       workflow_scenario()
     end
 
-    test "can create a graph from jobs", %{jobs: jobs} do
-      jobs = Map.values(jobs)
+    test "can create a graph from a workflow with jobs and edges", workflow do
+      jobs = Map.values(workflow.jobs)
+      edges = Map.values(workflow.edges)
 
       assert_raise KeyError, fn ->
         Graph.new(jobs)
       end
 
-      jobs = Enum.map(jobs, fn j -> Repo.preload(j, trigger: :upstream_job) end)
+      loaded_edges =
+        Enum.map(edges, fn e -> Repo.preload(e, [:source_job, :target_job]) end)
 
       # # find all the attempt runs for a given attempt
       # runs_query =
@@ -43,8 +45,10 @@ defmodule Lightning.Workflows.GraphTest do
       #   |> Repo.all()
       job_e = Enum.find(jobs, &match?(%{name: "job_e"}, &1))
 
+      loaded_workflow = %{jobs: jobs, edges: loaded_edges}
+
       graph =
-        Graph.new(jobs)
+        Graph.new(loaded_workflow)
         |> Graph.remove(job_e.id)
 
       remaining_jobs = graph |> Graph.vertices() |> Enum.map(& &1.name)
@@ -60,7 +64,7 @@ defmodule Lightning.Workflows.GraphTest do
       job_d = Enum.find(jobs, &match?(%{name: "job_d"}, &1))
 
       graph =
-        Graph.new(jobs)
+        Graph.new(loaded_workflow)
         |> Graph.remove(job_d.id)
 
       remaining_jobs = graph |> Graph.vertices() |> Enum.map(& &1.name)
@@ -74,7 +78,7 @@ defmodule Lightning.Workflows.GraphTest do
       job_a = Enum.find(jobs, &match?(%{name: "job_a"}, &1))
 
       graph =
-        Graph.new(jobs)
+        Graph.new(loaded_workflow)
         |> Graph.remove(job_a.id)
 
       assert graph.jobs == []

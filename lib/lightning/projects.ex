@@ -458,9 +458,7 @@ defmodule Lightning.Projects do
 
       jobs
       |> Enum.each(fn job ->
-        Lightning.Jobs.update_job(job, %{
-          "enabled" => false
-        })
+        Lightning.Jobs.update_job(job, %{"enabled" => false})
       end)
 
       project =

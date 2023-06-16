@@ -1,6 +1,8 @@
 defmodule Lightning.WorkflowsTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.Factories
+
   alias Lightning.{
     Workflows,
     Jobs,
@@ -86,6 +88,51 @@ defmodule Lightning.WorkflowsTest do
   end
 
   describe "workflows and edges" do
+    test "get_edge_by_webhook/1 returns the job for a path" do
+      %{job: _job, trigger: trigger, edge: edge} =
+        JobsFixtures.workflow_job_fixture()
+
+      assert Workflows.get_edge_by_webhook(trigger.id).id == edge.id
+
+      Ecto.Changeset.change(trigger, custom_path: "foo")
+      |> Lightning.Repo.update!()
+
+      assert Workflows.get_edge_by_webhook(trigger.id) == nil
+
+      assert Workflows.get_edge_by_webhook("foo").id == edge.id
+    end
+
+    test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
+      t1 = insert(:trigger, %{type: :cron, cron_expression: "5 0 * 8 *"})
+      job_0 = insert(:job, %{workflow: t1.workflow})
+
+      insert(:edge, %{
+        workflow: t1.workflow,
+        source_trigger: t1,
+        target_job: job_0
+      })
+
+      t2 = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
+      job_1 = insert(:job, %{workflow: t2.workflow})
+
+      e2 =
+        insert(:edge, %{
+          workflow: t2.workflow,
+          source_trigger: t2,
+          target_job: job_1
+        })
+
+      # Disabled Job
+      insert(:job, %{
+        enabled: false,
+        workflow: t2.workflow
+      })
+
+      [e | _] = Workflows.get_edges_for_cron_execution(DateTime.utc_now())
+
+      assert e.id == e2.id
+    end
+
     test "using create_workflow/1" do
       project = ProjectsFixtures.project_fixture()
       valid_attrs = %{name: "some-name", project_id: project.id}
@@ -166,50 +213,65 @@ defmodule Lightning.WorkflowsTest do
 
   describe "workflows and project spaces" do
     setup do
-      project = ProjectsFixtures.project_fixture()
-      w1 = WorkflowsFixtures.workflow_fixture(project_id: project.id)
-      w2 = WorkflowsFixtures.workflow_fixture(project_id: project.id)
+      project = insert(:project)
+      w1 = insert(:workflow, project: project)
+      w2 = insert(:workflow, project: project)
 
       w1_job =
-        JobsFixtures.job_fixture(
+        insert(:job,
           name: "webhook job",
-          project_id: project.id,
-          workflow_id: w1.id,
-          trigger: %{type: :webhook}
+          project: project,
+          workflow: w1
+          # trigger: %{type: :webhook}
         )
 
-      JobsFixtures.job_fixture(
-        name: "on fail",
-        project_id: project.id,
-        workflow_id: w1.id,
-        trigger: %{type: :on_job_failure, upstream_job_id: w1_job.id}
+      insert(:edge,
+        workflow: w1,
+        source_job: w1_job,
+        condition: :on_job_failure,
+        target_job:
+          insert(:job,
+            name: "on fail",
+            project: project,
+            workflow: w1
+          )
       )
 
-      JobsFixtures.job_fixture(
-        name: "on success",
-        project_id: project.id,
-        workflow_id: w1.id,
-        trigger: %{type: :on_job_success, upstream_job_id: w1_job.id}
+      insert(:edge,
+        workflow: w1,
+        source_job: w1_job,
+        condition: :on_job_success,
+        target_job:
+          insert(:job,
+            name: "on success",
+            project: project,
+            workflow: w1
+          )
       )
 
       w2_job =
-        JobsFixtures.job_fixture(
+        insert(:job,
           name: "other workflow",
-          project_id: project.id,
-          workflow_id: w2.id,
-          trigger: %{type: :webhook}
+          project: project,
+          workflow: w2
+          # trigger: %{type: :webhook}
         )
 
-      JobsFixtures.job_fixture(
-        name: "on fail",
-        project_id: project.id,
-        workflow_id: w2.id,
-        trigger: %{type: :on_job_failure, upstream_job_id: w2_job.id}
+      insert(:edge,
+        workflow: w2,
+        source_job: w2_job,
+        condition: :on_job_failure,
+        target_job:
+          insert(:job,
+            name: "on fail",
+            project: project,
+            workflow: w2
+          )
       )
 
-      JobsFixtures.job_fixture(
-        name: "unrelated job",
-        trigger: %{type: :webhook}
+      insert(:job,
+        name: "unrelated job"
+        # trigger: %{type: :webhook}
       )
 
       %{project: project, w1: w1, w2: w2}
@@ -220,21 +282,20 @@ defmodule Lightning.WorkflowsTest do
 
       assert length(results) == 2
 
-      assert w1.deleted_at == nil
+      assert results |> Enum.map(& &1.id) == [w1.id, w2.id]
 
-      assert w2.deleted_at == nil
+      for workflow <- results do
+        assert is_nil(workflow.deleted_at)
+        assert workflow.jobs != %Ecto.Association.NotLoaded{}
 
-      assert (w1
-              |> Repo.preload(
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
+        for job <- workflow.jobs do
+          assert job.credential != %Ecto.Association.NotLoaded{}
+          assert job.workflow != %Ecto.Association.NotLoaded{}
+        end
 
-      assert (w2
-              |> Repo.preload(
-                jobs: [:credential, :workflow, trigger: [:upstream_job]]
-              )) in results
-
-      assert length(results) == 2
+        assert workflow.triggers != %Ecto.Association.NotLoaded{}
+        assert workflow.edges != %Ecto.Association.NotLoaded{}
+      end
     end
 
     test "to_project_spec/1", %{project: project, w1: w1, w2: w2} do

@@ -6,7 +6,7 @@ defmodule Lightning.JobsFixtures do
 
   import Lightning.ProjectsFixtures
   import Lightning.WorkflowsFixtures
-  import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
   @doc """
   Generate a job.
@@ -29,8 +29,7 @@ defmodule Lightning.JobsFixtures do
         body: "fn(state => state)",
         enabled: true,
         name: "some name",
-        adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook"}
+        adaptor: "@openfn/language-common"
       })
       |> Lightning.Jobs.create_job()
 
@@ -45,24 +44,46 @@ defmodule Lightning.JobsFixtures do
   end
 
   def workflow_job_fixture(attrs \\ []) do
+    {workflow_name, attrs} =
+      attrs |> Enum.into(%{}) |> Map.pop(:workflow_name, random_name())
+
+    attrs =
+      attrs
+      |> case do
+        %{project: _project} ->
+          attrs
+
+        # Here as a stop gap while we change all the call sites
+        attrs = %{project_id: project_id} ->
+          attrs
+          |> Map.drop([:project_id])
+          |> Map.put_new(
+            :project,
+            Lightning.Repo.get!(Lightning.Projects.Project, project_id)
+          )
+
+        attrs ->
+          attrs |> Map.put_new(:project, insert(:project))
+      end
+
     workflow =
-      Ecto.Changeset.cast(
-        %Lightning.Workflows.Workflow{},
+      insert(
+        :workflow,
         %{
-          "name" =>
-            attrs[:workflow_name] ||
-              random_name(),
-          "project_id" => attrs[:project_id] || project_fixture().id,
-          "id" => Ecto.UUID.generate()
-        },
-        [:project_id, :id, :name]
+          name: workflow_name,
+          project: attrs[:project]
+        }
       )
 
     project_credential =
-      project_credential_fixture(
-        name: "my first cred",
-        body: %{"shhh" => "secret-stuff"}
-      )
+      attrs[:project_credential] ||
+        insert(:project_credential,
+          credential: %{
+            name: "my first cred",
+            body: %{"shhh" => "secret-stuff"}
+          },
+          project: attrs[:project]
+        )
 
     attrs =
       attrs
@@ -71,20 +92,32 @@ defmodule Lightning.JobsFixtures do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        project_credential_id: project_credential.id,
-        trigger: %{type: "webhook"}
+        workflow: workflow,
+        project_credential: project_credential
       })
 
-    %Lightning.Jobs.Job{}
-    |> Ecto.Changeset.change()
-    |> Lightning.Jobs.Job.put_workflow(workflow)
-    |> Lightning.Jobs.Job.changeset(attrs)
-    |> Lightning.Repo.insert!()
+    job = insert(:job, attrs)
+
+    t =
+      insert(:trigger,
+        workflow: attrs[:workflow],
+        type: :webhook
+      )
+
+    e =
+      insert(:edge,
+        workflow: attrs[:workflow],
+        source_trigger: t,
+        target_job: job,
+        condition: :always
+      )
+
+    %{job: job, edge: e, trigger: t}
   end
 
   def workflow_scenario() do
-    project = project_fixture()
-    workflow = workflow_fixture(project_id: project.id)
+    project = insert(:project)
+    workflow = insert(:workflow, project: project)
 
     #       +---+
     #   +---- A ----+
@@ -107,58 +140,93 @@ defmodule Lightning.JobsFixtures do
     # +---+       +---+
     #
 
-    job_a =
-      job_fixture(
-        name: "job_a",
-        workflow_id: workflow.id,
-        trigger: %{type: :webhook}
-      )
+    trigger =
+      insert(:trigger, %{
+        workflow: workflow,
+        type: :webhook
+      })
 
-    job_b =
-      job_fixture(
-        name: "job_b",
-        workflow_id: workflow.id,
-        trigger: %{type: :on_job_success, upstream_job_id: job_a.id}
-      )
+    job_a = insert(:job, %{name: "job_a", workflow: workflow})
 
-    job_c =
-      job_fixture(
-        name: "job_c",
-        workflow_id: workflow.id,
-        trigger: %{type: :on_job_success, upstream_job_id: job_b.id}
-      )
+    edge_t_a =
+      insert(:edge, %{
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job_a
+      })
 
-    job_d =
-      job_fixture(
-        name: "job_d",
-        workflow_id: workflow.id,
-        trigger: %{type: :on_job_success, upstream_job_id: job_c.id}
-      )
+    job_b = insert(:job, %{name: "job_b", workflow: workflow})
 
-    job_e =
-      job_fixture(
-        name: "job_e",
-        workflow_id: workflow.id,
-        trigger: %{type: :on_job_success, upstream_job_id: job_a.id}
-      )
+    edge_a_b =
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job_a,
+        target_job: job_b,
+        condition: :on_job_success
+      })
 
-    job_f =
-      job_fixture(
-        name: "job_f",
-        workflow_id: workflow.id,
-        trigger: %{type: :on_job_success, upstream_job_id: job_e.id}
-      )
+    job_c = insert(:job, %{name: "job_c", workflow: workflow})
 
-    job_g =
-      job_fixture(
-        name: "job_g",
-        workflow_id: workflow.id,
-        trigger: %{type: :on_job_success, upstream_job_id: job_f.id}
-      )
+    edge_b_c =
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job_b,
+        target_job: job_c,
+        condition: :on_job_success
+      })
+
+    job_d = insert(:job, %{name: "job_d", workflow: workflow})
+
+    edge_c_d =
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job_c,
+        target_job: job_d,
+        condition: :on_job_success
+      })
+
+    job_e = insert(:job, %{name: "job_e", workflow: workflow})
+
+    edge_a_e =
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job_a,
+        target_job: job_e,
+        condition: :on_job_success
+      })
+
+    job_f = insert(:job, %{name: "job_f", workflow: workflow})
+
+    edge_e_f =
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job_e,
+        target_job: job_f,
+        condition: :on_job_success
+      })
+
+    job_g = insert(:job, %{workflow: workflow, name: "job_g"})
+
+    edge_f_g =
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job_f,
+        target_job: job_g,
+        condition: :on_job_success
+      })
 
     %{
-      workflow: workflow,
+      workflow: workflow |> Lightning.Repo.reload(),
       project: project,
+      edges: %{
+        ta: edge_t_a,
+        ab: edge_a_b,
+        ae: edge_a_e,
+        bc: edge_b_c,
+        cd: edge_c_d,
+        ef: edge_e_f,
+        fg: edge_f_g
+      },
       jobs: %{
         a: job_a,
         b: job_b,

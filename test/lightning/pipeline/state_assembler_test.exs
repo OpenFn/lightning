@@ -130,7 +130,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   def webhook_workflow() do
     workflow = build_workflow()
 
-    {:ok, %{workflow: workflow, trigger: trigger} = job} =
+    {:ok, %{workflow: workflow} = job} =
       Job.new()
       |> Job.put_workflow(workflow)
       |> Job.put_project_credential(
@@ -143,11 +143,10 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
         body: "fn(state => state)",
         enabled: true,
         name: "some name",
-        adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook"}
+        adaptor: "@openfn/language-common"
       })
       |> Repo.insert()
 
-    %{workflow: workflow, trigger: trigger, job: job}
+    %{workflow: workflow, job: job}
   end
 end

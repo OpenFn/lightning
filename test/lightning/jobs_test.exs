@@ -11,6 +11,7 @@ defmodule Lightning.JobsTest do
   import Lightning.CredentialsFixtures
   import Lightning.InvocationFixtures
   import Lightning.WorkflowsFixtures
+  import Lightning.Factories
 
   describe "jobs" do
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
@@ -23,32 +24,31 @@ defmodule Lightning.JobsTest do
     test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
       job_fixture()
 
-      enabled_job =
-        job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
+      workflow = insert(:workflow)
 
-      _disabled_job =
-        job_fixture(
-          trigger: %{type: :cron, cron_expression: "5 0 * 8 *"},
-          enabled: false
+      t =
+        insert(:trigger,
+          workflow: workflow,
+          type: :cron,
+          cron_expression: "5 0 * 8 *"
         )
+
+      enabled_job = insert(:job, workflow: workflow)
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger_id: t.id,
+        target_job_id: enabled_job.id
+      )
+
+      # disabled job
+      insert(:edge,
+        workflow: workflow,
+        source_trigger_id: t.id,
+        target_job: build(:job, workflow: workflow, enabled: false)
+      )
 
       assert Jobs.list_active_cron_jobs() == [Jobs.get_job!(enabled_job.id)]
-    end
-
-    test "get_jobs_for_cron_execution/0 returns jobs to run for a given time" do
-      _job_0 = job_fixture(trigger: %{type: :cron, cron_expression: "5 0 * 8 *"})
-
-      job_1 = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
-
-      _disabled_job =
-        job_fixture(
-          trigger: %{type: :cron, cron_expression: "* * * * *"},
-          enabled: false
-        )
-
-      assert Jobs.get_jobs_for_cron_execution(DateTime.utc_now()) == [
-               Jobs.get_job!(job_1.id)
-             ]
     end
 
     test "get_job!/1 returns the job with given id" do
@@ -62,18 +62,6 @@ defmodule Lightning.JobsTest do
 
       assert Jobs.get_job(job.id) |> unload_relation(:workflow) == job
       assert Jobs.get_job(Ecto.UUID.generate()) == nil
-    end
-
-    test "get_job_by_webhook/1 returns the job for a path" do
-      job = job_fixture()
-
-      assert Jobs.get_job_by_webhook(job.trigger.id)
-             |> unload_relation(:workflow) == job
-
-      job = job_fixture(trigger: %{type: "webhook", custom_path: "foo"})
-
-      assert Jobs.get_job_by_webhook(job.trigger.id) == nil
-      assert Jobs.get_job_by_webhook("foo") |> unload_relation(:workflow) == job
     end
 
     test "change_job/1 returns a job changeset" do
@@ -101,13 +89,16 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_downstream_jobs_for/2 returns all jobs trigger by the provided one" do
-      job = job_fixture()
+      job = insert(:job)
+      other_job = insert(:job, workflow: job.workflow)
 
-      other_job =
-        job_fixture(
-          trigger: %{type: :on_job_failure, upstream_job_id: job.id},
-          workflow_id: job.workflow_id
-        )
+      # connect other_job to job via an edge
+      insert(:edge, %{
+        source_job_id: job.id,
+        workflow: job.workflow,
+        target_job_id: other_job.id,
+        condition: :on_job_failure
+      })
 
       assert Jobs.get_downstream_jobs_for(job) == [
                Jobs.get_job!(other_job.id)
@@ -124,138 +115,12 @@ defmodule Lightning.JobsTest do
 
   describe "update_job/2" do
     test "changing a cron to a webhook trigger does NOT create a new workflow" do
-      workflow_id = workflow_fixture().id
+      trigger = insert(:trigger, %{type: :cron, cron_expression: "* * * *"})
 
-      {:ok, %Job{} = job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron", cron_expression: "* * * *"},
-          workflow_id: workflow_id
-        })
+      workflow_id = trigger.workflow_id
 
-      {:ok,
-       %Job{
-         workflow_id: ^workflow_id,
-         trigger: %{workflow_id: ^workflow_id}
-       }} =
-        Jobs.update_job(job, %{
-          trigger: %{id: job.trigger.id, type: "webhook"}
-        })
-    end
-
-    test "update_job/2 from upstream_job A (in workflow 1) to upstream_job B (in workflow 2) changes the updated job's workflow_id to 2" do
-      workflow = workflow_fixture()
-
-      {:ok, %Job{} = upstream_job_1} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron"},
-          workflow_id: workflow.id
-        })
-
-      {:ok, %Job{} = upstream_job_2} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron"},
-          workflow_id: workflow.id
-        })
-
-      {:ok, %Job{} = downstream_job_a} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: upstream_job_1.id},
-          workflow_id: workflow.id
-        })
-
-      assert downstream_job_a.workflow_id == upstream_job_1.workflow_id
-
-      {:ok, %Job{} = downstream_job_a} =
-        Jobs.update_job(downstream_job_a, %{
-          trigger: %{
-            id: downstream_job_a.trigger.id,
-            type: "on_job_success",
-            upstream_job_id: upstream_job_2.id
-          }
-        })
-
-      assert downstream_job_a.workflow_id == upstream_job_2.workflow_id
-    end
-
-    # With some of the refactoring, we have lost the ability to automatically
-    # determine (easily) if a new Workflow must be made.
-    # We must determine how important this feature is, and deal with it via
-    # a dedicated function - and not automagically.
-    @tag :skip
-    test """
-    update_job/2 from upstream_job A (in workflow 1) to cron or webhook
-    creates a new workflow and changes the updated job's workflow_id
-    to THAT new workflow
-    """ do
-      workflow = workflow_fixture()
-
-      {:ok, %Job{} = cron_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "cron", cron_expression: "* * * *"},
-          workflow_id: workflow.id
-        })
-
-      {:ok, %Job{} = downstream_job} =
-        Jobs.create_job(%{
-          body: "some body",
-          enabled: true,
-          name: "some name",
-          adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: cron_job.id},
-          workflow_id: workflow.id
-        })
-
-      assert downstream_job.workflow_id == cron_job.workflow_id
-
-      workflows_before = Workflows.list_workflows()
-      count_workflows_before = Enum.count(workflows_before)
-
-      {:ok, %Job{} = downstream_job} =
-        Jobs.update_job(downstream_job, %{
-          trigger: %{
-            id: downstream_job.trigger.id,
-            type: "webhook"
-          }
-        })
-
-      assert downstream_job.trigger.upstream_job_id == nil
-
-      workflows_after = Workflows.list_workflows()
-      count_workflows_after = Enum.count(workflows_after)
-
-      refute downstream_job.workflow_id == cron_job.workflow_id
-      assert count_workflows_after == count_workflows_before + 1
-
-      assert Enum.member?(
-               Enum.map(workflows_before, fn w -> w.id end),
-               downstream_job.workflow_id
-             )
-             |> Kernel.not()
-
-      assert Enum.member?(
-               Enum.map(workflows_after, fn w -> w.id end),
-               downstream_job.workflow_id
-             )
+      {:ok, %{workflow_id: ^workflow_id}} =
+        Workflows.update_trigger(trigger, %{type: "webhook"})
     end
 
     test "update_job/2 with valid data updates the job" do
@@ -279,27 +144,33 @@ defmodule Lightning.JobsTest do
     end
 
     test "delete_job/1 deletes the job" do
-      job = job_fixture()
+      job = insert(:job)
       assert {:ok, %Job{}} = Jobs.delete_job(job)
       assert_raise Ecto.NoResultsError, fn -> Jobs.get_job!(job.id) end
     end
 
     test "delete_job/1 can't delete job with downstream jobs" do
-      job = job_fixture()
+      job = insert(:job)
 
-      {:ok, %Job{} = _} =
+      {:ok, job1} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
           name: "some name",
           adaptor: "@openfn/language-common",
-          trigger: %{type: "on_job_success", upstream_job_id: job.id},
           workflow_id: job.workflow_id
         })
 
+      insert(:edge, %{
+        condition: :on_job_success,
+        source_job: job,
+        target_job: job1,
+        workflow: job.workflow
+      })
+
       {:error, changeset} = Jobs.delete_job(job)
 
-      assert %{trigger_id: ["This job is associated with downstream jobs"]} =
+      assert %{workflow: ["This job is associated with downstream jobs"]} =
                errors_on(changeset)
     end
   end
@@ -351,7 +222,6 @@ defmodule Lightning.JobsTest do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        trigger: %{type: "webhook", comment: "foo"},
         workflow_id: workflow_fixture().id
       }
 
@@ -359,8 +229,6 @@ defmodule Lightning.JobsTest do
       assert job.body == "some body"
       assert job.enabled == true
       assert job.name == "some name"
-
-      assert job.trigger.comment == "foo"
     end
 
     test "with an upstream job returns a job with the upstream job's workflow_id" do
@@ -420,7 +288,20 @@ defmodule Lightning.JobsTest do
 
   describe "Scheduler" do
     test "enqueue_cronjobs/1 enqueues a cron job that's never been run before" do
-      job = job_fixture(trigger: %{type: :cron, cron_expression: "* * * * *"})
+      job = insert(:job)
+
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow: job.workflow
+        })
+
+      insert(:edge, %{
+        workflow: job.workflow,
+        source_trigger: trigger,
+        target_job: job
+      })
 
       Scheduler.enqueue_cronjobs()
 
@@ -438,16 +319,31 @@ defmodule Lightning.JobsTest do
       assert run.input_dataclip.type == :global
       assert run.input_dataclip.body == %{}
     end
+  end
 
+  describe "Scheduler repeats" do
     test "enqueue_cronjobs/1 enqueues a cron job that has been run before" do
       job =
-        job_fixture(
-          body: "fn(state => { console.log(state); return { changed: true }; })",
-          trigger: %{type: :cron, cron_expression: "* * * * *"}
+        insert(:job,
+          body: "fn(state => { console.log(state); return { changed: true }; })"
         )
 
+      trigger =
+        insert(:trigger, %{
+          type: :cron,
+          cron_expression: "* * * * *",
+          workflow: job.workflow
+        })
+
+      edge =
+        insert(:edge, %{
+          workflow: job.workflow,
+          source_trigger: trigger,
+          target_job: job
+        })
+
       {:ok, %{attempt_run: attempt_run}} =
-        Lightning.WorkOrderService.multi_for(:cron, job, dataclip_fixture())
+        Lightning.WorkOrderService.multi_for(:cron, edge, dataclip_fixture())
         |> Repo.transaction()
 
       Lightning.Pipeline.process(attempt_run)

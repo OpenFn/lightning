@@ -92,6 +92,7 @@ defmodule LightningWeb.API.JobControllerTest do
   end
 
   defp create_job(%{project: project}) do
-    %{job: workflow_job_fixture(project_id: project.id)}
+    %{job: job} = workflow_job_fixture(project_id: project.id)
+    %{job: job}
   end
 end

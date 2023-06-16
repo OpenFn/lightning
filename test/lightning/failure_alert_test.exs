@@ -26,7 +26,7 @@ defmodule Lightning.FailureAlertTest do
         |> Keyword.get(:time_scale)
         |> ms_to_human()
 
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "workflow-a",
           project_id: project.id,
@@ -38,7 +38,7 @@ defmodule Lightning.FailureAlertTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -61,7 +61,7 @@ defmodule Lightning.FailureAlertTest do
         )
         |> Repo.insert()
 
-      job2 =
+      %{job: job2, trigger: trigger2} =
         workflow_job_fixture(
           workflow_name: "workflow-b",
           project_id: project.id,
@@ -73,7 +73,7 @@ defmodule Lightning.FailureAlertTest do
 
       reason =
         reason_fixture(
-          trigger_id: job2.trigger.id,
+          trigger_id: trigger2.id,
           dataclip_id: dataclip.id
         )
 
@@ -182,7 +182,7 @@ defmodule Lightning.FailureAlertTest do
           project_users: [%{user_id: user.id, failure_alert: false}]
         )
 
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "workflow-a",
           project_id: project.id,
@@ -194,7 +194,7 @@ defmodule Lightning.FailureAlertTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 

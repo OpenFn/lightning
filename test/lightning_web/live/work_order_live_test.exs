@@ -15,7 +15,7 @@ defmodule LightningWeb.RunWorkOrderTest do
     test "WorkOrderComponent", %{
       project: project
     } do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "my workflow",
           project_id: project.id,
@@ -26,7 +26,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -60,7 +60,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project
     } do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "my workflow",
           project_id: project.id,
@@ -71,7 +71,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -134,7 +134,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When the most recent run is finished without exit code, work_order status is 'Timeout'",
          %{conn: conn, project: project} do
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -146,7 +146,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -187,7 +187,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When the most recent run is not complete, work_order status is 'Pending'",
          %{conn: conn, project: project} do
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -199,7 +199,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -240,7 +240,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When run A,B and C are successful, work_order status is 'Success'",
          %{conn: conn, project: project} do
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -264,7 +264,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -330,7 +330,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When run A and B are successful but C fails, work_order status is 'Failure'",
          %{conn: conn, project: project} do
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           name: "Job A",
           project_id: project.id,
@@ -363,7 +363,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         work_order_id: work_order.id,
         reason_id:
           reason_fixture(
-            trigger_id: job_a.trigger.id,
+            trigger_id: trigger.id,
             dataclip_id: dataclip.id
           ).id,
         runs: [
@@ -436,7 +436,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When run A and B are successful but C is pending, work_order status is 'Pending'",
          %{conn: conn, project: project} do
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -466,7 +466,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -534,7 +534,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project
     } do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "my workflow",
           project_id: project.id,
@@ -547,7 +547,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -618,7 +618,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project
     } do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "my workflow",
           project_id: project.id,
@@ -631,7 +631,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -704,7 +704,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project
     } do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "workflow 1",
           project_id: project.id,
@@ -717,7 +717,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -739,7 +739,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      job_two =
+      %{job: job_two, trigger: trigger_two} =
         workflow_job_fixture(
           workflow_name: "workflow 2",
           project_id: project.id,
@@ -752,7 +752,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_two.trigger.id,
+          trigger_id: trigger_two.id,
           dataclip_id: dataclip.id
         )
 
@@ -774,7 +774,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      job_other_project =
+      %{job: job_other_project} =
         workflow_job_fixture(
           workflow_name: "my workflow",
           project_id: Lightning.ProjectsFixtures.project_fixture().id,
@@ -842,7 +842,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project
     } do
-      job_one =
+      %{job: job_one, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "workflow 1",
           project_id: project.id,
@@ -855,7 +855,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_one.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -877,7 +877,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      job_two =
+      %{job: job_two, trigger: trigger_two} =
         workflow_job_fixture(
           workflow_name: "workflow 2",
           project_id: project.id,
@@ -890,7 +890,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_two.trigger.id,
+          trigger_id: trigger_two.id,
           dataclip_id: dataclip.id
         )
 
@@ -971,7 +971,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # workflow 1 -> 1 run success -> contains body with some data
       # workflow 2 -> 1 run failure -> contains log with some log
 
-      job_one =
+      %{job: job_one, trigger: trigger} =
         workflow_job_fixture(
           workflow_name: "workflow 1",
           project_id: project.id,
@@ -988,7 +988,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_one.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -1010,7 +1010,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      job_two =
+      %{job: job_two, trigger: trigger_two} =
         workflow_job_fixture(
           workflow_name: "workflow 2",
           project_id: project.id,
@@ -1024,7 +1024,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_two.trigger.id,
+          trigger_id: trigger_two.id,
           dataclip_id: dataclip.id
         )
 
@@ -1115,7 +1115,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       conn: conn,
       project: project_scoped
     } do
-      job = workflow_job_fixture(project_id: project_scoped.id)
+      %{job: job} = workflow_job_fixture(project_id: project_scoped.id)
       run = run_fixture(job_id: job.id)
 
       {:ok, _view, html} =
@@ -1128,7 +1128,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       project_unscoped = Lightning.ProjectsFixtures.project_fixture()
 
-      job = workflow_job_fixture(project_id: project_scoped.id)
+      %{job: job} = workflow_job_fixture(project_id: project_scoped.id)
       run = run_fixture(job_id: job.id)
 
       error =
@@ -1258,7 +1258,7 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       {conn, _user} = setup_project_user(conn, project, :editor)
 
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -1268,7 +1268,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -1324,7 +1324,7 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       {conn, _user} = setup_project_user(conn, project, :viewer)
 
-      job_a =
+      %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
@@ -1334,7 +1334,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       reason =
         reason_fixture(
-          trigger_id: job_a.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 

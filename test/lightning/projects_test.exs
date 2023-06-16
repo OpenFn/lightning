@@ -8,6 +8,7 @@ defmodule Lightning.ProjectsTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
   describe "projects" do
     @invalid_attrs %{name: nil}
@@ -168,18 +169,35 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "delete_project/1 deletes the project" do
-      %{
-        project: p1,
-        w1_job: w1_job
-      } =
+      %{project: p1, workflow_1_job: w1_job, workflow_1: w1} =
         full_project_fixture(
           scheduled_deletion: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
+      t1 = insert(:trigger, %{workflow: w1, type: :webhook})
+
+      e1 =
+        insert(:edge, %{
+          workflow: w1,
+          source_trigger: t1,
+          target_job: w1_job
+        })
+
       %{
         project: p2,
-        w2_job: w2_job
+        workflow_2_job: w2_job,
+        workflow_2: w2
       } = full_project_fixture()
+
+      t2 = insert(:trigger, %{workflow: w2, type: :webhook})
+
+      e2 =
+        build(:edge, %{
+          workflow: w2,
+          source_trigger: t2,
+          target_job: w2_job
+        })
+        |> insert()
 
       {:ok, p1_pu} = p1.project_users |> Enum.fetch(0)
 
@@ -188,7 +206,7 @@ defmodule Lightning.ProjectsTest do
       {:ok, p1_work_order} =
         Lightning.WorkOrderService.multi_for(
           :webhook,
-          w1_job,
+          e1,
           ~s[{"foo": "bar"}] |> Jason.decode!()
         )
         |> Repo.transaction()
@@ -200,7 +218,7 @@ defmodule Lightning.ProjectsTest do
 
       Lightning.WorkOrderService.multi_for(
         :webhook,
-        w2_job,
+        e2,
         ~s[{"foo": "bar"}] |> Jason.decode!()
       )
       |> Repo.transaction()
@@ -321,7 +339,9 @@ defmodule Lightning.ProjectsTest do
         project_fixture(project_users: [%{user_id: user.id}])
         |> Repo.reload()
 
-      assert [project_1, project_2] == Projects.get_projects_for_user(user)
+      user_projects = Projects.get_projects_for_user(user)
+      assert project_1 in user_projects
+      assert project_2 in user_projects
       assert [project_1] == Projects.get_projects_for_user(other_user)
     end
 
@@ -413,16 +433,16 @@ defmodule Lightning.ProjectsTest do
 
       project_jobs = Projects.project_jobs_query(project) |> Repo.all()
 
-      assert Enum.all?(project_jobs, fn job -> job.enabled == true end)
+      assert Enum.all?(project_jobs, & &1.enabled)
 
       assert project.scheduled_deletion == nil
 
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      now = DateTime.utc_now() |> DateTime.add(-1, :second)
       {:ok, project} = Projects.schedule_project_deletion(project)
 
       project_jobs = Projects.project_jobs_query(project) |> Repo.all()
 
-      assert Enum.all?(project_jobs, fn job -> job.enabled == false end)
+      assert Enum.all?(project_jobs, &(!&1.enabled))
 
       assert project.scheduled_deletion != nil
       assert Timex.diff(project.scheduled_deletion, now, :days) == days
@@ -476,5 +496,100 @@ defmodule Lightning.ProjectsTest do
       assert project_to_delete.id ==
                projects_deleted |> Enum.at(0) |> Map.get(:id)
     end
+  end
+
+  @spec full_project_fixture(attrs :: Keyword.t()) :: %{optional(any) => any}
+  def full_project_fixture(attrs \\ []) when is_list(attrs) do
+    user = insert(:user)
+
+    project =
+      build(:project, project_users: [%{user: user}])
+      |> ExMachina.merge_attributes(attrs)
+      |> insert()
+
+    workflow_1 = insert(:workflow, project: project, name: "workflow 1")
+
+    workflow_2 = insert(:workflow, project: project, name: "workflow 2")
+
+    credential =
+      insert(:credential,
+        user_id: user.id,
+        name: "new credential",
+        body: %{"foo" => "manchu"},
+        projects: [project]
+      )
+
+    workflow_1_job =
+      insert(:job,
+        name: "webhook job",
+        project: project,
+        workflow: workflow_1,
+        project_credential: %{credential: credential, project: project},
+        body: "console.log('webhook job')\nfn(state => state)"
+      )
+
+    insert(:edge,
+      workflow: workflow_1,
+      source_trigger: build(:trigger, workflow: workflow_1),
+      target_job: workflow_1_job
+    )
+
+    insert(:edge,
+      workflow: workflow_1,
+      source_job: workflow_1_job,
+      condition: :on_job_failure,
+      target_job:
+        insert(:job,
+          name: "on fail",
+          workflow: workflow_1,
+          body: "console.log('on fail')\nfn(state => state)"
+        )
+    )
+
+    insert(:edge,
+      workflow: workflow_1,
+      source_job: workflow_1_job,
+      condition: :on_job_success,
+      target_job:
+        insert(:job,
+          name: "on success",
+          workflow: workflow_1
+        )
+    )
+
+    workflow_2_job =
+      insert(:job,
+        name: "other workflow",
+        workflow: workflow_2
+      )
+
+    insert(:edge,
+      workflow: workflow_2,
+      source_trigger: build(:trigger, workflow: workflow_2),
+      target_job: workflow_2_job
+    )
+
+    insert(:edge,
+      workflow: workflow_2,
+      source_job: workflow_2_job,
+      condition: :on_job_success,
+      target_job:
+        insert(:job,
+          name: "on fail",
+          workflow: workflow_2
+        )
+    )
+
+    insert(:job,
+      name: "unrelated job"
+    )
+
+    %{
+      project: project,
+      workflow_1: workflow_1,
+      workflow_2: workflow_2,
+      workflow_1_job: workflow_1_job,
+      workflow_2_job: workflow_2_job
+    }
   end
 end

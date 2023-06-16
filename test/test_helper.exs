@@ -1,6 +1,9 @@
 Code.put_compiler_option(:warnings_as_errors, true)
 # Report which tests are synchronous
 # Rexbug.start("ExUnit.Server.add_sync_module/_")
+
+:ok = Application.ensure_started(:ex_machina)
+
 Mimic.copy(:hackney)
 Mimic.copy(File)
 Mimic.copy(IO)

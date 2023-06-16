@@ -108,7 +108,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      %{workflow: workflow} = workflow_job_fixture(project_id: project.id)
+      %{job: %{workflow: workflow}} =
+        workflow_job_fixture(project_id: project.id)
 
       {:ok, view, html} =
         live(
@@ -127,7 +128,8 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      %{workflow: workflow} = workflow_job_fixture(project_id: project.id)
+      %{job: %{workflow: workflow}} =
+        workflow_job_fixture(project_id: project.id)
 
       {:ok, view, html} =
         live(
@@ -144,7 +146,8 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "edit_job" do
     setup %{project: project} do
-      %{job: workflow_job_fixture(project_id: project.id)}
+      %{job: job} = workflow_job_fixture(project_id: project.id)
+      %{job: job}
     end
 
     test "renders the job inspector", %{
@@ -282,7 +285,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     } do
       {conn, _user} = setup_project_user(conn, project, :editor)
 
-      upstream_job = workflow_job_fixture(project_id: project.id)
+      %{job: upstream_job} = workflow_job_fixture(project_id: project.id)
 
       {:ok, view, html} =
         live(
@@ -364,7 +367,7 @@ defmodule LightningWeb.WorkflowLiveTest do
       conn: conn,
       project: project
     } do
-      %{workflow: workflow} = workflow_job_fixture()
+      %{job: %{workflow: workflow}} = workflow_job_fixture()
 
       {:ok, view, html} =
         live(
@@ -455,10 +458,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
   describe "edit_workflow" do
     setup %{project: project} do
-      %{
-        job:
-          workflow_job_fixture(project_id: project.id, workflow_name: "Untitled")
-      }
+      %{job: job} =
+        workflow_job_fixture(project_id: project.id, workflow_name: "Untitled")
+
+      %{job: job}
     end
 
     test "renders inplace workflow form", %{
@@ -639,10 +642,10 @@ defmodule LightningWeb.WorkflowLiveTest do
     alias LightningWeb.JobLive.CronSetupComponent
 
     setup %{project: project} do
-      %{
-        job:
-          workflow_job_fixture(project_id: project.id, workflow_name: "Untitled")
-      }
+      %{job: job} =
+        workflow_job_fixture(project_id: project.id, workflow_name: "Untitled")
+
+      %{job: job}
     end
 
     test "get_cron_data/1" do
@@ -799,12 +802,13 @@ defmodule LightningWeb.WorkflowLiveTest do
         )
       )
 
-      due_for_execution =
-        Timex.now()
-        |> Timex.set(hour: 0, minute: 0, second: 0, microsecond: 0)
-        |> Lightning.Jobs.get_jobs_for_cron_execution()
+      flunk("TODO: test that the job is scheduled for execution")
+      # due_for_execution =
+      #   Timex.now()
+      #   |> Timex.set(hour: 0, minute: 0, second: 0, microsecond: 0)
+      #   |> Lightning.Jobs.get_jobs_for_cron_execution()
 
-      assert job in due_for_execution
+      # assert job in due_for_execution
     end
 
     test "cron_setup_component can set trigger to a daily cron", %{

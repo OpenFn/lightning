@@ -17,7 +17,8 @@ defmodule Lightning.Jobs.Scheduler do
     Jobs,
     Pipeline,
     Repo,
-    WorkOrderService
+    WorkOrderService,
+    Workflows
   }
 
   alias Lightning.Invocation.Dataclip
@@ -34,9 +35,9 @@ defmodule Lightning.Jobs.Scheduler do
 
   def enqueue_cronjobs(date_time) do
     date_time
-    |> Jobs.get_jobs_for_cron_execution()
-    |> Enum.each(fn job ->
-      {:ok, %{attempt_run: attempt_run}} = invoke_cronjob(job)
+    |> Workflows.get_edges_for_cron_execution()
+    |> Enum.each(fn edge ->
+      {:ok, %{attempt_run: attempt_run}} = invoke_cronjob(edge)
 
       Pipeline.new(%{attempt_run_id: attempt_run.id})
       |> Oban.insert()
@@ -45,8 +46,8 @@ defmodule Lightning.Jobs.Scheduler do
     :ok
   end
 
-  @spec invoke_cronjob(Lightning.Jobs.Job.t()) :: {:ok | :error, map()}
-  defp invoke_cronjob(job) do
+  @spec invoke_cronjob(Lightning.Workflows.Edge.t()) :: {:ok | :error, map()}
+  defp invoke_cronjob(%{target_job: job} = edge) do
     case last_state_for_job(job.id) do
       nil ->
         Logger.debug(fn ->
@@ -62,7 +63,7 @@ defmodule Lightning.Jobs.Scheduler do
         # %{id: uuid, type: :global, body: %{arbitrary: true}}
         WorkOrderService.multi_for(
           :cron,
-          job,
+          edge,
           Dataclip.new(%{
             type: :global,
             body: %{},
@@ -78,7 +79,7 @@ defmodule Lightning.Jobs.Scheduler do
           # coveralls-ignore-stop
         end)
 
-        WorkOrderService.multi_for(:cron, job, dataclip)
+        WorkOrderService.multi_for(:cron, edge, dataclip)
         |> Repo.transaction()
     end
   end

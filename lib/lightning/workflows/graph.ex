@@ -12,21 +12,28 @@ defmodule Lightning.Workflows.Graph do
           jobs: [Lightning.Jobs.Job.t()]
         }
 
-  @spec new(jobs :: [Lightning.Jobs.Job.t()]) :: __MODULE__.t()
-  def new(jobs) when is_list(jobs) do
+  @spec new(workflow :: Lightning.Workflows.Workflow.t()) :: __MODULE__.t()
+  def new(workflow) do
     g = :digraph.new()
 
-    for j <- jobs do
+    for j <- workflow.jobs do
       :digraph.add_vertex(g, to_vertex(j))
     end
 
-    for j <- jobs do
-      if j.trigger.type in [:on_job_failure, :on_job_success] do
-        :digraph.add_edge(g, to_vertex(j.trigger.upstream_job), to_vertex(j))
+    for e <- workflow.edges do
+      if e.condition in [:on_job_failure, :on_job_success] do
+        :digraph.add_edge(g, to_vertex(e.source_job), to_vertex(e.target_job))
       end
     end
 
-    %__MODULE__{digraph: g, root: get_root(g), jobs: jobs}
+    root =
+      if workflow.edges == [] do
+        nil
+      else
+        get_root(g)
+      end
+
+    %__MODULE__{digraph: g, root: root, jobs: workflow.jobs}
   end
 
   @spec remove(__MODULE__.t(), Ecto.UUID.t()) :: __MODULE__.t()

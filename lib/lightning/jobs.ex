@@ -6,25 +6,26 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Jobs.{Job, Trigger, Query}
+  alias Lightning.Jobs.{Job, Query}
   alias Lightning.Projects.Project
+  alias Lightning.Workflows.Edge
 
   @doc """
   Returns the list of jobs.
   """
   def list_jobs do
-    Repo.all(Job |> preload([:trigger, :workflow]))
+    Repo.all(Job |> preload([:workflow]))
   end
 
   def list_active_cron_jobs do
-    Query.enabled_cron_jobs()
-    |> preload(:workflow)
+    Query.enabled_cron_jobs_by_edge()
     |> Repo.all()
+    |> Enum.map(fn e -> e.target_job end)
   end
 
   @spec jobs_for_project_query(Project.t()) :: Ecto.Queryable.t()
   def jobs_for_project_query(%Project{} = project) do
-    Query.jobs_for(project) |> preload(:trigger)
+    Query.jobs_for(project)
   end
 
   @spec jobs_for_project(Project.t()) :: [Job.t()]
@@ -44,7 +45,7 @@ defmodule Lightning.Jobs do
       [workflow_id, nil] ->
         from(j in Job,
           where: j.workflow_id == ^workflow_id,
-          preload: [:trigger, :workflow]
+          preload: [:workflow]
         )
         |> Repo.all()
 
@@ -52,45 +53,28 @@ defmodule Lightning.Jobs do
         from(j in Job,
           where: j.workflow_id == ^workflow_id,
           where: j.id != ^id,
-          preload: [:trigger, :workflow]
+          preload: [:workflow]
         )
         |> Repo.all()
     end
   end
 
   @doc """
-  Returns a list of jobs to execute, given a current timestamp in Unix. This is
-  used by the scheduler, which calls this function once every minute.
-  """
-  @spec get_jobs_for_cron_execution(DateTime.t()) :: [Job.t()]
-  def get_jobs_for_cron_execution(datetime) do
-    list_active_cron_jobs()
-    |> Enum.filter(fn job ->
-      cron_expression = job.trigger.cron_expression
-
-      with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
-           true <- Crontab.DateChecker.matches_date?(cron, datetime) do
-        job
-      else
-        _ -> false
-      end
-    end)
-  end
-
-  @doc """
   Returns the list of downstream jobs for a given job, optionally matching a
   specific trigger type.
+  When downstream_jobs_for is called without a trigger that means its between jobs
+  when it called with a trigger that means we are starting from outside the pipeline
   """
   @spec get_downstream_jobs_for(
           Job.t() | Ecto.UUID.t(),
-          Trigger.trigger_type() | nil
+          Edge.edge_condition() | nil
         ) :: [
           Job.t()
         ]
-  def get_downstream_jobs_for(job, trigger_type \\ nil)
+  def get_downstream_jobs_for(job, edge_condition \\ nil)
 
-  def get_downstream_jobs_for(%Job{id: job_id}, trigger_type) do
-    get_downstream_jobs_for(job_id, trigger_type)
+  def get_downstream_jobs_for(%Job{id: job_id}, edge_condition) do
+    get_downstream_jobs_for(job_id, edge_condition)
   end
 
   def get_downstream_jobs_for(job_id, nil) do
@@ -98,17 +82,19 @@ defmodule Lightning.Jobs do
     |> Repo.all()
   end
 
-  def get_downstream_jobs_for(job_id, trigger_type) do
+  def get_downstream_jobs_for(job_id, edge_condition) do
     downstream_query(job_id)
-    |> where([_, t], t.type == ^trigger_type)
+    |> where([_, e], e.condition == ^edge_condition)
     |> Repo.all()
   end
 
   defp downstream_query(job_id) do
-    from(j in Job,
-      join: t in assoc(j, :trigger),
-      where: t.upstream_job_id == ^job_id,
-      preload: [:workflow, trigger: t]
+    from(target_job in Job,
+      join: e in Edge,
+      on:
+        e.source_job_id == ^job_id and
+          target_job.id == e.target_job_id,
+      preload: [:workflow]
     )
   end
 
@@ -126,23 +112,10 @@ defmodule Lightning.Jobs do
       ** (Ecto.NoResultsError)
 
   """
-  def get_job!(id), do: Repo.get!(Job |> preload([:trigger, :workflow]), id)
+  def get_job!(id), do: Repo.get!(Job |> preload([:workflow]), id)
 
   def get_job(id) do
-    from(j in Job, preload: [:trigger, :workflow]) |> Repo.get(id)
-  end
-
-  @doc """
-  Gets a single job basic on it's webhook trigger.
-  """
-  def get_job_by_webhook(path) when is_binary(path) do
-    from(j in Job,
-      join: t in assoc(j, :trigger),
-      where:
-        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path,
-      preload: [:trigger, :workflow]
-    )
-    |> Repo.one()
+    from(j in Job, preload: [:workflow]) |> Repo.get(id)
   end
 
   @doc """
@@ -194,17 +167,24 @@ defmodule Lightning.Jobs do
 
   """
   def delete_job(%Job{} = job) do
-    job
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
-      name: :jobs_trigger_id_fkey,
-      message: "This job is associated with downstream jobs"
-    )
-    |> Ecto.Changeset.foreign_key_constraint(:trigger_id,
-      name: :invocation_reasons_run_id_fkey,
-      message: "This job is associated with runs"
-    )
-    |> Repo.delete()
+    changeset = job |> Ecto.Changeset.change()
+
+    get_downstream_jobs_for(job)
+    |> case do
+      [_ | _] ->
+        error =
+          Ecto.Changeset.add_error(
+            changeset,
+            :workflow,
+            "This job is associated with downstream jobs"
+          )
+
+        {:error, error}
+
+      _ ->
+        changeset
+        |> Repo.delete()
+    end
   end
 
   @doc """

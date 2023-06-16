@@ -15,6 +15,19 @@ defmodule Lightning.Workflows.Edge do
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
 
+  @type edge_condition() :: :always | :on_job_success | :on_job_failure
+  @type t() :: %__MODULE__{
+          __meta__: Ecto.Schema.Metadata.t(),
+          id: Ecto.UUID.t() | nil,
+          condition: edge_condition(),
+          workflow: nil | Workflow.t() | Ecto.Association.NotLoaded.t(),
+          source_job: nil | Job.t() | Ecto.Association.NotLoaded.t(),
+          source_trigger: nil | Trigger.t() | Ecto.Association.NotLoaded.t(),
+          target_job: nil | Job.t() | Ecto.Association.NotLoaded.t(),
+          delete: boolean()
+        }
+
+  @conditions [:on_job_success, :on_job_failure, :always]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "workflow_edges" do
@@ -23,11 +36,16 @@ defmodule Lightning.Workflows.Edge do
     belongs_to :source_trigger, Trigger
     belongs_to :target_job, Job
 
-    field :condition, :string
+    field :condition, Ecto.Enum, values: @conditions
 
     field :delete, :boolean, virtual: true
 
     timestamps()
+  end
+
+  def new(attrs) do
+    change(%__MODULE__{}, Map.merge(attrs, %{id: Ecto.UUID.generate()}))
+    |> change(attrs)
   end
 
   def changeset(edge, attrs) do

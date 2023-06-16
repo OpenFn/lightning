@@ -174,10 +174,10 @@ defmodule Lightning.CredentialsTest do
 
       credential_id = project_credential.credential_id
 
-      job =
+      %{job: job} =
         workflow_job_fixture(
-          project_id: project.id,
-          project_credential_id: project_credential.id
+          project: project,
+          project_credential: project_credential
         )
 
       # 1 project_credential created
