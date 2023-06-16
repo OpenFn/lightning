@@ -6,6 +6,8 @@ defmodule LightningWeb.WorkflowNewLiveTest do
 
   import SweetXml
 
+  alias LightningWeb.JobLive.CronSetupComponent
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -60,8 +62,6 @@ defmodule LightningWeb.WorkflowNewLiveTest do
   end
 
   describe "cron_setup_component" do
-    alias LightningWeb.JobLive.CronSetupComponent
-
     setup %{project: project} do
       %{
         job:
@@ -168,16 +168,7 @@ defmodule LightningWeb.WorkflowNewLiveTest do
            project: project,
            job: job
          } do
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_workflow_path(
-            conn,
-            :new_job,
-            project.id,
-            job.workflow_id
-          )
-        )
+      {:ok, view, html} = live(conn, ~p"/project/#{p.id}/w-new/new/j/#{job.id}")
 
       assert html =~ project.name
 
