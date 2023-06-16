@@ -27,7 +27,7 @@ defmodule Lightning.Workflows.Graph do
     end
 
     root =
-      if length(workflow.edges) == 0 do
+      if workflow.edges == [] do
         nil
       else
         get_root(g)
