@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowNewLive do
 
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
+  alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
@@ -144,8 +145,7 @@ defmodule LightningWeb.WorkflowNewLive do
        page_title: "",
        active_menu_item: :projects,
        can_edit_job: can_edit_job
-     )
-     |> maybe_assign_workflow()}
+     )}
   end
 
   @impl true
@@ -153,74 +153,48 @@ defmodule LightningWeb.WorkflowNewLive do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp maybe_assign_workflow(socket) do
-    if socket.assigns[:workflow] do
-      socket
-    else
-      workflow = %Workflow{}
-      job_1_id = Ecto.UUID.generate()
-      job_2_id = Ecto.UUID.generate()
-      trigger_1_id = Ecto.UUID.generate()
-
-      params = %{
-        "name" => nil,
-        "project_id" => socket.assigns.project.id,
-        "jobs" => [
-          %{"id" => job_1_id, "name" => "job-1"},
-          %{"id" => job_2_id, "name" => "job-2"}
-        ],
-        "triggers" => [
-          %{"id" => trigger_1_id, "type" => "webhook"}
-        ],
-        "edges" => [
-          %{
-            "id" => Ecto.UUID.generate(),
-            "source_trigger_id" => trigger_1_id,
-            "condition" => "true",
-            "target_job_id" => job_1_id
-          },
-          %{
-            "id" => Ecto.UUID.generate(),
-            "source_job_id" => job_1_id,
-            "condition" => ":on_success",
-            "target_job_id" => job_2_id
-          }
-        ]
-      }
-
-      socket |> assign(workflow: workflow) |> apply_params(params)
-    end
-  end
-
   def apply_action(socket, :new, _params) do
     assign(socket,
       page_title: "New Workflow"
     )
-    |> maybe_assign_workflow()
-    |> unselect_job()
-    |> unselect_trigger()
+    |> assign_workflow(%Workflow{project: socket.assigns.project})
+    |> unselect_all()
   end
 
-  def apply_action(socket, :edit_job, %{"job_id" => job_id}) do
-    selected_job =
+  def apply_action(socket, :edit, %{"id" => workflow_id}) do
+    socket
+    |> maybe_assign_workflow(workflow_id)
+    |> unselect_all()
+    |> assign(page_title: "Edit Workflow")
+  end
+
+  def apply_action(socket, :edit_job, %{"id" => workflow_id, "job_id" => job_id}) do
+    socket = maybe_assign_workflow(socket, workflow_id)
+
+    job =
       socket.assigns.changeset
       |> Ecto.Changeset.get_change(:jobs, [])
       |> Enum.find(fn changeset ->
         changeset |> Ecto.Changeset.get_field(:id) == job_id
       end)
 
-    socket |> assign(selected_job: selected_job)
+    socket |> select_node(job: job)
   end
 
-  def apply_action(socket, :edit_trigger, %{"trigger_id" => trigger_id}) do
-    selected_trigger =
+  def apply_action(socket, :edit_trigger, %{
+        "id" => workflow_id,
+        "trigger_id" => trigger_id
+      }) do
+    socket = maybe_assign_workflow(socket, workflow_id)
+
+    trigger =
       socket.assigns.changeset
       |> Ecto.Changeset.get_change(:triggers, [])
       |> Enum.find(fn changeset ->
         changeset |> Ecto.Changeset.get_field(:id) == trigger_id
       end)
 
-    socket |> assign(selected_trigger: selected_trigger)
+    socket |> select_node(trigger: trigger)
   end
 
   @impl true
@@ -241,15 +215,32 @@ defmodule LightningWeb.WorkflowNewLive do
   end
 
   def handle_event("save", %{"workflow" => params}, socket) do
+    # update the changeset
+    # then do the 'normal' insert or update
+
     initial_params = socket.assigns.workflow_params
 
     next_params =
       WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
-    {:noreply,
-     socket
-     |> apply_params(next_params)
-     |> push_patches_applied(initial_params)}
+    socket = socket |> apply_params(next_params)
+
+    socket =
+      Lightning.Repo.update(socket.assigns.changeset)
+      |> case do
+        {:ok, workflow} ->
+          socket
+          |> assign_workflow(workflow)
+          |> put_flash(:info, "Workflow saved")
+
+        {:error, changeset} ->
+          socket
+          |> assign_changeset(changeset)
+          |> put_flash(:error, "Workflow could not be saved")
+      end
+      |> push_patches_applied(initial_params)
+
+    {:noreply, socket}
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
@@ -298,15 +289,47 @@ defmodule LightningWeb.WorkflowNewLive do
      |> push_patches_applied(initial_params)}
   end
 
+  defp assign_workflow(socket, workflow) do
+    changeset = Workflow.changeset(workflow, %{})
+    IO.inspect(changeset)
+
+    socket
+    |> assign(
+      workflow: workflow,
+      changeset: changeset,
+      workflow_params: WorkflowParams.to_map(changeset)
+    )
+  end
+
+  defp maybe_assign_workflow(socket, workflow_id) do
+    case socket.assigns do
+      %{workflow: %{id: ^workflow_id}} ->
+        socket
+
+      # "new" -> ?
+
+      _ ->
+        workflow =
+          Workflows.get_workflow(workflow_id)
+          |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+
+        socket
+        |> assign_workflow(workflow)
+    end
+  end
+
   defp apply_params(socket, params) do
     # Build a new changeset from the new params
     changeset = socket.assigns.workflow |> Workflow.changeset(params)
 
+    socket |> assign_changeset(changeset)
+  end
+
+  defp assign_changeset(socket, changeset) do
     # Prepare a new set of workflow params from the changeset
     workflow_params = changeset |> WorkflowParams.to_map()
 
-    socket
-    |> assign(changeset: changeset, workflow_params: workflow_params)
+    socket |> assign(changeset: changeset, workflow_params: workflow_params)
   end
 
   defp push_patches_applied(socket, initial_params) do
@@ -318,11 +341,24 @@ defmodule LightningWeb.WorkflowNewLive do
     |> push_event("patches-applied", %{patches: patches})
   end
 
-  defp unselect_job(socket) do
-    socket |> assign(selected_job: nil)
+  defp unselect_all(socket) do
+    socket
+    |> assign(selected_job: nil, selected_trigger: nil, selected_edge: nil)
   end
 
-  defp unselect_trigger(socket) do
-    socket |> assign(selected_trigger: nil)
+  defp select_node(socket, [{type, value}]) do
+    case type do
+      :job ->
+        socket
+        |> assign(selected_job: value, selected_trigger: nil, selected_edge: nil)
+
+      :trigger ->
+        socket
+        |> assign(selected_job: nil, selected_trigger: value, selected_edge: nil)
+
+      :edge ->
+        socket
+        |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
+    end
   end
 end
