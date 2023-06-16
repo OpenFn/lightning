@@ -137,4 +137,52 @@ defmodule Lightning.AttemptServiceTest do
       assert MapSet.member?(new_runs, attempt_run.run_id)
     end
   end
+
+  describe "list_for_rerun_from_start/1" do
+    setup do
+      workflow_scenario()
+    end
+
+    test "only the first attempt (oldest) is listed for each work order", %{
+      jobs: jobs,
+      workflow: workflow
+    } do
+      work_order = work_order_fixture(workflow_id: workflow.id)
+      dataclip = dataclip_fixture()
+
+      # first attempt
+      now = Timex.now()
+
+      runs =
+        Enum.map(
+          [
+            {jobs.a, -100},
+            {jobs.b, -80},
+            {jobs.c, -70},
+            {jobs.d, -50},
+            {jobs.e, -30},
+            {jobs.f, -20}
+          ],
+          fn {j, time} ->
+            %{
+              job_id: j.id,
+              input_dataclip_id: dataclip.id,
+              exit_code: 0,
+              started_at: Timex.shift(now, seconds: time),
+              finished_at: Timex.shift(now, seconds: time + 5)
+            }
+          end
+        )
+
+      Lightning.Attempt.new(%{
+        work_order_id: work_order.id,
+        reason_id: work_order.reason_id,
+        runs: runs
+      })
+      |> Repo.insert!()
+
+      [attempt_run] = AttemptService.list_for_rerun_from_start([work_order.id])
+      assert attempt_run.run.job_id == jobs.a.id
+    end
+  end
 end

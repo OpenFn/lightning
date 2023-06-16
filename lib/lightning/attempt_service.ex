@@ -161,12 +161,13 @@ defmodule Lightning.AttemptService do
     attempt_run_numbers_query =
       from(ar in AttemptRun,
         join: att in assoc(ar, :attempt),
+        join: r in assoc(ar, :run),
         where: att.work_order_id in ^order_ids,
         select: %{
           id: ar.id,
           row_num:
             row_number()
-            |> over(partition_by: att.work_order_id, order_by: ar.inserted_at)
+            |> over(partition_by: att.work_order_id, order_by: r.started_at)
         }
       )
 
