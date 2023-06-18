@@ -22,6 +22,7 @@ defmodule Lightning.WorkOrder do
     belongs_to :workflow, Workflow
     belongs_to :reason, InvocationReason
     has_many :attempts, Attempt
+    has_many :jobs, through: [:workflow, :jobs]
 
     timestamps(type: :utc_datetime_usec)
   end

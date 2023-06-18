@@ -138,6 +138,86 @@ defmodule Lightning.AttemptServiceTest do
     end
   end
 
+  describe "rerun_many/2" do
+    setup do
+      workflow_scenario()
+    end
+
+    test "creates a new attempt starting from an existing run for each attempt run",
+         %{
+           jobs: jobs,
+           workflow: workflow
+         } do
+      work_order = work_order_fixture(workflow_id: workflow.id)
+      dataclip = dataclip_fixture()
+      user = user_fixture()
+
+      # first attempt
+      attempt_runs =
+        Enum.map([jobs.a, jobs.b, jobs.c, jobs.e, jobs.f], fn j ->
+          %{
+            job_id: j.id,
+            input_dataclip_id: dataclip.id,
+            exit_code: 0
+          }
+        end) ++
+          [%{job_id: jobs.d.id, exit_code: 1, input_dataclip_id: dataclip.id}]
+
+      attempt =
+        Lightning.Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: work_order.reason_id,
+          runs: attempt_runs
+        })
+        |> Repo.insert!()
+
+      # find the failed run for this attempt
+      run =
+        from(r in Run,
+          join: a in assoc(r, :attempts),
+          where: a.id == ^attempt.id,
+          where: r.exit_code == 1
+        )
+        |> Repo.one()
+
+      # find the failed attempt run
+      attempt_run =
+        Repo.get_by(Lightning.AttemptRun, run_id: run.id, attempt_id: attempt.id)
+
+      reason =
+        Lightning.InvocationReasons.build(:retry, %{user: user, run: run})
+        |> Repo.insert!()
+
+      {:ok, %{attempt_runs: {1, [new_attempt_run]}}} =
+        AttemptService.retry_many([attempt_run], [reason])
+        |> Repo.transaction()
+
+      refute new_attempt_run.attempt_id == attempt.id
+
+      original_runs =
+        from(r in Run,
+          join: a in assoc(r, :attempts),
+          where: a.id == ^attempt.id,
+          select: r.id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      new_runs =
+        from(r in Run,
+          join: a in assoc(r, :attempts),
+          where: a.id == ^new_attempt_run.attempt_id,
+          select: r.id
+        )
+        |> Repo.all()
+        |> MapSet.new()
+
+      assert MapSet.intersection(original_runs, new_runs) |> MapSet.size() == 5
+      refute MapSet.member?(original_runs, new_attempt_run.run_id)
+      assert MapSet.member?(new_runs, new_attempt_run.run_id)
+    end
+  end
+
   describe "list_for_rerun_from_start/1" do
     setup do
       workflow_scenario()

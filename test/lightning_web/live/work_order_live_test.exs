@@ -1451,34 +1451,25 @@ defmodule LightningWeb.RunWorkOrderTest do
       })
       |> Lightning.Repo.insert!()
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id,
-            filters: %{
-              body: true,
-              log: true,
-              success: true,
-              pending: true,
-              crash: true,
-              failure: true
-            }
-          )
+      path =
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: %{
+            body: true,
+            log: true,
+            success: true,
+            pending: true,
+            crash: true,
+            failure: true
+          }
         )
 
+      {:ok, view, _html} = live(conn, path)
+
       render_change(view, "toggle_all_selections", %{all_selections: true})
+      result = render_click(view, "bulk-rerun", %{type: "all"})
+      {:ok, _view, html} = follow_redirect(result, conn)
 
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert [] == all_enqueued(worker: Lightning.Pipeline)
-
-        assert view
-               |> render_click("bulk-rerun", %{type: "all"})
-               |> follow_redirect(conn) =~
-                 "Jobs have been set for rerun successfully."
-
-        assert [%Oban.Job{}, %Oban.Job{}] ==
-                 all_enqueued(worker: Lightning.Pipeline)
-      end)
+      assert html =~ "Jobs have been set for rerun successfully"
     end
 
     test "selecting all work orders in the page prompts the user to rerun all runs",

@@ -9,6 +9,7 @@ defmodule Lightning.WorkOrderService do
 
   alias Lightning.{
     WorkOrder,
+    InvocationReason,
     InvocationReasons,
     AttemptRun,
     AttemptService,
@@ -96,36 +97,45 @@ defmodule Lightning.WorkOrderService do
   end
 
   def retry_attempt_runs(attempt_runs, user) when is_list(attempt_runs) do
-    attempt_runs
-    |> Repo.preload([:attempt, run: [job: :workflow]])
-    |> Enum.reduce(Multi.new(), fn attempt_run, multi ->
-      Multi.run(multi, "retry.#{attempt_run.id}", fn _repo, _changes ->
-        attempt_run
-        |> multi_for_retry_attempt_run(user)
-        |> Oban.insert(:run, fn %{attempt_run: attempt_run} ->
-          Pipeline.new(%{attempt_run_id: attempt_run.id})
-        end)
-        |> Multi.run(:broadcast, fn _repo, %{attempt: attempt} ->
-          project_id = attempt_run.run.job.workflow.project_id
-          broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
-          {:ok, nil}
-        end)
-        |> Repo.transaction()
-        |> case do
-          {:error, failed_operation, failed_value, changes_so_far} ->
-            {:error,
-             %{
-               failed_operation: failed_operation,
-               failed_value: failed_value,
-               changes_so_far: changes_so_far
-             }}
+    attempt_runs = Repo.preload(attempt_runs, [:attempt, run: [job: :workflow]])
 
-          other ->
-            other
-        end
-      end)
+    Multi.new()
+    |> Multi.insert_all(
+      :reasons,
+      InvocationReason,
+      fn _changes ->
+        now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+        Enum.map(attempt_runs, fn %{run: run} ->
+          %{
+            type: :retry,
+            run_id: run.id,
+            user_id: user.id,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+      end,
+      returning: true
+    )
+    |> Multi.merge(fn %{reasons: {_count, reasons}} ->
+      AttemptService.retry_many(attempt_runs, reasons)
     end)
     |> Repo.transaction()
+    |> case do
+      {:ok, %{attempt_runs: {_count, attempt_runs}} = changes} ->
+        jobs =
+          Enum.map(attempt_runs, fn attempt_run ->
+            Pipeline.new(%{attempt_run_id: attempt_run.id})
+          end)
+
+        Oban.insert_all(jobs)
+
+        {:ok, changes}
+
+      other ->
+        other
+    end
   end
 
   defp multi_for_retry_attempt_run(

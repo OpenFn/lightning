@@ -8,6 +8,7 @@ defmodule Lightning.AttemptService do
   alias Lightning.Repo
   alias Lightning.{Attempt, AttemptRun}
   alias Lightning.Invocation.{Run}
+  alias Lightning.InvocationReason
 
   @doc """
   Create an attempt
@@ -107,6 +108,103 @@ defmodule Lightning.AttemptService do
       AttemptRun.new()
       |> Ecto.Changeset.put_assoc(:attempt, attempt)
       |> Ecto.Changeset.put_assoc(:run, new_run)
+    end)
+  end
+
+  def retry_many(
+        [%AttemptRun{} | _other_runs] = attempt_runs,
+        [%InvocationReason{} | _other_reasons] = reasons
+      ) do
+    attempt_runs =
+      attempt_runs
+      |> Repo.preload(
+        run: [],
+        attempt: [work_order: [jobs: [trigger: :upstream_job]], runs: []]
+      )
+
+    Multi.new()
+    |> Multi.insert_all(
+      :attempts,
+      Attempt,
+      fn _ ->
+        reasons_map = Map.new(reasons, &{&1.run_id, &1.id})
+        now = DateTime.utc_now()
+
+        Enum.map(attempt_runs, fn %{attempt: %{work_order: work_order}, run: run} ->
+          %{
+            work_order_id: work_order.id,
+            reason_id: reasons_map[run.id],
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+      end,
+      returning: true
+    )
+    |> Multi.run(:attempt_runs_setup, fn _repo,
+                                         %{attempts: {_count, attempts}} ->
+      attempts_map = Map.new(attempts, &{&1.work_order_id, &1.id})
+      now = DateTime.utc_now()
+
+      setup =
+        attempt_runs
+        |> Enum.map(fn %{attempt: attempt, run: run} ->
+          {skipped_runs, new_run} =
+            calculate_runs(attempt.work_order.jobs, attempt.runs, run)
+
+          attempt_id = attempts_map[attempt.work_order.id]
+
+          skipped_attempt_runs =
+            attempt_runs_attrs(attempt_id, skipped_runs, now)
+
+          {attempt_id, {skipped_attempt_runs, new_run.changes}}
+        end)
+
+      {:ok, setup}
+    end)
+    |> Multi.insert_all(
+      :skipped_attempt_runs,
+      AttemptRun,
+      fn %{attempt_runs_setup: setup} ->
+        Enum.flat_map(setup, fn {_, {skipped_runs, _new_run}} ->
+          skipped_runs
+        end)
+      end
+    )
+    |> Multi.insert_all(
+      :runs,
+      Run,
+      fn %{attempt_runs_setup: setup} ->
+        now = DateTime.utc_now()
+
+        Enum.map(setup, fn {_, {_skipped_runs, new_run}} ->
+          Map.merge(new_run, %{inserted_at: now, updated_at: now})
+        end)
+      end,
+      returning: true
+    )
+    |> Multi.insert_all(
+      :attempt_runs,
+      AttemptRun,
+      fn %{attempt_runs_setup: setup} ->
+        now = DateTime.utc_now()
+
+        Enum.flat_map(setup, fn {attempt_id, {_skipped_runs, new_run}} ->
+          attempt_runs_attrs(attempt_id, [new_run], now)
+        end)
+      end,
+      returning: true
+    )
+  end
+
+  defp attempt_runs_attrs(attempt_id, runs, timestamp) do
+    Enum.map(runs, fn run ->
+      %{
+        attempt_id: attempt_id,
+        run_id: run.id,
+        inserted_at: timestamp,
+        updated_at: timestamp
+      }
     end)
   end
 
