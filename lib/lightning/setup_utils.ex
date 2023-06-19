@@ -192,8 +192,7 @@ defmodule Lightning.SetupUtils do
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
         workflow_id: workflow.id,
-        project_credential_id:
-          List.first(dhis2_credential.project_credentials).id
+        project_credential_id: List.first(dhis2_credential.project_credentials).id
       })
 
     run_params = [
@@ -338,6 +337,13 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
+    {:ok, dataclip} =
+      Lightning.Invocation.create_dataclip(%{
+        body: %{data: %{name: "Sample dataclip"}, references: []},
+        project_id: openhie_project.id,
+        type: :http_request
+      })
+
     run_params = [
       %{
         job_id: send_to_openhim.id,
@@ -363,7 +369,9 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Done in 223ms! ✨
           """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        input_dataclip_id: dataclip.id,
+        output_dataclip_id: dataclip.id
       },
       %{
         job_id: notify_upload_successful.id,
@@ -388,7 +396,9 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Done in 209ms! ✨
           """),
         started_at: DateTime.utc_now() |> DateTime.add(20, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(25, :second),
+        input_dataclip_id: dataclip.id,
+        output_dataclip_id: dataclip.id
       }
     ]
 
@@ -437,8 +447,7 @@ defmodule Lightning.SetupUtils do
         enabled: true,
         trigger: %{type: "cron", cron_expression: "0 * * * *"},
         workflow_id: dhis2_workflow.id,
-        project_credential_id:
-          List.first(dhis2_credential.project_credentials).id
+        project_credential_id: List.first(dhis2_credential.project_credentials).id
       })
 
     {:ok, upload_to_google_sheet} =
@@ -624,12 +633,13 @@ defmodule Lightning.SetupUtils do
       multi
       |> Multi.insert("attempt_run_#{i}", fn %{
                                                attempt: attempt,
-                                               dataclip: dataclip
+                                               dataclip: _dataclip
                                              } ->
-        run =
-          Run.new(params)
-          |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
-          |> Ecto.Changeset.put_assoc(:output_dataclip, dataclip)
+        IO.inspect(params, label: "Run params")
+
+        run = Run.new(params)
+        # |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
+        # |> Ecto.Changeset.put_assoc(:output_dataclip, dataclip)
 
         AttemptRun.new(attempt, run)
       end)
