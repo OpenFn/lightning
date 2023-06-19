@@ -192,7 +192,8 @@ defmodule Lightning.SetupUtils do
         trigger: %{type: "on_job_success", upstream_job_id: job_2.id},
         enabled: true,
         workflow_id: workflow.id,
-        project_credential_id: List.first(dhis2_credential.project_credentials).id
+        project_credential_id:
+          List.first(dhis2_credential.project_credentials).id
       })
 
     run_params = [
@@ -219,7 +220,33 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Done in 304ms! ✨
           """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        input_dataclip_id:
+          create_dataclip(%{
+            body: %{
+              data: %{
+                age_in_months: 19,
+                name: "Genevieve Wimplemews"
+              }
+            },
+            project_id: project.id,
+            type: :http_request
+          }).id,
+        output_dataclip_id:
+          create_dataclip(%{
+            body: %{
+              data: %{
+                age_in_months: 19,
+                name: "Genevieve Wimplemews"
+              },
+              names: [
+                "Genevieve",
+                "Wimplemews"
+              ]
+            },
+            project_id: project.id,
+            type: :http_request
+          }).id
       },
       %{
         job_id: job_3.id,
@@ -263,15 +290,82 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Done in 2.052s! ✨
           """),
         started_at: DateTime.utc_now() |> DateTime.add(20, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(25, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(25, :second),
+        input_dataclip_id:
+          create_dataclip(%{
+            body: %{
+              data: %{
+                age_in_months: 19,
+                name: "Genevieve Wimplemews"
+              },
+              names: [
+                "Genevieve",
+                "Wimplemews"
+              ]
+            },
+            project_id: project.id,
+            type: :http_request
+          }).id,
+        output_dataclip_id:
+          create_dataclip(%{
+            body: %{
+              data: %{
+                httpStatus: "OK",
+                httpStatusCode: 200,
+                message: "Import was successful.",
+                response: %{
+                  importSummaries: [
+                    %{
+                      href:
+                        "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
+                      reference: "iqJrb85GmJb",
+                      responseType: "ImportSummary",
+                      status: "SUCCESS"
+                    }
+                  ],
+                  imported: 1,
+                  responseType: "ImportSummaries",
+                  status: "SUCCESS",
+                  total: 1,
+                  updated: 0
+                },
+                status: "OK"
+              },
+              names: [
+                "Genevieve",
+                "Wimplemews"
+              ],
+              references: [
+                %{
+                  age_in_months: 19,
+                  name: "Genevieve Wimplemews"
+                }
+              ]
+            },
+            project_id: project.id,
+            type: :http_request
+          }).id
       }
     ]
+
+    output_dataclip_id =
+      create_dataclip(%{
+        body: %{
+          data: %{
+            age_in_months: 19,
+            name: "Genevieve Wimplemews"
+          }
+        },
+        project_id: project.id,
+        type: :http_request
+      }).id
 
     create_workorder(
       :webhook,
       job_1,
       ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
-      run_params
+      run_params,
+      output_dataclip_id
     )
 
     %{
@@ -337,9 +431,9 @@ defmodule Lightning.SetupUtils do
         workflow_id: openhie_workflow.id
       })
 
-    {:ok, dataclip} =
-      Lightning.Invocation.create_dataclip(%{
-        body: %{data: %{name: "Sample dataclip"}, references: []},
+    dataclip =
+      create_dataclip(%{
+        body: %{data: %{}, references: []},
         project_id: openhie_project.id,
         type: :http_request
       })
@@ -402,12 +496,20 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
+    output_dataclip_id =
+      create_dataclip(%{
+        body: %{data: %{}, references: []},
+        project_id: openhie_project.id,
+        type: :http_request
+      }).id
+
     {:ok, openhie_workorder} =
       create_workorder(
         :webhook,
         fhir_standard_data,
         ~s[{}],
-        run_params
+        run_params,
+        output_dataclip_id
       )
 
     %{
@@ -442,12 +544,13 @@ defmodule Lightning.SetupUtils do
     {:ok, get_dhis2_data} =
       Jobs.create_job(%{
         name: "Get DHIS2 data",
-        body: "fn(state => state);",
+        body: "get('trackedEntityInstances/PQfMcpmXeFE');",
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
         trigger: %{type: "cron", cron_expression: "0 * * * *"},
         workflow_id: dhis2_workflow.id,
-        project_credential_id: List.first(dhis2_credential.project_credentials).id
+        project_credential_id:
+          List.first(dhis2_credential.project_credentials).id
       })
 
     {:ok, upload_to_google_sheet} =
@@ -458,6 +561,62 @@ defmodule Lightning.SetupUtils do
         enabled: true,
         trigger: %{type: "on_job_success", upstream_job_id: get_dhis2_data.id},
         workflow_id: dhis2_workflow.id
+      })
+
+    input_dataclip =
+      create_dataclip(%{
+        body: %{
+          data: %{
+            attributes: [
+              %{
+                attribute: "zDhUuAYrxNC",
+                created: "2016-08-03T23:49:43.309",
+                displayName: "Last name",
+                lastUpdated: "2016-08-03T23:49:43.309",
+                value: "Kelly",
+                valueType: "TEXT"
+              },
+              %{
+                attribute: "w75KJ2mc4zz",
+                code: "MMD_PER_NAM",
+                created: "2016-08-03T23:49:43.308",
+                displayName: "First name",
+                lastUpdated: "2016-08-03T23:49:43.308",
+                value: "John",
+                valueType: "TEXT"
+              }
+            ],
+            created: "2014-03-06T05:49:28.256",
+            createdAtClient: "2014-03-06T05:49:28.256",
+            lastUpdated: "2016-08-03T23:49:43.309",
+            orgUnit: "DiszpKrYNg8",
+            trackedEntityInstance: "PQfMcpmXeFE",
+            trackedEntityType: "nEenWmSyUEp"
+          },
+          references: [
+            %{}
+          ]
+        },
+        project_id: dhis2_project.id,
+        type: :http_request
+      })
+
+    output_dataclip =
+      create_dataclip(%{
+        body: %{
+          data: %{
+            spreadsheetId: "wv5ftwhte",
+            tableRange: "A3:D3",
+            updates: %{
+              updatedCells: 4
+            }
+          },
+          references: [
+            %{}
+          ]
+        },
+        project_id: dhis2_project.id,
+        type: :http_request
       })
 
     run_params = [
@@ -483,16 +642,57 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Done in 216ms! ✨
           """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        input_dataclip_id: input_dataclip.id,
+        output_dataclip_id: output_dataclip.id
       }
     ]
+
+    output_dataclip_id =
+      create_dataclip(%{
+        body: %{
+          data: %{
+            attributes: [
+              %{
+                attribute: "zDhUuAYrxNC",
+                created: "2016-08-03T23:49:43.309",
+                displayName: "Last name",
+                lastUpdated: "2016-08-03T23:49:43.309",
+                value: "Kelly",
+                valueType: "TEXT"
+              },
+              %{
+                attribute: "w75KJ2mc4zz",
+                code: "MMD_PER_NAM",
+                created: "2016-08-03T23:49:43.308",
+                displayName: "First name",
+                lastUpdated: "2016-08-03T23:49:43.308",
+                value: "John",
+                valueType: "TEXT"
+              }
+            ],
+            created: "2014-03-06T05:49:28.256",
+            createdAtClient: "2014-03-06T05:49:28.256",
+            lastUpdated: "2016-08-03T23:49:43.309",
+            orgUnit: "DiszpKrYNg8",
+            trackedEntityInstance: "PQfMcpmXeFE",
+            trackedEntityType: "nEenWmSyUEp"
+          },
+          references: [
+            %{}
+          ]
+        },
+        project_id: dhis2_project.id,
+        type: :http_request
+      }).id
 
     {:ok, successful_dhis2_workorder} =
       create_workorder(
         :cron,
         get_dhis2_data,
-        ~s[{}],
-        run_params
+        ~s[{"data": {}, "references": \[\]}],
+        run_params,
+        output_dataclip_id
       )
 
     # Make it fail for demo purposes
@@ -518,7 +718,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✘ Took 1.634s.
           """),
         started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second)
+        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        input_dataclip_id: input_dataclip.id
       }
     ]
 
@@ -526,8 +727,9 @@ defmodule Lightning.SetupUtils do
       create_workorder(
         :cron,
         get_dhis2_data,
-        ~s[{}],
-        run_params
+        ~s[{"data": {}, "references": \[\]}],
+        run_params,
+        output_dataclip_id
       )
 
     %{
@@ -577,18 +779,19 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_workorder(trigger, job, dataclip, run_params) do
+  defp create_workorder(trigger, job, dataclip, run_params, output_dataclip_id) do
     WorkOrderService.multi_for(
       trigger,
       job,
       dataclip
       |> Jason.decode!()
     )
-    |> add_and_update_runs(run_params)
+    |> add_and_update_runs(run_params, output_dataclip_id)
     |> Repo.transaction()
   end
 
-  def add_and_update_runs(multi, run_params) when is_list(run_params) do
+  def add_and_update_runs(multi, run_params, output_dataclip_id)
+      when is_list(run_params) do
     multi =
       multi
       |> Multi.run(:run, fn repo, %{attempt_run: attempt_run} ->
@@ -623,7 +826,8 @@ defmodule Lightning.SetupUtils do
             |> Enum.map(fn {log, index} -> {index, log} end)
             |> Enum.into(%{}),
           started_at: DateTime.utc_now() |> DateTime.add(0, :second),
-          finished_at: DateTime.utc_now() |> DateTime.add(5, :second)
+          finished_at: DateTime.utc_now() |> DateTime.add(5, :second),
+          output_dataclip_id: output_dataclip_id
         })
       end)
 
@@ -635,15 +839,16 @@ defmodule Lightning.SetupUtils do
                                                attempt: attempt,
                                                dataclip: _dataclip
                                              } ->
-        IO.inspect(params, label: "Run params")
-
         run = Run.new(params)
-        # |> Ecto.Changeset.put_assoc(:input_dataclip, dataclip)
-        # |> Ecto.Changeset.put_assoc(:output_dataclip, dataclip)
-
         AttemptRun.new(attempt, run)
       end)
     end)
+  end
+
+  defp create_dataclip(params) do
+    {:ok, dataclip} = Lightning.Invocation.create_dataclip(params)
+
+    dataclip
   end
 
   defp adaptor_for_log(run) do
