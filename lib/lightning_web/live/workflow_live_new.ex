@@ -238,7 +238,7 @@ defmodule LightningWeb.WorkflowNewLive do
     |> case do
       nil ->
         IO.inspect("no changeset found for id #{id}")
-        {:noreply, socket}
+        {:noreply, socket |> unselect_all()}
 
       [type, selected] ->
         {:noreply, socket |> select_node({type, selected})}

@@ -48,6 +48,7 @@ function toRFC6902Patch(patch: ImmerPatch): Patch {
   return {
     ...patch,
     path: `/${patch.path.join('/')}`,
+    op: patch.value === undefined ? 'remove' : patch.op,
   };
 }
 
@@ -111,13 +112,13 @@ export const createWorkflowStore = (
           ['jobs', 'triggers', 'edges'].forEach(k => {
             const key = k as keyof WorkflowProps;
             if (data[key]) {
-              const newCollection: any[] = [];
-              draft[key].forEach(item => {
-                if (!data[key]!.includes(item.id)) {
-                  newCollection.push(item);
+              const idsToRemove = data[key]!;
+
+              draft[key].forEach((item, i) => {
+                if (idsToRemove.includes(item.id)) {
+                  delete draft[key][i];
                 }
               });
-              draft[key] = newCollection;
             }
           });
         })
