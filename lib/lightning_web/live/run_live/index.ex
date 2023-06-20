@@ -218,10 +218,11 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("bulk-rerun", %{"type" => type}, socket) do
     with true <- socket.assigns.can_rerun_job,
-         {:ok, _changes} <- handle_bulk_rerun(socket, type) do
+         {:ok, %{attempt_runs: {count, _attempt_runs}}} <-
+           handle_bulk_rerun(socket, type) do
       {:noreply,
        socket
-       |> put_flash(:info, "Jobs have been set for rerun successfully")
+       |> put_flash(:info, "#{count} jobs have been set for rerun successfully")
        |> push_navigate(
          to:
            ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: socket.assigns.filters}}"

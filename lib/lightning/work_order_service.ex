@@ -70,71 +70,67 @@ defmodule Lightning.WorkOrderService do
 
   # @spec retry_attempt_run(AttemptRun.t(), User.t()) :: Ecto.Multi.t()
   def retry_attempt_run(attempt_run, user) do
-    attempt_run
-    |> Repo.preload([:attempt, :run])
-    |> multi_for_retry_attempt_run(user)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{attempt_run: attempt_run, attempt: attempt} = changes} ->
-        Pipeline.new(%{attempt_run_id: attempt_run.id})
-        |> Oban.insert()
+    multi =
+      attempt_run
+      |> Repo.preload([:attempt, :run])
+      |> multi_for_retry_attempt_run(user)
 
-        project_id =
-          from(r in Run,
-            join: j in assoc(r, :job),
-            join: p in assoc(j, :project),
-            where: r.id == ^attempt_run.run_id,
-            select: [p.id]
-          )
-          |> Repo.one!()
+    with {:ok, %{attempt_run: attempt_run, attempt: attempt} = changes} <-
+           Repo.transaction(multi) do
+      Pipeline.new(%{attempt_run_id: attempt_run.id})
+      |> Oban.insert()
 
-        broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
-        {:ok, changes}
+      project_id =
+        from(r in Run,
+          join: j in assoc(r, :job),
+          join: p in assoc(j, :project),
+          where: r.id == ^attempt_run.run_id,
+          select: [p.id]
+        )
+        |> Repo.one!()
 
-      other ->
-        other
+      broadcast(project_id, %Events.AttemptCreated{attempt: attempt})
+      {:ok, changes}
     end
   end
 
   def retry_attempt_runs(attempt_runs, user) when is_list(attempt_runs) do
     attempt_runs = Repo.preload(attempt_runs, [:attempt, run: [job: :workflow]])
 
-    Multi.new()
-    |> Multi.insert_all(
-      :reasons,
-      InvocationReason,
-      fn _changes ->
-        now = DateTime.utc_now() |> DateTime.truncate(:second)
+    multi =
+      Multi.new()
+      |> Multi.insert_all(
+        :reasons,
+        InvocationReason,
+        fn _changes ->
+          now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-        Enum.map(attempt_runs, fn %{run: run} ->
-          %{
-            type: :retry,
-            run_id: run.id,
-            user_id: user.id,
-            inserted_at: now,
-            updated_at: now
-          }
-        end)
-      end,
-      returning: true
-    )
-    |> Multi.merge(fn %{reasons: {_count, reasons}} ->
-      AttemptService.retry_many(attempt_runs, reasons)
-    end)
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{attempt_runs: {_count, attempt_runs}} = changes} ->
-        jobs =
-          Enum.map(attempt_runs, fn attempt_run ->
-            Pipeline.new(%{attempt_run_id: attempt_run.id})
+          Enum.map(attempt_runs, fn %{run: run} ->
+            %{
+              type: :retry,
+              run_id: run.id,
+              user_id: user.id,
+              inserted_at: now,
+              updated_at: now
+            }
           end)
+        end,
+        returning: true
+      )
+      |> Multi.merge(fn %{reasons: {_count, reasons}} ->
+        AttemptService.retry_many(attempt_runs, reasons)
+      end)
 
-        Oban.insert_all(jobs)
+    with {:ok, %{attempt_runs: {_count, attempt_runs}} = changes} <-
+           Repo.transaction(multi) do
+      jobs =
+        Enum.map(attempt_runs, fn attempt_run ->
+          Pipeline.new(%{attempt_run_id: attempt_run.id})
+        end)
 
-        {:ok, changes}
+      Oban.insert_all(jobs)
 
-      other ->
-        other
+      {:ok, changes}
     end
   end
 

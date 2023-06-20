@@ -5,6 +5,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   import Phoenix.LiveViewTest
 
   alias Lightning.Attempt
+  alias Lightning.Workorders.SearchParams
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
@@ -1467,9 +1468,17 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       render_change(view, "toggle_all_selections", %{all_selections: true})
       result = render_click(view, "bulk-rerun", %{type: "all"})
-      {:ok, _view, html} = follow_redirect(result, conn)
+      {:ok, view, html} = follow_redirect(result, conn)
 
-      assert html =~ "Jobs have been set for rerun successfully"
+      assert html =~ "2 jobs have been set for rerun successfully"
+
+      view
+      |> form("##{work_order_b.id}-selection-form")
+      |> render_change(%{selected: true})
+
+      result = render_click(view, "bulk-rerun", %{type: "selected"})
+      {:ok, _view, html} = follow_redirect(result, conn)
+      assert html =~ "1 jobs have been set for rerun successfully"
     end
 
     test "selecting all work orders in the page prompts the user to rerun all runs",
@@ -1546,5 +1555,199 @@ defmodule LightningWeb.RunWorkOrderTest do
       refute updated_html =~ "Rerun ALL (2 workorders) from start"
       assert updated_html =~ "Rerun selected (1 workorders) from start"
     end
+  end
+
+  describe "bulk_rerun_modal" do
+    test "2 run buttons are present when all entries have been selected" do
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          id: "bulk-rerun-modal",
+          page_number: 1,
+          total_entries: 25,
+          all_selected?: true,
+          selected_count: 5,
+          filters: %SearchParams{},
+          workflows: [{"Workflow a", "someid"}]
+        )
+
+      assert html =~ "Rerun ALL (25 workorders) from start"
+      assert html =~ "Rerun selected (5 workorders) from start"
+    end
+
+    test "only 1 run button present when some entries have been selected" do
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          id: "bulk-rerun-modal",
+          page_number: 1,
+          total_entries: 25,
+          all_selected?: false,
+          selected_count: 5,
+          filters: %SearchParams{},
+          workflows: [{"Workflow a", "someid"}]
+        )
+
+      refute html =~ "Rerun ALL (25 workorders) from start"
+      assert html =~ "Rerun selected (5 workorders) from start"
+    end
+
+    test "the filter queries are displayed correctly when all entries have been selected" do
+      assigns = %{
+        id: "bulk-rerun-modal",
+        page_number: 1,
+        total_entries: 25,
+        all_selected?: true,
+        selected_count: 5,
+        filters: %SearchParams{},
+        workflows: [{"Workflow A", "someid"}]
+      }
+
+      # status
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{status: ["success"]}}
+        )
+
+      assert html =~ safe_html_string("having a status of 'Success'")
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{status: ["success", "failed"]}}
+        )
+
+      assert html =~
+               safe_html_string(
+                 "having a status of either 'Success' or 'Failed'"
+               )
+
+      # search fields
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                search_fields: ["body"],
+                search_term: "TestSearch"
+              }
+          }
+        )
+
+      assert html =~ "whose run Input Body contain TestSearch"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                search_fields: ["body", "log"],
+                search_term: "TestSearch"
+              }
+          }
+        )
+
+      assert html =~ "whose run Input Body and Logs contain TestSearch"
+
+      # workflow
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{workflow_id: nil}}
+        )
+
+      refute html =~ "for Workflow A workflow"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{workflow_id: "someid"}}
+        )
+
+      assert html =~ "for Workflow A workflow"
+
+      # Run dates
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{date_after: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "which was last run after 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{date_before: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "which was last run before 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                date_after: ~U[2023-01-01 16:20:00.00Z],
+                date_before: ~U[2023-04-01 08:05:00.00Z]
+              }
+          }
+        )
+
+      assert html =~
+               "which was last run between 1/4/23 at 8:05am and 1/1/23 at 4:20pm"
+
+      # Work Order dates
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{wo_date_after: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "received after 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{wo_date_before: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "received before 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                wo_date_after: ~U[2023-01-01 16:20:00.00Z],
+                wo_date_before: ~U[2023-04-01 08:05:00.00Z]
+              }
+          }
+        )
+
+      assert html =~
+               "received between 1/4/23 at 8:05am and 1/1/23 at 4:20pm"
+    end
+  end
+
+  defp safe_html_string(string) do
+    string |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
   end
 end

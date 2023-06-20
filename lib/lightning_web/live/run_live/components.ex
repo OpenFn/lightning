@@ -741,9 +741,9 @@ defmodule LightningWeb.RunLive.Components do
   end
 
   defp humanize_field(search_field) do
-    case search_field do
-      :log -> "Logs"
-      :body -> "Input Body"
+    case to_string(search_field) do
+      "log" -> "Logs"
+      "body" -> "Input Body"
       other -> other |> to_string |> String.capitalize()
     end
   end
