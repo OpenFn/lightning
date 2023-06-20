@@ -45,11 +45,17 @@ export interface PendingAction {
 }
 
 function toRFC6902Patch(patch: ImmerPatch): Patch {
-  return {
-    ...patch,
+  const newPatch = {
     path: `/${patch.path.join('/')}`,
     op: patch.value === undefined ? 'remove' : patch.op,
+    value: patch.value,
   };
+
+  if (newPatch.op === 'remove') {
+    delete newPatch.value;
+  }
+
+  return newPatch;
 }
 
 export const createWorkflowStore = (
@@ -107,22 +113,27 @@ export const createWorkflowStore = (
       );
     },
     remove: data => {
-      set(state =>
-        proposeChanges(state, draft => {
+      set(state => {
+        const newState = proposeChanges(state, draft => {
           ['jobs', 'triggers', 'edges'].forEach(k => {
             const key = k as keyof WorkflowProps;
-            if (data[key]) {
-              const idsToRemove = data[key]!;
 
-              draft[key].forEach((item, i) => {
+            const idsToRemove = data[key]!;
+            if (idsToRemove) {
+              const nextItems: any[] = [];
+              draft[key].forEach(item => {
                 if (idsToRemove.includes(item.id)) {
-                  delete draft[key][i];
+                  nextItems.push(item);
                 }
               });
+              draft[key] = nextItems;
             }
           });
-        })
-      );
+        });
+
+        console.log('remove', newState);
+        return newState;
+      });
     },
     change: data => {
       set(state =>

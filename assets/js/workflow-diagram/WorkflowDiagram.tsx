@@ -1,30 +1,34 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import ReactFlow, {
-  Node,
+  NodeChange,
+  ReactFlowInstance,
   ReactFlowProvider,
   applyNodeChanges,
-  ReactFlowInstance,
-  NodeChange,
 } from 'reactflow';
-
+import { DEFAULT_TEXT } from '../editor/Editor';
 import layout from './layout';
 import nodeTypes from './nodes';
-import * as placeholder from './util/placeholder';
 import fromWorkflow from './util/from-workflow';
-import toWorkflow from './util/to-workflow';
+import * as placeholder from './util/placeholder';
 import throttle from './util/throttle';
-import { DEFAULT_TEXT } from '../editor/Editor';
+import toWorkflow from './util/to-workflow';
 
+import { useStore } from 'zustand';
+import { shallow } from 'zustand/shallow';
+import { WorkflowContext } from '../workflow-editor/component';
+import { WorkflowProps } from '../workflow-editor/store';
 import { FIT_DURATION, FIT_PADDING } from './constants';
-import type { Lightning, Flow, Positions } from './types';
-import { AddArgs, ChangeArgs, RemoveArgs } from '../workflow-editor/store';
+import type { Flow, Positions } from './types';
 
 type WorkflowDiagramProps = {
-  workflow: Lightning.Workflow;
   onSelectionChange: (id?: string) => void;
-  onAdd: (diff: AddArgs) => void;
-  onChange: (diff: ChangeArgs) => void;
-  onRemove: (diff: RemoveArgs) => void;
 };
 
 type ChartCache = {
@@ -34,9 +38,67 @@ type ChartCache = {
   deferSelection?: string;
 };
 
+type Workflow = Pick<WorkflowProps, 'jobs' | 'edges' | 'triggers'>;
+
+// This will take a store passed from the server and do some light transformation
+// Specifically it identifies placeholder nodes
+const identifyPlaceholders = (store: Workflow) => {
+  const { jobs, triggers, edges } = store;
+
+  const newJobs = jobs.map(item => {
+    if (!item.name && !item.body) {
+      return {
+        ...item,
+        placeholder: true,
+      };
+    }
+    return item;
+  });
+
+  const newEdges = edges.map(edge => {
+    const target = newJobs.find(({ id }) => edge.target_job_id === id);
+    if (target?.placeholder) {
+      return {
+        ...edge,
+        placeholder: true,
+      };
+    }
+    return edge;
+  });
+
+  const result = {
+    triggers,
+    jobs: newJobs,
+    edges: newEdges,
+  };
+
+  return result;
+};
+
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
-    const { workflow, onAdd, onChange, onRemove, onSelectionChange } = props;
+    const workflowStore = useContext(WorkflowContext);
+
+    const add = useStore(workflowStore!, state => state.add);
+    const remove = useStore(workflowStore!, state => state.remove);
+    const change = useStore(workflowStore!, state => state.change);
+
+    const _workflow = useStore(
+      workflowStore!,
+      state => ({
+        jobs: state.jobs,
+        triggers: state.triggers,
+        edges: state.edges,
+      }),
+      shallow
+    );
+
+    const workflow = useMemo(
+      () => identifyPlaceholders(_workflow),
+      [_workflow]
+    );
+
+    const { onSelectionChange } = props;
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
@@ -63,7 +125,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       const { positions, selectedId } = chartCache.current;
       const newModel = fromWorkflow(workflow, positions, selectedId);
 
-      //console.log('UPDATING WORKFLOW', newModel, selectedId);
+      console.debug('UPDATING WORKFLOW', newModel, selectedId);
       if (flow && newModel.nodes.length) {
         layout(newModel, setModel, flow, 200).then(positions => {
           // trigger selection on new nodes once they've been passed back through to us
@@ -116,9 +178,9 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         chartCache.current.selectedId = diff.nodes[0].id;
 
         // Push the changes
-        onAdd?.(toWorkflow(diff));
+        add(toWorkflow(diff));
       },
-      [onAdd, model]
+      [add, model]
     );
 
     const commitPlaceholder = useCallback(
@@ -128,22 +190,21 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         chartCache.current.deferSelection = id;
 
         // Update the store
-        onChange?.({
+        change({
           jobs: [{ id, name, body: DEFAULT_TEXT }],
         });
       },
-      [onChange, workflow]
+      [change, workflow]
     );
 
     const cancelPlaceholder = useCallback(
       (evt: CustomEvent<any>) => {
         const { id } = evt.detail;
-        console.log({ models: model, id });
 
         const e = model.edges.find(({ target }) => target === id);
-        onRemove({ jobs: [id], edges: [e?.id] });
+        remove({ jobs: [id], edges: [e?.id] });
       },
-      [onRemove, model]
+      [remove, model]
     );
 
     useEffect(() => {

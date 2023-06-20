@@ -12,15 +12,16 @@ export const add = (_model: Flow.Model, parentNode: Flow.Node) => {
     edges: [],
   };
 
-  const id = crypto.randomUUID();
+  const targetId = crypto.randomUUID();
   newModel.nodes.push({
-    id,
+    id: targetId,
     position: parentNode.position,
   });
+
   newModel.edges.push({
     id: crypto.randomUUID(),
     source: parentNode.id,
-    target: id,
+    target: targetId,
   });
   return newModel;
 };

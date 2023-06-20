@@ -92,14 +92,11 @@ export default {
 
     // Get the initial data from the server
     this.pushEventTo(this.el, 'get-initial-state', {}, (payload: any) => {
-      this.workflowStore = createWorkflowStore(
-        { ...payload, editJobUrl: this.editJobUrl },
-        pendingChange => {
-          this.pendingChanges.push(pendingChange);
+      this.workflowStore = createWorkflowStore(payload, pendingChange => {
+        this.pendingChanges.push(pendingChange);
 
-          this.processPendingChanges();
-        }
-      );
+        this.processPendingChanges();
+      });
 
       if (!payload.triggers.length && !payload.jobs.length) {
         // Create a placeholder chart and push it back up to the server
@@ -113,9 +110,6 @@ export default {
           this.workflowStore,
           this.onSelectionChange.bind(this)
         );
-        this.component.render(this.workflowStore.getState());
-
-        console.log(window.location.hash);
       });
     });
   },
@@ -128,13 +122,13 @@ export default {
   },
   onSelectionChange(id?: string) {
     if (!id) {
-      console.log('unselecting');
+      console.debug('unselecting');
 
       window.location.hash = '';
       return;
     }
 
-    console.log('selecting', id);
+    console.debug('selecting', id);
     window.location.hash = id;
   },
   destroyed() {
