@@ -6,7 +6,7 @@ import { Flow } from '../types';
 // created, we replace the placeholder with the real thing
 
 // Model is a react-flow chart model
-export const add = (model: Flow.Model, parentNode: Flow.Node) => {
+export const add = (_model: Flow.Model, parentNode: Flow.Node) => {
   const newModel: any = {
     nodes: [],
     edges: [],
@@ -18,7 +18,7 @@ export const add = (model: Flow.Model, parentNode: Flow.Node) => {
     position: parentNode.position,
   });
   newModel.edges.push({
-    id: `${parentNode.id}-${id}`,
+    id: crypto.randomUUID(),
     source: parentNode.id,
     target: id,
   });

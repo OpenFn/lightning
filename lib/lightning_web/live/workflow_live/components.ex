@@ -213,6 +213,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         <div class="grow">
           <%= @form
           |> input_value(:type)
+          |> to_string()
           |> then(fn
             "" -> "New Trigger"
             "webhook" -> "Webhook Trigger"

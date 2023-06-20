@@ -61,6 +61,3 @@ export namespace Flow {
 export type Positions = {
   [nodeId: string]: { x: number; y: number };
 };
-
-
-type CustomEvent 
