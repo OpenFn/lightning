@@ -222,7 +222,10 @@ defmodule LightningWeb.RunLive.Index do
            handle_bulk_rerun(socket, type) do
       {:noreply,
        socket
-       |> put_flash(:info, "#{count} jobs have been set for rerun successfully")
+       |> put_flash(
+         :info,
+         "New attempt#{if count > 1, do: "s", else: ""} enqueued for #{count} workorder#{if count > 1, do: "s", else: ""}"
+       )
        |> push_navigate(
          to:
            ~p"/projects/#{socket.assigns.project.id}/runs?#{%{filters: socket.assigns.filters}}"

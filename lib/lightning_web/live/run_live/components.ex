@@ -529,6 +529,7 @@ defmodule LightningWeb.RunLive.Components do
   # BULK RERUN
   attr :id, :string, required: true
   attr :page_number, :integer, required: true
+  attr :pages, :integer, required: true
   attr :total_entries, :integer, required: true
   attr :all_selected?, :boolean, required: true
   attr :selected_count, :integer, required: true
@@ -576,12 +577,12 @@ defmodule LightningWeb.RunLive.Components do
               <div class="mt-2">
                 <p class="text-sm text-gray-500">
                   <%= if @all_selected? do %>
-                    You've selected the <%= @selected_count %> work orders from page <%= @page_number %> of results for workorders matching the following query: <%= humanize_search_params(
+                    You've selected all <%= @selected_count %> workorders from page <%= @page_number %> of <%= @pages %>. There are a total of <%= @total_entries %> that match your current query: <%= humanize_search_params(
                       @filters,
                       @workflows
-                    ) %>. There are a total of <%= @total_entries %> work orders matching this query.
+                    ) %>.
                   <% else %>
-                    You've selected <%= @selected_count %> work orders to rerun from the start (first job). This will create a new attempt for these within the same work order
+                    You've selected <%= @selected_count %> workorders to rerun from the start. This will create a new attempt for each selected workorder.
                   <% end %>
                 </p>
               </div>
@@ -597,7 +598,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
-                Rerun selected (<%= @selected_count %> workorders) from start
+                Rerun <%= @selected_count %> selected workorders from start
               </button>
               <button
                 type="button"
@@ -606,7 +607,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun ALL (<%= @total_entries %> workorders) from start
+                Rerun all <%= @total_entries %> matching workorders from start
               </button>
               <div class="relative col-start-1 col-end-3">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
@@ -637,7 +638,7 @@ defmodule LightningWeb.RunLive.Components do
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
-                Rerun selected (<%= @selected_count %> workorders) from start
+                Rerun <%= @selected_count %> selected workorders from start
               </button>
               <button
                 type="button"
