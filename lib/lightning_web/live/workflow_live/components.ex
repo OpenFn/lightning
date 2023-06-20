@@ -7,11 +7,11 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
-      <ul
-        role="list"
-        class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4"
-      >
-        <.create_workflow_card can_create_workflow={@can_create_workflow} />
+      <div class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+        <.create_workflow_card
+          project={@project}
+          can_create_workflow={@can_create_workflow}
+        />
         <%= for workflow <- @workflows do %>
           <.workflow_card
             can_create_workflow={@can_create_workflow}
@@ -20,79 +20,76 @@ defmodule LightningWeb.WorkflowLive.Components do
             project={@project}
           />
         <% end %>
-      </ul>
+      </div>
     </div>
     """
   end
 
   def workflow_card(assigns) do
     ~H"""
-    <li
-      class="col-span-1 flex rounded-md shadow-sm"
-      role="button"
-      phx-click="goto_workflow"
-      phx-value-to={
-        Routes.project_workflow_path(
-          LightningWeb.Endpoint,
-          :show,
-          @project.id,
-          @workflow.id
-        )
-      }
-    >
-      <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
-        <div class="flex-1 truncate px-4 py-2 text-sm">
-          <span class="font-medium text-gray-900 hover:text-gray-600">
-            <%= @workflow.name %>
-          </span>
-          <p class="text-gray-500 text-xs">
-            Created <%= Timex.Format.DateTime.Formatters.Relative.format!(
-              @workflow.updated_at,
-              "{relative}"
-            ) %>
-          </p>
-        </div>
-        <%= if @can_delete_workflow do %>
+    <div>
+      <.link
+        navigate={~p"/projects/#{@project.id}/w-new/#{@workflow.id}"}
+        class="col-span-1 rounded-md shadow-sm"
+        role="button"
+      >
+        <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
+          <div class="flex-1 truncate px-4 py-2 text-sm">
+            <span class="font-medium text-gray-900 hover:text-gray-600">
+              <%= @workflow.name %>
+            </span>
+            <p class="text-gray-500 text-xs">
+              Created <%= Timex.Format.DateTime.Formatters.Relative.format!(
+                @workflow.updated_at,
+                "{relative}"
+              ) %>
+            </p>
+          </div>
           <div class="flex-shrink-0 pr-2">
-            <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-              <%= link(
-              to: "#",
-              phx_click: "delete_workflow",
-              phx_value_id: @workflow.id,
-              data: [ confirm: "Are you sure you'd like to delete this workflow?" ],
-              class: "inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") do %>
+            <div
+              :if={@can_delete_workflow}
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            >
+              <.link
+                href="#"
+                phx-click="delete_workflow"
+                phx-value-id={@workflow.id}
+                data-confirm="Are you sure you'd like to delete this workflow?"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
                 <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
-              <% end %>
+              </.link>
             </div>
           </div>
-        <% end %>
-      </div>
-    </li>
+        </div>
+      </.link>
+    </div>
     """
   end
 
   def create_workflow_card(assigns) do
     ~H"""
-    <li
-      class="col-span-1 flex rounded-md shadow-sm"
-      role={@can_create_workflow && "button"}
-      phx-click="create_workflow"
-    >
-      <div class={"flex flex-1 items-center justify-between truncate rounded-md
-      border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
-        <div class="flex-1 truncate px-4 py-2 text-sm">
-          <span class="font-medium">
-            Create new workflow
-          </span>
-          <p class="text-gray-200 text-xs">Automate a process</p>
-        </div>
-        <div class="flex-shrink-0 pr-2">
-          <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            <Icon.plus_circle />
+    <div>
+      <.link
+        navigate={~p"/projects/#{@project.id}/w-new/new"}
+        class="col-span-1 rounded-md shadow-sm"
+        role={@can_create_workflow && "button"}
+      >
+        <div class={"flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
+          <div class="flex-1 truncate px-4 py-2 text-sm">
+            <span class="font-medium">
+              Create new workflow
+            </span>
+            <p class="text-gray-200 text-xs">Automate a process</p>
+          </div>
+          <div class="flex-shrink-0 pr-2">
+            <div class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+              <Icon.plus_circle />
+            </div>
           </div>
         </div>
-      </div>
-    </li>
+      </.link>
+    </div>
     """
   end
 
