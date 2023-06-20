@@ -31,7 +31,7 @@ defmodule LightningWeb.LayoutComponents do
 
     <%= if assigns[:project] do %>
       <Settings.menu_item
-        to={Routes.project_workflow_path(@socket, :index, @project.id)}
+        to={~p"/projects/#{@project.id}/w"}
         active={@active_menu_item == :overview}
       >
         <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
