@@ -34,6 +34,7 @@ defmodule LightningWeb.Hooks do
        socket
        |> assign_new(:project_user, fn -> project_user end)
        |> assign_new(:project, fn -> project end)
+       |> push_event("project-scoped", %{id: project.id})
        |> assign_new(:projects, fn -> projects end)}
     else
       {:halt, redirect(socket, to: "/") |> put_flash(:nav, :not_found)}

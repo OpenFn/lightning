@@ -76,6 +76,15 @@ defmodule LightningWeb.WorkflowLive.Index do
     )
   end
 
+  def handle_event("restore", %{"id" => nil}, socket), do: {:noreply, socket}
+
+  def handle_event("restore", %{"id" => id}, socket) do
+    IO.inspect(socket, label: "is this coming????")
+
+    socket = socket |> assign(last_project: id)
+    {:noreply, socket}
+  end
+
   @impl true
   def handle_event("delete_workflow", %{"id" => id}, socket) do
     if socket.assigns.can_delete_workflow do

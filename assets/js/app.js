@@ -53,6 +53,14 @@ Hooks.CheckboxIndeterminate = {
   },
 };
 
+Hooks.Restore = {
+  mounted() {
+    console.log('when does this happen? when is the resotre cool');
+    const projectId = localStorage.getItem('lightning.last-project');
+    this.pushEvent('restore', { id: projectId });
+  },
+};
+
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")
@@ -82,6 +90,11 @@ let liveSocket = new LiveSocket('/live', Socket, {
 topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
 let topBarScheduled = undefined;
+
+window.addEventListener('phx:project-scoped', e => {
+  console.log(e.detail.id);
+  localStorage.setItem('lightning.last-project', e.detail.id);
+});
 
 window.addEventListener('phx:page-loading-start', () => {
   if (!topBarScheduled) {

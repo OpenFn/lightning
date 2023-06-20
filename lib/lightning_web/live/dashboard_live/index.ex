@@ -8,6 +8,9 @@ defmodule LightningWeb.DashboardLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    IO.inspect(socket, label: "yeh brov?")
+
+
     {:ok, socket |> assign(active_menu_item: :projects)}
   end
 
@@ -22,7 +25,11 @@ defmodule LightningWeb.DashboardLive.Index do
   end
 
   defp apply_action(socket, :index, _params) do
-    project = Projects.select_first_project_for_user(socket.assigns.current_user)
+    IO.inspect(socket.assigns, label: "assigns here")
+
+    project =
+      Projects.select_first_project_for_user(socket.assigns.current_user)
+      |> IO.inspect(label: "BLAh!")
 
     if project != nil do
       can_access_project =

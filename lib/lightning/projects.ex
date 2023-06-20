@@ -402,6 +402,7 @@ defmodule Lightning.Projects do
       limit: 1
     )
     |> Repo.one()
+    |> IO.inspect(label: "first project by what order?")
   end
 
   def url_safe_project_name(nil), do: ""
