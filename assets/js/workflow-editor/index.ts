@@ -45,6 +45,7 @@ const createNewWorkflow = () => {
   const triggers = [
     {
       id: crypto.randomUUID(),
+      type: 'webhook',
     },
   ];
   const jobs = [
@@ -52,6 +53,7 @@ const createNewWorkflow = () => {
       id: crypto.randomUUID(),
     },
   ];
+
   const edges = [
     {
       id: crypto.randomUUID(),

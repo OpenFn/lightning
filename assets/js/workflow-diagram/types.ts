@@ -5,7 +5,7 @@ export namespace Lightning {
   export interface Node {
     id: string;
     name: string;
-    workflowId: string;
+    workflow_id: string;
 
     // Not technically from Lightning, but we'll infer this and scribble it
     placeholder?: boolean;
@@ -13,12 +13,12 @@ export namespace Lightning {
 
   export interface CronTrigger extends Node {
     type: 'cron';
-    cronExpression: string;
+    cron_expression: string;
   }
 
   export interface WebhookTrigger extends Node {
     type: 'webhook';
-    webhookUrl: string;
+    webhook_url: string;
   }
 
   export type TriggerNode = CronTrigger | WebhookTrigger;

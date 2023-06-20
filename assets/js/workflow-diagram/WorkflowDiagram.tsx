@@ -129,7 +129,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         // Update the store
         onChange?.({
-          jobs: [{ id, name, body: DEFAULT_TEXT, workflow_id: workflow.id }],
+          jobs: [{ id, name, body: DEFAULT_TEXT }],
         });
       },
       [onChange, workflow]
