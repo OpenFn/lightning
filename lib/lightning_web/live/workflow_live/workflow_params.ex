@@ -78,15 +78,15 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
       %{
         jobs:
           changeset
-          |> Ecto.Changeset.get_change(:jobs, [])
+          |> Ecto.Changeset.get_field(:jobs, [])
           |> to_serializable([:id, :name, :adaptor, :body, :enabled]),
         triggers:
           changeset
-          |> Ecto.Changeset.get_change(:triggers, [])
+          |> Ecto.Changeset.get_field(:triggers, [])
           |> to_serializable([:id, :type, :cron_expression]),
         edges:
           changeset
-          |> Ecto.Changeset.get_change(:edges, [])
+          |> Ecto.Changeset.get_field(:edges, [])
           |> to_serializable([
             :id,
             :source_trigger_id,
@@ -103,15 +103,17 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
     changesets |> Enum.map(&to_serializable(&1, fields))
   end
 
-  defp to_serializable(changeset, fields) do
-    IO.inspect({changeset, fields})
+  defp to_serializable(changeset = %Ecto.Changeset{}, fields) do
+    to_serializable(changeset |> Ecto.Changeset.apply_changes(), fields)
+    |> Map.put(
+      :errors,
+      Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+      |> Map.take(fields)
+    )
+  end
 
-    %{__struct__: model} =
-      changeset
-      |> Ecto.Changeset.apply_changes()
-
-    changeset
-    |> Ecto.Changeset.apply_changes()
+  defp to_serializable(%{__struct__: model} = data, fields) do
+    data
     |> Map.take(fields)
     |> Enum.map(fn {key, val} ->
       val = cast_value(model, key, val)
@@ -119,11 +121,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
       {key, val}
     end)
     |> Enum.into(%{})
-    |> Map.put(
-      :errors,
-      Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-      |> Map.take(fields)
-    )
   end
 
   defp cast_value(model, field, value) do
