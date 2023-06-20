@@ -82,9 +82,9 @@ export default {
       this.workflowStore.getState().applyPatches(response.patches);
     });
 
-    window.addEventListener('hashchange', (_event) => {
+    window.addEventListener('hashchange', _event => {
       this.pushHash(window.location.hash);
-    })
+    });
 
     this.pushHash(window.location.hash);
 
@@ -127,40 +127,13 @@ export default {
   onSelectionChange(id?: string) {
     if (!id) {
       console.log('unselecting');
-      
-      this.unselectNode();
+
+      window.location.hash = '';
       return;
     }
 
-    const item = Object.entries(this.workflowStore.getState()).find(
-      ([_type, nodes]) => {
-        return nodes.find(node => node.id === id);
-      }
-    )?.[1];
-
-    if (!item) {
-      throw new Error(`Can't find node for id: ${id}`);
-    }
-
+    console.log('selecting', id);
     window.location.hash = id;
-    console.log('selecting', item.type, id);
-    
-
-    // switch (type) {
-    //   case 'jobs':
-    //     this.selectJob(id);
-    //     break;
-    //   case 'triggers':
-    //     this.selectTrigger(id);
-    //     break;
-    //   case 'edges':
-    //     this.selectEdge(id);
-    //     break;
-    //   case undefined:
-    //     throw new Error(`Can't find node for id: ${id}`);
-    //   default:
-    //     throw new Error(`Unknown type ${type}`);
-    // }
   },
   destroyed() {
     if (this.component) {

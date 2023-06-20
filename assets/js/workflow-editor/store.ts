@@ -12,7 +12,7 @@ export type RemoveArgs = {
   edges?: string[];
 };
 
-export type ChangeArgs = Partial<Omit<WorkflowProps, 'editJobUrl'>>;
+export type ChangeArgs = Partial<WorkflowProps>;
 
 export type AddArgs = ChangeArgs;
 
@@ -20,7 +20,6 @@ export type WorkflowProps = {
   triggers: Lightning.TriggerNode[];
   jobs: Lightning.JobNode[];
   edges: Lightning.Edge[];
-  editJobUrl: string;
 };
 
 export interface WorkflowState extends WorkflowProps {
@@ -60,7 +59,6 @@ export const createWorkflowStore = (
     triggers: [],
     jobs: [],
     edges: [],
-    editJobUrl: '',
   };
 
   // Calculate the next state using Immer, and then call the onChange callback
@@ -90,10 +88,11 @@ export const createWorkflowStore = (
     ...DEFAULT_PROPS,
     ...initProps,
     add: data => {
+      console.log('add', data);
       set(state =>
         proposeChanges(state, draft => {
           ['jobs', 'triggers', 'edges'].forEach(k => {
-            const key = k as keyof Omit<WorkflowProps, 'editJobUrl'>;
+            const key = k as keyof WorkflowProps;
             if (data[key]) {
               data[key]!.forEach(item => {
                 if (!item.id) {
@@ -110,7 +109,7 @@ export const createWorkflowStore = (
       set(state =>
         proposeChanges(state, draft => {
           ['jobs', 'triggers', 'edges'].forEach(k => {
-            const key = k as keyof Omit<WorkflowProps, 'editJobUrl'>;
+            const key = k as keyof WorkflowProps;
             if (data[key]) {
               const newCollection: any[] = [];
               draft[key].forEach(item => {
