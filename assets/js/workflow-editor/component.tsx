@@ -1,49 +1,18 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext } from 'react';
 import { createRoot } from 'react-dom/client';
-import { StoreApi, useStore } from 'zustand';
-import { WorkflowState, createWorkflowStore, WorkflowProps, RemoveArgs, ChangeArgs, AddArgs } from './store';
+import { StoreApi } from 'zustand';
+import {
+  WorkflowState,
+  createWorkflowStore
+} from './store';
 
-import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram'
+import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 
-export const WorkflowContext = createContext<StoreApi<WorkflowState> | null>(null);
+export const WorkflowContext = createContext<StoreApi<WorkflowState> | null>(
+  null
+);
 
 type Store = ReturnType<typeof createWorkflowStore>;
-type Workflow = Pick<WorkflowProps, 'jobs' | 'edges' | 'triggers'>;
-
-// This will take a store passed from the server and do some light transformation
-// Specifically it identifies placeholder nodes
-const identifyPlaceholders = (store: Workflow) => {
-  const { jobs, triggers, edges } = store;
-  
-  const newJobs = jobs.map((item) => {
-    if (!item.name && !item.body) {
-      return {
-        ...item,
-        placeholder: true
-      }
-    }
-    return item;
-  });
-  
-  const newEdges = edges.map((edge) => {
-    const target = newJobs.find(({ id }) => edge.target_job_id === id);
-    if (target?.placeholder) {
-      return {
-        ...edge,
-        placeholder: true
-      }
-    }
-    return edge;
-  });
-
-  const result = {
-    triggers,
-    jobs: newJobs,
-    edges: newEdges,
-  }
-
-  return result;
-}
 
 export function mount(
   el: Element | DocumentFragment,
@@ -53,28 +22,17 @@ export function mount(
   const componentRoot = createRoot(el);
 
   function unmount() {
-    unsubscribe();
+    console.log('unmount');
+
     return componentRoot.unmount();
   }
 
-  function render(model: Workflow) {
-    const { add, change, remove } = workflowStore.getState();
+  console.log('render');
+  componentRoot.render(
+    <WorkflowContext.Provider value={workflowStore}>
+      <WorkflowDiagram ref={el} onSelectionChange={onSelectionChange} />
+    </WorkflowContext.Provider>
+  );
 
-    componentRoot.render(
-      <WorkflowContext.Provider value={workflowStore}>
-        <WorkflowDiagram
-          ref={el}
-          workflow={identifyPlaceholders(model)}
-          onSelectionChange={onSelectionChange}
-          onAdd={add}
-          onChange={change}
-          onRemove={remove}
-        />
-      </WorkflowContext.Provider>
-    );
-  }
-
-  const unsubscribe = workflowStore.subscribe(render)
-
-  return { unmount, render };
+  return { unmount };
 }

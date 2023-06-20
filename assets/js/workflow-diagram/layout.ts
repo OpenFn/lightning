@@ -1,6 +1,6 @@
-import { getRectOfNodes, Node, ReactFlowInstance } from 'reactflow';
 import { stratify, tree } from 'd3-hierarchy';
 import { timer } from 'd3-timer';
+import { getRectOfNodes, Node, ReactFlowInstance } from 'reactflow';
 
 import { FIT_PADDING, NODE_HEIGHT, NODE_WIDTH } from './constants';
 import { Flow, Positions } from './types';
