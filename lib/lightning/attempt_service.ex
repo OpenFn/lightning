@@ -133,7 +133,7 @@ defmodule Lightning.AttemptService do
         Enum.map(attempt_runs, fn %{attempt: %{work_order: work_order}, run: run} ->
           %{
             work_order_id: work_order.id,
-            reason_id: reasons_map[run.id],
+            reason_id: Map.fetch!(reasons_map, run.id),
             inserted_at: now,
             updated_at: now
           }
