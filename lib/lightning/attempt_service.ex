@@ -117,10 +117,10 @@ defmodule Lightning.AttemptService do
       ) do
     attempt_runs =
       attempt_runs
-      |> Repo.preload(
-        run: [],
+      |> Repo.preload([
+        :run,
         attempt: [work_order: [jobs: [trigger: :upstream_job]], runs: []]
-      )
+      ])
 
     Multi.new()
     |> Multi.insert_all(
@@ -265,7 +265,10 @@ defmodule Lightning.AttemptService do
           id: ar.id,
           row_num:
             row_number()
-            |> over(partition_by: att.work_order_id, order_by: r.started_at)
+            |> over(
+              partition_by: att.work_order_id,
+              order_by: coalesce(r.started_at, r.inserted_at)
+            )
         }
       )
 
