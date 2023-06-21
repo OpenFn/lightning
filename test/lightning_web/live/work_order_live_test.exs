@@ -1553,7 +1553,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck 1 work order
       updated_html = render(view)
       refute updated_html =~ "Rerun all 2 matching workorders from start"
-      assert updated_html =~ "Rerun 1 selected workorders from start"
+      assert updated_html =~ "Rerun 1 selected workorder from start"
     end
   end
 
