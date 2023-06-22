@@ -75,6 +75,17 @@ Hooks.Copy = {
   },
 };
 
+// Sets the checkbox to indeterminate state if the element has the
+// `indeterminate` class
+Hooks.CheckboxIndeterminate = {
+  mounted() {
+    this.el.indeterminate = this.el.classList.contains('indeterminate');
+  },
+  updated() {
+    this.el.indeterminate = this.el.classList.contains('indeterminate');
+  },
+};
+
 // @ts-ignore
 let csrfToken = document
   .querySelector("meta[name='csrf-token']")

@@ -8,6 +8,7 @@ defmodule Lightning.AttemptService do
   alias Lightning.Repo
   alias Lightning.{Attempt, AttemptRun}
   alias Lightning.Invocation.{Run}
+  alias Lightning.InvocationReason
 
   @doc """
   Create an attempt
@@ -110,6 +111,109 @@ defmodule Lightning.AttemptService do
     end)
   end
 
+  @doc """
+  Creates new Attempts for each pair of corresponding AttemptRun and
+  InvocationReason.
+  """
+  @spec retry_many([AttemptRun.t()], [Lightning.InvocationReason.t()]) ::
+          Ecto.Multi.t()
+  def retry_many(
+        [%AttemptRun{} | _other_runs] = attempt_runs,
+        [%InvocationReason{} | _other_reasons] = reasons
+      ) do
+    attempt_runs =
+      attempt_runs
+      |> Repo.preload([
+        :run,
+        attempt: [work_order: [jobs: [trigger: :upstream_job]], runs: []]
+      ])
+
+    Multi.new()
+    |> Multi.insert_all(
+      :attempts,
+      Attempt,
+      fn _ ->
+        reasons_map = Map.new(reasons, &{&1.run_id, &1.id})
+        now = DateTime.utc_now()
+
+        Enum.map(attempt_runs, fn %{attempt: %{work_order: work_order}, run: run} ->
+          %{
+            work_order_id: work_order.id,
+            reason_id: Map.fetch!(reasons_map, run.id),
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+      end,
+      returning: true
+    )
+    |> Multi.run(:attempt_runs_setup, fn _repo,
+                                         %{attempts: {_count, attempts}} ->
+      attempts_map = Map.new(attempts, &{&1.work_order_id, &1.id})
+      now = DateTime.utc_now()
+
+      setup =
+        attempt_runs
+        |> Enum.map(fn %{attempt: attempt, run: run} ->
+          {skipped_runs, new_run} =
+            calculate_runs(attempt.work_order.jobs, attempt.runs, run)
+
+          attempt_id = attempts_map[attempt.work_order.id]
+
+          skipped_attempt_runs =
+            attempt_runs_attrs(attempt_id, skipped_runs, now)
+
+          {attempt_id, {skipped_attempt_runs, new_run.changes}}
+        end)
+
+      {:ok, setup}
+    end)
+    |> Multi.insert_all(
+      :skipped_attempt_runs,
+      AttemptRun,
+      fn %{attempt_runs_setup: setup} ->
+        Enum.flat_map(setup, fn {_, {skipped_runs, _new_run}} ->
+          skipped_runs
+        end)
+      end
+    )
+    |> Multi.insert_all(
+      :runs,
+      Run,
+      fn %{attempt_runs_setup: setup} ->
+        now = DateTime.utc_now()
+
+        Enum.map(setup, fn {_, {_skipped_runs, new_run}} ->
+          Map.merge(new_run, %{inserted_at: now, updated_at: now})
+        end)
+      end,
+      returning: true
+    )
+    |> Multi.insert_all(
+      :attempt_runs,
+      AttemptRun,
+      fn %{attempt_runs_setup: setup} ->
+        now = DateTime.utc_now()
+
+        Enum.flat_map(setup, fn {attempt_id, {_skipped_runs, new_run}} ->
+          attempt_runs_attrs(attempt_id, [new_run], now)
+        end)
+      end,
+      returning: true
+    )
+  end
+
+  defp attempt_runs_attrs(attempt_id, runs, timestamp) do
+    Enum.map(runs, fn run ->
+      %{
+        attempt_id: attempt_id,
+        run_id: run.id,
+        inserted_at: timestamp,
+        updated_at: timestamp
+      }
+    end)
+  end
+
   def get_jobs_for(%Attempt{id: id}) do
     from(j in Lightning.Jobs.Job,
       join: wf in assoc(j, :workflow),
@@ -155,6 +259,54 @@ defmodule Lightning.AttemptService do
       ]
     )
     |> Repo.one()
+  end
+
+  @doc """
+  Returns a list of AttemptRun structs that should be rerun for the given list
+  of work order ids.
+  """
+  @spec list_for_rerun_from_start([Ecto.UUID.t()]) :: [AttemptRun.t()]
+  def list_for_rerun_from_start(order_ids) when is_list(order_ids) do
+    attempt_run_numbers_query =
+      from(ar in AttemptRun,
+        join: att in assoc(ar, :attempt),
+        join: r in assoc(ar, :run),
+        where: att.work_order_id in ^order_ids,
+        select: %{
+          id: ar.id,
+          row_num:
+            row_number()
+            |> over(
+              partition_by: att.work_order_id,
+              order_by: coalesce(r.started_at, r.inserted_at)
+            )
+        }
+      )
+
+    first_attempt_runs_query =
+      from(ar in AttemptRun,
+        join: arn in subquery(attempt_run_numbers_query),
+        on: ar.id == arn.id,
+        where: arn.row_num == 1,
+        order_by: ar.inserted_at,
+        preload: [
+          :attempt,
+          run:
+            ^from(r in Run,
+              select: [
+                :id,
+                :job_id,
+                :started_at,
+                :finished_at,
+                :exit_code,
+                :input_dataclip_id,
+                :output_dataclip_id
+              ]
+            )
+        ]
+      )
+
+    Repo.all(first_attempt_runs_query)
   end
 
   @doc """

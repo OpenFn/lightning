@@ -1,9 +1,11 @@
 defmodule LightningWeb.RunWorkOrderTest do
   use LightningWeb.ConnCase, async: true
+  use Oban.Testing, repo: Lightning.Repo
 
   import Phoenix.LiveViewTest
 
   alias Lightning.Attempt
+  alias Lightning.Workorders.SearchParams
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
@@ -1254,10 +1256,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   describe "rerun" do
-    test "Project editors can rerun runs",
-         %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
-
+    setup %{conn: conn, project: project} do
       job_a =
         workflow_job_fixture(
           project_id: project.id,
@@ -1297,20 +1296,23 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      run =
-        Map.get(attempt, :runs)
-        |> List.first()
+      [attempt: attempt, work_order: work_order, project: project, conn: conn]
+    end
 
-      Lightning.Invocation.search_workorders(project).entries()
+    test "Project editors can rerun runs",
+         %{conn: conn, project: project, attempt: attempt} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      [run | _rest] = attempt.runs
 
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+          Routes.project_run_index_path(conn, :index, project.id)
         )
         |> follow_redirect(
           conn,
-          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
         )
 
       assert view
@@ -1321,62 +1323,18 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
 
     test "Project viewers can't rerun runs",
-         %{conn: conn, project: project} do
+         %{conn: conn, project: project, attempt: attempt} do
       {conn, _user} = setup_project_user(conn, project, :viewer)
-
-      job_a =
-        workflow_job_fixture(
-          project_id: project.id,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        )
-
-      dataclip = dataclip_fixture(project_id: project.id)
-
-      reason =
-        reason_fixture(
-          trigger_id: job_a.trigger.id,
-          dataclip_id: dataclip.id
-        )
-
-      work_order =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: job_a.workflow_id,
-          reason_id: reason.id
-        )
-
-      now = Timex.now()
-
-      attempt =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_a.id,
-              started_at: now |> Timex.shift(seconds: -25),
-              finished_at: now |> Timex.shift(seconds: -20),
-              exit_code: 0,
-              input_dataclip_id: dataclip.id
-            }
-          ]
-        })
-        |> Lightning.Repo.insert!()
-
-      run =
-        Map.get(attempt, :runs)
-        |> List.first()
-
-      Lightning.Invocation.search_workorders(project).entries()
+      [run | _rest] = attempt.runs
 
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+          Routes.project_run_index_path(conn, :index, project.id)
         )
         |> follow_redirect(
           conn,
-          "/projects/#{job_a.workflow.project_id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{job_a.workflow.project_id}"
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
         )
 
       assert view
@@ -1386,5 +1344,412 @@ defmodule LightningWeb.RunWorkOrderTest do
              }) =~
                "You are not authorized to perform this action."
     end
+
+    test "Project viewers can't rerun runs in bulk",
+         %{conn: conn, project: project} do
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      job_b =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_b.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order_b =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_b.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      # Attempt b
+      Attempt.new(%{
+        work_order_id: work_order_b.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
+        )
+
+      render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      assert render_click(view, "bulk-rerun", %{type: "all"}) =~
+               "You are not authorized to perform this action."
+    end
+
+    test "Project editors can rerun runs in bulk",
+         %{conn: conn, project: project} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      job_b =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_b.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order_b =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_b.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      # Attempt b
+      Attempt.new(%{
+        work_order_id: work_order_b.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      path =
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: %{
+            body: true,
+            log: true,
+            success: true,
+            pending: true,
+            crash: true,
+            failure: true
+          }
+        )
+
+      {:ok, view, _html} = live(conn, path)
+
+      render_change(view, "toggle_all_selections", %{all_selections: true})
+      result = render_click(view, "bulk-rerun", %{type: "all"})
+      {:ok, view, html} = follow_redirect(result, conn)
+
+      assert html =~ "New attempts enqueued for 2 workorders"
+
+      view
+      |> form("##{work_order_b.id}-selection-form")
+      |> render_change(%{selected: true})
+
+      result = render_click(view, "bulk-rerun", %{type: "selected"})
+      {:ok, _view, html} = follow_redirect(result, conn)
+      assert html =~ "New attempt enqueued for 1 workorder"
+    end
+
+    test "selecting all work orders in the page prompts the user to rerun all runs",
+         %{conn: conn, project: project} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      job_b =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_b.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order_b =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_b.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      # Attempt b
+      Attempt.new(%{
+        work_order_id: work_order_b.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_b.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
+        )
+
+      # All work orders have been selected, but there's only one page
+      html =
+        render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      refute html =~ "Rerun all 2 matching workorders from start"
+      assert html =~ "Rerun 2 selected workorders from start"
+
+      view
+      |> form("##{work_order_b.id}-selection-form")
+      |> render_change(%{selected: false})
+
+      # uncheck 1 work order
+      updated_html = render(view)
+      refute updated_html =~ "Rerun all 2 matching workorders from start"
+      assert updated_html =~ "Rerun 1 selected workorder from start"
+    end
+  end
+
+  describe "bulk_rerun_modal" do
+    test "2 run buttons are present when all entries have been selected" do
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          id: "bulk-rerun-modal",
+          page_number: 1,
+          pages: 3,
+          total_entries: 25,
+          all_selected?: true,
+          selected_count: 5,
+          filters: %SearchParams{},
+          workflows: [{"Workflow a", "someid"}]
+        )
+
+      assert html =~ "Rerun all 25 matching workorders from start"
+      assert html =~ "Rerun 5 selected workorders from start"
+    end
+
+    test "only 1 run button present when some entries have been selected" do
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          id: "bulk-rerun-modal",
+          page_number: 1,
+          total_entries: 25,
+          all_selected?: false,
+          selected_count: 5,
+          filters: %SearchParams{},
+          workflows: [{"Workflow a", "someid"}]
+        )
+
+      refute html =~ "Rerun all 25 matching workorders from start"
+      assert html =~ "Rerun 5 selected workorders from start"
+    end
+
+    test "the filter queries are displayed correctly when all entries have been selected" do
+      assigns = %{
+        id: "bulk-rerun-modal",
+        page_number: 1,
+        pages: 3,
+        total_entries: 25,
+        all_selected?: true,
+        selected_count: 5,
+        filters: %SearchParams{},
+        workflows: [{"Workflow A", "someid"}]
+      }
+
+      # status
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{status: ["success"]}}
+        )
+
+      assert html =~ safe_html_string("having a status of 'Success'")
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{status: ["success", "failed"]}}
+        )
+
+      assert html =~
+               safe_html_string(
+                 "having a status of either 'Success' or 'Failed'"
+               )
+
+      # search fields
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                search_fields: ["body"],
+                search_term: "TestSearch"
+              }
+          }
+        )
+
+      assert html =~ "whose run Input Body contain TestSearch"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                search_fields: ["body", "log"],
+                search_term: "TestSearch"
+              }
+          }
+        )
+
+      assert html =~ "whose run Input Body and Logs contain TestSearch"
+
+      # workflow
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{workflow_id: nil}}
+        )
+
+      refute html =~ "for Workflow A workflow"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{assigns | filters: %SearchParams{workflow_id: "someid"}}
+        )
+
+      assert html =~ "for Workflow A workflow"
+
+      # Run dates
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{date_after: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "which was last run after 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{date_before: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "which was last run before 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                date_after: ~U[2023-01-01 16:20:00.00Z],
+                date_before: ~U[2023-04-01 08:05:00.00Z]
+              }
+          }
+        )
+
+      assert html =~
+               "which was last run between 1/4/23 at 8:05am and 1/1/23 at 4:20pm"
+
+      # Work Order dates
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{wo_date_after: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "received after 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{wo_date_before: ~U[2023-04-01 08:05:00.00Z]}
+          }
+        )
+
+      assert html =~ "received before 1/4/23 at 8:05am"
+
+      html =
+        render_component(
+          &LightningWeb.RunLive.Components.bulk_rerun_modal/1,
+          %{
+            assigns
+            | filters: %SearchParams{
+                wo_date_after: ~U[2023-01-01 16:20:00.00Z],
+                wo_date_before: ~U[2023-04-01 08:05:00.00Z]
+              }
+          }
+        )
+
+      assert html =~
+               "received between 1/4/23 at 8:05am and 1/1/23 at 4:20pm"
+    end
+  end
+
+  defp safe_html_string(string) do
+    string |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
   end
 end

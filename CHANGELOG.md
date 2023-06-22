@@ -10,6 +10,10 @@ and this project adheres to
 
 ### Added
 
+- Ability to rerun workorders from start by selecting one of more of them from
+  the History page and clicking the "Rerun" button.
+  [#659](https://github.com/OpenFn/Lightning/issues/659)
+
 ### Changed
 
 ### Fixed
@@ -19,20 +23,12 @@ and this project adheres to
 
 ## [0.6.3]
 
-### Added
-
-### Changed
-
 ### Fixed
 
 - Prevent saving null log lines to the database, fix issue with run display
   [#866](https://github.com/OpenFn/Lightning/issues/866)
 
 ## [0.6.2]
-
-### Added
-
-### Changed
 
 ### Fixed
 
@@ -42,10 +38,6 @@ and this project adheres to
   [#859](https://github.com/OpenFn/Lightning/issues/859)
 
 ## [0.6.1]
-
-### Added
-
-### Changed
 
 ### Fixed
 

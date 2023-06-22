@@ -112,4 +112,97 @@ defmodule Lightning.WorkOrderServiceTest do
       end)
     end
   end
+
+  describe "retry_attempt_runs/2" do
+    test "creates a new attempt starting from an existing run" do
+      scenario_a = workflow_scenario()
+      scenario_b = workflow_scenario()
+      work_order_a = work_order_fixture(workflow_id: scenario_a.workflow.id)
+      work_order_b = work_order_fixture(workflow_id: scenario_b.workflow.id)
+      dataclip_a = dataclip_fixture()
+      dataclip_b = dataclip_fixture()
+      user = user_fixture()
+
+      # first attempt a
+      attempt_a =
+        Lightning.Attempt.new(%{
+          work_order_id: work_order_a.id,
+          reason_id: work_order_a.reason_id,
+          runs:
+            Enum.map([scenario_a.jobs.a, scenario_a.jobs.b], fn j ->
+              %{
+                job_id: j.id,
+                input_dataclip_id: dataclip_a.id,
+                exit_code: 0
+              }
+            end)
+        })
+        |> Repo.insert!()
+
+      # first attempt b
+      attempt_b =
+        Lightning.Attempt.new(%{
+          work_order_id: work_order_b.id,
+          reason_id: work_order_b.reason_id,
+          runs:
+            Enum.map(
+              [scenario_b.jobs.a, scenario_b.jobs.b, scenario_b.jobs.c],
+              fn j ->
+                %{
+                  job_id: j.id,
+                  input_dataclip_id: dataclip_b.id,
+                  exit_code: 0
+                }
+              end
+            )
+        })
+        |> Repo.insert!()
+
+      # find the first runs for these two attemts
+      run_a = hd(attempt_a.runs)
+      run_b = hd(attempt_b.runs)
+
+      attempt_runs =
+        from(ar in Lightning.AttemptRun,
+          join: r in assoc(ar, :run),
+          where: ar.run_id in ^[run_a.id, run_b.id],
+          preload: [run: [job: :workflow]]
+        )
+        |> Repo.all()
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _changes} = WorkOrderService.retry_attempt_runs(attempt_runs, user)
+
+        all_runs_a =
+          Repo.all(
+            from(r in Lightning.Invocation.Run, where: r.job_id == ^run_a.job_id)
+          )
+
+        [new_run_a] = all_runs_a -- attempt_a.runs
+
+        new_attempt_run_a =
+          Repo.get_by(Lightning.AttemptRun, run_id: new_run_a.id)
+
+        all_runs_b =
+          Repo.all(
+            from(r in Lightning.Invocation.Run, where: r.job_id == ^run_b.job_id)
+          )
+
+        [new_run_b] = all_runs_b -- attempt_b.runs
+
+        new_attempt_run_b =
+          Repo.get_by(Lightning.AttemptRun, run_id: new_run_b.id)
+
+        assert_enqueued(
+          worker: Lightning.Pipeline,
+          args: %{attempt_run_id: new_attempt_run_a.id}
+        )
+
+        assert_enqueued(
+          worker: Lightning.Pipeline,
+          args: %{attempt_run_id: new_attempt_run_b.id}
+        )
+      end)
+    end
+  end
 end
