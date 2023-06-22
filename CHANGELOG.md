@@ -14,7 +14,7 @@ and this project adheres to
 
 ### Fixed
 
-## [0.6.3]
+## [0.6.5] - 2023-06-22
 
 ### Added
 
@@ -22,21 +22,19 @@ and this project adheres to
   the History page and clicking the "Rerun" button.
   [#659](https://github.com/OpenFn/Lightning/issues/659)
 
-### Changed
-
 ### Fixed
 
 - Example runs for demo incorrect
   [#856](https://github.com/OpenFn/Lightning/issues/856)
 
-## [0.6.3]
+## [0.6.3] - 2023-06-15
 
 ### Fixed
 
 - Prevent saving null log lines to the database, fix issue with run display
   [#866](https://github.com/OpenFn/Lightning/issues/866)
 
-## [0.6.2]
+## [0.6.2] - 2023-06-09
 
 ### Fixed
 
@@ -45,7 +43,7 @@ and this project adheres to
 - Fixed bug with workflow cards
   [#859](https://github.com/OpenFn/Lightning/issues/859)
 
-## [0.6.1]
+## [0.6.1] - 2023-06-08
 
 ### Fixed
 
@@ -56,7 +54,7 @@ and this project adheres to
 - Remove `Timex` use from `SetupUtils` in favor of `DateTime` to fix issue when
   calling it in escript.
 
-## [0.6.0]
+## [0.6.0]- 2023-04-12
 
 ### Added
 
