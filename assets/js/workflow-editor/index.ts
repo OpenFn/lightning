@@ -1,27 +1,9 @@
 // Hook for Workflow Editor Component
+import { PhoenixHook } from '../hooks/PhoenixHook';
 import type { mount } from './component';
 import { Patch, PendingAction, createWorkflowStore } from './store';
 
-interface PhoenixHook {
-  mounted(): void;
-  el: HTMLElement & {
-    dataset: {
-      editJobUrl?: string;
-      editTriggerUrl?: string;
-      editEdgeUrl?: string;
-    };
-  };
-  destroyed(): void;
-  handleEvent<T = {}>(eventName: string, callback: (payload: T) => void): void;
-  pushEventTo<P = {}, R = any>(
-    selectorOrTarget: string | HTMLElement,
-    event: string,
-    payload: P,
-    callback?: (reply: R, ref: any) => void
-  ): void;
-}
-
-interface WorkflowEditorEntrypoint extends PhoenixHook {
+type WorkflowEditorEntrypoint = PhoenixHook<{
   component: ReturnType<typeof mount> | null;
   workflowStore: ReturnType<typeof createWorkflowStore>;
   componentModule: Promise<{ mount: typeof mount }>;
@@ -33,13 +15,10 @@ interface WorkflowEditorEntrypoint extends PhoenixHook {
     abortController: AbortController
   ): Promise<boolean>;
   abortController: AbortController | null;
-  editJobUrl: string;
-  editTriggerUrl: string;
-  editEdgeUrl: string;
   pushHash(id: string): void;
   unselectNode(): void;
   onSelectionChange(id?: string): void;
-}
+}>;
 
 const createNewWorkflow = () => {
   const triggers = [
@@ -67,10 +46,6 @@ const createNewWorkflow = () => {
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
     this._pendingWorker = Promise.resolve();
-    // TODO: ensure that this is set
-    this.editJobUrl = this.el.dataset.editJobUrl!;
-    this.editTriggerUrl = this.el.dataset.editTriggerUrl!;
-    this.editEdgeUrl = this.el.dataset.editEdgeUrl!;
     this.pendingChanges = [];
 
     // Setup our abort controller to stop any pending changes.
