@@ -25,11 +25,12 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
+import { AssocListChange, Copy, Flash } from './hooks';
 import JobEditor from './job-editor';
-import WorkflowEditor from './workflow-editor';
-import WorkflowDiagram from './workflow-diagram-old';
-import TabSelector from './tab-selector';
 import JobEditorResizer from './job-editor-resizer/mount';
+import TabSelector from './tab-selector';
+import WorkflowDiagram from './workflow-diagram-old';
+import WorkflowEditor from './workflow-editor';
 
 let Hooks = {
   WorkflowDiagram,
@@ -37,42 +38,9 @@ let Hooks = {
   JobEditor,
   JobEditorResizer,
   WorkflowEditor,
-};
-
-Hooks.Flash = {
-  mounted() {
-    let hide = () =>
-      liveSocket.execJS(this.el, this.el.getAttribute('phx-click'));
-    this.timer = setTimeout(() => hide(), 5000);
-    this.el.addEventListener('phx:hide-start', () => clearTimeout(this.timer));
-    this.el.addEventListener('mouseover', () => {
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => hide(), 5000);
-    });
-  },
-  destroyed() {
-    clearTimeout(this.timer);
-  },
-};
-Hooks.AssocListChange = {
-  mounted() {
-    this.el.addEventListener('change', _event => {
-      this.pushEventTo(this.el, 'select_item', { id: this.el.value });
-    });
-  },
-};
-
-Hooks.Copy = {
-  mounted() {
-    let { to } = this.el.dataset;
-    this.el.addEventListener('click', ev => {
-      ev.preventDefault();
-      let text = document.querySelector(to).value;
-      navigator.clipboard.writeText(text).then(() => {
-        console.log('Copied!');
-      });
-    });
-  },
+  Flash,
+  AssocListChange,
+  Copy,
 };
 
 // @ts-ignore
