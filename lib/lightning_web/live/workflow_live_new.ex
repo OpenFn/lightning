@@ -59,13 +59,9 @@ defmodule LightningWeb.WorkflowNewLive do
                 phx-change="validate"
                 class="h-full"
               >
-                <%= for job_form <- inputs_for(f, :jobs) do %>
+                <%= for job_form <- single_inputs_for(f, :jobs, @selected_job.id) do %>
                   <!-- Show only the currently selected one -->
                   <.job_form
-                    :if={
-                      Ecto.Changeset.get_field(job_form.source, :id) ==
-                        @selected_job.id
-                    }
                     on_change={&send_form_changed/1}
                     form={job_form}
                     cancel_url={
@@ -93,13 +89,9 @@ defmodule LightningWeb.WorkflowNewLive do
                 phx-change="validate"
                 class="h-full"
               >
-                <%= for trigger_form <- inputs_for(f, :triggers) do %>
+                <%= for trigger_form <- single_inputs_for(f, :triggers, @selected_trigger.id) do %>
                   <!-- Show only the currently selected one -->
                   <.trigger_form
-                    :if={
-                      Ecto.Changeset.get_field(trigger_form.source, :id) ==
-                        @selected_trigger.id
-                    }
                     form={trigger_form}
                     on_change={&send_form_changed/1}
                     requires_cron_job={
@@ -132,13 +124,9 @@ defmodule LightningWeb.WorkflowNewLive do
                 phx-change="validate"
                 class="h-full"
               >
-                <%= for edge_form <- single_inputs_for(f, :edges, @selected_edge |> Ecto.Changeset.get_field(:id)) do %>
+                <%= for edge_form <- single_inputs_for(f, :edges, @selected_edge.id) do %>
                   <!-- Show only the currently selected one -->
                   <.edge_form
-                    :if={
-                      Ecto.Changeset.get_field(edge_form.source, :id) ==
-                        @selected_edge.id
-                    }
                     form={edge_form}
                     disabled={!@can_edit_job}
                     cancel_url={
@@ -323,7 +311,7 @@ defmodule LightningWeb.WorkflowNewLive do
     end
   end
 
-  def send_form_changed(params) do
+  defp send_form_changed(params) do
     send(self(), {"form_changed", params})
   end
 
