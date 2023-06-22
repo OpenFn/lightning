@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-F53C5F9C.js"></script>
+    <script src="dist/sidebar_items-E0677637.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -195,11 +195,33 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#list_for_rerun_from_start/1" translate="no">list_for_rerun_from_start(order_ids)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a list of AttemptRun structs that should be rerun for the given list
+of work order ids.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#retry/3" translate="no">retry(attempt, run, reason)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Creates a new Attempt starting from a given run.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#retry_many/2" translate="no">retry_many(attempt_runs, reasons)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Creates new Attempts for each pair of corresponding AttemptRun and
+InvocationReason.</p></div>
 
     </div>
 
@@ -226,7 +248,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">append(attempt, run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L53" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L54" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -261,7 +283,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">build_attempt(work_order, reason)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L39" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L40" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -283,7 +305,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">calculate_runs(jobs, existing_runs, starting_run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L122" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L226" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -305,7 +327,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">create_attempt(work_order, job, reason)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L24" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L25" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -321,11 +343,11 @@ set as the previous Run for the new unsaved Run.</p>
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="0478438489-1">(</span><span class="p" data-group-id="0478438489-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="0478438489-2">}</span><span class="p" data-group-id="0478438489-1">)</span><span class="w">
-</span><span class="p" data-group-id="0478438489-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0478438489-4">%</span><span class="nc" data-group-id="0478438489-4">Attempt</span><span class="p" data-group-id="0478438489-4">{</span><span class="p" data-group-id="0478438489-4">}</span><span class="p" data-group-id="0478438489-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="1494123772-1">(</span><span class="p" data-group-id="1494123772-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="1494123772-2">}</span><span class="p" data-group-id="1494123772-1">)</span><span class="w">
+</span><span class="p" data-group-id="1494123772-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1494123772-4">%</span><span class="nc" data-group-id="1494123772-4">Attempt</span><span class="p" data-group-id="1494123772-4">{</span><span class="p" data-group-id="1494123772-4">}</span><span class="p" data-group-id="1494123772-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="0478438489-5">(</span><span class="p" data-group-id="0478438489-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="0478438489-6">}</span><span class="p" data-group-id="0478438489-5">)</span><span class="w">
-</span><span class="p" data-group-id="0478438489-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="0478438489-8">%</span><span class="nc" data-group-id="0478438489-8">Ecto.Changeset</span><span class="p" data-group-id="0478438489-8">{</span><span class="p" data-group-id="0478438489-8">}</span><span class="p" data-group-id="0478438489-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_attempt</span><span class="p" data-group-id="1494123772-5">(</span><span class="p" data-group-id="1494123772-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="1494123772-6">}</span><span class="p" data-group-id="1494123772-5">)</span><span class="w">
+</span><span class="p" data-group-id="1494123772-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1494123772-8">%</span><span class="nc" data-group-id="1494123772-8">Ecto.Changeset</span><span class="p" data-group-id="1494123772-8">{</span><span class="p" data-group-id="1494123772-8">}</span><span class="p" data-group-id="1494123772-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_for_rerun/2">
@@ -337,7 +359,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">get_for_rerun(attempt_id, run_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L138" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L242" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -359,7 +381,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">get_jobs_for(attempt)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L113" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L217" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -381,7 +403,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">get_last_attempt_for(run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L164" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L316" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -394,6 +416,35 @@ set as the previous Run for the new unsaved Run.</p>
 <p>Get the latest attempt associated to a given run</p>
   </section>
 </section>
+<section class="detail" id="list_for_rerun_from_start/1">
+
+  <div class="detail-header">
+    <a href="#list_for_rerun_from_start/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">list_for_rerun_from_start(order_ids)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L269" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> list_for_rerun_from_start([<a href="https://hexdocs.pm/ecto/3.9.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()]) :: [<a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>()]</pre>
+
+      </div>
+
+<p>Returns a list of AttemptRun structs that should be rerun for the given list
+of work order ids.</p>
+  </section>
+</section>
 <section class="detail" id="retry/3">
 
   <div class="detail-header">
@@ -403,7 +454,7 @@ set as the previous Run for the new unsaved Run.</p>
     </a>
     <h1 class="signature" translate="no">retry(attempt, run, reason)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L84" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L85" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -427,6 +478,36 @@ set as the previous Run for the new unsaved Run.</p>
 <p>Creates a new Attempt starting from a given run.</p><p>All upstream/prior Runs that were performed on that attempt are associated
 with the new Attempt, where as the specified run is used to create a new one
 and is added to the Attempt.</p><p>Any runs downstream from the Run given are ignored.</p>
+  </section>
+</section>
+<section class="detail" id="retry_many/2">
+
+  <div class="detail-header">
+    <a href="#retry_many/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">retry_many(attempt_runs, reasons)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/attempt_service.ex#L120" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> retry_many([<a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>()], [<a href="Lightning.InvocationReason.html#t:t/0">Lightning.InvocationReason.t</a>()]) ::
+  <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Multi.html#t:t/0">Ecto.Multi.t</a>()</pre>
+
+      </div>
+
+<p>Creates new Attempts for each pair of corresponding AttemptRun and
+InvocationReason.</p>
   </section>
 </section>
 
