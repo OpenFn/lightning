@@ -227,42 +227,58 @@ defmodule Lightning.AttemptServiceTest do
       jobs: jobs,
       workflow: workflow
     } do
-      work_order = work_order_fixture(workflow_id: workflow.id)
+      work_order_1 = work_order_fixture(workflow_id: workflow.id)
+      work_order_2 = work_order_fixture(workflow_id: workflow.id)
       dataclip = dataclip_fixture()
 
-      # first attempt
       now = Timex.now()
 
-      runs =
-        Enum.map(
-          [
-            {jobs.a, -100},
-            {jobs.b, -80},
-            {jobs.c, -70},
-            {jobs.d, -50},
-            {jobs.e, -30},
-            {jobs.f, -20}
-          ],
-          fn {j, time} ->
-            %{
-              job_id: j.id,
-              input_dataclip_id: dataclip.id,
-              exit_code: 0,
-              started_at: Timex.shift(now, seconds: time),
-              finished_at: Timex.shift(now, seconds: time + 5)
-            }
-          end
-        )
+      [work_order_1, work_order_2]
+      |> Enum.each(fn work_order ->
+        runs =
+          Enum.map(
+            [
+              {jobs.a, -100},
+              {jobs.b, -80},
+              {jobs.c, -70},
+              {jobs.d, -50},
+              {jobs.e, -30},
+              {jobs.f, -20}
+            ],
+            fn {j, time} ->
+              %{
+                job_id: j.id,
+                input_dataclip_id: dataclip.id,
+                exit_code: 0,
+                started_at: Timex.shift(now, microseconds: time),
+                finished_at: Timex.shift(now, microseconds: time + 5)
+              }
+            end
+          )
 
-      Lightning.Attempt.new(%{
-        work_order_id: work_order.id,
-        reason_id: work_order.reason_id,
-        runs: runs
-      })
-      |> Repo.insert!()
+        Lightning.Attempt.new(%{
+          work_order_id: work_order.id,
+          reason_id: work_order.reason_id,
+          runs: runs
+        })
+        |> Repo.insert!()
+      end)
 
-      [attempt_run] = AttemptService.list_for_rerun_from_start([work_order.id])
-      assert attempt_run.run.job_id == jobs.a.id
+      attempt_runs =
+        AttemptService.list_for_rerun_from_start([
+          work_order_1.id,
+          work_order_2.id
+        ])
+
+      assert Enum.all?(attempt_runs, fn ar -> ar.run.job_id == jobs.a.id end)
+
+      assert attempt_runs
+             |> Enum.uniq_by(& &1.attempt_id)
+             |> Enum.count() == 2
+
+      assert attempt_runs
+             |> Enum.uniq_by(& &1.attempt.work_order_id)
+             |> Enum.count() == 2
     end
   end
 end

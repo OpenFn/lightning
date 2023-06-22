@@ -111,6 +111,12 @@ defmodule Lightning.AttemptService do
     end)
   end
 
+  @doc """
+  Creates new Attempts for each pair of corresponding AttemptRun and
+  InvocationReason.
+  """
+  @spec retry_many([AttemptRun.t()], [Lightning.InvocationReason.t()]) ::
+          Ecto.Multi.t()
   def retry_many(
         [%AttemptRun{} | _other_runs] = attempt_runs,
         [%InvocationReason{} | _other_reasons] = reasons
@@ -255,6 +261,11 @@ defmodule Lightning.AttemptService do
     |> Repo.one()
   end
 
+  @doc """
+  Returns a list of AttemptRun structs that should be rerun for the given list
+  of work order ids.
+  """
+  @spec list_for_rerun_from_start([Ecto.UUID.t()]) :: [AttemptRun.t()]
   def list_for_rerun_from_start(order_ids) when is_list(order_ids) do
     attempt_run_numbers_query =
       from(ar in AttemptRun,

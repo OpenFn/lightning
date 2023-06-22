@@ -11,6 +11,7 @@ defmodule Lightning.WorkOrderService do
     WorkOrder,
     InvocationReason,
     InvocationReasons,
+    Attempt,
     AttemptRun,
     AttemptService,
     Pipeline
@@ -68,7 +69,8 @@ defmodule Lightning.WorkOrderService do
     end
   end
 
-  # @spec retry_attempt_run(AttemptRun.t(), User.t()) :: Ecto.Multi.t()
+  @spec retry_attempt_run(AttemptRun.t(), User.t()) ::
+          {:ok, %{attempt_run: AttemptRun.t(), attempt: Attempt.t()}}
   def retry_attempt_run(attempt_run, user) do
     multi =
       attempt_run
@@ -95,8 +97,6 @@ defmodule Lightning.WorkOrderService do
   end
 
   def retry_attempt_runs(attempt_runs, user) when is_list(attempt_runs) do
-    attempt_runs = Repo.preload(attempt_runs, [:attempt, run: [job: :workflow]])
-
     multi =
       Multi.new()
       |> Multi.insert_all(
@@ -105,10 +105,10 @@ defmodule Lightning.WorkOrderService do
         fn _changes ->
           now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-          Enum.map(attempt_runs, fn %{run: run} ->
+          Enum.map(attempt_runs, fn %{run_id: run_id} ->
             %{
               type: :retry,
-              run_id: run.id,
+              run_id: run_id,
               user_id: user.id,
               inserted_at: now,
               updated_at: now

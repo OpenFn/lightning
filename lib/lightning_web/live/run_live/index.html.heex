@@ -26,7 +26,7 @@
                 >
                   <%= checkbox(f, :all_selections,
                     id: "select_all",
-                    phx_hook: "CheckboxState",
+                    phx_hook: "CheckboxIndeterminate",
                     class:
                       "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"
                   ) %>
