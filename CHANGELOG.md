@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [0.6.3]
+
+### Added
+
 - Ability to rerun workorders from start by selecting one of more of them from
   the History page and clicking the "Rerun" button.
   [#659](https://github.com/OpenFn/Lightning/issues/659)
