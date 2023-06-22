@@ -56,6 +56,10 @@ defmodule Lightning.Helpers do
   """
   def json_safe(nil), do: nil
 
+  def json_safe(data) when is_struct(data) do
+    data |> Map.from_struct() |> json_safe()
+  end
+
   def json_safe(map) when is_map(map) do
     map
     |> Enum.map(fn {k, v} -> {Atom.to_string(k), json_safe(v)} end)

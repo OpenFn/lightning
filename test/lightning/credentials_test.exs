@@ -1,10 +1,12 @@
 defmodule Lightning.CredentialsTest do
+  alias Lightning.CredentialsFixtures
   use Lightning.DataCase, async: true
 
   alias Lightning.Repo
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
-  import Lightning.Factories
+  import Lightning.BypassHelpers
+  # import Lightning.Factories
 
   import Lightning.{
     JobsFixtures,
@@ -291,43 +293,76 @@ defmodule Lightning.CredentialsTest do
     end
   end
 
-  describe "refresh_credential/1" do
-    test "doesn't refresh tokens that don't expire" do
-      credential = insert(:credential)
-
-      assert {:ok, ^credential} = Credentials.refresh_credential(credential)
+  describe "maybe_refresh_token/1" do
+    test "doesn't refresh non OAuth credentials" do
+      credential = CredentialsFixtures.credential_fixture()
+      refreshed_credential = Credentials.maybe_refresh_token(credential)
+      assert credential == refreshed_credential
     end
 
-    test "doesn't refresh tokens that won't expire soon" do
-      # TODO adjust to correct time in future
-      expires_at =
-        DateTime.utc_now() |> DateTime.add(1, :day) |> DateTime.to_unix()
+    test "doesn't refresh fresh OAuth credentials" do
+      # now + 6 minutes
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 6 * 60
 
       credential =
-        insert(:credential,
-          schema: "googlesheets",
-          body: %{"expires_at" => expires_at}
+        credential_fixture(
+          body: %{
+            "access_token" => "ya29.a0AWY7CknfkidjXaoDT...",
+            "expires_at" => expires_at,
+            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGA...",
+            "scope" => "https://www.googleapis.com/auth/spreadsheets"
+          },
+          schema: "googlesheets"
         )
 
-      refute Credentials.credential_expired?(credential)
+      refreshed_credential = Credentials.maybe_refresh_token(credential)
 
-      assert {:ok, ^credential} = Credentials.refresh_credential(credential)
+      assert refreshed_credential.body["access_token"] ==
+               credential.body["access_token"]
+
+      assert refreshed_credential.body["expires_at"] ==
+               credential.body["expires_at"]
+
+      assert refreshed_credential == credential
     end
 
-    test "refreshes tokens that has expired" do
-      # TODO adjust to correct time in future
-      expires_at =
-        DateTime.utc_now() |> DateTime.add(-5, :second) |> DateTime.to_unix()
+    test "refreshes OAuth credentials when they are about to expire" do
+      bypass = Bypass.open()
+
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      expect_wellknown(bypass)
+
+      expect_token(bypass, Lightning.AuthProviders.Google.get_wellknown!())
+      # Now plus 4 minutes
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 4 * 60
 
       credential =
-        insert(:credential,
-          schema: "googlesheets",
-          body: %{"expires_at" => expires_at, "refresh_token" => "some-token"}
+        credential_fixture(
+          body: %{
+            "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+            "expires_at" => expires_at,
+            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+            "scope" => "https://www.googleapis.com/auth/spreadsheets"
+          },
+          schema: "googlesheets"
         )
 
-      assert Credentials.credential_expired?(credential)
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
 
-      assert {:ok, ^credential} = Credentials.refresh_credential(credential)
+      refute refreshed_credential.body["access_token"] ==
+               credential.body["access_token"]
+
+      assert refreshed_credential.body["expires_at"] >
+               credential.body["expires_at"]
+
+      assert refreshed_credential != credential
     end
   end
 end

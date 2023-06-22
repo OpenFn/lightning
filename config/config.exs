@@ -112,7 +112,7 @@ config :lightning, Lightning.FailureAlerter,
 # Disables / Hides the credential transfer feature for beta (in LightningWeb.CredentialLive.Edit)
 config :lightning, LightningWeb,
   allow_credential_transfer: false,
-  enable_google_credential: false
+  enable_google_credential: true
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.

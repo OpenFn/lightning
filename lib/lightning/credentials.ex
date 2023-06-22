@@ -5,6 +5,8 @@ defmodule Lightning.Credentials do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Credentials
+  alias Lightning.AuthProviders.Google
   alias Lightning.Repo
   alias Ecto.Multi
 
@@ -281,31 +283,41 @@ defmodule Lightning.Credentials do
     project_credentials -- project_users
   end
 
-  def refresh_credential(%Credential{schema: "googlesheets"} = credential) do
-    # convert credential.body["expires_at"] to DateTime
-    # if DateTime.utc_now() > credential.body["expires_at"] - 5mins
-    if credential_expired?(credential) do
-      Lightning.AuthProviders.Google.refresh_token(client, token)
-      # refresh it
-      # or {:error, reason} if we can't refresh it
-      {:ok, credential}
+  @spec maybe_refresh_token(nil | Lightning.Credentials.Credential.t()) ::
+          nil
+          | {:error, :invalid_config}
+          | Lightning.Credentials.Credential.t()
+          | {:ok, Lightning.Credentials.Credential.t()}
+  def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
+    %{expires_at: expires_at, refresh_token: refresh_token} =
+      credential.body |> Google.TokenBody.new()
+
+    if still_fresh(expires_at) do
+      credential
     else
-      # return it
-      {:ok, credential}
+      with {:ok, %OAuth2.Client{} = client} <- Google.build_client(),
+           {:ok, %OAuth2.AccessToken{} = token} <-
+             Google.refresh_token(client, %{refresh_token: refresh_token}),
+           token <- Google.TokenBody.from_oauth2_token(token) do
+        Credentials.update_credential(credential, %{
+          body: token |> Lightning.Helpers.json_safe()
+        })
+      end
     end
   end
 
-  def refresh_credential(credential), do: {:ok, credential}
+  def maybe_refresh_token(%Credential{} = credential),
+    do: credential
 
-  # A credential is consider expired if it's within 5 minutes of expiring.
-  def credential_expired?(%Credential{schema: "googlesheets"} = credential) do
-    %{"expires_at" => expires_at} = credential.body
+  def maybe_refresh_token(nil),
+    do: nil
 
-    diff_in_seconds =
-      expires_at
-      |> DateTime.from_unix!()
-      |> DateTime.diff(DateTime.utc_now())
+  defp still_fresh(expires_at, threshold \\ 5, time_unit \\ :minute) do
+    current_time = DateTime.utc_now()
+    expiration_time = DateTime.from_unix!(expires_at)
 
-    diff_in_seconds < 5 * 60
+    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
+
+    time_remaining >= threshold
   end
 end

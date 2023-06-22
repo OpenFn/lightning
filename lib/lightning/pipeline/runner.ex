@@ -115,7 +115,8 @@ defmodule Lightning.Pipeline.Runner do
     # good enough logs?
     # if we silently fail, the job _should_ fail, but we would have to figure out
     # that renewal was the reason.
-    Lightning.Credentials.refresh_credential(run.job.credential)
+
+    run = maybe_refresh_run_credential(run)
 
     # call a function that checks if the credential is of type "googlesheets"
     # then check if it needs to be updated.
@@ -236,6 +237,19 @@ defmodule Lightning.Pipeline.Runner do
       adaptor
     else
       adaptor
+    end
+  end
+
+  defp maybe_refresh_run_credential(run) do
+    case Lightning.Credentials.maybe_refresh_token(run.job.credential) do
+      {:ok, credential} ->
+        {:ok, updated_run} =
+          Invocation.update_run(run, %{credential_id: credential.id})
+
+        updated_run
+
+      _ ->
+        run
     end
   end
 end

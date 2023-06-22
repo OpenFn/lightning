@@ -10,14 +10,18 @@ defmodule Lightning.AuthProviders.Google do
 
     @primary_key false
     embedded_schema do
-      field :access_token, :string
-      field :refresh_token, :string
-      field :expires_at, :integer
-      field :scope, :string
+      field(:access_token, :string)
+      field(:refresh_token, :string)
+      field(:expires_at, :integer)
+      field(:scope, :string)
     end
 
     def new(attrs) do
       changeset(attrs) |> apply_changes()
+    end
+
+    def from_oauth2_token(%OAuth2.AccessToken{} = token) do
+      Map.from_struct(token) |> new()
     end
 
     @doc false
@@ -79,10 +83,15 @@ defmodule Lightning.AuthProviders.Google do
   end
 
   # Use the the refresh token to get a new access token.
+  @spec refresh_token(
+          %{:token => any, optional(any) => any} | OAuth2.Client.t(),
+          OAuth2.AccessToken.t() | %{refresh_token: binary()}
+        ) ::
+          {:error, binary | %{body: binary | list | map, code: integer}}
+          | {:ok, nil | OAuth2.AccessToken.t()}
   def refresh_token(client, token) do
     OAuth2.Client.refresh_token(%{client | token: token})
     |> case do
-      # TODO: we should get an expires_in/expires_at from the response?
       {:ok, %{token: token}} ->
         {:ok, token}
 

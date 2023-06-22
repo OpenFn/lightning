@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Check and renew OAuth credentials when running a job
+  [#646](https://github.com/OpenFn/Lightning/issues/646)
+
 ### Changed
 
 ### Fixed
