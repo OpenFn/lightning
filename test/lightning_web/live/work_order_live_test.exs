@@ -1539,11 +1539,11 @@ defmodule LightningWeb.RunWorkOrderTest do
           )
         )
 
-      # All work orders have been selected
+      # All work orders have been selected, but there's only one page
       html =
         render_change(view, "toggle_all_selections", %{all_selections: true})
 
-      assert html =~ "Rerun all 2 matching workorders from start"
+      refute html =~ "Rerun all 2 matching workorders from start"
       assert html =~ "Rerun 2 selected workorders from start"
 
       view
