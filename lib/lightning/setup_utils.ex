@@ -159,7 +159,6 @@ defmodule Lightning.SetupUtils do
   else { throw 'Error, patient ineligible.' }
 });",
         adaptor: "@openfn/language-common@latest",
-        trigger: %{type: "webhook"},
         enabled: true,
         workflow_id: workflow.id
       })
@@ -167,11 +166,10 @@ defmodule Lightning.SetupUtils do
     {:ok, source_trigger} =
       Workflows.build_trigger(%{
         type: :webhook,
-        job_id: job_1.id,
         workflow_id: workflow.id
       })
 
-    job_1_edge =
+    {:ok, job_1_edge} =
       Workflows.create_edge(%{
         workflow_id: workflow.id,
         source_trigger: source_trigger,
