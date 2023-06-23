@@ -9,6 +9,21 @@ defmodule Lightning.Workflows.EdgeTest do
       assert changeset.valid?
     end
 
+    test "trigger sourced edges must have the :always condition" do
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          source_trigger_id: Ecto.UUID.generate(),
+          condition: "on_job_success"
+        })
+
+      refute changeset.valid?
+
+      assert {:condition,
+              {"must be :always when source is a trigger",
+               [validation: :inclusion, enum: [:always]]}} in changeset.errors
+    end
+
     test "can't have both source_job_id and source_trigger_id" do
       changeset =
         Edge.changeset(%Edge{}, %{
