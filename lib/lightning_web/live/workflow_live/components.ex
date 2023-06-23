@@ -286,12 +286,25 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :cancel_url, :string, required: true
 
   def edge_form(assigns) do
-    assigns =
-      assigns
-      |> assign(:edge_options,
-        "On Success": "on_job_success",
-        "On Failure": "on_job_failure"
-      )
+    edge_options =
+      case assigns.form.source |> Ecto.Changeset.apply_changes() do
+        %{source_trigger_id: nil, source_job_id: job_id}
+        when not is_nil(job_id) ->
+          [
+            "On Success": "on_job_success",
+            "On Failure": "on_job_failure"
+          ]
+
+        %{source_trigger_id: trigger_id} when not is_nil(trigger_id) ->
+          [
+            Always: "always"
+          ]
+
+        _ ->
+          []
+      end
+
+    assigns = assigns |> assign(:edge_options, edge_options)
 
     ~H"""
     <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
@@ -317,16 +330,25 @@ defmodule LightningWeb.WorkflowLive.Components do
           <%= error_tag(@form, :condition,
             class: "block w-full rounded-md text-sm text-secondary-700 "
           ) %>
-          <Form.select_field
-            form={@form}
-            name={:condition}
-            values={@edge_options}
-            disabled={@disabled}
-          />
+          <%= if input_value(@form, :condition) == :always do %>
+            <Form.select_field
+              form={@form}
+              name={:condition}
+              values={@edge_options}
+              disabled={true}
+            />
+            <div class="max-w-xl text-sm text-gray-500">
+              <p>Jobs connected to a trigger are always run.</p>
+            </div>
+          <% else %>
+            <Form.select_field
+              form={@form}
+              name={:condition}
+              values={@edge_options}
+              disabled={@disabled}
+            />
+          <% end %>
         </div>
-        <pre>
-          <%= inspect @form.source %>
-        </pre>
       </div>
     </div>
     """
