@@ -5,7 +5,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
   alias Lightning.Workflows.Workflow
 
   setup do
-    workflow = %Workflow{}
     job_1_id = Ecto.UUID.generate()
     job_2_id = Ecto.UUID.generate()
     trigger_1_id = Ecto.UUID.generate()
@@ -36,10 +35,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
       ]
     }
 
-    changeset = workflow |> Workflow.changeset(params)
-
     %{
-      changeset: changeset,
+      params: params,
       job_1_id: job_1_id,
       job_2_id: job_2_id,
       trigger_1_id: trigger_1_id
@@ -48,11 +45,13 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
 
   describe "to_map/1" do
     test "creates a serializable map for a Workflow changeset", %{
-      changeset: changeset,
+      params: params,
       job_1_id: job_1_id,
       job_2_id: job_2_id,
       trigger_1_id: trigger_1_id
     } do
+      changeset = %Workflow{} |> Workflow.changeset(params)
+
       assert %{
                "edges" => [
                  %{
@@ -93,10 +92,81 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                ]
              } = changeset |> WorkflowParams.to_map()
     end
+
+    test "creates a serializable map for a Workflow changeset that already has associations",
+         %{
+           params: params,
+           job_1_id: job_1_id,
+           job_2_id: job_2_id,
+           trigger_1_id: trigger_1_id
+         } do
+      changeset =
+        %Workflow{}
+        |> Workflow.changeset(params)
+        |> Ecto.Changeset.apply_changes()
+        |> Workflow.changeset(%{
+          "jobs" => [
+            %{
+              "id" => job_3_id = Ecto.UUID.generate(),
+              "name" => "job-3"
+            }
+            | params["jobs"]
+          ]
+        })
+
+      assert %{
+               "edges" => [
+                 %{
+                   "condition" => "on_job_failure",
+                   "errors" => %{},
+                   "id" => _,
+                   "source_job_id" => nil,
+                   "source_trigger_id" => ^trigger_1_id,
+                   "target_job_id" => ^job_1_id
+                 },
+                 %{
+                   "condition" => "on_job_success",
+                   "errors" => %{},
+                   "id" => _,
+                   "source_job_id" => ^job_1_id,
+                   "source_trigger_id" => nil,
+                   "target_job_id" => ^job_2_id
+                 }
+               ],
+               "jobs" => [
+                 %{
+                   "adaptor" => "@openfn/language-common@latest",
+                   "body" => "",
+                   "enabled" => "true",
+                   "errors" => %{"body" => ["can't be blank"]},
+                   "name" => "job-3",
+                   "id" => ^job_3_id
+                 },
+                 %{
+                   "errors" => %{"name" => ["can't be blank"]},
+                   "id" => ^job_1_id,
+                   "name" => ""
+                 },
+                 %{
+                   "errors" => %{},
+                   "id" => ^job_2_id,
+                   "name" => "job-2"
+                 }
+               ],
+               "triggers" => [
+                 %{
+                   "errors" => %{},
+                   "id" => ^trigger_1_id,
+                   "type" => "webhook"
+                 }
+               ]
+             } = changeset |> WorkflowParams.to_map()
+    end
   end
 
   describe "to_patches/2" do
-    setup %{changeset: changeset} do
+    setup %{params: params} do
+      changeset = %Workflow{} |> Workflow.changeset(params)
       original_params = changeset |> WorkflowParams.to_map()
 
       params =
