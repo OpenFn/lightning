@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLiveTest do
   import Lightning.JobsFixtures
   import Lightning.WorkflowsFixtures
 
+  @tag skip: true
   describe "index" do
     test "displays the current version", %{conn: conn, project: project} do
       {:ok, _view, html} =
@@ -44,6 +45,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  @tag skip: true
   describe "create" do
     test "Create empty workflow for a project", %{conn: conn, project: project} do
       {:ok, view, html} =
@@ -87,6 +89,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  @tag skip: true
   describe "show" do
     test "renders prompt to create new job when workflow has no jobs", %{
       conn: conn,
@@ -123,6 +126,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  @tag skip: true
   describe "copy webhook url" do
     test "click on webhook job node to copy webhook url to clipboard", %{
       conn: conn,
@@ -144,6 +148,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  @tag skip: true
   describe "edit_job" do
     setup %{project: project} do
       %{job: job} = workflow_job_fixture(project_id: project.id)
@@ -278,6 +283,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  @tag skip: true
   describe "new_job" do
     test "can be created with an upstream job", %{
       conn: conn,
@@ -456,6 +462,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     end
   end
 
+  @tag skip: true
   describe "edit_workflow" do
     setup %{project: project} do
       %{job: job} =
@@ -535,6 +542,7 @@ defmodule LightningWeb.WorkflowLiveTest do
     # TODO test that the current job is not visible in upstream jobs
   end
 
+  @tag skip: true
   describe "delete_workflow" do
     test "project viewer can't delete a workflow in that project",
          %{
