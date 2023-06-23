@@ -69,6 +69,7 @@ defmodule Lightning.Workflows.Edge do
       [:source_job_id, :source_trigger_id],
       "source_job_id and source_trigger_id are mutually exclusive"
     )
+    |> validate_source_condition()
     |> validate_different_nodes()
   end
 
@@ -88,6 +89,21 @@ defmodule Lightning.Workflows.Edge do
           |> List.first()
 
         add_error(changeset, error_field, message)
+
+      _ ->
+        changeset
+    end
+  end
+
+  defp validate_source_condition(changeset) do
+    [:source_trigger_id, :condition]
+    |> Enum.map(&get_field(changeset, &1))
+    |> case do
+      [trigger, _condition] when not is_nil(trigger) ->
+        changeset
+        |> validate_inclusion(:condition, [:always],
+          message: "must be :always when source is a trigger"
+        )
 
       _ ->
         changeset

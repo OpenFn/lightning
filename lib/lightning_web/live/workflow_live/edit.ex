@@ -307,18 +307,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
-  defp webhook_url(changeset) do
-    if Ecto.Changeset.get_field(changeset, :type) == :webhook do
-      if id = Ecto.Changeset.get_field(changeset, :id) do
-        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
-      end
-    end
-  end
-
-  defp send_form_changed(params) do
-    send(self(), {"form_changed", params})
-  end
-
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     initial_params = socket.assigns.workflow_params
@@ -330,6 +318,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
      socket
      |> apply_params(next_params)
      |> push_patches_applied(initial_params)}
+  end
+
+  defp webhook_url(changeset) do
+    if Ecto.Changeset.get_field(changeset, :type) == :webhook do
+      if id = Ecto.Changeset.get_field(changeset, :id) do
+        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+      end
+    end
+  end
+
+  defp send_form_changed(params) do
+    send(self(), {"form_changed", params})
   end
 
   defp assign_workflow(socket, workflow) do
