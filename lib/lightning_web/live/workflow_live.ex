@@ -1,4 +1,4 @@
-defmodule LightningWeb.WorkflowLive do
+defmodule LightningWeb.WorkflowLive.Old do
   @moduledoc false
   use LightningWeb, :live_view
 
