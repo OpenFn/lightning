@@ -29,7 +29,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div>
       <.link
-        navigate={~p"/projects/#{@project.id}/w-new/#{@workflow.id}"}
+        navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
         class="col-span-1 rounded-md shadow-sm"
         role="button"
       >
@@ -71,7 +71,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div>
       <.link
-        navigate={~p"/projects/#{@project.id}/w-new/new"}
+        navigate={~p"/projects/#{@project.id}/w/new"}
         class="col-span-1 rounded-md shadow-sm"
         role={@can_create_workflow && "button"}
       >
