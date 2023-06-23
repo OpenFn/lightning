@@ -1,4 +1,4 @@
-defmodule LightningWeb.WorkflowNewLiveTest do
+defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
