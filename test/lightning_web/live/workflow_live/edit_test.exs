@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowNewLiveTest do
 
   describe "new" do
     test "builds a new workflow", %{conn: conn, project: project} do
-      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w-new/new")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
 
       # Naively add a job via the editor (calling the push-change event)
       assert view

@@ -1,4 +1,4 @@
-defmodule LightningWeb.WorkflowNewLive do
+defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, :live_view
 
@@ -65,11 +65,20 @@ defmodule LightningWeb.WorkflowNewLive do
                     on_change={&send_form_changed/1}
                     form={job_form}
                     cancel_url={
-                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                      ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                     }
                   />
                 <% end %>
               </.form>
+              <div class="flex-none sticky p-3 border-t">
+                <Common.button
+                  class="absolute bottom-2 right-2"
+                  phx-click="edit_job"
+                  disabled={!@can_edit_job}
+                >
+                  Edit
+                </Common.button>
+              </div>
             </div>
           </div>
         </div>
@@ -100,7 +109,7 @@ defmodule LightningWeb.WorkflowNewLive do
                     disabled={!@can_edit_job}
                     webhook_url={webhook_url(trigger_form.source)}
                     cancel_url={
-                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                      ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                     }
                   />
                 <% end %>
@@ -130,7 +139,7 @@ defmodule LightningWeb.WorkflowNewLive do
                     form={edge_form}
                     disabled={!@can_edit_job}
                     cancel_url={
-                      ~p"/projects/#{@project.id}/w-new/#{@workflow.id || "new"}"
+                      ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                     }
                   />
                 <% end %>
@@ -204,6 +213,11 @@ defmodule LightningWeb.WorkflowNewLive do
     {:reply,
      socket.assigns.workflow_params
      |> IO.inspect(label: "initial-state workflow_params"), socket}
+  end
+
+  @impl true
+  def handle_event("edit_job", _, socket) do
+    {:noreply, socket |> assign(show_edit_modal: true)}
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do
