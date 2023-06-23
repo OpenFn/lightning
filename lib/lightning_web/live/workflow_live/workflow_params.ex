@@ -70,23 +70,25 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   contain atom values.
   """
   @spec to_map(Ecto.Changeset.t()) :: %{String.t() => any()}
-  def to_map(changeset), do: to_serializable(changeset)
+  def to_map(changeset) do
+    to_serializable(changeset)
+  end
 
-  defp to_serializable(changeset) do
+  defp to_serializable(changeset = %Ecto.Changeset{}) do
     Map.merge(
       changeset |> to_serializable([:project_id, :name]),
       %{
         jobs:
           changeset
-          |> Ecto.Changeset.get_field(:jobs, [])
+          |> Ecto.Changeset.get_assoc(:jobs)
           |> to_serializable([:id, :name, :adaptor, :body, :enabled]),
         triggers:
           changeset
-          |> Ecto.Changeset.get_field(:triggers, [])
+          |> Ecto.Changeset.get_assoc(:triggers)
           |> to_serializable([:id, :type, :cron_expression]),
         edges:
           changeset
-          |> Ecto.Changeset.get_field(:edges, [])
+          |> Ecto.Changeset.get_assoc(:edges)
           |> to_serializable([
             :id,
             :source_trigger_id,

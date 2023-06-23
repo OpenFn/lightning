@@ -192,7 +192,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     assign(socket,
       page_title: "New Workflow"
     )
-    |> assign_workflow(%Workflow{project: socket.assigns.project})
+    |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
     |> unselect_all()
   end
 
@@ -210,9 +210,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
-    {:reply,
-     socket.assigns.workflow_params
-     |> IO.inspect(label: "initial-state workflow_params"), socket}
+    {:reply, socket.assigns.workflow_params, socket}
   end
 
   @impl true
@@ -267,7 +265,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     next_params =
       WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
-      |> IO.inspect(label: "next_params")
 
     socket = socket |> apply_params(next_params)
 
@@ -292,16 +289,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("push-change", %{"patches" => patches}, socket) do
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
-    IO.inspect(patches, label: "patches")
-
     {:ok, params} =
       WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
-    IO.inspect(socket.assigns.workflow_params,
-      label: "workflow_params after applying patches"
-    )
-
-    IO.inspect(params, label: "params after applying patches")
     socket = socket |> apply_params(params)
 
     # Calculate the difference between the new params and changes introduced by
@@ -344,7 +334,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp assign_workflow(socket, workflow) do
     changeset = Workflow.changeset(workflow, %{})
-    IO.inspect(changeset)
 
     socket
     |> assign(
