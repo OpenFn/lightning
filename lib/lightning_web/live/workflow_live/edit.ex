@@ -65,6 +65,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </span>
             <span><%= @expanded_job.name %></span>
           </div>
+
+          <div>
+            Job run details
+          </div>
+          <div>
+            Job Rerun  details
+          </div>
         </div>
 
         <div
