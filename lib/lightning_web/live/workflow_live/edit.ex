@@ -46,6 +46,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <%!-- Before Editor component has mounted --%> Loading...
         </div>
         <div
+          :if={@show_edit_modal}
+          class="relative z-10"
+          role="dialog"
+          aria-modal="true"
+          phx-mounted="true"
+          aria-labelledby="expand-job"
+        >
+          <div>I am the modal</div>
+        </div>
+
+        <div
           :if={@selected_job}
           class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
           lv-keep-style
@@ -79,7 +90,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   phx-click="edit_job"
                   disabled={!@can_edit_job}
                 >
-                  Edit
+                  Edit Me
                 </Common.button>
               </div>
             </div>
@@ -186,8 +197,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_edge: nil,
        selected_job: nil,
        selected_trigger: nil,
-       current_user: socket.assigns.current_user
-     )}
+       show_edit_modal: false
+     }
   end
 
   @impl true

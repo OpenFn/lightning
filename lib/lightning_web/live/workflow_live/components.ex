@@ -206,6 +206,19 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  def expand_job_modal(assigns) do
+    ~H"""
+    <div
+      class="relative z-10 hidden"
+      role="dialog"
+      aria-modal="true"
+      phx-mounted="true"
+    >
+      <div>I am the modal</div>
+    </div>
+    """
+  end
+
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
