@@ -46,35 +46,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <%!-- Before Editor component has mounted --%> Loading...
         </div>
         <div
-          :if={@show_edit_modal}
-          id="job-edit-modal"
-          class="relative z-20 w-full h-full bg-black text-white"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="expand-job"
-          lv-keep-style
-        >
-          <div>
-            <span><%= @expanded_job.adaptor %></span>
-            <span>
-              <%= if @expanded_job.credential != nil do %>
-                <%= @expanded_job.name %>
-              <% else %>
-                <%= "No Credentials" %>
-              <% end %>
-            </span>
-            <span><%= @expanded_job.name %></span>
-          </div>
-
-          <div>
-            Job run details
-          </div>
-          <div>
-            Job Rerun  details
-          </div>
-        </div>
-
-        <div
           :if={@selected_job}
           class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
           lv-keep-style
@@ -259,11 +230,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("edit_job", _, socket) do
     job = socket.assigns.selected_job
 
-    IO.inspect(job, label: "this is the job")
+    LightningWeb.ModalPortal.show_modal(
+      LightningWeb.WorkflowLive.ExpandedJobModal,
+      %{title: "Expanded Job", id: job.id, job: job}
+    )
 
-    {:noreply,
-     socket
-     |> assign(show_edit_modal: true, selected_job: nil, expanded_job: job)}
+    {:noreply, socket}
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do

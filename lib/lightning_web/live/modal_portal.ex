@@ -20,7 +20,7 @@ defmodule LightningWeb.ModalPortal do
     <div class={unless @show, do: "hidden"}>
       <%= if @show do %>
         <PetalComponents.Modal.modal
-          max_width="lg"
+          max_width="full"
           title={@show.title}
           close_modal_target={@myself}
         >
