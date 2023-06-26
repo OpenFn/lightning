@@ -47,13 +47,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </div>
         <div
           :if={@show_edit_modal}
-          class="relative z-10"
+          id="job-edit-modal"
+          class="relative z-20 w-full h-full bg-black text-white"
           role="dialog"
           aria-modal="true"
-          phx-mounted="true"
           aria-labelledby="expand-job"
+          lv-keep-style
         >
-          <div>I am the modal</div>
+          <div>
+            <span><%= @expanded_job.adaptor %></span>
+            <span>
+              <%= if @expanded_job.credential != nil do %>
+                <%= @expanded_job.name %>
+              <% else %>
+                <%= "No Credentials" %>
+              <% end %>
+            </span>
+            <span><%= @expanded_job.name %></span>
+          </div>
         </div>
 
         <div
@@ -191,6 +202,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(
        active_menu_item: :projects,
        can_edit_job: can_edit_job,
+       expanded_job: nil,
        page_title: "",
        project: project,
        project_user: project_user,
@@ -198,7 +210,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_job: nil,
        selected_trigger: nil,
        show_edit_modal: false
-     }
+     )}
   end
 
   @impl true
@@ -215,9 +227,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id}) do
+    # TODO we shouldn't be calling Repo from here
     workflow =
       Workflows.get_workflow(workflow_id)
-      |> Lightning.Repo.preload([:jobs, :triggers, :edges])
+      |> Lightning.Repo.preload([
+        :triggers,
+        :edges,
+        jobs: [:credential]
+      ])
 
     assign(socket,
       page_title: "New Workflow"
@@ -233,7 +250,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_event("edit_job", _, socket) do
-    {:noreply, socket |> assign(show_edit_modal: true)}
+    job = socket.assigns.selected_job
+
+    IO.inspect(job, label: "this is the job")
+
+    {:noreply,
+     socket
+     |> assign(show_edit_modal: true, selected_job: nil, expanded_job: job)}
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do
