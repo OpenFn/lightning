@@ -69,7 +69,7 @@ defmodule LightningWeb.RunLive.Index do
        search_fields: search_fields,
        active_menu_item: :runs,
        work_orders: [],
-       selected_work_orders: [],
+       selected_work_orders: %{},
        can_rerun_job: can_rerun_job,
        pagination_path:
          &Routes.project_run_index_path(
@@ -131,7 +131,7 @@ defmodule LightningWeb.RunLive.Index do
 
     socket
     |> assign(
-      selected_work_orders: [],
+      selected_work_orders: %{},
       page:
         Invocation.search_workorders(
           socket.assigns.project,
@@ -186,13 +186,22 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {:selection_toggled, {%{id: id}, selection}},
+        {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selection}},
         %{assigns: assigns} = socket
       ) do
     work_orders =
-      if selection,
-        do: [id | assigns.selected_work_orders],
-        else: assigns.selected_work_orders -- [id]
+      Map.update(
+        assigns.selected_work_orders,
+        workflow_id,
+        [id],
+        fn existing_orders ->
+          if selection do
+            [id | existing_orders]
+          else
+            existing_orders -- [id]
+          end
+        end
+      )
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
@@ -279,6 +288,7 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, "selected") do
     socket.assigns.selected_work_orders
+    |> flattened_selections()
     |> AttemptService.list_for_rerun_from_start()
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
@@ -294,12 +304,30 @@ defmodule LightningWeb.RunLive.Index do
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
 
-  defp all_selected?(work_orders, entries) do
-    Enum.count(work_orders) == Enum.count(entries)
+  defp all_selected?(work_orders_map, entries) do
+    selected_count = work_orders_map |> flattened_selections() |> Enum.count()
+    selected_count == Enum.count(entries)
   end
 
-  defp partially_selected?(work_orders, entries) do
-    entries != [] && work_orders != [] && !all_selected?(work_orders, entries)
+  defp partially_selected?(work_orders_map, entries) do
+    entries != [] && !none_selected?(work_orders_map) &&
+      !all_selected?(work_orders_map, entries)
+  end
+
+  defp flattened_selections(selected_orders_map) do
+    selected_orders_map
+    |> Map.values()
+    |> List.flatten()
+  end
+
+  defp none_selected?(selected_orders_map) do
+    flattened_selections(selected_orders_map) == []
+  end
+
+  defp selected_workflow_count(selected_orders_map) do
+    selected_orders_map
+    |> Enum.filter(fn {_key, val} -> Enum.count(val) >= 1 end)
+    |> Enum.count()
   end
 
   defp update_component_selections(entries, selection) do
