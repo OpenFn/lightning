@@ -2,6 +2,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
   Index Liveview for Runs
   """
+  alias Lightning.ExportUtils
   use LightningWeb, :live_view
 
   alias Lightning.Policies.ProjectUsers
@@ -160,6 +161,21 @@ defmodule LightningWeb.ProjectLive.Settings do
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
     end
+  end
+
+  def handle_event("export_project", %{"id" => id}, socket) do
+    {:ok, yaml} = Projects.export_project(:yaml, id)
+    file_name = "project_#{id}.yaml"
+    file_path = Path.join([Application.app_dir(:lightning), "priv", file_name])
+    :ok = File.write(file_path, yaml)
+
+    {:noreply,
+     socket
+     |> push_event("download_project", %{
+       link: "attachment; filename=#{file_path}",
+       file: file_name
+     })
+     |> put_flash(:info, "Project exported successfully")}
   end
 
   defp dispatch_flash(change_result, socket) do

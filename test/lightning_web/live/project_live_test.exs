@@ -130,6 +130,18 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project scheduled for deletion"
     end
 
+    test "project members can export a project", %{conn: conn, project: project} do
+      {:ok, index_live, html} = live(conn, ~p"/projects/#{project.id}/settings")
+
+      assert html =~
+               "Export your project as code, to save this version or edit your project locally"
+
+      assert index_live |> element("button", "Export project") |> has_element?()
+
+      index_live |> element("button", "Export project") |> render_click() =~
+        "Project exported successfully"
+    end
+
     test "project members with role other than owner can't delete a project from the settings page",
          %{
            conn: conn,
