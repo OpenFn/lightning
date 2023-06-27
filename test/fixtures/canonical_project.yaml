@@ -1,53 +1,32 @@
-name: a-test-project
-globals:
+name: my-new-project
 workflows:
-  workflow-1:
+  workflow-one:
+    name: My New Workflow
     jobs:
-      webhook-job:
-        trigger: webhook
-        adaptor: @openfn/language-common
-        enabled: true
-        credential:
-          foo: manchu
-        globals:
-        body: >
-          console.log('webhook job')
-          fn(state => state)
-      on-fail:
-        trigger:
-          on-fail: webhook-job
-        adaptor: @openfn/language-common
-        enabled: true
-        credential:
-        globals:
-        body: >
-          console.log('on fail')
-          fn(state => state)
-      on-success:
-        trigger:
-          on-success: webhook-job
-        adaptor: @openfn/language-common
-        enabled: true
-        credential:
-        globals:
-        body: >
-          fn(state => state)
-  workflow-2:
-    jobs:
-      other-workflow:
-        trigger: webhook
-        adaptor: @openfn/language-common
-        enabled: true
-        credential:
-        globals:
-        body: >
-          fn(state => state)
-      on-fail:
-        trigger:
-          on-fail: other-workflow
-        adaptor: @openfn/language-common
-        enabled: true
-        credential:
-        globals:
-        body: >
-          fn(state => state)
+      job-a:
+        name: My First Job
+        enabled: true # default
+        adaptor: @openfn/language-http@latest
+        body: |
+          alterState(state => {
+            console.log("Hello world!");
+            return state;
+          });
+      job-b:
+        name: My Second Job
+        adaptor: @openfn/language-common@latest
+        body: |
+          alterState(state => {
+            console.log("Hello world!");
+            return state;
+          });
+    triggers:
+      trigger-one:
+        type: webhook # default
+    edges:
+      webhook->job-a:
+        source_trigger: trigger-one
+        target_job: job-a
+      job-a->job-b:
+        source_job: job-a
+        target_job: job-b

@@ -4,40 +4,21 @@ defmodule Lightning.ExportUtils do
   from a project and its workflows.
   """
 
+  alias Lightning.Repo
+
   alias Lightning.{
     Projects,
     Workflows
   }
 
   defp job_to_treenode(job) do
-    trigger = job.trigger
-    parent_job = trigger.upstream_job
     job_name = job.name |> String.replace(" ", "-")
     %{body: credential_body} = job.credential || %{body: %{}}
-
-    {parent_id, trigger} =
-      case trigger.type do
-        :webhook ->
-          {nil, "webhook"}
-
-        :cron ->
-          {nil, %{cron: trigger.cron}}
-
-        :on_job_success ->
-          {parent_job.id,
-           %{"on-success": parent_job.name |> String.replace(" ", "-")}}
-
-        :on_job_failure ->
-          {parent_job.id,
-           %{"on-fail": parent_job.name |> String.replace(" ", "-")}}
-      end
 
     %{
       id: job.id,
       name: job_name,
       node_type: :job,
-      parent_id: parent_id,
-      trigger: trigger,
       adaptor: job.adaptor,
       body: job.body,
       credential: credential_body,
@@ -46,23 +27,42 @@ defmodule Lightning.ExportUtils do
     }
   end
 
-  defp node_list_to_tree(flat_node_list) do
-    groups = Enum.group_by(flat_node_list, & &1.parent_id)
+  defp trigger_to_treenode({num, trigger}) do
+    trigger_name = "trigger-#{num}"
 
-    Enum.map(groups[nil], &associate_children(&1, groups))
+    %{
+      name: trigger_name,
+      node_type: :trigger,
+      type: Atom.to_string(trigger.type)
+    }
   end
 
-  defp associate_children(node, groups) do
-    children = Enum.map(groups[node.id] || [], &associate_children(&1, groups))
-    Map.put(node, :jobs, children)
+  defp edge_to_treenode(%{source_job_id: nil} = edge) do
+    edge = Repo.preload(edge, [:source_trigger, :target_job])
+    trigger_name = edge.source_trigger.id |> String.replace(" ", "-")
+    target_name = edge.target_job.name |> String.replace(" ", "-")
+
+    %{
+      name: "#{trigger_name}->#{target_name}",
+      source_trigger: trigger_name,
+      target_job: target_name,
+      condition: edge.condition,
+      node_type: :edge
+    }
   end
 
-  defp flatten_job_descendants(acc, job_node) do
-    {children, job} = Map.pop(job_node, :jobs)
+  defp edge_to_treenode(%{source_trigger_id: nil} = edge) do
+    edge = Repo.preload(edge, [:source_job, :target_job])
+    source_job = edge.source_job.name |> String.replace(" ", "-")
+    target_job = edge.target_job.name |> String.replace(" ", "-")
 
-    Enum.reduce(children, acc ++ [job], fn child, ac ->
-      flatten_job_descendants(ac, child)
-    end)
+    %{
+      name: "#{source_job}->#{target_job}",
+      source_job: source_job,
+      target_job: target_job,
+      condition: edge.condition,
+      node_type: :edge
+    }
   end
 
   defp handle_bitstring(k, v, i) do
@@ -86,8 +86,10 @@ defmodule Lightning.ExportUtils do
   defp pick_and_sort(map) do
     ordering_map = %{
       project: [:name, :globals, :workflows],
-      workflow: [:jobs],
-      job: [:trigger, :adaptor, :enabled, :credential, :globals, :body]
+      workflow: [:name, :jobs],
+      job: [:name, :adaptor, :enabled, :credential, :globals, :body],
+      trigger: [:name, :type],
+      edge: [:name, :source_trigger, :source_job, :target_job]
     }
 
     map
@@ -135,7 +137,9 @@ defmodule Lightning.ExportUtils do
   defp handle_input(key, value, indentation) when is_list(value) do
     "#{indentation}#{key}:\n#{Enum.map_join(value, "\n", fn map -> cond do
         is_of_type(map, :workflow) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
-        is_of_type(map, :job) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
+        is_of_type(map, :job) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}   ")}"
+        is_of_type(map, :edge) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}  ")}"
+        is_of_type(map, :trigger) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}   ")}"
         true -> nil
       end end)}"
   end
@@ -150,25 +154,20 @@ defmodule Lightning.ExportUtils do
     |> Enum.join("\n")
   end
 
-  defp to_workflow_yaml_tree(tree, workflow) do
-    Enum.reduce(tree, [], fn root_job_node, acc ->
-      flat = flatten_job_descendants([], root_job_node)
-
-      acc ++
-        [
-          %{
-            name: workflow.name,
-            jobs: flat,
-            node_type: :workflow
-          }
-        ]
-    end)
+  defp to_workflow_yaml_tree(flow_map, workflow) do
+    %{
+      name: workflow.name,
+      jobs: flow_map.jobs,
+      triggers: flow_map.triggers,
+      edges: flow_map.edges,
+      node_type: :workflow
+    }
   end
 
   def build_yaml_tree(workflows, project) do
     workflows_map =
       Enum.reduce(workflows, %{}, fn workflow, acc ->
-        [ytree] = build_workflow_yaml_tree(workflow)
+        ytree = build_workflow_yaml_tree(workflow)
         Map.put(acc, String.replace(workflow.name, " ", "-"), ytree)
       end)
 
@@ -181,8 +180,14 @@ defmodule Lightning.ExportUtils do
   end
 
   defp build_workflow_yaml_tree(workflow) do
-    Enum.map(workflow.jobs, fn j -> job_to_treenode(j) end)
-    |> node_list_to_tree()
+    jobs = Enum.map(workflow.jobs, fn j -> job_to_treenode(j) end)
+    numbered_triggers = Enum.zip(1..length(workflow.triggers), workflow.triggers)
+    triggers = Enum.map(numbered_triggers, fn t -> trigger_to_treenode(t) end)
+    edges = Enum.map(workflow.edges, fn e -> edge_to_treenode(e) end)
+
+    flow_map = %{jobs: jobs, edges: edges, triggers: triggers}
+
+    flow_map
     |> to_workflow_yaml_tree(workflow)
   end
 
