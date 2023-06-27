@@ -7,7 +7,8 @@ defmodule Lightning.Pipeline.RunnerTest do
     JobsFixtures,
     InvocationFixtures,
     CredentialsFixtures,
-    ProjectsFixtures
+    ProjectsFixtures,
+    BypassHelpers
   }
 
   alias Lightning.Pipeline.Runner
@@ -85,6 +86,76 @@ defmodule Lightning.Pipeline.RunnerTest do
            |> Enum.any?(fn result ->
              Map.has_key?(result, "configuration")
            end)
+  end
+
+  test "start/2 takes a run and executes it, refreshing the oauth token if required" do
+    bypass = Bypass.open()
+
+    Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+      google: [
+        client_id: "foo",
+        client_secret: "bar",
+        wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+      ]
+    )
+
+    expect_wellknown(bypass)
+
+    expect_token(bypass, Lightning.AuthProviders.Google.get_wellknown!())
+    expires_at = DateTime.to_unix(DateTime.utc_now())
+
+    user = Lightning.AccountsFixtures.user_fixture()
+
+    project = project_fixture(project_users: [%{user_id: user.id}])
+
+    project_credential =
+      project_credential_fixture(
+        user_id: user.id,
+        name: "test credential",
+        body: %{
+          "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+          "expires_at" => expires_at,
+          "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+          "scope" => "https://www.googleapis.com/auth/spreadsheets"
+        },
+        schema: "googlesheets",
+        project_id: project.id
+      )
+
+    job =
+      workflow_job_fixture(
+        adaptor: "@openfn/language-common",
+        body: """
+        fn(state => {
+          console.log(state.configuration)
+          return state;
+        });
+        """,
+        project_id: project.id,
+        project_credential_id: project_credential.id
+      )
+
+    dataclip_body = %{"foo" => "bar"}
+
+    dataclip =
+      dataclip_fixture(
+        body: dataclip_body,
+        project_id: job.workflow.project_id,
+        type: :http_request
+      )
+
+    run = run_fixture(job_id: job.id, input_dataclip_id: dataclip.id)
+
+    result = %Lightning.Runtime.Result{} = Pipeline.Runner.start(run)
+
+    new_expiry =
+      Lightning.Credentials.Credential
+      |> Repo.get(project_credential.credential_id)
+      |> Map.get(:body)
+      |> Map.get("expires_at")
+
+    assert new_expiry > expires_at + 3599
+    assert Enum.at(result.log, 11) =~ "expires_at\":#{new_expiry}"
   end
 
   test "scrub_result/1 removes :configuration from a map" do

@@ -44,7 +44,11 @@ defmodule Lightning.BypassHelpers do
   def expect_token(bypass, wellknown, token) do
     body =
       token ||
-        %{"access_token" => "blah", "refresh_token" => "blerg"}
+        %{
+          "access_token" => "blah",
+          "refresh_token" => "blerg",
+          "expires_in" => 3600
+        }
         |> Jason.encode!()
 
     expect_token(bypass, wellknown, {200, body})

@@ -110,16 +110,7 @@ defmodule Lightning.Pipeline.Runner do
         samples: Lightning.Credentials.sensitive_values_for(run.job.credential)
       )
 
-    # what if this fails? do we want to fail the run?
-    # how would the run fail, if we throw an exception here would that have
-    # good enough logs?
-    # if we silently fail, the job _should_ fail, but we would have to figure out
-    # that renewal was the reason.
-
-    run = maybe_refresh_run_credential(run)
-
-    # call a function that checks if the credential is of type "googlesheets"
-    # then check if it needs to be updated.
+    Lightning.Credentials.maybe_refresh_token(run.job.credential)
 
     state = Lightning.Pipeline.StateAssembler.assemble(run)
 
@@ -237,19 +228,6 @@ defmodule Lightning.Pipeline.Runner do
       adaptor
     else
       adaptor
-    end
-  end
-
-  defp maybe_refresh_run_credential(run) do
-    case Lightning.Credentials.maybe_refresh_token(run.job.credential) do
-      {:ok, credential} ->
-        {:ok, updated_run} =
-          Invocation.update_run(run, %{credential_id: credential.id})
-
-        updated_run
-
-      _ ->
-        run
     end
   end
 end

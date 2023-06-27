@@ -10,10 +10,10 @@ defmodule Lightning.AuthProviders.Google do
 
     @primary_key false
     embedded_schema do
-      field(:access_token, :string)
-      field(:refresh_token, :string)
-      field(:expires_at, :integer)
-      field(:scope, :string)
+      field :access_token, :string
+      field :refresh_token, :string
+      field :expires_at, :integer
+      field :scope, :string
     end
 
     def new(attrs) do

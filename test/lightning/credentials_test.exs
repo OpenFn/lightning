@@ -296,7 +296,7 @@ defmodule Lightning.CredentialsTest do
   describe "maybe_refresh_token/1" do
     test "doesn't refresh non OAuth credentials" do
       credential = CredentialsFixtures.credential_fixture()
-      refreshed_credential = Credentials.maybe_refresh_token(credential)
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
       assert credential == refreshed_credential
     end
 
@@ -315,7 +315,7 @@ defmodule Lightning.CredentialsTest do
           schema: "googlesheets"
         )
 
-      refreshed_credential = Credentials.maybe_refresh_token(credential)
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
 
       assert refreshed_credential.body["access_token"] ==
                credential.body["access_token"]
@@ -356,13 +356,12 @@ defmodule Lightning.CredentialsTest do
 
       {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
 
-      refute refreshed_credential.body["access_token"] ==
-               credential.body["access_token"]
-
-      assert refreshed_credential.body["expires_at"] >
-               credential.body["expires_at"]
-
       assert refreshed_credential != credential
+
+      new_expiry = refreshed_credential.body["expires_at"]
+
+      assert is_integer(new_expiry)
+      assert new_expiry > DateTime.to_unix(DateTime.utc_now()) + 10 * 60
     end
   end
 end
