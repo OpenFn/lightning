@@ -14,6 +14,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   on_mount {LightningWeb.Hooks, :project_scope}
 
   attr :changeset, :map, required: true
+  attr :credentials, :list, required: true
 
   @impl true
   def render(assigns) do
@@ -64,6 +65,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <.job_form
                     on_change={&send_form_changed/1}
                     form={job_form}
+                    credentials={@credentials}
                     cancel_url={
                       ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                     }
@@ -173,13 +175,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:ok,
      socket
      |> assign(
-       project: project,
-       selected_job: nil,
-       selected_trigger: nil,
-       selected_edge: nil,
-       page_title: "",
        active_menu_item: :projects,
-       can_edit_job: can_edit_job
+       can_edit_job: can_edit_job,
+       credentials: [],
+       page_title: "",
+       project: project,
+       selected_edge: nil,
+       selected_job: nil,
+       selected_trigger: nil
      )}
   end
 
@@ -192,6 +195,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     assign(socket,
       page_title: "New Workflow"
     )
+    |> assign_credentials()
     |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
     |> unselect_all()
   end
@@ -204,6 +208,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     assign(socket,
       page_title: "New Workflow"
     )
+    |> assign_credentials()
     |> assign_workflow(workflow)
     |> unselect_all()
   end
@@ -330,6 +335,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp send_form_changed(params) do
     send(self(), {"form_changed", params})
+  end
+
+  defp assign_credentials(socket) do
+    credentials =
+      Lightning.Projects.list_project_credentials(socket.assigns.project)
+
+    socket
+    |> assign(credentials: credentials)
   end
 
   defp assign_workflow(socket, workflow) do

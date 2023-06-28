@@ -156,6 +156,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :on_change, :any, required: true
+  attr :credentials, :list, required: true
 
   def job_form(assigns) do
     ~H"""
@@ -190,6 +191,9 @@ defmodule LightningWeb.WorkflowLive.Components do
             on_change={@on_change}
             form={@form}
           />
+        </div>
+        <div class="col-span-6">
+          <.credential_select form={@form} credentials={@credentials} />
         </div>
       </div>
     </div>
@@ -377,6 +381,49 @@ defmodule LightningWeb.WorkflowLive.Components do
         </div>
       </div>
     </.form>
+    """
+  end
+
+  attr :form, :map, required: true
+  attr :disabled, :boolean, default: false
+  attr :credentials, :list, required: true
+
+  def credential_select(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        credential_options:
+          assigns.credentials |> Enum.map(&{&1.credential.name, &1.id})
+      )
+
+    ~H"""
+    <Form.label_field
+      form={@form}
+      field={:project_credential_id}
+      title="Credential"
+      for="credentialField"
+      tooltip="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
+    />
+    <%= error_tag(@form, :project_credential_id, class: "block w-full") %>
+    <Form.select_field
+      form={@form}
+      name={:project_credential_id}
+      id="credentialField"
+      prompt=""
+      values={@credential_options}
+      disabled={@disabled}
+    />
+
+    <div :if={!@disabled} class="text-right">
+      <button
+        id="new-credential-launcher"
+        type="button"
+        class="text-indigo-400 underline underline-offset-2 hover:text-indigo-500 text-xs"
+        phx-click="open_new_credential"
+      >
+        New credential
+      </button>
+    </div>
     """
   end
 end
