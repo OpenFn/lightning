@@ -92,6 +92,17 @@ defmodule Lightning.Projects do
 
   def get_project_user(id), do: Repo.get(ProjectUser, id)
 
+  def get_project_user(%Project{id: project_id}, %User{id: user_id}) do
+    from(pu in ProjectUser,
+      join: p in assoc(pu, :project),
+      on: p.id == ^project_id,
+      join: u in assoc(pu, :user),
+      on: u.id == ^user_id,
+      preload: [:user, :project]
+    )
+    |> Repo.one()
+  end
+
   @doc """
   Gets a single project with it's members via `project_users`.
 
