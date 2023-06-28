@@ -27,11 +27,8 @@ defmodule Lightning.ExportUtils do
     }
   end
 
-  defp trigger_to_treenode({num, trigger}) do
-    trigger_name = "trigger-#{num}"
-
+  defp trigger_to_treenode({_, trigger}) do
     %{
-      name: trigger_name,
       node_type: :trigger,
       type: Atom.to_string(trigger.type)
     }
@@ -39,7 +36,7 @@ defmodule Lightning.ExportUtils do
 
   defp edge_to_treenode(%{source_job_id: nil} = edge) do
     edge = Repo.preload(edge, [:source_trigger, :target_job])
-    trigger_name = edge.source_trigger.id |> String.replace(" ", "-")
+    trigger_name = edge.source_trigger.type |> String.replace(" ", "-")
     target_name = edge.target_job.name |> String.replace(" ", "-")
 
     %{
@@ -72,7 +69,7 @@ defmodule Lightning.ExportUtils do
           String.split(v, "\n")
           |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
 
-        "body: >\n#{indented_expression}"
+        "body: \n#{indented_expression}"
 
       false ->
         "#{k}: #{v}"
@@ -86,7 +83,7 @@ defmodule Lightning.ExportUtils do
   defp pick_and_sort(map) do
     ordering_map = %{
       project: [:name, :globals, :workflows],
-      workflow: [:name, :jobs],
+      workflow: [:name, :jobs, :triggers, :edges],
       job: [:name, :adaptor, :enabled, :credential, :globals, :body],
       trigger: [:name, :type],
       edge: [:name, :source_trigger, :source_job, :target_job]
@@ -138,7 +135,7 @@ defmodule Lightning.ExportUtils do
     "#{indentation}#{key}:\n#{Enum.map_join(value, "\n", fn map -> cond do
         is_of_type(map, :workflow) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
         is_of_type(map, :job) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}   ")}"
-        is_of_type(map, :edge) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}  ")}"
+        is_of_type(map, :edge) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}   ")}"
         is_of_type(map, :trigger) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}   ")}"
         true -> nil
       end end)}"
@@ -192,7 +189,7 @@ defmodule Lightning.ExportUtils do
   end
 
   def generate_new_yaml(project_id) do
-    project = Projects.get_project!(project_id)
+    project = Projects.get_project!(project_id) |> IO.inspect()
 
     yaml =
       project
