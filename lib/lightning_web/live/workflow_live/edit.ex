@@ -233,7 +233,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     LightningWeb.ModalPortal.show_modal(
       LightningWeb.WorkflowLive.ExpandedJobModal,
-      %{title: "Expanded Job", id: job.id, job: job}
+      %{
+        title: "Expanded Job",
+        id: job.id,
+        job: job,
+        job_id: job.id,
+        can_edit_job: socket.assigns.can_edit_job
+      }
     )
 
     {:noreply, socket}
