@@ -258,7 +258,17 @@ defmodule LightningWeb.RunLive.Index do
         %{assigns: %{page: page}} = socket
       ) do
     selection = String.to_existing_atom(selection)
-    work_orders = if selection, do: Enum.map(page.entries, & &1.id), else: []
+
+    work_orders =
+      if selection do
+        Enum.reduce(page.entries, %{}, fn entry, acc ->
+          Map.update(acc, entry.workflow_id, [entry.id], fn existing ->
+            [entry.id | existing]
+          end)
+        end)
+      else
+        %{}
+      end
 
     update_component_selections(page.entries, selection)
 

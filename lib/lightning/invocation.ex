@@ -471,6 +471,7 @@ defmodule Lightning.Invocation do
         ),
       select: %{
         id: wo.id,
+        workflow_id: wo.workflow_id,
         last_finished_at:
           fragment(
             "nullif(max(coalesce(?, 'infinity')), 'infinity')",
@@ -549,6 +550,7 @@ defmodule Lightning.Invocation do
          Enum.map(current_value, fn e ->
            %{
              id: e.id,
+             workflow_id: e.workflow_id,
              last_finished_at:
                if is_nil(e.last_finished_at) do
                  nil
