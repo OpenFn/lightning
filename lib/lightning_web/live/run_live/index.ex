@@ -71,6 +71,7 @@ defmodule LightningWeb.RunLive.Index do
        work_orders: [],
        selected_work_orders: %{},
        can_rerun_job: can_rerun_job,
+       active_modal: nil,
        pagination_path:
          &Routes.project_run_index_path(
            socket,
@@ -273,6 +274,15 @@ defmodule LightningWeb.RunLive.Index do
     update_component_selections(page.entries, selection)
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
+  end
+
+  def handle_event(
+        "toggle_modal",
+        %{"modal" => modal},
+        %{assigns: assigns} = socket
+      ) do
+    active_modal = if assigns.active_modal == modal, do: nil, else: modal
+    {:noreply, assign(socket, active_modal: active_modal)}
   end
 
   def handle_event("search", %{"filters" => filters} = _params, socket) do
