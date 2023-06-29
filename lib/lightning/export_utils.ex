@@ -8,7 +8,8 @@ defmodule Lightning.ExportUtils do
 
   alias Lightning.{
     Projects,
-    Workflows
+    Workflows,
+    ExportUtilsNum
   }
 
   defp job_to_treenode(job) do
@@ -27,28 +28,32 @@ defmodule Lightning.ExportUtils do
     }
   end
 
-  defp trigger_to_treenode({_, trigger}) do
+  defp trigger_to_treenode({num, trigger}) do
+    {:ok, string_no} = ExportUtilsNum.Number.to_string(num, format: :spellout)
+
     %{
+      id: trigger.id,
+      name: "trigger-" <> string_no,
       node_type: :trigger,
       type: Atom.to_string(trigger.type)
     }
   end
 
-  defp edge_to_treenode(%{source_job_id: nil} = edge) do
+  defp edge_to_treenode(%{source_job_id: nil} = edge, triggers) do
     edge = Repo.preload(edge, [:source_trigger, :target_job])
-    trigger_name = edge.source_trigger.type |> String.replace(" ", "-")
+    trigger_name = edge.source_trigger.type |> Atom.to_string()
     target_name = edge.target_job.name |> String.replace(" ", "-")
 
     %{
       name: "#{trigger_name}->#{target_name}",
-      source_trigger: trigger_name,
+      source_trigger: find_trigger_name(edge, triggers),
       target_job: target_name,
       condition: edge.condition,
       node_type: :edge
     }
   end
 
-  defp edge_to_treenode(%{source_trigger_id: nil} = edge) do
+  defp edge_to_treenode(%{source_trigger_id: nil} = edge, _unused_triggers) do
     edge = Repo.preload(edge, [:source_job, :target_job])
     source_job = edge.source_job.name |> String.replace(" ", "-")
     target_job = edge.target_job.name |> String.replace(" ", "-")
@@ -62,6 +67,12 @@ defmodule Lightning.ExportUtils do
     }
   end
 
+  defp find_trigger_name(edge, triggers) do
+    [trigger] = Enum.filter(triggers, fn t -> t.id == edge.source_trigger_id end)
+
+    trigger.name
+  end
+
   defp handle_bitstring(k, v, i) do
     case(k === :body) do
       true ->
@@ -69,7 +80,7 @@ defmodule Lightning.ExportUtils do
           String.split(v, "\n")
           |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
 
-        "body: \n#{indented_expression}"
+        "body: |\n#{indented_expression}"
 
       false ->
         "#{k}: #{v}"
@@ -85,8 +96,8 @@ defmodule Lightning.ExportUtils do
       project: [:name, :globals, :workflows],
       workflow: [:name, :jobs, :triggers, :edges],
       job: [:name, :adaptor, :enabled, :credential, :globals, :body],
-      trigger: [:name, :type],
-      edge: [:name, :source_trigger, :source_job, :target_job]
+      trigger: [:type],
+      edge: [:source_trigger, :source_job, :target_job]
     }
 
     map
@@ -180,7 +191,7 @@ defmodule Lightning.ExportUtils do
     jobs = Enum.map(workflow.jobs, fn j -> job_to_treenode(j) end)
     numbered_triggers = Enum.zip(1..length(workflow.triggers), workflow.triggers)
     triggers = Enum.map(numbered_triggers, fn t -> trigger_to_treenode(t) end)
-    edges = Enum.map(workflow.edges, fn e -> edge_to_treenode(e) end)
+    edges = Enum.map(workflow.edges, fn e -> edge_to_treenode(e, triggers) end)
 
     flow_map = %{jobs: jobs, edges: edges, triggers: triggers}
 
