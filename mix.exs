@@ -61,6 +61,7 @@ defmodule Lightning.MixProject do
       {:ecto_enum, "~> 1.4"},
       {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
+      {:ex_cldr_numbers, "~> 2.31"},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:ex_json_schema, "~> 0.9.1"},
       {:ex_machina, "~> 2.7.0", only: :test},
