@@ -309,7 +309,7 @@ defmodule LightningWeb.JobLive.JobBuilder do
   end
 
   def handle_event("open_new_credential", _params, socket) do
-    LightningWeb.ModalPortal.show_modal(
+    LightningWeb.ModalPortal.open_modal(
       LightningWeb.CredentialLive.CredentialEditModal,
       %{
         action: :new,
