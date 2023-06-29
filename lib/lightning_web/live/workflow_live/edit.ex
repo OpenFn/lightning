@@ -52,37 +52,41 @@ defmodule LightningWeb.WorkflowLive.Edit do
         >
           <.resize_component id={"resizer-#{@workflow.id}"} />
           <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
-            <div class="w-auto h-full" id={"job-pane-#{@workflow.id}"}>
-              <.form
-                :let={f}
-                id="workflow-form"
-                for={@changeset}
-                phx-submit="save"
-                phx-change="validate"
-                class="h-full"
-              >
-                <%= for job_form <- single_inputs_for(f, :jobs, @selected_job.id) do %>
-                  <!-- Show only the currently selected one -->
-                  <.job_form
-                    on_change={&send_form_changed/1}
-                    form={job_form}
-                    project_user={@project_user}
-                    cancel_url={
-                      ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
-                    }
-                  />
-                <% end %>
-              </.form>
-              <div class="flex-none sticky p-3 border-t">
-                <Common.button
-                  class="absolute bottom-2 right-2"
-                  phx-click="edit_job"
-                  disabled={!@can_edit_job}
-                >
-                  Edit Me
-                </Common.button>
+            <.panel>
+              <div class="flex flex-col h-full" id={"job-pane-#{@workflow.id}"}>
+                <div class="grow overflow-y-auto p-3">
+                  <.form
+                    :let={f}
+                    id="workflow-form"
+                    for={@changeset}
+                    phx-submit="save"
+                    phx-change="validate"
+                    class="h-full"
+                  >
+                    <%= for job_form <- single_inputs_for(f, :jobs, @selected_job.id) do %>
+                      <!-- Show only the currently selected one -->
+                      <.job_form
+                        on_change={&send_form_changed/1}
+                        form={job_form}
+                        project_user={@project_user}
+                        cancel_url={
+                          ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
+                        }
+                      />
+                    <% end %>
+                  </.form>
+                </div>
+                <div class="flex-none sticky p-3 border-t">
+                  <button
+                    type="button"
+                    class="px-4 py-1.5 h-10 inline-flex items-center gap-x-1.5 rounded-md bg-indigo-600 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                    phx-click="edit_job"
+                  >
+                    <Heroicons.pencil_square class="w-4 h-4 -ml-0.5" /> Edit
+                  </button>
+                </div>
               </div>
-            </div>
+            </.panel>
           </div>
         </div>
         <div
@@ -230,7 +234,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("edit_job", _, socket) do
     job = socket.assigns.selected_job
 
-    LightningWeb.ModalPortal.show_modal(
+    LightningWeb.ModalPortal.open_modal(
       LightningWeb.WorkflowLive.ExpandedJobModal,
       %{
         title: "Expanded Job",
@@ -245,28 +249,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do
-    id = Regex.run(~r/^#(.*)$/, hash) |> List.wrap() |> Enum.at(1)
-
-    # find the changeset for the selected item
-    # it could be an edge, a job or a trigger
-    [:jobs, :triggers, :edges]
-    |> Enum.reduce_while(nil, fn field, _ ->
-      Ecto.Changeset.get_field(socket.assigns.changeset, field, [])
-      |> Enum.find(&(&1.id == id))
-      |> case do
-        nil ->
-          {:cont, nil}
-
-        changeset ->
-          {:halt, [field, changeset]}
-      end
-    end)
-    |> case do
+    with [_, id, _mode] <- Regex.run(~r/^#([\d\w-]*),?([a-z]*)?$/, hash),
+         [type, selected] <- find_item_in_changeset(socket.assigns.changeset, id) do
+      {:noreply, socket |> select_node({type, selected})}
+    else
       nil ->
         {:noreply, socket |> unselect_all()}
-
-      [type, selected] ->
-        {:noreply, socket |> select_node({type, selected})}
     end
   end
 
@@ -411,5 +399,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
     end
+  end
+
+  # find the changeset for the selected item
+  # it could be an edge, a job or a trigger
+  defp find_item_in_changeset(changeset, id) do
+    [:jobs, :triggers, :edges]
+    |> Enum.reduce_while(nil, fn field, _ ->
+      Ecto.Changeset.get_field(changeset, field, [])
+      |> Enum.find(&(&1.id == id))
+      |> case do
+        nil ->
+          {:cont, nil}
+
+        changeset ->
+          {:halt, [field, changeset]}
+      end
+    end)
   end
 end
