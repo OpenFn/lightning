@@ -58,11 +58,15 @@ to get familiar with the app.
 
 ## Features
 
+### Build
 Plan and build workflows using Lightning's visual interface to quickly define
 when, where and what you want your automation to do.
 
 ![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
 
+Use our [CLI](https://github.com/OpenFn/kit/blob/main/packages/cli/README.md#openfncli) to quickly build, edit and deploy projects from the comfort of your own code editor.
+
+### Monitor
 Monitor all workflow activity in one place.
 ![Screenshot 2023-03-21 at 10 07 37](https://user-images.githubusercontent.com/36554605/226538515-f8b97950-80b9-4e5e-a5f4-7406c20ed37a.png)
 
@@ -72,14 +76,19 @@ Monitor all workflow activity in one place.
 - Receive a project digest for a daily/weekly/monthly summary of your project
   activity
 
+### Manage
 Manage users and access by project
 ![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
-### **Roles and permissions**
+### Roles and permissions
 
 Authorization is a central part of Lightning. As such, users are given different roles which determine what level of access they have for resources in the application. For more details
 about roles and permissions in Lightning, please refer to our
 [documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
+
+### Roadmap
+
+View our public roadmap [here](https://docs.openfn.org/documentation/openfn-roadmap#lightning-roadmap).
 
 ## Getting Started
 

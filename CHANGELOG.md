@@ -10,12 +10,26 @@ and this project adheres to
 
 ### Added
 
-- Check and renew OAuth credentials when running a job
-  [#646](https://github.com/OpenFn/Lightning/issues/646)
-
 ### Changed
 
 ### Fixed
+
+## [0.6.6] - 2023-06-30
+
+### Added
+
+- Add public API token to the demo site setup script
+- Check and renew OAuth credentials when running a job
+  [#646](https://github.com/OpenFn/Lightning/issues/646)
+
+### Fixed
+
+- Remove google sheets from adaptors list until supporting oauth flow
+  [#792](https://github.com/OpenFn/Lightning/issues/792)
+- Remove duplicate google sheets adaptor display on credential type picklist
+  [#663](https://github.com/OpenFn/Lightning/issues/663)
+- Fix demo setup script for calling from outside the app on Kubernetes
+  deployments [#917](https://github.com/OpenFn/Lightning/issues/917)
 
 ## [0.6.5] - 2023-06-22
 
