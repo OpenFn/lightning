@@ -1,81 +1,82 @@
-name: Name
-globals:
+name: a-test-project
+description: This is only a test
+# credentials:
+# globals:
 workflows:
   workflow-1:
     name: workflow 1
     jobs:
       webhook-job:
-       name: webhook-job
-       adaptor: @openfn/language-common@latest
-       enabled: true
-       credential:
-         foo: manchu
-       globals:
-       body: |
-         console.log('webhook job')
-         fn(state => state)
+        name: webhook-job
+        adaptor: '@openfn/language-common@latest'
+        enabled: true
+        # credential:
+        # globals:
+        body: |
+          console.log('webhook job')
+          fn(state => state)
       on-fail:
-       name: on-fail
-       adaptor: @openfn/language-common@latest
-       enabled: true
-       credential:
-       globals:
-       body: |
-         console.log('on fail')
-         fn(state => state)
+        name: on-fail
+        adaptor: '@openfn/language-common@latest'
+        enabled: true
+        # credential:
+        # globals:
+        body: |
+          console.log('on fail')
+          fn(state => state)
       on-success:
-       name: on-success
-       adaptor: @openfn/language-common@latest
-       enabled: true
-       credential:
-       globals:
-       body: |
-         console.log('hello!');
+        name: on-success
+        adaptor: '@openfn/language-common@latest'
+        enabled: true
+        # credential:
+        # globals:
+        body: |
+          console.log('hello!');
     triggers:
-      trigger-one:
-       type: webhook
+      webhook:
+        type: webhook
     edges:
       webhook->webhook-job:
-       source_trigger: trigger-one
-       target_job: webhook-job
-       condition: always
+        source_trigger: webhook
+        target_job: webhook-job
+        condition: always
       webhook-job->on-fail:
-       source_job: webhook-job
-       target_job: on-fail
-       condition: on_job_failure
+        source_job: webhook-job
+        target_job: on-fail
+        condition: on_job_failure
       webhook-job->on-success:
-       source_job: webhook-job
-       target_job: on-success
-       condition: on_job_success
+        source_job: webhook-job
+        target_job: on-success
+        condition: on_job_success
   workflow-2:
     name: workflow 2
     jobs:
-      other-workflow:
-       name: other-workflow
-       adaptor: @openfn/language-common@latest
-       enabled: true
-       credential:
-       globals:
-       body: |
-         console.log('hello!');
-      on-fail:
-       name: on-fail
-       adaptor: @openfn/language-common@latest
-       enabled: true
-       credential:
-       globals:
-       body: |
-         console.log('hello!');
+      some-cronjob:
+        name: some-cronjob
+        adaptor: '@openfn/language-common@latest'
+        enabled: true
+        # credential:
+        # globals:
+        body: |
+          console.log('hello!');
+      on-cron-failure:
+        name: on-cron-failure
+        adaptor: '@openfn/language-common@latest'
+        enabled: true
+        # credential:
+        # globals:
+        body: |
+          console.log('hello!');
     triggers:
-      trigger-one:
-       type: webhook
+      cron:
+        type: cron
+        cron_expression: '0 23 * * *'
     edges:
-      webhook->other-workflow:
-       source_trigger: trigger-one
-       target_job: other-workflow
-       condition: always
-      other-workflow->on-fail:
-       source_job: other-workflow
-       target_job: on-fail
-       condition: on_job_success
-
+      cron->some-cronjob:
+        source_trigger: cron
+        target_job: some-cronjob
+        condition: always
+      some-cronjob->on-cron-failure:
+        source_job: some-cronjob
+        target_job: on-cron-failure
+        condition: on_job_success

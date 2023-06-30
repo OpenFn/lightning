@@ -44,7 +44,7 @@ defmodule Lightning.WorkflowsTest do
 
       assert %{
                name: [
-                 "A workflow with this name does already exist in this project."
+                 "A workflow with this name already exists in this project."
                ]
              } = errors_on(changeset)
 
