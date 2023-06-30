@@ -36,6 +36,7 @@ defmodule LightningWeb.Router do
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
+    get "/download/yaml", DownloadsController, :download_project_yaml
   end
 
   ## JSON API
