@@ -119,8 +119,6 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_reset_password_instructions(user, url) do
     deliver(user.email, "Reset password instructions", """
 
-    ==============================
-
     Hi #{user.email},
 
     You can reset your password by visiting the URL below:
@@ -128,8 +126,6 @@ defmodule Lightning.Accounts.UserNotifier do
     #{url}
 
     If you didn't request this change, please ignore this.
-
-    ==============================
     """)
   end
 
@@ -139,8 +135,6 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_update_email_instructions(email, url) do
     deliver(email, "Update email instructions", """
 
-    ==============================
-
     Hi #{email},
 
     You can change your email by visiting the URL below:
@@ -149,7 +143,6 @@ defmodule Lightning.Accounts.UserNotifier do
 
     If you didn't request this change, please ignore this.
 
-    ==============================
     """)
   end
 
@@ -159,8 +152,6 @@ defmodule Lightning.Accounts.UserNotifier do
   def deliver_update_email_warning(email, new_email) do
     deliver(email, "Update email warning", """
 
-    ==============================
-
     Hi #{email},
 
     You have requested to change your email
@@ -169,7 +160,6 @@ defmodule Lightning.Accounts.UserNotifier do
 
     If you didn't request this change, please ignore this.
 
-    ==============================
     """)
   end
 
