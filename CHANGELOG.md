@@ -18,6 +18,7 @@ and this project adheres to
 
 ### Added
 
+- Add public API token to the demo site setup script
 - Check and renew OAuth credentials when running a job
   [#646](https://github.com/OpenFn/Lightning/issues/646)
 

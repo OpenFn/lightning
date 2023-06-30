@@ -92,10 +92,9 @@ defmodule LightningWeb.CredentialLive.TypePicker do
       end)
 
     type_options =
-      [
-        {"Raw", "raw"},
-        {"Google Sheets", "googlesheets"} | schemas_options
-      ]
+      schemas_options
+      |> append_if_missing({"Raw JSON", "raw"})
+      |> append_if_missing({"Googlesheets", "googlesheets"})
       |> Enum.filter(fn {_, key} ->
         case key do
           "googlesheets" ->
@@ -107,6 +106,10 @@ defmodule LightningWeb.CredentialLive.TypePicker do
       end)
 
     {:ok, socket |> assign(type_options: type_options)}
+  end
+
+  defp append_if_missing(list, item) do
+    if !Enum.member?(list, item), do: list ++ [item], else: list
   end
 
   @impl true
