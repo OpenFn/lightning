@@ -203,6 +203,10 @@ defmodule Lightning.AttemptService do
     )
   end
 
+  def retry_many([], []) do
+    Multi.new()
+  end
+
   defp attempt_runs_attrs(attempt_id, runs, timestamp) do
     Enum.map(runs, fn run ->
       %{
@@ -307,6 +311,72 @@ defmodule Lightning.AttemptService do
       )
 
     Repo.all(first_attempt_runs_query)
+  end
+
+  @doc """
+  Returns a list of AttemptRun structs that should be rerun for the given list
+  of workorder ids that are associated to the given Job
+  """
+  @spec list_for_rerun_from_job(
+          workorders :: [Ecto.UUID.t(), ...],
+          job_id :: Ecto.UUID.t()
+        ) :: [
+          AttemptRun.t(),
+          ...
+        ]
+  def list_for_rerun_from_job(order_ids, job_id)
+      when is_list(order_ids) do
+    last_attempts_query =
+      from(att in Lightning.Attempt,
+        where: att.work_order_id in ^order_ids,
+        group_by: att.work_order_id,
+        select: %{
+          work_order_id: att.work_order_id,
+          last_inserted_at: max(att.inserted_at)
+        }
+      )
+
+    last_attempt_runs_query =
+      from(ar in AttemptRun,
+        join: att in assoc(ar, :attempt),
+        join: last in subquery(last_attempts_query),
+        on:
+          last.work_order_id == att.work_order_id and
+            att.inserted_at == last.last_inserted_at,
+        join: r in assoc(ar, :run),
+        on: r.job_id == ^job_id,
+        group_by: ar.attempt_id,
+        select: %{
+          attempt_id: ar.attempt_id,
+          last_inserted_at: max(ar.inserted_at)
+        }
+      )
+
+    attempt_runs_query =
+      from(ar in AttemptRun,
+        join: last in subquery(last_attempt_runs_query),
+        on:
+          ar.attempt_id == last.attempt_id and
+            ar.inserted_at == last.last_inserted_at,
+        order_by: ar.inserted_at,
+        preload: [
+          :attempt,
+          run:
+            ^from(r in Run,
+              select: [
+                :id,
+                :job_id,
+                :started_at,
+                :finished_at,
+                :exit_code,
+                :input_dataclip_id,
+                :output_dataclip_id
+              ]
+            )
+        ]
+      )
+
+    Repo.all(attempt_runs_query)
   end
 
   @doc """

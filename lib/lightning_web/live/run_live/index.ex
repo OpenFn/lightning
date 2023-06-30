@@ -226,10 +226,10 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("bulk-rerun", %{"type" => type}, socket) do
+  def handle_event("bulk-rerun", attrs, socket) do
     with true <- socket.assigns.can_rerun_job,
          {:ok, %{attempt_runs: {count, _attempt_runs}}} <-
-           handle_bulk_rerun(socket, type) do
+           handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
        |> put_flash(
@@ -245,6 +245,14 @@ defmodule LightningWeb.RunLive.Index do
         {:noreply,
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      {:ok, %{reasons: {0, []}}} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Oops! The chosen step hasn't been run in the latest attempts of any of the selected workorders"
+         )}
 
       {:error, _changes} ->
         {:noreply,
@@ -306,14 +314,32 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  defp handle_bulk_rerun(socket, "selected") do
+  defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
+    socket.assigns.selected_work_orders
+    |> flattened_selections()
+    |> AttemptService.list_for_rerun_from_job(job_id)
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+  end
+
+  defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
+    filter = SearchParams.new(socket.assigns.filters)
+
+    socket.assigns.project
+    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Lightning.Repo.all()
+    |> Enum.map(& &1.id)
+    |> AttemptService.list_for_rerun_from_job(job_id)
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+  end
+
+  defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
     |> flattened_selections()
     |> AttemptService.list_for_rerun_from_start()
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
 
-  defp handle_bulk_rerun(socket, "all") do
+  defp handle_bulk_rerun(socket, %{"type" => "all"}) do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project

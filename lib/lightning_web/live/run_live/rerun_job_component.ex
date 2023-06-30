@@ -41,10 +41,6 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
     {:noreply, assign(socket, selected_job: selected_job)}
   end
 
-  def handle_event("bulk-rerun", _attrs, socket) do
-    {:noreply, socket}
-  end
-
   def render(assigns) do
     ~H"""
     <div
@@ -123,8 +119,8 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 type="button"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
+                phx-value-job={@selected_job.id}
                 phx-disable-with="Running..."
-                phx-target={@myself}
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-1"
               >
                 Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
@@ -136,8 +132,8 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 type="button"
                 phx-click="bulk-rerun"
                 phx-value-type="all"
+                phx-value-job={@selected_job.id}
                 phx-disable-with="Running..."
-                phx-target={@myself}
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
                 Rerun all <%= @total_entries %> matching workorders from selected job
@@ -169,6 +165,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 type="button"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
+                phx-value-job={@selected_job.id}
                 phx-disable-with="Running..."
                 class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
               >
