@@ -1,32 +1,75 @@
-name: my-new-project
+name: Name
+globals:
 workflows:
-  workflow-one:
-    name: My New Workflow
+  workflow-1:
+    name: workflow 1
     jobs:
-      job-a:
-        name: My First Job
-        enabled: true # default
-        adaptor: @openfn/language-http@latest
-        body: |
-          alterState(state => {
-            console.log("Hello world!");
-            return state;
-          });
-      job-b:
-        name: My Second Job
-        adaptor: @openfn/language-common@latest
-        body: |
-          alterState(state => {
-            console.log("Hello world!");
-            return state;
-          });
+      webhook-job:
+       name: webhook-job
+       adaptor: @openfn/language-common@latest
+       enabled: true
+       credential:
+         foo: manchu
+       globals:
+       body: |
+         console.log('webhook job')
+         fn(state => state)
+      on-fail:
+       name: on-fail
+       adaptor: @openfn/language-common@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         console.log('on fail')
+         fn(state => state)
+      on-success:
+       name: on-success
+       adaptor: @openfn/language-common@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         console.log('hello!');
     triggers:
       trigger-one:
-        type: webhook # default
+       type: webhook
     edges:
-      webhook->job-a:
-        source_trigger: trigger-one
-        target_job: job-a
-      job-a->job-b:
-        source_job: job-a
-        target_job: job-b
+      webhook->webhook-job:
+       source_trigger: trigger-one
+       target_job: webhook-job
+      webhook-job->on-fail:
+       source_job: webhook-job
+       target_job: on-fail
+      webhook-job->on-success:
+       source_job: webhook-job
+       target_job: on-success
+  workflow-2:
+    name: workflow 2
+    jobs:
+      other-workflow:
+       name: other-workflow
+       adaptor: @openfn/language-common@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         console.log('hello!');
+      on-fail:
+       name: on-fail
+       adaptor: @openfn/language-common@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         console.log('hello!');
+    triggers:
+      trigger-one:
+       type: webhook
+    edges:
+      webhook->other-workflow:
+       source_trigger: trigger-one
+       target_job: other-workflow
+      other-workflow->on-fail:
+       source_job: other-workflow
+       target_job: on-fail
