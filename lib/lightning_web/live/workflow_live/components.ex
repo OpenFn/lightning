@@ -153,38 +153,39 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  attr :id, :string, required: true
   slot :inner_block, required: true
+  slot :header
+  slot :footer
 
   def panel(assigns) do
     ~H"""
     <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
-      <%= render_slot(@inner_block) %>
+      <div class="flex flex-col h-full" id={@id}>
+        <div :if={Enum.any?(@header)} class="flex sticky top-0 border-b p-2">
+          <%= for item <- @header do %>
+            <%= render_slot(item) %>
+          <% end %>
+        </div>
+        <div class="grow overflow-y-auto p-3">
+          <%= render_slot(@inner_block) %>
+        </div>
+        <div :if={Enum.any?(@footer)} class="flex-none sticky p-3 border-t">
+          <%= for item <- @footer do %>
+            <%= render_slot(item) %>
+          <% end %>
+        </div>
+      </div>
     </div>
     """
   end
 
   attr :form, :map, required: true
-  attr :cancel_url, :string, required: true
   attr :on_change, :any, required: true
   attr :project_user, :map, required: true
 
   def job_form(assigns) do
     ~H"""
-    <div class="flex sticky top-0 border-b p-2">
-      <div class="grow">
-        <%= @form
-        |> input_value(:name)
-        |> then(fn
-          "" -> "Untitled Job"
-          name -> name
-        end) %>
-      </div>
-      <div class="flex-none">
-        <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
-          <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
-        </.link>
-      </div>
-    </div>
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <%= hidden_inputs_for(@form) %>
       <div class="col-span-6">
