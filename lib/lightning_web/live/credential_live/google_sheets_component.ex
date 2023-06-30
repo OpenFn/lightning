@@ -181,7 +181,7 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
         class="mx-auto"
       />
       <div class="text-sm ml-1">
-        Not working?
+        Don't see your profile?
         <.link
           href={@authorize_url}
           target="_blank"
