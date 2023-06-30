@@ -5,6 +5,8 @@ defmodule Lightning.Credentials do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Credentials
+  alias Lightning.AuthProviders.Google
   alias Lightning.Repo
   alias Ecto.Multi
 
@@ -279,5 +281,42 @@ defmodule Lightning.Credentials do
       |> Repo.all()
 
     project_credentials -- project_users
+  end
+
+  # TODO: this doesn't need to be Google specific. It should work for any standard OAuth2 credential.
+  @spec maybe_refresh_token(nil | Lightning.Credentials.Credential.t()) ::
+          {:error, :invalid_config}
+          | {:ok, Lightning.Credentials.Credential.t()}
+  def maybe_refresh_token(%Credential{schema: "googlesheets"} = credential) do
+    token_body = Google.TokenBody.new(credential.body)
+
+    if still_fresh(token_body) do
+      {:ok, credential}
+    else
+      with {:ok, %OAuth2.Client{} = client} <- Google.build_client(),
+           {:ok, %OAuth2.AccessToken{} = token} <-
+             Google.refresh_token(client, token_body),
+           token <- Google.TokenBody.from_oauth2_token(token) do
+        Credentials.update_credential(credential, %{
+          body: token |> Lightning.Helpers.json_safe()
+        })
+      end
+    end
+  end
+
+  def maybe_refresh_token(%Credential{} = credential), do: {:ok, credential}
+  def maybe_refresh_token(nil), do: {:ok, nil}
+
+  defp still_fresh(
+         %{expires_at: expires_at},
+         threshold \\ 5,
+         time_unit \\ :minute
+       ) do
+    current_time = DateTime.utc_now()
+    expiration_time = DateTime.from_unix!(expires_at)
+
+    time_remaining = DateTime.diff(expiration_time, current_time, time_unit)
+
+    time_remaining >= threshold
   end
 end

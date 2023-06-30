@@ -1,22 +1,30 @@
 defmodule Lightning.BypassHelpers do
   @moduledoc false
 
+  def build_wellknown(bypass, attrs \\ %{}) do
+    Map.merge(
+      %{
+        "authorization_endpoint" =>
+          "#{endpoint_url(bypass)}/authorization_endpoint",
+        "token_endpoint" => "#{endpoint_url(bypass)}/token_endpoint",
+        "userinfo_endpoint" => "#{endpoint_url(bypass)}/userinfo_endpoint"
+      },
+      attrs
+    )
+  end
+
   @doc """
   Add a well-known endpoint expectation. Used to test AuthProviders
   """
-  def expect_wellknown(bypass) do
+  def expect_wellknown(bypass, wellknown \\ nil)
+
+  def expect_wellknown(bypass, nil) do
+    expect_wellknown(bypass, build_wellknown(bypass))
+  end
+
+  def expect_wellknown(bypass, wellknown) do
     Bypass.expect(bypass, "GET", "auth/.well-known", fn conn ->
-      Plug.Conn.resp(
-        conn,
-        200,
-        %{
-          "authorization_endpoint" =>
-            "#{endpoint_url(bypass)}/authorization_endpoint",
-          "token_endpoint" => "#{endpoint_url(bypass)}/token_endpoint",
-          "userinfo_endpoint" => "#{endpoint_url(bypass)}/userinfo_endpoint"
-        }
-        |> Jason.encode!()
-      )
+      Plug.Conn.resp(conn, 200, wellknown |> Jason.encode!())
     end)
   end
 
@@ -36,7 +44,11 @@ defmodule Lightning.BypassHelpers do
   def expect_token(bypass, wellknown, token) do
     body =
       token ||
-        %{"access_token" => "blah", "refresh_token" => "blerg"}
+        %{
+          "access_token" => "blah",
+          "refresh_token" => "blerg",
+          "expires_in" => 3600
+        }
         |> Jason.encode!()
 
     expect_token(bypass, wellknown, {200, body})

@@ -110,6 +110,8 @@ defmodule Lightning.Pipeline.Runner do
         samples: Lightning.Credentials.sensitive_values_for(run.job.credential)
       )
 
+    Lightning.Credentials.maybe_refresh_token(run.job.credential)
+
     state = Lightning.Pipeline.StateAssembler.assemble(run)
 
     %{path: path} = find_or_install_adaptor(adaptor)

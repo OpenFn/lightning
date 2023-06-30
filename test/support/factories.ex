@@ -47,6 +47,10 @@ defmodule Lightning.Factories do
     struct!(Lightning.Attempt, attrs)
   end
 
+  def build(:credential, attrs) do
+    struct!(Lightning.Credentials.Credential, attrs)
+  end
+
   def build(:reason, attrs) do
     struct!(Lightning.InvocationReason, attrs)
   end

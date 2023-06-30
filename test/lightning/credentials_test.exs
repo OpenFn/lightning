@@ -1,9 +1,12 @@
 defmodule Lightning.CredentialsTest do
+  alias Lightning.CredentialsFixtures
   use Lightning.DataCase, async: true
 
   alias Lightning.Repo
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
+  import Lightning.BypassHelpers
+  # import Lightning.Factories
 
   import Lightning.{
     JobsFixtures,
@@ -287,6 +290,78 @@ defmodule Lightning.CredentialsTest do
 
       assert Credentials.sensitive_values_for(credential) == secrets
       assert Credentials.sensitive_values_for(credential.id) == secrets
+    end
+  end
+
+  describe "maybe_refresh_token/1" do
+    test "doesn't refresh non OAuth credentials" do
+      credential = CredentialsFixtures.credential_fixture()
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
+      assert credential == refreshed_credential
+    end
+
+    test "doesn't refresh fresh OAuth credentials" do
+      # now + 6 minutes
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 6 * 60
+
+      credential =
+        credential_fixture(
+          body: %{
+            "access_token" => "ya29.a0AWY7CknfkidjXaoDT...",
+            "expires_at" => expires_at,
+            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGA...",
+            "scope" => "https://www.googleapis.com/auth/spreadsheets"
+          },
+          schema: "googlesheets"
+        )
+
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
+
+      assert refreshed_credential.body["access_token"] ==
+               credential.body["access_token"]
+
+      assert refreshed_credential.body["expires_at"] ==
+               credential.body["expires_at"]
+
+      assert refreshed_credential == credential
+    end
+
+    test "refreshes OAuth credentials when they are about to expire" do
+      bypass = Bypass.open()
+
+      Lightning.ApplicationHelpers.put_temporary_env(:lightning, :oauth_clients,
+        google: [
+          client_id: "foo",
+          client_secret: "bar",
+          wellknown_url: "http://localhost:#{bypass.port}/auth/.well-known"
+        ]
+      )
+
+      expect_wellknown(bypass)
+
+      expect_token(bypass, Lightning.AuthProviders.Google.get_wellknown!())
+      # Now plus 4 minutes
+      expires_at = DateTime.to_unix(DateTime.utc_now()) + 4 * 60
+
+      credential =
+        credential_fixture(
+          body: %{
+            "access_token" => "ya29.a0AWY7CknfkidjXaoDTuNi",
+            "expires_at" => expires_at,
+            "refresh_token" => "1//03dATMQTmE5NSCgYIARAAGAMSNwF",
+            "scope" => "https://www.googleapis.com/auth/spreadsheets"
+          },
+          schema: "googlesheets"
+        )
+
+      {:ok, refreshed_credential} = Credentials.maybe_refresh_token(credential)
+
+      assert refreshed_credential != credential
+
+      new_expiry = refreshed_credential.body["expires_at"]
+
+      assert is_integer(new_expiry)
+      assert new_expiry > DateTime.to_unix(DateTime.utc_now()) + 10 * 60
     end
   end
 end

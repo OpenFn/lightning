@@ -20,6 +20,10 @@ defmodule Lightning.AuthProviders.Google do
       changeset(attrs) |> apply_changes()
     end
 
+    def from_oauth2_token(%OAuth2.AccessToken{} = token) do
+      Map.from_struct(token) |> new()
+    end
+
     @doc false
     def changeset(attrs \\ %{}) do
       %__MODULE__{}
@@ -78,6 +82,13 @@ defmodule Lightning.AuthProviders.Google do
     OAuth2.Client.get_token(client, params)
   end
 
+  # Use the the refresh token to get a new access token.
+  @spec refresh_token(
+          %{:token => any, optional(any) => any} | OAuth2.Client.t(),
+          OAuth2.AccessToken.t() | %{refresh_token: binary()}
+        ) ::
+          {:error, binary | %{body: binary | list | map, code: integer}}
+          | {:ok, nil | OAuth2.AccessToken.t()}
   def refresh_token(client, token) do
     OAuth2.Client.refresh_token(%{client | token: token})
     |> case do
