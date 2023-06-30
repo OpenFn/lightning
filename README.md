@@ -75,11 +75,15 @@ Monitor all workflow activity in one place.
 Manage users and access by project
 ![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
-### **Roles and permissions**
+### Roles and permissions
 
 Authorization is a central part of Lightning. As such, users are given different roles which determine what level of access they have for resources in the application. For more details
 about roles and permissions in Lightning, please refer to our
 [documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
+
+### Roadmap
+
+View our public roadmap [here](https://docs.openfn.org/documentation/openfn-roadmap#lightning-roadmap).
 
 ## Getting Started
 
