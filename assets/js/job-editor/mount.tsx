@@ -18,7 +18,6 @@ interface ViewHook {
   mounted(): void;
 }
 
-
 interface JobEditorEntrypoint extends ViewHook {
   componentRoot: ReturnType<typeof createRoot> | null;
   changeEvent: string;
@@ -39,11 +38,14 @@ type AttributeMutationRecord = MutationRecord & {
 
 let JobEditorComponent: typeof JobEditor | undefined;
 
-
 export default {
-
   mounted(this: JobEditorEntrypoint) {
+    console.group('JobEditor');
+    console.debug('Mounted');
     import('./JobEditor').then(module => {
+      console.group('JobEditor');
+      console.debug('loaded module');
+      console.groupEnd();
       JobEditorComponent = module.default as typeof JobEditor;
       this.componentRoot = createRoot(this.el);
 
@@ -55,8 +57,10 @@ export default {
       }
       this.setupObserver();
       this.render();
-      this.requestMetadata().then(() => this.render())
+      this.requestMetadata().then(() => this.render());
     });
+
+    console.groupEnd();
   },
   handleContentChange(content: string) {
     this.pushEventTo(this.el, this.changeEvent, { source: content });
@@ -69,7 +73,7 @@ export default {
           adaptor={adaptor}
           source={source}
           metadata={this.metadata}
-          disabled={disabled==="true"}
+          disabled={disabled === 'true'}
           onSourceChanged={src => this.handleContentChange(src)}
         />
       );
@@ -77,15 +81,15 @@ export default {
   },
   requestMetadata() {
     this.metadata = true; // indicate we're loading
-    this.render()
+    this.render();
     return new Promise(resolve => {
-      const callbackRef = this.handleEvent("metadata_ready", data => {
+      const callbackRef = this.handleEvent('metadata_ready', data => {
         this.removeHandleEvent(callbackRef);
         const sortedMetadata = sortMetadata(data);
-        this.metadata = sortedMetadata
+        this.metadata = sortedMetadata;
         resolve(sortedMetadata);
       });
-      
+
       this.pushEventTo(this.el, 'request_metadata', {});
     });
   },
