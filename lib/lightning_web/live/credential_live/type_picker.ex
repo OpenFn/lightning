@@ -109,7 +109,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   end
 
   defp append_if_missing(list, item) do
-    if !Enum.member?(list, item), do: list ++ [item], else: list
+    if Enum.member?(list, item), do: list, else: list ++ [item]
   end
 
   @impl true
