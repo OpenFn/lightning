@@ -28,11 +28,17 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Trigger{} = trigger) do
     Ecto.embedded_dump(trigger, :json)
-    |> Map.take(~w(id type)a)
+    |> Map.take(~w(id type cron_expression)a)
+    |> drop_keys_with_nil_value()
   end
 
   def as_json(%Edge{} = edge) do
     Ecto.embedded_dump(edge, :json)
     |> Map.take(~w(id source_job_id source_trigger_id condition target_job_id)a)
+    |> drop_keys_with_nil_value()
+  end
+
+  defp drop_keys_with_nil_value(map) do
+    Map.reject(map, fn {_, v} -> is_nil(v) end)
   end
 end
