@@ -13,6 +13,10 @@ defmodule Lightning.Demo do
   def reset_demo do
     Lightning.Release.load_app()
 
+    # We must start our vault so (public) credentials can be built for the demo.
+    unless GenServer.whereis(Lightning.Vault),
+      do: Lightning.Vault.start_link()
+
     {:ok, _, _} =
       Ecto.Migrator.with_repo(Lightning.Repo, fn _repo ->
         SetupUtils.tear_down(destroy_super: true)
