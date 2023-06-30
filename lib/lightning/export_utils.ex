@@ -200,7 +200,7 @@ defmodule Lightning.ExportUtils do
   end
 
   def generate_new_yaml(project_id) do
-    project = Projects.get_project!(project_id) |> IO.inspect()
+    project = Projects.get_project!(project_id)
 
     yaml =
       project
