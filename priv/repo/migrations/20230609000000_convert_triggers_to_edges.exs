@@ -47,6 +47,14 @@ defmodule Lightning.Repo.Migrations.ConvertTriggersToEdges do
       cte.updated_at
     FROM triggers_cte AS cte
     """)
+
+    execute("""
+    update jobs set trigger_id = null
+    """)
+
+    execute("""
+    delete from triggers where type in ('on_job_success', 'on_job_failure')
+    """)
   end
 
   def down do
