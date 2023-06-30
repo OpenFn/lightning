@@ -363,8 +363,15 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "export_project/2 as yaml" do
-      %{project: project} = full_project_fixture()
-      expected_yaml = File.read!("test/fixtures/canonical_project.yaml")
+      %{project: project} =
+        full_project_fixture(
+          name: "a-test-project",
+          description: "This is only a test"
+        )
+
+      expected_yaml =
+        File.read!("test/fixtures/canonical_project.yaml") |> String.trim()
+
       {:ok, generated_yaml} = Projects.export_project(:yaml, project.id)
 
       assert generated_yaml == expected_yaml
@@ -515,7 +522,7 @@ defmodule Lightning.ProjectsTest do
       insert(:credential,
         user_id: user.id,
         name: "new credential",
-        body: %{"foo" => "manchu"},
+        body: %{"foo" => "super-secret"},
         projects: [project]
       )
 
@@ -531,7 +538,8 @@ defmodule Lightning.ProjectsTest do
     insert(:edge,
       workflow: workflow_1,
       source_trigger: build(:trigger, workflow: workflow_1),
-      target_job: workflow_1_job
+      target_job: workflow_1_job,
+      condition: :always
     )
 
     insert(:edge,
@@ -559,14 +567,20 @@ defmodule Lightning.ProjectsTest do
 
     workflow_2_job =
       insert(:job,
-        name: "other workflow",
+        name: "some cronjob",
         workflow: workflow_2
       )
 
     insert(:edge,
       workflow: workflow_2,
-      source_trigger: build(:trigger, workflow: workflow_2),
-      target_job: workflow_2_job
+      source_trigger:
+        build(:trigger,
+          workflow: workflow_2,
+          type: :cron,
+          cron_expression: "0 23 * * *"
+        ),
+      target_job: workflow_2_job,
+      condition: :always
     )
 
     insert(:edge,
@@ -575,7 +589,7 @@ defmodule Lightning.ProjectsTest do
       condition: :on_job_success,
       target_job:
         insert(:job,
-          name: "on fail",
+          name: "on cron failure",
           workflow: workflow_2
         )
     )

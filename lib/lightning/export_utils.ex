@@ -4,90 +4,102 @@ defmodule Lightning.ExportUtils do
   from a project and its workflows.
   """
 
+  alias Lightning.Repo
+
   alias Lightning.{
     Projects,
     Workflows
   }
 
   defp job_to_treenode(job) do
-    trigger = job.trigger
-    parent_job = trigger.upstream_job
     job_name = job.name |> String.replace(" ", "-")
-    %{body: credential_body} = job.credential || %{body: %{}}
-
-    {parent_id, trigger} =
-      case trigger.type do
-        :webhook ->
-          {nil, "webhook"}
-
-        :cron ->
-          {nil, %{cron: trigger.cron}}
-
-        :on_job_success ->
-          {parent_job.id,
-           %{"on-success": parent_job.name |> String.replace(" ", "-")}}
-
-        :on_job_failure ->
-          {parent_job.id,
-           %{"on-fail": parent_job.name |> String.replace(" ", "-")}}
-      end
 
     %{
       id: job.id,
       name: job_name,
       node_type: :job,
-      parent_id: parent_id,
-      trigger: trigger,
       adaptor: job.adaptor,
       body: job.body,
-      credential: credential_body,
+      credential: nil,
       globals: [],
       enabled: job.enabled
     }
   end
 
-  defp node_list_to_tree(flat_node_list) do
-    groups = Enum.group_by(flat_node_list, & &1.parent_id)
+  defp trigger_to_treenode(trigger) do
+    base = %{
+      id: trigger.id,
+      name: Atom.to_string(trigger.type),
+      node_type: :trigger,
+      type: Atom.to_string(trigger.type)
+    }
 
-    Enum.map(groups[nil], &associate_children(&1, groups))
+    if trigger.type == :cron,
+      do: Map.put(base, :cron_expression, trigger.cron_expression),
+      else: base
   end
 
-  defp associate_children(node, groups) do
-    children = Enum.map(groups[node.id] || [], &associate_children(&1, groups))
-    Map.put(node, :jobs, children)
+  defp edge_to_treenode(%{source_job_id: nil} = edge, triggers) do
+    edge = Repo.preload(edge, [:source_trigger, :target_job])
+    trigger_name = edge.source_trigger.type |> Atom.to_string()
+    target_name = edge.target_job.name |> String.replace(" ", "-")
+
+    %{
+      name: "#{trigger_name}->#{target_name}",
+      source_trigger: find_trigger_name(edge, triggers),
+      target_job: target_name,
+      condition: edge.condition |> Atom.to_string(),
+      node_type: :edge
+    }
   end
 
-  defp flatten_job_descendants(acc, job_node) do
-    {children, job} = Map.pop(job_node, :jobs)
+  defp edge_to_treenode(%{source_trigger_id: nil} = edge, _unused_triggers) do
+    edge = Repo.preload(edge, [:source_job, :target_job])
+    source_job = edge.source_job.name |> String.replace(" ", "-")
+    target_job = edge.target_job.name |> String.replace(" ", "-")
 
-    Enum.reduce(children, acc ++ [job], fn child, ac ->
-      flatten_job_descendants(ac, child)
-    end)
+    %{
+      name: "#{source_job}->#{target_job}",
+      source_job: source_job,
+      target_job: target_job,
+      condition: edge.condition |> Atom.to_string(),
+      node_type: :edge
+    }
+  end
+
+  defp find_trigger_name(edge, triggers) do
+    [trigger] = Enum.filter(triggers, fn t -> t.id == edge.source_trigger_id end)
+
+    trigger.name
   end
 
   defp handle_bitstring(k, v, i) do
-    case(k === :body) do
-      true ->
+    case k do
+      :body ->
         indented_expression =
           String.split(v, "\n")
           |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
 
-        "body: >\n#{indented_expression}"
+        "body: |\n#{indented_expression}"
 
-      false ->
+      :adaptor ->
+        "#{k}: '#{v}'"
+
+      :cron_expression ->
+        "#{k}: '#{v}'"
+
+      _ ->
         "#{k}: #{v}"
     end
   end
 
-  defp is_of_type(map, type) do
-    Map.has_key?(map, :node_type) and map.node_type == type
-  end
-
   defp pick_and_sort(map) do
     ordering_map = %{
-      project: [:name, :globals, :workflows],
-      workflow: [:jobs],
-      job: [:trigger, :adaptor, :enabled, :credential, :globals, :body]
+      project: [:name, :description, :credentials, :globals, :workflows],
+      workflow: [:name, :jobs, :triggers, :edges],
+      job: [:name, :adaptor, :enabled, :credential, :globals, :body],
+      trigger: [:type, :cron_expression],
+      edge: [:source_trigger, :source_job, :target_job, :condition]
     }
 
     map
@@ -124,8 +136,8 @@ defmodule Lightning.ExportUtils do
     "#{indentation}#{key}: #{Atom.to_string(value)}"
   end
 
-  defp handle_input(key, value, indentation) when value in [%{}, []] do
-    "#{indentation}#{key}:"
+  defp handle_input(key, value, indentation) when value in [%{}, [], nil] do
+    "#{indentation}# #{key}:"
   end
 
   defp handle_input(key, value, indentation) when is_map(value) do
@@ -133,11 +145,7 @@ defmodule Lightning.ExportUtils do
   end
 
   defp handle_input(key, value, indentation) when is_list(value) do
-    "#{indentation}#{key}:\n#{Enum.map_join(value, "\n", fn map -> cond do
-        is_of_type(map, :workflow) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
-        is_of_type(map, :job) -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}"
-        true -> nil
-      end end)}"
+    "#{indentation}#{key}:\n#{Enum.map_join(value, "\n", fn map -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}" end)}"
   end
 
   defp to_new_yaml(map, indentation \\ "") do
@@ -150,39 +158,41 @@ defmodule Lightning.ExportUtils do
     |> Enum.join("\n")
   end
 
-  defp to_workflow_yaml_tree(tree, workflow) do
-    Enum.reduce(tree, [], fn root_job_node, acc ->
-      flat = flatten_job_descendants([], root_job_node)
-
-      acc ++
-        [
-          %{
-            name: workflow.name,
-            jobs: flat,
-            node_type: :workflow
-          }
-        ]
-    end)
+  defp to_workflow_yaml_tree(flow_map, workflow) do
+    %{
+      name: workflow.name,
+      jobs: flow_map.jobs,
+      triggers: flow_map.triggers,
+      edges: flow_map.edges,
+      node_type: :workflow
+    }
   end
 
   def build_yaml_tree(workflows, project) do
     workflows_map =
       Enum.reduce(workflows, %{}, fn workflow, acc ->
-        [ytree] = build_workflow_yaml_tree(workflow)
+        ytree = build_workflow_yaml_tree(workflow)
         Map.put(acc, String.replace(workflow.name, " ", "-"), ytree)
       end)
 
     %{
       name: project.name,
+      description: project.description,
       node_type: :project,
       globals: [],
-      workflows: workflows_map
+      workflows: workflows_map,
+      credentials: []
     }
   end
 
   defp build_workflow_yaml_tree(workflow) do
-    Enum.map(workflow.jobs, fn j -> job_to_treenode(j) end)
-    |> node_list_to_tree()
+    jobs = Enum.map(workflow.jobs, fn j -> job_to_treenode(j) end)
+    triggers = Enum.map(workflow.triggers, fn t -> trigger_to_treenode(t) end)
+    edges = Enum.map(workflow.edges, fn e -> edge_to_treenode(e, triggers) end)
+
+    flow_map = %{jobs: jobs, edges: edges, triggers: triggers}
+
+    flow_map
     |> to_workflow_yaml_tree(workflow)
   end
 
