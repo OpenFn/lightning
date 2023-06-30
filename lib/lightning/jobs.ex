@@ -6,7 +6,6 @@ defmodule Lightning.Jobs do
   import Ecto.Query, warn: false
   alias Lightning.Repo
 
-  alias Lightning.Attempt
   alias Lightning.Jobs.{Job, Trigger, Query}
   alias Lightning.Projects.Project
   alias Lightning.Workflows.Workflow
@@ -222,28 +221,10 @@ defmodule Lightning.Jobs do
     Job.changeset(job, attrs)
   end
 
-  @spec list_jobs_for_workflow(Workflow.t()) ::
-          [
-            %{
-              :id => Ecto.UUID.t(),
-              :name => String.t(),
-              :workorder_count => Integer.t()
-            },
-            ...
-          ]
-          | []
+  @spec list_jobs_for_workflow(Workflow.t()) :: [Job.t(), ...] | []
   def list_jobs_for_workflow(%Workflow{id: workflow_id}) do
     query =
-      from at in Attempt,
-        join: r in assoc(at, :runs),
-        join: j in assoc(r, :job),
-        group_by: j.id,
-        where: j.workflow_id == ^workflow_id,
-        select: %{
-          id: j.id,
-          name: j.name,
-          work_orders_count: count(at.work_order_id, :distinct)
-        }
+      from j in Job, where: j.workflow_id == ^workflow_id, select: [:id, :name]
 
     Repo.all(query)
   end

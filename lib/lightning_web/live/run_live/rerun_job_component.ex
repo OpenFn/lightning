@@ -7,7 +7,6 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   import LightningWeb.RunLive.Components, only: [hide_modal: 1, show_modal: 1]
   alias Lightning.Jobs
   alias Lightning.Workflows
-  alias Phoenix.LiveView.JS
 
   def update(
         %{
@@ -108,7 +107,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                           for={"job_#{job.id}"}
                           class="ml-3 block text-sm font-medium leading-6 text-gray-900"
                         >
-                          <%= job.name %> (<%= job.work_orders_count %> work orders)
+                          <%= job.name %>
                         </label>
                       </div>
                     <% end %>
@@ -116,7 +115,10 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 </fieldset>
               </div>
             </div>
-            <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+            <div
+              :if={@all_selected? and @total_entries > 1}
+              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+            >
               <button
                 type="button"
                 phx-click="bulk-rerun"
@@ -153,6 +155,31 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               <button
                 type="button"
                 class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:col-end-3 sm:mt-0"
+                phx-click="toggle_modal"
+                phx-value-modal={@id}
+              >
+                Cancel
+              </button>
+            </div>
+            <div
+              :if={!@all_selected? or @total_entries == 1}
+              class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
+            >
+              <button
+                type="button"
+                phx-click="bulk-rerun"
+                phx-value-type="selected"
+                phx-disable-with="Running..."
+                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 sm:col-start-2"
+              >
+                Rerun <%= @selected_count %> selected workorder<%= if @selected_count >
+                                                                        1,
+                                                                      do: "s",
+                                                                      else: "" %> from selected job
+              </button>
+              <button
+                type="button"
+                class="mt-3 inline-flex w-full justify-center items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0"
                 phx-click="toggle_modal"
                 phx-value-modal={@id}
               >
