@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-83063FF6.js"></script>
+    <script src="dist/sidebar_items-4B2F2749.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -216,7 +216,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">authorize_url(client, state)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L64" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L68" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -240,7 +240,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">build_client(opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L34" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L38" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -262,7 +262,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_config()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L125" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L136" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -284,7 +284,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_token(client, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L77" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L81" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -306,7 +306,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_userinfo(client, token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L95" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L106" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -328,7 +328,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_wellknown()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L101" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L112" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -350,7 +350,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">get_wellknown!()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L114" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L125" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -372,7 +372,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">refresh_token(client, token)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L81" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/google.ex#L92" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -381,6 +381,17 @@ Functions
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> refresh_token(
+  %{:token =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>(), optional(<a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()) =&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()} | <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.Client.html#t:t/0">OAuth2.Client.t</a>(),
+  <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.AccessToken.html#t:t/0">OAuth2.AccessToken.t</a>() | %{refresh_token: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>()}
+) ::
+  {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | %{body: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">binary</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">list</a>() | <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">map</a>(), code: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()}}
+  | {:ok, nil | <a href="https://hexdocs.pm/oauth2/2.1.0/OAuth2.AccessToken.html#t:t/0">OAuth2.AccessToken.t</a>()}</pre>
+
+      </div>
 
 
   </section>
