@@ -22,6 +22,13 @@ and this project adheres to
 - Check and renew OAuth credentials when running a job
   [#646](https://github.com/OpenFn/Lightning/issues/646)
 
+### Fixed
+
+- Remove google sheets from adaptors list until supporting oauth flow
+  [#792](https://github.com/OpenFn/Lightning/issues/792)
+- Remove duplicate google sheets adaptor display on credential type picklist
+  [#663](https://github.com/OpenFn/Lightning/issues/663)
+
 ## [0.6.5] - 2023-06-22
 
 ### Added
