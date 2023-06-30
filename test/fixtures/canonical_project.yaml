@@ -38,12 +38,15 @@ workflows:
       webhook->webhook-job:
        source_trigger: trigger-one
        target_job: webhook-job
+       condition: always
       webhook-job->on-fail:
        source_job: webhook-job
        target_job: on-fail
+       condition: on_job_failure
       webhook-job->on-success:
        source_job: webhook-job
        target_job: on-success
+       condition: on_job_success
   workflow-2:
     name: workflow 2
     jobs:
@@ -70,6 +73,9 @@ workflows:
       webhook->other-workflow:
        source_trigger: trigger-one
        target_job: other-workflow
+       condition: always
       other-workflow->on-fail:
        source_job: other-workflow
        target_job: on-fail
+       condition: on_job_success
+
