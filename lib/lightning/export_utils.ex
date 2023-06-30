@@ -48,7 +48,7 @@ defmodule Lightning.ExportUtils do
       name: "#{trigger_name}->#{target_name}",
       source_trigger: find_trigger_name(edge, triggers),
       target_job: target_name,
-      condition: "always",
+      condition: edge.condition |> Atom.to_string(),
       node_type: :edge
     }
   end
