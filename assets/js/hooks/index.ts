@@ -37,21 +37,3 @@ export const Copy = {
   },
 } as PhoenixHook<{}, { to: string }>;
 
-export const DownloadProject = {
-  updated() {
-    this.handleEvent('download_project', ({ link, file }) => {
-      console.log('Here');
-      this.downloadProject(link, file);
-    });
-  },
-
-  downloadProject(link, file) {
-    const downloadLink = document.createElement('a');
-    downloadLink.href = link;
-    downloadLink.download = file;
-    downloadLink.style.display = 'none';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-  },
-};

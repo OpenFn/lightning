@@ -25,7 +25,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
-import { AssocListChange, Copy, Flash, DownloadProject } from './hooks';
+import { AssocListChange, Copy, Flash } from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
@@ -41,7 +41,6 @@ let Hooks = {
   Flash,
   AssocListChange,
   Copy,
-  DownloadProject,
 };
 
 // @ts-ignore
@@ -84,17 +83,6 @@ window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
-});
-
-window.addEventListener('phx:download_project', e => {
-  const { file, link } = e.detail;
-  const downloadLink = document.createElement('a');
-  downloadLink.href = link;
-  downloadLink.download = file;
-  downloadLink.style.display = 'none';
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
 });
 
 window.addEventListener('keydown', event => {
