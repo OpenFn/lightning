@@ -534,7 +534,8 @@ defmodule Lightning.ProjectsTest do
     insert(:edge,
       workflow: workflow_1,
       source_trigger: build(:trigger, workflow: workflow_1),
-      target_job: workflow_1_job
+      target_job: workflow_1_job,
+      condition: :always
     )
 
     insert(:edge,
@@ -569,7 +570,8 @@ defmodule Lightning.ProjectsTest do
     insert(:edge,
       workflow: workflow_2,
       source_trigger: build(:trigger, workflow: workflow_2),
-      target_job: workflow_2_job
+      target_job: workflow_2_job,
+      condition: :always
     )
 
     insert(:edge,
