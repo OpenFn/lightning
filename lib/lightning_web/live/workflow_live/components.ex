@@ -7,7 +7,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   def workflow_list(assigns) do
     ~H"""
     <div class="w-full">
-      <div class="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+      <div class="mt-9 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
         <.create_workflow_card
           project={@project}
           can_create_workflow={@can_create_workflow}
@@ -154,26 +154,41 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :cancel_url, :string, required: true
   slot :inner_block, required: true
   slot :header
   slot :footer
 
   def panel(assigns) do
     ~H"""
-    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
-      <div class="flex flex-col h-full" id={@id}>
-        <div :if={Enum.any?(@header)} class="flex sticky top-0 border-b p-2">
-          <%= for item <- @header do %>
-            <%= render_slot(item) %>
-          <% end %>
+    <div class="absolute right-0 m-4 w-1/4" id={@id}>
+      <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow">
+        <div class="flex px-4 py-5 sm:px-6">
+          <div class="grow">
+            <b><%= @title %></b>
+          </div>
+          <div class="flex-none">
+            <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
+              <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
+            </.link>
+          </div>
         </div>
-        <div class="grow overflow-y-auto p-3">
-          <%= render_slot(@inner_block) %>
+        <div class="px-4 py-5 sm:p-6">
+          <div class="md:grid md:grid-cols-6 md:gap-4 @container">
+            <div class="col-span-6">
+              <%= render_slot(@inner_block) %>
+            </div>
+          </div>
         </div>
-        <div :if={Enum.any?(@footer)} class="flex-none sticky p-3 border-t">
-          <%= for item <- @footer do %>
-            <%= render_slot(item) %>
-          <% end %>
+        <div :if={Enum.any?(@footer)} class="p-3">
+          <div class="md:grid md:grid-cols-6 md:gap-4 @container">
+            <div class="col-span-6">
+              <%= for item <- @footer do %>
+                <%= render_slot(item) %>
+              <% end %>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -224,78 +239,57 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def trigger_form(assigns) do
     ~H"""
-    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
-      <div class="flex sticky top-0 border-b p-2">
-        <div class="grow">
-          <%= @form
-          |> input_value(:type)
-          |> to_string()
-          |> then(fn
-            "" -> "New Trigger"
-            "webhook" -> "Webhook Trigger"
-            "cron" -> "Cron Trigger"
-          end) %>
+    <%= hidden_inputs_for(@form) %>
+    <div class="col-span-6 @md:col-span-4">
+      <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
+        <div class="flex flex-row">
+          <span class="text-sm font-medium text-secondary-700">
+            Type
+          </span>
+          <Common.tooltip
+            id="trigger-tooltip"
+            title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
+            class="inline-block"
+          />
         </div>
-        <div class="flex-none">
-          <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
-            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
-          </.link>
+        <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
+        <Form.select_field
+          form={@form}
+          name={:type}
+          id="triggerType"
+          values={[
+            "Cron Schedule (UTC)": "cron",
+            "Webhook Event": "webhook"
+          ]}
+          disabled={@disabled}
+        />
+        <%= if @webhook_url do %>
+          <div class="col-span-4 @md:col-span-2 text-right text-">
+            <a
+              id="copyWebhookUrl"
+              href={@webhook_url}
+              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+              target="_blank"
+              phx-click="copied_to_clipboard"
+            >
+              Copy webhook url
+            </a>
+          </div>
+        <% end %>
+      <% end %>
+      <%= if @requires_cron_job do %>
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
         </div>
-      </div>
-      <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
-        <%= hidden_inputs_for(@form) %>
-        <div class="col-span-6 @md:col-span-4">
-          <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
-            <div class="flex flex-row">
-              <span class="text-sm font-medium text-secondary-700">
-                Type
-              </span>
-              <Common.tooltip
-                id="trigger-tooltip"
-                title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
-                class="inline-block"
-              />
-            </div>
-            <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
-            <Form.select_field
-              form={@form}
-              name={:type}
-              id="triggerType"
-              values={[
-                "Cron Schedule (UTC)": "cron",
-                "Webhook Event": "webhook"
-              ]}
-              disabled={@disabled}
-            />
-            <%= if @webhook_url do %>
-              <div class="col-span-4 @md:col-span-2 text-right text-">
-                <a
-                  id="copyWebhookUrl"
-                  href={@webhook_url}
-                  class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
-                  onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-                  target="_blank"
-                  phx-click="copied_to_clipboard"
-                >
-                  Copy webhook url
-                </a>
-              </div>
-            <% end %>
-          <% end %>
-          <%= if @requires_cron_job do %>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
-            <.live_component
-              id="cron-setup-component"
-              form={@form}
-              on_change={@on_change}
-              module={LightningWeb.JobLive.CronSetupComponent}
-              disabled={@disabled}
-            />
-          <% end %>
-        </div>
-      </div>
+        <.live_component
+          id="cron-setup-component"
+          form={@form}
+          on_change={@on_change}
+          module={LightningWeb.JobLive.CronSetupComponent}
+          disabled={@disabled}
+        />
+      <% end %>
     </div>
     """
   end
@@ -326,50 +320,35 @@ defmodule LightningWeb.WorkflowLive.Components do
     assigns = assigns |> assign(:edge_options, edge_options)
 
     ~H"""
-    <div class="h-full bg-white shadow-xl ring-1 ring-black ring-opacity-5">
-      <div class="flex sticky top-0 border-b p-2">
-        <div class="grow">
-          Edge
-        </div>
-        <div class="flex-none">
-          <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
-            <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
-          </.link>
-        </div>
+    <%= hidden_inputs_for(@form) %>
+
+    <Form.label_field
+      form={@form}
+      field={:condition}
+      title="Condition"
+      for={input_id(@form, :condition)}
+    />
+    <%= error_tag(@form, :condition,
+      class: "block w-full rounded-md text-sm text-secondary-700 "
+    ) %>
+    <%= if input_value(@form, :condition) == :always do %>
+      <Form.select_field
+        form={@form}
+        name={:condition}
+        values={@edge_options}
+        disabled={true}
+      />
+      <div class="max-w-xl text-sm text-gray-500">
+        <p>Jobs connected to a trigger are always run.</p>
       </div>
-      <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
-        <%= hidden_inputs_for(@form) %>
-        <div class="col-span-6">
-          <Form.label_field
-            form={@form}
-            field={:condition}
-            title="Condition"
-            for={input_id(@form, :condition)}
-          />
-          <%= error_tag(@form, :condition,
-            class: "block w-full rounded-md text-sm text-secondary-700 "
-          ) %>
-          <%= if input_value(@form, :condition) == :always do %>
-            <Form.select_field
-              form={@form}
-              name={:condition}
-              values={@edge_options}
-              disabled={true}
-            />
-            <div class="max-w-xl text-sm text-gray-500">
-              <p>Jobs connected to a trigger are always run.</p>
-            </div>
-          <% else %>
-            <Form.select_field
-              form={@form}
-              name={:condition}
-              values={@edge_options}
-              disabled={@disabled}
-            />
-          <% end %>
-        </div>
-      </div>
-    </div>
+    <% else %>
+      <Form.select_field
+        form={@form}
+        name={:condition}
+        values={@edge_options}
+        disabled={@disabled}
+      />
+    <% end %>
     """
   end
 
