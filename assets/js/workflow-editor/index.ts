@@ -16,6 +16,7 @@ type WorkflowEditorEntrypoint = PhoenixHook<{
   ): Promise<boolean>;
   abortController: AbortController | null;
   pushHash(id: string): void;
+  _onHashChange(e: Event): void;
   unselectNode(): void;
   onSelectionChange(id?: string): void;
 }>;
@@ -45,6 +46,7 @@ const createNewWorkflow = () => {
 
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
+    console.debug('WorkflowEditor mounted');
     this._pendingWorker = Promise.resolve();
     this.pendingChanges = [];
 
@@ -59,9 +61,14 @@ export default {
       this.workflowStore.getState().applyPatches(response.patches);
     });
 
-    window.addEventListener('hashchange', _event => {
+    this._onHashChange = event => {
+      console.log(event);
+      
+      console.log('hashchange', window.location.hash);
+
       this.pushHash(window.location.hash);
-    });
+    };
+    window.addEventListener('hashchange', this._onHashChange);
 
     this.pushHash(window.location.hash);
 
@@ -104,7 +111,8 @@ export default {
     }
 
     console.debug('selecting', id);
-    window.location.hash = id;
+    
+    window.location.hash = new URLSearchParams([ ["id", id], ]).toString();
   },
   destroyed() {
     if (this.component) {
@@ -114,6 +122,10 @@ export default {
     if (this.abortController) {
       this.abortController.abort();
     }
+
+    window.removeEventListener('hashchange', this._onHashChange);
+
+    console.debug('WorkflowEditor destroyed');
   },
   processPendingChanges() {
     // Ensure that changes are pushed in order

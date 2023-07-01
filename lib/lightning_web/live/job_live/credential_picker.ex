@@ -68,11 +68,10 @@ defmodule LightningWeb.JobLive.CredentialPicker do
   def handle_event("open_new_credential", _params, socket) do
     %{project_user: %{user: user, project: project}, form: form} = socket.assigns
 
-    LightningWeb.ModalPortal.show_modal(
+    LightningWeb.ModalPortal.open_modal(
       LightningWeb.CredentialLive.CredentialEditModal,
       %{
         action: :new,
-        # confirm: {"Save", type: "submit", form: "song-form"},
         credential: %Lightning.Credentials.Credential{
           user_id: user.id
         },
