@@ -224,7 +224,10 @@ defmodule Lightning.Jobs do
   @spec list_jobs_for_workflow(Workflow.t()) :: [Job.t(), ...] | []
   def list_jobs_for_workflow(%Workflow{id: workflow_id}) do
     query =
-      from j in Job, where: j.workflow_id == ^workflow_id, select: [:id, :name]
+      from j in Job,
+        where: j.workflow_id == ^workflow_id,
+        order_by: j.name,
+        select: [:id, :name]
 
     Repo.all(query)
   end

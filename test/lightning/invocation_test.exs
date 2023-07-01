@@ -341,10 +341,26 @@ defmodule Lightning.InvocationTest do
         ).entries()
 
       expected_order = [
-        %{id: wo_four.id, last_finished_at: run_four.finished_at},
-        %{id: wo_three.id, last_finished_at: run_three.finished_at},
-        %{id: wo_two.id, last_finished_at: run_two.finished_at},
-        %{id: wo_one.id, last_finished_at: run_one.finished_at}
+        %{
+          id: wo_four.id,
+          last_finished_at: run_four.finished_at,
+          workflow_id: workflow.id
+        },
+        %{
+          id: wo_three.id,
+          last_finished_at: run_three.finished_at,
+          workflow_id: workflow.id
+        },
+        %{
+          id: wo_two.id,
+          last_finished_at: run_two.finished_at,
+          workflow_id: workflow.id
+        },
+        %{
+          id: wo_one.id,
+          last_finished_at: run_one.finished_at,
+          workflow_id: workflow.id
+        }
       ]
 
       assert expected_order == simplified_result
@@ -611,9 +627,21 @@ defmodule Lightning.InvocationTest do
       # all work_orders in page_one are ordered by finished_at
 
       expected_order = [
-        %{id: wf3_wo3.id, last_finished_at: wf3_run3.finished_at},
-        %{id: wf3_wo2.id, last_finished_at: wf3_run2.finished_at},
-        %{id: wf3_wo1.id, last_finished_at: wf3_run1.finished_at}
+        %{
+          id: wf3_wo3.id,
+          last_finished_at: wf3_run3.finished_at,
+          workflow_id: job3.workflow_id
+        },
+        %{
+          id: wf3_wo2.id,
+          last_finished_at: wf3_run2.finished_at,
+          workflow_id: job3.workflow_id
+        },
+        %{
+          id: wf3_wo1.id,
+          last_finished_at: wf3_run1.finished_at,
+          workflow_id: job3.workflow_id
+        }
       ]
 
       assert expected_order == page_one_result
@@ -635,9 +663,21 @@ defmodule Lightning.InvocationTest do
 
       # all work_orders in page_two are ordered by finished_at
       expected_order = [
-        %{id: wf2_wo3.id, last_finished_at: wf2_run3.finished_at},
-        %{id: wf2_wo2.id, last_finished_at: wf2_run2.finished_at},
-        %{id: wf2_wo1.id, last_finished_at: wf2_run1.finished_at}
+        %{
+          id: wf2_wo3.id,
+          last_finished_at: wf2_run3.finished_at,
+          workflow_id: job2.workflow_id
+        },
+        %{
+          id: wf2_wo2.id,
+          last_finished_at: wf2_run2.finished_at,
+          workflow_id: job2.workflow_id
+        },
+        %{
+          id: wf2_wo1.id,
+          last_finished_at: wf2_run1.finished_at,
+          workflow_id: job2.workflow_id
+        }
       ]
 
       assert expected_order == page_two_result
@@ -659,9 +699,21 @@ defmodule Lightning.InvocationTest do
 
       # all work_orders in page_three are ordered by finished_at
       expected_order = [
-        %{id: wf1_wo3.id, last_finished_at: wf1_run3.finished_at},
-        %{id: wf1_wo2.id, last_finished_at: wf1_run2.finished_at},
-        %{id: wf1_wo1.id, last_finished_at: wf1_run1.finished_at}
+        %{
+          id: wf1_wo3.id,
+          last_finished_at: wf1_run3.finished_at,
+          workflow_id: job1.workflow_id
+        },
+        %{
+          id: wf1_wo2.id,
+          last_finished_at: wf1_run2.finished_at,
+          workflow_id: job1.workflow_id
+        },
+        %{
+          id: wf1_wo1.id,
+          last_finished_at: wf1_run1.finished_at,
+          workflow_id: job1.workflow_id
+        }
       ]
 
       assert expected_order == page_three_result

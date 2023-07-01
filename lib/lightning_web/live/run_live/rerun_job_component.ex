@@ -11,7 +11,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   def update(
         %{
           total_entries: _count,
-          selected_workorders: wo_list,
+          selected_count: _selected_count,
           workflow_id: workflow_id
         } = assigns,
         socket
@@ -21,13 +21,13 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
 
     {:ok,
      socket
-     |> assign(assigns)
      |> assign(
-       selected_count: Enum.count(wo_list),
+       show: false,
        workflow: workflow,
        workflow_jobs: jobs,
        selected_job: hd(jobs)
-     )}
+     )
+     |> assign(assigns)}
   end
 
   def handle_event(
@@ -116,6 +116,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
             >
               <button
+                id="rerun-selected-from-job-trigger"
                 type="button"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
@@ -129,6 +130,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                                                                       else: "" %> from selected job
               </button>
               <button
+                id="rerun-all-from-job-trigger"
                 type="button"
                 phx-click="bulk-rerun"
                 phx-value-type="all"
@@ -162,6 +164,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
             >
               <button
+                id="rerun-selected-from-job-trigger"
                 type="button"
                 phx-click="bulk-rerun"
                 phx-value-type="selected"
