@@ -13,8 +13,18 @@ defmodule LightningWeb.EndToEndTest do
 
   setup :register_and_log_in_superuser
 
-  # defp expected_core, do: "│ ◲ ◱  @openfn/core#v1.4.8 (Node.js v18.12.0"
-  # defp expected_adaptor, do: "@openfn/language-http@4.2.3"
+  defp has_expected_version?(string, dep) do
+    expression =
+      case dep do
+        :node -> ~r/(?=.*node.js)(?=.*18.12)/
+        :cli -> ~r/(?=.*cli)(?=.*0.0.35)/
+        :runtime -> ~r/(?=.*runtime)(?=.*0.0.21)/
+        :compiler -> ~r/(?=.*compiler)(?=.*0.0.29)/
+        :adaptor -> ~r/(?=.*language-http)(?=.*4.2.8)/
+      end
+
+    String.match?(string, expression)
+  end
 
   # workflow runs webhook then flow job
   test "the whole thing", %{conn: conn} do
@@ -42,8 +52,6 @@ defmodule LightningWeb.EndToEndTest do
         project_credential: project_credential
       )
 
-    # add an edge that follows the new rules foe edges
-    # delete the current trigger for this flow job as it will have an edge
     flow_job =
       insert(:job,
         name: "2nd-job",
@@ -114,16 +122,33 @@ defmodule LightningWeb.EndToEndTest do
       # Run 1 should succeed and use the appropriate packages
       assert run_1.finished_at != nil
       assert run_1.exit_code == 0
+
       assert Pipeline.assemble_logs_for_run(run_1) =~ "Done in"
 
-      #  Run 2 should fail but not expose a secret
+      r1_logs =
+        Pipeline.logs_for_run(run_1)
+        |> Enum.map(fn line -> line.body end)
+
+      # Check that versions are accurate and printed at the top of each run
+      assert Enum.at(r1_logs, 0) == "[CLI] ℹ Versions:"
+      assert Enum.at(r1_logs, 1) |> has_expected_version?(:node)
+      assert Enum.at(r1_logs, 2) |> has_expected_version?(:cli)
+      assert Enum.at(r1_logs, 3) |> has_expected_version?(:runtime)
+      assert Enum.at(r1_logs, 4) |> has_expected_version?(:compiler)
+      assert Enum.at(r1_logs, 5) |> has_expected_version?(:adaptor)
+
+      assert Enum.at(r1_logs, 11) =~ "[JOB] ℹ 2"
+      assert Enum.at(r1_logs, 12) =~ "[JOB] ℹ {\"name\":\"ศผ่องรี มมซึฆเ\"}"
+      assert Enum.at(r1_logs, 13) =~ "[R/T] ✔ Operation 1 complete in"
+      assert Enum.at(r1_logs, 15) =~ "[CLI] ✔ Done in"
+
+      # #  Run 2 should fail but not expose a secret
       assert run_2.finished_at != nil
       assert run_2.exit_code == 1
 
       log = Pipeline.assemble_logs_for_run(run_2)
-
-      assert log =~
-               ~S[{"password":"***","username":"quux"}]
+      assert log =~ ~S[{"password":"***","username":"quux"}]
+      assert log =~ ~S[Error in runtime execution!]
 
       #  Run 3 should succeed and log "6"
       assert run_3.finished_at != nil
