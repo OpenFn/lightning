@@ -122,9 +122,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                           </div>
                           <div class="grow">
                             <%= @selected_job.name %>
-
                           </div>
-                        <div class="flex-none">
+                          <div class="flex-none">
                             <button
                               type="button"
                               phx-click={close_modal}
@@ -133,7 +132,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                               <div class="sr-only">Close</div>
                               <Heroicons.x_mark class="w-6 h-6" />
                             </button>
-                        </div>
+                          </div>
                         </div>
                       </div>
                       <div class="grow overflow-y-auto">
@@ -233,7 +232,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def mount(_params, _session, socket) do
     project = socket.assigns.project
 
-    project_user = Projects.get_project_user(project, socket.assigns.current_user)
+    project_user =
+      Projects.get_project_user(project, socket.assigns.current_user)
 
     can_edit_job =
       ProjectUsers
@@ -322,7 +322,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("validate", %{"workflow" => params}, socket) do
     initial_params = socket.assigns.workflow_params
 
-    next_params = WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+    next_params =
+      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
     {:noreply,
      socket
@@ -337,7 +338,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     initial_params = socket.assigns.workflow_params
 
-    next_params = WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+    next_params =
+      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
     socket = socket |> apply_params(next_params)
 
@@ -362,7 +364,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("push-change", %{"patches" => patches}, socket) do
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
-    {:ok, params} = WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
+    {:ok, params} =
+      WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
     socket = socket |> apply_params(params)
 
@@ -383,7 +386,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     initial_params = socket.assigns.workflow_params
 
-    next_params = WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+    next_params =
+      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
     {:noreply,
      socket
