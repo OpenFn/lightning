@@ -32,7 +32,10 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
       assert response["data"] == [
                %{
-                 "attributes" => %{"name" => "a-test-project"},
+                 "attributes" => %{
+                   "name" => "a-test-project",
+                   "description" => nil
+                 },
                  "id" => project.id,
                  "links" => %{
                    "self" => "http://localhost:4002/api/projects/#{project.id}"
@@ -90,7 +93,10 @@ defmodule LightningWeb.API.ProjectControllerTest do
       response = json_response(conn, 200)
 
       assert response["data"] == %{
-               "attributes" => %{"name" => "a-test-project"},
+               "attributes" => %{
+                 "name" => "a-test-project",
+                 "description" => nil
+               },
                "id" => project.id,
                "links" => %{
                  "self" => "http://localhost:4002/api/projects/#{project.id}"
