@@ -244,11 +244,13 @@ defmodule LightningWeb.RunLive.Index do
       false ->
         {:noreply,
          socket
+         |> assign(active_modal: nil)
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
       {:ok, %{reasons: {0, []}}} ->
         {:noreply,
          socket
+         |> assign(active_modal: nil)
          |> put_flash(
            :error,
            "Oops! The chosen step hasn't been run in the latest attempts of any of the selected workorders"
@@ -257,6 +259,7 @@ defmodule LightningWeb.RunLive.Index do
       {:error, _changes} ->
         {:noreply,
          socket
+         |> assign(active_modal: nil)
          |> put_flash(:error, "Oops! an error occured during retries.")}
     end
   end
@@ -373,6 +376,12 @@ defmodule LightningWeb.RunLive.Index do
   defp selected_workflow_count(selected_orders_map) do
     selected_orders_map
     |> Enum.filter(fn {_key, val} -> Enum.count(val) >= 1 end)
+    |> Enum.count()
+  end
+
+  defp selected_workorder_count(selected_orders_map) do
+    selected_orders_map
+    |> flattened_selections()
     |> Enum.count()
   end
 

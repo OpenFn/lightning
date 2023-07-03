@@ -90,7 +90,7 @@
         pages={@page.total_pages}
         total_entries={@page.total_entries}
         all_selected?={all_selected?(@selected_work_orders, @page.entries)}
-        selected_count={selected_workflow_count(@selected_work_orders)}
+        selected_count={selected_workorder_count(@selected_work_orders)}
         filters={SearchParams.new(@filters)}
         workflows={@workflows}
       />
@@ -99,7 +99,7 @@
           module={LightningWeb.RunLive.RerunJobComponent}
           id="bulk-rerun-from-job-modal"
           total_entries={@page.total_entries}
-          selected_count={selected_workflow_count(@selected_work_orders)}
+          selected_count={selected_workorder_count(@selected_work_orders)}
           all_selected?={all_selected?(@selected_work_orders, @page.entries)}
           workflow_id={@selected_work_orders |> Map.keys() |> hd()}
           show={true}
