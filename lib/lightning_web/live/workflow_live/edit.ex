@@ -293,7 +293,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_event("get-initial-state", _params, socket) do
-    {:reply, socket.assigns.workflow_params, socket}
+    {:noreply,
+     socket
+     |> push_event("current-workflow-params", %{
+       workflow_params: socket.assigns.workflow_params
+     })}
   end
 
   def handle_event("set_expanded_job_modal", %{"show" => show}, socket)
