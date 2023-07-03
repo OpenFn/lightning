@@ -82,33 +82,35 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 <p class="text-sm text-gray-500">
                   Find all runs that include this step, and rerun from there
                 </p>
-                <fieldset class="mt-4">
-                  <legend class="sr-only">Workflow Job</legend>
-                  <div class="space-y-4">
-                    <%= for job <- @workflow_jobs do %>
-                      <div class="flex items-center">
-                        <input
-                          id={"job_#{job.id}"}
-                          name="job"
-                          type="radio"
-                          phx-change="select_job"
-                          phx-target={@myself}
-                          class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                          value={job.id}
-                          checked={
-                            if job.id == @selected_job.id, do: "checked", else: false
-                          }
-                        />
-                        <label
-                          for={"job_#{job.id}"}
-                          class="ml-3 block text-sm font-medium leading-6 text-gray-900"
-                        >
-                          <%= job.name %>
-                        </label>
-                      </div>
-                    <% end %>
-                  </div>
-                </fieldset>
+                <form phx-change="select_job" phx-target={@myself}>
+                  <fieldset class="mt-4">
+                    <legend class="sr-only">Workflow Job</legend>
+                    <div class="space-y-4">
+                      <%= for job <- @workflow_jobs do %>
+                        <div class="flex items-center">
+                          <input
+                            id={"job_#{job.id}"}
+                            name="job"
+                            type="radio"
+                            class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                            value={job.id}
+                            checked={
+                              if job.id == @selected_job.id,
+                                do: "checked",
+                                else: false
+                            }
+                          />
+                          <label
+                            for={"job_#{job.id}"}
+                            class="ml-3 block text-sm font-medium leading-6 text-gray-900"
+                          >
+                            <%= job.name %>
+                          </label>
+                        </div>
+                      <% end %>
+                    </div>
+                  </fieldset>
+                </form>
               </div>
             </div>
             <div

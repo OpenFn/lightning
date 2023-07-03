@@ -328,6 +328,8 @@ defmodule Lightning.AttemptService do
       when is_list(order_ids) do
     last_attempts_query =
       from(att in Lightning.Attempt,
+        join: r in assoc(att, :runs),
+        on: r.job_id == ^job_id,
         where: att.work_order_id in ^order_ids,
         group_by: att.work_order_id,
         select: %{
@@ -336,7 +338,7 @@ defmodule Lightning.AttemptService do
         }
       )
 
-    last_attempt_runs_query =
+    attempt_runs_query =
       from(ar in AttemptRun,
         join: att in assoc(ar, :attempt),
         join: last in subquery(last_attempts_query),
@@ -345,34 +347,10 @@ defmodule Lightning.AttemptService do
             att.inserted_at == last.last_inserted_at,
         join: r in assoc(ar, :run),
         on: r.job_id == ^job_id,
-        group_by: ar.attempt_id,
-        select: %{
-          attempt_id: ar.attempt_id,
-          last_inserted_at: max(ar.inserted_at)
-        }
-      )
-
-    attempt_runs_query =
-      from(ar in AttemptRun,
-        join: last in subquery(last_attempt_runs_query),
-        on:
-          ar.attempt_id == last.attempt_id and
-            ar.inserted_at == last.last_inserted_at,
         order_by: ar.inserted_at,
         preload: [
-          :attempt,
-          run:
-            ^from(r in Run,
-              select: [
-                :id,
-                :job_id,
-                :started_at,
-                :finished_at,
-                :exit_code,
-                :input_dataclip_id,
-                :output_dataclip_id
-              ]
-            )
+          attempt: att,
+          run: r
         ]
       )
 
