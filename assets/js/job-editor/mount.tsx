@@ -2,23 +2,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import type JobEditor from './JobEditor';
 import { sortMetadata } from '../metadata-loader/metadata';
+import { PhoenixHook } from '../hooks/PhoenixHook';
 
-// TODO needs reorganising
-interface ViewHook {
-  destroyed(): void;
-  el: HTMLElement;
-  pushEventTo(
-    target: HTMLElement,
-    event: string,
-    payload: {},
-    callback?: (reply: {}, ref: unknown) => void
-  ): void;
-  handleEvent(event: string, callback: (reply: {}) => void): unknown;
-  removeHandleEvent(callbackRef: unknown): void;
-  mounted(): void;
-}
-
-interface JobEditorEntrypoint extends ViewHook {
+interface JobEditorEntrypoint extends PhoenixHook {
   componentRoot: ReturnType<typeof createRoot> | null;
   changeEvent: string;
   field?: HTMLTextAreaElement | null;
