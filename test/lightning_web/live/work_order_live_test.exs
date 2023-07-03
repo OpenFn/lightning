@@ -1938,7 +1938,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert render(view) =~
                "Find all runs that include this step, and rerun from there"
 
-      view |> element("#job_#{jobs.a.id}") |> render_change()
+      view
+      |> form("#select-job-for-rerun-form")
+      |> render_change(%{job: jobs.a.id})
 
       result = view |> element("#rerun-all-from-job-trigger") |> render_click()
 
@@ -1952,7 +1954,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       view |> element("#bulk-rerun-from-job-modal-trigger") |> render_click()
 
-      view |> element("#job_#{jobs.a.id}") |> render_change()
+      view
+      |> form("#select-job-for-rerun-form")
+      |> render_change(%{job: jobs.a.id})
 
       result =
         view |> element("#rerun-selected-from-job-trigger") |> render_click()

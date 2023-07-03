@@ -82,7 +82,11 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
                 <p class="text-sm text-gray-500">
                   Find all runs that include this step, and rerun from there
                 </p>
-                <form phx-change="select_job" phx-target={@myself}>
+                <form
+                  id="select-job-for-rerun-form"
+                  phx-change="select_job"
+                  phx-target={@myself}
+                >
                   <fieldset class="mt-4">
                     <legend class="sr-only">Workflow Job</legend>
                     <div class="space-y-4">

@@ -329,7 +329,6 @@ defmodule Lightning.AttemptService do
     last_attempts_query =
       from(att in Lightning.Attempt,
         join: r in assoc(att, :runs),
-        on: r.job_id == ^job_id,
         where: att.work_order_id in ^order_ids,
         group_by: att.work_order_id,
         select: %{
