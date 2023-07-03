@@ -1940,7 +1940,6 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert render(view) =~
                "Find all runs that include this step, and rerun from there"
 
-
       view
       |> form("#select-job-for-rerun-form")
       |> render_change(%{job: jobs.a.id})
