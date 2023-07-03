@@ -190,6 +190,12 @@ defmodule LightningWeb.RunLive.Index do
         {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selection}},
         %{assigns: assigns} = socket
       ) do
+    # TODO: clean up this naming and adopt a simpler, more explicit approach.
+    # Note that this is not a list of work_orders. It's a map with 0 or many
+    # keys. Each key is a workflow_id, and the value for each key is a list of
+    # workorders. We might consider a list of {workorder, workflow} tuples or a
+    # list of %{wo: id, wf: id} maps. (Or, since we've found the bug and fixed
+    # it via the Map.reject line below, we might also leave this as is.)
     work_orders =
       Map.update(
         assigns.selected_work_orders,
@@ -203,6 +209,7 @@ defmodule LightningWeb.RunLive.Index do
           end
         end
       )
+      |> Map.reject(fn {_key, val} -> val == [] end)
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
