@@ -9,6 +9,7 @@ import {
 } from './store';
 
 type WorkflowEditorEntrypoint = PhoenixHook<{
+  _isMounting: boolean;
   _onHashChange(e: Event): void;
   _pendingWorker: Promise<void>;
   abortController: AbortController | null;
@@ -16,7 +17,7 @@ type WorkflowEditorEntrypoint = PhoenixHook<{
   componentModule: Promise<{ mount: typeof mount }>;
   getWorkflowParams(): void;
   handleWorkflowParams(payload: { workflow_params: WorkflowProps }): void;
-  mountComponent(): void;
+  maybeMountComponent(): void;
   onSelectionChange(id?: string): void;
   pendingChanges: PendingAction[];
   processPendingChanges(): void;
@@ -52,15 +53,12 @@ const createNewWorkflow = () => {
   return { triggers, jobs, edges };
 };
 
-function isTrue(value: string | null | undefined): boolean {
-  return value === 'true';
-}
-
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
     console.debug('WorkflowEditor hook mounted');
 
     this._pendingWorker = Promise.resolve();
+    this._isMounting = false;
     this.pendingChanges = [];
 
     // Setup our abort controller to stop any pending changes.
@@ -70,10 +68,6 @@ export default {
     this.componentModule = import('./component');
 
     this._onHashChange = event => {
-      console.log(event);
-
-      console.log('hashchange', window.location.hash);
-
       this.pushHash(window.location.hash);
     };
 
@@ -99,11 +93,6 @@ export default {
 
     // Get the initial data from the server
     this.getWorkflowParams();
-  },
-  updated() {
-    if (!this.component && isTrue(this.el.dataset.inView)) {
-      this.mountComponent();
-    }
   },
   pushHash(hash: string) {
     this.pushEventTo(this.el, 'hash-changed', { hash });
@@ -184,19 +173,20 @@ export default {
       this.workflowStore.getState().add(diff);
     }
 
-    if (!this.component && isTrue(this.el.dataset.inView)) {
-      this.mountComponent();
-    } else {
-      console.debug('not mounting component');
-    }
+    this.maybeMountComponent();
   },
-  mountComponent() {
-    this.componentModule.then(({ mount }) => {
-      this.component = mount(
-        this.el,
-        this.workflowStore,
-        this.onSelectionChange.bind(this)
-      );
-    });
+  maybeMountComponent() {
+    if (!this._isMounting && !this.component) {
+      this._isMounting = true;
+      this.componentModule.then(({ mount }) => {
+        this.component = mount(
+          this.el,
+          this.workflowStore,
+          this.onSelectionChange.bind(this)
+        );
+
+        this._isMounting = false;
+      });
+    }
   },
 } as WorkflowEditorEntrypoint;
