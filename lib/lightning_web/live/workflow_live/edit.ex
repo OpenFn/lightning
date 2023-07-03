@@ -12,10 +12,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
-  attr(:changeset, :map, required: true)
-  attr(:project_user, :map, required: true)
+  attr :changeset, :map, required: true
+  attr :project_user, :map, required: true
 
   @impl true
   def render(assigns) do
@@ -44,6 +44,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-update="ignore"
         >
           <%!-- Before Editor component has mounted --%> Loading...
+        </div>
+        <div class="flex-none" id="job-editor-pane">
+          <div
+            :if={@selected_job && @show_expanded_job}
+            class="absolute inset-0 z-20"
+          >
+            <LightningWeb.WorkflowLive.JobView.job_edit_view
+              job={@selected_job}
+              on_close="set_expanded_job"
+              form={to_form(@changeset)}
+            />
+          </div>
         </div>
         <div
           :if={@selected_job}
@@ -96,58 +108,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     shadow-sm hover:bg-indigo-500
                     focus-visible:outline focus-visible:outline-2
                     focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    phx-click="set_expanded_job_modal"
+                    phx-click="set_expanded_job"
                     phx-value-show="true"
                   >
                     <Heroicons.pencil_square class="w-4 h-4 -ml-0.5" /> Edit
                   </button>
                 </:footer>
-                <LightningWeb.Components.Modal.modal
-                  :let={close_modal}
-                  :if={@show_expanded_job_modal}
-                  id="expanded-job-modal"
-                  show={@show_expanded_job_modal}
-                >
-                  <div class="bg-white overscroll-none inset-4 resize-x">
-                    <div class="z-50 flex flex-col h-full">
-                      <div class="w-full">
-                        <div class="p-5 flex flex-row h-1/6">
-                          <div><%= @selected_job.adaptor %></div>
-                          <div class="grow">
-                            <%= if @selected_job.credential != nil do %>
-                              <%= @selected_job.credential.name %>
-                            <% else %>
-                              <%= "No Credentials" %>
-                            <% end %>
-                          </div>
-                          <div class="grow">
-                            <%= @selected_job.name %>
-                          </div>
-                          <div class="flex-none">
-                            <button
-                              type="button"
-                              phx-click={close_modal}
-                              class="text-gray-400 hover:text-gray-500"
-                            >
-                              <div class="sr-only">Close</div>
-                              <Heroicons.x_mark class="w-6 h-6" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="grow overflow-y-auto">
-                        <div class="grid grid-cols-3 divide-x">
-                          <div>Input</div>
-                          <div>Editor</div>
-                          <div>Output</div>
-                        </div>
-                      </div>
-                      <div class="flex-none h-1/6">
-                        <span> Reruns  Buttons </span>
-                      </div>
-                    </div>
-                  </div>
-                </LightningWeb.Components.Modal.modal>
               </.panel>
             </.form>
           </div>
@@ -252,12 +218,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
        page_title: "",
        project: project,
        project_user: project_user,
-       show_expanded_job_modal: false,
+       show_expanded_job: false,
        selection_mode: nil,
        selected_edge: nil,
        selected_job: nil,
-       selected_trigger: nil,
-       show_edit_modal: false
+       selected_trigger: nil
      )}
   end
 
@@ -300,14 +265,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      })}
   end
 
-  def handle_event("set_expanded_job_modal", %{"show" => show}, socket)
+  def handle_event("set_expanded_job", %{"show" => show}, socket)
       when show in ["true", "false"] do
     {:noreply,
-     socket |> assign(show_expanded_job_modal: show |> String.to_existing_atom())}
-  end
-
-  def handle_event("modal_closed", _, socket) do
-    {:noreply, socket |> assign(show_expanded_job_modal: false)}
+     socket |> assign(show_expanded_job: show |> String.to_existing_atom())}
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do
@@ -388,19 +349,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
+    IO.inspect(params)
     initial_params = socket.assigns.workflow_params
 
     next_params =
       WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+      |> IO.inspect()
 
     {:noreply,
      socket
      |> apply_params(next_params)
      |> push_patches_applied(initial_params)}
-  end
-
-  def handle_info({"expanded_modal_closed", _target}, socket) do
-    {:noreply, socket |> assign(show_expanded_job_modal: false)}
   end
 
   defp webhook_url(changeset) do
