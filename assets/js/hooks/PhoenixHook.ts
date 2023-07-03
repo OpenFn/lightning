@@ -5,6 +5,7 @@ export interface LiveSocket {
 
 export type PhoenixHook<T = {}, Dataset = {}, El = HTMLElement> = {
   mounted(): void;
+  updated(): void;
   liveSocket: LiveSocket;
   el: El & {
     dataset: Dataset;
