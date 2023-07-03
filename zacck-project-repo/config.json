@@ -1,0 +1,6 @@
+{
+  "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJKb2tlbiIsImlhdCI6MTY4Nzk0Mzk2OSwiaXNzIjoiSm9rZW4iLCJqdGkiOiIydG1jZzY2YjdtaWdubDY1cGcwMDAxaTUiLCJuYmYiOjE2ODc5NDM5NjksInVzZXJfaWQiOiI1OWQ3MzBmNy02MDUyLTQ3NGYtYTc5ZC1mMTVjNzAzZWRjOGMifQ.k2BSp7zgFALixEdQXZtn6tySCaFyTmxNcj9njvXKM3Q",
+  "specPath": "amber.yaml",
+  "statePath": ".amber-state.json",
+  "endpoint": "http://localhost:4000/api/provision"
+}

@@ -1,0 +1,56 @@
+{
+  "description": null,
+  "id": "4aca4a42-9f07-4494-8bef-05e8eca2a089",
+  "inserted_at": "2023-06-29T12:15:20",
+  "name": "dhis2-project-amber",
+  "scheduled_deletion": null,
+  "updated_at": "2023-06-29T12:15:20",
+  "workflows": {
+    "DHIS2-to-Sheets": {
+      "deleted_at": null,
+      "id": "8dcaa9c2-cd3f-418e-b070-7ac52aa3848d",
+      "inserted_at": "2023-06-29T12:15:20",
+      "name": "DHIS2 to Sheets",
+      "project_id": "4aca4a42-9f07-4494-8bef-05e8eca2a089",
+      "updated_at": "2023-06-29T12:15:20",
+      "edges": {
+        "cron->Get-DHIS2-data": {
+          "condition": null,
+          "id": "33e5bf0c-4fdd-4a6d-9068-74cb62df198a",
+          "source_job_id": null,
+          "source_trigger_id": "5ca4936d-411c-4bfc-a6f5-c4fc5f21ce90",
+          "target_job_id": "2d6a28c4-7557-43d1-abe6-88fb9863c139"
+        },
+        "Get-DHIS2-data->Upload-to-Google-Sheet": {
+          "condition": null,
+          "id": "1fb54d16-21d7-4252-8cbe-413df186fd17",
+          "source_job_id": "2d6a28c4-7557-43d1-abe6-88fb9863c139",
+          "source_trigger_id": null,
+          "target_job_id": "e4785e96-4c22-4f27-8295-3753205a1b4c"
+        }
+      },
+      "jobs": {
+        "Get-DHIS2-data": {
+          "adaptor": "@openfn/language-dhis2@latest",
+          "body": "fn(state => state);\n",
+          "enabled": true,
+          "id": "2d6a28c4-7557-43d1-abe6-88fb9863c139",
+          "name": "Get-DHIS2-data"
+        },
+        "Upload-to-Google-Sheet": {
+          "adaptor": "@openfn/language-http@latest",
+          "body": "fn(state => state);\n",
+          "enabled": true,
+          "id": "e4785e96-4c22-4f27-8295-3753205a1b4c",
+          "name": "Upload-to-Google-Sheet"
+        }
+      },
+      "triggers": {
+        "trigger-one": {
+          "id": "5ca4936d-411c-4bfc-a6f5-c4fc5f21ce90",
+          "type": "cron"
+        }
+      }
+    }
+  }
+}

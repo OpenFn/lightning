@@ -1,0 +1,40 @@
+name: zaccks-project-3
+globals:
+workflows:
+  test-with-taylor:
+    name: test-with-taylor
+    jobs:
+      Another-edited:
+       name: Another-edited
+       adaptor: @openfn/language-http@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         alterState(state => {
+           console.log("This is something!");
+           return state;
+         });
+         
+      My-Second-Job:
+       name: My-Second-Job
+       adaptor: @openfn/language-common@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         alterState(state => {
+           console.log("Hello world!");
+           return state;
+         });
+         
+    triggers:
+      trigger-one:
+       type: webhook
+    edges:
+      webhook->Another-edited:
+       source_trigger: trigger-one
+       target_job: Another-edited
+      Another-edited->My-Second-Job:
+       source_job: Another-edited
+       target_job: My-Second-Job

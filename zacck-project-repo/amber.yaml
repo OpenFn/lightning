@@ -1,0 +1,31 @@
+name: dhis2-project-amber
+globals:
+workflows:
+  DHIS2-to-Sheets:
+    name: DHIS2 to Sheets
+    jobs:
+      Get-DHIS2-data:
+       name: Get-DHIS2-data
+       adaptor: @openfn/language-dhis2@latest
+       enabled: true
+       globals:
+       body: |
+         fn(state => state);
+      Upload-to-Google-Sheet:
+       name: Upload-to-Google-Sheet
+       adaptor: @openfn/language-http@latest
+       enabled: true
+       credential:
+       globals:
+       body: |
+         fn(state => state);
+    triggers:
+      trigger-one:
+       type: cron
+    edges:
+      cron->Get-DHIS2-data:
+       source_trigger: trigger-one
+       target_job: Get-DHIS2-data
+      Get-DHIS2-data->Upload-to-Google-Sheet:
+       source_job: Get-DHIS2-data
+       target_job: Upload-to-Google-Sheet

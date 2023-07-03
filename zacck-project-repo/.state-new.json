@@ -1,0 +1,56 @@
+{
+  "description": null,
+  "id": "f1ade70a-3e7f-4501-bd17-0293b9cacc49",
+  "inserted_at": "2023-06-29T12:05:51",
+  "name": "tays-project",
+  "scheduled_deletion": null,
+  "updated_at": "2023-06-29T12:05:51",
+  "workflows": {
+    "test-with-taylor": {
+      "deleted_at": null,
+      "id": "18177fa4-5aa5-44e0-af4c-a601b4d05320",
+      "inserted_at": "2023-06-29T12:05:51",
+      "name": "test-with-taylor",
+      "project_id": "f1ade70a-3e7f-4501-bd17-0293b9cacc49",
+      "updated_at": "2023-06-29T12:05:51",
+      "edges": {
+        "webhook->Another-edited": {
+          "condition": null,
+          "id": "79438d88-2029-450d-b56d-c12b2d5314e4",
+          "source_job_id": null,
+          "source_trigger_id": "53f429cb-88d4-4d3c-a1b9-1a49204c395f",
+          "target_job_id": "b391a692-44d2-4b24-91aa-3f33dc63c401"
+        },
+        "Another-edited->My-Second-Job": {
+          "condition": null,
+          "id": "e648e3c7-2b3b-4392-a49e-f392836c5bfa",
+          "source_job_id": "b391a692-44d2-4b24-91aa-3f33dc63c401",
+          "source_trigger_id": null,
+          "target_job_id": "284f4f0a-2eb3-42dc-b47b-3856e45652e4"
+        }
+      },
+      "jobs": {
+        "Another-edited": {
+          "adaptor": "@openfn/language-http@latest",
+          "body": "alterState(state => {\n  console.log(\"This is something!\");\n  return state;\n});\n",
+          "enabled": true,
+          "id": "b391a692-44d2-4b24-91aa-3f33dc63c401",
+          "name": "Another-edited"
+        },
+        "My-Second-Job": {
+          "adaptor": "@openfn/language-common@latest",
+          "body": "alterState(state => {\n  console.log(\"Hello world!\");\n  return state;\n});\n",
+          "enabled": true,
+          "id": "284f4f0a-2eb3-42dc-b47b-3856e45652e4",
+          "name": "My-Second-Job"
+        }
+      },
+      "triggers": {
+        "trigger-one": {
+          "id": "53f429cb-88d4-4d3c-a1b9-1a49204c395f",
+          "type": "webhook"
+        }
+      }
+    }
+  }
+}

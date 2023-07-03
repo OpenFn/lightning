@@ -163,7 +163,12 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("export_project", %{"id" => id}, socket) do
-    {:noreply, push_navigate(socket, to: "/download/yaml?id=#{id}")}
+    {:ok, yaml} = Projects.export_project(:yaml, id)
+
+    {:noreply,
+     socket
+     |> push_event("download-yaml", %{yaml: yaml, filename: "project-#{id}.yaml"})
+     |> put_flash(:info, "Project yaml exported successfully")}
   end
 
   defp dispatch_flash(change_result, socket) do

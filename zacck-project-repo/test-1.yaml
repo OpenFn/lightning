@@ -1,0 +1,33 @@
+---
+name: zaccks-project
+workflows:
+  workflow-one:
+    name: test-with-taylor
+    jobs:
+      job-a:
+        name: Another edited
+        enabled: true
+        adaptor: @openfn/language-http@latest
+        body: |
+          alterState(state => {
+            console.log("This is something!");
+            return state;
+          });
+      job-b:
+        name: My Second Job
+        adaptor: @openfn/language-common@latest
+        body: |
+          alterState(state => {
+            console.log("Hello world!");
+            return state;
+          });
+    triggers:
+      trigger-one:
+        type: webhook
+    edges:
+      webhook->job-a:
+        source_trigger: trigger-one
+        target_job: job-a
+      job-a->job-b:
+        source_job: job-a
+        target_job: job-b

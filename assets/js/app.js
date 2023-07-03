@@ -25,7 +25,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
-import { AssocListChange, Copy, Flash } from './hooks';
+import { AssocListChange, Copy, Flash} from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
@@ -96,6 +96,16 @@ window.addEventListener('keydown', event => {
       form.click();
     }
   }
+});
+
+window.addEventListener('phx:download-yaml', e => {
+    const downloadLink = document.createElement('a');
+    downloadLink.setAttribute('href', 'data:text/yaml;charset=utf-8,' + encodeURIComponent(e.detail.yaml));
+    downloadLink.setAttribute('download', e.detail.filename);
+    downloadLink.style.display ='none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
 });
 
 // connect if there are any LiveViews on the page

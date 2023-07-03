@@ -1,0 +1,56 @@
+{
+  "description": null,
+  "id": "e6fd1f58-67f4-4025-8902-33e21cc90c1f",
+  "inserted_at": "2023-06-29T12:06:23",
+  "name": "zaccks-project-3",
+  "scheduled_deletion": null,
+  "updated_at": "2023-06-29T12:06:23",
+  "workflows": {
+    "test-with-taylor": {
+      "deleted_at": null,
+      "id": "81fb3f3a-c73b-4a92-9b4a-a53b0f3da1ab",
+      "inserted_at": "2023-06-29T12:06:23",
+      "name": "test-with-taylor",
+      "project_id": "e6fd1f58-67f4-4025-8902-33e21cc90c1f",
+      "updated_at": "2023-06-29T12:06:23",
+      "edges": {
+        "webhook->Another-edited": {
+          "condition": null,
+          "id": "a326de2f-a297-4ac8-9fdb-7726ef1b5222",
+          "source_job_id": null,
+          "source_trigger_id": "3fb0f63f-5602-495e-9f7a-0f82703cf939",
+          "target_job_id": "72086073-72ef-4770-bae5-5c23e1fb50c6"
+        },
+        "Another-edited->My-Second-Job": {
+          "condition": null,
+          "id": "ee604bc0-e8cb-43d1-ba70-2e7fe21485a1",
+          "source_job_id": "72086073-72ef-4770-bae5-5c23e1fb50c6",
+          "source_trigger_id": null,
+          "target_job_id": "ee97d407-b1db-4a64-9275-545bbe05ae0a"
+        }
+      },
+      "jobs": {
+        "Another-edited": {
+          "adaptor": "@openfn/language-http@latest",
+          "body": "alterState(state => {\n  console.log(\"This is something!\");\n  return state;\n});\n",
+          "enabled": true,
+          "id": "72086073-72ef-4770-bae5-5c23e1fb50c6",
+          "name": "Another-edited"
+        },
+        "My-Second-Job": {
+          "adaptor": "@openfn/language-common@latest",
+          "body": "alterState(state => {\n  console.log(\"Hello world!\");\n  return state;\n});\n",
+          "enabled": true,
+          "id": "ee97d407-b1db-4a64-9275-545bbe05ae0a",
+          "name": "My-Second-Job"
+        }
+      },
+      "triggers": {
+        "trigger-one": {
+          "id": "3fb0f63f-5602-495e-9f7a-0f82703cf939",
+          "type": "webhook"
+        }
+      }
+    }
+  }
+}
