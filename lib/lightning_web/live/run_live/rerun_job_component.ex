@@ -118,7 +118,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               </div>
             </div>
             <div
-              :if={@all_selected? and @total_entries > 1}
+              :if={@all_selected? and @total_entries > 1 and @pages > 1}
               class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
             >
               <button
@@ -166,7 +166,7 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
               </button>
             </div>
             <div
-              :if={!@all_selected? or @total_entries == 1}
+              :if={!@all_selected? or @total_entries == 1 or @pages == 1}
               class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3"
             >
               <button

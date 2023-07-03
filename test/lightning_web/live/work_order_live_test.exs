@@ -1928,7 +1928,9 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       refute html =~ "Find all runs that include this step, and rerun from there"
 
-      render_change(view, "toggle_all_selections", %{all_selections: true})
+      view
+      |> form("##{work_order_1.id}-selection-form")
+      |> render_change(%{selected: true})
 
       refute render(view) =~
                "Find all runs that include this step, and rerun from there"
@@ -1938,21 +1940,6 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert render(view) =~
                "Find all runs that include this step, and rerun from there"
 
-      view
-      |> form("#select-job-for-rerun-form")
-      |> render_change(%{job: jobs.a.id})
-
-      result = view |> element("#rerun-all-from-job-trigger") |> render_click()
-
-      {:ok, view, html} = follow_redirect(result, conn)
-
-      assert html =~ "New attempts enqueued for 2 workorders"
-
-      view
-      |> form("##{work_order_1.id}-selection-form")
-      |> render_change(%{selected: true})
-
-      view |> element("#bulk-rerun-from-job-modal-trigger") |> render_click()
 
       view
       |> form("#select-job-for-rerun-form")
@@ -1977,6 +1964,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           total_entries: 25,
           all_selected?: true,
           selected_count: 5,
+          pages: 2,
           filters: %SearchParams{},
           workflow_id: workflow.id
         )
@@ -1996,6 +1984,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           total_entries: 25,
           all_selected?: true,
           selected_count: 5,
+          pages: 2,
           filters: %SearchParams{},
           workflow_id: workflow.id
         )
@@ -2014,6 +2003,26 @@ defmodule LightningWeb.RunWorkOrderTest do
           total_entries: 25,
           all_selected?: false,
           selected_count: 5,
+          pages: 2,
+          filters: %SearchParams{},
+          workflow_id: workflow.id
+        )
+
+      refute html =~ "Rerun all 25 matching workorders from selected job"
+      assert html =~ "Rerun 5 selected workorders from selected job"
+    end
+
+    test "only 1 run button is present when total pages is 1", %{
+      workflow: workflow
+    } do
+      html =
+        render_component(
+          LightningWeb.RunLive.RerunJobComponent,
+          id: "bulk-rerun-from-start-modal",
+          total_entries: 25,
+          all_selected?: true,
+          selected_count: 5,
+          pages: 1,
           filters: %SearchParams{},
           workflow_id: workflow.id
         )

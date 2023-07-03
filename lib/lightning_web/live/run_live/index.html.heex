@@ -102,6 +102,7 @@
           selected_count={selected_workorder_count(@selected_work_orders)}
           all_selected?={all_selected?(@selected_work_orders, @page.entries)}
           workflow_id={@selected_work_orders |> Map.keys() |> hd()}
+          pages={@page.total_pages}
           show={true}
         />
       </div>
