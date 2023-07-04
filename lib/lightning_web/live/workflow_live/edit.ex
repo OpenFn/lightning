@@ -26,29 +26,37 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <:title>
             <.workflow_name_field changeset={@changeset} />
           </:title>
-          <Form.submit_button
-            class=""
-            phx-disable-with="Saving..."
-            disabled={!@changeset.valid?}
-            form="workflow-form"
-          >
-            Save
-          </Form.submit_button>
+          <.with_changes_indicator changeset={@changeset}>
+            <Form.submit_button
+              class=""
+              phx-disable-with="Saving..."
+              disabled={!@changeset.valid?}
+              form="workflow-form"
+            >
+              Save
+            </Form.submit_button>
+          </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
       <div class="relative h-full flex">
         <div
-          class="grow"
           phx-hook="WorkflowEditor"
+          class="grow"
           id={"editor-#{@project.id}"}
           phx-update="ignore"
         >
-          <%!-- Before Editor component has mounted --%> Loading...
+          <%!-- Before Editor component has mounted --%>
+          <div class="flex place-content-center h-full cursor-wait">
+            <.box_loader />
+          </div>
         </div>
+        <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @show_expanded_job}
-            class="absolute inset-0 z-20"
+            class="absolute hidden inset-0 z-20"
+            phx-mounted={fade_in()}
+            phx-remove={fade_out()}
           >
             <LightningWeb.WorkflowLive.JobView.job_edit_view
               job={@selected_job}
@@ -296,11 +304,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_patches_applied(initial_params)}
   end
 
-  def handle_event("save", %{"workflow" => params} = all, socket) do
-    IO.inspect(all)
-    # update the changeset
-    # then do the 'normal' insert or update
-
+  def handle_event("save", %{"workflow" => params}, socket) do
     initial_params = socket.assigns.workflow_params
 
     next_params =
@@ -349,12 +353,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    IO.inspect(params)
     initial_params = socket.assigns.workflow_params
 
     next_params =
       WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
-      |> IO.inspect()
 
     {:noreply,
      socket
@@ -450,5 +452,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:halt, [field, changeset]}
       end
     end)
+  end
+
+  defp box_loader(assigns) do
+    ~H"""
+    <span class="inline-block top-[50%] w-10 h-10 relative border-4
+                 border-gray-400 animate-spin-pause">
+      <span class="align-top inline-block w-full bg-gray-400 animate-fill-up"></span>
+    </span>
+    """
+  end
+
+  defp with_changes_indicator(assigns) do
+    ~H"""
+    <div class="relative">
+      <div
+        :if={@changeset.changes |> Enum.any?()}
+        class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0"
+      >
+      </div>
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
   end
 end

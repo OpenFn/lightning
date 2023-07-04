@@ -27,6 +27,26 @@ module.exports = {
         sans: ['Inter var', ...defaultTheme.fontFamily.sans],
         mono: ['Fira Code VF', ...defaultTheme.fontFamily.mono],
       },
+      animation: {
+        'spin-pause': 'spin-pause 2s infinite ease',
+        'fill-up': 'fill-up 2s infinite ease-in',
+      },
+      keyframes: {
+        'spin-pause': {
+          '0%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(180deg)' },
+          '50%': { transform: 'rotate(180deg)' },
+          '75%': { transform: 'rotate(360deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        'fill-up': {
+          '0%': { height: '0%' },
+          '25%': { height: '0%' },
+          '50%': { height: '100%' },
+          '75%': { height: '100%' },
+          '100%': { height: '0%' },
+        },
+      },
     },
   },
   plugins: [
