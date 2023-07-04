@@ -186,11 +186,11 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selection}},
+        {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selected?}},
         %{assigns: assigns} = socket
       ) do
     work_orders =
-      if selection do
+      if selected? do
         [%{id: id, workflow_id: workflow_id} | assigns.selected_work_orders]
       else
         assigns.selected_work_orders -- [%{id: id, workflow_id: workflow_id}]
