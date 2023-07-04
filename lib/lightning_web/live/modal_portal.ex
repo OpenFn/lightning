@@ -113,8 +113,6 @@ defmodule LightningWeb.ModalPortal do
   end
 
   def hide_modal(close_modal_target \\ nil, id \\ "modal") do
-    IO.inspect({close_modal_target, id}, label: "hide_modal")
-
     js =
       %JS{}
       |> JS.hide(

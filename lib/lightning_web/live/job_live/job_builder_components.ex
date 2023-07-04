@@ -135,6 +135,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
   attr :adaptor, :string, required: true
   attr :disabled, :boolean, default: false
   attr :source, :string, required: true
+  attr :change_event, :string, default: "job_body_changed"
   attr :rest, :global
 
   def job_editor_component(assigns) do
@@ -145,7 +146,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
       data-adaptor={@adaptor}
       data-source={@source}
       data-disabled={@disabled}
-      data-change-event="job_body_changed"
+      data-change-event={@change_event}
       phx-hook="JobEditor"
       phx-update="ignore"
       class="flex flex-col h-full"
