@@ -99,15 +99,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     </.link>
                   </div>
                 </:header>
-
-                <%= for job_form <- single_inputs_for(f, :jobs, @selected_job.id) do %>
-                  <!-- Show only the currently selected one -->
-                  <.job_form
-                    on_change={&send_form_changed/1}
-                    form={job_form}
-                    project_user={@project_user}
-                  />
-                <% end %>
+                <!-- Show only the currently selected one -->
+                <.job_form
+                  on_change={&send_form_changed/1}
+                  form={single_inputs_for(f, :jobs, @selected_job.id)}
+                  project_user={@project_user}
+                />
                 <:footer>
                   <button
                     type="button"
@@ -142,21 +139,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 phx-change="validate"
                 class="h-full"
               >
-                <%= for trigger_form <- single_inputs_for(f, :triggers, @selected_trigger.id) do %>
-                  <!-- Show only the currently selected one -->
-                  <.trigger_form
-                    form={trigger_form}
-                    on_change={&send_form_changed/1}
-                    requires_cron_job={
-                      Ecto.Changeset.get_field(trigger_form.source, :type) == :cron
-                    }
-                    disabled={!@can_edit_job}
-                    webhook_url={webhook_url(trigger_form.source)}
-                    cancel_url={
-                      ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
-                    }
-                  />
-                <% end %>
+                <!-- Show only the currently selected one -->
+                <.trigger_form
+                  form={single_inputs_for(f, :triggers, @selected_trigger.id)}
+                  on_change={&send_form_changed/1}
+                  requires_cron_job={@selected_trigger.type == :cron}
+                  disabled={!@can_edit_job}
+                  webhook_url={webhook_url(@selected_trigger)}
+                  cancel_url={
+                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
+                  }
+                />
               </.form>
             </div>
           </div>
@@ -177,16 +170,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 phx-change="validate"
                 class="h-full"
               >
-                <%= for edge_form <- single_inputs_for(f, :edges, @selected_edge.id) do %>
-                  <!-- Show only the currently selected one -->
-                  <.edge_form
-                    form={edge_form}
-                    disabled={!@can_edit_job}
-                    cancel_url={
-                      ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
-                    }
-                  />
-                <% end %>
+                <!-- Show only the currently selected one -->
+                <.edge_form
+                  form={single_inputs_for(f, :edges, @selected_edge.id)}
+                  disabled={!@can_edit_job}
+                  cancel_url={
+                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
+                  }
+                />
               </.form>
             </div>
           </div>
@@ -199,7 +190,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp single_inputs_for(form, field, id) do
     form
     |> inputs_for(field)
-    |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == id))
+    |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == id))
   end
 
   @impl true
@@ -364,11 +355,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_patches_applied(initial_params)}
   end
 
-  defp webhook_url(changeset) do
-    if Ecto.Changeset.get_field(changeset, :type) == :webhook do
-      if id = Ecto.Changeset.get_field(changeset, :id) do
-        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
-      end
+  defp webhook_url(trigger) do
+    with %{type: :webhook, id: id} <- trigger do
+      Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+    else
+      _ -> nil
     end
   end
 
@@ -442,7 +433,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp find_item_in_changeset(changeset, id) do
     [:jobs, :triggers, :edges]
     |> Enum.reduce_while(nil, fn field, _ ->
-      Ecto.Changeset.get_field(changeset, field, [])
+      Ecto.Changeset.get_assoc(changeset, field, :struct)
       |> Enum.find(&(&1.id == id))
       |> case do
         nil ->
