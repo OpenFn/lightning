@@ -3,18 +3,17 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   alias LightningWeb.Components.Form
 
-  attr :job_id, :string, required: true
-  attr :current_user, Lightning.Accounts.User, required: true
-  attr :builder_state, :any, required: true
+  attr :job, :map, required: true
   attr :on_run, :any, required: true
   attr :selected_dataclip, Lightning.Invocation.Dataclip
-  attr :project, Lightning.Projects.Project
 
   @impl true
-  def render(%{changeset: changeset, can_run_job: can_run_job} = assigns) do
+  def render(assigns) do
     assigns =
       assigns
-      |> assign(run_button_disabled: !(changeset.valid? and can_run_job))
+      |> assign(
+        run_button_disabled: !(assigns.changeset.valid? and assigns.can_run_job)
+      )
 
     ~H"""
     <div id={@id} class="h-full">
@@ -30,15 +29,13 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         <Form.select_field
           form={f}
           name={:dataclip_id}
-          id={:dataclip_id}
           values={@dataclips_options}
-          selected={@selected_dataclip.id}
           phx-target={@myself}
           phx-change="validate"
         />
         <br />
         <div class="flex flex-col gap-2">
-          <div class="flex gap-4 flex-row text-sm" id="dataclip-type">
+          <div class="flex gap-4 flex-row text-sm">
             <div class="basis-1/2 font-semibold text-secondary-700">
               Dataclip Type
             </div>
@@ -46,7 +43,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
               <Common.dataclip_type_pill dataclip={@selected_dataclip} />
             </div>
           </div>
-          <div class="flex gap-4 flex-row text-sm" id="dataclip-type">
+          <div class="flex gap-4 flex-row text-sm">
             <div class="basis-1/2 font-semibold text-secondary-700">
               Initial State Assembly
             </div>
@@ -102,67 +99,37 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   @impl true
   def update(
         %{
-          builder_state: builder_state,
-          current_user: current_user,
           id: id,
-          job_id: job_id,
-          project: project,
+          job: job,
+          dataclips: dataclips,
           on_run: on_run,
-          can_run_job: can_run_job,
-          return_to: return_to
+          can_run_job: can_run_job
         },
         socket
       ) do
-    dataclips =
-      Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
-        id: job_id
-      })
-
     dataclips_options =
       dataclips
       |> Enum.map(&{&1.id, &1.id})
       |> Enum.concat([{"New custom input", "custom"}])
 
-    last_dataclip = List.first(dataclips)
-    no_dataclip? = is_nil(last_dataclip)
-
-    current_dataclip = get_current_dataclip(builder_state, job_id)
-
-    has_current_dataclip? = not is_nil(current_dataclip)
-
     selected_dataclip =
-      cond do
-        no_dataclip? -> nil
-        has_current_dataclip? -> current_dataclip
-        true -> last_dataclip
-      end
-
-    init_form =
-      if is_nil(selected_dataclip) do
-        %{}
-      else
-        %{"manual_run" => %{dataclip_id: selected_dataclip.id}}
-      end
+      socket.assigns |> Map.get(:selected_dataclip, dataclips |> List.first())
 
     {:ok,
      socket
      |> assign(
-       job_id: job_id,
-       project: project,
-       current_user: current_user,
-       id: id,
-       builder_state: builder_state,
+       can_run_job: can_run_job,
+       changeset: changeset(%{}),
        dataclips: dataclips,
        dataclips_options: dataclips_options,
+       id: id,
+       job: job,
        on_run: on_run,
-       selected_dataclip: selected_dataclip |> format(),
-       can_run_job: can_run_job,
-       return_to: return_to
+       selected_dataclip: selected_dataclip
      )
      |> assign_new(:custom_input?, fn ->
        is_nil(selected_dataclip)
-     end)
-     |> update_form(init_form)}
+     end)}
   end
 
   @impl true
@@ -183,12 +150,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
          |> push_event("push-hash", %{hash: "output"})}
 
       {:error, changeset} ->
-        {:noreply,
-         socket
-         |> assign(
-           changeset: changeset,
-           form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
-         )}
+        {:noreply, socket |> assign(changeset: changeset)}
     end
   end
 
@@ -210,10 +172,13 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         } = params,
         socket
       ) do
-    socket = socket |> update_form(params)
-
     {:noreply,
-     socket |> assign(custom_input?: true, selected_dataclip: nil |> format())}
+     socket
+     |> assign(
+       changeset: changeset(params) |> Map.put(:action, :validate),
+       custom_input?: true,
+       selected_dataclip: nil |> format()
+     )}
   end
 
   def handle_event("validate", params, socket) do
@@ -224,11 +189,11 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     dataclips = socket.assigns.dataclips
     selected_dataclip = Enum.find(dataclips, fn d -> d.id == id end)
 
-    send(
-      self(),
-      {:update_builder_state,
-       %{dataclip: selected_dataclip, job_id: socket.assigns.job_id}}
-    )
+    # send(
+    #   self(),
+    #   {:update_builder_state,
+    #    %{dataclip: selected_dataclip, job_id: socket.assigns.job_id}}
+    # )
 
     {:noreply,
      socket
@@ -259,45 +224,33 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
     changeset =
       changeset(manual_run)
-      |> Ecto.Changeset.put_change(:job_id, socket.assigns.job_id)
-      |> Ecto.Changeset.put_change(:project_id, socket.assigns.project.id)
-      |> Ecto.Changeset.put_change(:user, socket.assigns.current_user)
       |> Map.put(:action, :validate)
 
     socket
-    |> assign(
-      changeset: changeset,
-      form: Phoenix.HTML.FormData.to_form(changeset, as: "manual_run")
-    )
+    |> assign(changeset: changeset)
   end
 
   defp changeset(attrs) do
-    required_fields =
-      if attrs["dataclip_id"] == "custom" or attrs == %{} do
-        [:body]
-      else
-        [:dataclip_id]
-      end
+    # required_fields =
+    #   if attrs["body"] == "custom" or attrs == %{} do
+    #     [:body]
+    #   else
+    #     [:dataclip_id]
+    #   end
 
     data = %{
       dataclip_id: nil,
-      job_id: nil,
-      project_id: nil,
-      user: nil,
-      body: nil,
-      custom: false
+      body: nil
     }
 
     types = %{
       dataclip_id: Ecto.UUID,
-      job_id: Ecto.UUID,
-      project_id: Ecto.UUID,
-      user: :map,
       body: :string
     }
 
-    Ecto.Changeset.cast({data, types}, attrs, required_fields)
-    |> Ecto.Changeset.validate_required(required_fields)
+    # , required_fields)
+    Ecto.Changeset.cast({data, types}, attrs, [:dataclip_id, :body])
+    # |> Ecto.Changeset.validate_required(required_fields)
   end
 
   defp create_manual_workorder(changeset) do

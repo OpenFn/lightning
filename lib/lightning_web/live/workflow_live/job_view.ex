@@ -25,9 +25,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <div class="grow flex">
           <div class="flex-1 px-4 py-6">
             <!-- Left column area -->
-            <div class="rounded-md border border-dashed border-gray-700">
-              Left
-            </div>
+            <.input_pane id={"job-input-pane-#{@job.id}"} job={@job} />
           </div>
 
           <div class="flex-1 px-4 py-6 h-full">
@@ -57,5 +55,46 @@ defmodule LightningWeb.WorkflowLive.JobView do
       </div>
     </div>
     """
+  end
+
+  def input_pane(%{job: job} = assigns) do
+    assigns =
+      if changed?(assigns, :job) do
+        # TODO: this might end up triggering constant reloading
+        assign(assigns,
+          dataclips:
+            Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
+              id: job.id
+            })
+        )
+      else
+        assigns |> assign_new(:dataclips, fn -> [] end)
+      end
+      |> assign(is_persisted: job.__meta__.state == :loaded)
+
+    ~H"""
+    <%= if @is_persisted do %>
+      <.live_component
+        module={LightningWeb.JobLive.ManualRunComponent}
+        id={"manual-job-#{@job.id}"}
+        job={@job}
+        dataclips={@dataclips}
+        on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
+        builder_state={%{}}
+        can_run_job={true}
+      />
+    <% else %>
+      <p>Please save your Job first.</p>
+    <% end %>
+    """
+  end
+
+  def follow_run(job_id, attempt_run) do
+    IO.inspect({job_id, attempt_run})
+    # send_update(__MODULE__,
+    #   id: id(job_id),
+    #   attempt_run: attempt_run,
+    #   event: :follow_run
+    # )
   end
 end
