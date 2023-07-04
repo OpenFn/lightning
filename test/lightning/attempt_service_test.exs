@@ -223,10 +223,12 @@ defmodule Lightning.AttemptServiceTest do
       workflow_scenario()
     end
 
-    test "only the first attempt (oldest) is listed for each work order", %{
-      jobs: jobs,
-      workflow: workflow
-    } do
+    test "only the first attempt (oldest) is listed for each work order, ordered
+          by workorder creation date, oldest to newest",
+         %{
+           jobs: jobs,
+           workflow: workflow
+         } do
       work_order_1 = work_order_fixture(workflow_id: workflow.id)
       work_order_2 = work_order_fixture(workflow_id: workflow.id)
       dataclip = dataclip_fixture()
@@ -264,21 +266,25 @@ defmodule Lightning.AttemptServiceTest do
         |> Repo.insert!()
       end)
 
-      attempt_runs =
+      [ar1, ar2] =
         AttemptService.list_for_rerun_from_start([
           work_order_1.id,
           work_order_2.id
         ])
 
-      assert Enum.all?(attempt_runs, fn ar -> ar.run.job_id == jobs.a.id end)
+      assert Enum.all?([ar1, ar2], fn ar -> ar.run.job_id == jobs.a.id end)
 
-      assert attempt_runs
+      assert [ar1, ar2]
              |> Enum.uniq_by(& &1.attempt_id)
              |> Enum.count() == 2
 
-      assert attempt_runs
+      assert [ar1, ar2]
              |> Enum.uniq_by(& &1.attempt.work_order_id)
              |> Enum.count() == 2
+
+      assert work_order_1.inserted_at < work_order_2.inserted_at
+      assert ar1.attempt.work_order_id == work_order_1.id
+      assert ar2.attempt.work_order_id == work_order_2.id
     end
   end
 
@@ -287,13 +293,16 @@ defmodule Lightning.AttemptServiceTest do
       workflow_scenario()
     end
 
-    test "returns the AttemptRuns for the latest Attempt of each work order associated with the job",
+    test "returns the AttemptRuns for the latest Attempt of each work order
+          associated with the job, ordered by workorder creation date, oldest to
+          newest",
          %{
            jobs: jobs,
            workflow: workflow
          } do
       work_order_1 = work_order_fixture(workflow_id: workflow.id)
       work_order_2 = work_order_fixture(workflow_id: workflow.id)
+
       dataclip = dataclip_fixture()
 
       # First Attempts with all Jobs
@@ -364,7 +373,7 @@ defmodule Lightning.AttemptServiceTest do
         })
         |> Repo.insert!()
 
-      attempt_runs =
+      [first_attempt_run_in_list, second_attempt_run_in_list] =
         AttemptService.list_for_rerun_from_job(
           [
             work_order_1.id,
@@ -373,10 +382,13 @@ defmodule Lightning.AttemptServiceTest do
           jobs.d.id
         )
 
-      assert Enum.count(attempt_runs) == 2
+      assert work_order_1.inserted_at < work_order_2.inserted_at
 
-      assert Enum.any?(attempt_runs, fn atr -> atr.id == attempt_run2.id end)
-      assert Enum.any?(attempt_runs, fn atr -> atr.id == attempt_run.id end)
+      assert first_attempt_run_in_list.attempt.work_order_id == work_order_1.id
+      assert second_attempt_run_in_list.attempt.work_order_id == work_order_2.id
+
+      assert first_attempt_run_in_list.id == attempt_run2.id
+      assert first_attempt_run_in_list.id == attempt_run.id
     end
   end
 end
