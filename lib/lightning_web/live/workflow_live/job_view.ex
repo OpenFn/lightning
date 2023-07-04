@@ -35,8 +35,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
             <.live_component
               module={EditorPane}
               id={"job-editor-pane-#{@job.id}"}
-              job={@job}
-              form={@form}
+              form={
+                @form
+                |> inputs_for(:jobs)
+                |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == @job.id))
+              }
               disabled={false}
               class="h-full"
             />

@@ -5,6 +5,7 @@ defmodule LightningWeb.LiveHelpers do
   import Phoenix.Component
 
   alias LightningWeb.Components.{Common, Icon}
+  alias Phoenix.LiveView.JS
 
   def live_info_block(assigns) do
     assigns =
@@ -124,5 +125,23 @@ defmodule LightningWeb.LiveHelpers do
   @spec display_short_uuid(binary()) :: binary()
   def display_short_uuid(uuid_string) do
     uuid_string |> String.slice(0..7)
+  end
+
+  def fade_in(opts \\ []) do
+    Keyword.put(
+      opts,
+      :transition,
+      {"ease-in duration-150", "opacity-0", "opacity-100"}
+    )
+    |> JS.show()
+  end
+
+  def fade_out(opts \\ []) do
+    Keyword.put(
+      opts,
+      :transition,
+      {"ease-out duration-300", "opacity-100", "opacity-0"}
+    )
+    |> JS.hide()
   end
 end
