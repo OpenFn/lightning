@@ -9,6 +9,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
+  import Lightning.WorkflowsFixtures
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -1926,19 +1927,27 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       {:ok, view, html} = live(conn, path)
 
-      refute html =~ "Find all runs that include this step, and rerun from there"
+      refute html =~
+               "Find all runs that include this step, and rerun from there"
+
+      assert render_change(view, "toggle_all_selections", %{
+               all_selections: true
+             }) =~ "Find all runs that include this step, and rerun from there"
+
+      view
+      |> form("#select-job-for-rerun-form")
+      |> render_change(%{job: jobs.a.id})
+
+      result = view |> render_click("bulk-rerun", %{type: "all", job: jobs.a.id})
+
+      {:ok, view, html} = follow_redirect(result, conn)
+
+      assert html =~
+               "New attempts enqueued for 2 workorders"
 
       view
       |> form("##{work_order_1.id}-selection-form")
       |> render_change(%{selected: true})
-
-      refute render(view) =~
-               "Find all runs that include this step, and rerun from there"
-
-      view |> element("#bulk-rerun-from-job-modal-trigger") |> render_click()
-
-      assert render(view) =~
-               "Find all runs that include this step, and rerun from there"
 
       view
       |> form("#select-job-for-rerun-form")
@@ -1950,6 +1959,95 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, _view, html} = follow_redirect(result, conn)
 
       assert html =~ "New attempt enqueued for 1 workorder"
+    end
+
+    test "jobs on the modal are updated every time the selected workflow is changed",
+         %{
+           conn: conn,
+           project: project
+         } do
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      now = Timex.now()
+
+      scenarios =
+        Enum.map(1..3, fn _n ->
+          workflow = workflow_fixture(project_id: project.id)
+
+          work_order =
+            work_order_fixture(
+              project_id: project.id,
+              workflow_id: workflow.id
+            )
+
+          jobs =
+            Enum.map(1..5, fn i ->
+              job_fixture(
+                name: "job_#{i}",
+                workflow_id: workflow.id,
+                trigger: %{type: :webhook}
+              )
+            end)
+
+          runs =
+            Enum.map(
+              jobs,
+              fn j ->
+                %{
+                  job_id: j.id,
+                  started_at: now |> Timex.shift(seconds: -25),
+                  finished_at: now |> Timex.shift(seconds: -20),
+                  exit_code: 0,
+                  input_dataclip_id: dataclip.id
+                }
+              end
+            )
+
+          Attempt.new(%{
+            work_order_id: work_order.id,
+            reason_id: work_order.reason_id,
+            runs: runs
+          })
+          |> Lightning.Repo.insert!()
+
+          %{work_order: work_order, workflow: workflow, jobs: jobs}
+        end)
+
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      path =
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: %{
+            body: true,
+            log: true,
+            success: true,
+            pending: true,
+            crash: true,
+            failure: true
+          }
+        )
+
+      {:ok, view, _html} = live(conn, path)
+
+      for scenario <- scenarios do
+        for job <- scenario.jobs do
+          refute has_element?(view, "input#job_#{job.id}")
+        end
+
+        # SELECT
+        view
+        |> form("##{scenario.work_order.id}-selection-form")
+        |> render_change(%{selected: true})
+
+        for job <- scenario.jobs do
+          assert has_element?(view, "input#job_#{job.id}")
+        end
+
+        # UNSELECT
+        view
+        |> form("##{scenario.work_order.id}-selection-form")
+        |> render_change(%{selected: false})
+      end
     end
 
     test "all jobs in the selected workflow are displayed", %{

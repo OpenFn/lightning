@@ -69,9 +69,8 @@ defmodule LightningWeb.RunLive.Index do
        search_fields: search_fields,
        active_menu_item: :runs,
        work_orders: [],
-       selected_work_orders: %{},
+       selected_work_orders: [],
        can_rerun_job: can_rerun_job,
-       active_modal: nil,
        pagination_path:
          &Routes.project_run_index_path(
            socket,
@@ -132,7 +131,7 @@ defmodule LightningWeb.RunLive.Index do
 
     socket
     |> assign(
-      selected_work_orders: %{},
+      selected_work_orders: [],
       page:
         Invocation.search_workorders(
           socket.assigns.project,
@@ -190,26 +189,12 @@ defmodule LightningWeb.RunLive.Index do
         {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selection}},
         %{assigns: assigns} = socket
       ) do
-    # TODO: clean up this naming and adopt a simpler, more explicit approach.
-    # Note that this is not a list of work_orders. It's a map with 0 or many
-    # keys. Each key is a workflow_id, and the value for each key is a list of
-    # workorders. We might consider a list of {workorder, workflow} tuples or a
-    # list of %{wo: id, wf: id} maps. (Or, since we've found the bug and fixed
-    # it via the Map.reject line below, we might also leave this as is.)
     work_orders =
-      Map.update(
-        assigns.selected_work_orders,
-        workflow_id,
-        [id],
-        fn existing_orders ->
-          if selection do
-            [id | existing_orders]
-          else
-            existing_orders -- [id]
-          end
-        end
-      )
-      |> Map.reject(fn {_key, val} -> val == [] end)
+      if selection do
+        [%{id: id, workflow_id: workflow_id} | assigns.selected_work_orders]
+      else
+        assigns.selected_work_orders -- [%{id: id, workflow_id: workflow_id}]
+      end
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
@@ -251,13 +236,11 @@ defmodule LightningWeb.RunLive.Index do
       false ->
         {:noreply,
          socket
-         |> assign(active_modal: nil)
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
       {:ok, %{reasons: {0, []}}} ->
         {:noreply,
          socket
-         |> assign(active_modal: nil)
          |> put_flash(
            :error,
            "Oops! The chosen step hasn't been run in the latest attempts of any of the selected workorders"
@@ -266,7 +249,6 @@ defmodule LightningWeb.RunLive.Index do
       {:error, _changes} ->
         {:noreply,
          socket
-         |> assign(active_modal: nil)
          |> put_flash(:error, "Oops! an error occured during retries.")}
     end
   end
@@ -280,27 +262,16 @@ defmodule LightningWeb.RunLive.Index do
 
     work_orders =
       if selection do
-        Enum.reduce(page.entries, %{}, fn entry, acc ->
-          Map.update(acc, entry.workflow_id, [entry.id], fn existing ->
-            [entry.id | existing]
-          end)
+        Enum.map(page.entries, fn entry ->
+          Map.take(entry, [:id, :workflow_id])
         end)
       else
-        %{}
+        []
       end
 
     update_component_selections(page.entries, selection)
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
-  end
-
-  def handle_event(
-        "toggle_modal",
-        %{"modal" => modal},
-        %{assigns: assigns} = socket
-      ) do
-    active_modal = if assigns.active_modal == modal, do: nil, else: modal
-    {:noreply, assign(socket, active_modal: active_modal)}
   end
 
   def handle_event("search", %{"filters" => filters} = _params, socket) do
@@ -326,7 +297,7 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
-    |> flattened_selections()
+    |> workorders_ids()
     |> AttemptService.list_for_rerun_from_job(job_id)
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
@@ -344,7 +315,7 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
-    |> flattened_selections()
+    |> workorders_ids()
     |> AttemptService.list_for_rerun_from_start()
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
@@ -360,36 +331,32 @@ defmodule LightningWeb.RunLive.Index do
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
 
-  defp all_selected?(work_orders_map, entries) do
-    selected_count = work_orders_map |> flattened_selections() |> Enum.count()
-    selected_count == Enum.count(entries)
+  defp all_selected?(work_orders, entries) do
+    Enum.count(work_orders) == Enum.count(entries)
   end
 
-  defp partially_selected?(work_orders_map, entries) do
-    entries != [] && !none_selected?(work_orders_map) &&
-      !all_selected?(work_orders_map, entries)
+  defp partially_selected?(work_orders, entries) do
+    entries != [] && !none_selected?(work_orders) &&
+      !all_selected?(work_orders, entries)
   end
 
-  defp flattened_selections(selected_orders_map) do
-    selected_orders_map
-    |> Map.values()
-    |> List.flatten()
+  defp workorders_ids(selected_orders) do
+    Enum.map(selected_orders, fn workorder -> workorder.id end)
   end
 
-  defp none_selected?(selected_orders_map) do
-    flattened_selections(selected_orders_map) == []
+  defp none_selected?(selected_orders) do
+    selected_orders == []
   end
 
-  defp selected_workflow_count(selected_orders_map) do
-    selected_orders_map
-    |> Enum.filter(fn {_key, val} -> Enum.count(val) >= 1 end)
+  defp selected_workflow_count(selected_orders) do
+    selected_orders
+    |> Enum.map(fn workorder -> workorder.workflow_id end)
+    |> Enum.uniq()
     |> Enum.count()
   end
 
-  defp selected_workorder_count(selected_orders_map) do
-    selected_orders_map
-    |> flattened_selections()
-    |> Enum.count()
+  defp selected_workorder_count(selected_orders) do
+    Enum.count(selected_orders)
   end
 
   defp update_component_selections(entries, selection) do
