@@ -249,7 +249,7 @@ defmodule Lightning.WorkOrderService do
   def create_work_order(attrs \\ %{}) do
     %WorkOrder{}
     |> WorkOrder.changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(returning: true)
   end
 
   def build(workflow, reason) do
