@@ -74,7 +74,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           for={@changeset}
           phx-submit="save"
           phx-change="validate"
-          class="h-full"
         >
           <.panel
             title={
@@ -118,7 +117,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           for={@changeset}
           phx-submit="save"
           phx-change="validate"
-          class="h-full"
         >
           <.panel
             id={"trigger-pane-#{@selected_trigger.id}"}
@@ -155,7 +153,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           for={@changeset}
           phx-submit="save"
           phx-change="validate"
-          class="h-full"
         >
           <.panel
             id={"edge-pane-#{@selected_edge.id}"}
