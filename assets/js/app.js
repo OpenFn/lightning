@@ -87,12 +87,11 @@ window.addEventListener('phx:page-loading-stop', () => {
 
 window.addEventListener('keydown', event => {
   const currentURL = window.location.pathname;
-  const edit_job_url = /\/projects\/(.+)\/w\/(.+)\/j\/(.+)/;
+  const edit_workflow_url = /\/projects\/(.+)\/w\/(.+)/;
   if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-    if (edit_job_url.test(currentURL)) {
+    if (edit_workflow_url.test(currentURL)) {
       event.preventDefault();
-      console.log('Saving the job');
-      let form = document.querySelector("button[form='job-form']");
+      let form = document.querySelector("button[form='workflow-form']");
       form.click();
     }
   }
