@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
   NodeChange,
   ReactFlowInstance,
@@ -17,15 +11,17 @@ import { shallow } from 'zustand/shallow';
 import { DEFAULT_TEXT } from '../editor/Editor';
 import layout from './layout';
 import nodeTypes from './nodes';
+import edgeTypes from './edges';
 import fromWorkflow from './util/from-workflow';
 import * as placeholder from './util/placeholder';
 import throttle from './util/throttle';
 import toWorkflow from './util/to-workflow';
+import updateSelectionStyles from './util/update-selection';
 import { FIT_DURATION, FIT_PADDING } from './constants';
+import shouldLayout from './util/should-layout';
 
 import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
-import shouldLayout from './util/should-layout';
 
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
@@ -73,7 +69,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     useEffect(() => {
       const { positions, selectedId } = chartCache.current;
       const newModel = fromWorkflow(workflow, positions, selectedId);
-
       //console.log('UPDATING WORKFLOW', newModel, selectedId);
       if (flow && newModel.nodes.length) {
         const layoutId = shouldLayout(
@@ -83,11 +78,18 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
-          layout(newModel, setModel, flow, 200).then(positions => {
+          layout(newModel, setModel, flow, 300).then(positions => {
             // Note we don't update positions until the animation has finished
             chartCache.current.positions = positions;
           });
         } else {
+          // If layout is id, ensure nodes have positions
+          // This is really only needed when there's a single trigger node
+          newModel.nodes.forEach(n => {
+            if (!n.position) {
+              n.position = { x: 0, y: 0 };
+            }
+          });
           setModel(newModel);
         }
       } else {
@@ -103,6 +105,20 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       [setModel, model]
     );
 
+    const updateSelection = useCallback(
+      (id?: string) => {
+        const { selectedId } = chartCache.current;
+        if (id !== selectedId) {
+          chartCache.current.selectedId = id;
+          onSelectionChange(id);
+
+          const updatedModel = updateSelectionStyles(model, id);
+          setModel(updatedModel);
+        }
+      },
+      [onSelectionChange, model]
+    );
+
     const handleNodeClick = useCallback(
       (event: React.MouseEvent, node: Flow.Node) => {
         if ((event.target as HTMLElement).closest('[name=add-node]')) {
@@ -111,34 +127,26 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           updateSelection(node.id);
         }
       },
-      [model]
+      [updateSelection]
     );
 
     const handleEdgeClick = useCallback(
       (_event: React.MouseEvent, edge: Flow.Edge) => {
         updateSelection(edge.id);
       },
-      []
+      [updateSelection]
     );
 
-    const handleBackgroundClick = useCallback((event: React.MouseEvent) => {
-      if (
-        event.target.classList &&
-        event.target.classList.contains('react-flow__pane')
-      ) {
-        updateSelection(undefined);
-      }
-    }, []);
-
-    const updateSelection = useCallback(
-      (id?: string) => {
-        const { selectedId } = chartCache.current;
-        if (id !== selectedId) {
-          chartCache.current.selectedId = id;
-          onSelectionChange(id);
+    const handleBackgroundClick = useCallback(
+      (event: React.MouseEvent) => {
+        if (
+          event.target.classList &&
+          event.target.classList.contains('react-flow__pane')
+        ) {
+          updateSelection(undefined);
         }
       },
-      [onSelectionChange]
+      [updateSelection]
     );
 
     const addNode = useCallback(
@@ -150,7 +158,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         chartCache.current.positions[newNode.id] = newNode.position;
         // Mark the new node as selected for the next render
         chartCache.current.selectedId = newNode.id;
-        onSelectionChange(undefined);
+        onSelectionChange(newNode.id);
 
         // Push the changes
         add(toWorkflow(diff));
@@ -161,8 +169,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const commitPlaceholder = useCallback(
       (evt: CustomEvent<any>) => {
         const { id, name } = evt.detail;
-        // Select the placeholder on next render
-        chartCache.current.deferSelection = id;
 
         // Update the store
         change({
@@ -239,6 +245,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           onNodesChange={onNodesChange}
           nodesDraggable={false}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onClick={handleBackgroundClick}
           onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}

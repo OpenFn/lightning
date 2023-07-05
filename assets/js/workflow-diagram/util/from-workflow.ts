@@ -1,16 +1,28 @@
-import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Lightning, Flow, Positions } from '../types';
 import { identify, isPlaceholder } from './placeholder';
+import { styleEdge } from '../styles';
 
-// TODO pass in the currently selected items so that we can maintain selection
+function getEdgeLabel(condition: string) {
+  if (condition) {
+    if (condition === 'on_job_success') {
+      return '✓';
+    }
+    if (condition === 'on_job_failure') {
+      return 'X';
+    }
+    if (condition === 'always') {
+      return '∞';
+    }
+  }
+  // some code expression
+  return '{}';
+}
+
 const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
-  selectedNodeId?: string
+  selectedId?: string
 ): Flow.Model => {
-  if (workflow.jobs.length == 0) {
-    return { nodes: [], edges: [] };
-  }
   const workflowWithPlaceholders = identify(workflow);
   const allowPlaceholder = workflowWithPlaceholders.jobs.every(
     j => !isPlaceholder(j)
@@ -25,12 +37,11 @@ const fromWorkflow = (
       const model: any = {
         id: item.id,
         data: {
-          name: item.name,
-          item: item,
+          ...item,
         },
       };
 
-      if (item.id === selectedNodeId) {
+      if (item.id === selectedId) {
         model.selected = true;
       } else {
         model.selected = false;
@@ -44,8 +55,9 @@ const fromWorkflow = (
           model.position = positions[node.id];
         }
 
-        model.width = NODE_WIDTH;
-        model.height = NODE_HEIGHT;
+        // This is a work of fantasy
+        // model.width = NODE_WIDTH;
+        // model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
 
@@ -58,17 +70,15 @@ const fromWorkflow = (
         const edge = item as Lightning.Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
-        model.label = item.name;
-        model.labelBgStyle = {
-          fill: 'rgb(243, 244, 246)',
+        model.type = 'step';
+        model.label = getEdgeLabel(edge.condition ?? 'always');
+        model.markerEnd = {
+          type: 'arrowclosed',
+          width: 32,
+          height: 32,
         };
-        if (isPlaceholder(item)) {
-          model.style = {
-            strokeDasharray: '4, 4',
-            stroke: 'rgb(99, 102, 241, 0.3)',
-            strokeWidth: '1.5px',
-          };
-        }
+
+        styleEdge(model);
       }
 
       collection.push(model);
@@ -81,6 +91,7 @@ const fromWorkflow = (
   process(workflowWithPlaceholders.jobs, nodes, 'job');
   process(workflowWithPlaceholders.triggers, nodes, 'trigger');
   process(workflowWithPlaceholders.edges, edges, 'edge');
+
   return { nodes, edges };
 };
 

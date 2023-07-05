@@ -1,84 +1,131 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
-import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
+import Shape from '../components/Shape';
+import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
 
+type BaseNodeProps = NodeProps<NodeData> & {
+  shape?: 'circle' | 'rect';
+  icon?: string;
+  label?: string;
+  sublabel?: string;
+  toolbar?: any;
+};
+
+const Label = ({ children }: React.PropsWithChildren) => {
+  if (children && (children as any).length) {
+    return <p className="line-clamp-2 align-left text-m">{children}</p>;
+  }
+  return null;
+};
+
+const SubLabel = ({ children }: React.PropsWithChildren) => {
+  if (children && (children as any).length) {
+    return (
+      <p className="line-clamp-2 align-left text-sm text-slate-500">
+        {children}
+      </p>
+    );
+  }
+  return null;
+};
+
 const Node = ({
-  label,
-  labelClass = '',
-  tooltip,
-  interactive = true,
-  data,
+  // standard  react flow stuff
   isConnectable,
   selected,
   targetPosition,
   sourcePosition,
+
+  // custom stuff
   toolbar,
-}: NodeProps<NodeData>) => {
+  shape,
+  label, // main label which appears to the right
+  sublabel, // A smaller label to the right
+  icon, // displayed inside the SVG shape
+}: BaseNodeProps) => {
+  const { width, height, anchorx, strokeWidth, style } =
+    nodeIconStyles(selected);
+
   return (
-    <div
-      className={[
-        'group',
-        'bg-white',
-        interactive ? 'cursor-pointer' : 'cursor-default',
-        'h-full',
-        'p-1',
-        'rounded-md',
-        'shadow-sm',
-        'text-center',
-        'text-xs',
-        selected ? 'ring-2' : 'ring-0.5',
-        selected ? 'ring-indigo-500' : 'ring-black',
-        selected ? 'ring-opacity-20' : 'ring-opacity-5',
-      ].join(' ')}
-      style={{ width: `${NODE_WIDTH}px`, height: `${NODE_HEIGHT}px` }}
-      title={tooltip || label}
-    >
-      {targetPosition && <Handle
-        type="target"
-        position={targetPosition}
-        isConnectable={isConnectable}
-        style={{ visibility: 'hidden', border: 'none', height: 0, top: 0 }}
-      />
-}
-      <div
-        className={[
-          'h-full',
-          'text-center',
-          // TODO can we remove the data call, do all data stuff in Job and Trigger?
-          !data.hasChildren && 'items-center',
-        ].filter(Boolean).join(' ')}
-      >
-        <div
-          className={[
-            'flex',
-            !data.hasChildren && 'flex-col',
-            'justify-center',
-            'h-full',
-            'text-center',
-          ].filter(Boolean).join(' ')}
-        >
-          <p className={`line-clamp-2 align-middle ${labelClass}`}>{label}</p>
+    <div className="group">
+      <div className="flex flex-row">
+        <div>
+          {targetPosition && (
+            <Handle
+              type="target"
+              isConnectable={isConnectable}
+              position={targetPosition}
+              style={{
+                visibility: 'hidden',
+                height: 0,
+                top: 0,
+                left: strokeWidth + anchorx,
+              }}
+            />
+          )}
+          <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
+            <Shape
+              shape={shape}
+              width={width}
+              height={height}
+              strokeWidth={strokeWidth}
+              styles={style}
+            />
+          </svg>
+          {icon && (
+            <div
+              style={{
+                position: 'absolute',
+                // Position is half of the difference of the actual width, offset for stroke
+                left: 0.1 * width + strokeWidth,
+                top: 0.1 * height + strokeWidth,
+                height: `${0.8 * height}px`,
+                width: `${0.8 * width}px`,
+                ...nodeLabelStyles(selected),
+              }}
+            >
+              {typeof icon === 'string' ? (
+                <div className="font-bold">{icon}</div>
+              ) : (
+                icon
+              )}
+            </div>
+          )}
+        </div>
+        {sourcePosition && (
+          <Handle
+            type="source"
+            isConnectable={isConnectable}
+            position={sourcePosition}
+            style={{
+              visibility: 'hidden',
+              height: 0,
+              top: height,
+              left: strokeWidth + anchorx,
+            }}
+          />
+        )}
+        <div className="flex flex-col flex-1 justify-center ml-2">
+          <Label>{label}</Label>
+          <SubLabel>{sublabel}</SubLabel>
         </div>
       </div>
-      {toolbar && <div
-        className="flex flex-col w-fit mx-auto items-center opacity-0 
-                      group-hover:opacity-100 transition duration-150 ease-in-out"
-      >
-        {/* TODO don't show this if ths node already has a placeholder child */}
-        {toolbar()}
-      </div>}
-      <Handle
-        type="source"
-        position={sourcePosition}
-        isConnectable={isConnectable}
-        style={{ visibility: 'hidden', border: 'none', height: 0, bottom: 0 }}
-      />
+      {toolbar && (
+        <div
+          style={{ width: `${width}px`, marginTop: '-14px' }}
+          className="flex flex-col items-center
+                    opacity-0  group-hover:opacity-100
+                    transition duration-150 ease-in-out"
+        >
+          {toolbar()}
+        </div>
+      )}
     </div>
   );
 };
 
-Node.displayName = 'JobNode';
+Node.displayName = 'Node';
 
 export default memo(Node);
