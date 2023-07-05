@@ -140,20 +140,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :id, :string, required: true
-
-  def resize_component(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      phx-hook="JobEditorResizer"
-      phx-update="ignore"
-      class="h-full bg-slate-200 w-2 cursor-col-resize z-11 resize-x"
-    >
-    </div>
-    """
-  end
-
-  attr :id, :string, required: true
   attr :title, :string, required: true
   attr :cancel_url, :string, required: true
   slot :inner_block, required: true
@@ -162,11 +148,11 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def panel(assigns) do
     ~H"""
-    <div class="absolute right-0 m-4 w-1/4" id={@id}>
+    <div class="absolute right-0 sm:m-4 w-full sm:w-1/2 md:w-1/3 lg:w-1/4" id={@id}>
       <div class="divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow">
         <div class="flex px-4 py-5 sm:px-6">
-          <div class="grow">
-            <b><%= @title %></b>
+          <div class="grow font-bold">
+            <%= @title %>
           </div>
           <div class="flex-none">
             <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
@@ -338,7 +324,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         values={@edge_options}
         disabled={true}
       />
-      <div class="max-w-xl text-sm text-gray-500">
+      <div class="max-w-xl text-sm text-gray-500 mt-2">
         <p>Jobs connected to a trigger are always run.</p>
       </div>
     <% else %>
