@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               phx-change="validate"
               class="h-full"
             >
-              <.panel id={"job-pane-#{@workflow.id}"}>
+              <.panel id={"job-pane-#{@selected_job.id}"}>
                 <:header>
                   <div class="grow">
                     <%= f

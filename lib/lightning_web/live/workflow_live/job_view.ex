@@ -8,7 +8,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   def job_edit_view(assigns) do
     ~H"""
-    <div class="relative h-full flex bg-white">
+    <div class="relative h-full flex bg-white" id={"job-edit-view-#{@job.id}"}>
       <div class="grow flex min-h-full flex-col ">
         <!-- Top band -->
         <div class="h-14 flex border-b">

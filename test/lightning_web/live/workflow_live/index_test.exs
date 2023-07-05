@@ -38,6 +38,9 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "Two"
              )
     end
+
+    test "users can delete a workflow"
+    test "users with viewer role cannot delete a workflow"
   end
 
   def has_link?(view, path, text_filter \\ nil) do
