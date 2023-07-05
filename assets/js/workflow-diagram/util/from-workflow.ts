@@ -62,6 +62,7 @@ const fromWorkflow = (
         model.labelBgStyle = {
           fill: 'rgb(243, 244, 246)',
         };
+        model.type = 'step';
         if (isPlaceholder(item)) {
           model.style = {
             strokeDasharray: '4, 4',
