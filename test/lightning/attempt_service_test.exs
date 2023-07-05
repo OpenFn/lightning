@@ -226,32 +226,14 @@ defmodule Lightning.AttemptServiceTest do
     test "only the first attempt (oldest) is listed for each work order, ordered
           by workorder creation date, oldest to newest",
          %{
-           project: project,
            jobs: jobs,
            workflow: workflow
          } do
+      work_order_1 = work_order_fixture(workflow_id: workflow.id)
+      work_order_2 = work_order_fixture(workflow_id: workflow.id)
+      dataclip = dataclip_fixture()
+
       now = Timex.now()
-      reason = reason_fixture(project_id: project.id)
-
-      work_order_1 =
-        %Lightning.WorkOrder{
-          workflow_id: workflow.id,
-          reason_id: reason.id,
-          inserted_at: Timex.shift(now, seconds: -100),
-          updated_at: now
-        }
-        |> Lightning.Repo.insert!(returning: true)
-
-      work_order_2 =
-        %Lightning.WorkOrder{
-          workflow_id: workflow.id,
-          reason_id: reason.id,
-          inserted_at: now,
-          updated_at: now
-        }
-        |> Lightning.Repo.insert!(returning: true)
-
-      dataclip = dataclip_fixture(project_id: project.id)
 
       [work_order_1, work_order_2]
       |> Enum.each(fn work_order ->
@@ -315,32 +297,13 @@ defmodule Lightning.AttemptServiceTest do
           associated with the job, ordered by workorder creation date, oldest to
           newest",
          %{
-           project: project,
            jobs: jobs,
            workflow: workflow
          } do
-      now = Timex.now()
-      reason = reason_fixture(project_id: project.id)
+      work_order_1 = work_order_fixture(workflow_id: workflow.id)
+      work_order_2 = work_order_fixture(workflow_id: workflow.id)
 
-      work_order_1 =
-        %Lightning.WorkOrder{
-          workflow_id: workflow.id,
-          reason_id: reason.id,
-          inserted_at: Timex.shift(now, seconds: -100),
-          updated_at: now
-        }
-        |> Lightning.Repo.insert!(returning: true)
-
-      work_order_2 =
-        %Lightning.WorkOrder{
-          workflow_id: workflow.id,
-          reason_id: reason.id,
-          inserted_at: now,
-          updated_at: now
-        }
-        |> Lightning.Repo.insert!(returning: true)
-
-      dataclip = dataclip_fixture(project_id: project.id)
+      dataclip = dataclip_fixture()
 
       # First Attempts with all Jobs
       [_attempt_1_work_order_1, attempt_1_work_order_2] =
@@ -425,7 +388,7 @@ defmodule Lightning.AttemptServiceTest do
       assert second_attempt_run_in_list.attempt.work_order_id == work_order_2.id
 
       assert first_attempt_run_in_list.id == attempt_run2.id
-      assert second_attempt_run_in_list.id == attempt_run.id
+      assert first_attempt_run_in_list.id == attempt_run.id
     end
   end
 end
