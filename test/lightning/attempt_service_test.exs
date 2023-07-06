@@ -388,7 +388,7 @@ defmodule Lightning.AttemptServiceTest do
       assert second_attempt_run_in_list.attempt.work_order_id == work_order_2.id
 
       assert first_attempt_run_in_list.id == attempt_run2.id
-      assert first_attempt_run_in_list.id == attempt_run.id
+      assert second_attempt_run_in_list.id == attempt_run.id
     end
   end
 end
