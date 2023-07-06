@@ -9,6 +9,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
+  import Lightning.WorkflowsFixtures
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -1345,7 +1346,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                "You are not authorized to perform this action."
     end
 
-    test "Project viewers can't rerun runs in bulk",
+    test "Project viewers can't rerun runs in bulk from start",
          %{conn: conn, project: project} do
       {conn, _user} = setup_project_user(conn, project, :viewer)
 
@@ -1409,7 +1410,7 @@ defmodule LightningWeb.RunWorkOrderTest do
                "You are not authorized to perform this action."
     end
 
-    test "Project editors can rerun runs in bulk",
+    test "Project editors can rerun runs in bulk from start",
          %{conn: conn, project: project} do
       {conn, _user} = setup_project_user(conn, project, :editor)
 
@@ -1751,5 +1752,380 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   defp safe_html_string(string) do
     string |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+  end
+
+  describe "bulk rerun from job" do
+    setup %{conn: conn} do
+      scenario = workflow_scenario()
+
+      work_order_1 =
+        work_order_fixture(
+          project_id: scenario.project.id,
+          workflow_id: scenario.workflow.id
+        )
+
+      work_order_2 =
+        work_order_fixture(
+          project_id: scenario.project.id,
+          workflow_id: scenario.workflow.id
+        )
+
+      dataclip = dataclip_fixture(project_id: scenario.project.id)
+
+      now = Timex.now()
+
+      attempts =
+        Enum.map([work_order_1, work_order_2], fn work_order ->
+          runs =
+            Enum.map(
+              Map.values(scenario.jobs),
+              fn j ->
+                %{
+                  job_id: j.id,
+                  started_at: now |> Timex.shift(seconds: -25),
+                  finished_at: now |> Timex.shift(seconds: -20),
+                  exit_code: 0,
+                  input_dataclip_id: dataclip.id
+                }
+              end
+            )
+
+          Attempt.new(%{
+            work_order_id: work_order.id,
+            reason_id: work_order.reason_id,
+            runs: runs
+          })
+          |> Lightning.Repo.insert!()
+        end)
+
+      Map.merge(scenario, %{
+        conn: conn,
+        attempts: attempts,
+        work_order_1: work_order_1,
+        work_order_2: work_order_2
+      })
+    end
+
+    test "only selecting workorders from the same workflow shows the rerun button",
+         %{conn: conn, project: project} do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      job_3 =
+        workflow_job_fixture(
+          project_id: project.id,
+          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        )
+
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      reason =
+        reason_fixture(
+          trigger_id: job_3.trigger.id,
+          dataclip_id: dataclip.id
+        )
+
+      work_order_3 =
+        work_order_fixture(
+          project_id: project.id,
+          workflow_id: job_3.workflow_id,
+          reason_id: reason.id
+        )
+
+      now = Timex.now()
+
+      # Attempt 3
+      Attempt.new(%{
+        work_order_id: work_order_3.id,
+        reason_id: reason.id,
+        runs: [
+          %{
+            job_id: job_3.id,
+            started_at: now |> Timex.shift(seconds: -25),
+            finished_at: now |> Timex.shift(seconds: -20),
+            exit_code: 0,
+            input_dataclip_id: dataclip.id
+          }
+        ]
+      })
+      |> Lightning.Repo.insert!()
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
+        )
+
+      refute html =~ "Rerun from..."
+
+      # All work orders have been selected
+      refute render_change(view, "toggle_all_selections", %{
+               all_selections: true
+             }) =~ "Rerun from..."
+
+      # uncheck 1 work order
+      view
+      |> form("##{work_order_3.id}-selection-form")
+      |> render_change(%{selected: false})
+
+      updated_html = render(view)
+      assert updated_html =~ "Rerun from..."
+    end
+
+    test "Project viewers can't rerun runs",
+         %{conn: conn, project: project, jobs: jobs} do
+      {conn, _user} = setup_project_user(conn, project, :viewer)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id,
+            filters: %{
+              body: true,
+              log: true,
+              success: true,
+              pending: true,
+              crash: true,
+              failure: true
+            }
+          )
+        )
+
+      render_change(view, "toggle_all_selections", %{all_selections: true})
+
+      assert render_click(view, "bulk-rerun", %{type: "all", job: jobs.b.id}) =~
+               "You are not authorized to perform this action."
+    end
+
+    test "Project editors can rerun runs", %{
+      conn: conn,
+      project: project,
+      jobs: jobs,
+      work_order_1: work_order_1
+    } do
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      path =
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: %{
+            body: true,
+            log: true,
+            success: true,
+            pending: true,
+            crash: true,
+            failure: true
+          }
+        )
+
+      {:ok, view, html} = live(conn, path)
+
+      refute html =~
+               "Find all runs that include this step, and rerun from there"
+
+      assert render_change(view, "toggle_all_selections", %{
+               all_selections: true
+             }) =~ "Find all runs that include this step, and rerun from there"
+
+      view
+      |> form("#select-job-for-rerun-form")
+      |> render_change(%{job: jobs.a.id})
+
+      result = view |> render_click("bulk-rerun", %{type: "all", job: jobs.a.id})
+
+      {:ok, view, html} = follow_redirect(result, conn)
+
+      assert html =~
+               "New attempts enqueued for 2 workorders"
+
+      view
+      |> form("##{work_order_1.id}-selection-form")
+      |> render_change(%{selected: true})
+
+      view
+      |> form("#select-job-for-rerun-form")
+      |> render_change(%{job: jobs.a.id})
+
+      result =
+        view |> element("#rerun-selected-from-job-trigger") |> render_click()
+
+      {:ok, _view, html} = follow_redirect(result, conn)
+
+      assert html =~ "New attempt enqueued for 1 workorder"
+    end
+
+    test "jobs on the modal are updated every time the selected workflow is changed",
+         %{
+           conn: conn,
+           project: project
+         } do
+      dataclip = dataclip_fixture(project_id: project.id)
+
+      now = Timex.now()
+
+      scenarios =
+        Enum.map(1..3, fn _n ->
+          workflow = workflow_fixture(project_id: project.id)
+
+          work_order =
+            work_order_fixture(
+              project_id: project.id,
+              workflow_id: workflow.id
+            )
+
+          jobs =
+            Enum.map(1..5, fn i ->
+              job_fixture(
+                name: "job_#{i}",
+                workflow_id: workflow.id,
+                trigger: %{type: :webhook}
+              )
+            end)
+
+          runs =
+            Enum.map(
+              jobs,
+              fn j ->
+                %{
+                  job_id: j.id,
+                  started_at: now |> Timex.shift(seconds: -25),
+                  finished_at: now |> Timex.shift(seconds: -20),
+                  exit_code: 0,
+                  input_dataclip_id: dataclip.id
+                }
+              end
+            )
+
+          Attempt.new(%{
+            work_order_id: work_order.id,
+            reason_id: work_order.reason_id,
+            runs: runs
+          })
+          |> Lightning.Repo.insert!()
+
+          %{work_order: work_order, workflow: workflow, jobs: jobs}
+        end)
+
+      {conn, _user} = setup_project_user(conn, project, :editor)
+
+      path =
+        Routes.project_run_index_path(conn, :index, project.id,
+          filters: %{
+            body: true,
+            log: true,
+            success: true,
+            pending: true,
+            crash: true,
+            failure: true
+          }
+        )
+
+      {:ok, view, _html} = live(conn, path)
+
+      for scenario <- scenarios do
+        for job <- scenario.jobs do
+          refute has_element?(view, "input#job_#{job.id}")
+        end
+
+        # SELECT
+        view
+        |> form("##{scenario.work_order.id}-selection-form")
+        |> render_change(%{selected: true})
+
+        for job <- scenario.jobs do
+          assert has_element?(view, "input#job_#{job.id}")
+        end
+
+        # UNSELECT
+        view
+        |> form("##{scenario.work_order.id}-selection-form")
+        |> render_change(%{selected: false})
+      end
+    end
+
+    test "all jobs in the selected workflow are displayed", %{
+      workflow: workflow,
+      jobs: jobs
+    } do
+      html =
+        render_component(
+          LightningWeb.RunLive.RerunJobComponent,
+          id: "bulk-rerun-from-start-modal",
+          total_entries: 25,
+          all_selected?: true,
+          selected_count: 5,
+          pages: 2,
+          filters: %SearchParams{},
+          workflow_id: workflow.id
+        )
+
+      for job <- Map.values(jobs) do
+        assert html =~ job.name
+      end
+    end
+
+    test "2 run buttons are present when all entries have been selected", %{
+      workflow: workflow
+    } do
+      html =
+        render_component(
+          LightningWeb.RunLive.RerunJobComponent,
+          id: "bulk-rerun-from-start-modal",
+          total_entries: 25,
+          all_selected?: true,
+          selected_count: 5,
+          pages: 2,
+          filters: %SearchParams{},
+          workflow_id: workflow.id
+        )
+
+      assert html =~ "Rerun all 25 matching workorders from selected job"
+      assert html =~ "Rerun 5 selected workorders from selected job"
+    end
+
+    test "only 1 run button is present when some entries have been selected", %{
+      workflow: workflow
+    } do
+      html =
+        render_component(
+          LightningWeb.RunLive.RerunJobComponent,
+          id: "bulk-rerun-from-start-modal",
+          total_entries: 25,
+          all_selected?: false,
+          selected_count: 5,
+          pages: 2,
+          filters: %SearchParams{},
+          workflow_id: workflow.id
+        )
+
+      refute html =~ "Rerun all 25 matching workorders from selected job"
+      assert html =~ "Rerun 5 selected workorders from selected job"
+    end
+
+    test "only 1 run button is present when total pages is 1", %{
+      workflow: workflow
+    } do
+      html =
+        render_component(
+          LightningWeb.RunLive.RerunJobComponent,
+          id: "bulk-rerun-from-start-modal",
+          total_entries: 25,
+          all_selected?: true,
+          selected_count: 5,
+          pages: 1,
+          filters: %SearchParams{},
+          workflow_id: workflow.id
+        )
+
+      refute html =~ "Rerun all 25 matching workorders from selected job"
+      assert html =~ "Rerun 5 selected workorders from selected job"
+    end
   end
 end

@@ -8,6 +8,7 @@ defmodule Lightning.Jobs do
 
   alias Lightning.Jobs.{Job, Trigger, Query}
   alias Lightning.Projects.Project
+  alias Lightning.Workflows.Workflow
 
   @doc """
   Returns the list of jobs.
@@ -218,5 +219,16 @@ defmodule Lightning.Jobs do
   """
   def change_job(%Job{} = job, attrs \\ %{}) do
     Job.changeset(job, attrs)
+  end
+
+  @spec list_jobs_for_workflow(Workflow.t()) :: [Job.t(), ...] | []
+  def list_jobs_for_workflow(%Workflow{id: workflow_id}) do
+    query =
+      from j in Job,
+        where: j.workflow_id == ^workflow_id,
+        order_by: j.name,
+        select: [:id, :name]
+
+    Repo.all(query)
   end
 end

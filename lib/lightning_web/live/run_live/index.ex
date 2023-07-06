@@ -186,13 +186,15 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {:selection_toggled, {%{id: id}, selection}},
+        {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selected?}},
         %{assigns: assigns} = socket
       ) do
     work_orders =
-      if selection,
-        do: [id | assigns.selected_work_orders],
-        else: assigns.selected_work_orders -- [id]
+      if selected? do
+        [%{id: id, workflow_id: workflow_id} | assigns.selected_work_orders]
+      else
+        assigns.selected_work_orders -- [%{id: id, workflow_id: workflow_id}]
+      end
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
@@ -216,10 +218,10 @@ defmodule LightningWeb.RunLive.Index do
     end
   end
 
-  def handle_event("bulk-rerun", %{"type" => type}, socket) do
+  def handle_event("bulk-rerun", attrs, socket) do
     with true <- socket.assigns.can_rerun_job,
          {:ok, %{attempt_runs: {count, _attempt_runs}}} <-
-           handle_bulk_rerun(socket, type) do
+           handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
        |> put_flash(
@@ -236,6 +238,14 @@ defmodule LightningWeb.RunLive.Index do
          socket
          |> put_flash(:error, "You are not authorized to perform this action.")}
 
+      {:ok, %{reasons: {0, []}}} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Oops! The chosen step hasn't been run in the latest attempts of any of the selected workorders"
+         )}
+
       {:error, _changes} ->
         {:noreply,
          socket
@@ -249,7 +259,15 @@ defmodule LightningWeb.RunLive.Index do
         %{assigns: %{page: page}} = socket
       ) do
     selection = String.to_existing_atom(selection)
-    work_orders = if selection, do: Enum.map(page.entries, & &1.id), else: []
+
+    work_orders =
+      if selection do
+        Enum.map(page.entries, fn entry ->
+          Map.take(entry, [:id, :workflow_id])
+        end)
+      else
+        []
+      end
 
     update_component_selections(page.entries, selection)
 
@@ -277,13 +295,32 @@ defmodule LightningWeb.RunLive.Index do
      )}
   end
 
-  defp handle_bulk_rerun(socket, "selected") do
+  defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
+    |> workorders_ids()
+    |> AttemptService.list_for_rerun_from_job(job_id)
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+  end
+
+  defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
+    filter = SearchParams.new(socket.assigns.filters)
+
+    socket.assigns.project
+    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Lightning.Repo.all()
+    |> Enum.map(& &1.id)
+    |> AttemptService.list_for_rerun_from_job(job_id)
+    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+  end
+
+  defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
+    socket.assigns.selected_work_orders
+    |> workorders_ids()
     |> AttemptService.list_for_rerun_from_start()
     |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
   end
 
-  defp handle_bulk_rerun(socket, "all") do
+  defp handle_bulk_rerun(socket, %{"type" => "all"}) do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
@@ -299,7 +336,27 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp partially_selected?(work_orders, entries) do
-    entries != [] && work_orders != [] && !all_selected?(work_orders, entries)
+    entries != [] && !none_selected?(work_orders) &&
+      !all_selected?(work_orders, entries)
+  end
+
+  defp workorders_ids(selected_orders) do
+    Enum.map(selected_orders, fn workorder -> workorder.id end)
+  end
+
+  defp none_selected?(selected_orders) do
+    selected_orders == []
+  end
+
+  defp selected_workflow_count(selected_orders) do
+    selected_orders
+    |> Enum.map(fn workorder -> workorder.workflow_id end)
+    |> Enum.uniq()
+    |> Enum.count()
+  end
+
+  defp selected_workorder_count(selected_orders) do
+    Enum.count(selected_orders)
   end
 
   defp update_component_selections(entries, selection) do

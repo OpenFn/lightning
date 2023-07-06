@@ -223,10 +223,12 @@ defmodule Lightning.AttemptServiceTest do
       workflow_scenario()
     end
 
-    test "only the first attempt (oldest) is listed for each work order", %{
-      jobs: jobs,
-      workflow: workflow
-    } do
+    test "only the first attempt (oldest) is listed for each work order, ordered
+          by workorder creation date, oldest to newest",
+         %{
+           jobs: jobs,
+           workflow: workflow
+         } do
       work_order_1 = work_order_fixture(workflow_id: workflow.id)
       work_order_2 = work_order_fixture(workflow_id: workflow.id)
       dataclip = dataclip_fixture()
@@ -264,21 +266,129 @@ defmodule Lightning.AttemptServiceTest do
         |> Repo.insert!()
       end)
 
-      attempt_runs =
+      [ar1, ar2] =
         AttemptService.list_for_rerun_from_start([
           work_order_1.id,
           work_order_2.id
         ])
 
-      assert Enum.all?(attempt_runs, fn ar -> ar.run.job_id == jobs.a.id end)
+      assert Enum.all?([ar1, ar2], fn ar -> ar.run.job_id == jobs.a.id end)
 
-      assert attempt_runs
+      assert [ar1, ar2]
              |> Enum.uniq_by(& &1.attempt_id)
              |> Enum.count() == 2
 
-      assert attempt_runs
+      assert [ar1, ar2]
              |> Enum.uniq_by(& &1.attempt.work_order_id)
              |> Enum.count() == 2
+
+      assert work_order_1.inserted_at < work_order_2.inserted_at
+      assert ar1.attempt.work_order_id == work_order_1.id
+      assert ar2.attempt.work_order_id == work_order_2.id
+    end
+  end
+
+  describe "list_for_rerun_from_job/2" do
+    setup do
+      workflow_scenario()
+    end
+
+    test "returns the AttemptRuns for the latest Attempt of each work order
+          associated with the job, ordered by workorder creation date, oldest to
+          newest",
+         %{
+           jobs: jobs,
+           workflow: workflow
+         } do
+      work_order_1 = work_order_fixture(workflow_id: workflow.id)
+      work_order_2 = work_order_fixture(workflow_id: workflow.id)
+
+      dataclip = dataclip_fixture()
+
+      # First Attempts with all Jobs
+      [_attempt_1_work_order_1, attempt_1_work_order_2] =
+        Enum.map([work_order_1, work_order_2], fn work_order ->
+          runs =
+            Enum.map(
+              Map.values(jobs),
+              fn j ->
+                %{
+                  job_id: j.id,
+                  input_dataclip_id: dataclip.id,
+                  exit_code: 0
+                }
+              end
+            )
+
+          Lightning.Attempt.new(%{
+            work_order_id: work_order.id,
+            reason_id: work_order.reason_id,
+            runs: runs
+          })
+          |> Repo.insert!()
+        end)
+
+      # Second Attempt For Work Order 1
+      # Job d is missing
+      dataclip2 = dataclip_fixture()
+
+      runs =
+        Enum.map([jobs.a, jobs.b, jobs.c, jobs.e, jobs.f], fn j ->
+          %{
+            job_id: j.id,
+            input_dataclip_id: dataclip2.id,
+            exit_code: 0
+          }
+        end)
+
+      attempt_2_work_order_1 =
+        Attempt.new(%{
+          work_order_id: work_order_1.id,
+          reason_id: work_order_1.reason_id,
+          runs: runs
+        })
+        |> Repo.insert!()
+
+      # Only the attempt for work order2 will be listed
+      assert [attempt_run] =
+               AttemptService.list_for_rerun_from_job(
+                 [
+                   work_order_1.id,
+                   work_order_2.id
+                 ],
+                 jobs.d.id
+               )
+
+      assert attempt_run.attempt_id == attempt_1_work_order_2.id
+
+      ## create the missing attempt run
+      attempt_run2 =
+        Lightning.AttemptRun.new(%{
+          attempt_id: attempt_2_work_order_1.id,
+          run: %{
+            job_id: jobs.d.id,
+            input_dataclip_id: dataclip2.id,
+            exit_code: 0
+          }
+        })
+        |> Repo.insert!()
+
+      [first_attempt_run_in_list, second_attempt_run_in_list] =
+        AttemptService.list_for_rerun_from_job(
+          [
+            work_order_1.id,
+            work_order_2.id
+          ],
+          jobs.d.id
+        )
+
+      assert work_order_1.inserted_at < work_order_2.inserted_at
+
+      assert first_attempt_run_in_list.attempt.work_order_id == work_order_1.id
+      assert second_attempt_run_in_list.attempt.work_order_id == work_order_2.id
+
+      assert first_attempt_run_in_list.id == attempt_run2.id
+      assert second_attempt_run_in_list.id == attempt_run.id
     end
   end
 end

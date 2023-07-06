@@ -21,6 +21,9 @@ and this project adheres to
 - Add public API token to the demo site setup script
 - Check and renew OAuth credentials when running a job
   [#646](https://github.com/OpenFn/Lightning/issues/646)
+- Add feature to bulk rerun work orders from a specific step in their workflow;
+  e.g., "rerun these 50 work orders, starting each at step 4."
+  [#906](https://github.com/OpenFn/Lightning/pull/906)
 
 ### Fixed
 
