@@ -7,9 +7,9 @@ import { Flow, Positions } from './types';
 
 const layout = tree<Node>()
   // the node size configures the spacing between the nodes ([width, height])
-  .nodeSize([240, 150])
+  .nodeSize([200, 200])
   // this is needed for creating equal space between all nodes
-  .separation(() => 1);
+  .separation(() => 2);
 
 const calculateLayout = async (
   model: Flow.Model,
