@@ -1,26 +1,33 @@
 import React, { memo } from 'react';
 import { Position } from 'reactflow';
-import type { NodeProps } from 'reactflow';
+import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import cronstrue from 'cronstrue';
 
-import getTriggerLabels from '../util/get-trigger-labels';
+import type { Lightning } from '../types';
 import Node from './Node';
 
-type Trigger = any;
-type Workflow = any;
+type TriggerMeta = {
+  label: string;
+  sublabel?: string;
+  tooltip?: string;
+  icon?: typeof ClockIcon | typeof GlobeAltIcon;
+};
+
 const TriggerNode = ({
   sourcePosition = Position.Bottom,
   ...props
-}: NodeProps & {
-  data: { label: string; trigger: Trigger; workflow: Workflow };
 }): JSX.Element => {
-  const { label, tooltip } = getTriggerLabels(props.data);
-
+  const { label, sublabel, tooltip, icon } = getTriggerMeta(
+    props.data as Lightning.TriggerNode
+  );
   return (
     <Node
       {...props}
       shape="circle"
       label={label}
+      sublabel={sublabel}
       tooltip={tooltip}
+      icon={icon}
       sourcePosition={sourcePosition}
       interactive={props.data.trigger.type === 'webhook'}
     />
@@ -30,3 +37,24 @@ const TriggerNode = ({
 TriggerNode.displayName = 'TriggerWorkflowNode';
 
 export default memo(TriggerNode);
+
+function getTriggerMeta(trigger: Lightning.TriggerNode): TriggerMeta {
+  switch (trigger.type) {
+    case 'webhook':
+      return {
+        label: 'Webhook trigger',
+        sublabel: `On each request received`,
+        tooltip: 'Click to copy webhook URL',
+        icon: <GlobeAltIcon />,
+      };
+    case 'cron':
+      try {
+        return {
+          label: 'Cron trigger',
+          sublabel: cronstrue.toString(trigger.cron_expression),
+          icon: <ClockIcon />,
+        };
+      } catch (_error) {}
+  }
+  return { label: '', sublabel: '' };
+}
