@@ -26,7 +26,6 @@ const TriggerNode = ({
       shape="circle"
       label={label}
       tooltip={tooltip}
-      targetPosition={false}
       sourcePosition={sourcePosition}
       interactive={props.data.trigger.type === 'webhook'}
     />
