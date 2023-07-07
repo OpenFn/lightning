@@ -27,9 +27,32 @@ const Rect = ({ width, height, styles, strokeWidth }) =>
     {...styles}
   />;
 
+const Shape = ({ shape, width, height, strokeWidth, styles }) => {
+  if (shape === 'circle') {
+    return <Circle width={width} height={height} styles={styles} strokeWidth={strokeWidth}/>
+  } else {
+    return <Rect width={width} height={height} styles={styles} strokeWidth={strokeWidth} />
+  }
+}
+
+const Label = ({ children }) => {
+  if (children && children.length) {
+    return (<p className="line-clamp-2 align-left text-m">
+      {children}
+    </p>)
+  }
+  return null;
+}
+const SubLabel = ({ children }) => {
+  if (children && children.length) {
+    return (<p className="line-clamp-2 align-left text-sm text-slate-500">
+      {children}
+    </p>)
+  }
+  return null;
+}
+
 const Node = ({
-  label,
-  sublabel,
   labelClass = '',
   tooltip,
   interactive = true,
@@ -40,6 +63,17 @@ const Node = ({
   targetPosition,
   sourcePosition,
   toolbar,
+
+  // New stuff we need to support
+  icon, // displayed inside the SVG shape
+  status, // [ok | error | warning, message]. Passed into a status widget
+
+  // title and subtitle?
+  // name and adaptor?
+  // I think I prefer this to be generic
+  label, // main label which appears to the right
+  sublabel, // A smaller label to the right
+
 }: NodeProps<NodeData>) => {
 
   // Values to control the svg shape
@@ -52,8 +86,10 @@ const Node = ({
     stroke: '#c0c0c0',
     fill: 'white'
   }
+  // TODO I don't really think we're controlling the node size properly
+  // what will very long labels do?
   return (
-    <div className="flex flex-row" style={{ maxWidth: '300px' }}>
+    <div className="flex flex-row">
       <div>
         {targetPosition && <Handle
           type="target"
@@ -62,8 +98,7 @@ const Node = ({
           style={{ visibility: 'hidden', height: 0, top: 0, left: (strokeWidth + anchorx) }}
         />}
         <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
-          {shape === 'circle' && <Circle width={width} height={height} styles={style} strokeWidth={strokeWidth}/>}
-          {shape != 'circle' && <Rect width={width} height={height} styles={style} strokeWidth={strokeWidth} />}
+          <Shape shape={shape} width={width} height={height} strokeWidth={strokeWidth} styles={style}/>
         </svg>
         {sourcePosition && <Handle
           type="source"
@@ -71,9 +106,9 @@ const Node = ({
           position={sourcePosition}
           style={{ visibility: 'hidden', height: 0, top: height, left: (strokeWidth + anchorx) }}/>}
       </div>
-      <div className="flex-1 justify-left" style={{ maxWidth: '150px' }}>
-        {label && <p className={`line-clamp-2 align-left${labelClass}`}>{label}</p> }
-        {sublabel && <p className={`line-clamp-2 align-left${labelClass}`}>{sublabel}</p>         }
+      <div className="flex flex-col flex-1 justify-center ml-2">
+          <Label>{label}</Label>
+          <SubLabel>{sublabel}</SubLabel>
       </div>
     </div>
   )

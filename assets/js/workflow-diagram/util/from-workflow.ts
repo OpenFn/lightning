@@ -25,8 +25,7 @@ const fromWorkflow = (
       const model: any = {
         id: item.id,
         data: {
-          name: item.name,
-          item: item,
+          ...item,
         },
       };
 
@@ -44,8 +43,9 @@ const fromWorkflow = (
           model.position = positions[node.id];
         }
 
-        model.width = NODE_WIDTH;
-        model.height = NODE_HEIGHT;
+        // This is a work of fantasy
+        // model.width = NODE_WIDTH;
+        // model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
 
@@ -59,10 +59,17 @@ const fromWorkflow = (
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.label = item.name;
+        // TODO I don't like all this style stuff being buried in this file
+        // Feels like hte wrong place for cosmetic stuff
         model.labelBgStyle = {
           fill: 'rgb(243, 244, 246)',
         };
         model.type = 'step';
+        model.markerEnd = {
+          type: 'arrowclosed',
+          width: 32,
+          height: 32,
+        };
         if (isPlaceholder(item)) {
           model.style = {
             strokeDasharray: '4, 4',
