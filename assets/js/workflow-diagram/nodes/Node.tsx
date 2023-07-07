@@ -39,8 +39,6 @@ const Node = ({
   selected,
   targetPosition,
   sourcePosition,
-
-  allowSource = false,
   toolbar,
 }: NodeProps<NodeData>) => {
   
@@ -53,24 +51,26 @@ const Node = ({
   const strokeWidth = 2;
   const style = {
     stroke: '#c0c0c0',
-    fill: 'transparent'
+    fill: 'white'
   }
   return (
     <div className="flex flex-row" style={{ maxWidth: '300px' }}>
       <div>
-        {targetPosition && <Handle
+        {<Handle
           type="target"
           isConnectable={isConnectable}
-          style={{ background:'red', visibility: 'visible', border: 'none', height: 0, top: 0, left: (strokeWidth + anchorx) }}
+          position={targetPosition}
+          style={{ visibility: 'hidden', height: 0, top: 0, left: (strokeWidth + anchorx) }}
         />}
         <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
           {shape === 'circle' && <Circle width={width} height={height} styles={style} strokeWidth={strokeWidth}/>}
           {shape != 'circle' && <Rect width={width} height={height} styles={style} strokeWidth={strokeWidth} />}
         </svg>
-        {sourcePosition && <Handle
+        {<Handle
           type="source"
           isConnectable={isConnectable}
-          style={{ visibility: 'visible', border: 'none', height: 0, top: height, left: (strokeWidth + anchorx) }}/>}
+          position={sourcePosition}
+          style={{ visibility: 'hidden', height: 0, top: height, left: (strokeWidth + anchorx) }}/>}
       </div>
       <div className="flex-1 justify-left" style={{ maxWidth: '150px' }}>
         {label && <p className={`line-clamp-2 align-left${labelClass}`}>{label}</p> }
