@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Handle, Position } from 'reactflow';
+import { Position } from 'reactflow';
 import type { NodeProps } from 'reactflow';
 
 import getTriggerLabels from '../util/get-trigger-labels';
@@ -15,12 +15,7 @@ const TriggerNode = ({
 }): JSX.Element => {
   const { label, tooltip } = getTriggerLabels(props.data);
 
-  const width = 150;
-  const height = 150;
-  const styles = { fill: 'red', strokeWidth: 2, stroke: '#fff' };
-
   return (
-    // <ellipse cx={width / 2} cy={height / 2} rx={width / 2} ry={height / 2} {...styles}/>
     <Node
       {...props}
       shape="circle"
