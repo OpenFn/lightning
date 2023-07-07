@@ -17,6 +17,7 @@ const JobNode = ({
     label={props.data?.name}
     targetPosition={targetPosition}
     sourcePosition={sourcePosition}
+    allowSource
     toolbar={toolbar}
   />)
  
