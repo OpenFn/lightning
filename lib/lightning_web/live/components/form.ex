@@ -54,17 +54,19 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  def text_area(assigns) do
-    classes = ~w[
+  attr :form, :any, required: true
+  attr :field, :atom, required: true
+  attr :label, :string, required: false
+  attr :rest, :global, include: ~w(disabled), default: %{class: ~w[
       rounded-md
       w-full
       font-mono
       bg-slate-800
       text-slate-50
       h-96
-      min-h-full
-    ]
+    ] |> Enum.join(" ")}
 
+  def text_area(assigns) do
     label_classes = ~w[
       block
       text-sm
@@ -72,20 +74,22 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
-    opts = assigns_to_attributes(assigns, [:id, :form, :name, :values])
-
     assigns =
       assigns
-      |> assign(label_classes: label_classes, opts: opts)
-      |> assign_new(:classes, fn -> classes end)
-      |> assign_new(:disabled, fn -> false end)
+      |> assign(
+        label_classes: label_classes,
+        opts: assigns.rest |> Enum.into([])
+      )
+      |> assign_new(:label, fn -> false end)
 
     ~H"""
     <%= if @label do %>
-      <%= label(@form, @id, @label, class: @label_classes) %>
+      <%= label(@form, @field, @label, class: @label_classes) %>
+    <% else %>
+      <%= label(@form, @field, class: @label_classes) %>
     <% end %>
-    <%= error_tag(@form, @id) %>
-    <%= textarea(@form, @id, @opts ++ [class: @classes, disabled: @disabled]) %>
+    <%= error_tag(@form, @field) %>
+    <%= textarea(@form, @field, @opts) %>
     """
   end
 
@@ -405,14 +409,14 @@ defmodule LightningWeb.Components.Form do
       focus:ring-opacity-50
     ]
 
-    rest =
+    opts =
       assigns_to_attributes(assigns.rest, [:class, :form, :name, :values]) ++
         [class: select_classes]
 
-    assigns = assign(assigns, rest: rest)
+    assigns = assign(assigns, opts: opts)
 
     ~H"""
-    <%= select(@form, @name, @values, @rest) %>
+    <%= select(@form, @name, @values, @opts) %>
     """
   end
 

@@ -4,6 +4,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   attr :job, :map, required: true
   attr :form, :map, required: true
+  attr :current_user, :map, required: true
+  attr :project, :map, required: true
   attr :on_close, :any, required: true
 
   def job_edit_view(assigns) do
@@ -25,7 +27,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <div class="grow flex">
           <div class="flex-1 px-4 py-6">
             <!-- Left column area -->
-            <.input_pane id={"job-input-pane-#{@job.id}"} job={@job} />
+            <.input_pane
+              id={"job-input-pane-#{@job.id}"}
+              job={@job}
+              user={@current_user}
+              project={@project}
+            />
           </div>
 
           <div class="flex-1 px-4 py-6 h-full">
@@ -79,8 +86,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
         id={"manual-job-#{@job.id}"}
         job={@job}
         dataclips={@dataclips}
-        on_run={fn attempt_run -> follow_run(@job_id, attempt_run) end}
-        builder_state={%{}}
+        project={@project}
+        user={@user}
+        on_run={fn attempt_run -> follow_run(@job.id, attempt_run) end}
         can_run_job={true}
       />
     <% else %>
