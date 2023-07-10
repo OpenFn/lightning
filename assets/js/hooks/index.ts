@@ -24,6 +24,19 @@ export const AssocListChange = {
   },
 } as PhoenixHook<{}, {}, HTMLSelectElement>;
 
+export const SubmitViaCtrlS = {
+  mounted() {
+    this.el.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        this.el.dispatchEvent(
+          new Event('submit', { bubbles: true, cancelable: true })
+        );
+      }
+    });
+  },
+} as PhoenixHook<{}, { to: string }>;
+
 export const Copy = {
   mounted() {
     let { to } = this.el.dataset;
@@ -36,4 +49,3 @@ export const Copy = {
     });
   },
 } as PhoenixHook<{}, { to: string }>;
-
