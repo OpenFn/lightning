@@ -58,7 +58,7 @@ defmodule Lightning.WorkOrderService do
         |> Oban.insert()
 
         broadcast(
-          job.workflow.project_id,
+          models.job.workflow.project_id,
           %Events.AttemptCreated{attempt: models.attempt}
         )
 

@@ -10,6 +10,7 @@ defmodule Lightning.Workflows.Edge do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Lightning.Validators
 
   alias Lightning.Workflows.Workflow
   alias Lightning.Jobs.Job
@@ -75,28 +76,6 @@ defmodule Lightning.Workflows.Edge do
     )
     |> validate_source_condition()
     |> validate_different_nodes()
-  end
-
-  @doc """
-  Validate that only one of the fields is set at a time.
-  """
-  def validate_exclusive(changeset, fields, message) do
-    fields
-    |> Enum.map(&get_field(changeset, &1))
-    |> Enum.reject(&is_nil/1)
-    |> case do
-      f when length(f) > 1 ->
-        error_field =
-          fields
-          |> Enum.map(&[&1, fetch_field(changeset, &1)])
-          |> Enum.find(fn [_, {kind, _}] -> kind == :changes end)
-          |> List.first()
-
-        add_error(changeset, error_field, message)
-
-      _ ->
-        changeset
-    end
   end
 
   defp validate_source_condition(changeset) do

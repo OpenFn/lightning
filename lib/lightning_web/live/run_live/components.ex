@@ -308,7 +308,7 @@ defmodule LightningWeb.RunLive.Components do
     <style>
       div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content; }
     </style>
-    <div class="rounded-md mt-4 text-slate-200 bg-slate-700 border-slate-300 shadow-sm
+    <div class="rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
                     font-mono proportional-nums w-full text-sm">
       <%= for { line, i } <- @log do %>
         <.log_line num={i} line={line} />

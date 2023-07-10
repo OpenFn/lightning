@@ -60,6 +60,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <LightningWeb.WorkflowLive.JobView.job_edit_view
               job={@selected_job}
+              current_user={@current_user}
+              project={@project}
               on_close="set_expanded_job"
               form={to_form(@changeset)}
             />
