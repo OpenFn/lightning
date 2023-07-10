@@ -25,7 +25,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
-import { AssocListChange, Copy, Flash } from './hooks';
+import { AssocListChange, Copy, Flash, SubmitViaCtrlS } from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
@@ -41,6 +41,7 @@ let Hooks = {
   Flash,
   AssocListChange,
   Copy,
+  SubmitViaCtrlS,
 };
 
 // Sets the checkbox to indeterminate state if the element has the
@@ -94,18 +95,6 @@ window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
-});
-
-window.addEventListener('keydown', event => {
-  const currentURL = window.location.pathname;
-  const edit_workflow_url = /\/projects\/(.+)\/w\/(.+)/;
-  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-    if (edit_workflow_url.test(currentURL)) {
-      event.preventDefault();
-      let form = document.querySelector("button[form='workflow-form']");
-      form.click();
-    }
-  }
 });
 
 // connect if there are any LiveViews on the page
