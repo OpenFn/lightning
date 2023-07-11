@@ -82,7 +82,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         );
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
-          console.log(' >> layout ', layoutId);
           layout(newModel, setModel, flow, 200).then(positions => {
             // trigger selection on new nodes once they've been passed back through to us
             if (chartCache.current.deferSelection) {
@@ -184,7 +183,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           }
         };
       }
-    }, [commitPlaceholder, ref]);
+    }, [commitPlaceholder, cancelPlaceholder, ref]);
 
     // Note that we only support a single selection
     const handleSelectionChange = useCallback(
