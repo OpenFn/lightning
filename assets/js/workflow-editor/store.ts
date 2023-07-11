@@ -122,7 +122,7 @@ export const createWorkflowStore = (
             if (idsToRemove) {
               const nextItems: any[] = [];
               draft[key].forEach(item => {
-                if (idsToRemove.includes(item.id)) {
+                if (!idsToRemove.includes(item.id)) {
                   nextItems.push(item);
                 }
               });
