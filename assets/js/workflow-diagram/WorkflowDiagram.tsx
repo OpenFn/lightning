@@ -25,6 +25,7 @@ import { FIT_DURATION, FIT_PADDING } from './constants';
 
 import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
+import shouldLayout from './util/should-layout';
 
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
@@ -34,8 +35,9 @@ type WorkflowDiagramProps = {
 type ChartCache = {
   positions: Positions;
   selectedId?: string;
-  ignoreNextSelection: boolean;
+  ignoreNextSelection?: boolean;
   deferSelection?: string;
+  lastLayout?: string;
 };
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
@@ -60,8 +62,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
     const chartCache = useRef<ChartCache>({
       positions: {},
-      selectedId: undefined,
-      ignoreNextSelection: false,
     });
 
     const [flow, setFlow] = useState<ReactFlowInstance>();
@@ -74,18 +74,28 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       const { positions, selectedId } = chartCache.current;
       const newModel = fromWorkflow(workflow, positions, selectedId);
 
-      console.log('UPDATING WORKFLOW', newModel, selectedId);
+      //console.log('UPDATING WORKFLOW', newModel, selectedId);
       if (flow && newModel.nodes.length) {
-        layout(newModel, setModel, flow, 200).then(positions => {
-          // trigger selection on new nodes once they've been passed back through to us
-          if (chartCache.current.deferSelection) {
-            onSelectionChange(chartCache.current.deferSelection);
-            delete chartCache.current.deferSelection;
-          }
+        const layoutId = shouldLayout(
+          newModel.edges,
+          chartCache.current.lastLayout
+        );
+        if (layoutId) {
+          chartCache.current.lastLayout = layoutId;
+          console.log(' >> layout ', layoutId);
+          layout(newModel, setModel, flow, 200).then(positions => {
+            // trigger selection on new nodes once they've been passed back through to us
+            if (chartCache.current.deferSelection) {
+              onSelectionChange(chartCache.current.deferSelection);
+              delete chartCache.current.deferSelection;
+            }
 
-          // Bit of a hack - don't update positions until the animation has finished
-          chartCache.current.positions = positions;
-        });
+            // Bit of a hack - don't update positions until the animation has finished
+            chartCache.current.positions = positions;
+          });
+        } else {
+          setModel(newModel);
+        }
       } else {
         chartCache.current.positions = {};
       }
@@ -143,7 +153,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           jobs: [{ id, name, body: DEFAULT_TEXT }],
         });
       },
-      [change, workflow]
+      [change]
     );
 
     const cancelPlaceholder = useCallback(
