@@ -1,10 +1,7 @@
 import React, { createContext } from 'react';
 import { createRoot } from 'react-dom/client';
 import { StoreApi } from 'zustand';
-import {
-  WorkflowState,
-  createWorkflowStore
-} from './store';
+import { WorkflowState, createWorkflowStore } from './store';
 
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 
@@ -22,12 +19,9 @@ export function mount(
   const componentRoot = createRoot(el);
 
   function unmount() {
-    console.log('unmount');
-
     return componentRoot.unmount();
   }
 
-  console.log('render');
   componentRoot.render(
     <WorkflowContext.Provider value={workflowStore}>
       <WorkflowDiagram ref={el} onSelectionChange={onSelectionChange} />
