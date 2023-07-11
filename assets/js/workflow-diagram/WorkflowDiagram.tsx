@@ -46,7 +46,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const remove = useStore(store!, state => state.remove);
     const change = useStore(store!, state => state.change);
 
-    const incomingWorkflow = useStore(
+    const workflow = useStore(
       store!,
       state => ({
         jobs: state.jobs,
@@ -55,16 +55,9 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       }),
       shallow
     );
-
-    const workflow = useMemo(
-      () => placeholder.identify(incomingWorkflow),
-      [incomingWorkflow]
-    );
-
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
-    // If I push the store in here and use it more, will I have to do this less...?
     const chartCache = useRef<ChartCache>({
       positions: {},
       selectedId: undefined,
@@ -76,11 +69,12 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // Respond to changes pushed into the component from outside
     // This usually means the workflow has changed or its the first load, so we don't want to animate
     // Later, if responding to changes from other users live, we may want to animate
+    // TODO it would be nice to not run a layout here on every keystroke
     useEffect(() => {
       const { positions, selectedId } = chartCache.current;
       const newModel = fromWorkflow(workflow, positions, selectedId);
 
-      console.debug('UPDATING WORKFLOW', newModel, selectedId);
+      console.log('UPDATING WORKFLOW', newModel, selectedId);
       if (flow && newModel.nodes.length) {
         layout(newModel, setModel, flow, 200).then(positions => {
           // trigger selection on new nodes once they've been passed back through to us
@@ -95,7 +89,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       } else {
         chartCache.current.positions = {};
       }
-    }, [chartCache, workflow, flow]);
+    }, [workflow, flow]);
 
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
