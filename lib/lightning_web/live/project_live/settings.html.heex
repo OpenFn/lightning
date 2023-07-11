@@ -73,11 +73,11 @@
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
                   <LightningWeb.Components.Form.text_area
-                    classes="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+                    class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
                     form={f}
                     disabled={!@can_edit_project_description}
                     label="Project description"
-                    id={:description}
+                    field={:description}
                   />
                   <small class="mt-2 block text-xs text-gray-600">
                     A short description of a project [max 240 characters]
