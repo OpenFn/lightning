@@ -14,8 +14,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr(:changeset, :map, required: true)
-  attr(:project_user, :map, required: true)
+  attr :changeset, :map, required: true
+  attr :project_user, :map, required: true
+
+  def follow_run(attempt_run) do
+    send(self(), {:follow_run, attempt_run})
+  end
 
   @impl true
   def render(assigns) do
@@ -62,6 +66,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
               job={@selected_job}
               current_user={@current_user}
               project={@project}
+              socket={@socket}
+              on_run={&follow_run/1}
+              follow_run_id={@follow_run_id}
               on_close="set_expanded_job"
               form={to_form(@changeset)}
             />
@@ -202,14 +209,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
        active_menu_item: :projects,
        can_edit_job: can_edit_job,
        expanded_job: nil,
+       follow_run_id: nil,
        page_title: "",
        project: project,
        project_user: project_user,
-       show_expanded_job: false,
-       selection_mode: nil,
        selected_edge: nil,
        selected_job: nil,
-       selected_trigger: nil
+       selected_trigger: nil,
+       selection_mode: nil,
+       show_expanded_job: false
      )}
   end
 
@@ -265,7 +273,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
          [type, selected] <- find_item_in_changeset(socket.assigns.changeset, id) do
       {:noreply,
        socket
-       |> select_node({type, selected}, mode)}
+       |> select_node({type, selected}, mode)
+       |> maybe_unfollow_run()}
     else
       _ -> {:noreply, socket |> unselect_all()}
     end
@@ -343,6 +352,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_patches_applied(initial_params)}
   end
 
+  def handle_info({:follow_run, attempt_run}, socket) do
+    {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
   defp webhook_url(trigger) do
     with %{type: :webhook, id: id} <- trigger do
       Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
@@ -414,6 +427,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
         |> assign(selected_job: nil, selected_trigger: nil, selected_edge: value)
     end
     |> assign(selection_mode: selection_mode)
+  end
+
+  defp maybe_unfollow_run(socket) do
+    if changed?(socket, :selected_job) do
+      socket |> assign(follow_run_id: nil)
+    else
+      socket
+    end
   end
 
   # find the changeset for the selected item

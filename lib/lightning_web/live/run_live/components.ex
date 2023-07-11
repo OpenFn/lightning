@@ -181,41 +181,44 @@ defmodule LightningWeb.RunLive.Components do
         Log
       </.toggle_item>
     </.toggle_bar>
-    <%= if @show_input_dataclip do %>
-      <div id="input_section" style="display: none;" class="@container">
-        <.dataclip_view dataclip={@run.input_dataclip} />
-      </div>
-    <% end %>
-
-    <div id="log_section" style="display: none;" class="@container">
-      <.run_log_viewer run={@run} />
-    </div>
-    <div id="output_section" style="display: none;" class="@container">
-      <%= cond  do %>
-        <% @run.exit_code > 0 -> %>
-          <.dataclip_view
-            dataclip={nil}
-            no_dataclip_message={
-              %{
-                label: "This run failed",
-                description: "There is no output. See the logs for more information"
-              }
-            }
-          />
-        <% is_nil(@run.output_dataclip_id) -> %>
-          <.dataclip_view
-            dataclip={nil}
-            no_dataclip_message={
-              %{
-                label: "There is no output for this run",
-                description:
-                  "Check your job expression to ensure that the final operation returns something."
-              }
-            }
-          />
-        <% true -> %>
-          <.dataclip_view dataclip={@run.output_dataclip} />
+    <div class="mt-4">
+      <%= if @show_input_dataclip do %>
+        <div id="input_section" style="display: none;" class="@container">
+          <.dataclip_view dataclip={@run.input_dataclip} />
+        </div>
       <% end %>
+
+      <div id="log_section" style="display: none;" class="@container">
+        <.run_log_viewer run={@run} />
+      </div>
+      <div id="output_section" style="display: none;" class="@container">
+        <%= cond  do %>
+          <% @run.exit_code > 0 -> %>
+            <.dataclip_view
+              dataclip={nil}
+              no_dataclip_message={
+                %{
+                  label: "This run failed",
+                  description:
+                    "There is no output. See the logs for more information"
+                }
+              }
+            />
+          <% is_nil(@run.output_dataclip_id) -> %>
+            <.dataclip_view
+              dataclip={nil}
+              no_dataclip_message={
+                %{
+                  label: "There is no output for this run",
+                  description:
+                    "Check your job expression to ensure that the final operation returns something."
+                }
+              }
+            />
+          <% true -> %>
+            <.dataclip_view dataclip={@run.output_dataclip} />
+        <% end %>
+      </div>
     </div>
     """
   end
