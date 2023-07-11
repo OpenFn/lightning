@@ -23,7 +23,7 @@ import toWorkflow from './util/to-workflow';
 import { useStore } from 'zustand';
 import { shallow } from 'zustand/shallow';
 import { WorkflowContext } from '../workflow-editor/component';
-import { WorkflowProps } from '../workflow-editor/store';
+
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import type { Flow, Positions } from './types';
 
@@ -38,42 +38,8 @@ type ChartCache = {
   deferSelection?: string;
 };
 
-type Workflow = Pick<WorkflowProps, 'jobs' | 'edges' | 'triggers'>;
-
 // This will take a store passed from the server and do some light transformation
 // Specifically it identifies placeholder nodes
-const identifyPlaceholders = (store: Workflow) => {
-  const { jobs, triggers, edges } = store;
-
-  const newJobs = jobs.map(item => {
-    if (!item.name && !item.body) {
-      return {
-        ...item,
-        placeholder: true,
-      };
-    }
-    return item;
-  });
-
-  const newEdges = edges.map(edge => {
-    const target = newJobs.find(({ id }) => edge.target_job_id === id);
-    if (target?.placeholder) {
-      return {
-        ...edge,
-        placeholder: true,
-      };
-    }
-    return edge;
-  });
-
-  const result = {
-    triggers,
-    jobs: newJobs,
-    edges: newEdges,
-  };
-
-  return result;
-};
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
@@ -83,7 +49,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const remove = useStore(workflowStore!, state => state.remove);
     const change = useStore(workflowStore!, state => state.change);
 
-    const _workflow = useStore(
+    const storeModel = useStore(
       workflowStore!,
       state => ({
         jobs: state.jobs,
@@ -94,8 +60,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     );
 
     const workflow = useMemo(
-      () => identifyPlaceholders(_workflow),
-      [_workflow]
+      () => placeholder.identify(storeModel),
+      [storeModel]
     );
 
     const { onSelectionChange } = props;
