@@ -12,10 +12,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr :changeset, :map, required: true
-  attr :project_user, :map, required: true
+  attr(:changeset, :map, required: true)
+  attr(:project_user, :map, required: true)
 
   @impl true
   def render(assigns) do
@@ -67,123 +67,109 @@ defmodule LightningWeb.WorkflowLive.Edit do
             />
           </div>
         </div>
-        <div
+        <.form
+          :let={f}
           :if={@selected_job}
-          class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
-          lv-keep-style
+          id="workflow-form"
+          for={@changeset}
+          phx-submit="save"
+          phx-hook="SubmitViaCtrlS"
+          phx-change="validate"
         >
-          <.resize_component id={"resizer-#{@workflow.id}"} />
-          <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
-            <.form
-              :let={f}
-              id="workflow-form"
-              for={@changeset}
-              phx-submit="save"
-              phx-change="validate"
-              class="h-full"
-            >
-              <.panel id={"job-pane-#{@selected_job.id}"}>
-                <:header>
-                  <div class="grow">
-                    <%= f
-                    |> input_value(:name)
-                    |> then(fn
-                      "" -> "Untitled Job"
-                      name -> name
-                    end) %>
-                  </div>
-                  <div class="flex-none">
-                    <.link
-                      patch={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
-                      class="justify-center hover:text-gray-500"
-                    >
-                      <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
-                    </.link>
-                  </div>
-                </:header>
-                <!-- Show only the currently selected one -->
-                <.job_form
-                  on_change={&send_form_changed/1}
-                  form={single_inputs_for(f, :jobs, @selected_job.id)}
-                  project_user={@project_user}
-                />
-                <:footer>
-                  <button
-                    type="button"
-                    class="px-4 py-1.5 h-10 inline-flex items-center gap-x-1.5
+          <.panel
+            title={
+              single_inputs_for(f, :jobs, @selected_job.id)
+              |> input_value(:name)
+              |> then(fn
+                "" -> "Untitled Job"
+                name -> name
+              end)
+            }
+            id={"job-pane-#{@selected_job.id}"}
+            cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+          >
+            <!-- Show only the currently selected one -->
+            <.job_form
+              on_change={&send_form_changed/1}
+              form={single_inputs_for(f, :jobs, @selected_job.id)}
+              project_user={@project_user}
+            />
+            <:footer>
+              <button
+                type="button"
+                class="px-4 py-1.5 h-10 inline-flex items-center gap-x-1.5
                     rounded-md bg-indigo-600 text-sm font-semibold text-white
                     shadow-sm hover:bg-indigo-500
                     focus-visible:outline focus-visible:outline-2
                     focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    phx-click="set_expanded_job"
-                    phx-value-show="true"
-                  >
-                    <Heroicons.pencil_square class="w-4 h-4 -ml-0.5" /> Edit
-                  </button>
-                </:footer>
-              </.panel>
-            </.form>
-          </div>
-        </div>
-        <div
+                phx-click="set_expanded_job"
+                phx-value-show="true"
+              >
+                <Heroicons.pencil_square class="w-4 h-4 -ml-0.5" /> Edit
+              </button>
+            </:footer>
+          </.panel>
+        </.form>
+
+        <.form
+          :let={f}
           :if={@selected_trigger}
-          class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
-          lv-keep-style
+          id="workflow-form"
+          for={@changeset}
+          phx-submit="save"
+          phx-change="validate"
         >
-          <.resize_component id={"resizer-#{@workflow.id}"} />
-          <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
+          <.panel
+            id={"trigger-pane-#{@selected_trigger.id}"}
+            title={
+              single_inputs_for(f, :triggers, @selected_trigger.id)
+              |> input_value(:type)
+              |> to_string()
+              |> then(fn
+                "" -> "New Trigger"
+                "webhook" -> "Webhook Trigger"
+                "cron" -> "Cron Trigger"
+              end)
+            }
+            cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+          >
             <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
-              <.form
-                :let={f}
-                id="workflow-form"
-                for={@changeset}
-                phx-submit="save"
-                phx-change="validate"
-                class="h-full"
-              >
-                <!-- Show only the currently selected one -->
-                <.trigger_form
-                  form={single_inputs_for(f, :triggers, @selected_trigger.id)}
-                  on_change={&send_form_changed/1}
-                  requires_cron_job={@selected_trigger.type == :cron}
-                  disabled={!@can_edit_job}
-                  webhook_url={webhook_url(@selected_trigger)}
-                  cancel_url={
-                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
-                  }
-                />
-              </.form>
+              <!-- Show only the currently selected one -->
+              <.trigger_form
+                form={single_inputs_for(f, :triggers, @selected_trigger.id)}
+                on_change={&send_form_changed/1}
+                requires_cron_job={@selected_trigger.type == :cron}
+                disabled={!@can_edit_job}
+                webhook_url={webhook_url(@selected_trigger)}
+                cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+              />
             </div>
-          </div>
-        </div>
-        <div
+          </.panel>
+        </.form>
+
+        <.form
+          :let={f}
           :if={@selected_edge}
-          class="grow-0 w-1/2 relative min-w-[300px] max-w-[90%]"
-          lv-keep-style
+          id="workflow-form"
+          for={@changeset}
+          phx-submit="save"
+          phx-change="validate"
         >
-          <.resize_component id={"resizer-#{@workflow.id}"} />
-          <div class="absolute inset-y-0 left-2 right-0 z-10 resize-x ">
+          <.panel
+            id={"edge-pane-#{@selected_edge.id}"}
+            cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+            title="Edge"
+          >
             <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
-              <.form
-                :let={f}
-                id="workflow-form"
-                for={@changeset}
-                phx-submit="save"
-                phx-change="validate"
-                class="h-full"
-              >
-                <!-- Show only the currently selected one -->
-                <.edge_form
-                  form={single_inputs_for(f, :edges, @selected_edge.id)}
-                  disabled={!@can_edit_job}
-                  cancel_url={
-                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
-                  }
-                />
-              </.form>
+              <!-- Show only the currently selected one -->
+              <.edge_form
+                form={single_inputs_for(f, :edges, @selected_edge.id)}
+                disabled={!@can_edit_job}
+                cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+              />
             </div>
-          </div>
-        </div>
+          </.panel>
+        </.form>
       </div>
     </LayoutComponents.page_content>
     """

@@ -25,7 +25,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
-import { AssocListChange, Copy, Flash } from './hooks';
+import { AssocListChange, Copy, Flash, SubmitViaCtrlS } from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
@@ -41,6 +41,7 @@ let Hooks = {
   Flash,
   AssocListChange,
   Copy,
+  SubmitViaCtrlS,
 };
 
 // @ts-ignore
@@ -83,19 +84,6 @@ window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
-});
-
-window.addEventListener('keydown', event => {
-  const currentURL = window.location.pathname;
-  const edit_job_url = /\/projects\/(.+)\/w\/(.+)\/j\/(.+)/;
-  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-    if (edit_job_url.test(currentURL)) {
-      event.preventDefault();
-      console.log('Saving the job');
-      let form = document.querySelector("button[form='job-form']");
-      form.click();
-    }
-  }
 });
 
 // connect if there are any LiveViews on the page
