@@ -1,6 +1,5 @@
 import React, {
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -12,6 +11,9 @@ import ReactFlow, {
   ReactFlowProvider,
   applyNodeChanges,
 } from 'reactflow';
+import { useStore, StoreApi } from 'zustand';
+import { shallow } from 'zustand/shallow';
+
 import { DEFAULT_TEXT } from '../editor/Editor';
 import layout from './layout';
 import nodeTypes from './nodes';
@@ -19,16 +21,14 @@ import fromWorkflow from './util/from-workflow';
 import * as placeholder from './util/placeholder';
 import throttle from './util/throttle';
 import toWorkflow from './util/to-workflow';
-
-import { useStore } from 'zustand';
-import { shallow } from 'zustand/shallow';
-import { WorkflowContext } from '../workflow-editor/component';
-
 import { FIT_DURATION, FIT_PADDING } from './constants';
+
+import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
 
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
+  store: StoreApi<WorkflowState>;
 };
 
 type ChartCache = {
@@ -40,14 +40,14 @@ type ChartCache = {
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
-    const workflowStore = useContext(WorkflowContext);
+    const { onSelectionChange, store } = props;
 
-    const add = useStore(workflowStore!, state => state.add);
-    const remove = useStore(workflowStore!, state => state.remove);
-    const change = useStore(workflowStore!, state => state.change);
+    const add = useStore(store!, state => state.add);
+    const remove = useStore(store!, state => state.remove);
+    const change = useStore(store!, state => state.change);
 
-    const storeModel = useStore(
-      workflowStore!,
+    const incomingWorkflow = useStore(
+      store!,
       state => ({
         jobs: state.jobs,
         triggers: state.triggers,
@@ -57,11 +57,10 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     );
 
     const workflow = useMemo(
-      () => placeholder.identify(storeModel),
-      [storeModel]
+      () => placeholder.identify(incomingWorkflow),
+      [incomingWorkflow]
     );
 
-    const { onSelectionChange } = props;
     const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
