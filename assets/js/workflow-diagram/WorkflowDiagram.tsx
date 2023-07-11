@@ -38,9 +38,6 @@ type ChartCache = {
   deferSelection?: string;
 };
 
-// This will take a store passed from the server and do some light transformation
-// Specifically it identifies placeholder nodes
-
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
     const workflowStore = useContext(WorkflowContext);
@@ -76,13 +73,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     });
 
     const [flow, setFlow] = useState<ReactFlowInstance>();
-
-    const setFlowInstance = useCallback(
-      (s: ReactFlowInstance) => {
-        setFlow(s);
-      },
-      [setFlow]
-    );
 
     // Respond to changes pushed into the component from outside
     // This usually means the workflow has changed or its the first load, so we don't want to animate
@@ -252,7 +242,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           nodesDraggable={false}
           nodeTypes={nodeTypes}
           onNodeClick={handleNodeClick}
-          onInit={setFlowInstance}
+          onInit={setFlow}
           deleteKeyCode={null}
           fitView
           fitViewOptions={{ padding: FIT_PADDING }}
