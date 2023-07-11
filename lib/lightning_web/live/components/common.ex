@@ -316,10 +316,10 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:id, :string, required: true)
-  attr(:default_hash, :string, required: true)
-  attr(:orientation, :string, required: true)
-  slot(:inner_block, required: true)
+  attr :id, :string, required: true
+  attr :default_hash, :string, required: true
+  attr :orientation, :string, required: true
+  slot :inner_block, required: true
 
   def tab_bar(assigns) do
     horizontal_classes = ~w[
@@ -359,8 +359,8 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:for_hash, :string, required: true)
-  slot(:inner_block, required: true)
+  attr :for_hash, :string, required: true
+  slot :inner_block, required: true
 
   def panel_content(assigns) do
     ~H"""
@@ -375,9 +375,9 @@ defmodule LightningWeb.Components.Common do
     """
   end
 
-  attr(:hash, :string, required: true)
-  attr(:orientation, :string, required: true)
-  slot(:inner_block, required: true)
+  attr :hash, :string, required: true
+  attr :orientation, :string, required: true
+  slot :inner_block, required: true
 
   def tab_item(assigns) do
     vertical_classes = ~w[
