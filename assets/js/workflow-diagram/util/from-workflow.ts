@@ -1,6 +1,6 @@
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Lightning, Flow, Positions } from '../types';
-import { isPlaceholder } from './placeholder';
+import { identify, isPlaceholder } from './placeholder';
 
 // TODO pass in the currently selected items so that we can maintain selection
 const fromWorkflow = (
@@ -11,7 +11,10 @@ const fromWorkflow = (
   if (workflow.jobs.length == 0) {
     return { nodes: [], edges: [] };
   }
-  const allowPlaceholder = workflow.jobs.every(j => !isPlaceholder(j));
+  const workflowWithPlaceholders = identify(workflow);
+  const allowPlaceholder = workflowWithPlaceholders.jobs.every(
+    j => !isPlaceholder(j)
+  );
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
@@ -72,9 +75,9 @@ const fromWorkflow = (
   const nodes = [] as Flow.Node[];
   const edges = [] as Flow.Edge[];
 
-  process(workflow.jobs, nodes, 'job');
-  process(workflow.triggers, nodes, 'trigger');
-  process(workflow.edges, edges, 'edge');
+  process(workflowWithPlaceholders.jobs, nodes, 'job');
+  process(workflowWithPlaceholders.triggers, nodes, 'trigger');
+  process(workflowWithPlaceholders.edges, edges, 'edge');
 
   return { nodes, edges };
 };
