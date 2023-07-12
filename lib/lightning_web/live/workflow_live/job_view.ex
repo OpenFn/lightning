@@ -15,7 +15,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <div class="relative h-full flex bg-white" id={@id}>
       <div class="grow flex min-h-full flex-col ">
-        <div class="h-14 flex border-b">
+        <div class="h-14 border-b relative">
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
@@ -47,10 +47,22 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
-        <div class="grow"></div>
-        <.link href={@close_url} class="grow-0 w-14 flex items-center justify-center">
-          <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
-        </.link>
+        <div class="flex h-14 place-content-stretch">
+          <div class="basis-1/3 flex items-center gap-4 pl-4">
+            <.adaptor_block adaptor={@job.adaptor} />
+            <.credential_block credential={@job.credential} />
+          </div>
+          <div class="basis-1/3 font-semibold flex items-center justify-center">
+            <%= @job.name %>
+          </div>
+          <div class="basis-1/3 flex justify-end">
+            <div class="flex w-14 items-center justify-center">
+              <.link href={@close_url}>
+                <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
+              </.link>
+            </div>
+          </div>
+        </div>
       </:top>
       <:column>
         <.input_pane
@@ -133,6 +145,50 @@ defmodule LightningWeb.WorkflowLive.JobView do
     <% else %>
       <p>Please save your Job first.</p>
     <% end %>
+    """
+  end
+
+  defp credential_block(assigns) do
+    ~H"""
+    <div class="flex items-center gap-2">
+      <%= if @credential do %>
+        <Heroicons.lock_closed class="w-6 h-6 text-gray-500" />
+        <span class="text-xs text-gray-500 font-semibold grow">
+          <%= @credential.name %>
+        </span>
+      <% else %>
+        <Heroicons.lock_open class="w-6 h-6 text-gray-500" />
+        <span class="text-xs text-gray-500 font-semibold grow">
+          No Credential
+        </span>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp adaptor_block(assigns) do
+    {package_name, version} =
+      Lightning.AdaptorRegistry.resolve_package_name(assigns.adaptor)
+
+    assigns =
+      assigns
+      |> assign(
+        package_name: package_name,
+        version: version
+      )
+
+    ~H"""
+    <div class="grid grid-rows-2 grid-flow-col">
+      <div class="row-span-2 flex items-center mr-2">
+        <Heroicons.cube class="w-6 h-6 text-gray-500" />
+      </div>
+      <div class="text-xs text-gray-500 font-semibold">
+        <%= @package_name %>
+      </div>
+      <div class="text-xs text-gray-500 font-semibold font-mono">
+        <%= @version %>
+      </div>
+    </div>
     """
   end
 end
