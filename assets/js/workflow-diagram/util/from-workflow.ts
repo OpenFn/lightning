@@ -32,7 +32,10 @@ const fromWorkflow = (
 
       if (item.id === selectedNodeId) {
         model.selected = true;
+      } else {
+        model.selected = false;
       }
+
       if (/(job|trigger)/.test(type)) {
         const node = item as Lightning.Node;
         model.type = isPlaceholder(node) ? 'placeholder' : type;
@@ -78,7 +81,7 @@ const fromWorkflow = (
   process(workflowWithPlaceholders.jobs, nodes, 'job');
   process(workflowWithPlaceholders.triggers, nodes, 'trigger');
   process(workflowWithPlaceholders.edges, edges, 'edge');
-
+  console.log(edges);
   return { nodes, edges };
 };
 

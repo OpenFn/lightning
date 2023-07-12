@@ -35,8 +35,6 @@ type WorkflowDiagramProps = {
 type ChartCache = {
   positions: Positions;
   selectedId?: string;
-  ignoreNextSelection?: boolean;
-  deferSelection?: string;
   lastLayout?: string;
 };
 
@@ -62,6 +60,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
     const chartCache = useRef<ChartCache>({
       positions: {},
+      selectedId: undefined,
+      lastLayout: undefined,
     });
 
     const [flow, setFlow] = useState<ReactFlowInstance>();
@@ -69,7 +69,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // Respond to changes pushed into the component from outside
     // This usually means the workflow has changed or its the first load, so we don't want to animate
     // Later, if responding to changes from other users live, we may want to animate
-    // TODO it would be nice to not run a layout here on every keystroke
     useEffect(() => {
       const { positions, selectedId } = chartCache.current;
       const newModel = fromWorkflow(workflow, positions, selectedId);
@@ -112,25 +111,44 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       (event: React.MouseEvent, node: Flow.Node) => {
         if ((event.target as HTMLElement).closest('[name=add-node]')) {
           addNode(node);
+        } else {
+          updateSelection(node.id);
         }
       },
       [model]
+    );
+
+    const handleEdgeClick = useCallback(
+      (_event: React.MouseEvent, edge: Flow.Edge) => {
+        updateSelection(edge.id);
+      },
+      []
+    );
+
+    const handleBackgroundClick = useCallback((event: React.MouseEvent) => {
+      if (
+        event.target.classList &&
+        event.target.classList.contains('react-flow__pane')
+      ) {
+        updateSelection(undefined);
+      }
+    }, []);
+
+    const updateSelection = useCallback(
+      (id?: string) => {
+        const { selectedId } = chartCache.current;
+        if (id !== selectedId) {
+          chartCache.current.selectedId = id;
+          onSelectionChange(id);
+        }
+      },
+      [onSelectionChange]
     );
 
     const addNode = useCallback(
       (parentNode: Flow.Node) => {
         // Generate a placeholder node and edge
         const diff = placeholder.add(model, parentNode);
-
-        // reactflow will fire a selection change event after the click
-        // (regardless of whether the node is selected)
-        // We need to ignore this
-        chartCache.current.ignoreNextSelection = true;
-
-        // If the editor is currently open, update the selection to show the new node
-        if (chartCache.current.selectedId) {
-          chartCache.current.deferSelection = diff.nodes[0].id;
-        }
 
         // Mark the new node as selected for the next render
         chartCache.current.selectedId = diff.nodes[0].id;
@@ -185,29 +203,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       }
     }, [commitPlaceholder, cancelPlaceholder, ref]);
 
-    // Note that we only support a single selection
-    const handleSelectionChange = useCallback(
-      ({ nodes, edges }: Flow.Model) => {
-        // console.log('> handleSelectionChange', nodes.map(({ id }) => id))
-        const { selectedId, ignoreNextSelection } = chartCache.current;
-        const newSelectedId = nodes.length
-          ? nodes[0].id
-          : edges.length
-          ? edges[0].id
-          : undefined;
-        if (ignoreNextSelection) {
-          console.log('ignoring selection change');
-
-          // do nothing as the ignore flag was set
-        } else if (newSelectedId !== selectedId) {
-          chartCache.current.selectedId = newSelectedId;
-          onSelectionChange(newSelectedId);
-        }
-        chartCache.current.ignoreNextSelection = false;
-      },
-      [onSelectionChange]
-    );
-
     // Trigger a fit when the parent div changes size
     useEffect(() => {
       if (flow && ref) {
@@ -239,11 +234,12 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           proOptions={{ account: 'paid-pro', hideAttribution: true }}
           nodes={model.nodes}
           edges={model.edges}
-          onSelectionChange={handleSelectionChange}
           onNodesChange={onNodesChange}
           nodesDraggable={false}
           nodeTypes={nodeTypes}
+          onClick={handleBackgroundClick}
           onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
           onInit={setFlow}
           deleteKeyCode={null}
           fitView
