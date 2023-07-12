@@ -15,7 +15,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
     ~H"""
     <div class="relative h-full flex bg-white" id={@id}>
       <div class="grow flex min-h-full flex-col ">
-        <!-- Top band -->
         <div class="h-14 flex border-b">
           <%= render_slot(@top) %>
         </div>
@@ -27,9 +26,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </div>
           <% end %>
         </div>
-        <!-- Top band -->
         <div class="h-14 flex border-t">
-          bottom band
+          <%= render_slot(@bottom) %>
         </div>
       </div>
     </div>
@@ -40,7 +38,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :form, :map, required: true
   attr :current_user, :map, required: true
   attr :project, :map, required: true
-  attr :on_close, :any, required: true
+  attr :close_url, :any, required: true
   attr :socket, :any, required: true
   attr :on_run, :any, required: true, doc: "Callback to run a job manually"
   attr :follow_run_id, :any, default: nil
@@ -50,13 +48,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
     <.container id={"job-edit-view-#{@job.id}"}>
       <:top>
         <div class="grow"></div>
-        <div
-          class="grow-0 w-14 flex items-center justify-center"
-          phx-click={@on_close}
-          phx-value-show="false"
-        >
+        <.link href={@close_url} class="grow-0 w-14 flex items-center justify-center">
           <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
-        </div>
+        </.link>
       </:top>
       <:column>
         <.input_pane
