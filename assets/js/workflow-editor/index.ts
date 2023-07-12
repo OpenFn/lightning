@@ -105,7 +105,6 @@ export default {
     this.liveSocket.pushHistoryPatch(this.el.dataset.baseUrl!, 'push', this.el);
   },
   onSelectionChange(id?: string) {
-    console.log(id);
     if (!id) {
       console.debug('unselecting');
 

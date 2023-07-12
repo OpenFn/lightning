@@ -81,7 +81,6 @@ const fromWorkflow = (
   process(workflowWithPlaceholders.jobs, nodes, 'job');
   process(workflowWithPlaceholders.triggers, nodes, 'trigger');
   process(workflowWithPlaceholders.edges, edges, 'edge');
-  console.log(edges);
   return { nodes, edges };
 };
 

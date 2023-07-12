@@ -79,16 +79,11 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           newModel.edges,
           chartCache.current.lastLayout
         );
+
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
           layout(newModel, setModel, flow, 200).then(positions => {
-            // trigger selection on new nodes once they've been passed back through to us
-            if (chartCache.current.deferSelection) {
-              onSelectionChange(chartCache.current.deferSelection);
-              delete chartCache.current.deferSelection;
-            }
-
-            // Bit of a hack - don't update positions until the animation has finished
+            // Note we don't update positions until the animation has finished
             chartCache.current.positions = positions;
           });
         } else {
