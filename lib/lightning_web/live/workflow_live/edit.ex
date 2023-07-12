@@ -57,7 +57,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
           <div
-            :if={@selected_job && @show_expanded_job}
+            :if={@selected_job && @selection_mode == "expand"}
             class="absolute hidden inset-0 z-20"
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
@@ -69,7 +69,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
               socket={@socket}
               on_run={&follow_run/1}
               follow_run_id={@follow_run_id}
-              on_close="set_expanded_job"
+              close_url={
+                "#id=#{@selected_job.id}"
+              }
               form={to_form(@changeset)}
             />
           </div>
@@ -102,18 +104,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
               project_user={@project_user}
             />
             <:footer>
-              <button
-                type="button"
+              <.link
+                href={
+                  "#id=#{@selected_job.id}&mode=expand"
+                }
                 class="px-4 py-1.5 h-10 inline-flex items-center gap-x-1.5
-                    rounded-md bg-indigo-600 text-sm font-semibold text-white
-                    shadow-sm hover:bg-indigo-500
-                    focus-visible:outline focus-visible:outline-2
-                    focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                phx-click="set_expanded_job"
-                phx-value-show="true"
+                rounded-md bg-indigo-600 text-sm font-semibold text-white
+                shadow-sm hover:bg-indigo-500
+                focus-visible:outline focus-visible:outline-2
+                focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
               >
                 <Heroicons.pencil_square class="w-4 h-4 -ml-0.5" /> Edit
-              </button>
+              </.link>
             </:footer>
           </.panel>
         </.form>
@@ -216,8 +218,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_edge: nil,
        selected_job: nil,
        selected_trigger: nil,
-       selection_mode: nil,
-       show_expanded_job: false
+       selection_mode: nil
      )}
   end
 
@@ -260,10 +261,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
      })}
   end
 
+  def handle_event("close_job_editor", _, socket) do
+    {:noreply, socket |> assign(selection_mode: nil)}
+  end
+
   def handle_event("set_expanded_job", %{"show" => show}, socket)
       when show in ["true", "false"] do
-    {:noreply,
-     socket |> assign(show_expanded_job: show |> String.to_existing_atom())}
+    {:noreply, socket |> assign(selection_mode: "expand")}
   end
 
   def handle_event("hash-changed", %{"hash" => hash}, socket) do

@@ -95,6 +95,7 @@ export default {
     this.getWorkflowParams();
   },
   pushHash(hash: string) {
+    console.debug('Detected hashchange to:', hash);
     this.pushEventTo(this.el, 'hash-changed', { hash });
   },
   unselectNode() {
