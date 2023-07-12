@@ -30,8 +30,6 @@ export const SubmitViaCtrlS = {
     window.addEventListener('keydown', this.callback);
   },
   handleEvent(e: KeyboardEvent) {
-    console.log(e);
-
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       this.el.dispatchEvent(

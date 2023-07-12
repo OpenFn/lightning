@@ -144,9 +144,11 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       (parentNode: Flow.Node) => {
         // Generate a placeholder node and edge
         const diff = placeholder.add(model, parentNode);
-
+        const [newNode] = diff.nodes;
+        // Ensure the starting position is set
+        chartCache.current.positions[newNode.id] = newNode.position;
         // Mark the new node as selected for the next render
-        chartCache.current.selectedId = diff.nodes[0].id;
+        chartCache.current.selectedId = newNode.id;
 
         // Push the changes
         add(toWorkflow(diff));
