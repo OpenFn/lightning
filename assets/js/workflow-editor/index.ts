@@ -96,6 +96,10 @@ export default {
   },
   reconnected() {
     this.pushHash(window.location.hash);
+
+    // TODO: request the workflow params, but this time create a diff
+    // between the current state and the server state and send those diffs
+    // to the server.
   },
   pushHash(hash: string) {
     console.debug('Detected hashchange to:', hash);
