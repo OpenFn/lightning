@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Oban exception: "value too long" when log lines are longer than 255 chars
+  [#929](https://github.com/OpenFn/Lightning/issues/929)
+
 ## [0.6.6] - 2023-06-30
 
 ### Added
