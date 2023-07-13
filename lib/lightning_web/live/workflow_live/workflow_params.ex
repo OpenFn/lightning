@@ -26,16 +26,15 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
 
   defp merge_list_params(source, new) when is_list(source) do
     new
-    |> Enum.map(&key_as_int/1)
     |> Enum.reduce(source, fn {index, val}, acc ->
-      acc |> List.update_at(index, &Map.merge(&1, val))
+      acc |> List.update_at(index |> key_as_int(), &Map.merge(&1, val))
     end)
   end
 
-  defp key_as_int({key, val}) when is_binary(key) do
+  defp key_as_int(key) when is_binary(key) do
     case Integer.parse(key) do
-      {key, ""} -> {key, val}
-      _ -> {key, val}
+      {key, ""} -> key
+      _ -> key
     end
   end
 
@@ -81,6 +80,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         jobs:
           changeset
           |> Ecto.Changeset.get_assoc(:jobs)
+          |> Enum.reject(&match?(%{action: :replace}, &1))
           |> to_serializable([:id, :name, :adaptor, :body, :enabled]),
         triggers:
           changeset
@@ -89,6 +89,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
         edges:
           changeset
           |> Ecto.Changeset.get_assoc(:edges)
+          |> Enum.reject(&match?(%{action: :replace}, &1))
           |> to_serializable([
             :id,
             :source_trigger_id,

@@ -26,9 +26,9 @@ defmodule Lightning.Workflows.Workflow do
   schema "workflows" do
     field :name, :string
 
-    has_many :edges, Edge, on_replace: :delete
+    has_many :edges, Edge, on_replace: :delete_if_exists
 
-    has_many :jobs, Job
+    has_many :jobs, Job, on_replace: :delete
     has_many :triggers, Trigger
 
     has_many :work_orders, Lightning.WorkOrder
@@ -47,9 +47,9 @@ defmodule Lightning.Workflows.Workflow do
     workflow
     |> cast(attrs, [:name, :project_id])
     |> validate_required([:name, :project_id])
+    |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Trigger.changeset/2)
-    |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> validate()
   end
 
