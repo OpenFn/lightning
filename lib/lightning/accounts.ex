@@ -9,7 +9,7 @@ defmodule Lightning.Accounts do
 
   import Ecto.Query, warn: false
   alias Lightning.Repo
-  alias Lightning.Accounts.{User, UserToken, UserNotifier}
+  alias Lightning.Accounts.{User, UserToken, UserTOTP, UserNotifier}
   alias Lightning.Credentials
 
   require Logger
@@ -156,6 +156,13 @@ defmodule Lightning.Accounts do
 
   """
   def get_token!(id), do: Repo.get!(UserToken, id)
+
+  @doc """
+  Gets a single UserTOTP if any exists.
+  """
+  def get_user_totp(%User{id: user_id}) do
+    Repo.get_by(UserTOTP, user_id: user_id)
+  end
 
   @doc """
   Registers a superuser.
