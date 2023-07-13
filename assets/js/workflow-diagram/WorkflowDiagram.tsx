@@ -30,6 +30,7 @@ import shouldLayout from './util/should-layout';
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
   store: StoreApi<WorkflowState>;
+  initialSelection?: string;
 };
 
 type ChartCache = {
@@ -40,7 +41,7 @@ type ChartCache = {
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
-    const { onSelectionChange, store } = props;
+    const { onSelectionChange, store, initialSelection } = props;
 
     const add = useStore(store!, state => state.add);
     const remove = useStore(store!, state => state.remove);
@@ -60,7 +61,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
     const chartCache = useRef<ChartCache>({
       positions: {},
-      selectedId: undefined,
+      selectedId: initialSelection,
       lastLayout: undefined,
     });
 
