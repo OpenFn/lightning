@@ -7,12 +7,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Projects
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
+  alias Lightning.Jobs.Job
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
@@ -84,82 +85,108 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="SubmitViaCtrlS"
           phx-change="validate"
         >
-          <.panel
+          <.single_inputs_for
+            :let={jf}
             :if={@selected_job}
-            title={
-              single_inputs_for(f, :jobs, @selected_job.id)
-              |> input_value(:name)
-              |> then(fn
-                "" -> "Untitled Job"
-                name -> name
-              end)
-            }
-            id={"job-pane-#{@selected_job.id}"}
-            cancel_url="#"
+            form={f}
+            field={:jobs}
+            id={@selected_job.id}
           >
-            <!-- Show only the currently selected one -->
-            <.job_form
-              on_change={&send_form_changed/1}
-              form={single_inputs_for(f, :jobs, @selected_job.id)}
-              project_user={@project_user}
-            />
-            <:footer>
-              <.link
-                href={
-                  "#id=#{@selected_job.id}&mode=expand"
-                }
-                class="px-4 py-1.5 h-10 inline-flex items-center gap-x-1.5
-                rounded-md bg-indigo-600 text-sm font-semibold text-white
-                shadow-sm hover:bg-indigo-500
-                focus-visible:outline focus-visible:outline-2
-                focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                <Heroicons.pencil_square class="w-4 h-4 -ml-0.5" /> Edit
-              </.link>
-            </:footer>
-          </.panel>
-          <.panel
-            :if={@selected_trigger}
-            id={"trigger-pane-#{@selected_trigger.id}"}
-            title={
-              single_inputs_for(f, :triggers, @selected_trigger.id)
-              |> input_value(:type)
-              |> to_string()
-              |> then(fn
-                "" -> "New Trigger"
-                "webhook" -> "Webhook Trigger"
-                "cron" -> "Cron Trigger"
-              end)
-            }
-            cancel_url="#"
-          >
-            <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
+            <.panel
+              title={
+                input_value(jf, :name)
+                |> then(fn
+                  "" -> "Untitled Job"
+                  name -> name
+                end)
+              }
+              id={"job-pane-#{@selected_job.id}"}
+              cancel_url="#"
+            >
               <!-- Show only the currently selected one -->
-              <.trigger_form
-                form={single_inputs_for(f, :triggers, @selected_trigger.id)}
+              <.job_form
                 on_change={&send_form_changed/1}
-                requires_cron_job={@selected_trigger.type == :cron}
-                disabled={!@can_edit_job}
-                webhook_url={webhook_url(@selected_trigger)}
-                cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+                form={jf}
+                project_user={@project_user}
               />
-            </div>
-          </.panel>
-          <.panel
-            :if={@selected_edge}
-            id={"edge-pane-#{@selected_edge.id}"}
-            cancel_url="#"
-            title="Edge"
+              <:footer>
+                <div class="flex flex-row">
+                  <.link
+                    href={ "#id=#{@selected_job.id}&mode=expand" }
+                    class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                  >
+                    <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
+                  </.link>
+                  <div class="grow flex justify-end">
+                    <label>
+                      <Common.button
+                        color="red"
+                        phx-click="delete_node"
+                        phx-value-id={@selected_job.id}
+                      >
+                        Delete
+                      </Common.button>
+                    </label>
+                  </div>
+                </div>
+              </:footer>
+            </.panel>
+          </.single_inputs_for>
+          <.single_inputs_for
+            :let={tf}
+            :if={@selected_trigger}
+            form={f}
+            field={:triggers}
+            id={@selected_trigger.id}
           >
-            <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
-              <!-- Show only the currently selected one -->
-              <.edge_form
-                form={single_inputs_for(f, :edges, @selected_edge.id)}
-                disabled={!@can_edit_job}
-                cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
-              />
-            </div>
-          </.panel>
+            <.panel
+              id={"trigger-pane-#{@selected_trigger.id}"}
+              title={
+                input_value(tf, :type)
+                |> to_string()
+                |> then(fn
+                  "" -> "New Trigger"
+                  "webhook" -> "Webhook Trigger"
+                  "cron" -> "Cron Trigger"
+                end)
+              }
+              cancel_url="#"
+            >
+              <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
+                <!-- Show only the currently selected one -->
+                <.trigger_form
+                  form={single_inputs_for(f, :triggers, @selected_trigger.id)}
+                  on_change={&send_form_changed/1}
+                  requires_cron_job={@selected_trigger.type == :cron}
+                  disabled={!@can_edit_job}
+                  webhook_url={webhook_url(@selected_trigger)}
+                  cancel_url={
+                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
+                  }
+                />
+              </div>
+            </.panel>
+          </.single_inputs_for>
+          <.single_inputs_for
+            :let={ef}
+            :if={@selected_edge}
+            form={f}
+            field={:edges}
+            id={@selected_edge.id}
+          >
+            <.panel id={"edge-pane-#{@selected_edge.id}"} cancel_url="#" title="Edge">
+              <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
+                <!-- Show only the currently selected one -->
+                <.edge_form
+                  form={ef}
+                  disabled={!@can_edit_job}
+                  cancel_url={
+                    ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
+                  }
+                />
+              </div>
+            </.panel>
+          </.single_inputs_for>
         </.form>
       </div>
     </LayoutComponents.page_content>
@@ -170,6 +197,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
     form
     |> inputs_for(field)
     |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == id))
+  end
+
+  defp single_inputs_for(assigns) do
+    forms =
+      assigns[:form]
+      |> inputs_for(assigns[:field])
+      |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
+
+    assigns = assigns |> assign(forms: forms)
+
+    ~H"""
+    <%= for f <- @forms do %>
+      <%= render_slot(@inner_block, f) %>
+    <% end %>
+    """
   end
 
   @impl true
@@ -246,6 +288,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_event("current-workflow-params", %{
        workflow_params: socket.assigns.workflow_params
      })}
+  end
+
+  def handle_event("delete_node", %{"id" => id}, socket) do
+    %{changeset: changeset, workflow_params: initial_params} = socket.assigns
+
+    edges_to_delete =
+      Ecto.Changeset.get_assoc(changeset, :edges, :struct)
+      |> Enum.filter(&(&1.target_job_id == id))
+
+    next_params =
+      Map.update!(initial_params, "edges", fn edges ->
+        edges
+        |> Enum.reject(fn edge ->
+          edge["id"] in Enum.map(edges_to_delete, & &1.id)
+        end)
+      end)
+      |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+
+    {:noreply,
+     socket
+     |> apply_params(next_params)
+     |> push_patches_applied(initial_params)}
   end
 
   def handle_event("close_job_editor", _, socket) do
@@ -448,8 +512,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         nil ->
           {:cont, nil}
 
+        %Job{} = job ->
+          {:halt, [field, job |> Lightning.Repo.preload(:credential)]}
+
         item ->
-          {:halt, [field, item |> Lightning.Repo.preload(:credential)]}
+          {:halt, [field, item]}
       end
     end)
   end
