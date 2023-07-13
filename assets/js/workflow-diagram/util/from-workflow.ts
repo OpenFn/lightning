@@ -2,7 +2,25 @@ import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Lightning, Flow, Positions } from '../types';
 import { identify, isPlaceholder } from './placeholder';
 
-// TODO pass in the currently selected items so that we can maintain selection
+function getEdgeLabel(condition: string) {
+  if (condition) {
+    console.log(condition);
+    if (condition === 'on_job_success') {
+      return '✓';
+    }
+    if (condition === 'on_job_failure') {
+      return 'X';
+    }
+    if (condition === 'always') {
+      return '∞';
+    }
+    // some code expression
+    return '{}';
+  }
+}
+
+// TODO separate structural stuff (labels, selected, position)
+// from style stuff, and move the style functions somewhere obvious
 const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
@@ -58,12 +76,11 @@ const fromWorkflow = (
         const edge = item as Lightning.Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
-        model.label = item.name;
         // TODO I don't like all this style stuff being buried in this file
         // Feels like hte wrong place for cosmetic stuff
-        model.labelBgStyle = {
-          fill: 'rgb(243, 244, 246)',
-        };
+        // model.labelBgStyle = {
+        //   fill: 'rgb(243, 244, 246)',
+        // };
         model.type = 'step';
         model.markerEnd = {
           type: 'arrowclosed',
@@ -77,6 +94,16 @@ const fromWorkflow = (
             strokeWidth: '1.5px',
           };
         }
+        // all edge labels are circles
+        // with tick, cross, infinity or {}
+        model.label = getEdgeLabel(edge.condition);
+        model.labelBgPadding = [12, 8];
+        model.labelBgStyle = {
+          stroke: '#b1b1b7',
+          strokeWidth: 2,
+          fill: 'white',
+        };
+        model.labelBgBorderRadius = 16;
       }
 
       collection.push(model);
