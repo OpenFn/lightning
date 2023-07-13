@@ -163,6 +163,7 @@ export default {
             reject(false)
           );
 
+          console.debug('push-change response', response);
           this.workflowStore.getState().applyPatches(response.patches);
           resolve(true);
         }

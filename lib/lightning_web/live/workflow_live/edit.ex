@@ -78,7 +78,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </div>
         <.form
           :let={f}
-          :if={@selected_job}
           id="workflow-form"
           for={@changeset}
           phx-submit="save"
@@ -86,6 +85,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-change="validate"
         >
           <.panel
+            :if={@selected_job}
             title={
               single_inputs_for(f, :jobs, @selected_job.id)
               |> input_value(:name)
@@ -95,7 +95,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               end)
             }
             id={"job-pane-#{@selected_job.id}"}
-            cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+            cancel_url="#"
           >
             <!-- Show only the currently selected one -->
             <.job_form
@@ -118,17 +118,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
               </.link>
             </:footer>
           </.panel>
-        </.form>
-
-        <.form
-          :let={f}
-          :if={@selected_trigger}
-          id="workflow-form"
-          for={@changeset}
-          phx-submit="save"
-          phx-change="validate"
-        >
           <.panel
+            :if={@selected_trigger}
             id={"trigger-pane-#{@selected_trigger.id}"}
             title={
               single_inputs_for(f, :triggers, @selected_trigger.id)
@@ -140,7 +131,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 "cron" -> "Cron Trigger"
               end)
             }
-            cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+            cancel_url="#"
           >
             <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
               <!-- Show only the currently selected one -->
@@ -154,19 +145,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
             </div>
           </.panel>
-        </.form>
-
-        <.form
-          :let={f}
-          :if={@selected_edge}
-          id="workflow-form"
-          for={@changeset}
-          phx-submit="save"
-          phx-change="validate"
-        >
           <.panel
+            :if={@selected_edge}
             id={"edge-pane-#{@selected_edge.id}"}
-            cancel_url={~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"}
+            cancel_url="#"
             title="Edge"
           >
             <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
@@ -218,7 +200,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_edge: nil,
        selected_job: nil,
        selected_trigger: nil,
-       selection_mode: nil
+       selection_mode: nil,
+       workflow: nil,
+       workflow_params: %{}
      )}
   end
 
@@ -228,10 +212,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def apply_action(socket, :new, _params) do
-    assign(socket,
-      page_title: "New Workflow"
-    )
-    |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
+    if socket.assigns.workflow do
+      socket
+    else
+      socket
+      |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
+    end
+    |> assign(page_title: "New Workflow")
     |> unselect_all()
   end
 
@@ -296,11 +283,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> push_patches_applied(initial_params)}
   end
 
-  def handle_event("save", %{"workflow" => params}, socket) do
+  def handle_event("save", params, socket) do
     initial_params = socket.assigns.workflow_params
 
     next_params =
-      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+      case params do
+        %{"workflow" => params} ->
+          WorkflowParams.apply_form_params(
+            socket.assigns.workflow_params,
+            params
+          )
+
+        %{} ->
+          socket.assigns.workflow_params
+      end
 
     socket = socket |> apply_params(next_params)
 
@@ -452,8 +448,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         nil ->
           {:cont, nil}
 
-        changeset ->
-          {:halt, [field, changeset]}
+        item ->
+          {:halt, [field, item |> Lightning.Repo.preload(:credential)]}
       end
     end)
   end
