@@ -1,16 +1,8 @@
-import React, { createContext } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { StoreApi } from 'zustand';
-import {
-  WorkflowState,
-  createWorkflowStore
-} from './store';
+import { createWorkflowStore } from './store';
 
 import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
-
-export const WorkflowContext = createContext<StoreApi<WorkflowState> | null>(
-  null
-);
 
 type Store = ReturnType<typeof createWorkflowStore>;
 
@@ -22,16 +14,22 @@ export function mount(
   const componentRoot = createRoot(el);
 
   function unmount() {
-    console.log('unmount');
-
     return componentRoot.unmount();
   }
 
-  console.log('render');
+  let initialSelection;
+  const hash = window.location.hash;
+  if (hash && hash.match('id=')) {
+    initialSelection = hash.split('id=')[1];
+  }
+
   componentRoot.render(
-    <WorkflowContext.Provider value={workflowStore}>
-      <WorkflowDiagram ref={el} onSelectionChange={onSelectionChange} />
-    </WorkflowContext.Provider>
+    <WorkflowDiagram
+      ref={el}
+      initialSelection={initialSelection}
+      store={workflowStore}
+      onSelectionChange={onSelectionChange}
+    />
   );
 
   return { unmount };

@@ -60,7 +60,7 @@ function toRFC6902Patch(patch: ImmerPatch): Patch {
 
 export const createWorkflowStore = (
   initProps?: Partial<WorkflowProps>,
-  onChange?: (pendingAction: PendingAction) => void
+  onChange: (pendingAction: PendingAction) => void = () => {}
 ) => {
   const DEFAULT_PROPS: WorkflowProps = {
     triggers: [],
@@ -95,7 +95,6 @@ export const createWorkflowStore = (
     ...DEFAULT_PROPS,
     ...initProps,
     add: data => {
-      console.log('add', data);
       set(state =>
         proposeChanges(state, draft => {
           ['jobs', 'triggers', 'edges'].forEach(k => {
@@ -113,8 +112,8 @@ export const createWorkflowStore = (
       );
     },
     remove: data => {
-      set(state => {
-        const newState = proposeChanges(state, draft => {
+      set(state =>
+        proposeChanges(state, draft => {
           ['jobs', 'triggers', 'edges'].forEach(k => {
             const key = k as keyof WorkflowProps;
 
@@ -122,18 +121,15 @@ export const createWorkflowStore = (
             if (idsToRemove) {
               const nextItems: any[] = [];
               draft[key].forEach(item => {
-                if (idsToRemove.includes(item.id)) {
+                if (!idsToRemove.includes(item.id)) {
                   nextItems.push(item);
                 }
               });
               draft[key] = nextItems;
             }
           });
-        });
-
-        console.log('remove', newState);
-        return newState;
-      });
+        })
+      );
     },
     change: data => {
       set(state =>
@@ -161,6 +157,6 @@ export const createWorkflowStore = (
 
       set(state => applyPatches(state, immerPatches));
     },
-    onChange: onChange ? onChange : () => {},
+    onChange,
   }));
 };
