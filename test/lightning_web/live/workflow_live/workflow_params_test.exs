@@ -114,6 +114,8 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
           ]
         })
 
+      next_params = changeset |> WorkflowParams.to_map()
+
       assert %{
                "edges" => [
                  %{
@@ -160,7 +162,36 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParamsTest do
                    "type" => "webhook"
                  }
                ]
-             } = changeset |> WorkflowParams.to_map()
+             } = next_params
+
+      next_params =
+        changeset
+        |> Ecto.Changeset.apply_changes()
+        |> Workflow.changeset(params |> Map.put("edges", []))
+        |> WorkflowParams.to_map()
+
+      assert %{
+               "edges" => [],
+               "jobs" => [
+                 %{
+                   "errors" => %{"name" => ["can't be blank"]},
+                   "id" => ^job_1_id,
+                   "name" => ""
+                 },
+                 %{
+                   "errors" => %{},
+                   "id" => ^job_2_id,
+                   "name" => "job-2"
+                 }
+               ],
+               "triggers" => [
+                 %{
+                   "errors" => %{},
+                   "id" => ^trigger_1_id,
+                   "type" => "webhook"
+                 }
+               ]
+             } = next_params
     end
   end
 
