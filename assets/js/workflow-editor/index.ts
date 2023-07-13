@@ -94,6 +94,9 @@ export default {
     // Get the initial data from the server
     this.getWorkflowParams();
   },
+  reconnected() {
+    this.pushHash(window.location.hash);
+  },
   pushHash(hash: string) {
     console.debug('Detected hashchange to:', hash);
     this.pushEventTo(this.el, 'hash-changed', { hash });

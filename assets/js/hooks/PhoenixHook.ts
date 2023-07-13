@@ -11,6 +11,8 @@ export type PhoenixHook<T = {}, Dataset = {}, El = HTMLElement> = {
     dataset: Dataset;
   };
   destroyed(): void;
+  reconnected(): void;
+  disconnected(): void;
   handleEvent<T = {}>(eventName: string, callback: (payload: T) => void): void;
   pushEventTo<P = {}, R = any>(
     selectorOrTarget: string | HTMLElement,
