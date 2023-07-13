@@ -17,9 +17,16 @@ export function mount(
     return componentRoot.unmount();
   }
 
+  let initialSelection;
+  const hash = window.location.hash;
+  if (hash && hash.match('id=')) {
+    initialSelection = hash.split('id=')[1];
+  }
+
   componentRoot.render(
     <WorkflowDiagram
       ref={el}
+      initialSelection={initialSelection}
       store={workflowStore}
       onSelectionChange={onSelectionChange}
     />
