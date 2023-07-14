@@ -10,7 +10,6 @@ import {
 
 type WorkflowEditorEntrypoint = PhoenixHook<{
   _isMounting: boolean;
-  _onHashChange(e: Event): void;
   _pendingWorker: Promise<void>;
   abortController: AbortController | null;
   component: ReturnType<typeof mount> | null;
@@ -21,7 +20,6 @@ type WorkflowEditorEntrypoint = PhoenixHook<{
   onSelectionChange(id?: string): void;
   pendingChanges: PendingAction[];
   processPendingChanges(): void;
-  pushHash(id: string): void;
   pushPendingChange(
     pendingChange: PendingAction,
     abortController: AbortController
@@ -67,14 +65,6 @@ export default {
     // Preload the component
     this.componentModule = import('./component');
 
-    this._onHashChange = event => {
-      this.pushHash(window.location.hash);
-    };
-
-    window.addEventListener('hashchange', this._onHashChange);
-
-    this.pushHash(window.location.hash);
-
     this.workflowStore = createWorkflowStore({}, pendingChange => {
       this.pendingChanges.push(pendingChange);
 
@@ -95,30 +85,28 @@ export default {
     this.getWorkflowParams();
   },
   reconnected() {
-    this.pushHash(window.location.hash);
-
     // TODO: request the workflow params, but this time create a diff
     // between the current state and the server state and send those diffs
     // to the server.
-  },
-  pushHash(hash: string) {
-    console.debug('Detected hashchange to:', hash);
-    this.pushEventTo(this.el, 'hash-changed', { hash });
   },
   unselectNode() {
     this.liveSocket.pushHistoryPatch(this.el.dataset.baseUrl!, 'push', this.el);
   },
   onSelectionChange(id?: string) {
-    if (!id) {
-      console.debug('unselecting');
+    const nextUrl = new URL(window.location.href);
 
-      window.location.hash = '';
-      return;
+    if (!id) {
+      console.debug('Unselecting');
+
+      nextUrl.searchParams.delete('s');
+      nextUrl.searchParams.delete('m');
+    } else {
+      console.debug('Selecting', id);
+
+      nextUrl.searchParams.set('s', id);
     }
 
-    console.debug('selecting', id);
-
-    window.location.hash = new URLSearchParams([['id', id]]).toString();
+    this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
   },
   destroyed() {
     if (this.component) {
@@ -128,8 +116,6 @@ export default {
     if (this.abortController) {
       this.abortController.abort();
     }
-
-    window.removeEventListener('hashchange', this._onHashChange);
 
     console.debug('WorkflowEditor destroyed');
   },
