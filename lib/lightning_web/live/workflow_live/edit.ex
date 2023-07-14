@@ -24,6 +24,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        base_url:
+          ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}"
+      )
+
     ~H"""
     <LayoutComponents.page_content>
       <:header>
@@ -71,7 +78,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               on_run={&follow_run/1}
               follow_run_id={@follow_run_id}
               close_url={
-                "#id=#{@selected_job.id}"
+                "#{@base_url}?s=#{@selected_job.id}"
               }
               form={to_form(@changeset)}
             />
@@ -101,7 +108,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 end)
               }
               id={"job-pane-#{@selected_job.id}"}
-              cancel_url="#"
+              cancel_url="?"
             >
               <!-- Show only the currently selected one -->
               <.job_form
@@ -112,7 +119,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <:footer>
                 <div class="flex flex-row">
                   <.link
-                    href={ "#id=#{@selected_job.id}&mode=expand" }
+                    patch={ "#{@base_url}?s=#{@selected_job.id}&m=expand" }
                     class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                   >
                     <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
@@ -150,7 +157,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   "cron" -> "Cron Trigger"
                 end)
               }
-              cancel_url="#"
+              cancel_url="?"
             >
               <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
                 <!-- Show only the currently selected one -->
@@ -174,7 +181,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             field={:edges}
             id={@selected_edge.id}
           >
-            <.panel id={"edge-pane-#{@selected_edge.id}"} cancel_url="#" title="Edge">
+            <.panel id={"edge-pane-#{@selected_edge.id}"} cancel_url="?" title="Edge">
               <div class="w-auto h-full" id={"edge-pane-#{@workflow.id}"}>
                 <!-- Show only the currently selected one -->
                 <.edge_form
@@ -244,13 +251,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_trigger: nil,
        selection_mode: nil,
        workflow: nil,
-       workflow_params: %{}
+       workflow_params: %{},
+       hash_params: %{"id" => nil, "mode" => nil}
      )}
   end
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    {:noreply,
+     apply_action(socket, socket.assigns.live_action, params)
+     |> apply_selection_params(params)}
   end
 
   def apply_action(socket, :new, _params) do
@@ -265,14 +275,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id}) do
-    # TODO we shouldn't be calling Repo from here
     workflow =
-      Workflows.get_workflow(workflow_id)
-      |> Lightning.Repo.preload([
-        :triggers,
-        :edges,
-        jobs: [:credential]
-      ])
+      case socket.assigns.workflow do
+        %{id: ^workflow_id} = workflow ->
+          workflow
+
+        _ ->
+          # TODO we shouldn't be calling Repo from here
+          Workflows.get_workflow(workflow_id)
+          |> Lightning.Repo.preload([
+            :triggers,
+            :edges,
+            jobs: [:credential]
+          ])
+      end
 
     assign(socket,
       page_title: "New Workflow"
@@ -310,29 +326,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      socket
      |> apply_params(next_params)
      |> push_patches_applied(initial_params)}
-  end
-
-  def handle_event("close_job_editor", _, socket) do
-    {:noreply, socket |> assign(selection_mode: nil)}
-  end
-
-  def handle_event("set_expanded_job", %{"show" => show}, socket)
-      when show in ["true", "false"] do
-    {:noreply, socket |> assign(selection_mode: "expand")}
-  end
-
-  def handle_event("hash-changed", %{"hash" => hash}, socket) do
-    with {"#", query} <- String.split_at(hash, 1),
-         %{"id" => id, "mode" => mode} <-
-           URI.decode_query(query) |> Enum.into(%{"mode" => nil}),
-         [type, selected] <- find_item_in_changeset(socket.assigns.changeset, id) do
-      {:noreply,
-       socket
-       |> select_node({type, selected}, mode)
-       |> maybe_unfollow_run()}
-    else
-      _ -> {:noreply, socket |> unselect_all()}
-    end
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
@@ -455,6 +448,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket |> assign_changeset(changeset)
   end
 
+  defp apply_selection_params(socket, params) do
+    params
+    |> Map.take(["s", "m"])
+    |> Enum.into(%{"s" => nil, "m" => nil})
+    |> then(fn
+      # Nothing is selected
+      %{"s" => nil} ->
+        socket |> unselect_all()
+
+      # Attempt to select the given item, possibly with a mode (such as `expand`)
+      %{"s" => selected_id, "m" => mode} ->
+        case find_item_in_changeset(socket.assigns.changeset, selected_id) do
+          [type, selected] ->
+            socket |> select_node({type, selected}, mode)
+
+          nil ->
+            socket |> unselect_all()
+        end
+    end)
+    |> maybe_unfollow_run()
+  end
+
   defp assign_changeset(socket, changeset) do
     # Prepare a new set of workflow params from the changeset
     workflow_params = changeset |> WorkflowParams.to_map()
@@ -474,6 +489,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp unselect_all(socket) do
     socket
     |> assign(selected_job: nil, selected_trigger: nil, selected_edge: nil)
+    |> assign(selection_mode: nil)
   end
 
   defp select_node(socket, {type, value}, selection_mode) do
