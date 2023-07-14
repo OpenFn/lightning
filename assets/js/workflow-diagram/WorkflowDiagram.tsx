@@ -150,6 +150,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         chartCache.current.positions[newNode.id] = newNode.position;
         // Mark the new node as selected for the next render
         chartCache.current.selectedId = newNode.id;
+        onSelectionChange(undefined);
 
         // Push the changes
         add(toWorkflow(diff));
@@ -167,6 +168,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         change({
           jobs: [{ id, name, body: DEFAULT_TEXT }],
         });
+
+        onSelectionChange(id);
       },
       [change]
     );
@@ -177,6 +180,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         const e = model.edges.find(({ target }) => target === id);
         remove({ jobs: [id], edges: [e?.id] });
+        onSelectionChange(undefined);
       },
       [remove, model]
     );

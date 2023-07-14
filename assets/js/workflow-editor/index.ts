@@ -93,7 +93,8 @@ export default {
     this.liveSocket.pushHistoryPatch(this.el.dataset.baseUrl!, 'push', this.el);
   },
   onSelectionChange(id?: string) {
-    const nextUrl = new URL(window.location.href);
+    const currentUrl = new URL(window.location.href);
+    const nextUrl = new URL(currentUrl);
 
     if (!id) {
       console.debug('Unselecting');
@@ -106,7 +107,11 @@ export default {
       nextUrl.searchParams.set('s', id);
     }
 
-    this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+    if (
+      currentUrl.searchParams.toString() !== nextUrl.searchParams.toString()
+    ) {
+      this.liveSocket.pushHistoryPatch(nextUrl.toString(), 'push', this.el);
+    }
   },
   destroyed() {
     if (this.component) {
