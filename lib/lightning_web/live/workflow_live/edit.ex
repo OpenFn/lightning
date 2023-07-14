@@ -150,6 +150,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <.panel
               id={"trigger-pane-#{@selected_trigger.id}"}
+              cancel_url="?"
               title={
                 input_value(tf, :type)
                 |> to_string()
@@ -159,14 +160,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   "cron" -> "Cron Trigger"
                 end)
               }
-              cancel_url="?"
             >
               <div class="w-auto h-full" id={"trigger-pane-#{@workflow.id}"}>
                 <!-- Show only the currently selected one -->
                 <.trigger_form
-                  form={single_inputs_for(f, :triggers, @selected_trigger.id)}
+                  form={tf}
                   on_change={&send_form_changed/1}
-                  requires_cron_job={@selected_trigger.type == :cron}
                   disabled={!@can_edit_job}
                   webhook_url={webhook_url(@selected_trigger)}
                   cancel_url={
