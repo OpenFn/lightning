@@ -8,6 +8,7 @@ defmodule Lightning.Accounts do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+  alias Ecto.Multi
   alias Lightning.Repo
   alias Lightning.Accounts.{User, UserToken, UserTOTP, UserNotifier}
   alias Lightning.Credentials
@@ -162,6 +163,25 @@ defmodule Lightning.Accounts do
   """
   def get_user_totp(%User{id: user_id}) do
     Repo.get_by(UserTOTP, user_id: user_id)
+  end
+
+  @doc """
+  Updates or Inserts the user's TOTP
+  """
+  @spec upsert_user_totp(UserTOTP.t(), map()) ::
+          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+  def upsert_user_totp(totp, attrs) do
+    Multi.new()
+    |> Multi.insert_or_update(:totp, UserTOTP.changeset(totp, attrs))
+    |> Multi.update(:user, fn %{totp: totp} ->
+      totp = Repo.preload(totp, [:user])
+      Ecto.Changeset.change(totp.user, %{mfa_enabled: true})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{totp: totp}} -> {:ok, totp}
+      {:error, :totp, changeset, _} -> {:error, changeset}
+    end
   end
 
   @doc """
