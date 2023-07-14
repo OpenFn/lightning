@@ -185,6 +185,25 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Deletes the given user's TOTP
+  """
+  @spec delete_user_totp(UserTOTP.t()) ::
+          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+  def delete_user_totp(totp) do
+    Multi.new()
+    |> Multi.update(:user, fn _changes ->
+      totp = Repo.preload(totp, [:user])
+      Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
+    end)
+    |> Multi.delete(:totp, totp)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{totp: totp}} -> {:ok, totp}
+      {:error, _key, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
   Registers a superuser.
 
   ## Examples
