@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
+import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
 
@@ -92,17 +93,9 @@ const Node = ({
   sublabel, // A smaller label to the right
 }: NodeProps<NodeData>) => {
   // Values to control the svg shape
-  // TODO are these values constant?
-  const width = 100;
-  const height = 100;
-  const anchorx = width / 2;
-  const strokeWidth = 2;
-  const style = {
-    stroke: '#c0c0c0',
-    fill: 'white',
-  };
-  // TODO I don't really think we're controlling the node size properly
-  // what will very long labels do?
+  const { width, height, anchorx, strokeWidth, style } =
+    nodeIconStyles(selected);
+
   return (
     <div className="flex flex-row">
       <div>
@@ -138,15 +131,11 @@ const Node = ({
                 top: 0.1 * height + strokeWidth,
                 height: `${0.8 * height}px`,
                 width: `${0.8 * width}px`,
-                //  This should default the colour for our placeholder icons
-                color: '#c0c0c0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                ...nodeLabelStyles(selected),
               }}
             >
               {typeof icon === 'string' ? (
-                <div className="text-black font-bold">{icon}</div>
+                <div className="font-bold">{icon}</div>
               ) : (
                 icon
               )}

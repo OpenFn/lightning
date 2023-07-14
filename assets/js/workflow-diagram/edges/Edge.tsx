@@ -5,12 +5,7 @@ import {
   getBezierPath,
   EdgeLabelRenderer,
 } from 'reactflow';
-
-// TODO should these be driven by tailwind?
-// These are copies of the react-flow defaults, changing
-// them here won't change the edge colour (but it should!)
-const EDGE_COLOR = '#b1b1b7';
-const EDGE_COLOR_SELECTED = '#555555';
+import { labelStyles } from '../styles';
 
 const CustomEdge: FC<EdgeProps> = props => {
   const {
@@ -34,8 +29,6 @@ const CustomEdge: FC<EdgeProps> = props => {
     targetPosition,
   });
 
-  const primaryColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
-
   return (
     <>
       <StepEdge {...stepEdgeProps} />
@@ -45,14 +38,8 @@ const CustomEdge: FC<EdgeProps> = props => {
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             background: 'white',
-            width: '32px',
-            height: '32px',
-            border: `solid 2px ${primaryColor}`,
-            borderRadius: 16,
-            fontSize: 18,
-            textAlign: 'center',
-            fontWeight: 700,
-            color: primaryColor,
+            pointerEvents: 'all',
+            ...labelStyles(selected),
           }}
           className="nodrag nopan"
         >
