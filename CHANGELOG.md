@@ -14,8 +14,6 @@ and this project adheres to
   [#875](https://github.com/OpenFn/Lightning/issues/875)
 - Export projects as `.yaml` via UI
   [#249](https://github.com/OpenFn/Lightning/issues/249)
-- Port demo runs from main to nodes and edges branch
-  [#879](https://github.com/OpenFn/Lightning/issues/879)
 
 ### Changed
 
