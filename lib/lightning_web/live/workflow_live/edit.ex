@@ -253,7 +253,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selection_mode: nil,
        workflow: nil,
        workflow_params: %{},
-       selection_params: %{"id" => nil, "mode" => nil}
+       selection_params: %{"s" => nil, "m" => nil}
      )}
   end
 
