@@ -10,11 +10,18 @@ defmodule LightningWeb.JobLive.CredentialPicker do
 
   attr :form, :map, required: true
   attr :disabled, :boolean, default: false
-  attr :credential_options, :list, required: true
+  attr :credentials, :list, required: true
   attr :on_change, :any, default: nil
 
   @impl true
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        credential_options:
+          assigns.credentials |> Enum.map(&{&1.credential.name, &1.id})
+      )
+
     ~H"""
     <div>
       <Form.label_field
@@ -51,15 +58,12 @@ defmodule LightningWeb.JobLive.CredentialPicker do
 
   @impl true
   def update(%{project_user: project_user} = assigns, socket) do
-    credentials =
-      Lightning.Projects.list_project_credentials(project_user.project)
-
     socket =
       socket
       |> assign(assigns)
-      |> assign(
-        credential_options: credentials |> Enum.map(&{&1.credential.name, &1.id})
-      )
+      |> assign_new(:credentials, fn ->
+        Lightning.Projects.list_project_credentials(project_user.project)
+      end)
 
     {:ok, socket}
   end
