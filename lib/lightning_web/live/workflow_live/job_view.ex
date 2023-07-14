@@ -35,7 +35,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   end
 
   attr :job, :map, required: true
-  attr :form, :map, required: true
+  attr :form, :map, required: true, doc: "A form built from a job"
   attr :current_user, :map, required: true
   attr :project, :map, required: true
   attr :close_url, :any, required: true
@@ -77,11 +77,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <.live_component
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
-          form={
-            @form
-            |> inputs_for(:jobs)
-            |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == @job.id))
-          }
+          form={@form}
           disabled={false}
           class="h-full"
         />
@@ -117,18 +113,20 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :can_run_job, :boolean, default: true
 
   def input_pane(%{job: job} = assigns) do
+    # TODO: move loading the dataclips either down into the ManualRunComponent
+    # or up into the parent liveview
     assigns =
-      if changed?(assigns, :job) do
-        assign(assigns,
-          dataclips:
-            Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
-              id: job.id
-            })
-        )
-      else
-        assigns |> assign_new(:dataclips, fn -> [] end)
-      end
-      |> assign(is_persisted: job.__meta__.state == :loaded)
+      assigns
+      |> assign(job_id: job.id, is_persisted: job.__meta__.state == :loaded)
+      |> assign_new(:dataclips, fn
+        %{job_id: job_id, is_persisted: true} ->
+          Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
+            id: job_id
+          })
+
+        %{is_persisted: false} ->
+          []
+      end)
 
     ~H"""
     <%= if @is_persisted do %>
