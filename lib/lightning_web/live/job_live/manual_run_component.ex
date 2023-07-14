@@ -110,6 +110,11 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
   end
 
   @impl true
+  def mount(socket) do
+    {:ok, socket |> assign(changeset: nil)}
+  end
+
+  @impl true
   def update(
         %{
           id: id,
@@ -122,16 +127,10 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         },
         socket
       ) do
-    dataclip_id = dataclips |> List.first(%{id: nil}) |> Map.get(:id)
-
     {:ok,
      socket
      |> assign(
        can_run_job: can_run_job,
-       changeset:
-         ManualWorkorder.changeset(%{project: project, job: job, user: user}, %{
-           dataclip_id: dataclip_id
-         }),
        dataclips: dataclips,
        id: id,
        job: job,
@@ -139,6 +138,17 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        user: user,
        on_run: on_run
      )
+     |> update(:changeset, fn
+       nil, %{job: job, user: user, project: project} ->
+         dataclip_id = dataclips |> List.first(%{id: nil}) |> Map.get(:id)
+
+         ManualWorkorder.changeset(%{project: project, job: job, user: user}, %{
+           dataclip_id: dataclip_id
+         })
+
+       current, _ ->
+         current
+     end)
      |> set_selected_dataclip()}
   end
 
@@ -155,7 +165,9 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
             {:noreply, socket}
 
           {:error, changeset} ->
-            {:noreply, socket |> assign(changeset: changeset)}
+            {:noreply,
+             socket
+             |> assign(changeset: changeset |> Map.put(:action, :validate))}
         end
 
       false ->
@@ -246,6 +258,17 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         end
 
       %{dataclip_id: nil, body: body, project: project} ->
+        body =
+          body
+          |> Jason.decode()
+          |> case do
+            {:ok, body} ->
+              body
+
+            {:error, _} ->
+              body
+          end
+
         Lightning.Invocation.create_dataclip(%{
           project_id: project.id,
           type: :run_result,
