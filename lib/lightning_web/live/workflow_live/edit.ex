@@ -110,7 +110,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 end)
               }
               id={"job-pane-#{@selected_job.id}"}
-              cancel_url="?"
+              cancel_url={@base_url}
             >
               <!-- Show only the currently selected one -->
               <.job_form
@@ -150,7 +150,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <.panel
               id={"trigger-pane-#{@selected_trigger.id}"}
-              cancel_url="?"
+              cancel_url={@base_url}
               title={
                 input_value(tf, :type)
                 |> to_string()
@@ -253,7 +253,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selection_mode: nil,
        workflow: nil,
        workflow_params: %{},
-       hash_params: %{"id" => nil, "mode" => nil}
+       selection_params: %{"id" => nil, "mode" => nil}
      )}
   end
 
@@ -388,7 +388,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # the changeset/validation.
     patches = WorkflowParams.to_patches(params, socket.assigns.workflow_params)
 
-    {:reply, %{patches: patches}, socket}
+    {:reply, %{patches: patches}, socket |> apply_selection_params()}
   end
 
   def handle_event("copied_to_clipboard", _, socket) do
@@ -445,10 +445,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_selection_params(socket, params) do
-    params
-    |> Map.take(["s", "m"])
-    |> Enum.into(%{"s" => nil, "m" => nil})
-    |> then(fn
+    socket
+    |> assign(
+      selection_params:
+        params |> Map.take(["s", "m"]) |> Enum.into(%{"s" => nil, "m" => nil})
+    )
+    |> apply_selection_params()
+  end
+
+  defp apply_selection_params(socket) do
+    socket.assigns.selection_params
+    |> case do
       # Nothing is selected
       %{"s" => nil} ->
         socket |> unselect_all()
@@ -462,7 +469,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           nil ->
             socket |> unselect_all()
         end
-    end)
+    end
     |> maybe_unfollow_run()
   end
 
