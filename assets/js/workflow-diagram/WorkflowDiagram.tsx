@@ -10,6 +10,8 @@ import ReactFlow, {
   ReactFlowInstance,
   ReactFlowProvider,
   applyNodeChanges,
+  applyEdgeChanges,
+  EdgeSelectionChange,
 } from 'reactflow';
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
@@ -17,6 +19,7 @@ import { shallow } from 'zustand/shallow';
 import { DEFAULT_TEXT } from '../editor/Editor';
 import layout from './layout';
 import nodeTypes from './nodes';
+import edgeTypes from './edges';
 import fromWorkflow from './util/from-workflow';
 import * as placeholder from './util/placeholder';
 import throttle from './util/throttle';
@@ -103,6 +106,42 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       [setModel, model]
     );
 
+    const updateSelection = useCallback(
+      (id?: string) => {
+        const { selectedId } = chartCache.current;
+        if (id !== selectedId) {
+          chartCache.current.selectedId = id;
+          onSelectionChange(id);
+
+          const changes: EdgeSelectionChange[] = [];
+
+          // Manually re-render to correctly draw styles
+          // (sadly the custom edge label is quite slow to update)
+          if (id) {
+            // TODO is it an edge or a node?
+            changes.push({
+              id,
+              type: 'select',
+              selected: true,
+            });
+          }
+          if (selectedId) {
+            // safe to do this if it's a node...? seems ok
+            changes.push({
+              id: selectedId,
+              type: 'select',
+              selected: false,
+            });
+          }
+          // If an edge is already selected, deselect it
+          // (this works around a react-flow bug too)
+          const newEdges = applyEdgeChanges(changes, model.edges);
+          setModel({ nodes: model.nodes, edges: newEdges });
+        }
+      },
+      [onSelectionChange, model]
+    );
+
     const handleNodeClick = useCallback(
       (event: React.MouseEvent, node: Flow.Node) => {
         if ((event.target as HTMLElement).closest('[name=add-node]')) {
@@ -111,34 +150,26 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           updateSelection(node.id);
         }
       },
-      [model]
+      [updateSelection]
     );
 
     const handleEdgeClick = useCallback(
       (_event: React.MouseEvent, edge: Flow.Edge) => {
         updateSelection(edge.id);
       },
-      []
+      [updateSelection]
     );
 
-    const handleBackgroundClick = useCallback((event: React.MouseEvent) => {
-      if (
-        event.target.classList &&
-        event.target.classList.contains('react-flow__pane')
-      ) {
-        updateSelection(undefined);
-      }
-    }, []);
-
-    const updateSelection = useCallback(
-      (id?: string) => {
-        const { selectedId } = chartCache.current;
-        if (id !== selectedId) {
-          chartCache.current.selectedId = id;
-          onSelectionChange(id);
+    const handleBackgroundClick = useCallback(
+      (event: React.MouseEvent) => {
+        if (
+          event.target.classList &&
+          event.target.classList.contains('react-flow__pane')
+        ) {
+          updateSelection(undefined);
         }
       },
-      [onSelectionChange]
+      [updateSelection]
     );
 
     const addNode = useCallback(
@@ -239,6 +270,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           onNodesChange={onNodesChange}
           nodesDraggable={false}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onClick={handleBackgroundClick}
           onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}
