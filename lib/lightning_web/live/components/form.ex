@@ -83,12 +83,18 @@ defmodule LightningWeb.Components.Form do
       |> assign_new(:label, fn -> false end)
 
     ~H"""
-    <%= if @label do %>
-      <%= label(@form, @field, @label, class: @label_classes) %>
-    <% else %>
-      <%= label(@form, @field, class: @label_classes) %>
-    <% end %>
-    <%= error_tag(@form, @field) %>
+    <div class="flex">
+      <div class="shrink">
+        <%= if @label do %>
+          <%= label(@form, @field, @label, class: @label_classes) %>
+        <% else %>
+          <%= label(@form, @field, class: @label_classes) %>
+        <% end %>
+      </div>
+      <div class="grow text-right">
+        <.error form={@form} field={@field} />
+      </div>
+    </div>
     <%= textarea(@form, @field, @opts) %>
     """
   end
@@ -274,22 +280,14 @@ defmodule LightningWeb.Components.Form do
 
   attr :form, :any, required: true
   attr :field, :any, required: true
-  attr :opts, :global
+
+  attr :opts, :global,
+    default: %{class: "block w-full text-sm text-secondary-700"}
 
   def error(assigns) do
-    error_classes = ~w[
-      block
-      w-full
-      text-sm
-      text-secondary-700
-    ]
-
     assigns =
       assigns
-      |> update(:opts, fn opts ->
-        assigns_to_attributes(opts)
-        |> Keyword.put_new(:class, error_classes)
-      end)
+      |> update(:opts, &assigns_to_attributes/1)
 
     ~H"""
     <%= error_tag(@form, @field, @opts) %>
