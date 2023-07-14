@@ -96,7 +96,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
       <div class="hidden sm:block" aria-hidden="true">
         <div class="py-2"></div>
       </div>
-      <div class="col-span-6 @md:col-span-4">
+      <div class="col-span-4 @md:col-span-4">
         <Form.text_field field={:cron_expression} form={@form} disabled={@disabled} />
       </div>
     </div>
