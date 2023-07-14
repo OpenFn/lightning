@@ -97,22 +97,22 @@ const Node = ({
     nodeIconStyles(selected);
 
   return (
-    <div className="flex flex-row">
-      <div>
-        {targetPosition && (
-          <Handle
-            type="target"
-            isConnectable={isConnectable}
-            position={targetPosition}
-            style={{
-              visibility: 'hidden',
-              height: 0,
-              top: 0,
-              left: strokeWidth + anchorx,
-            }}
-          />
-        )}
+    <div className="group">
+      <div className="flex flex-row">
         <div>
+          {targetPosition && (
+            <Handle
+              type="target"
+              isConnectable={isConnectable}
+              position={targetPosition}
+              style={{
+                visibility: 'hidden',
+                height: 0,
+                top: 0,
+                left: strokeWidth + anchorx,
+              }}
+            />
+          )}
           <svg style={{ maxWidth: '110px', maxHeight: '110px' }}>
             <Shape
               shape={shape}
@@ -155,11 +155,22 @@ const Node = ({
             }}
           />
         )}
+        <div className="flex flex-col flex-1 justify-center ml-2">
+          <Label>{label}</Label>
+          <SubLabel>{sublabel}</SubLabel>
+        </div>
       </div>
-      <div className="flex flex-col flex-1 justify-center ml-2">
-        <Label>{label}</Label>
-        <SubLabel>{sublabel}</SubLabel>
-      </div>
+      {toolbar && (
+        <div
+          style={{ width: `${width}px`, marginTop: '-14px' }}
+          className="flex flex-col items-center
+                    opacity-0  group-hover:opacity-100
+                    transition duration-150 ease-in-out"
+        >
+          {/* TODO don't show this if ths node already has a placeholder child */}
+          {toolbar()}
+        </div>
+      )}
     </div>
   );
 };
