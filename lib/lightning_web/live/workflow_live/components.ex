@@ -220,7 +220,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
   attr :webhook_url, :string, required: true
-  attr :requires_cron_job, :boolean, required: true
   attr :on_change, :any, required: true
 
   def trigger_form(assigns) do
@@ -249,12 +248,25 @@ defmodule LightningWeb.WorkflowLive.Components do
           ]}
           disabled={@disabled}
         />
-        <%= if @webhook_url do %>
+      <% end %>
+      <%= case @form |> input_value(:type) do %>
+        <% :cron -> %>
+          <div class="hidden sm:block" aria-hidden="true">
+            <div class="py-2"></div>
+          </div>
+          <.live_component
+            id="cron-setup-component"
+            form={@form}
+            on_change={@on_change}
+            module={LightningWeb.JobLive.CronSetupComponent}
+            disabled={@disabled}
+          />
+        <% :webhook -> %>
           <div class="col-span-4 @md:col-span-2 text-right text-">
             <a
               id="copyWebhookUrl"
               href={@webhook_url}
-              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500"
+              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
               onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
               target="_blank"
               phx-click="copied_to_clipboard"
@@ -262,19 +274,6 @@ defmodule LightningWeb.WorkflowLive.Components do
               Copy webhook url
             </a>
           </div>
-        <% end %>
-      <% end %>
-      <%= if @requires_cron_job do %>
-        <div class="hidden sm:block" aria-hidden="true">
-          <div class="py-2"></div>
-        </div>
-        <.live_component
-          id="cron-setup-component"
-          form={@form}
-          on_change={@on_change}
-          module={LightningWeb.JobLive.CronSetupComponent}
-          disabled={@disabled}
-        />
       <% end %>
     </div>
     """
