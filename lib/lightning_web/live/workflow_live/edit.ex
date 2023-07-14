@@ -80,7 +80,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
-              form={to_form(@changeset)}
+              form={
+                to_form(@changeset) |> single_inputs_for(:jobs, @selected_job.id)
+              }
             />
           </div>
         </div>
@@ -426,14 +428,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp assign_workflow(socket, workflow) do
-    changeset = Workflow.changeset(workflow, %{})
-
     socket
-    |> assign(
-      workflow: workflow,
-      changeset: changeset,
-      workflow_params: WorkflowParams.to_map(changeset)
-    )
+    |> assign(workflow: workflow)
+    |> apply_params(socket.assigns.workflow_params)
   end
 
   defp apply_params(socket, params) do
