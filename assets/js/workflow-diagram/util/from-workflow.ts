@@ -97,13 +97,13 @@ const fromWorkflow = (
         // all edge labels are circles
         // with tick, cross, infinity or {}
         model.label = getEdgeLabel(edge.condition);
-        model.labelBgPadding = [12, 8];
-        model.labelBgStyle = {
-          stroke: '#b1b1b7',
-          strokeWidth: 2,
-          fill: 'white',
-        };
-        model.labelBgBorderRadius = 16;
+        // model.labelBgPadding = [12, 8];
+        // model.labelBgStyle = {
+        //   stroke: '#b1b1b7',
+        //   strokeWidth: 2,
+        //   fill: 'white',
+        // };
+        // model.labelBgBorderRadius = 16;
       }
 
       collection.push(model);
