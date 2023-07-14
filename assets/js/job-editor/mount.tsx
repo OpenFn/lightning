@@ -4,18 +4,22 @@ import type JobEditor from './JobEditor';
 import { sortMetadata } from '../metadata-loader/metadata';
 import { PhoenixHook } from '../hooks/PhoenixHook';
 
-interface JobEditorEntrypoint extends PhoenixHook {
-  componentRoot: ReturnType<typeof createRoot> | null;
-  changeEvent: string;
-  field?: HTMLTextAreaElement | null;
-  handleContentChange(content: string): void;
-  metadata?: true | object;
-  observer: MutationObserver | null;
-  render(): void;
-  requestMetadata(): Promise<{}>;
-  setupObserver(): void;
-  removeHandleEvent(callbackRef: unknown): void;
-}
+type JobEditorEntrypoint = PhoenixHook<
+  {
+    componentRoot: ReturnType<typeof createRoot> | null;
+    changeEvent: string;
+    field?: HTMLTextAreaElement | null;
+    handleContentChange(content: string): void;
+    metadata?: true | object;
+    observer: MutationObserver | null;
+    render(): void;
+    requestMetadata(): Promise<{}>;
+    setupObserver(): void;
+    removeHandleEvent(callbackRef: unknown): void;
+    _timeout: number | null;
+  },
+  { adaptor: string; source: string; disabled: string }
+>;
 
 type AttributeMutationRecord = MutationRecord & {
   attributeName: string;
@@ -23,6 +27,8 @@ type AttributeMutationRecord = MutationRecord & {
 };
 
 let JobEditorComponent: typeof JobEditor | undefined;
+
+const EDITOR_DEBOUNCE_MS = 300;
 
 export default {
   mounted(this: JobEditorEntrypoint) {
@@ -49,7 +55,18 @@ export default {
     console.groupEnd();
   },
   handleContentChange(content: string) {
-    this.pushEventTo(this.el, this.changeEvent, { source: content });
+    if (this._timeout) {
+      clearTimeout(this._timeout);
+      this._timeout = window.setTimeout(() => {
+        this.pushEventTo(this.el, this.changeEvent, { source: content });
+        this._timeout = null;
+      }, EDITOR_DEBOUNCE_MS);
+    } else {
+      this.pushEventTo(this.el, this.changeEvent, { source: content });
+      this._timeout = window.setTimeout(() => {
+        this._timeout = null;
+      }, EDITOR_DEBOUNCE_MS);
+    }
   },
   render() {
     const { adaptor, source, disabled } = this.el.dataset;
@@ -84,6 +101,7 @@ export default {
       mutations.forEach(mutation => {
         const { attributeName, oldValue } = mutation as AttributeMutationRecord;
         const newValue = this.el.getAttribute(attributeName);
+        console.log('attribute changed', attributeName, oldValue, newValue);
         if (oldValue !== newValue) {
           this.render();
         }
