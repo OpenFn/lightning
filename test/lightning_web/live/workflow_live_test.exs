@@ -18,47 +18,10 @@ defmodule LightningWeb.WorkflowLiveTest do
 
       assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
     end
-
-    test "lists all workflows for a project", %{
-      conn: conn,
-      project: project
-    } do
-      %{workflow: workflow_one} = workflow_job_fixture(project_id: project.id)
-      %{workflow: workflow_two} = workflow_job_fixture(project_id: project.id)
-
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
-
-      assert html =~ "Create new workflow"
-
-      assert view
-             |> element(
-               "li[phx-value-to='#{Routes.project_workflow_path(conn, :show, project.id, workflow_one.id)}']"
-             )
-             |> has_element?()
-
-      assert view
-             |> element(
-               "li[phx-value-to='#{Routes.project_workflow_path(conn, :show, project.id, workflow_two.id)}']"
-             )
-             |> has_element?()
-    end
   end
 
   @tag skip: true
   describe "create" do
-    test "Create empty workflow for a project", %{conn: conn, project: project} do
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
-
-      assert html =~ "Create new workflow"
-
-      assert view
-             |> element("li[role='button'][phx-click='create_workflow']")
-             |> render_click() =~
-               "Create job"
-    end
-
     test "Project viewers can't create workflows", %{
       conn: conn,
       project: project
@@ -540,75 +503,6 @@ defmodule LightningWeb.WorkflowLiveTest do
 
     # TODO test that jobs in different projects are not available in flow triggers
     # TODO test that the current job is not visible in upstream jobs
-  end
-
-  @tag skip: true
-  describe "delete_workflow" do
-    test "project viewer can't delete a workflow in that project",
-         %{
-           conn: conn,
-           project: project
-         } do
-      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
-      {conn, _user} = setup_project_user(conn, project, :viewer)
-
-      {:ok, view, _html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
-
-      assert view
-             |> render_click("delete_workflow", %{"id" => workflow.id}) =~
-               "You are not authorized to perform this action."
-    end
-
-    test "delete a workflow on project index page",
-         %{
-           conn: conn,
-           project: project
-         } do
-      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
-
-      {:ok, view, html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project.id))
-
-      assert html =~ workflow.name
-
-      assert view
-             |> element("a[phx-click='delete_workflow']")
-             |> render_click() =~
-               "Workflow deleted successfully"
-
-      refute has_element?(view, "workflow-#{workflow.id}")
-    end
-
-    test "delete a workflow on edit workflow page",
-         %{
-           conn: conn,
-           project: project
-         } do
-      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
-
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_workflow_path(
-            conn,
-            :edit_workflow,
-            project.id,
-            workflow.id
-          )
-        )
-
-      assert html =~ workflow.name
-
-      assert view
-             |> element(
-               "#workflow-#{workflow.id} a[phx-click='delete_workflow']"
-             )
-             |> render_click() =~
-               "Workflow deleted successfully"
-
-      refute has_element?(view, "workflow-#{workflow.id}")
-    end
   end
 
   defp has_expected_version?(view, expected_version) do

@@ -16,18 +16,22 @@ defmodule LightningWeb.Hooks do
   usage - like `DashboardLive`.
   """
   def on_mount(:project_scope, %{"project_id" => project_id}, _session, socket) do
+    %{current_user: current_user} = socket.assigns
+
     project = Lightning.Projects.get_project(project_id)
 
-    projects =
-      Lightning.Projects.get_projects_for_user(socket.assigns.current_user)
+    projects = Lightning.Projects.get_projects_for_user(current_user)
+
+    project_user = Lightning.Projects.get_project_user(project, current_user)
 
     can_access_project =
       ProjectUsers
-      |> Permissions.can?(:access_project, socket.assigns.current_user, project)
+      |> Permissions.can?(:access_project, current_user, project)
 
     if can_access_project do
       {:cont,
        socket
+       |> assign_new(:project_user, fn -> project_user end)
        |> assign_new(:project, fn -> project end)
        |> assign_new(:projects, fn -> projects end)}
     else

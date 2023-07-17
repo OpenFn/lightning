@@ -29,6 +29,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     ~H"""
     <div>
       <.link
+        id={"workflow-card-#{@workflow.id}"}
         navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
         class="col-span-1 rounded-md shadow-sm"
         role="button"

@@ -37,7 +37,7 @@ defmodule Lightning.Policies.ProjectUsers do
   @spec authorize(
           actions(),
           Lightning.Accounts.User.t(),
-          Lightning.Projects.Project.t()
+          Lightning.Projects.Project.t() | nil
         ) :: boolean
   def authorize(:access_project, %User{}, nil), do: false
 
@@ -64,7 +64,12 @@ defmodule Lightning.Policies.ProjectUsers do
            ],
       do: Projects.get_project_user_role(user, project) in [:owner, :admin]
 
-  def authorize(action, %User{} = user, %Project{} = project)
+  def authorize(action, %User{} = user, %Project{} = project) do
+    project_user = Projects.get_project_user(project, user)
+    authorize(action, user, project_user)
+  end
+
+  def authorize(action, %User{}, %ProjectUser{} = project_user)
       when action in [
              :create_workflow,
              :edit_job,
@@ -75,10 +80,5 @@ defmodule Lightning.Policies.ProjectUsers do
              :rerun_job,
              :provision_project
            ],
-      do:
-        Projects.get_project_user_role(user, project) in [
-          :owner,
-          :admin,
-          :editor
-        ]
+      do: project_user.role in [:owner, :admin, :editor]
 end
