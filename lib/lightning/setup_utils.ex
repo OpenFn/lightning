@@ -215,8 +215,7 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
         workflow_id: workflow.id,
-        project_credential_id:
-          List.first(dhis2_credential.project_credentials).id
+        project_credential_id: List.first(dhis2_credential.project_credentials).id
       })
 
     Workflows.create_edge(%{
@@ -346,8 +345,7 @@ defmodule Lightning.SetupUtils do
                 response: %{
                   importSummaries: [
                     %{
-                      href:
-                        "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
+                      href: "https://play.dhis2.org/dev/api/trackedEntityInstances/iqJrb85GmJb",
                       reference: "iqJrb85GmJb",
                       responseType: "ImportSummary",
                       status: "SUCCESS"
@@ -621,8 +619,7 @@ defmodule Lightning.SetupUtils do
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
         workflow_id: dhis2_workflow.id,
-        project_credential_id:
-          List.first(dhis2_credential.project_credentials).id
+        project_credential_id: List.first(dhis2_credential.project_credentials).id
       })
 
     {:ok, dhis_trigger} =
