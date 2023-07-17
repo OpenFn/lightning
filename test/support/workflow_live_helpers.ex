@@ -35,6 +35,74 @@ defmodule Lightning.WorkflowLive.Helpers do
     link |> render_click()
   end
 
+  def add_node_from(view, _node) do
+    # TODO: how should we add nodes, we probably should be using the json patch
+    # hooks/events here.
+    view
+    |> editor_element()
+  end
+
+  # Internal Interaction Helpers
+
+  @doc """
+  This is a helper for interacting with the editor. It similates changes
+  made to the Zustand store by the diagram component.
+  """
+  def push_patches_to_view(view, patches) do
+    view
+    |> editor_element()
+    |> render_hook("push-change", %{patches: patches})
+  end
+
+  def add_job_patch(name \\ "") do
+    Jsonpatch.diff(
+      %{jobs: []},
+      %{jobs: [%{id: Ecto.UUID.generate(), name: name}]}
+    )
+    |> Jsonpatch.Mapper.to_map()
+    |> List.first()
+    |> Lightning.Helpers.json_safe()
+  end
+
+  @doc """
+  This helper replicates the data sent to the server when a new workflow is
+  created, and the WorkflowDiagram component is mounted and determines the
+  initial state of the diagram.
+
+  i.e. the initial state of a new workflow is essentially an empty map, the
+  diagram component then adds some initial nodes and edges to the diagram.
+  """
+  def initial_workflow_patchset(project) do
+    job_id = Ecto.UUID.generate()
+    trigger_id = Ecto.UUID.generate()
+
+    Jsonpatch.diff(
+      %{
+        "edges" => [],
+        "errors" => %{"name" => ["can't be blank"]},
+        "jobs" => [],
+        "name" => "",
+        "project_id" => project.id,
+        "triggers" => []
+      },
+      %{
+        "triggers" => [%{"id" => trigger_id}],
+        "jobs" => [%{"id" => job_id}],
+        "edges" => [
+          %{
+            "id" => Ecto.UUID.generate(),
+            "source_trigger_id" => trigger_id,
+            "target_job_id" => job_id
+          }
+        ],
+        "name" => "",
+        "project_id" => project.id
+      }
+    )
+    |> Jsonpatch.Mapper.to_map()
+    |> Enum.map(&Lightning.Helpers.json_safe/1)
+  end
+
   # Assertion Helpers
 
   def has_workflow_edit_container?(view, workflow) do
