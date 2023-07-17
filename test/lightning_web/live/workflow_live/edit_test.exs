@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
+  import Lightning.WorkflowLive.Helpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -11,7 +12,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Naively add a job via the editor (calling the push-change event)
       assert view
-             |> element("#editor-#{project.id}")
              |> push_patches_to_view([add_job_patch()])
 
       # The server responds with a patch with any further changes
@@ -19,6 +19,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         view,
         %{
           patches: [
+            %{op: "add", path: "/jobs/0/project_credential_id", value: nil},
             %{
               op: "add",
               path: "/jobs/0/errors",
@@ -38,20 +39,68 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         }
       )
     end
+
+    @tag role: :editor
+    test "creating a new workflow", %{conn: conn, project: project} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      assert view |> push_patches_to_view(initial_workflow_patchset(project))
+
+      view |> fill_workflow_name("My Workflow")
+
+      assert view |> save_is_disabled()
+
+      {job, _, _} = view |> select_first_job()
+
+      view |> fill_job_fields(job, %{name: "My Job"})
+
+      view |> click_edit(job)
+
+      view |> change_editor_text("some body")
+
+      refute view |> save_is_disabled()
+
+      assert view |> has_pending_changes()
+
+      view |> click_save()
+
+      refute view |> has_pending_changes()
+    end
+
+    @tag role: :viewer
+    test "viewers can't create new workflows", %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new")
+        |> follow_redirect(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "You are not authorized to perform this action."
+    end
   end
 
-  defp push_patches_to_view(elem, patches) do
-    elem
-    |> render_hook("push-change", %{patches: patches})
-  end
+  describe "edit" do
+    setup :create_workflow
 
-  defp add_job_patch(name \\ "") do
-    Jsonpatch.diff(
-      %{jobs: []},
-      %{jobs: [%{id: Ecto.UUID.generate(), name: name}]}
-    )
-    |> Jsonpatch.Mapper.to_map()
-    |> List.first()
-    |> Lightning.Helpers.json_safe()
+    test "users can edit an existing workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      assert html =~ workflow.name
+    end
+
+    @tag role: :viewer
+    test "viewers can't edit existing workflows", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, _view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      flunk("TODO: test that viewers can't edit workflows")
+    end
   end
 end

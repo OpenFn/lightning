@@ -89,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.Index do
             |> assign(
               workflows: Workflows.get_workflows_for(socket.assigns.project)
             )
-            |> put_flash(:info, "Workflow deleted successfully")
+            |> put_flash(:info, "Workflow successfully deleted.")
           }
 
         {:error, _changeset} ->
