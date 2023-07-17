@@ -260,7 +260,7 @@ defmodule Lightning.SetupUtils do
               }
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id,
         output_dataclip_id:
           create_dataclip(%{
@@ -275,7 +275,7 @@ defmodule Lightning.SetupUtils do
               ]
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id
       },
       %{
@@ -334,7 +334,7 @@ defmodule Lightning.SetupUtils do
               ]
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id,
         output_dataclip_id:
           create_dataclip(%{
@@ -373,7 +373,7 @@ defmodule Lightning.SetupUtils do
               ]
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id
       }
     ]
