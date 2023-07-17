@@ -81,7 +81,14 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
           changeset
           |> Ecto.Changeset.get_assoc(:jobs)
           |> Enum.reject(&match?(%{action: :replace}, &1))
-          |> to_serializable([:id, :name, :adaptor, :body, :enabled]),
+          |> to_serializable([
+            :id,
+            :name,
+            :adaptor,
+            :body,
+            :enabled,
+            :project_credential_id
+          ]),
         triggers:
           changeset
           |> Ecto.Changeset.get_assoc(:triggers)

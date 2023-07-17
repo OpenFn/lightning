@@ -399,6 +399,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
+    IO.inspect(params, label: "form_changed")
     initial_params = socket.assigns.workflow_params
 
     next_params =
@@ -429,7 +430,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_workflow(socket, workflow) do
     socket
     |> assign(workflow: workflow)
-    |> apply_params(socket.assigns.workflow_params)
+    |> apply_params(
+      socket.assigns.workflow_params
+      |> IO.inspect(label: "workflow_params")
+    )
   end
 
   defp apply_params(socket, params) do
@@ -454,6 +458,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_selection_params(socket) do
+    IO.inspect(socket.assigns.selection_params, label: "selection_params")
+
     socket.assigns.selection_params
     |> case do
       # Nothing is selected
