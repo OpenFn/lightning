@@ -53,7 +53,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <div
           phx-hook="WorkflowEditor"
           class="grow"
-          id={"editor-#{@project.id}"}
+          id={"editor-#{@workflow.id}"}
           phx-update="ignore"
         >
           <%!-- Before Editor component has mounted --%>

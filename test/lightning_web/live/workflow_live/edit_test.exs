@@ -12,7 +12,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       # Naively add a job via the editor (calling the push-change event)
       assert view
-             |> element("#editor-#{project.id}")
              |> push_patches_to_view([add_job_patch()])
 
       # The server responds with a patch with any further changes
@@ -43,7 +42,9 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
     @tag role: :editor
     test "creating a new workflow", %{conn: conn, project: project} do
-      {:ok, _view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       flunk("TODO: test interacting with the editor and saving")
     end
@@ -72,28 +73,16 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert html =~ workflow.name
     end
 
-    @tag role: :viewer, skip: true
-    test "viewers can't edit existing workflows", %{conn: conn, project: project} do
-      {:ok, _view, html} =
-        live(conn, ~p"/projects/#{project.id}/w/new")
-        |> follow_redirect(~r"/projects/#{project.id}/w")
+    @tag role: :viewer
+    test "viewers can't edit existing workflows", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, _view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
-      assert html =~ "You are not authorized to perform this action."
+      flunk("TODO: test that viewers can't edit workflows")
     end
-  end
-
-  defp push_patches_to_view(elem, patches) do
-    elem
-    |> render_hook("push-change", %{patches: patches})
-  end
-
-  defp add_job_patch(name \\ "") do
-    Jsonpatch.diff(
-      %{jobs: []},
-      %{jobs: [%{id: Ecto.UUID.generate(), name: name}]}
-    )
-    |> Jsonpatch.Mapper.to_map()
-    |> List.first()
-    |> Lightning.Helpers.json_safe()
   end
 end
