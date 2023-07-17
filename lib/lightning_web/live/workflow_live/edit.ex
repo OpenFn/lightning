@@ -4,7 +4,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
-  alias Lightning.Projects
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
   alias Lightning.Jobs.Job
@@ -13,10 +12,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr :changeset, :map, required: true
-  attr :project_user, :map, required: true
+  attr(:changeset, :map, required: true)
+  attr(:project_user, :map, required: true)
 
   def follow_run(attempt_run) do
     send(self(), {:follow_run, attempt_run})
@@ -50,7 +49,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
-      <div class="relative h-full flex">
+      <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
         <div
           phx-hook="WorkflowEditor"
           class="grow"
@@ -222,31 +221,42 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  @impl true
-  def mount(_params, _session, socket) do
-    project = socket.assigns.project
+  def authorize(%{assigns: %{live_action: :new}} = socket) do
+    %{project_user: project_user, current_user: current_user, project: project} =
+      socket.assigns
 
-    project_user =
-      Projects.get_project_user(project, socket.assigns.current_user)
+    Permissions.can(ProjectUsers, :create_workflow, current_user, project_user)
+    |> then(fn
+      :ok ->
+        socket
+
+      {:error, _} ->
+        socket
+        |> put_flash(:error, "You are not authorized to perform this action.")
+        |> push_redirect(to: ~p"/projects/#{project.id}/w")
+    end)
+  end
+
+  def authorize(%{assigns: %{live_action: :edit}} = socket) do
+    %{project_user: project_user, current_user: current_user} = socket.assigns
 
     can_edit_job =
-      ProjectUsers
-      |> Permissions.can(
-        :edit_job,
-        socket.assigns.current_user,
-        project
-      )
+      Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
 
+    socket
+    |> assign(can_edit_job: can_edit_job)
+  end
+
+  @impl true
+  def mount(_params, _session, socket) do
     {:ok,
      socket
+     |> authorize()
      |> assign(
        active_menu_item: :projects,
-       can_edit_job: can_edit_job,
        expanded_job: nil,
        follow_run_id: nil,
        page_title: "",
-       project: project,
-       project_user: project_user,
        selected_edge: nil,
        selected_job: nil,
        selected_trigger: nil,
@@ -399,7 +409,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    IO.inspect(params, label: "form_changed")
     initial_params = socket.assigns.workflow_params
 
     next_params =
@@ -430,10 +439,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp assign_workflow(socket, workflow) do
     socket
     |> assign(workflow: workflow)
-    |> apply_params(
-      socket.assigns.workflow_params
-      |> IO.inspect(label: "workflow_params")
-    )
+    |> apply_params(socket.assigns.workflow_params)
   end
 
   defp apply_params(socket, params) do
@@ -458,8 +464,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp apply_selection_params(socket) do
-    IO.inspect(socket.assigns.selection_params, label: "selection_params")
-
     socket.assigns.selection_params
     |> case do
       # Nothing is selected

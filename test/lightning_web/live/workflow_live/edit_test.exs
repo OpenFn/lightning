@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
+  import Lightning.WorkflowLive.Helpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -19,6 +20,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         view,
         %{
           patches: [
+            %{op: "add", path: "/jobs/0/project_credential_id", value: nil},
             %{
               op: "add",
               path: "/jobs/0/errors",
@@ -37,6 +39,46 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           ]
         }
       )
+    end
+
+    @tag role: :editor
+    test "creating a new workflow", %{conn: conn, project: project} do
+      {:ok, _view, _html} = live(conn, ~p"/projects/#{project.id}/w/new")
+
+      flunk("TODO: test interacting with the editor and saving")
+    end
+
+    @tag role: :viewer
+    test "viewers can't create new workflows", %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new")
+        |> follow_redirect(conn, ~p"/projects/#{project.id}/w")
+
+      assert html =~ "You are not authorized to perform this action."
+    end
+  end
+
+  describe "edit" do
+    setup :create_workflow
+
+    test "users can edit an existing workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      assert html =~ workflow.name
+    end
+
+    @tag role: :viewer, skip: true
+    test "viewers can't edit existing workflows", %{conn: conn, project: project} do
+      {:ok, _view, html} =
+        live(conn, ~p"/projects/#{project.id}/w/new")
+        |> follow_redirect(~r"/projects/#{project.id}/w")
+
+      assert html =~ "You are not authorized to perform this action."
     end
   end
 

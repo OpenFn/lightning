@@ -3,9 +3,11 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   import Phoenix.LiveViewTest
 
   import Lightning.Factories
+  import Lightning.WorkflowLive.Helpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+  setup :create_workflow
 
   describe "index" do
     test "renders a list of workflows", %{conn: conn, project: project} do
@@ -38,13 +40,84 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
                "Two"
              )
     end
-
-    test "users can delete a workflow"
-    test "users with viewer role cannot delete a workflow"
   end
 
-  def has_link?(view, path, text_filter \\ nil) do
-    view
-    |> element("a[href='#{path}']", text_filter)
+  describe "creating workflows" do
+    @tag role: :viewer, skip: true
+    test "users with viewer role cannot create a workflow", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert view
+             |> has_link?(
+               ~p"/projects/#{project.id}/w/new",
+               "Create new workflow"
+             )
+
+      {:ok, _view, html} =
+        view
+        |> click_create_workflow()
+        |> follow_redirect(conn)
+
+      assert html =~ "You are not authorized to perform this action."
+    end
+
+    @tag role: :editor
+    test "users with editor role can create a workflow", %{
+      conn: conn,
+      project: project
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      {:ok, view, _html} =
+        view
+        |> click_create_workflow()
+        |> follow_redirect(conn, "/projects/#{project.id}/w/new")
+
+      assert view |> element("#workflow-edit-") |> has_element?()
+    end
+  end
+
+  describe "deleting workflows" do
+    @tag role: :viewer
+    test "users with viewer role cannot delete a workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      refute view
+             |> has_delete_workflow_link?(workflow),
+             "shouldn't have a delete link on the page"
+
+      assert view |> render_click("delete_workflow", %{"id" => workflow.id}) =~
+               "You are not authorized to perform this action.",
+             "shouldn't be able to delete a workflow by sending an event"
+    end
+
+    @tag role: :editor
+    test "users with editor role can delete a workflow", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project.id}/w")
+
+      assert has_workflow_card?(view, workflow)
+
+      assert view
+             |> has_delete_workflow_link?(workflow),
+             "should have a delete link on the page"
+
+      assert view |> click_delete_workflow(workflow) =~
+               "Workflow successfully deleted.",
+             "should be able to delete a workflow by sending an event"
+
+      refute has_workflow_card?(view, workflow),
+             "shouldn't have the workflow card on the page"
+    end
   end
 end
