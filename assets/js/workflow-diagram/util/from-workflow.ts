@@ -24,9 +24,6 @@ const fromWorkflow = (
   positions: Positions,
   selectedId?: string
 ): Flow.Model => {
-  if (workflow.jobs.length == 0) {
-    return { nodes: [], edges: [] };
-  }
   const workflowWithPlaceholders = identify(workflow);
   const allowPlaceholder = workflowWithPlaceholders.jobs.every(
     j => !isPlaceholder(j)
@@ -95,6 +92,7 @@ const fromWorkflow = (
   process(workflowWithPlaceholders.jobs, nodes, 'job');
   process(workflowWithPlaceholders.triggers, nodes, 'trigger');
   process(workflowWithPlaceholders.edges, edges, 'edge');
+
   return { nodes, edges };
 };
 
