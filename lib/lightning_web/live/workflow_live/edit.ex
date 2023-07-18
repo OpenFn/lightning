@@ -113,6 +113,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <!-- Show only the currently selected one -->
               <.job_form
                 on_change={&send_form_changed/1}
+                editable={@can_edit_job}
                 form={jf}
                 project_user={@project_user}
               />
@@ -228,6 +229,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> then(fn
       :ok ->
         socket
+        |> assign(
+          can_edit_job:
+            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
+        )
 
       {:error, _} ->
         socket

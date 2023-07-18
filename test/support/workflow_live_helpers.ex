@@ -191,6 +191,16 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> has_element?()
   end
 
+  def input_is_disabled(view, job, field) do
+    idx = get_index_of_job(view, job)
+
+    view
+    |> element(
+      "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]'][disabled]"
+    )
+    |> has_element?()
+  end
+
   def has_workflow_edit_container?(view, workflow) do
     view
     |> element("#workflow-edit-#{workflow.id}")

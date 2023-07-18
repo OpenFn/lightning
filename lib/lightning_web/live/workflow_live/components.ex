@@ -184,6 +184,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   attr :form, :map, required: true
   attr :on_change, :any, required: true
+  attr :editable, :boolean, default: false
   attr :project_user, :map, required: true
 
   def job_form(assigns) do
@@ -191,15 +192,21 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
       <%= hidden_inputs_for(@form) %>
       <div class="col-span-6">
-        <Form.check_box form={@form} field={:enabled} />
+        <Form.check_box form={@form} field={:enabled} disabled={!@editable} />
       </div>
       <div class="col-span-6 @md:col-span-4">
-        <Form.text_field form={@form} label="Job Name" field={:name} />
+        <Form.text_field
+          form={@form}
+          label="Job Name"
+          field={:name}
+          disabled={!@editable}
+        />
       </div>
       <div class="col-span-6">
         <.live_component
           id={"adaptor-picker-#{input_value(@form, :id)}"}
           module={LightningWeb.JobLive.AdaptorPicker}
+          disabled={!@editable}
           on_change={@on_change}
           form={@form}
         />
@@ -208,6 +215,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         <.live_component
           id={"credential-picker-#{input_value(@form, :id)}"}
           module={LightningWeb.JobLive.CredentialPicker}
+          disabled={!@editable}
           project_user={@project_user}
           on_change={@on_change}
           form={@form}
