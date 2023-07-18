@@ -7,6 +7,9 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Added ability for a user to enable MFA on their account;
+  using 2FA apps like Authy, Google Authenticator etc
+  [#890](https://github.com/OpenFn/Lightning/issues/890)
 
 ### Added
 
