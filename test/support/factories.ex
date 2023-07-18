@@ -8,7 +8,7 @@ defmodule Lightning.Factories do
   def workflow_factory do
     %Lightning.Workflows.Workflow{
       project: build(:project),
-      name: sequence(:workflow_name, &"workflow-#{&1})")
+      name: sequence(:workflow_name, &"workflow-#{&1}")
     }
   end
 

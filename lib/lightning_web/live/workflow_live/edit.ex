@@ -12,10 +12,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
-  attr(:changeset, :map, required: true)
-  attr(:project_user, :map, required: true)
+  attr :changeset, :map, required: true
+  attr :project_user, :map, required: true
 
   def follow_run(attempt_run) do
     send(self(), {:follow_run, attempt_run})
@@ -27,7 +27,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       assigns
       |> assign(
         base_url:
-          ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}"
+          ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}",
+        workflow_form: to_form(assigns.changeset)
       )
 
     ~H"""
@@ -35,7 +36,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <:header>
         <LayoutComponents.header socket={@socket}>
           <:title>
-            <.workflow_name_field changeset={@changeset} />
+            <.workflow_name_field form={@workflow_form} />
           </:title>
           <.with_changes_indicator changeset={@changeset}>
             <Form.submit_button
@@ -79,16 +80,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
-              form={
-                to_form(@changeset) |> single_inputs_for(:jobs, @selected_job.id)
-              }
+              form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             />
           </div>
         </div>
         <.form
           :let={f}
           id="workflow-form"
-          for={@changeset}
+          for={@workflow_form}
           phx-submit="save"
           phx-hook="SubmitViaCtrlS"
           phx-change="validate"
@@ -282,30 +281,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
       |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
     end
     |> assign(page_title: "New Workflow")
-    |> unselect_all()
   end
 
   def apply_action(socket, :edit, %{"id" => workflow_id}) do
-    workflow =
-      case socket.assigns.workflow do
-        %{id: ^workflow_id} = workflow ->
-          workflow
+    case socket.assigns.workflow do
+      %{id: ^workflow_id} ->
+        socket
 
-        _ ->
-          # TODO we shouldn't be calling Repo from here
+      _ ->
+        # TODO we shouldn't be calling Repo from here
+        workflow =
           Workflows.get_workflow(workflow_id)
           |> Lightning.Repo.preload([
             :triggers,
             :edges,
             jobs: [:credential]
           ])
-      end
 
-    assign(socket,
-      page_title: "New Workflow"
-    )
-    |> assign_workflow(workflow)
-    |> unselect_all()
+        socket |> assign_workflow(workflow) |> assign(page_title: workflow.name)
+    end
   end
 
   @impl true
@@ -348,6 +342,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      socket
      |> apply_params(next_params)
+     |> mark_validated()
      |> push_patches_applied(initial_params)}
   end
 
@@ -379,6 +374,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:error, changeset} ->
           socket
           |> assign_changeset(changeset)
+          |> mark_validated()
           |> put_flash(:error, "Workflow could not be saved")
       end
       |> push_patches_applied(initial_params)
@@ -417,6 +413,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      socket
      |> apply_params(next_params)
+     |> mark_validated()
      |> push_patches_applied(initial_params)}
   end
 
@@ -487,7 +484,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # Prepare a new set of workflow params from the changeset
     workflow_params = changeset |> WorkflowParams.to_map()
 
-    socket |> assign(changeset: changeset, workflow_params: workflow_params)
+    socket
+    |> assign(
+      changeset: changeset,
+      workflow_params: workflow_params
+    )
   end
 
   defp push_patches_applied(socket, initial_params) do
@@ -548,6 +549,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:halt, [field, item]}
       end
     end)
+  end
+
+  defp mark_validated(socket) do
+    socket
+    |> assign(changeset: socket.assigns.changeset |> Map.put(:action, :validate))
   end
 
   defp box_loader(assigns) do

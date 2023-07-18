@@ -338,13 +338,13 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  attr :changeset, :map, required: true
+  attr :form, :map, required: true
 
   def workflow_name_field(assigns) do
     ~H"""
     <.form
       :let={f}
-      for={@changeset}
+      for={@form}
       phx-submit="save"
       phx-change="validate"
       id="workflow_name_form"

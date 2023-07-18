@@ -85,10 +85,24 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       workflow: workflow
     } do
-      {:ok, _view, html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
-      assert html =~ workflow.name
+      assert view |> page_title() =~ workflow.name
+
+      view |> fill_workflow_name("")
+
+      job_2 = workflow.jobs |> Enum.at(1)
+
+      view |> select_job(job_2)
+      view |> fill_job_fields(job_2, %{name: ""})
+
+      assert view |> job_form_has_error(job_2, "name", "can't be blank")
+      assert view |> save_is_disabled()
+
+      assert view |> fill_job_fields(job_2, %{name: "My Other Job"})
+
+      assert view |> save_is_disabled()
     end
 
     @tag role: :viewer

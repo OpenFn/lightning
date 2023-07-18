@@ -46,7 +46,6 @@ defmodule Lightning.Workflows.Workflow do
   def changeset(workflow, attrs) do
     workflow
     |> cast(attrs, [:name, :project_id])
-    |> validate_required([:name, :project_id])
     |> cast_assoc(:edges, with: &Edge.changeset/2)
     |> cast_assoc(:jobs, with: &Job.changeset/2)
     |> cast_assoc(:triggers, with: &Trigger.changeset/2)
