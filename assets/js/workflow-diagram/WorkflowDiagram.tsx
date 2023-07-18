@@ -88,7 +88,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
         if (layoutId) {
           chartCache.current.lastLayout = layoutId;
-          layout(newModel, setModel, flow, 200).then(positions => {
+          layout(newModel, setModel, flow, 300).then(positions => {
             // Note we don't update positions until the animation has finished
             chartCache.current.positions = positions;
           });

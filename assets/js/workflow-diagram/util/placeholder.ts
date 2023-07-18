@@ -16,7 +16,11 @@ export const add = (_model: Flow.Model, parentNode: Flow.Node) => {
   const targetId = crypto.randomUUID();
   newModel.nodes.push({
     id: targetId,
-    position: parentNode.position,
+    position: {
+      // Offset the position of the placeholder to be more pleasing during animation
+      x: parentNode.position.x,
+      y: parentNode.position.y + 100,
+    },
   });
 
   newModel.edges.push({
