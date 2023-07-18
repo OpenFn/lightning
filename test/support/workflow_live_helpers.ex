@@ -76,10 +76,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   def fill_job_fields(view, job, attrs) do
     job_id = Map.get(job, :id)
 
-    idx =
-      :sys.get_state(view.pid).socket.assigns.workflow_params
-      |> Map.get("jobs")
-      |> Enum.find_index(fn j -> j["id"] == job_id end)
+    idx = get_index_of_job(view, job)
 
     assert element(view, "[name^='workflow[jobs][#{idx}]']") |> has_element?(),
            "can find the job form for #{job_id}, got an index of #{inspect(idx)}"
@@ -126,6 +123,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> Lightning.Helpers.json_safe()
   end
 
+  def get_index_of_job(view, job) do
+    :sys.get_state(view.pid).socket.assigns.workflow_params
+    |> Map.get("jobs")
+    |> Enum.find_index(fn j -> j["id"] == job.id end)
+  end
+
   @doc """
   This helper replicates the data sent to the server when a new workflow is
   created, and the WorkflowDiagram component is mounted and determines the
@@ -166,6 +169,17 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   # Assertion Helpers
+
+  def job_form_has_error(view, job, field, error) do
+    idx = get_index_of_job(view, job)
+
+    view
+    |> element(
+      "#job-pane-#{job.id} [phx-feedback-for='workflow[jobs][#{idx}][#{field}]']",
+      error
+    )
+    |> has_element?()
+  end
 
   def has_pending_changes(view) do
     view |> element("[data-is-dirty]") |> has_element?()

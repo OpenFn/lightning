@@ -114,12 +114,24 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   end
 
   defp to_serializable(changeset = %Ecto.Changeset{}, fields) do
-    to_serializable(changeset |> Ecto.Changeset.apply_changes(), fields)
+    model = changeset |> Ecto.Changeset.apply_changes()
+
+    # validate_required drops changes when they invalid, we need to maintain
+    # them so that our form doesn't forget the changes made by the user.
+    fields_dropped_by_required =
+      (changeset.params || %{})
+      |> Map.filter(fn {skey, _val} ->
+        key = String.to_atom(skey)
+        key in changeset.required
+      end)
+
+    to_serializable(model, fields)
     |> Map.put(
       :errors,
       Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
       |> Map.take(fields)
     )
+    |> Map.merge(fields_dropped_by_required)
   end
 
   defp to_serializable(%{__struct__: model} = data, fields) do
