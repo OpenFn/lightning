@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { Position, NodeProps } from 'reactflow';
 import Node from './Node';
-import PlusButton from './PlusButton';
+import PlusButton from '../components/PlusButton';
 import getAdaptorName from '../util/get-adaptor-name';
 import * as icons from '../components/adaptor-icons';
 

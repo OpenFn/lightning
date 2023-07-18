@@ -1,17 +1,9 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
   NodeChange,
   ReactFlowInstance,
   ReactFlowProvider,
   applyNodeChanges,
-  applyEdgeChanges,
-  EdgeSelectionChange,
 } from 'reactflow';
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
@@ -26,11 +18,10 @@ import throttle from './util/throttle';
 import toWorkflow from './util/to-workflow';
 import updateSelectionStyles from './util/update-selection';
 import { FIT_DURATION, FIT_PADDING } from './constants';
+import shouldLayout from './util/should-layout';
 
 import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
-import shouldLayout from './util/should-layout';
-import { styleEdge } from './styles';
 
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
@@ -92,8 +83,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
             chartCache.current.positions = positions;
           });
         } else {
-          // If layout is skippe,d ensure nodes have positions
-          // (this is really only needed when there's a single trigger node)
+          // If layout is id, ensure nodes have positions
+          // This is really only needed when there's a single trigger node
           newModel.nodes.forEach(n => {
             if (!n.position) {
               n.position = { x: 0, y: 0 };
@@ -178,8 +169,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const commitPlaceholder = useCallback(
       (evt: CustomEvent<any>) => {
         const { id, name } = evt.detail;
-        // Select the placeholder on next render
-        chartCache.current.deferSelection = id;
 
         // Update the store
         change({
