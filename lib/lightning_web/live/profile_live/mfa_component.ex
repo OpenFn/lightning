@@ -23,7 +23,9 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
   @impl true
   def handle_event("show-mfa-options", _params, %{assigns: assigns} = socket) do
     app = "OpenFn"
-    secret = NimbleTOTP.secret()
+    # added to allow testing. We need the secret to generate a valid code
+    totp_client = Application.get_env(:lightning, :totp_client, NimbleTOTP)
+    secret = totp_client.secret()
 
     qrcode_uri =
       NimbleTOTP.otpauth_uri("#{app}:#{assigns.user.email}", secret, issuer: app)
@@ -55,7 +57,7 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
       {:ok, _totp} ->
         {:noreply,
          socket
-         |> put_flash(:info, "2FA Enabled successfully!")
+         |> put_flash(:info, "MFA Setup successfully!")
          |> push_navigate(to: ~p"/profile")}
 
       {:error, changeset} ->
@@ -70,7 +72,7 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
       {:ok, _totp} ->
         {:noreply,
          socket
-         |> put_flash(:info, "2FA Disabled successfully!")
+         |> put_flash(:info, "MFA Disabled successfully!")
          |> push_navigate(to: ~p"/profile")}
 
       {:error, _reason} ->

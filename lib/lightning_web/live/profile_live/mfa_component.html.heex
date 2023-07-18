@@ -13,6 +13,7 @@
         </span>
       </span>
       <button
+        id="toggle-mfa-switch"
         type="button"
         class={"#{if @show, do: "bg-indigo-600", else: "bg-gray-200"} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"}
         role="switch"
@@ -37,8 +38,9 @@
 
     <div :if={@current_totp && is_nil(@editing_totp)} class="">
       <div class="py-5 text-sm">
-        You've configured an authentication app to get two-factor authentication codes.
+        You have configured an authentication app to get two-factor authentication codes.
         <a
+          id="setup_another_totp_device"
           href="#"
           phx-click="show-mfa-options"
           phx-target={@myself}
@@ -110,6 +112,7 @@
             </div>
             <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
               <button
+                id="disable_mfa_button"
                 type="button"
                 phx-click="disable_mfa"
                 phx-target={@myself}
@@ -164,6 +167,7 @@
         </p>
         <.form
           :let={f}
+          id="set_totp_form"
           for={@totp_changeset}
           phx-submit="save_totp"
           phx-target={@myself}
