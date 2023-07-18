@@ -78,7 +78,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     useEffect(() => {
       const { positions, selectedId } = chartCache.current;
       const newModel = fromWorkflow(workflow, positions, selectedId);
-
       //console.log('UPDATING WORKFLOW', newModel, selectedId);
       if (flow && newModel.nodes.length) {
         const layoutId = shouldLayout(
@@ -93,6 +92,13 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
             chartCache.current.positions = positions;
           });
         } else {
+          // If layout is skippe,d ensure nodes have positions
+          // (this is really only needed when there's a single trigger node)
+          newModel.nodes.forEach(n => {
+            if (!n.position) {
+              n.position = { x: 0, y: 0 };
+            }
+          });
           setModel(newModel);
         }
       } else {
