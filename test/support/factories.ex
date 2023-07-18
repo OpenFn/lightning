@@ -90,31 +90,64 @@ defmodule Lightning.Factories do
   def with_job(workflow, job) do
     %{
       workflow
-      | jobs: [%{job | workflow: nil}]
+      | jobs: merge_assoc(workflow.jobs, merge_attributes(job, %{workflow: nil}))
     }
   end
 
   def with_trigger(workflow, trigger) do
     %{
       workflow
-      | triggers: [%{trigger | workflow: nil}]
+      | triggers: merge_assoc(workflow.triggers, %{trigger | workflow: nil})
     }
   end
 
-  def with_edge(workflow, {%Lightning.Jobs.Trigger{} = trigger, job}) do
+  def with_edge(workflow, source_target, extra \\ %{})
+
+  def with_edge(
+        workflow,
+        {%Lightning.Jobs.Job{} = source_job, target_job},
+        extra
+      ) do
     %{
       workflow
-      | edges: [
-          %{
-            id: Ecto.UUID.generate(),
-            source_trigger_id: trigger.id,
-            target_job_id: job.id
-          }
-        ]
+      | edges:
+          merge_assoc(
+            workflow.edges,
+            Enum.into(extra, %{
+              id: Ecto.UUID.generate(),
+              source_job_id: source_job.id,
+              target_job_id: target_job.id
+            })
+          )
+    }
+  end
+
+  def with_edge(workflow, {%Lightning.Jobs.Trigger{} = trigger, job}, extra) do
+    %{
+      workflow
+      | edges:
+          merge_assoc(
+            workflow.edges,
+            Enum.into(extra, %{
+              id: Ecto.UUID.generate(),
+              source_trigger_id: trigger.id,
+              target_job_id: job.id
+            })
+          )
     }
   end
 
   def with_project_user(%Lightning.Projects.Project{} = project, user, role) do
     %{project | project_users: [%{user: user, role: role}]}
+  end
+
+  defp merge_assoc(left, right) do
+    case left do
+      %Ecto.Association.NotLoaded{} ->
+        [right]
+
+      left when is_list(left) ->
+        Enum.concat(left, List.wrap(right))
+    end
   end
 end
