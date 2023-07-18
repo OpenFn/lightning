@@ -243,14 +243,25 @@ defmodule LightningWeb.Components.Form do
     ]
 
     input_classes = ~w[
-      mt-1
-      focus:ring-primary-500
-      focus:border-primary-500
-      block w-full
-      shadow-sm
-      sm:text-sm
-      border-secondary-300
+      block
+      w-full
       rounded-md
+      border-0
+      py-1.5
+      text-gray-900
+      shadow-sm
+      ring-1
+      ring-gray-300
+      placeholder:text-gray-400
+      focus:ring-2
+      focus:ring-inset
+      focus:ring-indigo-600
+      disabled:cursor-not-allowed
+      disabled:bg-gray-50
+      disabled:text-gray-500
+      disabled:ring-gray-200
+      sm:text-sm
+      sm:leading-6
     ]
 
     assigns =
@@ -296,13 +307,16 @@ defmodule LightningWeb.Components.Form do
 
   def check_box(assigns) do
     checkbox_classes = ~w[
-      "focus:ring-primary-500
+      focus:ring-primary-500
       h-4
       w-4
       text-primary-600
       text-sm
       border-secondary-300
       rounded
+      disabled:bg-gray-300
+      focus:disabled:ring-gray-300
+      disabled:text-gray-300
     ]
 
     error_tag_classes = ~w[
@@ -405,6 +419,7 @@ defmodule LightningWeb.Components.Form do
       focus:ring
       focus:ring-primary-200
       focus:ring-opacity-50
+      disabled:cursor-not-allowed
     ]
 
     opts =
@@ -430,6 +445,7 @@ defmodule LightningWeb.Components.Form do
       focus:ring
       focus:ring-primary-200
       focus:ring-opacity-50
+      disabled:cursor-not-allowed
     ]
 
     opts = assigns_to_attributes(assigns) ++ [class: select_classes]

@@ -111,9 +111,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       project: project,
       workflow: workflow
     } do
-      {:ok, _view, _html} =
+      {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
+      job_1 = workflow.jobs |> Enum.at(0)
+
+      view |> select_job(job_1)
+
+      assert view |> input_is_disabled(job_1, "name")
+
+      # TODO: live-components are disabled
+      # TODO: validate callback won't accept changes
+      # TODO: form-changed won't accept changes
       flunk("TODO: test that viewers can't edit workflows")
     end
   end
