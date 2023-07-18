@@ -342,7 +342,13 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def workflow_name_field(assigns) do
     ~H"""
-    <.form :let={f} for={@changeset} phx-submit="save" phx-change="validate">
+    <.form
+      :let={f}
+      for={@changeset}
+      phx-submit="save"
+      phx-change="validate"
+      id="workflow_name_form"
+    >
       <div class="relative">
         <%= text_input(
           f,

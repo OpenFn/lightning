@@ -11,10 +11,26 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_patch("?s=#{job.id}")
   end
 
+  def select_first_job(view) do
+    job =
+      %{id: id} =
+      :sys.get_state(view.pid).socket.assigns.changeset
+      |> Ecto.Changeset.get_assoc(:jobs, :struct)
+      |> List.first()
+
+    {job, 0, view |> render_patch("?s=#{id}")}
+  end
+
   def click_edit(view, job) do
     view
     |> element("#job-pane-#{job.id} a[href*='m=expand']")
     |> render_click()
+  end
+
+  def click_save(view) do
+    view
+    |> element("#workflow-form")
+    |> render_submit()
   end
 
   def click_workflow_card(view, workflow) do
@@ -35,11 +51,57 @@ defmodule Lightning.WorkflowLive.Helpers do
     link |> render_click()
   end
 
+  def change_editor_text(view, text) do
+    view
+    |> element("[phx-hook='JobEditor']")
+    |> render_hook(:job_body_changed, %{source: text})
+  end
+
+  @doc """
+  This helper is used to fill in the form fields for a given job.
+  Internally it looks up the index of the job in the workflow_params
+  which is what the form uses to identify the job.
+
+  If the job or it's corresponding form elements are not found,
+  an assertian error is raised.
+
+  **NOTE** this helper _only_ fills in fields available on the job panel, fields
+  such as the job's body are not available here.
+
+  ## Examples
+
+      view
+      |> fill_job_fields(%{id: job.id}, %{name: "My Job"})
+  """
+  def fill_job_fields(view, job, attrs) do
+    job_id = Map.get(job, :id)
+
+    idx =
+      :sys.get_state(view.pid).socket.assigns.workflow_params
+      |> Map.get("jobs")
+      |> Enum.find_index(fn j -> j["id"] == job_id end)
+
+    assert element(view, "[name^='workflow[jobs][#{idx}]']") |> has_element?(),
+           "can find the job form for #{job_id}, got an index of #{inspect(idx)}"
+
+    view
+    |> form("#workflow-form", %{
+      "workflow" => %{"jobs" => %{to_string(idx) => attrs}}
+    })
+    |> render_change()
+  end
+
   def add_node_from(view, _node) do
     # TODO: how should we add nodes, we probably should be using the json patch
     # hooks/events here.
     view
     |> editor_element()
+  end
+
+  def fill_workflow_name(view, name) do
+    view
+    |> element("#workflow_name_form")
+    |> render_change(%{"workflow" => %{"name" => name}})
   end
 
   # Internal Interaction Helpers
@@ -104,6 +166,16 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   # Assertion Helpers
+
+  def has_pending_changes(view) do
+    view |> element("[data-is-dirty]") |> has_element?()
+  end
+
+  def save_is_disabled(view) do
+    view
+    |> element("button[type='submit'][form='workflow-form'][disabled]")
+    |> has_element?()
+  end
 
   def has_workflow_edit_container?(view, workflow) do
     view
