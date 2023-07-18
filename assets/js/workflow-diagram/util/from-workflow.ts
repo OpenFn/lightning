@@ -1,10 +1,10 @@
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Lightning, Flow, Positions } from '../types';
 import { identify, isPlaceholder } from './placeholder';
+import { styleEdge } from '../styles';
 
 function getEdgeLabel(condition: string) {
   if (condition) {
-    console.log(condition);
     if (condition === 'on_job_success') {
       return '✓';
     }
@@ -19,12 +19,10 @@ function getEdgeLabel(condition: string) {
   }
 }
 
-// TODO separate structural stuff (labels, selected, position)
-// from style stuff, and move the style functions somewhere obvious
 const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
-  selectedNodeId?: string
+  selectedId?: string
 ): Flow.Model => {
   if (workflow.jobs.length == 0) {
     return { nodes: [], edges: [] };
@@ -47,7 +45,7 @@ const fromWorkflow = (
         },
       };
 
-      if (item.id === selectedNodeId) {
+      if (item.id === selectedId) {
         model.selected = true;
       } else {
         model.selected = false;
@@ -76,34 +74,15 @@ const fromWorkflow = (
         const edge = item as Lightning.Edge;
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
-        // TODO I don't like all this style stuff being buried in this file
-        // Feels like hte wrong place for cosmetic stuff
-        // model.labelBgStyle = {
-        //   fill: 'rgb(243, 244, 246)',
-        // };
         model.type = 'step';
+        model.label = getEdgeLabel(edge.condition);
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
           height: 32,
         };
-        if (isPlaceholder(item)) {
-          model.style = {
-            strokeDasharray: '4, 4',
-            stroke: 'rgb(99, 102, 241, 0.3)',
-            strokeWidth: '1.5px',
-          };
-        }
-        // all edge labels are circles
-        // with tick, cross, infinity or {}
-        model.label = getEdgeLabel(edge.condition);
-        // model.labelBgPadding = [12, 8];
-        // model.labelBgStyle = {
-        //   stroke: '#b1b1b7',
-        //   strokeWidth: 2,
-        //   fill: 'white',
-        // };
-        // model.labelBgBorderRadius = 16;
+
+        styleEdge(model);
       }
 
       collection.push(model);

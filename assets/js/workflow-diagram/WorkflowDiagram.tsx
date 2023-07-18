@@ -24,11 +24,13 @@ import fromWorkflow from './util/from-workflow';
 import * as placeholder from './util/placeholder';
 import throttle from './util/throttle';
 import toWorkflow from './util/to-workflow';
+import updateSelectionStyles from './util/update-selection';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 
 import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
 import shouldLayout from './util/should-layout';
+import { styleEdge } from './styles';
 
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
@@ -113,30 +115,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
           chartCache.current.selectedId = id;
           onSelectionChange(id);
 
-          const changes: EdgeSelectionChange[] = [];
-
-          // Manually re-render to correctly draw styles
-          // (sadly the custom edge label is quite slow to update)
-          if (id) {
-            // TODO is it an edge or a node?
-            changes.push({
-              id,
-              type: 'select',
-              selected: true,
-            });
-          }
-          if (selectedId) {
-            // safe to do this if it's a node...? seems ok
-            changes.push({
-              id: selectedId,
-              type: 'select',
-              selected: false,
-            });
-          }
-          // If an edge is already selected, deselect it
-          // (this works around a react-flow bug too)
-          const newEdges = applyEdgeChanges(changes, model.edges);
-          setModel({ nodes: model.nodes, edges: newEdges });
+          const updatedModel = updateSelectionStyles(model, id);
+          setModel(updatedModel);
         }
       },
       [onSelectionChange, model]

@@ -13,7 +13,7 @@ function PlusButton() {
         viewBox="0 0 24 24"
         strokeWidth="1.5"
         stroke="currentColor"
-        className="w-3 h-3"
+        className="w-5 h-5"
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
       </svg>
