@@ -19,16 +19,10 @@ const CustomEdge: FC<EdgeProps> = props => {
   } = props;
   const { label, ...stepEdgeProps } = props;
 
-  // TODO surely we can use a simpler calculation here?
-  const [_path, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-
+  // Simply label position calculation
+  // If this breaks down, use getBezierPath from https://reactflow.dev/docs/examples/edges/custom-edge/
+  const labelX = (sourceX + targetX) / 2;
+  const labelY = (sourceY + targetY) / 2;
   return (
     <>
       <StepEdge {...stepEdgeProps} />
