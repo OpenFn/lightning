@@ -3,7 +3,7 @@ import { Position } from 'reactflow';
 import { ClockIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import cronstrue from 'cronstrue';
 
-import PlusButton from './PlusButton';
+import PlusButton from '../components/PlusButton';
 import Node from './Node';
 import type { Lightning } from '../types';
 

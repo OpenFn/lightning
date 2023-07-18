@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
-import Shape from './shapes';
+import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
