@@ -232,17 +232,25 @@ defmodule Lightning.WorkflowLive.Helpers do
   def create_workflow(%{project: project}) do
     trigger = build(:trigger, type: :webhook)
 
-    job =
+    job_1 =
       build(:job,
         body: ~s[fn(state => { return {...state, extra: "data"} })],
         name: "First Job"
       )
 
+    job_2 =
+      build(:job,
+        body: ~s[fn(state => { return {...state, extra: "data"} })],
+        name: "Second Job"
+      )
+
     workflow =
       build(:workflow, project: project)
-      |> with_job(job)
+      |> with_job(job_1)
       |> with_trigger(trigger)
-      |> with_edge({trigger, job})
+      |> with_edge({trigger, job_1})
+      |> with_job(job_2)
+      |> with_edge({job_1, job_2}, %{condition: :on_job_success})
       |> insert()
 
     %{workflow: workflow |> Lightning.Repo.preload([:jobs, :triggers, :edges])}
