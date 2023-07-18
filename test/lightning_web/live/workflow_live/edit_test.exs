@@ -46,7 +46,25 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
-      flunk("TODO: test interacting with the editor and saving")
+      view |> fill_workflow_name("My Workflow")
+
+      assert view |> save_is_disabled()
+
+      {job, _, _} = view |> select_first_job()
+
+      view |> fill_job_fields(job, %{name: "My Job"})
+
+      view |> click_edit(job)
+
+      view |> change_editor_text("some body")
+
+      refute view |> save_is_disabled()
+
+      assert view |> has_pending_changes()
+
+      view |> click_save()
+
+      refute view |> has_pending_changes()
     end
 
     @tag role: :viewer

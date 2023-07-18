@@ -17,4 +17,17 @@ defmodule Lightning.LiveViewHelpers do
       end
     end)
   end
+
+  @doc """
+  Get the assigns for a given LiveView process
+
+  ## Examples
+
+      {:ok, view, _html} = live(conn, ~p"/projects")
+      view |> get_assigns()
+      # => %{ ... }
+  """
+  def get_assigns(live) do
+    :sys.get_state(live.pid).socket.assigns
+  end
 end
