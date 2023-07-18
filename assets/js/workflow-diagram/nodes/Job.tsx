@@ -1,5 +1,5 @@
-import React, { memo, useState } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import React, { memo } from 'react';
+import { Position, NodeProps } from 'reactflow';
 import Node from './Node';
 import PlusButton from './PlusButton';
 import getAdaptorName from '../util/get-adaptor-name';
@@ -34,7 +34,7 @@ JobNode.displayName = 'JobNode';
 
 export default memo(JobNode);
 
-function getAdaptorIcon(adaptor) {
+function getAdaptorIcon(adaptor: string) {
   // TODO how will we do this?
   if (adaptor === 'dhis2') {
     return icons.dhis2;

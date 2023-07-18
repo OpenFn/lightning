@@ -8,9 +8,6 @@
 import { Flow } from './types';
 import { isPlaceholder } from './util/placeholder';
 
-// TODO should these be driven by tailwind?
-// These are copies of the react-flow defaults, changing
-// them here won't change the edge colour (but it should!)
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
 

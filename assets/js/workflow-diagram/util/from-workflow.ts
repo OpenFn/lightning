@@ -1,4 +1,3 @@
-import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 import { Lightning, Flow, Positions } from '../types';
 import { identify, isPlaceholder } from './placeholder';
 import { styleEdge } from '../styles';
@@ -14,9 +13,9 @@ function getEdgeLabel(condition: string) {
     if (condition === 'always') {
       return '∞';
     }
-    // some code expression
-    return '{}';
   }
+  // some code expression
+  return '{}';
 }
 
 const fromWorkflow = (
@@ -72,7 +71,7 @@ const fromWorkflow = (
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge.condition);
+        model.label = getEdgeLabel(edge.condition ?? 'always');
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
