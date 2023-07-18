@@ -1,65 +1,27 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
-import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
+import Shape from './shapes';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
 
 type NodeData = any;
 
-const Circle = ({ width, height, styles, strokeWidth }) => (
-  <ellipse
-    // Note we have to offset the x/y position by the stroke width or the stroke will clip outside the canvas
-    cx={strokeWidth + width / 2}
-    cy={strokeWidth + height / 2}
-    rx={width / 2}
-    ry={height / 2}
-    strokeWidth={strokeWidth}
-    {...styles}
-  />
-);
-
-const Rect = ({ width, height, styles, strokeWidth }) => (
-  <rect
-    // Note we have to offset the x/y position by the stroke width or the stroke will clip outside the canvas
-    x={strokeWidth}
-    y={strokeWidth}
-    rx={16}
-    width={width}
-    height={height}
-    strokeWidth={strokeWidth}
-    {...styles}
-  />
-);
-
-const Shape = ({ shape, width, height, strokeWidth, styles }) => {
-  if (shape === 'circle') {
-    return (
-      <Circle
-        width={width}
-        height={height}
-        styles={styles}
-        strokeWidth={strokeWidth}
-      />
-    );
-  } else {
-    return (
-      <Rect
-        width={width}
-        height={height}
-        styles={styles}
-        strokeWidth={strokeWidth}
-      />
-    );
-  }
+type BaseNodeProps = NodeProps<NodeData> & {
+  shape?: 'circle' | 'rect';
+  icon?: string;
+  label?: string;
+  sublabel?: string;
+  toolbar?: any;
 };
 
-const Label = ({ children }) => {
-  if (children && children.length) {
+const Label = ({ children }: React.PropsWithChildren) => {
+  if (children && (children as any).length) {
     return <p className="line-clamp-2 align-left text-m">{children}</p>;
   }
   return null;
 };
-const SubLabel = ({ children }) => {
-  if (children && children.length) {
+
+const SubLabel = ({ children }: React.PropsWithChildren) => {
+  if (children && (children as any).length) {
     return (
       <p className="line-clamp-2 align-left text-sm text-slate-500">
         {children}
@@ -70,29 +32,19 @@ const SubLabel = ({ children }) => {
 };
 
 const Node = ({
-  labelClass = '',
-  tooltip,
-  interactive = true,
-  data,
-  shape,
+  // standard  react flow stuff
   isConnectable,
   selected,
   targetPosition,
   sourcePosition,
+
+  // custom stuff
   toolbar,
-
-  // New stuff we need to support
-  icon, // displayed inside the SVG shape
-  // Is this a string? A component?
-  status, // [ok | error | warning, message]. Passed into a status widget
-
-  // title and subtitle?
-  // name and adaptor?
-  // I think I prefer this to be generic
+  shape,
   label, // main label which appears to the right
   sublabel, // A smaller label to the right
-}: NodeProps<NodeData>) => {
-  // Values to control the svg shape
+  icon, // displayed inside the SVG shape
+}: BaseNodeProps) => {
   const { width, height, anchorx, strokeWidth, style } =
     nodeIconStyles(selected);
 
@@ -167,7 +119,6 @@ const Node = ({
                     opacity-0  group-hover:opacity-100
                     transition duration-150 ease-in-out"
         >
-          {/* TODO don't show this if ths node already has a placeholder child */}
           {toolbar()}
         </div>
       )}
@@ -175,6 +126,6 @@ const Node = ({
   );
 };
 
-Node.displayName = 'JobNode';
+Node.displayName = 'Node';
 
 export default memo(Node);
