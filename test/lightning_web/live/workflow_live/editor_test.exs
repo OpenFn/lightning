@@ -17,7 +17,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
     job = workflow.jobs |> List.first()
 
-    view |> select_job(job)
+    view |> select_node(job)
 
     view |> job_panel_element(job)
 
