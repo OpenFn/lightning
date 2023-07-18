@@ -167,7 +167,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         chartCache.current.positions[newNode.id] = newNode.position;
         // Mark the new node as selected for the next render
         chartCache.current.selectedId = newNode.id;
-        onSelectionChange(undefined);
+        onSelectionChange(newNode.id);
 
         // Push the changes
         add(toWorkflow(diff));
