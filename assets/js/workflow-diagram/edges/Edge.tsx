@@ -1,22 +1,9 @@
 import React, { FC } from 'react';
-import {
-  StepEdge,
-  EdgeProps,
-  getBezierPath,
-  EdgeLabelRenderer,
-} from 'reactflow';
+import { StepEdge, EdgeProps, EdgeLabelRenderer } from 'reactflow';
 import { labelStyles } from '../styles';
 
 const CustomEdge: FC<EdgeProps> = props => {
-  const {
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    selected,
-  } = props;
+  const { sourceX, sourceY, targetX, targetY, selected } = props;
   const { label, ...stepEdgeProps } = props;
 
   // Simply label position calculation
