@@ -26,7 +26,7 @@ import type { Flow, Positions } from './types';
 type WorkflowDiagramProps = {
   onSelectionChange: (id?: string) => void;
   store: StoreApi<WorkflowState>;
-  initialSelection?: string;
+  initialSelection?: string | null;
 };
 
 type ChartCache = {

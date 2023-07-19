@@ -7,7 +7,7 @@ import WorkflowDiagram from '../workflow-diagram/WorkflowDiagram';
 type Store = ReturnType<typeof createWorkflowStore>;
 
 export function mount(
-  el: Element | DocumentFragment,
+  el: HTMLElement,
   workflowStore: Store,
   onSelectionChange: (id?: string) => void
 ) {
@@ -18,10 +18,8 @@ export function mount(
   }
 
   let initialSelection;
-  const hash = window.location.hash;
-  if (hash && hash.match('id=')) {
-    initialSelection = hash.split('id=')[1];
-  }
+  const currentUrl = new URL(window.location.href);
+  initialSelection = currentUrl.searchParams.get('s');
 
   componentRoot.render(
     <WorkflowDiagram
