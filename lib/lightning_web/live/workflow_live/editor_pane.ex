@@ -1,6 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
-  import LightningWeb.JobLive.JobBuilderComponents
+  alias LightningWeb.JobLive.JobBuilderComponents
 
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
@@ -14,7 +14,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   def render(assigns) do
     ~H"""
     <div class={@class} id={@id}>
-      <.job_editor_component
+      <JobBuilderComponents.job_editor_component
         adaptor={@adaptor}
         source={@source}
         id={"job-editor-#{@job_id}"}
@@ -34,7 +34,10 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
     socket =
       socket
       |> assign(
-        adaptor: form |> input_value(:adaptor),
+        adaptor:
+          form
+          |> input_value(:adaptor)
+          |> Lightning.AdaptorRegistry.resolve_adaptor(),
         source: form |> input_value(:body),
         credential: form |> input_value(:credential),
         job_id: form |> input_value(:id)

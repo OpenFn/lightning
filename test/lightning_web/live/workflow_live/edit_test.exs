@@ -54,6 +54,10 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> fill_job_fields(job, %{name: "My Job"})
 
+      refute view |> element("#adaptor-version option[selected]") |> render() =~
+               ~r(value="@openfn/[a-z-]+@latest"),
+             "should not have @latest selected by default"
+
       view |> click_edit(job)
 
       view |> change_editor_text("some body")

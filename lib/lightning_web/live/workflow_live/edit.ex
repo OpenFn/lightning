@@ -474,6 +474,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket.assigns.workflow
       |> Workflow.changeset(
         params
+        |> set_default_adaptors()
         |> Map.put("project_id", socket.assigns.project.id)
       )
 
@@ -527,6 +528,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> push_event("patches-applied", %{patches: patches})
+  end
+
+  # In situations where a new job is added, specifically by the WorkflowDiagram
+  # component, the job will not have an adaptor set. This function will set the
+  # adaptor to the current latest version of the adaptor, instead of the
+  # `@latest` version.
+  defp set_default_adaptors(params) do
+    case params do
+      %{"jobs" => _} ->
+        params
+        |> Map.update!("jobs", fn jobs ->
+          jobs
+          |> Enum.map(fn job ->
+            if Map.keys(job) == ["id"] do
+              job
+              |> Map.put(
+                "adaptor",
+                Lightning.AdaptorRegistry.resolve_adaptor(%Job{}.adaptor)
+              )
+            else
+              job
+            end
+          end)
+        end)
+
+      _ ->
+        params
+    end
   end
 
   defp unselect_all(socket) do
