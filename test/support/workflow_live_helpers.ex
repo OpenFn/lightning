@@ -4,6 +4,8 @@ defmodule Lightning.WorkflowLive.Helpers do
   import Lightning.Factories
   import ExUnit.Assertions
 
+  alias Lightning.Jobs.Job
+
   # Interaction Helpers
 
   def select_job(view, job) do
@@ -33,6 +35,15 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_submit()
   end
 
+  def click_close_error_flash(view) do
+    view |> render_click("lv:clear-flash", %{key: "error"})
+
+    refute view
+           |> has_element?(
+             "div[phx-click='lv:clear-flash'][phx-value-key='error']"
+           )
+  end
+
   def click_workflow_card(view, workflow) do
     view |> workflow_card(workflow) |> render_click()
   end
@@ -55,6 +66,30 @@ defmodule Lightning.WorkflowLive.Helpers do
     view
     |> element("[phx-hook='JobEditor']")
     |> render_hook(:job_body_changed, %{source: text})
+  end
+
+  @doc """
+  These helpers are used to force events on the workflow form.
+  The buttons should be disabled, but a user could still force a save
+  by sending a hand-crafted message via the socket.
+  """
+  def force_event(view, :save) do
+    view |> render_submit(:save, %{workflow: %{name: "New Name"}})
+  end
+
+  def force_event(view, :form_changed) do
+    view.pid |> send({"form_changed", %{"workflow" => %{"name" => "New Name"}}})
+    render(view)
+  end
+
+  def force_event(view, :validate) do
+    view
+    |> render_click("validate", %{workflow: %{name: "New Name"}})
+  end
+
+  def force_event(view, :delete_node, job) do
+    view
+    |> render_click("delete_node", %{id: job.id})
   end
 
   @doc """
@@ -185,19 +220,30 @@ defmodule Lightning.WorkflowLive.Helpers do
     view |> element("[data-is-dirty]") |> has_element?()
   end
 
-  def save_is_disabled(view) do
+  def save_is_disabled?(view) do
     view
     |> element("button[type='submit'][form='workflow-form'][disabled]")
     |> has_element?()
   end
 
-  def input_is_disabled(view, job, field) do
+  def input_is_disabled?(view, %Job{} = job, field) do
     idx = get_index_of_job(view, job)
 
     view
-    |> element(
-      "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]'][disabled]"
+    |> input_is_disabled?(
+      "#job-pane-#{job.id} [name='workflow[jobs][#{idx}][#{field}]']"
     )
+  end
+
+  def input_is_disabled?(view, selector) do
+    view
+    |> element("#{selector}[disabled]")
+    |> has_element?()
+  end
+
+  def delete_job_button_is_disabled?(view, %Job{} = job) do
+    view
+    |> element("#job-pane-#{job.id} button[phx-click='delete_node'][disabled]")
     |> has_element?()
   end
 
