@@ -8,19 +8,27 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   # Interaction Helpers
 
-  def select_job(view, job) do
+  def select_node(view, node) do
     view
-    |> render_patch("?s=#{job.id}")
+    |> render_patch("?s=#{node.id}")
   end
 
   def select_first_job(view) do
     job =
-      %{id: id} =
       :sys.get_state(view.pid).socket.assigns.changeset
       |> Ecto.Changeset.get_assoc(:jobs, :struct)
       |> List.first()
 
-    {job, 0, view |> render_patch("?s=#{id}")}
+    {job, 0, view |> select_node(job)}
+  end
+
+  def select_trigger(view) do
+    trigger =
+      :sys.get_state(view.pid).socket.assigns.changeset
+      |> Ecto.Changeset.get_assoc(:triggers, :struct)
+      |> List.first()
+
+    {trigger, 0, view |> select_node(trigger)}
   end
 
   def click_edit(view, job) do

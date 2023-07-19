@@ -39,14 +39,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <.workflow_name_field form={@workflow_form} />
           </:title>
           <.with_changes_indicator changeset={@changeset}>
-            <Form.submit_button
-              class=""
-              phx-disable-with="Saving..."
-              disabled={!@can_edit_job or !@changeset.valid?}
-              form="workflow-form"
-            >
-              Save
-            </Form.submit_button>
+            <div class="flex flex-row gap-2">
+              <Heroicons.lock_closed
+                :if={!@can_edit_job}
+                class="w-5 h-5 place-self-center text-gray-300"
+              />
+              <Form.submit_button
+                class=""
+                phx-disable-with="Saving..."
+                disabled={!@can_edit_job or !@changeset.valid?}
+                form="workflow-form"
+              >
+                Save
+              </Form.submit_button>
+            </div>
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
