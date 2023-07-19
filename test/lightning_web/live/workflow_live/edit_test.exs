@@ -94,7 +94,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       job_2 = workflow.jobs |> Enum.at(1)
 
-      view |> select_job(job_2)
+      view |> select_node(job_2)
       view |> fill_job_fields(job_2, %{name: ""})
 
       assert view |> job_form_has_error(job_2, "name", "can't be blank")
@@ -114,10 +114,18 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       {:ok, view, _html} =
         live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
+      view |> select_node(workflow.triggers |> Enum.at(0))
+
+      assert view |> input_is_disabled?("[name='workflow[triggers][0][type]']")
+
+      view |> select_node(workflow.edges |> Enum.at(0))
+
+      assert view |> input_is_disabled?("[name='workflow[edges][0][condition]']")
+
       assert view |> save_is_disabled?()
       job_1 = workflow.jobs |> Enum.at(0)
 
-      view |> select_job(job_1)
+      view |> select_node(job_1)
 
       assert view |> input_is_disabled?(job_1, "name")
 
@@ -147,8 +155,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> force_event(:validate) =~
                "You are not authorized to perform this action."
-
-      flunk("TODO: test that viewers can't edit triggers or edges")
     end
   end
 end
