@@ -34,7 +34,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header socket={@socket}>
+        <LayoutComponents.header current_user={@current_user}>
           <:title>
             <.workflow_name_field form={@workflow_form} />
           </:title>

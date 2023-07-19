@@ -52,7 +52,7 @@ defmodule LightningWeb.DashboardLive.Index do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header socket={@socket} current_user={@current_user}>
+        <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
         </LayoutComponents.header>
       </:header>
