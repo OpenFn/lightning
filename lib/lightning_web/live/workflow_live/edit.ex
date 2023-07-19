@@ -42,7 +42,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             <Form.submit_button
               class=""
               phx-disable-with="Saving..."
-              disabled={!@changeset.valid?}
+              disabled={!@can_edit_job or !@changeset.valid?}
               form="workflow-form"
             >
               Save
@@ -131,6 +131,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         color="red"
                         phx-click="delete_node"
                         phx-value-id={@selected_job.id}
+                        disabled={!@can_edit_job}
                       >
                         Delete
                       </Common.button>
@@ -317,74 +318,82 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("delete_node", %{"id" => id}, socket) do
-    %{changeset: changeset, workflow_params: initial_params} = socket.assigns
+    %{
+      changeset: changeset,
+      workflow_params: initial_params,
+      can_edit_job: can_edit_job
+    } = socket.assigns
 
-    edges_to_delete =
-      Ecto.Changeset.get_assoc(changeset, :edges, :struct)
-      |> Enum.filter(&(&1.target_job_id == id))
+    if can_edit_job do
+      edges_to_delete =
+        Ecto.Changeset.get_assoc(changeset, :edges, :struct)
+        |> Enum.filter(&(&1.target_job_id == id))
 
-    next_params =
-      Map.update!(initial_params, "edges", fn edges ->
-        edges
-        |> Enum.reject(fn edge ->
-          edge["id"] in Enum.map(edges_to_delete, & &1.id)
+      next_params =
+        Map.update!(initial_params, "edges", fn edges ->
+          edges
+          |> Enum.reject(fn edge ->
+            edge["id"] in Enum.map(edges_to_delete, & &1.id)
+          end)
         end)
-      end)
-      |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
+        |> Map.update!("jobs", &Enum.reject(&1, fn job -> job["id"] == id end))
 
-    {:noreply,
-     socket
-     |> apply_params(next_params)
-     |> push_patches_applied(initial_params)}
+      {:noreply,
+       socket
+       |> apply_params(next_params)
+       |> push_patches_applied(initial_params)}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
-    initial_params = socket.assigns.workflow_params
-
-    next_params =
-      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
-
-    {:noreply,
-     socket
-     |> apply_params(next_params)
-     |> mark_validated()
-     |> push_patches_applied(initial_params)}
+    {:noreply, handle_new_params(socket, params)}
   end
 
   def handle_event("save", params, socket) do
-    initial_params = socket.assigns.workflow_params
+    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
+      socket.assigns
 
-    next_params =
-      case params do
-        %{"workflow" => params} ->
-          WorkflowParams.apply_form_params(
-            socket.assigns.workflow_params,
-            params
-          )
+    if can_edit_job do
+      next_params =
+        case params do
+          %{"workflow" => params} ->
+            WorkflowParams.apply_form_params(
+              socket.assigns.workflow_params,
+              params
+            )
 
-        %{} ->
-          socket.assigns.workflow_params
-      end
+          %{} ->
+            socket.assigns.workflow_params
+        end
 
-    socket = socket |> apply_params(next_params)
+      socket = socket |> apply_params(next_params)
 
-    socket =
-      Lightning.Repo.insert_or_update(socket.assigns.changeset)
-      |> case do
-        {:ok, workflow} ->
-          socket
-          |> assign_workflow(workflow)
-          |> put_flash(:info, "Workflow saved")
+      socket =
+        Lightning.Repo.insert_or_update(socket.assigns.changeset)
+        |> case do
+          {:ok, workflow} ->
+            socket
+            |> assign_workflow(workflow)
+            |> put_flash(:info, "Workflow saved")
 
-        {:error, changeset} ->
-          socket
-          |> assign_changeset(changeset)
-          |> mark_validated()
-          |> put_flash(:error, "Workflow could not be saved")
-      end
-      |> push_patches_applied(initial_params)
+          {:error, changeset} ->
+            socket
+            |> assign_changeset(changeset)
+            |> mark_validated()
+            |> put_flash(:error, "Workflow could not be saved")
+        end
+        |> push_patches_applied(initial_params)
 
-    {:noreply, socket}
+      {:noreply, socket}
+    else
+      {:noreply,
+       socket
+       |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
   end
 
   def handle_event("push-change", %{"patches" => patches}, socket) do
@@ -410,20 +419,29 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    initial_params = socket.assigns.workflow_params
-
-    next_params =
-      WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
-
-    {:noreply,
-     socket
-     |> apply_params(next_params)
-     |> mark_validated()
-     |> push_patches_applied(initial_params)}
+    {:noreply, handle_new_params(socket, params)}
   end
 
   def handle_info({:follow_run, attempt_run}, socket) do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
+  defp handle_new_params(socket, params) do
+    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
+      socket.assigns
+
+    if can_edit_job do
+      next_params =
+        WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+
+      socket
+      |> apply_params(next_params)
+      |> mark_validated()
+      |> push_patches_applied(initial_params)
+    else
+      socket
+      |> put_flash(:error, "You are not authorized to perform this action.")
+    end
   end
 
   defp webhook_url(trigger) do
