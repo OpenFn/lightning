@@ -25,6 +25,22 @@ defmodule Lightning.AccountsFixtures do
     user
   end
 
+  def user_with_mfa_fixture(attrs \\ []) when is_list(attrs) do
+    user = user_fixture(attrs)
+
+    user_totp = %Lightning.Accounts.UserTOTP{
+      secret: NimbleTOTP.secret(),
+      user_id: user.id
+    }
+
+    valid_code = NimbleTOTP.verification_code(user_totp.secret)
+
+    {:ok, _totp} =
+      Lightning.Accounts.upsert_user_totp(user_totp, %{code: valid_code})
+
+    %{user | mfa_enabled: true}
+  end
+
   def superuser_fixture(attrs \\ []) when is_list(attrs) do
     {:ok, user} =
       attrs
