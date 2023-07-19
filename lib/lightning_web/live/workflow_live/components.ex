@@ -364,12 +364,14 @@ defmodule LightningWeb.WorkflowLive.Components do
           class: "peer block w-full
             text-2xl font-bold text-secondary-900
             border-0 py-1.5 focus:ring-0",
+          required: true,
           placeholder: "Untitled"
         ) %>
         <div
           class="absolute inset-x-0 bottom-0
                  peer-hover:border-t peer-hover:border-gray-300
-                 peer-focus:border-t-2 peer-focus:border-indigo-600"
+                 peer-focus:border-t-2 peer-focus:border-indigo-600
+                 peer-invalid:border-t-2 peer-invalid:border-rose-400"
           aria-hidden="true"
         >
         </div>
