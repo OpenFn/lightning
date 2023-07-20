@@ -189,14 +189,13 @@ defmodule Lightning.SetupUtils do
       })
 
     user_id = List.first(project_users).user_id
+
     Workflows.create_edge(%{
       workflow_id: workflow.id,
       source_job: job_1,
       condition: :on_job_success,
       target_job_id: job_2.id
     })
-
-    project_user = List.first(project_users)
 
     dhis2_credential = create_dhis2_credential(project, user_id)
 
@@ -562,15 +561,6 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       }).id
 
-    {:ok, openhie_workorder} =
-      create_workorder(
-        :webhook,
-        fhir_standard_data,
-        ~s[{}],
-        run_params,
-        output_dataclip_id
-      )
-
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
@@ -579,27 +569,13 @@ defmodule Lightning.SetupUtils do
         source_job_id: send_to_openhim.id
       })
 
-    run_params = [
-      %{
-        job_id: send_to_openhim.id,
-        exit_code: 1,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      },
-      %{
-        job_id: notify_upload_failed.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
-      }
-    ]
-
     {:ok, openhie_workorder} =
       create_workorder(
         :webhook,
         openhie_root_edge,
         ~s[{}],
-        run_params
+        run_params,
+        output_dataclip_id
       )
 
     %{
@@ -792,7 +768,7 @@ defmodule Lightning.SetupUtils do
     {:ok, successful_dhis2_workorder} =
       create_workorder(
         :cron,
-        get_dhis2_data,
+        root_edge,
         ~s[{"data": {}, "references": \[\]}],
         run_params,
         output_dataclip_id
@@ -829,11 +805,12 @@ defmodule Lightning.SetupUtils do
     {:ok, failure_dhis2_workorder} =
       create_workorder(
         :cron,
-        get_dhis2_data,
+        root_edge,
         ~s[{"data": {}, "references": \[\]}],
         run_params,
         output_dataclip_id
       )
+
     {:ok, _success_upload} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
@@ -851,12 +828,13 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    {:ok, dhis2_workorder} =
+    {:ok, _dhis2_workorder} =
       create_workorder(
         :cron,
         root_edge,
         ~s[{}],
-        run_params
+        run_params,
+        output_dataclip_id
       )
 
     %{
@@ -906,13 +884,8 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_workorder(trigger, job, dataclip, run_params, output_dataclip_id) do
-    WorkOrderService.multi_for(
-      trigger,
-      edge,
-      dataclip
-      |> Jason.decode!()
-    )
+  defp create_workorder(trigger, edge, dataclip, run_params, output_dataclip_id) do
+    WorkOrderService.multi_for(trigger, edge, dataclip |> Jason.decode!())
     |> add_and_update_runs(run_params, output_dataclip_id)
     |> Repo.transaction()
   end

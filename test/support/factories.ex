@@ -2,7 +2,9 @@ defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
 
   def project_factory do
-    %Lightning.Projects.Project{}
+    %Lightning.Projects.Project{
+      name: sequence(:project_name, &"project-#{&1}")
+    }
   end
 
   def workflow_factory do
@@ -139,6 +141,10 @@ defmodule Lightning.Factories do
 
   def with_project_user(%Lightning.Projects.Project{} = project, user, role) do
     %{project | project_users: [%{user: user, role: role}]}
+  end
+
+  def for_project(%Lightning.Jobs.Job{} = job, project) do
+    %{job | workflow: build(:workflow, %{project: project})}
   end
 
   defp merge_assoc(left, right) do

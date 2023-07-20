@@ -127,7 +127,7 @@ defmodule Lightning.AttemptService do
       attempt_runs
       |> Repo.preload([
         :run,
-        attempt: [work_order: [jobs: [trigger: :upstream_job]], runs: []]
+        attempt: [work_order: [workflow: [:jobs, :edges]], runs: []]
       ])
 
     Multi.new()
@@ -158,7 +158,7 @@ defmodule Lightning.AttemptService do
         attempt_runs
         |> Enum.map(fn %{attempt: attempt, run: run} ->
           {skipped_runs, new_run} =
-            calculate_runs(attempt.work_order.jobs, attempt.runs, run)
+            calculate_runs(attempt.work_order.workflow, attempt.runs, run)
 
           attempt_id = attempts_map[attempt.work_order.id]
 
@@ -218,15 +218,6 @@ defmodule Lightning.AttemptService do
         updated_at: timestamp
       }
     end)
-  end
-
-  def get_jobs_for(%Attempt{id: id}) do
-    from(j in Lightning.Jobs.Job,
-      join: wf in assoc(j, :workflow),
-      join: a in assoc(wf, :attempts),
-      where: a.id == ^id,
-      preload: [trigger: :upstream_job]
-    )
   end
 
   def get_workflow_for(%Attempt{work_order: %{workflow_id: wid}}) do

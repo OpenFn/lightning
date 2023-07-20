@@ -131,8 +131,8 @@ defmodule Lightning.Pipeline.RunnerTest do
           return state;
         });
         """,
-        project_id: project.id,
-        project_credential_id: project_credential.id
+        project: project,
+        project_credential: project_credential
       )
 
     dataclip_body = %{"foo" => "bar"}

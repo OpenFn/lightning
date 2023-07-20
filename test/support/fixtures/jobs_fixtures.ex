@@ -115,8 +115,8 @@ defmodule Lightning.JobsFixtures do
     %{job: job, edge: e, trigger: t}
   end
 
-  def workflow_scenario() do
-    project = insert(:project)
+  def workflow_scenario(context \\ %{}) do
+    project = Map.get_lazy(context, :project, fn -> insert(:project) end)
     workflow = insert(:workflow, project: project)
 
     #       +---+
