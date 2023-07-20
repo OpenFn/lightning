@@ -115,11 +115,6 @@ defmodule LightningWeb.Router do
         live "/dataclips/new", DataclipLive.Edit, :new
         live "/dataclips/:id/edit", DataclipLive.Edit, :edit
 
-        # TODO: remove these
-        live "/w/:workflow_id/j/new", WorkflowLive.Old, :new_job
-        live "/w/:workflow_id/j/:job_id", WorkflowLive.Old, :edit_job
-        live "/w/:workflow_id/edit", WorkflowLive.Old, :edit_workflow
-
         live "/w", WorkflowLive.Index, :index
         live "/w/new", WorkflowLive.Edit, :new
         live "/w/:id", WorkflowLive.Edit, :edit

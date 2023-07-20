@@ -64,7 +64,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       workflow: workflow
     } do
       {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/j/new")
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
 
       assert has_element?(view, "#builder-new")
 
