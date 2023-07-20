@@ -25,17 +25,21 @@ defmodule Lightning.Accounts.UserTOTP do
     |> cast(attrs, [:code])
     |> validate_required([:code, :secret])
     |> validate_format(:code, ~r/^\d{6}$/, message: "should be a 6 digit number")
-    |> maybe_validate_code()
+    |> maybe_validate_code(totp)
   end
 
-  defp maybe_validate_code(changeset) do
+  defp maybe_validate_code(changeset, totp) do
     code = get_field(changeset, :code)
-    secret = get_field(changeset, :secret)
 
-    if changeset.valid? and NimbleTOTP.valid?(secret, code) do
+    if changeset.valid? and valid_totp?(totp, code) do
       changeset
     else
       add_error(changeset, :code, "invalid code")
     end
+  end
+
+  def valid_totp?(totp, code) do
+    is_binary(code) and byte_size(code) == 6 and
+      NimbleTOTP.valid?(totp.secret, code)
   end
 end

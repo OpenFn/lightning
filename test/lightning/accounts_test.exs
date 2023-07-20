@@ -154,6 +154,23 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "valid_user_totp?/2" do
+    setup do
+      user = user_with_mfa_fixture()
+
+      %{totp: Accounts.get_user_totp(user), user: user}
+    end
+
+    test "returns false if the code is not valid", %{user: user} do
+      assert Accounts.valid_user_totp?(user, "invalid") == false
+    end
+
+    test "returns true for valid totp", %{user: user, totp: totp} do
+      code = NimbleTOTP.verification_code(totp.secret)
+      assert Accounts.valid_user_totp?(user, code) == true
+    end
+  end
+
   describe "delete_user_totp/1" do
     test "successfully deletes the given user TOTP and disables the mfa_flag" do
       user = user_fixture()

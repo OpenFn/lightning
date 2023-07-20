@@ -19,9 +19,9 @@ defmodule LightningWeb.UserAuth do
   @doc """
   Logs the user in by creating a new session token.
   """
-  def log_in_user(conn, user, params \\ %{}) do
+  def log_in_user(conn, user) do
     token = Accounts.generate_user_session_token(user)
-    new_session(conn, token, params)
+    new_session(conn, token)
   end
 
   @doc """
@@ -36,22 +36,31 @@ defmodule LightningWeb.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def new_session(conn, token, params \\ %{}) do
-    user_return_to = get_session(conn, :user_return_to)
-
+  def new_session(conn, token) do
     conn
     |> renew_session()
     |> put_session(:user_token, token)
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
-    |> maybe_write_remember_me_cookie(token, params)
+  end
+
+  @doc """
+  Returns to or redirects to the dashboard and potentially set remember_me token.
+  """
+  def redirect_user_after_login_with_remember_me(conn, params \\ %{}) do
+    user_return_to = get_session(conn, :user_return_to)
+
+    conn
+    |> maybe_write_remember_me_cookie(params)
+    |> delete_session(:user_return_to)
     |> redirect(to: user_return_to || signed_in_path(conn))
   end
 
-  defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
+  defp maybe_write_remember_me_cookie(conn, %{"remember_me" => "true"}) do
+    token = get_session(conn, :user_token)
     put_resp_cookie(conn, @remember_me_cookie, token, @remember_me_options)
   end
 
-  defp maybe_write_remember_me_cookie(conn, _token, _params) do
+  defp maybe_write_remember_me_cookie(conn, _params) do
     conn
   end
 
@@ -71,9 +80,12 @@ defmodule LightningWeb.UserAuth do
   #     end
   #
   defp renew_session(conn) do
+    user_return_to = get_session(conn, :user_return_to)
+
     conn
     |> configure_session(renew: true)
     |> clear_session()
+    |> put_session(:user_return_to, user_return_to)
   end
 
   @doc """
@@ -166,26 +178,34 @@ defmodule LightningWeb.UserAuth do
   they use the application at all, here would be a good place.
   """
   def require_authenticated_user(conn, _opts) do
-    if conn.assigns[:current_user] do
-      conn
-    else
-      conn
-      |> get_format()
-      |> case do
-        "json" ->
-          conn
-          |> put_status(:unauthorized)
-          |> put_view(LightningWeb.ErrorView)
-          |> render(:"401")
-          |> halt()
+    cond do
+      is_nil(conn.assigns[:current_user]) ->
+        conn
+        |> get_format()
+        |> case do
+          "json" ->
+            conn
+            |> put_status(:unauthorized)
+            |> put_view(LightningWeb.ErrorView)
+            |> render(:"401")
+            |> halt()
 
-        _ ->
-          conn
-          |> put_flash(:error, "You must log in to access this page.")
-          |> maybe_store_return_to()
-          |> redirect(to: Routes.user_session_path(conn, :new))
-          |> halt()
-      end
+          _ ->
+            conn
+            |> put_flash(:error, "You must log in to access this page.")
+            |> maybe_store_return_to()
+            |> redirect(to: Routes.user_session_path(conn, :new))
+            |> halt()
+        end
+
+      get_format(conn) == "html" && get_session(conn, :user_totp_pending) &&
+          conn.path_info != ["users", "two-factor", "app"] ->
+        conn
+        |> redirect(to: Routes.user_totp_path(conn, :new))
+        |> halt()
+
+      true ->
+        conn
     end
   end
 

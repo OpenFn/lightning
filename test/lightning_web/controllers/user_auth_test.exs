@@ -20,7 +20,7 @@ defmodule LightningWeb.UserAuthTest do
     %{user: user_fixture(), conn: conn}
   end
 
-  describe "log_in_user/3" do
+  describe "log_in_user/2" do
     test "stores the user token in the session", %{conn: conn, user: user} do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
@@ -28,7 +28,6 @@ defmodule LightningWeb.UserAuthTest do
       assert get_session(conn, :live_socket_id) ==
                "users_sessions:#{Base.url_encode64(token)}"
 
-      assert redirected_to(conn) == "/"
       assert Accounts.get_user_by_session_token(token)
     end
 
@@ -44,13 +43,31 @@ defmodule LightningWeb.UserAuthTest do
       refute get_session(conn, :to_be_removed)
     end
 
-    test "redirects to the configured path", %{conn: conn, user: user} do
+    test "does not clear the configured redirect path", %{conn: conn, user: user} do
       conn =
         conn
         |> put_session(:user_return_to, "/hello")
         |> UserAuth.log_in_user(user)
 
+      assert get_session(conn, :user_return_to)
+    end
+  end
+
+  describe "redirect_user_after_login_with_remember_me/2" do
+    test "redirects to / by default", %{conn: conn} do
+      assert conn
+             |> UserAuth.redirect_user_after_login_with_remember_me()
+             |> redirected_to() == "/"
+    end
+
+    test "redirects to the configured path", %{conn: conn} do
+      conn =
+        conn
+        |> put_session(:user_return_to, "/hello")
+        |> UserAuth.redirect_user_after_login_with_remember_me()
+
       assert redirected_to(conn) == "/hello"
+      refute get_session(conn, :user_return_to)
     end
 
     test "writes a cookie if remember_me is configured", %{
@@ -60,7 +77,10 @@ defmodule LightningWeb.UserAuthTest do
       conn =
         conn
         |> fetch_cookies()
-        |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_user_after_login_with_remember_me(%{
+          "remember_me" => "true"
+        })
 
       assert get_session(conn, :user_token) == conn.cookies[@remember_me_cookie]
 
@@ -128,7 +148,10 @@ defmodule LightningWeb.UserAuthTest do
       logged_in_conn =
         conn
         |> fetch_cookies()
-        |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_user_after_login_with_remember_me(%{
+          "remember_me" => "true"
+        })
 
       user_token = logged_in_conn.cookies[@remember_me_cookie]
       %{value: signed_token} = logged_in_conn.resp_cookies[@remember_me_cookie]
@@ -225,6 +248,20 @@ defmodule LightningWeb.UserAuthTest do
 
       refute conn.halted
       refute conn.status
+    end
+
+    test "redirects if user is authenticated but pending totp", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> put_session(:user_totp_pending, true)
+        |> UserAuth.require_authenticated_user([])
+
+      assert conn.halted
+      assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
     end
   end
 end

@@ -34,11 +34,14 @@ defmodule LightningWeb.UserSessionController do
         totp_params = Map.take(user_params, ["remember_me"])
 
         conn
+        |> UserAuth.log_in_user(user)
         |> put_session(:user_totp_pending, true)
         |> redirect(to: Routes.user_totp_path(conn, :new, user: totp_params))
 
       %User{} = user ->
-        UserAuth.log_in_user(conn, user, user_params)
+        conn
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_user_after_login_with_remember_me(user_params)
 
       _ ->
         conn
@@ -57,6 +60,7 @@ defmodule LightningWeb.UserSessionController do
       token ->
         conn
         |> UserAuth.new_session(token)
+        |> UserAuth.redirect_user_after_login_with_remember_me()
     end
   end
 
