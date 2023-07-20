@@ -77,6 +77,9 @@ defmodule LightningWeb.Router do
   scope "/", LightningWeb do
     pipe_through [:browser, :require_authenticated_user]
 
+    get "/users/two-factor/app", UserTOTPController, :new
+    post "/users/two-factor/app", UserTOTPController, :create
+
     get "/profile/confirm_email/:token",
         UserConfirmationController,
         :confirm_email
