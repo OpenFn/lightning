@@ -2,6 +2,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
   use LightningWeb.ConnCase, async: true
 
   import Ecto.Query
+  import Lightning.Factories
 
   alias Lightning.Workflows.Workflow
 
@@ -32,7 +33,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     } do
       %{id: project_id, name: project_name} =
         project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :owner}]
         )
 
@@ -54,7 +55,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       user: user
     } do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :admin}]
         )
 
@@ -67,7 +68,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       user: user
     } do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :editor}]
         )
 
@@ -80,7 +81,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       user: user
     } do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :viewer}]
         )
 
@@ -91,7 +92,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
     test "returns a 403 if user does not have access", %{
       conn: conn
     } do
-      %{id: project_id} = Lightning.Factories.insert(:project)
+      %{id: project_id} = insert(:project)
 
       conn = get(conn, ~p"/api/provision/#{project_id}")
       response = json_response(conn, 403)
@@ -105,7 +106,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
     test "is forbidden for a viewer", %{conn: conn, user: user} do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :viewer}]
         )
 
@@ -120,7 +121,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
     test "is forbidden for an editor", %{conn: conn, user: user} do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :editor}]
         )
 
@@ -135,12 +136,13 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
     test "fails with a 422 on validation errors", %{conn: conn, user: user} do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :owner}]
         )
 
       body = %{
         "id" => project.id,
+        "name" => "",
         "workflows" => [%{"name" => "default"}]
       }
 
@@ -203,7 +205,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       user: user
     } do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :owner}]
         )
 
@@ -275,7 +277,7 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
       user: user
     } do
       project =
-        Lightning.Factories.insert(:project,
+        insert(:project,
           project_users: [%{user_id: user.id, role: :admin}]
         )
 

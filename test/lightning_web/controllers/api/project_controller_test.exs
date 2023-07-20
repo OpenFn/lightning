@@ -1,7 +1,7 @@
 defmodule LightningWeb.API.ProjectControllerTest do
   use LightningWeb.ConnCase, async: true
 
-  import Lightning.ProjectsFixtures
+  import Lightning.Factories
 
   setup %{conn: conn} do
     {:ok, conn: put_req_header(conn, "accept", "application/json")}
@@ -33,7 +33,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
       assert response["data"] == [
                %{
                  "attributes" => %{
-                   "name" => "a-test-project",
+                   "name" => project.name,
                    "description" => nil
                  },
                  "id" => project.id,
@@ -50,7 +50,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
       conn: conn,
       project: project
     } do
-      other_user = Lightning.AccountsFixtures.user_fixture()
+      other_user = insert(:user)
 
       token =
         other_user
@@ -58,9 +58,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
       conn = conn |> Plug.Conn.put_req_header("authorization", "Bearer #{token}")
 
-      Lightning.ProjectsFixtures.project_fixture(
-        project_users: [%{user_id: other_user.id}]
-      )
+      insert(:project, project_users: [%{user_id: other_user.id}])
 
       conn = get(conn, ~p"/api/projects")
       response = json_response(conn, 200)
@@ -83,7 +81,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
     setup [:assign_bearer_for_api, :create_project_for_current_user]
 
     test "with token for other project", %{conn: conn} do
-      other_project = project_fixture()
+      other_project = insert(:project)
       conn = get(conn, ~p"/api/projects/#{other_project.id}")
       assert json_response(conn, 401) == %{"error" => "Unauthorized"}
     end
@@ -94,7 +92,7 @@ defmodule LightningWeb.API.ProjectControllerTest do
 
       assert response["data"] == %{
                "attributes" => %{
-                 "name" => "a-test-project",
+                 "name" => project.name,
                  "description" => nil
                },
                "id" => project.id,

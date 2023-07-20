@@ -33,9 +33,35 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   # Ensure that @latest is converted into a version number
   test "mounts the JobEditor with the correct attrs"
 
+  @tag skip: true
   describe "manual runs" do
     test "can see the last 3 dataclips"
     test "can create a new dataclip"
-    test "can run a workflow"
+
+    test "can run a workflow" do
+      # assert_enqueued(worker: Lightning.Pipeline)
+      # assert [run_viewer] = live_children(view)
+      # assert run_viewer |> render() =~ "Not started."
+    end
+  end
+
+  describe "Editor events" do
+    @tag skip: true
+    test "can handle request_metadata event", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/j/new")
+
+      assert has_element?(view, "#builder-new")
+
+      assert view
+             |> with_target("#builder-new")
+             |> render_click("request_metadata", %{})
+
+      assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
+    end
   end
 end

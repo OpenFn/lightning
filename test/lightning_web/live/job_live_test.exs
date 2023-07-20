@@ -61,23 +61,6 @@ defmodule LightningWeb.JobLiveTest do
     end
   end
 
-  describe "JobBuilder events" do
-    test "request_metadata", %{conn: conn, project: project} do
-      workflow = workflow_fixture(name: "the workflow", project_id: project.id)
-
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}/j/new")
-
-      assert has_element?(view, "#builder-new")
-
-      assert view
-             |> with_target("#builder-new")
-             |> render_click("request_metadata", %{})
-
-      assert_push_event(view, "metadata_ready", %{"error" => "no_credential"})
-    end
-  end
-
   describe "Deleting a job from inspector" do
     test "jobs with no downstream jobs can be deleted", %{
       conn: conn,

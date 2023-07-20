@@ -154,7 +154,7 @@ defmodule Lightning.AttemptServiceTest do
          } do
       work_order = work_order_fixture(workflow_id: workflow.id)
       dataclip = dataclip_fixture()
-      user = user_fixture()
+      user = insert(:user)
 
       # first attempt
       attempt_runs =

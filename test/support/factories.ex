@@ -2,7 +2,9 @@ defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
 
   def project_factory do
-    %Lightning.Projects.Project{}
+    %Lightning.Projects.Project{
+      name: sequence(:project_name, &"project-#{&1}")
+    }
   end
 
   def workflow_factory do
