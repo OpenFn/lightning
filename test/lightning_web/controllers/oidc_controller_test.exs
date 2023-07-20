@@ -82,6 +82,34 @@ defmodule LightningWeb.OidcControllerTest do
       assert redirected_to(conn) == "/"
     end
 
+    test "logs the person in but marks totp as pending for users wth MFA enabled",
+         %{
+           conn: conn,
+           bypass: bypass,
+           handler: handler
+         } do
+      expect_token(bypass, handler.wellknown)
+
+      user = user_with_mfa_fixture()
+
+      expect_userinfo(bypass, handler.wellknown, %{"email" => user.email})
+
+      conn =
+        conn
+        |> get(
+          Routes.oidc_path(conn, :new, handler.name, %{"code" => "callback_code"})
+        )
+
+      assert get_session(conn, :user_totp_pending)
+
+      assert redirected_to(conn) ==
+               Routes.user_totp_path(conn, :new, user: %{"remember_me" => true})
+
+      # The user is redirected to the TOTP page if they try accessing other pages
+      conn = get(conn, "/")
+      assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
+    end
+
     test "shows an error when the person doesn't exist", %{
       conn: conn,
       bypass: bypass,
