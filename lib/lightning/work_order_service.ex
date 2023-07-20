@@ -202,7 +202,11 @@ defmodule Lightning.WorkOrderService do
   # build trigger
   # build edge connecting trigger to job
 
-  def multi_for(type, %{target_job: job, source_trigger: trigger}, dataclip_body)
+  def multi_for(
+        type,
+        %Lightning.Workflows.Edge{target_job: job, source_trigger: trigger},
+        dataclip_body
+      )
       when type in [:webhook, :cron] do
     Multi.new()
     |> put_job(job)

@@ -189,6 +189,7 @@ defmodule Lightning.SetupUtils do
       })
 
     user_id = List.first(project_users).user_id
+
     Workflows.create_edge(%{
       workflow_id: workflow.id,
       source_job: job_1,
@@ -562,15 +563,6 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       }).id
 
-    {:ok, openhie_workorder} =
-      create_workorder(
-        :webhook,
-        fhir_standard_data,
-        ~s[{}],
-        run_params,
-        output_dataclip_id
-      )
-
     {:ok, _failed_upload} =
       Workflows.create_edge(%{
         workflow_id: openhie_workflow.id,
@@ -599,7 +591,8 @@ defmodule Lightning.SetupUtils do
         :webhook,
         openhie_root_edge,
         ~s[{}],
-        run_params
+        run_params,
+        output_dataclip_id
       )
 
     %{
@@ -792,7 +785,7 @@ defmodule Lightning.SetupUtils do
     {:ok, successful_dhis2_workorder} =
       create_workorder(
         :cron,
-        get_dhis2_data,
+        root_edge,
         ~s[{"data": {}, "references": \[\]}],
         run_params,
         output_dataclip_id
@@ -829,11 +822,12 @@ defmodule Lightning.SetupUtils do
     {:ok, failure_dhis2_workorder} =
       create_workorder(
         :cron,
-        get_dhis2_data,
+        root_edge,
         ~s[{"data": {}, "references": \[\]}],
         run_params,
         output_dataclip_id
       )
+
     {:ok, _success_upload} =
       Workflows.create_edge(%{
         workflow_id: dhis2_workflow.id,
@@ -856,7 +850,8 @@ defmodule Lightning.SetupUtils do
         :cron,
         root_edge,
         ~s[{}],
-        run_params
+        run_params,
+        output_dataclip_id
       )
 
     %{
@@ -906,13 +901,8 @@ defmodule Lightning.SetupUtils do
     end)
   end
 
-  defp create_workorder(trigger, job, dataclip, run_params, output_dataclip_id) do
-    WorkOrderService.multi_for(
-      trigger,
-      edge,
-      dataclip
-      |> Jason.decode!()
-    )
+  defp create_workorder(trigger, edge, dataclip, run_params, output_dataclip_id) do
+    WorkOrderService.multi_for(trigger, edge, dataclip |> Jason.decode!())
     |> add_and_update_runs(run_params, output_dataclip_id)
     |> Repo.transaction()
   end
