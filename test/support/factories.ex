@@ -143,6 +143,10 @@ defmodule Lightning.Factories do
     %{project | project_users: [%{user: user, role: role}]}
   end
 
+  def for_project(%Lightning.Jobs.Job{} = job, project) do
+    %{job | workflow: build(:workflow, %{project: project})}
+  end
+
   defp merge_assoc(left, right) do
     case left do
       %Ecto.Association.NotLoaded{} ->

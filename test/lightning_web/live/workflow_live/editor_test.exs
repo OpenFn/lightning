@@ -31,12 +31,23 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   end
 
   # Ensure that @latest is converted into a version number
+  @tag skip: true
   test "mounts the JobEditor with the correct attrs"
 
   @tag skip: true
   describe "manual runs" do
-    test "can see the last 3 dataclips"
+    test "viewers can't run a job" do
+      # view
+      # |> with_target("#manual-job-#{job.id}")
+    end
+
+    test "can see the last 3 dataclips" do
+    end
+
+    @tag skip: true
     test "can create a new dataclip"
+    @tag skip: true
+    test "can't with a new dataclip if it's invalid"
 
     test "can run a workflow" do
       # assert_enqueued(worker: Lightning.Pipeline)

@@ -109,6 +109,13 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
+    @tag skip: true
+    test "can delete a job" do
+      # can't delete if there are downstream jobs
+      # assert view |> render_click("delete_job", %{"id" => job.id}) =~
+      #          "Unable to delete jobs with downstream jobs or runs."
+    end
+
     @tag role: :viewer
     test "viewers can't edit existing workflows", %{
       conn: conn,

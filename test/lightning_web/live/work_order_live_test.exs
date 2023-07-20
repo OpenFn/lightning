@@ -11,6 +11,8 @@ defmodule LightningWeb.RunWorkOrderTest do
   import Lightning.InvocationFixtures
   import Lightning.WorkflowsFixtures
 
+  import Lightning.Factories
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -1256,11 +1258,9 @@ defmodule LightningWeb.RunWorkOrderTest do
     end
   end
 
+  @tag role: :editor
   describe "rerun" do
-    test "Project editors can rerun runs",
-         %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
-
+    setup %{conn: conn, project: project} do
       %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
@@ -1303,10 +1303,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       [attempt: attempt, work_order: work_order, project: project, conn: conn]
     end
 
+    @tag role: :editor
     test "Project editors can rerun runs",
          %{conn: conn, project: project, attempt: attempt} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
-
       [run | _rest] = attempt.runs
 
       {:ok, view, _html} =
@@ -1326,55 +1325,10 @@ defmodule LightningWeb.RunWorkOrderTest do
              })
     end
 
+    @tag role: :viewer
     test "Project viewers can't rerun runs",
          %{conn: conn, project: project, attempt: attempt} do
-      {conn, _user} = setup_project_user(conn, project, :viewer)
       [run | _rest] = attempt.runs
-
-      %{job: job_a, trigger: trigger} =
-        workflow_job_fixture(
-          project_id: project.id,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
-        )
-
-      dataclip = dataclip_fixture(project_id: project.id)
-
-      reason =
-        reason_fixture(
-          trigger_id: trigger.id,
-          dataclip_id: dataclip.id
-        )
-
-      work_order =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: job_a.workflow_id,
-          reason_id: reason.id
-        )
-
-      now = Timex.now()
-
-      attempt =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
-          runs: [
-            %{
-              job_id: job_a.id,
-              started_at: now |> Timex.shift(seconds: -25),
-              finished_at: now |> Timex.shift(seconds: -20),
-              exit_code: 0,
-              input_dataclip_id: dataclip.id
-            }
-          ]
-        })
-        |> Lightning.Repo.insert!()
-
-      run =
-        Map.get(attempt, :runs)
-        |> List.first()
-
-      Lightning.Invocation.search_workorders(project).entries()
 
       {:ok, view, _html} =
         live(
@@ -1394,10 +1348,9 @@ defmodule LightningWeb.RunWorkOrderTest do
                "You are not authorized to perform this action."
     end
 
+    @tag role: :viewer
     test "Project viewers can't rerun runs in bulk from start",
          %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :viewer)
-
       job_b =
         workflow_job_fixture(
           project_id: project.id,
@@ -1458,10 +1411,9 @@ defmodule LightningWeb.RunWorkOrderTest do
                "You are not authorized to perform this action."
     end
 
+    @tag role: :editor
     test "Project editors can rerun runs in bulk from start",
          %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
-
       job_b =
         workflow_job_fixture(
           project_id: project.id,
@@ -1530,28 +1482,35 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "New attempt enqueued for 1 workorder"
     end
 
+    @tag role: :editor
     test "selecting all work orders in the page prompts the user to rerun all runs",
          %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
+      trigger = build(:trigger, type: :webhook)
 
-      job_b =
-        workflow_job_fixture(
-          project_id: project.id,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
+      job_a =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "First Job"
         )
+
+      build(:workflow, project: project)
+      |> with_job(job_a)
+      |> with_trigger(trigger)
+      |> with_edge({trigger, job_a})
+      |> insert()
+
+      job_a = job_a |> Lightning.Repo.reload()
+      trigger = trigger |> Lightning.Repo.reload()
 
       dataclip = dataclip_fixture(project_id: project.id)
 
       reason =
-        reason_fixture(
-          trigger_id: job_b.trigger.id,
-          dataclip_id: dataclip.id
-        )
+        insert(:reason, type: trigger.type, trigger: trigger, dataclip: dataclip)
 
       work_order_b =
         work_order_fixture(
           project_id: project.id,
-          workflow_id: job_b.workflow_id,
+          workflow_id: job_a.workflow_id,
           reason_id: reason.id
         )
 
@@ -1563,7 +1522,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         reason_id: reason.id,
         runs: [
           %{
-            job_id: job_b.id,
+            job_id: job_a.id,
             started_at: now |> Timex.shift(seconds: -25),
             finished_at: now |> Timex.shift(seconds: -20),
             exit_code: 0,
@@ -1854,30 +1813,33 @@ defmodule LightningWeb.RunWorkOrderTest do
       })
     end
 
+    @tag role: :editor
     test "only selecting workorders from the same workflow shows the rerun button",
          %{conn: conn, project: project} do
-      {conn, _user} = setup_project_user(conn, project, :editor)
+      trigger = build(:trigger, type: :webhook)
 
-      job_3 =
-        workflow_job_fixture(
-          project_id: project.id,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
+      job_a =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "First Job"
         )
 
-      dataclip = dataclip_fixture(project_id: project.id)
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_a)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> insert()
+
+      job_a = job_a |> Lightning.Repo.reload()
+      trigger = trigger |> Lightning.Repo.reload()
+
+      dataclip = insert(:dataclip, project: project)
 
       reason =
-        reason_fixture(
-          trigger_id: job_3.trigger.id,
-          dataclip_id: dataclip.id
-        )
+        insert(:reason, type: trigger.type, trigger: trigger, dataclip: dataclip)
 
-      work_order_3 =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: job_3.workflow_id,
-          reason_id: reason.id
-        )
+      work_order_3 = insert(:workorder, workflow: workflow, reason: reason)
 
       now = Timex.now()
 
@@ -1887,7 +1849,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         reason_id: reason.id,
         runs: [
           %{
-            job_id: job_3.id,
+            job_id: job_a.id,
             started_at: now |> Timex.shift(seconds: -25),
             finished_at: now |> Timex.shift(seconds: -20),
             exit_code: 0,
@@ -1928,10 +1890,12 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert updated_html =~ "Rerun from..."
     end
 
-    test "Project viewers can't rerun runs",
-         %{conn: conn, project: project, jobs: jobs} do
-      {conn, _user} = setup_project_user(conn, project, :viewer)
-
+    @tag role: :viewer
+    test "Project viewers can't rerun runs", %{
+      conn: conn,
+      project: project,
+      jobs: jobs
+    } do
       {:ok, view, _html} =
         live(
           conn,
@@ -1953,14 +1917,13 @@ defmodule LightningWeb.RunWorkOrderTest do
                "You are not authorized to perform this action."
     end
 
+    @tag role: :editor
     test "Project editors can rerun runs", %{
       conn: conn,
       project: project,
       jobs: jobs,
       work_order_1: work_order_1
     } do
-      {conn, _user} = setup_project_user(conn, project, :editor)
-
       path =
         Routes.project_run_index_path(conn, :index, project.id,
           filters: %{
@@ -2060,8 +2023,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
           %{work_order: work_order, workflow: workflow, jobs: jobs}
         end)
-
-      {conn, _user} = setup_project_user(conn, project, :editor)
 
       path =
         Routes.project_run_index_path(conn, :index, project.id,

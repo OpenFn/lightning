@@ -10,11 +10,6 @@ defmodule LightningWeb.ProjectLiveTest do
   }
   @invalid_attrs %{raw_name: nil}
 
-  defp create_project(_) do
-    project = project_fixture()
-    %{project: project}
-  end
-
   describe "Index as a regular user" do
     setup :register_and_log_in_user
 
@@ -35,7 +30,7 @@ defmodule LightningWeb.ProjectLiveTest do
   end
 
   describe "Index as a super user" do
-    setup [:register_and_log_in_superuser, :create_project]
+    setup [:register_and_log_in_superuser, :create_project_for_current_user]
 
     test "lists all projects", %{conn: conn, project: project} do
       {:ok, _index_live, html} =
@@ -138,8 +133,10 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert index_live |> element("button", "Export project") |> has_element?()
 
-      index_live |> element("button", "Export project") |> render_click() =~
-        "Project exported successfully"
+      assert index_live
+             |> element("button", "Export project")
+             |> render_click()
+             |> follow_redirect(conn, "/download/yaml?id=#{project.id}")
     end
 
     test "project members with role other than owner can't delete a project from the settings page",
@@ -332,8 +329,7 @@ defmodule LightningWeb.ProjectLiveTest do
           project_users: [%{user_id: another_user.id}]
         })
 
-      {:ok, view, _html} =
-        live(conn, Routes.project_workflow_path(conn, :index, project_1))
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project_1}/w")
 
       refute view
              |> element(
@@ -356,52 +352,33 @@ defmodule LightningWeb.ProjectLiveTest do
              )
              |> has_element?()
 
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_workflow_path(conn, :index, project_1.id)
-        )
+      {:ok, view, html} = live(conn, ~p"/projects/#{project_1}/w")
 
       assert html =~ project_1.name
       assert view |> element("button", "#{project_1.name}") |> has_element?()
 
       assert view
-             |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_2.id)}']"
-             )
+             |> element("a[href='#{~p"/projects/#{project_2.id}/w"}']")
              |> has_element?()
 
       refute view
-             |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_3.id)}']"
-             )
+             |> element("a[href='#{~p"/projects/#{project_3.id}/w"}']")
              |> has_element?()
 
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_workflow_path(conn, :index, project_2.id)
-        )
+      {:ok, view, html} = live(conn, ~p"/projects/#{project_2}/w")
 
       assert html =~ project_2.name
       assert view |> element("button", "#{project_2.name}") |> has_element?()
 
       assert view
-             |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_1.id)}']"
-             )
+             |> element("a[href='#{~p"/projects/#{project_1.id}/w"}']")
              |> has_element?()
 
       refute view
-             |> element(
-               "a[href='#{Routes.project_workflow_path(conn, :index, project_3.id)}']"
-             )
+             |> element("a[href='#{~p"/projects/#{project_3.id}/w"}']")
              |> has_element?()
 
-      assert live(
-               conn,
-               Routes.project_workflow_path(conn, :index, project_3.id)
-             ) ==
+      assert live(conn, ~p"/projects/#{project_3}/w") ==
                {:error, {:redirect, %{flash: %{"nav" => :not_found}, to: "/"}}}
     end
   end

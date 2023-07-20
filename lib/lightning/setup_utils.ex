@@ -197,8 +197,6 @@ defmodule Lightning.SetupUtils do
       target_job_id: job_2.id
     })
 
-    project_user = List.first(project_users)
-
     dhis2_credential = create_dhis2_credential(project, user_id)
 
     {:ok, job_3} =
@@ -571,21 +569,6 @@ defmodule Lightning.SetupUtils do
         source_job_id: send_to_openhim.id
       })
 
-    run_params = [
-      %{
-        job_id: send_to_openhim.id,
-        exit_code: 1,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      },
-      %{
-        job_id: notify_upload_failed.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(21, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(31, :second)
-      }
-    ]
-
     {:ok, openhie_workorder} =
       create_workorder(
         :webhook,
@@ -845,7 +828,7 @@ defmodule Lightning.SetupUtils do
       }
     ]
 
-    {:ok, dhis2_workorder} =
+    {:ok, _dhis2_workorder} =
       create_workorder(
         :cron,
         root_edge,
