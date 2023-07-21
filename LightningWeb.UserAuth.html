@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-56E59A5D.js"></script>
+    <script src="dist/sidebar_items-52754488.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -152,7 +152,7 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#log_in_user/3" translate="no">log_in_user(conn, user, params \\ %{})</a>
+        <a href="#log_in_user/2" translate="no">log_in_user(conn, user)</a>
 
       </div>
 
@@ -172,7 +172,15 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#new_session/3" translate="no">new_session(conn, token, params \\ %{})</a>
+        <a href="#mark_totp_pending/1" translate="no">mark_totp_pending(conn)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new_session/2" translate="no">new_session(conn, token)</a>
 
       </div>
 
@@ -192,11 +200,37 @@ and remember me token.</p></div>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#redirect_with_return_to/2" translate="no">redirect_with_return_to(conn, params \\ %{})</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns to or redirects to the dashboard and potentially set remember_me token.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#require_authenticated_user/2" translate="no">require_authenticated_user(conn, opts)</a>
 
       </div>
 
         <div class="summary-synopsis"><p>Used for routes that require the user to be authenticated.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#totp_pending?/1" translate="no">totp_pending?(conn)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#totp_validated/1" translate="no">totp_validated(conn)</a>
+
+      </div>
 
     </div>
 
@@ -223,7 +257,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">authenticate_bearer(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L129" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L143" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -245,7 +279,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">fetch_current_user(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L102" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L116" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -259,18 +293,16 @@ Functions
 and remember me token.</p>
   </section>
 </section>
-<section class="detail" id="log_in_user/3">
-
-    <span id="log_in_user/2"></span>
+<section class="detail" id="log_in_user/2">
 
   <div class="detail-header">
-    <a href="#log_in_user/3" class="detail-link" title="Link to this function">
+    <a href="#log_in_user/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">log_in_user(conn, user, params \\ %{})</h1>
+    <h1 class="signature" translate="no">log_in_user(conn, user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L22" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L24" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -292,7 +324,7 @@ and remember me token.</p>
     </a>
     <h1 class="signature" translate="no">log_out_user(conn)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L84" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L98" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -305,18 +337,38 @@ and remember me token.</p>
 <p>Logs the user out.</p><p>It clears all session data for safety. See renew_session.</p>
   </section>
 </section>
-<section class="detail" id="new_session/3">
-
-    <span id="new_session/2"></span>
+<section class="detail" id="mark_totp_pending/1">
 
   <div class="detail-header">
-    <a href="#new_session/3" class="detail-link" title="Link to this function">
+    <a href="#mark_totp_pending/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">new_session(conn, token, params \\ %{})</h1>
+    <h1 class="signature" translate="no">mark_totp_pending(conn)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L39" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L214" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="new_session/2">
+
+  <div class="detail-header">
+    <a href="#new_session/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">new_session(conn, token)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L41" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -343,7 +395,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">redirect_if_user_is_authenticated(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L152" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L166" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -356,6 +408,30 @@ if you are not using LiveView.</p>
 <p>Used for routes that require the user to not be authenticated.</p>
   </section>
 </section>
+<section class="detail" id="redirect_with_return_to/2">
+
+    <span id="redirect_with_return_to/1"></span>
+
+  <div class="detail-header">
+    <a href="#redirect_with_return_to/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">redirect_with_return_to(conn, params \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L51" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns to or redirects to the dashboard and potentially set remember_me token.</p>
+  </section>
+</section>
 <section class="detail" id="require_authenticated_user/2">
 
   <div class="detail-header">
@@ -365,7 +441,7 @@ if you are not using LiveView.</p>
     </a>
     <h1 class="signature" translate="no">require_authenticated_user(conn, opts)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L168" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L182" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -377,6 +453,50 @@ if you are not using LiveView.</p>
 
 <p>Used for routes that require the user to be authenticated.</p><p>If you want to enforce the user email is confirmed before
 they use the application at all, here would be a good place.</p>
+  </section>
+</section>
+<section class="detail" id="totp_pending?/1">
+
+  <div class="detail-header">
+    <a href="#totp_pending?/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">totp_pending?(conn)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L218" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="totp_validated/1">
+
+  <div class="detail-header">
+    <a href="#totp_validated/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">totp_validated(conn)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/user_auth.ex#L222" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
   </section>
 </section>
 

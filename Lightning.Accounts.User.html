@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-56E59A5D.js"></script>
+    <script src="dist/sidebar_items-52754488.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -281,6 +281,7 @@ Types
   id: <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
   inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   last_name: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  mfa_enabled: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   password: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   project_users: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
   projects: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
@@ -316,7 +317,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">confirm_changeset(user)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L241" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L242" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -338,7 +339,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">details_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L179" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L180" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -360,7 +361,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">email_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L199" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L200" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -384,7 +385,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">password_changeset(user, attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L231" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L232" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -417,7 +418,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">scheduled_deletion_changeset(user, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L212" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L213" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -441,7 +442,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">superuser_registration_changeset(attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L113" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L114" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -489,7 +490,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">user_registration_changeset(attrs, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L68" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L69" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -525,7 +526,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">valid_password?(arg1, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L252" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L253" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -548,7 +549,7 @@ Defaults to <code class="inline">true</code>.</li></ul>
     </a>
     <h1 class="signature" translate="no">validate_current_password(changeset, password)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L268" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user.ex#L269" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>

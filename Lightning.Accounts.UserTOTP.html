@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.6.7">
 
-    <title>Lightning.CLI.Result — Lightning v0.6.7</title>
+    <title>Lightning.Accounts.UserTOTP — Lightning v0.6.7</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -102,26 +102,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L10" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.CLI.Result</span> 
+  <span translate="no">Lightning.Accounts.UserTOTP</span> 
   <small class="app-vsn" translate="no">(Lightning v0.6.7)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Struct that wraps the output of an OpenFn CLI call.</p><p>Containing the keys:</p><ul><li><code class="inline">start_time</code></li><li><code class="inline">end_time</code></li><li><code class="inline">status</code></li><li><code class="inline">logs</code></li></ul><h2 id="module-logs" class="section-heading">
-  <a href="#module-logs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">logs</p>
-  </a>
-  Logs
-</h2>
-<p>The OpenFn CLI returns JSON formatted log lines, which are decoded and added
-to a <code class="inline">Result</code> struct.</p><p>There are two kinds of output:</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="9403931148-1">{</span><span class="s">&quot;level&quot;</span><span class="ss">:&quot;&lt;&lt;level&gt;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;name&quot;</span><span class="ss">:&quot;&lt;&lt;module&gt;&gt;&quot;</span><span class="p">,</span><span class="s">&quot;message&quot;</span><span class="ss">:&quot;...&quot;</span><span class="p">]</span><span class="p">,</span><span class="s">&quot;time&quot;</span><span class="ss">:&lt;</span><span class="o">&lt;</span><span class="n">timestamp</span><span class="p">&gt;&gt;</span><span class="p" data-group-id="9403931148-1">}</span></code></pre><p>These are usually for general logging, and debugging.</p><pre><code class="makeup elixir" translate="no"><span class="p" data-group-id="8062958755-1">{</span><span class="s">&quot;message&quot;</span><span class="p">:</span><span class="p" data-group-id="8062958755-2">[</span><span class="s">&quot;&lt;&lt;message|filepath|output&gt;&gt;&quot;</span><span class="p" data-group-id="8062958755-2">]</span><span class="p" data-group-id="8062958755-1">}</span></code></pre><p>The above is the equivalent of the output of a command</p>
+<p>User Time based OTPs schema</p>
   </section>
 
 
@@ -154,17 +147,7 @@ to a <code class="inline">Result</code> struct.</p><p>There are two kinds of out
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#get_messages/1" translate="no">get_messages(result)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><p>Returns <code class="inline">message</code> type log lines from a <code class="inline">Result</code>.</p></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#new/1" translate="no">new(data)</a>
+        <a href="#changeset/2" translate="no">changeset(totp, attrs)</a>
 
       </div>
 
@@ -172,7 +155,7 @@ to a <code class="inline">Result</code> struct.</p><p>There are two kinds of out
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#parse/2" translate="no">parse(result, extra \\ [])</a>
+        <a href="#valid_totp?/2" translate="no">valid_totp?(totp, code)</a>
 
       </div>
 
@@ -201,7 +184,7 @@ Types
     </a>
     <h1 class="signature" translate="no">t()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L40" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L8" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -213,11 +196,15 @@ Types
 
       <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.CLI.Result{
-  end_time: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
-  logs: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">list</a>(),
-  start_time: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>(),
-  status: <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">integer</a>()
+          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.Accounts.UserTOTP{
+  __meta__: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  code: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  id: <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
+  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  secret: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
+  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
+  user: <a href="Lightning.Accounts.User.html#t:t/0">Lightning.Accounts.User.t</a>() | <a href="https://hexdocs.pm/ecto/3.9.4/Ecto.Association.NotLoaded.html#t:t/0">Ecto.Association.NotLoaded.t</a>() | nil,
+  user_id: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
 }</pre>
 
       </div>
@@ -238,44 +225,16 @@ Types
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="get_messages/1">
+<section class="detail" id="changeset/2">
 
   <div class="detail-header">
-    <a href="#get_messages/1" class="detail-link" title="Link to this function">
+    <a href="#changeset/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">get_messages(result)</h1>
+    <h1 class="signature" translate="no">changeset(totp, attrs)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L66" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> get_messages(<a href="#t:t/0">t</a>()) :: [<a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>()]</pre>
-
-      </div>
-
-<p>Returns <code class="inline">message</code> type log lines from a <code class="inline">Result</code>.</p>
-  </section>
-</section>
-<section class="detail" id="new/1">
-
-  <div class="detail-header">
-    <a href="#new/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">new(data)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L49" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L27" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -288,18 +247,16 @@ Functions
 
   </section>
 </section>
-<section class="detail" id="parse/2">
-
-    <span id="parse/1"></span>
+<section class="detail" id="valid_totp?/2">
 
   <div class="detail-header">
-    <a href="#parse/2" class="detail-link" title="Link to this function">
+    <a href="#valid_totp?/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">parse(result, extra \\ [])</h1>
+    <h1 class="signature" translate="no">valid_totp?(totp, code)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/cli.ex#L53" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/accounts/user_totp.ex#L45" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
