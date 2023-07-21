@@ -134,6 +134,24 @@ defmodule LightningWeb.UserSessionControllerTest do
       assert response =~ "User Profile"
     end
 
+    test "logs the user in but marks totp as pending for users wth MFA enabled",
+         %{conn: conn} do
+      user = user_with_mfa_fixture()
+
+      conn =
+        post(conn, Routes.user_session_path(conn, :create), %{
+          "user" => %{"email" => user.email, "password" => valid_user_password()}
+        })
+
+      assert get_session(conn, :user_totp_pending)
+
+      assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
+
+      # The user is redirected to the TOTP page if they try accessing other pages
+      conn = get(conn, "/")
+      assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
+    end
+
     test "a user that has been scheduled for deletion can't log in", %{
       conn: conn,
       scheduled_deletion_user: scheduled_deletion_user
@@ -178,6 +196,26 @@ defmodule LightningWeb.UserSessionControllerTest do
 
       assert conn.resp_cookies["_lightning_web_user_remember_me"]
       assert redirected_to(conn) == "/"
+    end
+
+    test "a user with MFA logging in with remember is redirected to TOTP page with remember_me query param",
+         %{conn: conn} do
+      user = user_with_mfa_fixture()
+
+      conn =
+        post(conn, Routes.user_session_path(conn, :create), %{
+          "user" => %{
+            "email" => user.email,
+            "password" => valid_user_password(),
+            "remember_me" => "true"
+          }
+        })
+
+      refute conn.resp_cookies["_lightning_web_user_remember_me"]
+      assert get_session(conn, :user_totp_pending)
+
+      assert redirected_to(conn) ==
+               Routes.user_totp_path(conn, :new, user: [remember_me: true])
     end
 
     test "logs the user in with return to", %{conn: conn, user: user} do

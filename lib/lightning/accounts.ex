@@ -8,8 +8,9 @@ defmodule Lightning.Accounts do
     max_attempts: 1
 
   import Ecto.Query, warn: false
+  alias Ecto.Multi
   alias Lightning.Repo
-  alias Lightning.Accounts.{User, UserToken, UserNotifier}
+  alias Lightning.Accounts.{User, UserToken, UserTOTP, UserNotifier}
   alias Lightning.Credentials
 
   require Logger
@@ -156,6 +157,61 @@ defmodule Lightning.Accounts do
 
   """
   def get_token!(id), do: Repo.get!(UserToken, id)
+
+  @doc """
+  Gets a single UserTOTP if any exists.
+  """
+  def get_user_totp(%User{id: user_id}) do
+    Repo.get_by(UserTOTP, user_id: user_id)
+  end
+
+  @doc """
+  Updates or Inserts the user's TOTP
+  """
+  @spec upsert_user_totp(UserTOTP.t(), map()) ::
+          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+  def upsert_user_totp(totp, attrs) do
+    Multi.new()
+    |> Multi.insert_or_update(:totp, UserTOTP.changeset(totp, attrs))
+    |> Multi.update(:user, fn %{totp: totp} ->
+      totp = Repo.preload(totp, [:user])
+      Ecto.Changeset.change(totp.user, %{mfa_enabled: true})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{totp: totp}} -> {:ok, totp}
+      {:error, :totp, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Deletes the given user's TOTP
+  """
+  @spec delete_user_totp(UserTOTP.t()) ::
+          {:ok, UserTOTP.t()} | {:error, Ecto.Changeset.t()}
+  def delete_user_totp(totp) do
+    Multi.new()
+    |> Multi.update(:user, fn _changes ->
+      totp = Repo.preload(totp, [:user])
+      Ecto.Changeset.change(totp.user, %{mfa_enabled: false})
+    end)
+    |> Multi.delete(:totp, totp)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{totp: totp}} -> {:ok, totp}
+      {:error, _key, changeset, _} -> {:error, changeset}
+    end
+  end
+
+  @doc """
+  Validates if the given TOTP code is valid.
+  """
+  @spec valid_user_totp?(User.t(), String.t()) :: true | false
+  def valid_user_totp?(user, code) do
+    totp = Repo.get_by!(UserTOTP, user_id: user.id)
+
+    UserTOTP.valid_totp?(totp, code)
+  end
 
   @doc """
   Registers a superuser.

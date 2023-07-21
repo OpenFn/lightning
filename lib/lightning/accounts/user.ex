@@ -29,6 +29,7 @@ defmodule Lightning.Accounts.User do
     field :confirmed_at, :utc_datetime
     field :role, RolesEnum, default: :user
     field :disabled, :boolean, default: false
+    field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
 
     has_many :credentials, Lightning.Credentials.Credential

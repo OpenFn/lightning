@@ -40,8 +40,21 @@ defmodule LightningWeb.OidcController do
           |> put_flash(:error, "Could not find user account")
           |> redirect(to: Routes.user_session_path(conn, :new))
 
+        %{mfa_enabled: true} = user ->
+          conn
+          |> UserAuth.log_in_user(user)
+          |> UserAuth.mark_totp_pending()
+          |> redirect(
+            to:
+              Routes.user_totp_path(conn, :new, user: %{"remember_me" => "true"})
+          )
+
         user ->
-          conn |> UserAuth.log_in_user(user, %{"remember_me" => "true"})
+          conn
+          |> UserAuth.log_in_user(user)
+          |> UserAuth.redirect_with_return_to(%{
+            "remember_me" => "true"
+          })
       end
     end
   end

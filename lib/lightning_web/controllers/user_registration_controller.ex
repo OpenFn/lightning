@@ -38,6 +38,7 @@ defmodule LightningWeb.UserRegistrationController do
         conn
         |> put_flash(:info, "User created successfully.")
         |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to()
 
       {:error, %Ecto.Changeset{} = changeset} ->
         render(conn, "new.html", changeset: changeset)

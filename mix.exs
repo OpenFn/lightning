@@ -101,7 +101,10 @@ defmodule Lightning.MixProject do
       {:timex, "~> 3.7"},
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
-      {:hammer, "~> 6.0"}
+      {:hammer, "~> 6.0"},
+      # MFA
+      {:nimble_totp, "~> 1.0"},
+      {:eqrcode, "~> 0.1"}
     ]
   end
 

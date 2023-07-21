@@ -4,7 +4,6 @@ defmodule LightningWeb.RunLive.RerunJobComponent do
   """
 
   use LightningWeb, :live_component
-  import LightningWeb.RunLive.Components, only: [hide_modal: 1, show_modal: 1]
   alias Lightning.Jobs
   alias Lightning.Workflows
 

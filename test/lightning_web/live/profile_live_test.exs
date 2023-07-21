@@ -217,4 +217,134 @@ defmodule LightningWeb.ProfileLiveTest do
       assert html =~ "User Profile"
     end
   end
+
+  defmodule LightningWeb.ProfileLiveTest.TOTP do
+    def secret do
+      <<4, 70, 0, 227, 26, 97, 234, 162, 13, 44, 36, 56, 102, 50, 59, 143, 157,
+        4, 157, 18>>
+    end
+  end
+
+  describe "MFA Component for a user without MFA enabled" do
+    setup :register_and_log_in_user
+
+    test "on clicking the toggle button a QR code is generated", %{conn: conn} do
+      {:ok, view, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+
+      refute html =~
+               "You have configured an authentication app to get two-factor authentication codes"
+
+      refute html =~ "Scan the QR code"
+
+      # show QR code
+      assert view |> element("#toggle-mfa-switch") |> render_click() =~
+               "Scan the QR code"
+
+      # hide QR code
+      view |> element("#toggle-mfa-switch") |> render_click()
+
+      refute render(view) =~ "Scan the QR code"
+    end
+
+    test "user can successfully add MFA to their account", %{conn: conn} do
+      Application.put_env(
+        :lightning,
+        :totp_client,
+        LightningWeb.ProfileLiveTest.TOTP
+      )
+
+      {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+
+      refute view |> form("#set_totp_form") |> has_element?()
+
+      assert view |> element("#toggle-mfa-switch") |> render_click() =~
+               "Scan the QR code"
+
+      assert view |> form("#set_totp_form") |> has_element?()
+
+      secret = LightningWeb.ProfileLiveTest.TOTP.secret()
+      valid_code = NimbleTOTP.verification_code(secret)
+
+      view
+      |> form("#set_totp_form", user_totp: %{code: valid_code})
+      |> render_submit()
+
+      flash = assert_redirected(view, Routes.profile_edit_path(conn, :edit))
+      assert flash["info"] == "MFA Setup successfully!"
+    end
+  end
+
+  describe "MFA Component for a user with MFA enabled" do
+    setup args do
+      %{user: user} = setup = register_and_log_in_user(args)
+
+      user_totp = %Lightning.Accounts.UserTOTP{
+        secret: NimbleTOTP.secret(),
+        user_id: user.id
+      }
+
+      valid_code = NimbleTOTP.verification_code(user_totp.secret)
+
+      {:ok, _totp} =
+        Lightning.Accounts.upsert_user_totp(user_totp, %{code: valid_code})
+
+      setup
+    end
+
+    test "the user sees an option to setup another device", %{
+      conn: conn
+    } do
+      {:ok, view, html} = live(conn, Routes.profile_edit_path(conn, :edit))
+
+      assert html =~
+               "You have configured an authentication app to get two-factor authentication codes"
+
+      assert view |> element("a#setup_another_totp_device") |> has_element?()
+      refute html =~ "Scan the QR code"
+
+      # show QR code
+      html = view |> element("a#setup_another_totp_device") |> render_click()
+      assert html =~ "Scan the QR code"
+      refute view |> element("a#setup_another_totp_device") |> has_element?()
+    end
+
+    test "user can disable MFA from their account", %{conn: conn} do
+      {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+
+      result = view |> element("#disable_mfa_button") |> render_click()
+
+      {:ok, view, html} = follow_redirect(result, conn)
+      assert html =~ "MFA Disabled successfully!"
+
+      refute render(view) =~
+               "You have configured an authentication app to get two-factor authentication codes"
+    end
+
+    test "user can successfully setup another device", %{conn: conn} do
+      Application.put_env(
+        :lightning,
+        :totp_client,
+        LightningWeb.ProfileLiveTest.TOTP
+      )
+
+      {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
+
+      refute view |> form("#set_totp_form") |> has_element?()
+
+      assert view |> element("a#setup_another_totp_device") |> render_click() =~
+               "Scan the QR code"
+
+      assert view |> form("#set_totp_form") |> has_element?()
+
+      secret = LightningWeb.ProfileLiveTest.TOTP.secret()
+      valid_code = NimbleTOTP.verification_code(secret)
+
+      view
+      |> form("#set_totp_form", user_totp: %{code: valid_code})
+      |> render_submit()
+
+      flash = assert_redirected(view, Routes.profile_edit_path(conn, :edit))
+      assert flash["info"] == "MFA Setup successfully!"
+    end
+  end
 end

@@ -30,8 +30,18 @@ defmodule LightningWeb.UserSessionController do
         )
         |> render("new.html", auth_handler_url: auth_handler_url())
 
+      %User{mfa_enabled: true} = user ->
+        totp_params = Map.take(user_params, ["remember_me"])
+
+        conn
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.mark_totp_pending()
+        |> redirect(to: Routes.user_totp_path(conn, :new, user: totp_params))
+
       %User{} = user ->
-        UserAuth.log_in_user(conn, user, user_params)
+        conn
+        |> UserAuth.log_in_user(user)
+        |> UserAuth.redirect_with_return_to(user_params)
 
       _ ->
         conn
@@ -50,6 +60,7 @@ defmodule LightningWeb.UserSessionController do
       token ->
         conn
         |> UserAuth.new_session(token)
+        |> UserAuth.redirect_with_return_to()
     end
   end
 

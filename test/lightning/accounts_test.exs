@@ -11,7 +11,7 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts
   alias Lightning.Projects.ProjectUser
 
-  alias Lightning.Accounts.{User, UserToken}
+  alias Lightning.Accounts.{User, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
 
   test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
@@ -101,6 +101,85 @@ defmodule Lightning.AccountsTest do
       %{id: id} = user_token = Repo.get_by(UserToken, token: token)
 
       assert %UserToken{id: ^id} = Accounts.get_token!(user_token.id)
+    end
+  end
+
+  describe "get_user_totp/1" do
+    setup do
+      user = user_fixture()
+      [user: user]
+    end
+
+    test "returns nil if the User has no TOTP", %{user: user} do
+      assert Accounts.get_user_totp(user) |> is_nil()
+    end
+
+    test "returns the TOTP of the user if present", %{user: user} do
+      %{id: id} =
+        Repo.insert!(%UserTOTP{user_id: user.id, secret: "some secret"})
+
+      assert %UserTOTP{id: ^id} = Accounts.get_user_totp(user)
+    end
+  end
+
+  describe "upsert_user_totp/2" do
+    setup do
+      user = user_fixture()
+      [user: user]
+    end
+
+    test "errors if the provided code is invalid", %{user: user} do
+      user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
+      valid_code = NimbleTOTP.verification_code(user_totp.secret)
+
+      invalid_code =
+        valid_code |> String.graphemes() |> Enum.shuffle() |> Enum.join()
+
+      {:error, changeset} =
+        Accounts.upsert_user_totp(user_totp, %{code: invalid_code})
+
+      assert %{code: ["invalid code"]} = errors_on(changeset)
+    end
+
+    test "creates the UserTOTP successfully with a valid code", %{user: user} do
+      user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
+      valid_code = NimbleTOTP.verification_code(user_totp.secret)
+      refute user.mfa_enabled
+
+      assert {:ok, _totp} =
+               Accounts.upsert_user_totp(user_totp, %{code: valid_code})
+
+      updated_user = Repo.get(User, user.id)
+      assert updated_user.mfa_enabled
+    end
+  end
+
+  describe "valid_user_totp?/2" do
+    setup do
+      user = user_with_mfa_fixture()
+
+      %{totp: Accounts.get_user_totp(user), user: user}
+    end
+
+    test "returns false if the code is not valid", %{user: user} do
+      assert Accounts.valid_user_totp?(user, "invalid") == false
+    end
+
+    test "returns true for valid totp", %{user: user, totp: totp} do
+      code = NimbleTOTP.verification_code(totp.secret)
+      assert Accounts.valid_user_totp?(user, code) == true
+    end
+  end
+
+  describe "delete_user_totp/1" do
+    test "successfully deletes the given user TOTP and disables the mfa_flag" do
+      user = user_fixture()
+      user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
+      valid_code = NimbleTOTP.verification_code(user_totp.secret)
+      {:ok, totp} = Accounts.upsert_user_totp(user_totp, %{code: valid_code})
+      assert Repo.get(User, user.id).mfa_enabled
+      {:ok, _} = Accounts.delete_user_totp(totp)
+      refute Repo.get(User, user.id).mfa_enabled
     end
   end
 
