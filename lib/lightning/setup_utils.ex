@@ -41,16 +41,6 @@ defmodule Lightning.SetupUtils do
         {:ok, nil}
       end
 
-    Lightning.Repo.insert!(%Lightning.Accounts.UserToken{
-      user_id: super_user.id,
-      context: "api",
-      token:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJKb2tlbiIsImlhdCI6MTY4
-        ODAzNzE4NSwiaXNzIjoiSm9rZW4iLCJqdGkiOiIydG1ocG8zYm0xdmR0MDZvZDgwMDAwdTEiLCJuY
-        mYiOjE2ODgwMzcxODUsInVzZXJfaWQiOiIzZjM3OGU2Yy02NjBhLTRiOTUtYWI5Ni02YmQwZGMyNj
-        NkMzMifQ.J1FnACGpqtQbmXNvyUCwCY4mS5S6CohRU3Ey-N0prP4"
-    })
-
     {:ok, admin} =
       Accounts.register_user(%{
         first_name: "Amy",
@@ -151,13 +141,15 @@ defmodule Lightning.SetupUtils do
     {:ok, job_1} =
       Jobs.create_job(%{
         name: "Job 1 - Check if age is over 18 months",
-        body: "fn(state => {
-  if (state.data.age_in_months > 18) {
-    console.log('Eligible for program.');
-    return state;
-  }
-  else { throw 'Error, patient ineligible.' }
-});",
+        body: """
+          fn(state => {
+            if (state.data.age_in_months > 18) {
+              console.log('Eligible for program.');
+              return state;
+            }
+            else { throw 'Error, patient ineligible.' }
+          });
+        """,
         adaptor: "@openfn/language-common@latest",
         enabled: true,
         workflow_id: workflow.id
@@ -179,16 +171,16 @@ defmodule Lightning.SetupUtils do
     {:ok, job_2} =
       Jobs.create_job(%{
         name: "Job 2 - Convert data to DHIS2 format",
-        body: "fn(state => {
-  const names = state.data.name.split(' ');
-  return { ...state, names };
-});",
+        body: """
+          fn(state => {
+            const names = state.data.name.split(' ');
+            return { ...state, names };
+          });
+        """,
         adaptor: "@openfn/language-common@latest",
         enabled: true,
         workflow_id: workflow.id
       })
-
-    user_id = List.first(project_users).user_id
 
     Workflows.create_edge(%{
       workflow_id: workflow.id,
@@ -197,25 +189,29 @@ defmodule Lightning.SetupUtils do
       target_job_id: job_2.id
     })
 
+    user_id = List.first(project_users).user_id
+
     dhis2_credential = create_dhis2_credential(project, user_id)
 
     {:ok, job_3} =
       Jobs.create_job(%{
         name: "Job 3 - Upload to DHIS2",
-        body: "create('trackedEntityInstances', {
-  trackedEntityType: 'nEenWmSyUEp', // a person
-  orgUnit: 'DiszpKrYNg8',
-  attributes: [
-    {
-      attribute: 'w75KJ2mc4zz', // attribute id for first name
-      value: state.names[0] // the first name from submission
-    },
-    {
-      attribute: 'zDhUuAYrxNC', // attribute id for last name
-      value: state.names[1] // the last name from submission
-    }
-  ]
-});",
+        body: """
+          create('trackedEntityInstances', {
+            trackedEntityType: 'nEenWmSyUEp', // a person
+            orgUnit: 'DiszpKrYNg8',
+            attributes: [
+              {
+                attribute: 'w75KJ2mc4zz', // attribute id for first name
+                value: state.names[0] // the first name from submission
+              },
+              {
+                attribute: 'zDhUuAYrxNC', // attribute id for last name
+                value: state.names[1] // the last name from submission
+              }
+            ]
+          });
+        """,
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
         workflow_id: workflow.id,
@@ -253,8 +249,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
           [CLI] ✔ Done in 304ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
         input_dataclip_id:
           create_dataclip(%{
             body: %{
@@ -264,7 +260,7 @@ defmodule Lightning.SetupUtils do
               }
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id,
         output_dataclip_id:
           create_dataclip(%{
@@ -279,7 +275,7 @@ defmodule Lightning.SetupUtils do
               ]
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id
       },
       %{
@@ -323,8 +319,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686850601-169521-1k3hzfw.json
           [CLI] ✔ Done in 2.052s! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(20, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(25, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-35, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-30, :second),
         input_dataclip_id:
           create_dataclip(%{
             body: %{
@@ -338,7 +334,7 @@ defmodule Lightning.SetupUtils do
               ]
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id,
         output_dataclip_id:
           create_dataclip(%{
@@ -377,7 +373,7 @@ defmodule Lightning.SetupUtils do
               ]
             },
             project_id: project.id,
-            type: :http_request
+            type: :run_result
           }).id
       }
     ]
@@ -394,17 +390,19 @@ defmodule Lightning.SetupUtils do
         type: :http_request
       }).id
 
-    create_workorder(
-      :webhook,
-      job_1_edge,
-      ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
-      run_params,
-      output_dataclip_id
-    )
+    {:ok, workorder} =
+      create_workorder(
+        :webhook,
+        job_1_edge,
+        ~s[{"age_in_months": 19, "name": "Genevieve Wimplemews"}],
+        run_params,
+        output_dataclip_id
+      )
 
     %{
       project: project,
       workflow: workflow,
+      workorder: workorder,
       jobs: [job_1, job_2, job_3]
     }
   end
@@ -425,14 +423,15 @@ defmodule Lightning.SetupUtils do
     {:ok, openhie_trigger} =
       Workflows.build_trigger(%{
         type: :webhook,
-        id: "cae544ab-03dc-4ccc-a09c-fb4edb255d7a",
         workflow_id: openhie_workflow.id
       })
 
     {:ok, fhir_standard_data} =
       Jobs.create_job(%{
         name: "Transform data to FHIR standard",
-        body: "fn(state => state);",
+        body: """
+        fn(state => state);
+        """,
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         workflow_id: openhie_workflow.id
@@ -449,7 +448,9 @@ defmodule Lightning.SetupUtils do
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
-        body: "fn(state => state);",
+        body: """
+        fn(state => state);
+        """,
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         workflow_id: openhie_workflow.id
@@ -466,7 +467,9 @@ defmodule Lightning.SetupUtils do
     {:ok, notify_upload_successful} =
       Jobs.create_job(%{
         name: "Notify CHW upload successful",
-        body: "fn(state => state);",
+        body: """
+        fn(state => state);
+        """,
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         workflow_id: openhie_workflow.id
@@ -483,7 +486,9 @@ defmodule Lightning.SetupUtils do
     {:ok, notify_upload_failed} =
       Jobs.create_job(%{
         name: "Notify CHW upload failed",
-        body: "fn(state => state);",
+        body: """
+        fn(state => state);
+        """,
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         workflow_id: openhie_workflow.id
@@ -494,6 +499,14 @@ defmodule Lightning.SetupUtils do
         body: %{data: %{}, references: []},
         project_id: openhie_project.id,
         type: :http_request
+      })
+
+    {:ok, _failed_upload} =
+      Workflows.create_edge(%{
+        workflow_id: openhie_workflow.id,
+        condition: :on_job_failure,
+        target_job_id: notify_upload_failed.id,
+        source_job_id: send_to_openhim.id
       })
 
     run_params = [
@@ -520,8 +533,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840746-126941-i2yb2g.json
           [CLI] ✔ Done in 223ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
         input_dataclip_id: dataclip.id,
         output_dataclip_id: dataclip.id
       },
@@ -547,8 +560,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840747-126941-16ewhef.json
           [CLI] ✔ Done in 209ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(20, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(25, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-35, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-30, :second),
         input_dataclip_id: dataclip.id,
         output_dataclip_id: dataclip.id
       }
@@ -560,14 +573,6 @@ defmodule Lightning.SetupUtils do
         project_id: openhie_project.id,
         type: :http_request
       }).id
-
-    {:ok, _failed_upload} =
-      Workflows.create_edge(%{
-        workflow_id: openhie_workflow.id,
-        condition: :on_job_failure,
-        target_job_id: notify_upload_failed.id,
-        source_job_id: send_to_openhim.id
-      })
 
     {:ok, openhie_workorder} =
       create_workorder(
@@ -610,12 +615,14 @@ defmodule Lightning.SetupUtils do
     {:ok, get_dhis2_data} =
       Jobs.create_job(%{
         name: "Get DHIS2 data",
-        body: "get('trackedEntityInstances/PQfMcpmXeFE');",
+        body: """
+        get('trackedEntityInstances/PQfMcpmXeFE');
+        """,
         adaptor: "@openfn/language-dhis2@latest",
         enabled: true,
+        workflow_id: dhis2_workflow.id,
         project_credential_id:
-          List.first(dhis2_credential.project_credentials).id,
-        workflow_id: dhis2_workflow.id
+          List.first(dhis2_credential.project_credentials).id
       })
 
     {:ok, dhis_trigger} =
@@ -636,10 +643,20 @@ defmodule Lightning.SetupUtils do
     {:ok, upload_to_google_sheet} =
       Jobs.create_job(%{
         name: "Upload to Google Sheet",
-        body: "fn(state => state);",
+        body: """
+        fn(state => state);
+        """,
         adaptor: "@openfn/language-http@latest",
         enabled: true,
         workflow_id: dhis2_workflow.id
+      })
+
+    {:ok, _success_upload} =
+      Workflows.create_edge(%{
+        workflow_id: dhis2_workflow.id,
+        condition: :on_job_success,
+        target_job_id: upload_to_google_sheet.id,
+        source_job_id: get_dhis2_data.id
       })
 
     input_dataclip =
@@ -720,8 +737,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✔ Writing output to /tmp/output-1686840343-126941-1hb3ve5.json
           [CLI] ✔ Done in 216ms! ✨
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
         input_dataclip_id: input_dataclip.id,
         output_dataclip_id: output_dataclip.id
       }
@@ -796,8 +813,8 @@ defmodule Lightning.SetupUtils do
           [CLI] ✘ Error: 503 Service Unavailable, please try again later
           [CLI] ✘ Took 1.634s.
           """),
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(15, :second),
+        started_at: DateTime.utc_now() |> DateTime.add(-45, :second),
+        finished_at: DateTime.utc_now() |> DateTime.add(-40, :second),
         input_dataclip_id: input_dataclip.id
       }
     ]
@@ -807,32 +824,6 @@ defmodule Lightning.SetupUtils do
         :cron,
         root_edge,
         ~s[{"data": {}, "references": \[\]}],
-        run_params,
-        output_dataclip_id
-      )
-
-    {:ok, _success_upload} =
-      Workflows.create_edge(%{
-        workflow_id: dhis2_workflow.id,
-        condition: :on_job_success,
-        target_job_id: upload_to_google_sheet.id,
-        source_job_id: get_dhis2_data.id
-      })
-
-    run_params = [
-      %{
-        job_id: upload_to_google_sheet.id,
-        exit_code: 0,
-        started_at: DateTime.utc_now() |> DateTime.add(10, :second),
-        finished_at: DateTime.utc_now() |> DateTime.add(20, :second)
-      }
-    ]
-
-    {:ok, _dhis2_workorder} =
-      create_workorder(
-        :cron,
-        root_edge,
-        ~s[{}],
         run_params,
         output_dataclip_id
       )
@@ -885,7 +876,12 @@ defmodule Lightning.SetupUtils do
   end
 
   defp create_workorder(trigger, edge, dataclip, run_params, output_dataclip_id) do
-    WorkOrderService.multi_for(trigger, edge, dataclip |> Jason.decode!())
+    WorkOrderService.multi_for(
+      trigger,
+      edge,
+      dataclip
+      |> Jason.decode!()
+    )
     |> add_and_update_runs(run_params, output_dataclip_id)
     |> Repo.transaction()
   end
@@ -925,8 +921,8 @@ defmodule Lightning.SetupUtils do
             |> Enum.with_index()
             |> Enum.map(fn {log, index} -> {index, log} end)
             |> Enum.into(%{}),
-          started_at: DateTime.utc_now() |> DateTime.add(0, :second),
-          finished_at: DateTime.utc_now() |> DateTime.add(5, :second),
+          started_at: DateTime.utc_now() |> DateTime.add(-55, :second),
+          finished_at: DateTime.utc_now() |> DateTime.add(-50, :second),
           output_dataclip_id: output_dataclip_id
         })
       end)
