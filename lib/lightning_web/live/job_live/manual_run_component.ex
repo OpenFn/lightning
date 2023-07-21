@@ -283,7 +283,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
     selected_dataclip =
       with dataclip_id when not is_nil(dataclip_id) <-
              Ecto.Changeset.get_field(changeset, :dataclip_id),
-           dataclip <-
+           dataclip when not is_nil(dataclip) <-
              Enum.find(dataclips, &match?(%{id: ^dataclip_id}, &1)) do
         dataclip
       end

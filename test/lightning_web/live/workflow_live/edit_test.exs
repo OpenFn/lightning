@@ -47,7 +47,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
       view |> fill_workflow_name("My Workflow")
-
       assert view |> save_is_disabled?()
 
       {job, _, _} = view |> select_first_job()

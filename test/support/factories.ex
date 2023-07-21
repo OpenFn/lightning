@@ -34,7 +34,11 @@ defmodule Lightning.Factories do
   end
 
   def dataclip_factory do
-    %Lightning.Invocation.Dataclip{project: build(:project)}
+    %Lightning.Invocation.Dataclip{
+      project: build(:project),
+      body: %{},
+      type: :http_request
+    }
   end
 
   def run_factory do

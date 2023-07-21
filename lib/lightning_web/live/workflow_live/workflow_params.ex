@@ -73,7 +73,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
     to_serializable(changeset)
   end
 
-  defp to_serializable(changeset = %Ecto.Changeset{}) do
+  defp to_serializable(%Ecto.Changeset{} = changeset) do
     Map.merge(
       changeset |> to_serializable([:project_id, :name]),
       %{
@@ -113,7 +113,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
     changesets |> Enum.map(&to_serializable(&1, fields))
   end
 
-  defp to_serializable(changeset = %Ecto.Changeset{}, fields) do
+  defp to_serializable(%Ecto.Changeset{} = changeset, fields) do
     model = changeset |> Ecto.Changeset.apply_changes()
 
     # validate_required drops changes when they invalid, we need to maintain
@@ -121,7 +121,7 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
     fields_dropped_by_required =
       (changeset.params || %{})
       |> Map.filter(fn {skey, _val} ->
-        key = String.to_atom(skey)
+        key = String.to_existing_atom(skey)
         key in changeset.required
       end)
 

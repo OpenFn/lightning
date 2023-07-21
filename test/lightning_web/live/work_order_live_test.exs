@@ -1260,7 +1260,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
   @tag role: :editor
   describe "rerun" do
-    setup %{conn: conn, project: project} do
+    setup %{project: project} do
       %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
           project_id: project.id,
@@ -1300,7 +1300,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      [attempt: attempt, work_order: work_order, project: project, conn: conn]
+      %{attempt: attempt, work_order: work_order, project: project}
     end
 
     @tag role: :editor
@@ -1308,15 +1308,28 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project, attempt: attempt} do
       [run | _rest] = attempt.runs
 
+      params = %{
+        filters: %{
+          body: true,
+          crash: true,
+          date_after: "",
+          date_before: "",
+          failure: true,
+          log: true,
+          pending: true,
+          search_term: "",
+          success: true,
+          timeout: true,
+          wo_date_after: "",
+          wo_date_before: "",
+          workflow_id: ""
+        },
+        project_id: project.id
+      }
+
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(
-          conn,
-          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
-        )
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        |> follow_redirect(conn, ~p"/projects/#{project}/runs?#{params}")
 
       assert view
              |> render_click("rerun", %{
@@ -1330,15 +1343,28 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project, attempt: attempt} do
       [run | _rest] = attempt.runs
 
+      params = %{
+        filters: %{
+          body: true,
+          crash: true,
+          date_after: "",
+          date_before: "",
+          failure: true,
+          log: true,
+          pending: true,
+          search_term: "",
+          success: true,
+          timeout: true,
+          wo_date_after: "",
+          wo_date_before: "",
+          workflow_id: ""
+        },
+        project_id: project.id
+      }
+
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(
-          conn,
-          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
-        )
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+        |> follow_redirect(conn, ~p"/projects/#{project}/runs?#{params}")
 
       assert view
              |> render_click("rerun", %{
@@ -1351,44 +1377,46 @@ defmodule LightningWeb.RunWorkOrderTest do
     @tag role: :viewer
     test "Project viewers can't rerun runs in bulk from start",
          %{conn: conn, project: project} do
+      trigger = build(:trigger, type: :webhook)
+
       job_b =
-        workflow_job_fixture(
-          project_id: project.id,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "First Job"
         )
 
-      dataclip = dataclip_fixture(project_id: project.id)
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_b)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_b})
+        |> insert()
+
+      dataclip = insert(:dataclip, project: project)
+
+      job_b = job_b |> Lightning.Repo.reload()
+      trigger = trigger |> Lightning.Repo.reload()
 
       reason =
-        reason_fixture(
-          trigger_id: job_b.trigger.id,
-          dataclip_id: dataclip.id
-        )
+        insert(:reason, type: trigger.type, trigger: trigger, dataclip: dataclip)
 
-      work_order_b =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: job_b.workflow_id,
-          reason_id: reason.id
-        )
+      work_order_b = insert(:workorder, workflow: workflow, reason: reason)
 
       now = Timex.now()
 
-      # Attempt b
-      Attempt.new(%{
-        work_order_id: work_order_b.id,
-        reason_id: reason.id,
+      insert(:attempt,
+        work_order: work_order_b,
+        reason: reason,
         runs: [
           %{
-            job_id: job_b.id,
+            job: job_b,
             started_at: now |> Timex.shift(seconds: -25),
             finished_at: now |> Timex.shift(seconds: -20),
             exit_code: 0,
-            input_dataclip_id: dataclip.id
+            input_dataclip: dataclip
           }
         ]
-      })
-      |> Lightning.Repo.insert!()
+      )
 
       {:ok, view, _html} =
         live(
@@ -1414,44 +1442,46 @@ defmodule LightningWeb.RunWorkOrderTest do
     @tag role: :editor
     test "Project editors can rerun runs in bulk from start",
          %{conn: conn, project: project} do
+      trigger = build(:trigger, type: :webhook)
+
       job_b =
-        workflow_job_fixture(
-          project_id: project.id,
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "First Job"
         )
 
-      dataclip = dataclip_fixture(project_id: project.id)
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_b)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_b})
+        |> insert()
+
+      job_b = workflow.jobs |> List.first()
+      trigger = workflow.triggers |> List.first()
+
+      dataclip = insert(:dataclip, project: project)
 
       reason =
-        reason_fixture(
-          trigger_id: job_b.trigger.id,
-          dataclip_id: dataclip.id
-        )
+        insert(:reason, type: trigger.type, trigger: trigger, dataclip: dataclip)
 
-      work_order_b =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: job_b.workflow_id,
-          reason_id: reason.id
-        )
+      work_order_b = insert(:workorder, workflow: workflow, reason: reason)
 
       now = Timex.now()
 
-      # Attempt b
-      Attempt.new(%{
-        work_order_id: work_order_b.id,
-        reason_id: reason.id,
+      insert(:attempt,
+        work_order: work_order_b,
+        reason: reason,
         runs: [
           %{
-            job_id: job_b.id,
+            job: job_b,
             started_at: now |> Timex.shift(seconds: -25),
             finished_at: now |> Timex.shift(seconds: -20),
             exit_code: 0,
-            input_dataclip_id: dataclip.id
+            input_dataclip: dataclip
           }
         ]
-      })
-      |> Lightning.Repo.insert!()
+      )
 
       path =
         Routes.project_run_index_path(conn, :index, project.id,
@@ -1487,50 +1517,44 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       trigger = build(:trigger, type: :webhook)
 
-      job_a =
+      job_b =
         build(:job,
           body: ~s[fn(state => { return {...state, extra: "data"} })],
           name: "First Job"
         )
 
-      build(:workflow, project: project)
-      |> with_job(job_a)
-      |> with_trigger(trigger)
-      |> with_edge({trigger, job_a})
-      |> insert()
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_b)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_b})
+        |> insert()
 
-      job_a = job_a |> Lightning.Repo.reload()
-      trigger = trigger |> Lightning.Repo.reload()
+      job_b = workflow.jobs |> List.first()
+      trigger = workflow.triggers |> List.first()
 
-      dataclip = dataclip_fixture(project_id: project.id)
+      dataclip = insert(:dataclip, project: project)
 
       reason =
         insert(:reason, type: trigger.type, trigger: trigger, dataclip: dataclip)
 
-      work_order_b =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: job_a.workflow_id,
-          reason_id: reason.id
-        )
+      work_order_b = insert(:workorder, workflow: workflow, reason: reason)
 
       now = Timex.now()
 
-      # Attempt b
-      Attempt.new(%{
-        work_order_id: work_order_b.id,
-        reason_id: reason.id,
+      insert(:attempt,
+        work_order: work_order_b,
+        reason: reason,
         runs: [
           %{
-            job_id: job_a.id,
+            job: job_b,
             started_at: now |> Timex.shift(seconds: -25),
             finished_at: now |> Timex.shift(seconds: -20),
             exit_code: 0,
-            input_dataclip_id: dataclip.id
+            input_dataclip: dataclip
           }
         ]
-      })
-      |> Lightning.Repo.insert!()
+      )
 
       {:ok, view, _html} =
         live(
@@ -1762,8 +1786,8 @@ defmodule LightningWeb.RunWorkOrderTest do
   end
 
   describe "bulk rerun from job" do
-    setup %{conn: conn} do
-      scenario = workflow_scenario()
+    setup %{project: project} do
+      scenario = workflow_scenario(%{project: project})
 
       work_order_1 =
         work_order_fixture(
@@ -1806,7 +1830,6 @@ defmodule LightningWeb.RunWorkOrderTest do
         end)
 
       Map.merge(scenario, %{
-        conn: conn,
         attempts: attempts,
         work_order_1: work_order_1,
         work_order_2: work_order_2

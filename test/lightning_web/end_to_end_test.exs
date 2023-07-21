@@ -13,17 +13,25 @@ defmodule LightningWeb.EndToEndTest do
 
   setup :register_and_log_in_superuser
 
-  defp has_expected_version?(string, dep) do
-    expression =
-      case dep do
-        :node -> ~r/(?=.*node.js)(?=.*18.12)/
-        :cli -> ~r/(?=.*cli)(?=.*0.0.35)/
-        :runtime -> ~r/(?=.*runtime)(?=.*0.0.21)/
-        :compiler -> ~r/(?=.*compiler)(?=.*0.0.29)/
-        :adaptor -> ~r/(?=.*language-http)(?=.*4.2.8)/
-      end
+  defmacrop assert_has_expected_version?(string, dep) do
+    quote do
+      case unquote(dep) do
+        :node ->
+          assert unquote(string) =~ ~r/(?=.*node.js)(?=.*18.12)/
 
-    String.match?(string, expression)
+        :cli ->
+          assert unquote(string) =~ ~r/(?=.*cli)(?=.*0.0.35)/
+
+        :runtime ->
+          assert unquote(string) =~ ~r/(?=.*runtime)(?=.*0.0.21)/
+
+        :compiler ->
+          assert unquote(string) =~ ~r/(?=.*compiler)(?=.*0.0.29)/
+
+        :adaptor ->
+          assert unquote(string) =~ ~r/(?=.*language-http)(?=.*5.0.1)/
+      end
+    end
   end
 
   # workflow runs webhook then flow job
@@ -131,11 +139,11 @@ defmodule LightningWeb.EndToEndTest do
 
       # Check that versions are accurate and printed at the top of each run
       assert Enum.at(r1_logs, 0) == "[CLI] ℹ Versions:"
-      assert Enum.at(r1_logs, 1) |> has_expected_version?(:node)
-      assert Enum.at(r1_logs, 2) |> has_expected_version?(:cli)
-      assert Enum.at(r1_logs, 3) |> has_expected_version?(:runtime)
-      assert Enum.at(r1_logs, 4) |> has_expected_version?(:compiler)
-      assert Enum.at(r1_logs, 5) |> has_expected_version?(:adaptor)
+      Enum.at(r1_logs, 1) |> assert_has_expected_version?(:node)
+      Enum.at(r1_logs, 2) |> assert_has_expected_version?(:cli)
+      Enum.at(r1_logs, 3) |> assert_has_expected_version?(:runtime)
+      Enum.at(r1_logs, 4) |> assert_has_expected_version?(:compiler)
+      Enum.at(r1_logs, 5) |> assert_has_expected_version?(:adaptor)
 
       assert Enum.at(r1_logs, 11) =~ "[JOB] ℹ 2"
       assert Enum.at(r1_logs, 12) =~ "[JOB] ℹ {\"name\":\"ศผ่องรี มมซึฆเ\"}"

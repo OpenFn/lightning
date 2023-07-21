@@ -1,5 +1,5 @@
 defmodule LightningWeb.AuthProvidersLiveTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Lightning.BypassHelpers
@@ -88,7 +88,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
              )
              |> render_change()
 
-      assert view |> element("button", "Test") |> render_click() =~
+      assert view |> element("button#test-button", "Test") |> render_click() =~
                "error parsing .well-known"
 
       assert view
@@ -161,7 +161,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       {:ok, view, _html} =
         live(conn, Routes.auth_providers_index_path(conn, :edit))
 
-      assert view |> element("button", "Test") |> render_click() =~
+      assert view |> element("button#test-button", "Test") |> render_click() =~
                "Success"
 
       assert view

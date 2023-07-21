@@ -64,11 +64,9 @@ defmodule Lightning.InstallSchemasTest do
       File
       |> expect(:rm_rf, fn _ -> nil end)
       |> expect(:mkdir_p, fn _ -> nil end)
-      |> expect(:open!, fn "test/fixtures/schemas/asana.json", [:write] ->
-        nil
-      end)
-      |> expect(:open!, fn "test/fixtures/schemas/primero.json", [:write] ->
-        nil
+      |> expect(:open!, fn
+        "test/fixtures/schemas/primero.json", [:write] -> nil
+        "test/fixtures/schemas/asana.json", [:write] -> nil
       end)
       |> expect(:close, 2, fn _ -> nil end)
 

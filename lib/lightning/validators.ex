@@ -1,4 +1,8 @@
 defmodule Lightning.Validators do
+  @moduledoc """
+  Extra validators for Ecto.Changeset.
+  """
+
   import Ecto.Changeset
 
   @doc """

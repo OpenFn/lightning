@@ -112,7 +112,7 @@ defmodule Lightning.JobsFixtures do
         condition: :always
       )
 
-    %{job: job, edge: e, trigger: t}
+    %{job: job, edge: e, trigger: t, workflow: workflow}
   end
 
   def workflow_scenario(context \\ %{}) do

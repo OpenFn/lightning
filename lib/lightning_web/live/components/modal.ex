@@ -1,4 +1,10 @@
 defmodule LightningWeb.Components.Modal do
+  @moduledoc """
+  A modal component that can be used to display a modal on the page.
+
+  This currently isn't used anywhere but should be used in the future to
+  replace the existing modal implementations.
+  """
   use LightningWeb, :component
 
   alias Phoenix.LiveView.JS

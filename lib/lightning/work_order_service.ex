@@ -128,6 +128,11 @@ defmodule Lightning.WorkOrderService do
           Pipeline.new(%{attempt_run_id: attempt_run.id})
         end)
 
+      # HACK: Oban's testing functions only apply to `self` and LiveView
+      # tests run in child processes, so for now we need to set the testing
+      # mode from within the process.
+      Process.put(:oban_testing, :manual)
+
       Oban.insert_all(jobs)
 
       {:ok, changes}

@@ -1,5 +1,5 @@
 defmodule Lightning.Pipeline.RunnerTest do
-  use Lightning.DataCase, async: true
+  use Lightning.DataCase, async: false
 
   alias Lightning.Pipeline
 
@@ -122,7 +122,7 @@ defmodule Lightning.Pipeline.RunnerTest do
         project_id: project.id
       )
 
-    job =
+    %{job: job} =
       workflow_job_fixture(
         adaptor: "@openfn/language-common",
         body: """

@@ -451,10 +451,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp webhook_url(trigger) do
-    with %{type: :webhook, id: id} <- trigger do
-      Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
-    else
-      _ -> nil
+    trigger
+    |> case do
+      %{type: :webhook, id: id} ->
+        Routes.webhooks_url(LightningWeb.Endpoint, :create, [id])
+
+      _ ->
+        nil
     end
   end
 
@@ -536,25 +539,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
   # `@latest` version.
   defp set_default_adaptors(params) do
     case params do
-      %{"jobs" => _} ->
+      %{"jobs" => job_params} ->
         params
-        |> Map.update!("jobs", fn jobs ->
-          jobs
-          |> Enum.map(fn job ->
-            if Map.keys(job) == ["id"] do
-              job
-              |> Map.put(
-                "adaptor",
-                Lightning.AdaptorRegistry.resolve_adaptor(%Job{}.adaptor)
-              )
-            else
-              job
-            end
-          end)
-        end)
+        |> Map.put("jobs", job_params |> Enum.map(&maybe_add_default_adaptor/1))
 
       _ ->
         params
+    end
+  end
+
+  defp maybe_add_default_adaptor(job_param) do
+    if Map.keys(job_param) == ["id"] do
+      job_param
+      |> Map.put(
+        "adaptor",
+        Lightning.AdaptorRegistry.resolve_adaptor(%Job{}.adaptor)
+      )
+    else
+      job_param
     end
   end
 
