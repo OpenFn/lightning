@@ -36,6 +36,9 @@ defmodule Lightning.Accounts.User do
     has_many :project_users, Lightning.Projects.ProjectUser
     has_many :projects, through: [:project_users, :project]
 
+    has_many :backup_codes, Lightning.Accounts.UserBackupCode,
+      on_replace: :delete
+
     timestamps()
   end
 

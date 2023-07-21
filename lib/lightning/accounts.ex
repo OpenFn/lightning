@@ -10,7 +10,15 @@ defmodule Lightning.Accounts do
   import Ecto.Query, warn: false
   alias Ecto.Multi
   alias Lightning.Repo
-  alias Lightning.Accounts.{User, UserToken, UserTOTP, UserNotifier}
+
+  alias Lightning.Accounts.{
+    User,
+    UserBackupCode,
+    UserToken,
+    UserTOTP,
+    UserNotifier
+  }
+
   alias Lightning.Credentials
 
   require Logger
@@ -174,8 +182,16 @@ defmodule Lightning.Accounts do
     Multi.new()
     |> Multi.insert_or_update(:totp, UserTOTP.changeset(totp, attrs))
     |> Multi.update(:user, fn %{totp: totp} ->
-      totp = Repo.preload(totp, [:user])
-      Ecto.Changeset.change(totp.user, %{mfa_enabled: true})
+      totp = Repo.preload(totp, user: :backup_codes)
+
+      new_backup_codes =
+        Enum.map(1..10, fn _n ->
+          %UserBackupCode{code: UserBackupCode.generate_backup_code()}
+        end)
+
+      totp.user
+      |> Ecto.Changeset.change(%{mfa_enabled: true})
+      |> Ecto.Changeset.put_assoc(:backup_codes, new_backup_codes)
     end)
     |> Repo.transaction()
     |> case do
@@ -211,6 +227,41 @@ defmodule Lightning.Accounts do
     totp = Repo.get_by!(UserTOTP, user_id: user.id)
 
     UserTOTP.valid_totp?(totp, code)
+  end
+
+  @doc """
+  Validates if the given Backup code is valid.
+  """
+  @spec valid_user_backup_code?(User.t(), String.t()) :: true | false
+  def valid_user_backup_code?(user, code) do
+    user = Repo.preload(user, [:backup_codes])
+
+    with {backup_codes, true} <- validate_backup_codes(user.backup_codes, code),
+         {:ok, _user} <- update_user_backup_codes(user, backup_codes) do
+      true
+    else
+      _other ->
+        false
+    end
+  end
+
+  defp validate_backup_codes(backup_codes, user_code) do
+    Enum.map_reduce(backup_codes, false, fn backup, valid? ->
+      if Plug.Crypto.secure_compare(backup.code, user_code) and
+           is_nil(backup.used_at) do
+        {Ecto.Changeset.change(backup, %{used_at: NaiveDateTime.utc_now()}),
+         true}
+      else
+        {backup, valid?}
+      end
+    end)
+  end
+
+  defp update_user_backup_codes(user, backup_codes) do
+    user
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:backup_codes, backup_codes)
+    |> Repo.update()
   end
 
   @doc """
