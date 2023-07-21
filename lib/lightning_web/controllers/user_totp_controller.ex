@@ -6,8 +6,6 @@ defmodule LightningWeb.UserTOTPController do
 
   plug :redirect_if_totp_is_not_pending
 
-  @totp_session :user_totp_pending
-
   def new(conn, params) do
     render(conn, "new.html",
       error_message: nil,
@@ -20,8 +18,8 @@ defmodule LightningWeb.UserTOTPController do
 
     if Accounts.valid_user_totp?(current_user, params["code"]) do
       conn
-      |> delete_session(@totp_session)
-      |> UserAuth.redirect_user_after_login_with_remember_me(params)
+      |> UserAuth.totp_validated()
+      |> UserAuth.redirect_with_return_to(params)
     else
       render(conn, "new.html",
         remember_me: params["remember_me"],
@@ -31,7 +29,7 @@ defmodule LightningWeb.UserTOTPController do
   end
 
   defp redirect_if_totp_is_not_pending(conn, _opts) do
-    if get_session(conn, @totp_session) do
+    if UserAuth.totp_pending?(conn) do
       conn
     else
       conn

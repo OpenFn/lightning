@@ -6,7 +6,11 @@ defmodule Lightning.Accounts.UserTOTP do
   import Ecto.Changeset
 
   @type t :: %__MODULE__{
-          id: Ecto.UUID.t() | nil
+          id: Ecto.UUID.t() | nil,
+          secret: String.t() | nil,
+          code: String.t() | nil,
+          user:
+            Lightning.Accounts.User.t() | Ecto.Association.NotLoaded.t() | nil
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}

@@ -35,13 +35,13 @@ defmodule LightningWeb.UserSessionController do
 
         conn
         |> UserAuth.log_in_user(user)
-        |> put_session(:user_totp_pending, true)
+        |> UserAuth.mark_totp_pending()
         |> redirect(to: Routes.user_totp_path(conn, :new, user: totp_params))
 
       %User{} = user ->
         conn
         |> UserAuth.log_in_user(user)
-        |> UserAuth.redirect_user_after_login_with_remember_me(user_params)
+        |> UserAuth.redirect_with_return_to(user_params)
 
       _ ->
         conn
@@ -60,7 +60,7 @@ defmodule LightningWeb.UserSessionController do
       token ->
         conn
         |> UserAuth.new_session(token)
-        |> UserAuth.redirect_user_after_login_with_remember_me()
+        |> UserAuth.redirect_with_return_to()
     end
   end
 

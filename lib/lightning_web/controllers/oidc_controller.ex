@@ -43,7 +43,7 @@ defmodule LightningWeb.OidcController do
         %{mfa_enabled: true} = user ->
           conn
           |> UserAuth.log_in_user(user)
-          |> put_session(:user_totp_pending, true)
+          |> UserAuth.mark_totp_pending()
           |> redirect(
             to:
               Routes.user_totp_path(conn, :new, user: %{"remember_me" => "true"})
@@ -52,7 +52,7 @@ defmodule LightningWeb.OidcController do
         user ->
           conn
           |> UserAuth.log_in_user(user)
-          |> UserAuth.redirect_user_after_login_with_remember_me(%{
+          |> UserAuth.redirect_with_return_to(%{
             "remember_me" => "true"
           })
       end

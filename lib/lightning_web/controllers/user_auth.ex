@@ -16,6 +16,8 @@ defmodule LightningWeb.UserAuth do
   @remember_me_cookie "_lightning_web_user_remember_me"
   @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
 
+  @totp_session :user_totp_pending
+
   @doc """
   Logs the user in by creating a new session token.
   """
@@ -46,7 +48,7 @@ defmodule LightningWeb.UserAuth do
   @doc """
   Returns to or redirects to the dashboard and potentially set remember_me token.
   """
-  def redirect_user_after_login_with_remember_me(conn, params \\ %{}) do
+  def redirect_with_return_to(conn, params \\ %{}) do
     user_return_to = get_session(conn, :user_return_to)
 
     conn
@@ -198,7 +200,7 @@ defmodule LightningWeb.UserAuth do
             |> halt()
         end
 
-      get_format(conn) == "html" && get_session(conn, :user_totp_pending) &&
+      get_format(conn) == "html" && totp_pending?(conn) &&
           conn.path_info != ["users", "two-factor", "app"] ->
         conn
         |> redirect(to: Routes.user_totp_path(conn, :new))
@@ -207,6 +209,18 @@ defmodule LightningWeb.UserAuth do
       true ->
         conn
     end
+  end
+
+  def mark_totp_pending(conn) do
+    put_session(conn, @totp_session, true)
+  end
+
+  def totp_pending?(conn) do
+    get_session(conn, @totp_session)
+  end
+
+  def totp_validated(conn) do
+    delete_session(conn, @totp_session)
   end
 
   defp maybe_store_return_to(%{method: "GET"} = conn) do

@@ -53,10 +53,10 @@ defmodule LightningWeb.UserAuthTest do
     end
   end
 
-  describe "redirect_user_after_login_with_remember_me/2" do
+  describe "redirect_with_return_to/2" do
     test "redirects to / by default", %{conn: conn} do
       assert conn
-             |> UserAuth.redirect_user_after_login_with_remember_me()
+             |> UserAuth.redirect_with_return_to()
              |> redirected_to() == "/"
     end
 
@@ -64,7 +64,7 @@ defmodule LightningWeb.UserAuthTest do
       conn =
         conn
         |> put_session(:user_return_to, "/hello")
-        |> UserAuth.redirect_user_after_login_with_remember_me()
+        |> UserAuth.redirect_with_return_to()
 
       assert redirected_to(conn) == "/hello"
       refute get_session(conn, :user_return_to)
@@ -78,7 +78,7 @@ defmodule LightningWeb.UserAuthTest do
         conn
         |> fetch_cookies()
         |> UserAuth.log_in_user(user)
-        |> UserAuth.redirect_user_after_login_with_remember_me(%{
+        |> UserAuth.redirect_with_return_to(%{
           "remember_me" => "true"
         })
 
@@ -149,7 +149,7 @@ defmodule LightningWeb.UserAuthTest do
         conn
         |> fetch_cookies()
         |> UserAuth.log_in_user(user)
-        |> UserAuth.redirect_user_after_login_with_remember_me(%{
+        |> UserAuth.redirect_with_return_to(%{
           "remember_me" => "true"
         })
 
@@ -257,7 +257,7 @@ defmodule LightningWeb.UserAuthTest do
       conn =
         conn
         |> assign(:current_user, user)
-        |> put_session(:user_totp_pending, true)
+        |> UserAuth.mark_totp_pending()
         |> UserAuth.require_authenticated_user([])
 
       assert conn.halted
