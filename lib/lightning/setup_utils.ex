@@ -41,6 +41,16 @@ defmodule Lightning.SetupUtils do
         {:ok, nil}
       end
 
+    Lightning.Repo.insert!(%Lightning.Accounts.UserToken{
+      user_id: super_user.id,
+      context: "api",
+      token:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJKb2tlbiIsImlhdCI6MTY4
+          ODAzNzE4NSwiaXNzIjoiSm9rZW4iLCJqdGkiOiIydG1ocG8zYm0xdmR0MDZvZDgwMDAwdTEiLCJuY
+          mYiOjE2ODgwMzcxODUsInVzZXJfaWQiOiIzZjM3OGU2Yy02NjBhLTRiOTUtYWI5Ni02YmQwZGMyNj
+          NkMzMifQ.J1FnACGpqtQbmXNvyUCwCY4mS5S6CohRU3Ey-N0prP4"
+    })
+
     {:ok, admin} =
       Accounts.register_user(%{
         first_name: "Amy",

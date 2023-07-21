@@ -703,6 +703,14 @@ defmodule Lightning.SetupUtilsTest do
       assert super_user.email == "super@openfn.org"
       User.valid_password?(super_user, "welcome123")
 
+      user_token =
+        Lightning.Repo.all(Lightning.Accounts.UserToken)
+        |> List.first()
+
+      assert user_token.user_id == super_user.id
+      assert user_token.context == "api"
+      assert user_token.token =~ "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+
       assert admin.email == "demo@openfn.org"
       User.valid_password?(admin, "welcome123")
 
