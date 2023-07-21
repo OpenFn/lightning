@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditorTest do
   use LightningWeb.ConnCase, async: true
+  use Oban.Testing, repo: Lightning.Repo
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   # import Lightning.Factories
@@ -34,7 +35,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   @tag skip: true
   test "mounts the JobEditor with the correct attrs"
 
-  @tag skip: true
   describe "manual runs" do
     test "viewers can't run a job" do
       # view
@@ -46,13 +46,67 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
     @tag skip: true
     test "can create a new dataclip"
-    @tag skip: true
-    test "can't with a new dataclip if it's invalid"
 
-    test "can run a workflow" do
-      # assert_enqueued(worker: Lightning.Pipeline)
-      # assert [run_viewer] = live_children(view)
-      # assert run_viewer |> render() =~ "Not started."
+    test "can't with a new dataclip if it's invalid", %{
+      conn: conn,
+      project: p,
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      view
+      |> form("#manual-job-#{job.id} form", %{
+        "manual_workorder" => %{"body" => "["}
+      })
+      |> render_change()
+
+      view
+      |> element("#manual-job-#{job.id} form")
+      |> render_submit()
+
+      refute_enqueued(worker: Lightning.Pipeline)
+
+      assert view
+             |> element("#manual-job-#{job.id} form")
+             |> render()
+
+      assert view |> has_element?("#manual-job-#{job.id} form", "Invalid body")
+    end
+
+    test "can run a job", %{conn: conn, project: p, workflow: w} do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      assert view
+             |> element(
+               "#manual-job-#{job.id} form button[type=submit][disabled]"
+             )
+             |> has_element?()
+
+      view
+      |> form("#manual-job-#{job.id} form", %{
+        "manual_workorder" => %{"body" => "{}"}
+      })
+      |> render_change()
+
+      refute view
+             |> element(
+               "#manual-job-#{job.id} form button[type=submit][disabled]"
+             )
+             |> has_element?()
+
+      view
+      |> element("#manual-job-#{job.id} form")
+      |> render_submit()
+
+      assert_enqueued(worker: Lightning.Pipeline)
+      assert [run_viewer] = live_children(view)
+      assert run_viewer |> render() =~ "Not started."
     end
   end
 
