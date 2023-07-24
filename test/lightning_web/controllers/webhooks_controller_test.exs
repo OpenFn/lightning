@@ -8,24 +8,26 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   describe "a POST request to '/i'" do
     test "with a valid trigger id instantiates a workorder", %{conn: conn} do
-      expect(Lightning.Pipeline.Runner, :start, fn _run ->
-        %Lightning.Runtime.Result{}
+      Oban.Testing.with_testing_mode(:inline, fn ->
+        expect(Lightning.Pipeline.Runner, :start, fn _run ->
+          %Lightning.Runtime.Result{}
+        end)
+
+        %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
+
+        message = %{"foo" => "bar"}
+        conn = post(conn, "/i/#{trigger.id}", message)
+
+        assert %{"work_order_id" => _, "run_id" => run_id} =
+                 json_response(conn, 200)
+
+        %{job_id: job_id, input_dataclip: %{body: body}} =
+          Invocation.get_run!(run_id)
+          |> Repo.preload(:input_dataclip)
+
+        assert job_id == job.id
+        assert body == message
       end)
-
-      %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
-
-      message = %{"foo" => "bar"}
-      conn = post(conn, "/i/#{trigger.id}", message)
-
-      assert %{"work_order_id" => _, "run_id" => run_id} =
-               json_response(conn, 200)
-
-      %{job_id: job_id, input_dataclip: %{body: body}} =
-        Invocation.get_run!(run_id)
-        |> Repo.preload(:input_dataclip)
-
-      assert job_id == job.id
-      assert body == message
     end
 
     test "with an invalid trigger id returns a 404", %{conn: conn} do

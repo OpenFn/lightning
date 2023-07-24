@@ -211,10 +211,12 @@ defmodule Lightning.ProjectsTest do
         )
         |> Repo.transaction()
 
-      Lightning.WorkOrderService.retry_attempt_run(
-        p1_work_order.attempt_run,
-        p1_user
-      )
+      Oban.Testing.with_testing_mode(:inline, fn ->
+        Lightning.WorkOrderService.retry_attempt_run(
+          p1_work_order.attempt_run,
+          p1_user
+        )
+      end)
 
       Lightning.WorkOrderService.multi_for(
         :webhook,

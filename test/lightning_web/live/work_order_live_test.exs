@@ -1,6 +1,5 @@
 defmodule LightningWeb.RunWorkOrderTest do
   use LightningWeb.ConnCase, async: true
-  use Oban.Testing, repo: Lightning.Repo
 
   import Phoenix.LiveViewTest
 
