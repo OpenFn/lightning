@@ -8,20 +8,54 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
   import Lightning.Factories
 
+  describe "RunViewer" do
+    test "output messages" do
+      assert render_component(
+               &LightningWeb.RunLive.Components.run_viewer/1,
+               run:
+                 insert(:run, exit_code: 1, output_dataclip_id: nil)
+                 |> Lightning.Repo.preload(:log_lines)
+             ) =~
+               "This run failed"
+
+      assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
+               run:
+                 insert(:run, exit_code: 0, output_dataclip_id: nil)
+                 |> Lightning.Repo.preload(:log_lines)
+             ) =~
+               "There is no output for this run"
+
+      run =
+        run_fixture(
+          exit_code: 0,
+          output_dataclip_id:
+            insert(:dataclip,
+              type: :run_result,
+              body: %{name: "dataclip_body"}
+            ).id
+        )
+        |> Lightning.Repo.preload(:output_dataclip)
+
+      assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
+               run: run |> Lightning.Repo.preload(:log_lines)
+             ) =~
+               "dataclip_body"
+    end
+  end
+
   test "run_list_item component" do
     reason = insert(:reason, type: :webhook)
 
     attempt =
-      build(:attempt,
+      insert(:attempt,
         work_order: build(:workorder, reason: reason),
         runs: [
           build(:run),
-          build(:run, finished_at: Timex.now(), exit_code: 0),
-          build(:run, finished_at: Timex.now())
+          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
+          build(:run, finished_at: DateTime.utc_now())
         ],
         reason: reason
       )
-      |> insert()
 
     first_run = attempt.runs |> List.first()
     second_run = attempt.runs |> Enum.at(1)
@@ -101,8 +135,8 @@ defmodule LightningWeb.RunLive.ComponentsTest do
         work_order: build(:workorder, reason: reason),
         runs: [
           build(:run),
-          build(:run, finished_at: Timex.now(), exit_code: 0),
-          build(:run, finished_at: Timex.now())
+          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
+          build(:run, finished_at: DateTime.utc_now())
         ],
         reason: reason
       )
@@ -168,7 +202,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       started_at = now |> Timex.shift(seconds: -25)
       finished_at = now |> Timex.shift(seconds: -1)
 
-      run = run_fixture(started_at: started_at, finished_at: finished_at)
+      run = insert(:run, started_at: started_at, finished_at: finished_at)
 
       html =
         render_component(&Components.run_details/1, run: run)
@@ -194,7 +228,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
       now = Timex.now()
 
       started_at = now |> Timex.shift(seconds: -25)
-      run = run_fixture(started_at: started_at)
+      run = insert(:run, started_at: started_at)
 
       html =
         render_component(&Components.run_details/1, run: run)
@@ -216,7 +250,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
     end
 
     test "with unstarted run" do
-      run = run_fixture()
+      run = insert(:run)
 
       html =
         render_component(&Components.run_details/1, run: run)

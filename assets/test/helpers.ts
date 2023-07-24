@@ -1,4 +1,4 @@
-import { Job } from '../src/types';
+import type { Job } from '../src/types';
 import { readFile, writeFile } from 'node:fs/promises';
 
 export async function getFixture<T>(name: string): Promise<T> {

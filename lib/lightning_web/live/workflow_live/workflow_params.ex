@@ -26,16 +26,15 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
 
   defp merge_list_params(source, new) when is_list(source) do
     new
-    |> Enum.map(&key_as_int/1)
     |> Enum.reduce(source, fn {index, val}, acc ->
-      acc |> List.update_at(index, &Map.merge(&1, val))
+      acc |> List.update_at(index |> key_as_int(), &Map.merge(&1, val))
     end)
   end
 
-  defp key_as_int({key, val}) when is_binary(key) do
+  defp key_as_int(key) when is_binary(key) do
     case Integer.parse(key) do
-      {key, ""} -> {key, val}
-      _ -> {key, val}
+      {key, ""} -> key
+      _ -> key
     end
   end
 
@@ -69,23 +68,35 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
   serialize to JSON. This is necessary because the underlying model may
   contain atom values.
   """
-  def to_map(changeset), do: to_serializable(changeset)
+  @spec to_map(Ecto.Changeset.t()) :: %{String.t() => any()}
+  def to_map(changeset) do
+    to_serializable(changeset)
+  end
 
-  defp to_serializable(changeset) do
+  defp to_serializable(%Ecto.Changeset{} = changeset) do
     Map.merge(
       changeset |> to_serializable([:project_id, :name]),
       %{
         jobs:
           changeset
-          |> Ecto.Changeset.get_change(:jobs)
-          |> to_serializable([:id, :name, :adaptor, :enabled]),
+          |> Ecto.Changeset.get_assoc(:jobs)
+          |> Enum.reject(&match?(%{action: :replace}, &1))
+          |> to_serializable([
+            :id,
+            :name,
+            :adaptor,
+            :body,
+            :enabled,
+            :project_credential_id
+          ]),
         triggers:
           changeset
-          |> Ecto.Changeset.get_change(:triggers)
-          |> to_serializable([:id, :type]),
+          |> Ecto.Changeset.get_assoc(:triggers)
+          |> to_serializable([:id, :type, :cron_expression]),
         edges:
           changeset
-          |> Ecto.Changeset.get_change(:edges)
+          |> Ecto.Changeset.get_assoc(:edges)
+          |> Enum.reject(&match?(%{action: :replace}, &1))
           |> to_serializable([
             :id,
             :source_trigger_id,
@@ -102,13 +113,29 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
     changesets |> Enum.map(&to_serializable(&1, fields))
   end
 
-  defp to_serializable(changeset, fields) do
-    %{__struct__: model} =
-      changeset
-      |> Ecto.Changeset.apply_changes()
+  defp to_serializable(%Ecto.Changeset{} = changeset, fields) do
+    model = changeset |> Ecto.Changeset.apply_changes()
 
-    changeset
-    |> Ecto.Changeset.apply_changes()
+    # validate_required drops changes when they invalid, we need to maintain
+    # them so that our form doesn't forget the changes made by the user.
+    fields_dropped_by_required =
+      (changeset.params || %{})
+      |> Map.filter(fn {skey, _val} ->
+        key = String.to_existing_atom(skey)
+        key in changeset.required
+      end)
+
+    to_serializable(model, fields)
+    |> Map.put(
+      :errors,
+      Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+      |> Map.take(fields)
+    )
+    |> Map.merge(fields_dropped_by_required)
+  end
+
+  defp to_serializable(%{__struct__: model} = data, fields) do
+    data
     |> Map.take(fields)
     |> Enum.map(fn {key, val} ->
       val = cast_value(model, key, val)
@@ -116,11 +143,6 @@ defmodule LightningWeb.WorkflowNewLive.WorkflowParams do
       {key, val}
     end)
     |> Enum.into(%{})
-    |> Map.put(
-      :errors,
-      Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-      |> Map.take(fields)
-    )
   end
 
   defp cast_value(model, field, value) do

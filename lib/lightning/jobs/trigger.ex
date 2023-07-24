@@ -14,7 +14,6 @@ defmodule Lightning.Jobs.Trigger do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Jobs.Job
   alias Lightning.Workflows.Workflow
 
   @type t :: %__MODULE__{
@@ -22,26 +21,27 @@ defmodule Lightning.Jobs.Trigger do
           id: Ecto.UUID.t() | nil
         }
 
-  @flow_types [:on_job_success, :on_job_failure]
-  @trigger_types [:webhook, :cron] ++ @flow_types
+  @trigger_types [:webhook, :cron]
 
-  @type trigger_type :: :webhook | :cron | :on_job_success | :on_job_failure
-
+  @type trigger_type :: :webhook | :cron
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "triggers" do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
-    has_many :jobs, Job
     belongs_to :workflow, Workflow
-    belongs_to :upstream_job, Job
 
     field :type, Ecto.Enum, values: @trigger_types, default: :webhook
 
     field :delete, :boolean, virtual: true
 
     timestamps()
+  end
+
+  def new(attrs) do
+    change(%__MODULE__{}, Map.merge(attrs, %{id: Ecto.UUID.generate()}))
+    |> change(attrs)
   end
 
   @doc false
@@ -54,25 +54,11 @@ defmodule Lightning.Jobs.Trigger do
         :custom_path,
         :type,
         :workflow_id,
-        :upstream_job_id,
         :cron_expression
       ])
 
     changeset
-    |> cast_assoc(:jobs,
-      with: {Job, :changeset, [changeset |> get_field(:workflow_id)]}
-    )
     |> validate()
-  end
-
-  @doc """
-  DEPRECATED: Triggers are now created via the workflow, this function is only
-  used when creating a Trigger via a Job.
-  """
-  def changeset(job, attrs, workflow_id) do
-    changeset(job, attrs)
-    |> put_change(:workflow_id, workflow_id)
-    |> validate_required(:workflow_id)
   end
 
   def validate(changeset) do
@@ -97,28 +83,18 @@ defmodule Lightning.Jobs.Trigger do
   end
 
   # Append validations based on the type of the Trigger.
-  # - `:on_job_success` must have an associated upstream Job model.
-  # - `:webhook` should _not_ have an upstream Job.
   defp validate_by_type(changeset) do
     changeset
     |> fetch_field!(:type)
     |> case do
-      type when type in @flow_types ->
-        changeset
-        |> put_change(:cron_expression, nil)
-        |> validate_required(:upstream_job_id)
-        |> assoc_constraint(:upstream_job)
-
       :webhook ->
         changeset
         |> put_change(:cron_expression, nil)
-        |> put_change(:upstream_job_id, nil)
 
       :cron ->
         changeset
         |> put_default(:cron_expression, "0 0 * * *")
         |> validate_cron()
-        |> put_change(:upstream_job_id, nil)
 
       nil ->
         changeset

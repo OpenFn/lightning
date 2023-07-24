@@ -5,9 +5,9 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query, warn: false
   alias Lightning.Repo
-  alias LightningWeb.Router.Helpers
-  alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.{Edge, Workflow}
   alias Lightning.Projects.Project
+  alias Lightning.{Jobs, Jobs.Trigger, Jobs.Job}
 
   @doc """
   Returns the list of workflows.
@@ -127,33 +127,10 @@ defmodule Lightning.Workflows do
 
   def get_workflows_for_query(%Project{} = project) do
     from(w in Workflow,
-      preload: [jobs: [:credential, :workflow, trigger: [:upstream_job]]],
+      preload: [:triggers, :edges, jobs: [:credential, :workflow]],
       where: is_nil(w.deleted_at) and w.project_id == ^project.id,
       order_by: [asc: w.name]
     )
-  end
-
-  defp trigger_for_project_space(job) do
-    case job.trigger.type do
-      :webhook ->
-        %{
-          "webhookUrl" =>
-            Helpers.webhooks_url(
-              LightningWeb.Endpoint,
-              :create,
-              [job.trigger.id]
-            )
-        }
-
-      :cron ->
-        %{"cronExpression" => job.trigger.cron_expression}
-
-      type when type in [:on_job_failure, :on_job_success] ->
-        %{"upstreamJob" => job.trigger.upstream_job_id}
-    end
-    |> Enum.into(%{
-      "type" => job.trigger.type
-    })
   end
 
   @spec to_project_space([Workflow.t()]) :: %{}
@@ -167,8 +144,8 @@ defmodule Lightning.Workflows do
             "id" => job.id,
             "name" => job.name,
             "adaptor" => job.adaptor,
-            "workflowId" => job.workflow_id,
-            "trigger" => trigger_for_project_space(job)
+            "workflowId" => job.workflow_id
+            # "trigger" => trigger_for_project_space(job)
           }
         end),
       "workflows" =>
@@ -200,5 +177,78 @@ defmodule Lightning.Workflows do
 
       Repo.update_all(workflow_jobs_query, set: [enabled: false])
     end)
+  end
+
+  @doc """
+  Creates an edge
+  """
+  def create_edge(attrs) do
+    attrs
+    |> Edge.new()
+    |> Repo.insert()
+  end
+
+  @doc """
+  Gets a Single Edge by it's webhook trigger.
+  """
+  def get_edge_by_webhook(path) when is_binary(path) do
+    from(e in Edge,
+      join: j in Job,
+      on: j.id == e.target_job_id,
+      join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where:
+        fragment(
+          "coalesce(?, ?)",
+          t.custom_path,
+          type(e.source_trigger_id, :string)
+        ) == ^path,
+      preload: [:source_trigger, :target_job]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns a list of edges with jobs to execute, given a current timestamp in Unix. This is
+  used by the scheduler, which calls this function once every minute.
+  """
+  @spec get_edges_for_cron_execution(DateTime.t()) :: [Edge.t()]
+  def get_edges_for_cron_execution(datetime) do
+    cron_edges =
+      Jobs.Query.enabled_cron_jobs_by_edge()
+      |> Repo.all()
+
+    for e <- cron_edges,
+        has_matching_trigger(e, datetime),
+        do: e
+  end
+
+  defp has_matching_trigger(edge, datetime) do
+    cron_expression = edge.source_trigger.cron_expression
+
+    with {:ok, cron} <- Crontab.CronExpression.Parser.parse(cron_expression),
+         true <- Crontab.DateChecker.matches_date?(cron, datetime) do
+      edge
+    else
+      _ -> false
+    end
+  end
+
+  @doc """
+  Builds a Trigger
+  """
+  def build_trigger(attrs) do
+    attrs
+    |> Trigger.new()
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a trigger
+  """
+  def update_trigger(trigger, attrs) do
+    trigger
+    |> Trigger.changeset(attrs)
+    |> Repo.update()
   end
 end

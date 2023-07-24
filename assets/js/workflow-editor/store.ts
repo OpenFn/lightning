@@ -1,20 +1,31 @@
 import type { Patch as ImmerPatch } from 'immer';
+
 import { applyPatches, enablePatches, produce } from 'immer';
 import { createStore } from 'zustand';
+import type { Lightning } from '../workflow-diagram/types';
 
 enablePatches();
 
-type WorkflowProps = {
-  triggers: {}[];
-  jobs: {}[];
-  edges: {}[];
-  editJobUrl: string;
+export type RemoveArgs = {
+  jobs?: string[];
+  triggers?: string[];
+  edges?: string[];
+};
+
+export type ChangeArgs = Partial<WorkflowProps>;
+
+export type AddArgs = ChangeArgs;
+
+export type WorkflowProps = {
+  triggers: Lightning.TriggerNode[];
+  jobs: Lightning.JobNode[];
+  edges: Lightning.Edge[];
 };
 
 export interface WorkflowState extends WorkflowProps {
-  addEdge: (edge: any) => void;
-  addJob: (job: any) => void;
-  addTrigger: (node: any) => void;
+  add: (data: AddArgs) => void;
+  change: (data: ChangeArgs) => void;
+  remove: (data: RemoveArgs) => void;
   onChange: (pendingAction: PendingAction) => void;
   applyPatches: (patches: Patch[]) => void;
 }
@@ -33,37 +44,28 @@ export interface PendingAction {
   patches: Patch[];
 }
 
-// Build a new node, with the bare minimum properties.
-function buildNode() {
-  return { id: crypto.randomUUID() };
-}
-
-// Build a new trigger, with the bare minimum properties.
-function buildTrigger() {
-  return { id: crypto.randomUUID() };
-}
-
-// Build a new edge, with the bare minimum properties.
-function buildEdge() {
-  return { id: crypto.randomUUID() };
-}
-
 function toRFC6902Patch(patch: ImmerPatch): Patch {
-  return {
-    ...patch,
+  const newPatch = {
     path: `/${patch.path.join('/')}`,
+    op: patch.value === undefined ? 'remove' : patch.op,
+    value: patch.value,
   };
+
+  if (newPatch.op === 'remove') {
+    delete newPatch.value;
+  }
+
+  return newPatch;
 }
 
 export const createWorkflowStore = (
   initProps?: Partial<WorkflowProps>,
-  onChange?: (pendingAction: PendingAction) => void
+  onChange: (pendingAction: PendingAction) => void = () => {}
 ) => {
   const DEFAULT_PROPS: WorkflowProps = {
     triggers: [],
     jobs: [],
     edges: [],
-    editJobUrl: '',
   };
 
   // Calculate the next state using Immer, and then call the onChange callback
@@ -92,27 +94,58 @@ export const createWorkflowStore = (
   return createStore<WorkflowState>()(set => ({
     ...DEFAULT_PROPS,
     ...initProps,
-    addJob: job => {
+    add: data => {
       set(state =>
         proposeChanges(state, draft => {
-          const newJob = buildNode();
-          draft.jobs.push(newJob);
+          ['jobs', 'triggers', 'edges'].forEach(k => {
+            const key = k as keyof WorkflowProps;
+            if (data[key]) {
+              data[key]!.forEach(item => {
+                if (!item.id) {
+                  item.id = crypto.randomUUID();
+                }
+                draft[key].push(item as any);
+              });
+            }
+          });
         })
       );
     },
-    addTrigger: trigger => {
+    remove: data => {
       set(state =>
         proposeChanges(state, draft => {
-          const newTrigger = buildTrigger();
-          draft.triggers.push(newTrigger);
+          ['jobs', 'triggers', 'edges'].forEach(k => {
+            const key = k as keyof WorkflowProps;
+
+            const idsToRemove = data[key]!;
+            if (idsToRemove) {
+              const nextItems: any[] = [];
+              draft[key].forEach(item => {
+                if (!idsToRemove.includes(item.id)) {
+                  nextItems.push(item);
+                }
+              });
+              draft[key] = nextItems;
+            }
+          });
         })
       );
     },
-    addEdge: edge => {
+    change: data => {
       set(state =>
         proposeChanges(state, draft => {
-          const newEdge = buildEdge();
-          draft.edges.push(newEdge);
+          for (const [t, changes] of Object.entries(data)) {
+            const type = t as 'jobs' | 'triggers' | 'edges';
+            for (const change of changes) {
+              const current = draft[type] as Array<
+                Lightning.Node | Lightning.Edge
+              >;
+              const item = current.find(i => i.id === change.id);
+              if (item) {
+                Object.assign(item, change);
+              }
+            }
+          }
         })
       );
     },
@@ -124,6 +157,6 @@ export const createWorkflowStore = (
 
       set(state => applyPatches(state, immerPatches));
     },
-    onChange: onChange ? onChange : () => {},
+    onChange,
   }));
 };

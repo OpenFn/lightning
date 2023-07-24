@@ -13,6 +13,11 @@ and this project adheres to
 
 ### Added
 
+- Write/run sql script to convert triggers
+  [#875](https://github.com/OpenFn/Lightning/issues/875)
+- Export projects as `.yaml` via UI
+  [#249](https://github.com/OpenFn/Lightning/issues/249)
+
 ### Changed
 
 ### Fixed

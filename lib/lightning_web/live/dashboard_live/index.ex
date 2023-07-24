@@ -35,9 +35,7 @@ defmodule LightningWeb.DashboardLive.Index do
 
       if can_access_project do
         socket
-        |> push_redirect(
-          to: Routes.project_workflow_path(socket, :index, project.id)
-        )
+        |> push_redirect(to: ~p"/projects/#{project.id}/w")
       else
         {:halt, redirect(socket, to: "/") |> put_flash(:nav, :not_found)}
       end
@@ -54,7 +52,7 @@ defmodule LightningWeb.DashboardLive.Index do
     ~H"""
     <LayoutComponents.page_content>
       <:header>
-        <LayoutComponents.header socket={@socket} current_user={@current_user}>
+        <LayoutComponents.header current_user={@current_user}>
           <:title><%= @page_title %></:title>
         </LayoutComponents.header>
       </:header>

@@ -111,12 +111,18 @@ defmodule LightningWeb.ConnCase do
       setup :create_project_for_current_user
 
   It then adds the project (as `:project`) to the setup context
+
+  The currently logged in user will be added to the project as an editor by default.
+  This can be changed using `@tag role: :viewer` or `@tag role: :admin` etc
+  above the test definition.
   """
-  def create_project_for_current_user(%{user: user}) do
+  def create_project_for_current_user(%{user: user} = context) do
     project =
-      Lightning.ProjectsFixtures.project_fixture(
-        project_users: [%{user_id: user.id}]
-      )
+      Lightning.Factories.insert(:project, %{
+        project_users: [
+          %{user: user, role: Map.get(context, :role, :editor)}
+        ]
+      })
 
     %{project: project}
   end

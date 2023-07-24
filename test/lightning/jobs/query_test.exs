@@ -5,6 +5,7 @@ defmodule Lightning.Jobs.QueryTest do
   import Lightning.JobsFixtures
   import Lightning.AccountsFixtures
   import Lightning.ProjectsFixtures
+  import Lightning.Factories
 
   test "jobs_for/1 with user" do
     user = user_fixture()
@@ -18,14 +19,25 @@ defmodule Lightning.Jobs.QueryTest do
            ]
   end
 
-  test "enabled_cron_jobs/0" do
-    job = job_fixture(trigger: %{type: :cron, cron: "* * * * *"}, enabled: true)
+  test "enabled_cron_jobs_by_edge/0" do
+    trigger = insert(:trigger, %{type: :cron, cron_expression: "* * * * *"})
+    job = insert(:job, enabled: true, workflow: trigger.workflow)
 
-    _disabled_conjob =
-      job_fixture(trigger: %{type: :cron, cron: "* * * * *"}, enabled: false)
+    insert(:edge, %{
+      source_trigger: trigger,
+      target_job: job,
+      workflow: job.workflow
+    })
+
+    _disabled_conjob = job_fixture(enabled: false)
 
     _non_cronjob = job_fixture()
 
-    assert Query.enabled_cron_jobs() |> Repo.all() == [job]
+    jobs =
+      Query.enabled_cron_jobs_by_edge()
+      |> Repo.all()
+      |> Enum.map(fn e -> e.target_job.id end)
+
+    assert jobs == [job.id]
   end
 end

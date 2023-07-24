@@ -1,119 +1,163 @@
 defmodule Lightning.Factories do
-  @spec build(atom(), keyword()) :: struct() | map() | no_return()
-  def build(f, attrs \\ [])
+  use ExMachina.Ecto, repo: Lightning.Repo
 
-  def build(:job, attrs) do
-    struct!(Lightning.Jobs.Job, %{
+  def project_factory do
+    %Lightning.Projects.Project{
+      name: sequence(:project_name, &"project-#{&1}")
+    }
+  end
+
+  def workflow_factory do
+    %Lightning.Workflows.Workflow{
+      project: build(:project),
+      name: sequence(:workflow_name, &"workflow-#{&1}")
+    }
+  end
+
+  def job_factory do
+    %Lightning.Jobs.Job{
+      id: fn -> Ecto.UUID.generate() end,
       workflow: build(:workflow),
-      trigger: build(:trigger)
-    })
-    |> merge_attributes(attrs)
+      body: "console.log('hello!');"
+    }
   end
 
-  def build(:trigger, attrs) do
-    struct!(Lightning.Jobs.Trigger, %{workflow: build(:workflow)})
-    |> merge_attributes(attrs)
+  def trigger_factory do
+    %Lightning.Jobs.Trigger{
+      id: fn -> Ecto.UUID.generate() end,
+      workflow: build(:workflow)
+    }
   end
 
-  def build(:edge, attrs) do
-    struct!(Lightning.Workflows.Edge, %{workflow: build(:workflow)})
-    |> merge_attributes(attrs)
+  def edge_factory do
+    %Lightning.Workflows.Edge{workflow: build(:workflow)}
   end
 
-  def build(:dataclip, attrs) do
-    struct!(Lightning.Invocation.Dataclip, %{project: build(:project)})
-    |> merge_attributes(attrs)
+  def dataclip_factory do
+    %Lightning.Invocation.Dataclip{
+      project: build(:project),
+      body: %{},
+      type: :http_request
+    }
   end
 
-  def build(:user, attrs) do
-    struct!(Lightning.Accounts.User, %{
-      email: "user#{System.unique_integer()}@example.com",
+  def run_factory do
+    %Lightning.Invocation.Run{
+      job: build(:job),
+      input_dataclip: build(:dataclip)
+    }
+  end
+
+  def attempt_factory do
+    %Lightning.Attempt{}
+  end
+
+  def reason_factory do
+    %Lightning.InvocationReason{}
+  end
+
+  def credential_factory do
+    %Lightning.Credentials.Credential{}
+  end
+
+  def project_credential_factory do
+    %Lightning.Projects.ProjectCredential{
+      project: build(:project),
+      credential: build(:credential)
+    }
+  end
+
+  def workorder_factory do
+    %Lightning.WorkOrder{workflow: build(:workflow)}
+  end
+
+  def user_factory do
+    %Lightning.Accounts.User{
+      email: sequence(:email, &"email-#{&1}@example.com"),
       password: "hello world!",
       first_name: "anna",
       hashed_password: Bcrypt.hash_pwd_salt("hello world!")
-    })
-    |> merge_attributes(attrs)
+    }
   end
 
-  def build(:run, attrs) do
-    struct!(Lightning.Invocation.Run, %{
-      job: build(:job),
-      input_dataclip: build(:dataclip)
-    })
-    |> merge_attributes(attrs)
+  # ----------------------------------------------------------------------------
+  # Helpers
+  # ----------------------------------------------------------------------------
+  # Useful for building up a workflow in a test:
+  #
+  # ```
+  # workflow =
+  #   build(:workflow, project: project)
+  #   |> with_job(job)
+  #   |> with_trigger(trigger)
+  #   |> with_edge({trigger, job})
+  # ```
+
+  def with_job(workflow, job) do
+    %{
+      workflow
+      | jobs: merge_assoc(workflow.jobs, merge_attributes(job, %{workflow: nil}))
+    }
   end
 
-  def build(:attempt, attrs) do
-    struct!(Lightning.Attempt, attrs)
+  def with_trigger(workflow, trigger) do
+    %{
+      workflow
+      | triggers: merge_assoc(workflow.triggers, %{trigger | workflow: nil})
+    }
   end
 
-  def build(:credential, attrs) do
-    struct!(Lightning.Credentials.Credential, attrs)
+  def with_edge(workflow, source_target, extra \\ %{})
+
+  def with_edge(
+        workflow,
+        {%Lightning.Jobs.Job{} = source_job, target_job},
+        extra
+      ) do
+    %{
+      workflow
+      | edges:
+          merge_assoc(
+            workflow.edges,
+            Enum.into(extra, %{
+              id: Ecto.UUID.generate(),
+              source_job_id: source_job.id,
+              target_job_id: target_job.id
+            })
+          )
+    }
   end
 
-  def build(:reason, attrs) do
-    struct!(Lightning.InvocationReason, attrs)
+  def with_edge(workflow, {%Lightning.Jobs.Trigger{} = trigger, job}, extra) do
+    %{
+      workflow
+      | edges:
+          merge_assoc(
+            workflow.edges,
+            Enum.into(extra, %{
+              id: Ecto.UUID.generate(),
+              source_trigger_id: trigger.id,
+              target_job_id: job.id
+            })
+          )
+    }
   end
 
-  def build(:workorder, attrs) do
-    struct!(
-      Lightning.WorkOrder,
-      %{workflow: build(:workflow)}
-    )
-    |> merge_attributes(attrs)
+  def with_project_user(%Lightning.Projects.Project{} = project, user, role) do
+    %{project | project_users: [%{user: user, role: role}]}
   end
 
-  def build(:workflow, attrs) do
-    struct!(Lightning.Workflows.Workflow, %{project: build(:project)})
-    |> merge_attributes(attrs)
+  def for_project(%Lightning.Jobs.Job{} = job, project) do
+    %{job | workflow: build(:workflow, %{project: project})}
   end
 
-  def build(:project, attrs) do
-    struct!(Lightning.Projects.Project, attrs)
-  end
+  defp merge_assoc(left, right) do
+    case left do
+      %Ecto.Association.NotLoaded{} ->
+        [right]
 
-  def insert(%{__struct__: struct} = record) do
-    Ecto.Changeset.change(struct!(struct))
-    |> put_fields(record)
-    |> put_assocs(record)
-    |> Lightning.Repo.insert!()
-  end
-
-  def insert(f) when is_atom(f) do
-    build(f, []) |> insert()
-  end
-
-  def insert(f, attrs) when is_atom(f) do
-    build(f, attrs) |> insert()
-  end
-
-  @spec merge_attributes(struct | map, map) :: struct | map | no_return
-  def merge_attributes(%{__struct__: _} = record, attrs),
-    do: struct!(record, attrs)
-
-  def merge_attributes(record, attrs), do: Map.merge(record, attrs)
-
-  defp put_assocs(changeset, %{__struct__: struct} = record) do
-    struct.__schema__(:associations)
-    |> Enum.reduce(changeset, fn association_name, changeset ->
-      case Map.get(record, association_name) do
-        %Ecto.Association.NotLoaded{} ->
-          changeset
-
-        value ->
-          Ecto.Changeset.put_assoc(changeset, association_name, value)
-      end
-    end)
-  end
-
-  defp put_fields(changeset, %{__struct__: struct} = record) do
-    struct.__schema__(:fields)
-    |> Enum.reduce(changeset, fn field_name, changeset ->
-      Ecto.Changeset.put_change(
-        changeset,
-        field_name,
-        Map.get(record, field_name)
-      )
-    end)
+      left when is_list(left) ->
+        Enum.concat(left, List.wrap(right))
+    end
   end
 end

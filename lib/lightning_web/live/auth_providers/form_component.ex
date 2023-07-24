@@ -303,7 +303,7 @@ defmodule LightningWeb.AuthProvidersLive.FormComponent do
           </div>
         </Common.button>
       <% :unknown -> %>
-        <Common.button_white phx-click="test" phx_target={@myself} id="test-button">
+        <Common.button_white phx-click="test" phx-target={@myself} id="test-button">
           <div class="h-full -ml-1">
             <Heroicons.beaker solid class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">Test</span>

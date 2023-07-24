@@ -25,11 +25,12 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
+import { AssocListChange, Copy, Flash, SubmitViaCtrlS } from './hooks';
 import JobEditor from './job-editor';
-import WorkflowDiagram from './workflow-diagram';
-import WorkflowEditor from './workflow-editor';
-import TabSelector from './tab-selector';
 import JobEditorResizer from './job-editor-resizer/mount';
+import TabSelector from './tab-selector';
+import WorkflowDiagram from './workflow-diagram-old';
+import WorkflowEditor from './workflow-editor';
 
 let Hooks = {
   WorkflowDiagram,
@@ -37,42 +38,10 @@ let Hooks = {
   JobEditor,
   JobEditorResizer,
   WorkflowEditor,
-};
-
-Hooks.Flash = {
-  mounted() {
-    let hide = () =>
-      liveSocket.execJS(this.el, this.el.getAttribute('phx-click'));
-    this.timer = setTimeout(() => hide(), 5000);
-    this.el.addEventListener('phx:hide-start', () => clearTimeout(this.timer));
-    this.el.addEventListener('mouseover', () => {
-      clearTimeout(this.timer);
-      this.timer = setTimeout(() => hide(), 5000);
-    });
-  },
-  destroyed() {
-    clearTimeout(this.timer);
-  },
-};
-Hooks.AssocListChange = {
-  mounted() {
-    this.el.addEventListener('change', _event => {
-      this.pushEventTo(this.el, 'select_item', { id: this.el.value });
-    });
-  },
-};
-
-Hooks.Copy = {
-  mounted() {
-    let { to } = this.el.dataset;
-    this.el.addEventListener('click', ev => {
-      ev.preventDefault();
-      let text = document.querySelector(to).value;
-      navigator.clipboard.writeText(text).then(() => {
-        console.log('Copied!');
-      });
-    });
-  },
+  Flash,
+  AssocListChange,
+  Copy,
+  SubmitViaCtrlS,
 };
 
 // Sets the checkbox to indeterminate state if the element has the
@@ -126,19 +95,6 @@ window.addEventListener('phx:page-loading-stop', () => {
   clearTimeout(topBarScheduled);
   topBarScheduled = undefined;
   topbar.hide();
-});
-
-window.addEventListener('keydown', event => {
-  const currentURL = window.location.pathname;
-  const edit_job_url = /\/projects\/(.+)\/w\/(.+)\/j\/(.+)/;
-  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-    if (edit_job_url.test(currentURL)) {
-      event.preventDefault();
-      console.log('Saving the job');
-      let form = document.querySelector("button[form='job-form']");
-      form.click();
-    }
-  }
 });
 
 // connect if there are any LiveViews on the page

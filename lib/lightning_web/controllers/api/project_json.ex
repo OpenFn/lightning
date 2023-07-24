@@ -4,7 +4,7 @@ defmodule LightningWeb.API.ProjectJSON do
   alias LightningWeb.Router.Helpers, as: Routes
   import LightningWeb.API.Helpers
 
-  @fields ~w(name)a
+  @fields ~w(name description)a
 
   def render("index.json", %{page: page, conn: conn}) do
     %{

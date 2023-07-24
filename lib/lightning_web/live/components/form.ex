@@ -54,17 +54,19 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  def text_area(assigns) do
-    classes = ~w[
+  attr :form, :any, required: true
+  attr :field, :atom, required: true
+  attr :label, :string, required: false
+  attr :rest, :global, include: ~w(disabled), default: %{class: ~w[
       rounded-md
       w-full
       font-mono
       bg-slate-800
       text-slate-50
       h-96
-      min-h-full
-    ]
+    ] |> Enum.join(" ")}
 
+  def text_area(assigns) do
     label_classes = ~w[
       block
       text-sm
@@ -72,20 +74,28 @@ defmodule LightningWeb.Components.Form do
       text-secondary-700
     ]
 
-    opts = assigns_to_attributes(assigns, [:id, :form, :name, :values])
-
     assigns =
       assigns
-      |> assign(label_classes: label_classes, opts: opts)
-      |> assign_new(:classes, fn -> classes end)
-      |> assign_new(:disabled, fn -> false end)
+      |> assign(
+        label_classes: label_classes,
+        opts: assigns.rest |> Enum.into([])
+      )
+      |> assign_new(:label, fn -> false end)
 
     ~H"""
-    <%= if @label do %>
-      <%= label(@form, @id, @label, class: @label_classes) %>
-    <% end %>
-    <%= error_tag(@form, @id) %>
-    <%= textarea(@form, @id, @opts ++ [class: @classes, disabled: @disabled]) %>
+    <div class="flex">
+      <div class="shrink">
+        <%= if @label do %>
+          <%= label(@form, @field, @label, class: @label_classes) %>
+        <% else %>
+          <%= label(@form, @field, class: @label_classes) %>
+        <% end %>
+      </div>
+      <div class="grow text-right">
+        <.error form={@form} field={@field} />
+      </div>
+    </div>
+    <%= textarea(@form, @field, @opts) %>
     """
   end
 
@@ -233,14 +243,25 @@ defmodule LightningWeb.Components.Form do
     ]
 
     input_classes = ~w[
-      mt-1
-      focus:ring-primary-500
-      focus:border-primary-500
-      block w-full
-      shadow-sm
-      sm:text-sm
-      border-secondary-300
+      block
+      w-full
       rounded-md
+      border-0
+      py-1.5
+      text-gray-900
+      shadow-sm
+      ring-1
+      ring-gray-300
+      placeholder:text-gray-400
+      focus:ring-2
+      focus:ring-inset
+      focus:ring-indigo-600
+      disabled:cursor-not-allowed
+      disabled:bg-gray-50
+      disabled:text-gray-500
+      disabled:ring-gray-200
+      sm:text-sm
+      sm:leading-6
     ]
 
     assigns =
@@ -270,22 +291,14 @@ defmodule LightningWeb.Components.Form do
 
   attr :form, :any, required: true
   attr :field, :any, required: true
-  attr :opts, :global
+
+  attr :opts, :global,
+    default: %{class: "block w-full text-sm text-secondary-700"}
 
   def error(assigns) do
-    error_classes = ~w[
-      block
-      w-full
-      text-sm
-      text-secondary-700
-    ]
-
     assigns =
       assigns
-      |> update(:opts, fn opts ->
-        assigns_to_attributes(opts)
-        |> Keyword.put_new(:class, error_classes)
-      end)
+      |> update(:opts, &assigns_to_attributes/1)
 
     ~H"""
     <%= error_tag(@form, @field, @opts) %>
@@ -294,13 +307,16 @@ defmodule LightningWeb.Components.Form do
 
   def check_box(assigns) do
     checkbox_classes = ~w[
-      "focus:ring-primary-500
+      focus:ring-primary-500
       h-4
       w-4
       text-primary-600
       text-sm
       border-secondary-300
       rounded
+      disabled:bg-gray-300
+      focus:disabled:ring-gray-300
+      disabled:text-gray-300
     ]
 
     error_tag_classes = ~w[
@@ -403,16 +419,17 @@ defmodule LightningWeb.Components.Form do
       focus:ring
       focus:ring-primary-200
       focus:ring-opacity-50
+      disabled:cursor-not-allowed
     ]
 
-    rest =
+    opts =
       assigns_to_attributes(assigns.rest, [:class, :form, :name, :values]) ++
         [class: select_classes]
 
-    assigns = assign(assigns, rest: rest)
+    assigns = assign(assigns, opts: opts)
 
     ~H"""
-    <%= select(@form, @name, @values, @rest) %>
+    <%= select(@form, @name, @values, @opts) %>
     """
   end
 
@@ -428,6 +445,7 @@ defmodule LightningWeb.Components.Form do
       focus:ring
       focus:ring-primary-200
       focus:ring-opacity-50
+      disabled:cursor-not-allowed
     ]
 
     opts = assigns_to_attributes(assigns) ++ [class: select_classes]

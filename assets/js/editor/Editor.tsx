@@ -8,7 +8,8 @@ import createCompletionProvider from './magic-completion';
 // static imports for core lib
 import dts_es5 from './lib/es5.min.dts';
 
-const DEFAULT_TEXT = '// Get started by adding operations from the API reference\n';
+export const DEFAULT_TEXT =
+  '// Get started by adding operations from the API reference\n';
 
 type EditorProps = {
   source?: string;
@@ -75,24 +76,29 @@ const defaultOptions: MonacoProps['options'] = {
     showClasses: false,
     showInterfaces: false,
     showConstructors: false,
-  }
+  },
 };
 
 type Lib = {
   content: string;
   filePath?: string;
-}
+};
 
-async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namespace'): Promise<Lib[]> {
+async function loadDTS(
+  specifier: string,
+  type: 'namespace' | 'module' = 'namespace'
+): Promise<Lib[]> {
   // Work out the module name from the specifier
   // (his gets a bit tricky with @openfn/ module names)
   const nameParts = specifier.split('@');
   nameParts.pop(); // remove the version
   const name = nameParts.join('@');
 
-  const results: Lib[] = [{
-    content: dts_es5
-  }];
+  const results: Lib[] = [
+    {
+      content: dts_es5,
+    },
+  ];
   if (name !== '@openfn/language-common') {
     const pkg = await fetchFile(`${specifier}/package.json`);
     const commonVersion = JSON.parse(pkg || '{}').dependencies?.[
@@ -108,7 +114,7 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
     }
 
     const common = await loadDTS(
-      `@openfn/language-common@${commonVersion.replace("^", "")}`,
+      `@openfn/language-common@${commonVersion.replace('^', '')}`,
       'module'
     );
     results.push(...common);
@@ -118,7 +124,7 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
   // We seem to have to do this because Monaco doesn't recognise types declared in different files
   // across namespaces
   // This should work well enough on adaptors anyway
-  let bigFile = ''
+  let bigFile = '';
   for await (const filePath of fetchDTSListing(specifier)) {
     if (!filePath.startsWith('node_modules')) {
       let content = await fetchFile(`${specifier}${filePath}`);
@@ -133,7 +139,6 @@ async function loadDTS(specifier: string, type: 'namespace' | 'module' = 'namesp
   return results;
 }
 
-
 export default function Editor({
   source,
   adaptor,
@@ -145,7 +150,10 @@ export default function Editor({
   const [loading, setLoading] = useState(false);
   const [monaco, setMonaco] = useState<typeof Monaco>();
   const [options, setOptions] = useState(defaultOptions);
-  const listeners = useRef<{ insertSnippet?: EventListenerOrEventListenerObject, updateLayout?: any; }>({});
+  const listeners = useRef<{
+    insertSnippet?: EventListenerOrEventListenerObject;
+    updateLayout?: any;
+  }>({});
 
   const handleSourceChange = useCallback(
     (newSource: string) => {
@@ -200,16 +208,24 @@ export default function Editor({
         editor.layout({ width: 0, height: 0 });
         setTimeout(() => {
           try {
-            editor.layout()
+            editor.layout();
           } catch (e) {
-            editor.layout()
+            editor.layout();
           }
         }, 1);
-      }
+      };
 
-      document.addEventListener('insert-snippet', listeners.current.insertSnippet);
-      document.addEventListener('update-layout', listeners.current.updateLayout);
-    }, []);
+      document.addEventListener(
+        'insert-snippet',
+        listeners.current.insertSnippet
+      );
+      document.addEventListener(
+        'update-layout',
+        listeners.current.updateLayout
+      );
+    },
+    []
+  );
 
   useEffect(() => {
     if (monaco && metadata) {
@@ -223,7 +239,7 @@ export default function Editor({
         // completion handler. State doesn't work very well, we probably need a ref for this
         // If metadata is passed as a prop, this becomes a little bit easier to manage
         p.dispose();
-      }
+      };
     }
   }, [monaco, metadata]);
 
@@ -256,11 +272,10 @@ export default function Editor({
     if (adaptor) {
       setLoading(true);
       setLib([]); // instantly clear intelligence
-      loadDTS(adaptor)
-        .then(l => {
-          setLib(l)
-          setLoading(false)
-        });
+      loadDTS(adaptor).then(l => {
+        setLib(l);
+        setLoading(false);
+      });
     }
   }, [adaptor]);
 

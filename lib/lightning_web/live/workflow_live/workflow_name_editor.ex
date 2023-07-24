@@ -93,11 +93,7 @@ defmodule LightningWeb.WorkflowLive.WorkflowNameEditor do
 
       <%= if @can_delete do %>
         <%= link(
-            to: Routes.project_workflow_path(
-                        @socket,
-                        :index,
-                        @project.id
-                      ),
+            to: "#",
             phx_click: "delete_workflow",
             phx_value_id: @workflow.id,
             data: [

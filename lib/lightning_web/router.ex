@@ -36,6 +36,7 @@ defmodule LightningWeb.Router do
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
+    get "/download/yaml", DownloadsController, :download_project_yaml
   end
 
   ## JSON API
@@ -117,13 +118,9 @@ defmodule LightningWeb.Router do
         live "/dataclips/new", DataclipLive.Edit, :new
         live "/dataclips/:id/edit", DataclipLive.Edit, :edit
 
-        live "/w/:workflow_id/j/new", WorkflowLive, :new_job
-        live "/w/:workflow_id/j/:job_id", WorkflowLive, :edit_job
-        live "/w/:workflow_id/edit", WorkflowLive, :edit_workflow
-        live "/w/:workflow_id", WorkflowLive, :show
-        live "/w", WorkflowLive, :index
-        live "/w-new/:id", WorkflowNewLive, :new
-        live "/w-new/:id/j/:job_id", WorkflowNewLive, :edit_job
+        live "/w", WorkflowLive.Index, :index
+        live "/w/new", WorkflowLive.Edit, :new
+        live "/w/:id", WorkflowLive.Edit, :edit
       end
 
       live "/credentials", CredentialLive.Index, :index

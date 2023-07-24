@@ -85,7 +85,8 @@ defmodule Lightning.AttemptService do
   def retry(%Attempt{} = attempt, %Run{} = run, reason) do
     attempt = Repo.preload(attempt, :work_order)
 
-    workflow_jobs = get_jobs_for(attempt) |> Repo.all()
+    # no way we don't have a workflow , throw if we dont have one
+    attempt_workflow = get_workflow_for(attempt) |> Repo.one!()
 
     existing_runs =
       from(r in Run,
@@ -94,7 +95,8 @@ defmodule Lightning.AttemptService do
       )
       |> Repo.all()
 
-    {skipped_runs, new_run} = calculate_runs(workflow_jobs, existing_runs, run)
+    {skipped_runs, new_run} =
+      calculate_runs(attempt_workflow, existing_runs, run)
 
     Multi.new()
     |> Multi.insert(:attempt, fn _ ->
@@ -125,7 +127,7 @@ defmodule Lightning.AttemptService do
       attempt_runs
       |> Repo.preload([
         :run,
-        attempt: [work_order: [jobs: [trigger: :upstream_job]], runs: []]
+        attempt: [work_order: [workflow: [:jobs, :edges]], runs: []]
       ])
 
     Multi.new()
@@ -156,7 +158,7 @@ defmodule Lightning.AttemptService do
         attempt_runs
         |> Enum.map(fn %{attempt: attempt, run: run} ->
           {skipped_runs, new_run} =
-            calculate_runs(attempt.work_order.jobs, attempt.runs, run)
+            calculate_runs(attempt.work_order.workflow, attempt.runs, run)
 
           attempt_id = attempts_map[attempt.work_order.id]
 
@@ -218,16 +220,14 @@ defmodule Lightning.AttemptService do
     end)
   end
 
-  def get_jobs_for(%Attempt{id: id}) do
-    from(j in Lightning.Jobs.Job,
-      join: wf in assoc(j, :workflow),
-      join: a in assoc(wf, :attempts),
-      where: a.id == ^id,
-      preload: [trigger: :upstream_job]
+  def get_workflow_for(%Attempt{work_order: %{workflow_id: wid}}) do
+    from(w in Lightning.Workflows.Workflow,
+      where: w.id == ^wid,
+      preload: [:jobs, edges: [:target_job, :source_job]]
     )
   end
 
-  def calculate_runs(jobs, existing_runs, starting_run) do
+  def calculate_runs(workflow, existing_runs, starting_run) do
     # TODO sanity check that ALL existing runs have a place in the graph
 
     runs_by_job_id =
@@ -235,7 +235,7 @@ defmodule Lightning.AttemptService do
       |> Enum.into(%{}, fn %Run{job_id: job_id} = run -> {job_id, run} end)
 
     graph =
-      Lightning.Workflows.Graph.new(jobs)
+      Lightning.Workflows.Graph.new(workflow)
       |> Lightning.Workflows.Graph.remove(starting_run.job_id)
 
     {graph.jobs

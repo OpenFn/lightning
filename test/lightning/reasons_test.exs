@@ -1,9 +1,9 @@
 defmodule Lightning.InvocationReasonsTest do
   use Lightning.DataCase, async: true
 
-  import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
   import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   alias Lightning.InvocationReasons
   alias Lightning.InvocationReason
@@ -15,12 +15,14 @@ defmodule Lightning.InvocationReasonsTest do
     end
 
     test "with valid data creates a reason" do
+      trigger = insert(:trigger, %{type: :webhook})
+
       valid_attrs = %{
         type: :webhook,
         user_id: user_fixture().id,
         run_id: run_fixture().id,
         dataclip_id: dataclip_fixture().id,
-        trigger_id: job_fixture().trigger.id
+        trigger_id: trigger.id
       }
 
       assert {:ok, %InvocationReason{}} =
@@ -30,33 +32,21 @@ defmodule Lightning.InvocationReasonsTest do
 
   describe "build/2" do
     test "with trigger of type :webhook or :cron returns a valid reason" do
+      trigger = insert(:trigger, %{type: :webhook})
+      cron_trigger = insert(:trigger, %{type: :cron})
       dataclip = dataclip_fixture()
 
       assert %Ecto.Changeset{valid?: true} =
                InvocationReasons.build(
-                 job_fixture(trigger: %{type: :webhook}).trigger,
+                 trigger,
                  dataclip
                )
 
       assert %Ecto.Changeset{valid?: true} =
                InvocationReasons.build(
-                 job_fixture(trigger: %{type: :cron}).trigger,
+                 cron_trigger,
                  dataclip
                )
-
-      errors =
-        InvocationReasons.build(
-          job_fixture(
-            trigger: %{
-              type: :on_job_success,
-              upstream_job_id: job_fixture().id
-            }
-          ).trigger,
-          dataclip
-        )
-        |> errors_on()
-
-      assert {:type, ["is invalid"]} in errors
     end
 
     test "with :manual" do

@@ -2,6 +2,7 @@ defmodule Lightning.Workflows.Graph do
   @moduledoc """
   Utility to construct and manipulate a graph/plan made out of Jobs
   """
+  alias Lightning.Workflows.Workflow
   defstruct [:digraph, :root, :jobs]
 
   @type vertex :: {Ecto.UUID.t()}
@@ -12,21 +13,32 @@ defmodule Lightning.Workflows.Graph do
           jobs: [Lightning.Jobs.Job.t()]
         }
 
-  @spec new(jobs :: [Lightning.Jobs.Job.t()]) :: __MODULE__.t()
-  def new(jobs) when is_list(jobs) do
+  @spec new(workflow :: Workflow.t()) :: __MODULE__.t()
+  def new(%Workflow{} = workflow) do
     g = :digraph.new()
 
-    for j <- jobs do
+    for j <- workflow.jobs do
       :digraph.add_vertex(g, to_vertex(j))
     end
 
-    for j <- jobs do
-      if j.trigger.type in [:on_job_failure, :on_job_success] do
-        :digraph.add_edge(g, to_vertex(j.trigger.upstream_job), to_vertex(j))
+    for e <- workflow.edges do
+      if e.condition in [:on_job_failure, :on_job_success] do
+        :digraph.add_edge(
+          g,
+          to_vertex(%{id: e.source_job_id}),
+          to_vertex(%{id: e.target_job_id})
+        )
       end
     end
 
-    %__MODULE__{digraph: g, root: get_root(g), jobs: jobs}
+    root =
+      if workflow.edges == [] do
+        nil
+      else
+        get_root(g)
+      end
+
+    %__MODULE__{digraph: g, root: root, jobs: workflow.jobs}
   end
 
   @spec remove(__MODULE__.t(), Ecto.UUID.t()) :: __MODULE__.t()
@@ -69,7 +81,7 @@ defmodule Lightning.Workflows.Graph do
     true = :digraph.del_vertices(graph.digraph, unreachable)
   end
 
-  defp to_vertex(job) do
-    {job.id}
+  defp to_vertex(%{id: id}) do
+    {id}
   end
 end

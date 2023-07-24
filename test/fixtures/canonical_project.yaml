@@ -1,53 +1,82 @@
 name: a-test-project
-globals:
+description: This is only a test
+# credentials:
+# globals:
 workflows:
   workflow-1:
+    name: workflow 1
     jobs:
       webhook-job:
-        trigger: webhook
-        adaptor: @openfn/language-common
+        name: webhook-job
+        adaptor: '@openfn/language-common@latest'
         enabled: true
-        credential:
-          foo: manchu
-        globals:
-        body: >
+        # credential:
+        # globals:
+        body: |
           console.log('webhook job')
           fn(state => state)
       on-fail:
-        trigger:
-          on-fail: webhook-job
-        adaptor: @openfn/language-common
+        name: on-fail
+        adaptor: '@openfn/language-common@latest'
         enabled: true
-        credential:
-        globals:
-        body: >
+        # credential:
+        # globals:
+        body: |
           console.log('on fail')
           fn(state => state)
       on-success:
-        trigger:
-          on-success: webhook-job
-        adaptor: @openfn/language-common
+        name: on-success
+        adaptor: '@openfn/language-common@latest'
         enabled: true
-        credential:
-        globals:
-        body: >
-          fn(state => state)
+        # credential:
+        # globals:
+        body: |
+          console.log('hello!');
+    triggers:
+      webhook:
+        type: webhook
+    edges:
+      webhook->webhook-job:
+        source_trigger: webhook
+        target_job: webhook-job
+        condition: always
+      webhook-job->on-fail:
+        source_job: webhook-job
+        target_job: on-fail
+        condition: on_job_failure
+      webhook-job->on-success:
+        source_job: webhook-job
+        target_job: on-success
+        condition: on_job_success
   workflow-2:
+    name: workflow 2
     jobs:
-      other-workflow:
-        trigger: webhook
-        adaptor: @openfn/language-common
+      some-cronjob:
+        name: some-cronjob
+        adaptor: '@openfn/language-common@latest'
         enabled: true
-        credential:
-        globals:
-        body: >
-          fn(state => state)
-      on-fail:
-        trigger:
-          on-fail: other-workflow
-        adaptor: @openfn/language-common
+        # credential:
+        # globals:
+        body: |
+          console.log('hello!');
+      on-cron-failure:
+        name: on-cron-failure
+        adaptor: '@openfn/language-common@latest'
         enabled: true
-        credential:
-        globals:
-        body: >
-          fn(state => state)
+        # credential:
+        # globals:
+        body: |
+          console.log('hello!');
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '0 23 * * *'
+    edges:
+      cron->some-cronjob:
+        source_trigger: cron
+        target_job: some-cronjob
+        condition: always
+      some-cronjob->on-cron-failure:
+        source_job: some-cronjob
+        target_job: on-cron-failure
+        condition: on_job_success

@@ -9,10 +9,11 @@ defmodule Lightning.PipelineTest do
   import Lightning.InvocationFixtures
   import Lightning.JobsFixtures
   import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
   describe "process/1" do
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
-      job =
+      %{job: job, trigger: trigger} =
         workflow_job_fixture(
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
@@ -29,12 +30,20 @@ defmodule Lightning.PipelineTest do
             ).id
         )
 
+      # add an edge to connect the two jobs
+      insert(:edge, %{
+        source_job_id: job.id,
+        workflow: job.workflow,
+        target_job_id: downstream_job_id,
+        condition: :on_job_failure
+      })
+
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       dataclip = dataclip_fixture()
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -76,39 +85,64 @@ defmodule Lightning.PipelineTest do
     end
 
     test "starts a run for a given AttemptRun and executes its on_job_success downstream job" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
       job =
-        workflow_job_fixture(
-          body: ~s[fn(state => { return {...state, extra: "data"} })]
+        insert(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "1",
+          workflow: workflow
         )
 
-      %{id: project_credential_id, credential_id: credential_id} =
-        project_credential_fixture(
+      insert(:edge, %{
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job
+      })
+
+      credential =
+        insert(:credential,
           name: "my credential",
           body: %{"apiToken" => "secret123"}
         )
 
-      %{id: _downstream_job_id} =
-        job_fixture(
-          trigger: %{type: :on_job_success, upstream_job_id: job.id},
-          body: ~s[fn(state => state)],
-          workflow_id: job.workflow_id,
-          project_credential_id: project_credential_id
-        )
+      downstream_job =
+        insert(:job, %{
+          workflow: workflow,
+          project_credential:
+            build(:project_credential, project: project, credential: credential)
+        })
 
-      %{id: _disabled_downstream_job_id} =
-        job_fixture(
-          trigger: %{type: :on_job_success, upstream_job_id: job.id},
+      insert(:edge, %{
+        workflow: workflow,
+        source_job: job,
+        target_job: downstream_job,
+        condition: :on_job_success
+      })
+
+      disabled_downstream_job =
+        insert(:job,
           enabled: false,
           body: ~s[fn(state => state)],
-          workflow_id: job.workflow_id
+          workflow: workflow,
+          name: "3"
         )
+
+      insert(:edge, %{
+        source_job: job,
+        workflow: job.workflow,
+        target_job: disabled_downstream_job,
+        condition: :on_job_success
+      })
 
       work_order = work_order_fixture(workflow_id: job.workflow_id)
       dataclip = dataclip_fixture()
 
       reason =
         reason_fixture(
-          trigger_id: job.trigger.id,
+          trigger_id: trigger.id,
           dataclip_id: dataclip.id
         )
 
@@ -142,7 +176,7 @@ defmodule Lightning.PipelineTest do
 
       assert expected_run.input_dataclip_id == output_dataclip_id
 
-      assert expected_run.credential_id == credential_id
+      assert expected_run.credential_id == credential.id
 
       assert %{
                "data" => %{}

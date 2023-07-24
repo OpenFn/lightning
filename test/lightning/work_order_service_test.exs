@@ -25,14 +25,16 @@ defmodule Lightning.WorkOrderServiceTest do
 
   describe "create_webhook_workorder/2" do
     test "creates a webhook workorder" do
-      job = job_fixture() |> Repo.preload(:workflow)
+      %{job: job, trigger: trigger} = workflow_job_fixture()
+
+      edge = Lightning.Workflows.get_edge_by_webhook(trigger.id)
       dataclip_body = %{"foo" => "bar"}
 
       Oban.Testing.with_testing_mode(:manual, fn ->
         WorkOrderService.subscribe(job.workflow.project_id)
 
         {:ok, %{attempt: attempt, attempt_run: attempt_run}} =
-          WorkOrderService.create_webhook_workorder(job, dataclip_body)
+          WorkOrderService.create_webhook_workorder(edge, dataclip_body)
 
         assert_receive {Lightning.WorkOrderService,
                         %Lightning.Workorders.Events.AttemptCreated{}},
@@ -62,7 +64,8 @@ defmodule Lightning.WorkOrderServiceTest do
       jobs: jobs,
       workflow: workflow
     } do
-      work_order = work_order_fixture(workflow_id: workflow.id)
+      work_order = work_order_fixture(workflow: workflow)
+
       dataclip = dataclip_fixture()
       user = user_fixture()
 

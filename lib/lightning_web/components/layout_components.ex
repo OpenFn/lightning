@@ -31,7 +31,7 @@ defmodule LightningWeb.LayoutComponents do
 
     <%= if assigns[:project] do %>
       <Settings.menu_item
-        to={Routes.project_workflow_path(@socket, :index, @project.id)}
+        to={~p"/projects/#{@project.id}/w"}
         active={@active_menu_item == :overview}
       >
         <Icon.workflows class="h-5 w-5 inline-block mr-2 align-middle" />
@@ -103,7 +103,7 @@ defmodule LightningWeb.LayoutComponents do
 
   def header(assigns) do
     ~H"""
-    <div class="flex-none bg-white shadow-sm z-20">
+    <div class="flex-none bg-white shadow-sm z-30">
       <div class="max-w-7xl mx-auto h-20 sm:px-6 lg:px-8 flex items-center">
         <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
           <%= if assigns[:title], do: render_slot(@title) %>
@@ -141,10 +141,7 @@ defmodule LightningWeb.LayoutComponents do
               <Heroicons.command_line class="w-5 h-5 text-secondary-500" />
               API Tokens
             </.dropdown_menu_item>
-            <.dropdown_menu_item
-              link_type="live_redirect"
-              to={Routes.user_session_path(@socket, :delete)}
-            >
+            <.dropdown_menu_item link_type="live_redirect" to={~p"/users/log_out"}>
               <Heroicons.arrow_right_on_rectangle class="w-5 h-5 text-secondary-500" />
               Log out
             </.dropdown_menu_item>

@@ -4,6 +4,7 @@
   "description": "",
   "main": "js/app.js",
   "scripts": {
+    "start": "node dev-server.mjs",
     "test": "npx ava ./test/index.test.ts",
     "test-report": "npx ava --tap ./test/index.test.ts | tap-xunit > ../test/reports/ava.xml"
   },
@@ -17,15 +18,19 @@
     "@tailwindcss/forms": "^0.5.3",
     "classcat": "^5.0.4",
     "cronstrue": "^2.14.0",
+    "d3-hierarchy": "^3.1.2",
     "elkjs": "^0.8.2",
-    "jsonpath": "^1.1.1",
+    "esbuild-plugin-copy": "^2.1.1",
+    "esbuild-postcss": "^0.0.4",
     "immer": "^10.0.1",
+    "jsonpath": "^1.1.1",
     "marked": "^4.2.4",
     "monaco-editor": "^0.34.0",
+    "postcss": "^8.4.23",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
-    "react-flow-renderer": "^10.3.16",
     "react-markdown": "^8.0.3",
+    "reactflow": "^11.7.0",
     "zustand": "^4.3.7"
   },
   "devDependencies": {
@@ -33,6 +38,7 @@
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "ava": "^5.1.0",
+    "esbuild": "^0.17.18",
     "tap-xunit": "^2.4.1",
     "ts-node": "^10.9.1"
   },

@@ -30,9 +30,9 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
   alias Lightning.AuthProviders.Google
   import LightningWeb.OauthCredentialHelper
 
-  attr(:form, :map, required: true)
-  attr(:update_body, :any, required: true)
-  slot(:inner_block)
+  attr :form, :map, required: true
+  attr :update_body, :any, required: true
+  slot :inner_block
 
   def fieldset(assigns) do
     changeset = assigns.form.source
