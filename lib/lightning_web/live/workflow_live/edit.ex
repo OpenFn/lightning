@@ -99,7 +99,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-change="validate"
         >
           <.single_inputs_for
-            :let={jf}
+            :let={{jf, has_child_edges}}
             :if={@selected_job}
             form={f}
             field={:jobs}
@@ -137,7 +137,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         color="red"
                         phx-click="delete_node"
                         phx-value-id={@selected_job.id}
-                        disabled={!@can_edit_job}
+                        disabled={!@can_edit_job or has_child_edges}
                       >
                         Delete
                       </Common.button>
@@ -213,9 +213,30 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == id))
   end
 
-  defp single_inputs_for(assigns) do
+  defp single_inputs_for(%{field: :jobs} = assigns) do
+    form = assigns[:form]
+
+    has_child_edges = form.source |> has_child_edges?(assigns[:id])
+
     forms =
-      assigns[:form]
+      form
+      |> inputs_for(assigns[:field])
+      |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
+
+    assigns = assigns |> assign(forms: forms, has_child_edges: has_child_edges)
+
+    ~H"""
+    <%= for f <- @forms do %>
+      <%= render_slot(@inner_block, {f, @has_child_edges}) %>
+    <% end %>
+    """
+  end
+
+  defp single_inputs_for(assigns) do
+    form = assigns[:form]
+
+    forms =
+      form
       |> inputs_for(assigns[:field])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
@@ -330,7 +351,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_edit_job: can_edit_job
     } = socket.assigns
 
-    if can_edit_job do
+    with true <- can_edit_job || :not_authorized,
+         false <- has_child_edges?(changeset, id) || :has_child_edges do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -349,9 +371,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
        |> apply_params(next_params)
        |> push_patches_applied(initial_params)}
     else
-      {:noreply,
-       socket
-       |> put_flash(:error, "You are not authorized to perform this action.")}
+      :not_authorized ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+
+      :has_child_edges ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Delete all descendant jobs first.")}
     end
   end
 
@@ -430,6 +458,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:follow_run, attempt_run}, socket) do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
+  defp has_child_edges?(workflow_changeset, job_id) do
+    workflow_changeset
+    |> Ecto.Changeset.get_assoc(:edges, :struct)
+    |> Enum.filter(&(&1.source_job_id == job_id))
+    |> Enum.any?()
   end
 
   defp handle_new_params(socket, params) do
