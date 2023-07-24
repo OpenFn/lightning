@@ -52,7 +52,7 @@ defmodule LightningWeb.ModalPortal do
     ~H"""
     <div
       id={@id}
-      phx-mounted={!@hide && show_modal(@id)}
+      phx-mounted={!@hide && on_show(@id)}
       {@rest}
       class="hidden relative z-50"
     >
@@ -69,8 +69,8 @@ defmodule LightningWeb.ModalPortal do
         <div
           class={"w-full max-h-full overflow-auto bg-white shadow-lg rounded-xl dark:bg-gray-800 #{@rest[:class]}"}
           role="document"
-          phx-click-away={hide_modal(@close_modal_target, @id)}
-          phx-window-keydown={hide_modal(@close_modal_target, @id)}
+          phx-click-away={on_hide(@close_modal_target, @id)}
+          phx-window-keydown={on_hide(@close_modal_target, @id)}
           phx-key="escape"
         >
           <!-- Header -->
@@ -81,7 +81,7 @@ defmodule LightningWeb.ModalPortal do
               </div>
 
               <button
-                phx-click={hide_modal(@close_modal_target, @id)}
+                phx-click={on_hide(@close_modal_target, @id)}
                 class="text-gray-400 hover:text-gray-500"
               >
                 <div class="sr-only">Close</div>
@@ -112,7 +112,7 @@ defmodule LightningWeb.ModalPortal do
     send_update(__MODULE__, id: "modal-portal", show: nil)
   end
 
-  def hide_modal(close_modal_target \\ nil, id \\ "modal") do
+  def on_hide(close_modal_target \\ nil, id \\ "modal") do
     js =
       %JS{}
       |> JS.hide(
@@ -141,7 +141,7 @@ defmodule LightningWeb.ModalPortal do
 
   # We are unsure of what the best practice is for using this.
   # Open to suggestions/PRs
-  def show_modal(js \\ %JS{}, id) do
+  def on_show(js \\ %JS{}, id) do
     js
     |> JS.show(to: "##{id}")
     |> JS.show(
