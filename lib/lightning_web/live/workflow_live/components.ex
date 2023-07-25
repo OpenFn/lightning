@@ -232,6 +232,11 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :on_change, :any, required: true
 
   def trigger_form(assigns) do
+    assigns =
+      assign(assigns,
+        type: assigns.form.source |> Ecto.Changeset.get_field(:type)
+      )
+
     ~H"""
     <%= hidden_inputs_for(@form) %>
     <div class="col-span-6 @md:col-span-4">
@@ -258,7 +263,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           disabled={@disabled}
         />
       <% end %>
-      <%= case @form |> input_value(:type) do %>
+      <%= case @type do %>
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
