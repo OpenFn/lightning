@@ -2,8 +2,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @moduledoc """
   Workorder component
   """
-  alias Lightning.Policies.ProjectUsers
-  alias Lightning.Policies.Permissions
   alias Lightning.Invocation
   use Phoenix.Component
   use LightningWeb, :live_component
@@ -11,17 +9,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
 
   @impl true
   def update(
-        %{work_order: work_order, project: project, current_user: current_user} =
+        %{work_order: work_order, project: project, can_rerun_job: can_rerun_job} =
           assigns,
         socket
       ) do
-    can_rerun_job =
-      Permissions.can?(ProjectUsers, :rerun_job, current_user, project)
-
     {:ok,
      socket
-     |> assign(project: project)
-     |> assign(can_rerun_job: can_rerun_job)
+     |> assign(project: project, can_rerun_job: can_rerun_job)
      |> set_entry_selection(assigns)
      |> set_work_order_details(work_order)}
   end
