@@ -24,6 +24,8 @@ and this project adheres to
 
 - Fix issue when deleting nodes from the workflow editor
   [#830](https://github.com/OpenFn/Lightning/issues/830)
+- Fix issue when clicking a trigger on a new/unsaved workflow
+  [#954](https://github.com/OpenFn/Lightning/issues/954)
 
 ## [0.6.7] - 2023-07-13
 
