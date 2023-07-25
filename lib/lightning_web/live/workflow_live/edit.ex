@@ -352,7 +352,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     } = socket.assigns
 
     with true <- can_edit_job || :not_authorized,
-         false <- has_child_edges?(changeset, id) || :has_child_edges do
+         true <- !has_child_edges?(changeset, id) || :has_child_edges do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -368,6 +368,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:noreply,
        socket
+       |> push_patch(
+         to:
+           ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}",
+         replace: true
+       )
        |> apply_params(next_params)
        |> push_patches_applied(initial_params)}
     else

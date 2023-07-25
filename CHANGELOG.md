@@ -22,6 +22,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue when deleting nodes from the workflow editor
+  [#830](https://github.com/OpenFn/Lightning/issues/830)
+
 ## [0.6.7] - 2023-07-13
 
 ### Added
