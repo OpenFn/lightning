@@ -43,6 +43,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_submit()
   end
 
+  def click_delete_job(view, job) do
+    view
+    |> delete_job_button(job)
+    |> render_click()
+  end
+
   def click_close_error_flash(view) do
     view |> render_click("lv:clear-flash", %{key: "error"})
 
@@ -250,8 +256,8 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   def delete_job_button_is_disabled?(view, %Job{} = job) do
-    view
-    |> element("#job-pane-#{job.id} button[phx-click='delete_node'][disabled]")
+    delete_job_button(view, job)
+    |> Map.update!(:selector, &(&1 <> "[disabled]"))
     |> has_element?()
   end
 
@@ -287,6 +293,11 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def workflow_card(view, workflow) do
     view |> element("#workflow-card-#{workflow.id}", workflow.name)
+  end
+
+  def delete_job_button(view, %Job{} = job) do
+    view
+    |> element("#job-pane-#{job.id} button[phx-click='delete_node']")
   end
 
   def delete_workflow_link(view, workflow) do

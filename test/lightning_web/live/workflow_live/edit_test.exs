@@ -108,15 +108,38 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
-    @tag skip: true
-    test "can delete a job" do
-      # can't delete if there are downstream jobs
-      # assert view |> render_click("delete_job", %{"id" => job.id}) =~
-      #          "Unable to delete jobs with downstream jobs or runs."
+    @tag role: :editor
+    test "can delete a job", %{conn: conn, project: project, workflow: workflow} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      [job_1, job_2] = workflow.jobs
+      view |> select_node(job_1)
+
+      assert view |> delete_job_button_is_disabled?(job_1)
+
+      # Test that the delete event doesn't work even if the button is disabled.
+      assert view |> force_event(:delete_node, job_1) =~
+               "Delete all descendant jobs first."
+
+      view |> select_node(job_2)
+      assert_patched(view, ~p"/projects/#{project}/w/#{workflow}?s=#{job_2}")
+
+      refute view |> delete_job_button_is_disabled?(job_2)
+
+      view |> click_delete_job(job_2)
+
+      assert_push_event(view, "patches-applied", %{
+        patches: [
+          %{op: "remove", path: "/jobs/1"},
+          %{op: "remove", path: "/edges/1"}
+        ]
+      })
+
+      assert_patched(view, ~p"/projects/#{project}/w/#{workflow}")
     end
 
     @tag role: :viewer
-    test "viewers can't edit existing workflows", %{
+    test "viewers can't edit existing jobs", %{
       conn: conn,
       project: project,
       workflow: workflow
