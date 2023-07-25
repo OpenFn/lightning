@@ -12,7 +12,7 @@ import { Flow } from '../types';
  *
  * TODO: as an optimisation, consider exiting early once we've updated both selected items
  */
-export default (model: Flow.Model, newSelection: string) => {
+export default (model: Flow.Model, newSelection?: string) => {
   const updatedModel = {
     nodes: model.nodes.map(updateItem) as Flow.Node[],
     edges: model.edges.map(updateItem) as Flow.Edge[],
@@ -21,7 +21,7 @@ export default (model: Flow.Model, newSelection: string) => {
   // we have no way of knowing whether the selection is a node or id
   // so we have to do both
   function updateItem(item: Flow.Edge | Flow.Node) {
-    if (item.selected) {
+    if (item.selected && item.id !== newSelection) {
       return styleItem({
         ...item,
         selected: false,

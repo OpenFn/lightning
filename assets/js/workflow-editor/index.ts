@@ -24,7 +24,6 @@ type WorkflowEditorEntrypoint = PhoenixHook<{
     pendingChange: PendingAction,
     abortController: AbortController
   ): Promise<boolean>;
-  unselectNode(): void;
   workflowStore: ReturnType<typeof createWorkflowStore>;
 }>;
 
@@ -81,6 +80,11 @@ export default {
       this.workflowStore.getState().applyPatches(response.patches);
     });
 
+    this.handleEvent('navigate', (e: { href: string }) => {
+      const id = new URL(e.href).searchParams.get('s');
+      this.component?.render(id);
+    });
+
     // Get the initial data from the server
     this.getWorkflowParams();
   },
@@ -88,9 +92,6 @@ export default {
     // TODO: request the workflow params, but this time create a diff
     // between the current state and the server state and send those diffs
     // to the server.
-  },
-  unselectNode() {
-    this.liveSocket.pushHistoryPatch(this.el.dataset.baseUrl!, 'push', this.el);
   },
   onSelectionChange(id?: string) {
     const currentUrl = new URL(window.location.href);

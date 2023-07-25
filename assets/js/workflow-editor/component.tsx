@@ -13,22 +13,23 @@ export function mount(
 ) {
   const componentRoot = createRoot(el);
 
+  const initialSelection = new URL(window.location.href).searchParams.get('s');
+  render(initialSelection);
+
+  function render(selection?: string | null) {
+    componentRoot.render(
+      <WorkflowDiagram
+        ref={el}
+        selection={selection}
+        store={workflowStore}
+        onSelectionChange={onSelectionChange}
+      />
+    );
+  }
+
   function unmount() {
     return componentRoot.unmount();
   }
 
-  let initialSelection;
-  const currentUrl = new URL(window.location.href);
-  initialSelection = currentUrl.searchParams.get('s');
-
-  componentRoot.render(
-    <WorkflowDiagram
-      ref={el}
-      initialSelection={initialSelection}
-      store={workflowStore}
-      onSelectionChange={onSelectionChange}
-    />
-  );
-
-  return { unmount };
+  return { unmount, render };
 }
