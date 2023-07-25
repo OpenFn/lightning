@@ -185,28 +185,6 @@ defmodule Lightning.WorkOrderService do
           | Dataclip.t()
           | %{optional(String.t()) => any}
         ) :: Ecto.Multi.t()
-  #  InvocationReasons.build(job.trigger, dataclip)
-
-  # 1,2,3 ==================================================================
-
-  # --JOB TO JOB------------------------------------------------------------
-
-  # 1 - "flow" and this replacing "on_job_success" or "on_job_fail" triggers
-  # with EDGES that go between { source_job_id, condition, target_job_id }
-
-  # --TRIGGER TO JOB--------------------------------------------------------
-
-  # 2 - "cron" - replace job.trigger_id (where trigger.type = cron)
-  # with { source_trigger_id, condition, target_job_id }
-
-  # 3 - "webhook" - replace job.trigger_id (where trigger.type = webhook)
-  # with { source_trigger_id, condition, target_job_id }
-
-  # ========================================================================
-
-  # build trigger
-  # build edge connecting trigger to job
-
   def multi_for(
         type,
         %Lightning.Workflows.Edge{target_job: job, source_trigger: trigger},

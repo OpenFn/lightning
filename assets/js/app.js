@@ -29,11 +29,9 @@ import { AssocListChange, Copy, Flash, SubmitViaCtrlS } from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
-import WorkflowDiagram from './workflow-diagram-old';
 import WorkflowEditor from './workflow-editor';
 
 let Hooks = {
-  WorkflowDiagram,
   TabSelector,
   JobEditor,
   JobEditorResizer,
