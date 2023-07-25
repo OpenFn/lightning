@@ -27,13 +27,30 @@ defmodule Lightning.WorkOrderService do
 
   @pubsub Lightning.PubSub
 
+  defp enqueue(oban_job) do
+    # HACK: Oban's testing functions only apply to `self` and LiveView
+    # tests run in child processes, so for now we need to set the testing
+    # mode from within the process.
+    if is_nil(Process.get(:oban_testing)) do
+      Process.put(:oban_testing, :manual)
+    end
+
+    case oban_job do
+      jobs when is_list(jobs) ->
+        Oban.insert_all(jobs)
+
+      _ ->
+        Oban.insert(oban_job)
+    end
+  end
+
   def create_webhook_workorder(edge, dataclip_body) do
     multi_for(:webhook, edge, dataclip_body)
     |> Repo.transaction()
     |> case do
       {:ok, models} ->
         Pipeline.new(%{attempt_run_id: models.attempt_run.id})
-        |> Oban.insert()
+        |> enqueue()
 
         job = edge.target_job |> Repo.preload(:workflow)
 
@@ -55,7 +72,7 @@ defmodule Lightning.WorkOrderService do
     |> case do
       {:ok, models} ->
         Lightning.Pipeline.new(%{attempt_run_id: models.attempt_run.id})
-        |> Oban.insert()
+        |> enqueue()
 
         broadcast(
           models.job.workflow.project_id,
@@ -80,7 +97,7 @@ defmodule Lightning.WorkOrderService do
     with {:ok, %{attempt_run: attempt_run, attempt: attempt} = changes} <-
            Repo.transaction(multi) do
       Pipeline.new(%{attempt_run_id: attempt_run.id})
-      |> Oban.insert()
+      |> enqueue()
 
       project_id =
         from(r in Run,
@@ -128,12 +145,7 @@ defmodule Lightning.WorkOrderService do
           Pipeline.new(%{attempt_run_id: attempt_run.id})
         end)
 
-      # HACK: Oban's testing functions only apply to `self` and LiveView
-      # tests run in child processes, so for now we need to set the testing
-      # mode from within the process.
-      Process.put(:oban_testing, :manual)
-
-      Oban.insert_all(jobs)
+      enqueue(jobs)
 
       {:ok, changes}
     end
