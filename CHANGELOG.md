@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Fixed
 
+- Propagate url pushState/changes to Workflow Diagram selection
+  [#944](https://github.com/OpenFn/Lightning/issues/944)
 - Fix issue when deleting nodes from the workflow editor
   [#830](https://github.com/OpenFn/Lightning/issues/830)
 - Fix issue when clicking a trigger on a new/unsaved workflow
