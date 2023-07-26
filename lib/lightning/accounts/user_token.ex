@@ -34,7 +34,7 @@ defmodule Lightning.Accounts.UserToken do
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
   @session_validity_in_days 60
-  @two_factor_session_validity_in_seconds 60 * 200
+  @two_factor_session_validity_in_seconds 60 * 5
   @auth_validity_in_seconds 30
 
   @primary_key {:id, :binary_id, autogenerate: true}
