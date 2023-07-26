@@ -73,26 +73,28 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
                 <Common.dataclip_type_pill dataclip={@selected_dataclip} />
               </div>
             </div>
+            <div class="flex flex-row mt-4">
+              <div class="basis-1/2 font-semibold text-secondary-700">
+                State Assembly
+              </div>
+              <div class="text-right text-sm">
+                <%= if(@selected_dataclip.type == :http_request) do %>
+                  The JSON shown here is the <em>body</em>
+                  of an HTTP request. The state assembler will place this payload into
+                  <code>state.data</code>
+                  when the job is run, before adding <code>state.configuration</code>
+                  from your selected credential.
+                <% else %>
+                  The state assembler will overwrite the <code>configuration</code>
+                  attribute below with the body of the currently selected credential.
+                <% end %>
+              </div>
+            </div>
           </div>
           <div class="h-32 overflow-y-auto">
             <LightningWeb.RunLive.Components.log_view log={
               format_dataclip_body(@selected_dataclip)
             } />
-          </div>
-          <div class="flex-none">
-            <div class="font-semibold text-secondary-700">State Assembly</div>
-            <div class="text-right text-sm">
-              <%= if(@selected_dataclip.type == :http_request) do %>
-                The JSON shown here is the <em>body</em>
-                of an HTTP request. The state assembler will place this payload into
-                <code>state.data</code>
-                when the job is run, before adding <code>state.configuration</code>
-                from your selected credential.
-              <% else %>
-                The state assembler will overwrite the <code>configuration</code>
-                attribute below with the body of the currently selected credential.
-              <% end %>
-            </div>
           </div>
         </div>
         <div class="flex-none flex place-content-end">
