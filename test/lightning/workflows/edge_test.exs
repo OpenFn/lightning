@@ -15,9 +15,7 @@ defmodule Lightning.Workflows.EdgeTest do
     end
 
     test "edges must have a condition" do
-      changeset =
-        Edge.changeset(%Edge{}, %{workflow_id: Ecto.UUID.generate()})
-        |> IO.inspect()
+      changeset = Edge.changeset(%Edge{}, %{workflow_id: Ecto.UUID.generate()})
 
       refute changeset.valid?
 
