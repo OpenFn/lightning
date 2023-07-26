@@ -10,7 +10,7 @@
     <h1 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
       Two-factor authentication
     </h1>
-    <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
+    <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700 mb-4">
       <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
         <.title authentication_type={@authentication_type} />
         <%= if @error_message do %>
@@ -57,6 +57,30 @@
             Use one of your backup codes. Kindly note that a backup code can only be used once
           </p>
         </.form>
+      </div>
+    </div>
+
+    <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-700 dark:border-gray-600 mb-4">
+      <div class="p-3 space-y-2 md:space-y-4 sm:p-6">
+        <p class="">
+          Having problems?
+          <ul class="list-disc pl-4">
+            <li>
+              <a
+                href={
+                  ~p"/users/two-factor/app?authentication_type=#{invert_chosen_type(@authentication_type)}&user[remember_me]=#{@remember_me}"
+                }
+                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+              >
+                <%= if @authentication_type == :totp do %>
+                  Use your backup code
+                <% else %>
+                  Use your authenticator app
+                <% end %>
+              </a>
+            </li>
+          </ul>
+        </p>
       </div>
     </div>
   </div>

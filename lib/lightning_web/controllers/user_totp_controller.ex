@@ -10,7 +10,7 @@ defmodule LightningWeb.UserTOTPController do
     render(conn, "new.html",
       error_message: nil,
       remember_me: params["user"]["remember_me"],
-      authentication_type: params["authentication_type"]
+      authentication_type: authentication_type(params["authentication_type"])
     )
   end
 
