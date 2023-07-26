@@ -55,10 +55,13 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
 
     case Accounts.upsert_user_totp(editing_totp, params) do
       {:ok, _totp} ->
+        token = Accounts.generate_two_factor_session_token(socket.assigns.user)
+        params = %{token: Base.encode32(token)}
+
         {:noreply,
          socket
          |> put_flash(:info, "MFA Setup successfully!")
-         |> push_navigate(to: ~p"/profile")}
+         |> push_navigate(to: ~p"/profile/auth/backup_codes?#{params}")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, totp_changeset: changeset)}

@@ -85,6 +85,27 @@ defmodule LightningWeb.Router do
         UserConfirmationController,
         :confirm_email
 
+    live_session :auth, on_mount: LightningWeb.InitAssigns do
+      live "/auth/confirm_access", ReAuthenticateLive.New, :new
+    end
+
+    live_session :reauth,
+      session: {LightningWeb.UserAuth, :reauthentication_session, []},
+      on_mount: [
+        {LightningWeb.InitAssigns, :default},
+        {LightningWeb.UserAuth, :ensure_reauthenticated}
+      ] do
+      scope "/" do
+        pipe_through [
+          :reauthenticate_user,
+          :require_reauthenticated_user
+        ]
+
+        live "/profile/auth/backup_codes", BackupCodesLive.Index, :index
+        get "/profile/auth/backup_codes/print", BackupCodesController, :print
+      end
+    end
+
     live_session :settings, on_mount: LightningWeb.InitAssigns do
       live "/settings", SettingsLive.Index, :index
 
