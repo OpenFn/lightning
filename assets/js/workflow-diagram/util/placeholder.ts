@@ -27,7 +27,9 @@ export const add = (_model: Flow.Model, parentNode: Flow.Node) => {
     id: crypto.randomUUID(),
     source: parentNode.id,
     target: targetId,
+    data: { condition: 'on_job_success' },
   });
+
   return newModel;
 };
 

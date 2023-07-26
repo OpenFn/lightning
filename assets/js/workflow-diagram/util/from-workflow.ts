@@ -77,7 +77,7 @@ const fromWorkflow = (
           width: 32,
           height: 32,
         };
-
+        model.data = { condition: edge.condition };
         styleEdge(model);
       }
 
