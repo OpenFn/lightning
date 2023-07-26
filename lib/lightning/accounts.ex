@@ -265,6 +265,16 @@ defmodule Lightning.Accounts do
   end
 
   @doc """
+  Lists the user backup codes
+  """
+  @spec list_user_backup_codes(User.t()) :: [UserBackupCode.t(), ...] | []
+  def list_user_backup_codes(user) do
+    query = from b in UserBackupCode, where: b.user_id == ^user.id
+
+    Repo.all(query)
+  end
+
+  @doc """
   Registers a superuser.
 
   ## Examples
@@ -618,6 +628,37 @@ defmodule Lightning.Accounts do
   """
   def delete_session_token(token) do
     Repo.delete_all(UserToken.token_and_context_query(token, "session"))
+    :ok
+  end
+
+  ## 2FA Session
+
+  @doc """
+  Generates a 2FA session token.
+  """
+  def generate_two_factor_session_token(user) do
+    {token, user_token} = UserToken.build_token(user, "two_factor_session")
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Checks if the given two factor token for the user is valid
+  """
+  def two_factor_session_token_valid?(user, token) do
+    base_query = UserToken.verify_token_query(token, "two_factor_session")
+    query = from t in UserToken, where: t.user_id == ^user.id
+    Repo.exists?(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_two_factor_session_token(token) do
+    Repo.delete_all(
+      UserToken.token_and_context_query(token, "two_factor_session")
+    )
+
     :ok
   end
 

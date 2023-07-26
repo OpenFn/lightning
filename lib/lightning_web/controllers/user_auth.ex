@@ -5,6 +5,7 @@ defmodule LightningWeb.UserAuth do
 
   import Plug.Conn
   import Phoenix.Controller
+  use LightningWeb, :verified_routes
 
   alias Lightning.Accounts
   alias LightningWeb.Router.Helpers, as: Routes
@@ -17,6 +18,9 @@ defmodule LightningWeb.UserAuth do
   @remember_me_options [sign: true, max_age: @max_age, same_site: "Lax"]
 
   @totp_session :user_totp_pending
+  @reauthenticated_cookie "_lightning_reauthenticated_key"
+  # max age should be short, ideally 5 minutes
+  @reauthenticated_options [sign: true, max_age: 60 * 200, same_site: "Strict"]
 
   @doc """
   Logs the user in by creating a new session token.
@@ -98,6 +102,8 @@ defmodule LightningWeb.UserAuth do
   def log_out_user(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
+    reauthenticate_token = fetch_cookies(conn, signed: [@reauthenticated_cookie])
+    reauthenticate_token && Accounts.delete_two_factor_session_token(user_token)
 
     if live_socket_id = get_session(conn, :live_socket_id) do
       LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
@@ -106,6 +112,7 @@ defmodule LightningWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
+    |> delete_resp_cookie(@reauthenticated_cookie)
     |> redirect(to: "/")
   end
 
@@ -131,6 +138,46 @@ defmodule LightningWeb.UserAuth do
         {nil, conn}
       end
     end
+  end
+
+  @doc """
+  Re-Authenticates the user by looking into the cookies or query params
+  """
+  def reauthenticate_user(conn, _opts) do
+    {user_token, conn} = ensure_two_factor_token(conn)
+    user = conn.assigns.current_user
+
+    valid? =
+      user && user_token &&
+        Accounts.two_factor_session_token_valid?(user, user_token)
+
+    assign(conn, :user_reauthenticated?, valid?)
+  end
+
+  defp ensure_two_factor_token(conn) do
+    conn = fetch_query_params(conn)
+
+    if token = conn.query_params["token"] do
+      user_token = Base.decode32!(token)
+      {user_token, write_reauthentication_cookie(conn, user_token)}
+    else
+      conn = fetch_cookies(conn, signed: [@reauthenticated_cookie])
+
+      if user_token = conn.cookies[@reauthenticated_cookie] do
+        {user_token, conn}
+      else
+        {nil, conn}
+      end
+    end
+  end
+
+  defp write_reauthentication_cookie(conn, token) do
+    conn
+    |> put_resp_cookie(
+      @reauthenticated_cookie,
+      token,
+      @reauthenticated_options
+    )
   end
 
   defp update_last_used(token) do
@@ -208,6 +255,72 @@ defmodule LightningWeb.UserAuth do
 
       true ->
         conn
+    end
+  end
+
+  @doc """
+  Used for routes that require the user to be re-authenticated.
+  """
+  def require_reauthenticated_user(conn, _opts) do
+    if is_nil(conn.assigns[:user_reauthenticated?]) do
+      conn
+      |> put_flash(
+        :error,
+        "You must verify yourself again in order to access this page."
+      )
+      |> maybe_store_return_to()
+      |> redirect(to: ~p"/auth/confirm_access")
+      |> halt()
+    else
+      conn
+    end
+  end
+
+  @doc """
+  Used for LiveView routes that require the user to be re-authenticated.
+  """
+  def on_mount(:ensure_reauthenticated, _params, session, socket) do
+    socket = mount_user_reauthentication(session, socket)
+
+    if socket.assigns.current_user do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(
+          :error,
+          "You must verify yourself again in order to access this page."
+        )
+        |> Phoenix.LiveView.redirect(to: ~p"/auth/confirm_access")
+
+      {:halt, socket}
+    end
+  end
+
+  defp mount_user_reauthentication(session, socket) do
+    with %{} = user <- socket.assigns.current_user,
+         %{"two_factor_token" => user_token} <- session do
+      Phoenix.Component.assign_new(socket, :user_reauthenticated?, fn ->
+        Accounts.two_factor_session_token_valid?(user, user_token)
+      end)
+    else
+      _other ->
+        Phoenix.Component.assign_new(socket, :user_reauthenticated?, fn ->
+          nil
+        end)
+    end
+  end
+
+  @doc """
+  Fetches the two factor token to be used in LiveView sessions
+  """
+  def reauthentication_session(conn) do
+    {user_token, conn} = ensure_two_factor_token(conn)
+
+    if user_token do
+      %{"two_factor_token" => user_token}
+    else
+      %{}
     end
   end
 

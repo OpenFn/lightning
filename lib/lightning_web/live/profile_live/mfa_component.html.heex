@@ -281,5 +281,25 @@
         </div>
       </div>
     </div>
+
+    <div
+      :if={@user.mfa_enabled}
+      class="flex items-start justify-between my-5 mb-5"
+    >
+      <div class="">
+        <h3 class="font-medium leading-6 text-gray-900 pb-1">
+          Recovery codes
+        </h3>
+        <p class="text-sm text-gray-500">
+          Recovery codes can be used to access your account in the event you lose access to your device and cannot receive two-factor authentication codes.
+        </p>
+      </div>
+      <a
+        href={~p"/profile/auth/backup_codes"}
+        class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+      >
+        View
+      </a>
+    </div>
   </div>
 </div>

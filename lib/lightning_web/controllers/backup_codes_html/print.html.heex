@@ -1,0 +1,49 @@
+<section>
+  <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
+    <a href="#" class="flex items-center mb-6">
+      <img
+        class="w-16 h-16"
+        src={Routes.static_path(@conn, "/images/logo.svg")}
+        alt="OpenFn logo"
+      />
+    </a>
+    <h1 class="text-2xl font-semibold text-gray-900 mb-6">
+      Backup Codes
+    </h1>
+    <div class="w-full bg-white rounded-lg shadow md:mt-0 sm:max-w-md xl:p-0 mb-4">
+      <div class="p-3 space-y-2 md:space-y-4 sm:p-6">
+        <div class="flex items-center justify-center">
+          <p class="text-center">
+            Account:
+            <span class="font-bold">
+              <%= @current_user.email %>
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="w-full bg-white rounded-lg md:mt-0 sm:max-w-md xl:p-0 mb-4">
+      <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+        <p class="text-sm text-center leading-tight tracking-tight text-gray-900">
+          You can only use each backup code once
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-4 px-4 py-5 sm:px-6 py-4 border-y border-gray-300">
+          <div
+            :for={backup_code <- @backup_codes}
+            class="text-center tracking-widest"
+          >
+            <%= backup_code.code %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  window.addEventListener("load", () => {
+    window.print();
+    window.close();
+  });
+</script>
