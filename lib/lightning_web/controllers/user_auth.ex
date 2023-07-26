@@ -20,7 +20,7 @@ defmodule LightningWeb.UserAuth do
   @totp_session :user_totp_pending
   @reauthenticated_cookie "_lightning_reauthenticated_key"
   # max age should be short, ideally 5 minutes
-  @reauthenticated_options [sign: true, max_age: 60 * 200, same_site: "Strict"]
+  @reauthenticated_options [sign: true, max_age: 60 * 5, same_site: "Strict"]
 
   @doc """
   Logs the user in by creating a new session token.
