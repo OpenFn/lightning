@@ -2,11 +2,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
   use LightningWeb, :component
   alias LightningWeb.WorkflowLive.EditorPane
 
-  attr(:id, :string, required: true)
-  slot(:top)
+  attr :id, :string, required: true
+  slot :top
 
   slot :column do
-    attr(:class, :string, doc: "Extra CSS classes for the column")
+    attr :class, :string, doc: "Extra CSS classes for the column"
   end
 
   slot(:bottom)
@@ -34,14 +34,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  attr(:job, :map, required: true)
-  attr(:form, :map, required: true, doc: "A form built from a job")
-  attr(:current_user, :map, required: true)
-  attr(:project, :map, required: true)
-  attr(:close_url, :any, required: true)
-  attr(:socket, :any, required: true)
-  attr(:on_run, :any, required: true, doc: "Callback to run a job manually")
-  attr(:follow_run_id, :any, default: nil)
+  attr :job, :map, required: true
+  attr :form, :map, required: true, doc: "A form built from a job"
+  attr :current_user, :map, required: true
+  attr :project, :map, required: true
+  attr :close_url, :any, required: true
+  attr :socket, :any, required: true
+  attr :on_run, :any, required: true, doc: "Callback to run a job manually"
+  attr :follow_run_id, :any, default: nil
 
   slot(:footer)
 
@@ -116,11 +116,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
-  attr(:job, :map, required: true)
-  attr(:user, :map, required: true)
-  attr(:project, :map, required: true)
-  attr(:on_run, :any, required: true, doc: "Callback to run a job manually")
-  attr(:can_run_job, :boolean, default: true)
+  attr :job, :map, required: true
+  attr :user, :map, required: true
+  attr :project, :map, required: true
+  attr :on_run, :any, required: true, doc: "Callback to run a job manually"
+  attr :can_run_job, :boolean, default: true
 
   def input_pane(%{job: job} = assigns) do
     # TODO: move loading the dataclips either down into the ManualRunComponent

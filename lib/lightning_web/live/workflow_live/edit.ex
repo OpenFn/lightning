@@ -14,8 +14,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr(:changeset, :map, required: true)
-  attr(:project_user, :map, required: true)
+  attr :changeset, :map, required: true
+  attr :project_user, :map, required: true
 
   def follow_run(attempt_run) do
     send(self(), {:follow_run, attempt_run})
