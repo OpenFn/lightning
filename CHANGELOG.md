@@ -14,6 +14,17 @@ and this project adheres to
 
 ### Fixed
 
+## [v0.7.0-pre3] - 2023-07-26
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed an issue with newly created edges that prevented downstream jobs
+  [977](https://github.com/OpenFn/Lightning/issues/977)
+
 ## [v0.7.0-pre2] - 2023-07-26
 
 Note that this is a pre-release with a couple of known bugs that are tracked in
