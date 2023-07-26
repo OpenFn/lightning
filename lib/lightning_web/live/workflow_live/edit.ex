@@ -12,7 +12,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true

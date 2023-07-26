@@ -9,7 +9,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
     attr :class, :string, doc: "Extra CSS classes for the column"
   end
 
-  slot(:bottom)
+  slot :bottom
 
   def container(assigns) do
     ~H"""
@@ -43,7 +43,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :on_run, :any, required: true, doc: "Callback to run a job manually"
   attr :follow_run_id, :any, default: nil
 
-  slot(:footer)
+  slot :footer
 
   def job_edit_view(assigns) do
     ~H"""
