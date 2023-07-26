@@ -60,7 +60,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         phx-submit="run"
       >
         <.dataclip_selector form={f} phx-target={@myself} dataclips={@dataclips} />
-
         <div :if={is_nil(@selected_dataclip)} class="flex-1 flex flex-col">
           <Form.text_area form={f} field={:body} phx-debounce="300" />
         </div>
@@ -75,7 +74,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
               </div>
             </div>
           </div>
-          <div class="grow h-32 overflow-y-auto">
+          <div class="h-32 overflow-y-auto">
             <LightningWeb.RunLive.Components.log_view log={
               format_dataclip_body(@selected_dataclip)
             } />

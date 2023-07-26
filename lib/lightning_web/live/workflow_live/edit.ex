@@ -12,10 +12,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   import LightningWeb.WorkflowLive.Components
 
-  on_mount {LightningWeb.Hooks, :project_scope}
+  on_mount({LightningWeb.Hooks, :project_scope})
 
-  attr :changeset, :map, required: true
-  attr :project_user, :map, required: true
+  attr(:changeset, :map, required: true)
+  attr(:project_user, :map, required: true)
 
   def follow_run(attempt_run) do
     send(self(), {:follow_run, attempt_run})
@@ -26,8 +26,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     assigns =
       assigns
       |> assign(
-        base_url:
-          ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}",
+        base_url: ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}",
         workflow_form: to_form(assigns.changeset)
       )
 
@@ -88,7 +87,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 "#{@base_url}?s=#{@selected_job.id}"
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
-            />
+            >
+              <:footer>
+                <.with_changes_indicator changeset={@changeset}>
+                  <div class="flex flex-row gap-2">
+                    <Heroicons.lock_closed
+                      :if={!@can_edit_job}
+                      class="w-5 h-5 place-self-center text-gray-300"
+                    />
+                    <Form.submit_button
+                      class=""
+                      phx-disable-with="Saving..."
+                      disabled={!@can_edit_job or !@changeset.valid?}
+                      form="workflow-form"
+                    >
+                      Save
+                    </Form.submit_button>
+                  </div>
+                </.with_changes_indicator>
+              </:footer>
+            </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
         </div>
         <.form
@@ -251,16 +269,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def authorize(%{assigns: %{live_action: :new}} = socket) do
-    %{project_user: project_user, current_user: current_user, project: project} =
-      socket.assigns
+    %{project_user: project_user, current_user: current_user, project: project} = socket.assigns
 
     Permissions.can(ProjectUsers, :create_workflow, current_user, project_user)
     |> then(fn
       :ok ->
         socket
         |> assign(
-          can_edit_job:
-            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
+          can_edit_job: Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
         )
 
       {:error, _} ->
@@ -273,8 +289,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def authorize(%{assigns: %{live_action: :edit}} = socket) do
     %{project_user: project_user, current_user: current_user} = socket.assigns
 
-    can_edit_job =
-      Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
+    can_edit_job = Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
 
     socket
     |> assign(can_edit_job: can_edit_job)
@@ -370,8 +385,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       {:noreply,
        socket
        |> push_patch(
-         to:
-           ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}",
+         to: ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}",
          replace: true
        )
        |> apply_params(next_params)
@@ -394,8 +408,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
-      socket.assigns
+    %{workflow_params: initial_params, can_edit_job: can_edit_job} = socket.assigns
 
     if can_edit_job do
       next_params =
@@ -439,8 +452,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("push-change", %{"patches" => patches}, socket) do
     # Apply the incoming patches to the current workflow params producing a new
     # set of params.
-    {:ok, params} =
-      WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
+    {:ok, params} = WorkflowParams.apply_patches(socket.assigns.workflow_params, patches)
 
     socket = socket |> apply_params(params)
 
@@ -474,12 +486,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp handle_new_params(socket, params) do
-    %{workflow_params: initial_params, can_edit_job: can_edit_job} =
-      socket.assigns
+    %{workflow_params: initial_params, can_edit_job: can_edit_job} = socket.assigns
 
     if can_edit_job do
-      next_params =
-        WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
+      next_params = WorkflowParams.apply_form_params(socket.assigns.workflow_params, params)
 
       socket
       |> apply_params(next_params)
@@ -528,8 +538,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp apply_selection_params(socket, params) do
     socket
     |> assign(
-      selection_params:
-        params |> Map.take(["s", "m"]) |> Enum.into(%{"s" => nil, "m" => nil})
+      selection_params: params |> Map.take(["s", "m"]) |> Enum.into(%{"s" => nil, "m" => nil})
     )
     |> apply_selection_params()
   end
