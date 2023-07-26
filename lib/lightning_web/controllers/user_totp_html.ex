@@ -19,4 +19,14 @@ defmodule LightningWeb.UserTOTPHTML do
     </h1>
     """
   end
+
+  defp invert_chosen_type(authentication_type) do
+    case authentication_type do
+      :backup_code ->
+        :totp
+
+      _other ->
+        :backup_code
+    end
+  end
 end
