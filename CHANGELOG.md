@@ -7,18 +7,34 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Added ability for a user to enable MFA on their account;
-  using 2FA apps like Authy, Google Authenticator etc
-  [#890](https://github.com/OpenFn/Lightning/issues/890)
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.7.0-pre2] - 2023-07-26
+
+Note that this is a pre-release with a couple of known bugs that are tracked in
+the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
+
+### Added
+
+- Added ability for a user to enable MFA on their account; using 2FA apps like
+  Authy, Google Authenticator etc
+  [#890](https://github.com/OpenFn/Lightning/issues/890)
 - Write/run sql script to convert triggers
   [#875](https://github.com/OpenFn/Lightning/issues/875)
 - Export projects as `.yaml` via UI
   [#249](https://github.com/OpenFn/Lightning/issues/249)
 
 ### Changed
+
+- In `v0.7.0` we change the underlying workflow building and execution
+  infrastructure to align with a standard "nodes and edges" design for directed
+  acyclic graphs (DAGs). Make sure to run the migrations!
+  [793](<(https://github.com/OpenFn/Lightning/issues/793)>)
 
 ### Fixed
 
@@ -32,6 +48,7 @@ and this project adheres to
 ## [0.6.7] - 2023-07-13
 
 ### Added
+
 - Add feature to bulk rerun work orders from a specific step in their workflow;
   e.g., "rerun these 50 work orders, starting each at step 4."
   [#906](https://github.com/OpenFn/Lightning/pull/906)
