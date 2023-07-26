@@ -14,12 +14,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
   def container(assigns) do
     ~H"""
     <div class="relative h-full flex bg-white" id={@id}>
-      <div class="grow flex min-h-full flex-col ">
+      <div class="grow flex min-h-full flex-col">
         <div class="h-14 border-b relative">
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
-        <div class="grow flex">
+        <div class="grow flex h-5/6">
           <%= for slot <- @column do %>
             <div class={"flex-1 px-4 py-6 #{Map.get(slot, :class, "")}"}>
               <%= render_slot(slot) %>
