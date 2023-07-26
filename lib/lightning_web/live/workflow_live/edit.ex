@@ -72,7 +72,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @selection_mode == "expand"}
-            class="absolute hidden inset-0 z-20"
+            class="fixed left-0 top-0 right-0 bottom-0 m-8 hidden inset-0 z-50
+            bg-white fixed inset-0 z-10 overflow-y-auto rounded-lg shadow-xl"
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
           >
@@ -87,7 +88,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 "#{@base_url}?s=#{@selected_job.id}"
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
-            />
+            >
+              <:footer>
+                <.with_changes_indicator changeset={@changeset}>
+                  <div class="flex flex-row gap-2">
+                    <Heroicons.lock_closed
+                      :if={!@can_edit_job}
+                      class="w-5 h-5 place-self-center text-gray-300"
+                    />
+                    <Form.submit_button
+                      class=""
+                      phx-disable-with="Saving..."
+                      disabled={!@can_edit_job or !@changeset.valid?}
+                      form="workflow-form"
+                    >
+                      Save
+                    </Form.submit_button>
+                  </div>
+                </.with_changes_indicator>
+              </:footer>
+            </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
         </div>
         <.form
