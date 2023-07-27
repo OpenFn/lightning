@@ -217,7 +217,8 @@ defmodule Lightning.Projects.ProvisionerTest do
           user,
           body
           |> add_entity_to_workflow(workflow_id, "edges", %{
-            "id" => other_edge_id
+            "id" => other_edge_id,
+            "condition" => "on_job_success"
           })
         )
 
@@ -355,6 +356,7 @@ defmodule Lightning.Projects.ProvisionerTest do
             %{
               "id" => job_edge_id,
               "source_job_id" => first_job_id,
+              "condition" => "on_job_success",
               "target_job_id" => second_job_id
             }
           ]

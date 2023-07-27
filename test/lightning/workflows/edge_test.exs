@@ -5,8 +5,23 @@ defmodule Lightning.Workflows.EdgeTest do
 
   describe "changeset/2" do
     test "valid changeset" do
-      changeset = Edge.changeset(%Edge{}, %{workflow_id: Ecto.UUID.generate()})
+      changeset =
+        Edge.changeset(%Edge{}, %{
+          workflow_id: Ecto.UUID.generate(),
+          condition: :on_job_success
+        })
+
       assert changeset.valid?
+    end
+
+    test "edges must have a condition" do
+      changeset = Edge.changeset(%Edge{}, %{workflow_id: Ecto.UUID.generate()})
+
+      refute changeset.valid?
+
+      assert changeset.errors == [
+               condition: {"can't be blank", [validation: :required]}
+             ]
     end
 
     test "trigger sourced edges must have the :always condition" do
@@ -59,6 +74,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_job_id: job_id,
+          condition: :on_job_success,
           target_job_id: job_id
         })
 
@@ -73,6 +89,7 @@ defmodule Lightning.Workflows.EdgeTest do
         Edge.changeset(%Edge{}, %{
           workflow_id: Ecto.UUID.generate(),
           source_job_id: job_id,
+          condition: :on_job_success,
           target_job_id: Ecto.UUID.generate()
         })
 
@@ -86,6 +103,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
+          condition: :on_job_success,
           source_job_id: job.id
         })
 
@@ -105,6 +123,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
+          condition: :on_job_success,
           target_job_id: job.id
         })
 
@@ -131,6 +150,7 @@ defmodule Lightning.Workflows.EdgeTest do
       changeset =
         Edge.changeset(%Edge{}, %{
           workflow_id: workflow.id,
+          condition: :always,
           source_trigger_id: trigger.id
         })
 

@@ -149,7 +149,13 @@ defmodule Lightning.WorkflowsTest do
         project_id: project.id,
         jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
         triggers: [%{id: trigger_id, type: :webhook}],
-        edges: [%{source_trigger_id: trigger_id, target_job_id: job_id}]
+        edges: [
+          %{
+            source_trigger_id: trigger_id,
+            condition: :always,
+            target_job_id: job_id
+          }
+        ]
       }
 
       assert {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
@@ -172,7 +178,13 @@ defmodule Lightning.WorkflowsTest do
         project_id: project.id,
         jobs: [%{id: job_id, name: "some-job", body: "fn(state)"}],
         triggers: [%{id: trigger_id, type: :webhook}],
-        edges: [%{source_trigger_id: trigger_id, target_job_id: job_id}]
+        edges: [
+          %{
+            source_trigger_id: trigger_id,
+            target_job_id: job_id,
+            condition: :always
+          }
+        ]
       }
 
       {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
@@ -183,7 +195,12 @@ defmodule Lightning.WorkflowsTest do
       valid_attrs = %{
         jobs: [%{id: job_id, name: "some-job-renamed"}],
         edges: [
-          %{id: edge.id, source_trigger_id: trigger_id, target_job_id: job_id}
+          %{
+            id: edge.id,
+            source_trigger_id: trigger_id,
+            target_job_id: job_id,
+            condition: :always
+          }
         ]
       }
 
