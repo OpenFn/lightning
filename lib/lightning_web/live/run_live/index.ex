@@ -86,7 +86,8 @@ defmodule LightningWeb.RunLive.Index do
     do: %{
       "body" => "true",
       "crash" => "true",
-      "date_after" => "",
+      "date_after" =>
+        Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
       "failure" => "true",
       "log" => "true",
