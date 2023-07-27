@@ -108,11 +108,24 @@ config :lightning,
        |> String.to_atom()
 
 # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
+release =
+  case Application.get_env(:lightning, :image_info) do
+    [image_tag: nil, branch: nil, commit: nil] ->
+      "mix-v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+
+    [image_tag: image_tag, branch: _branch, commit: commit] ->
+      if Enum.member?(["edge", "latest"], image_tag), do: commit, else: image_tag
+
+    _other ->
+      nil
+  end
+
 config :sentry,
   filter: Lightning.SentryEventFilter,
   environment_name: config_env(),
   included_environments:
-    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
+    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: []),
+  release: release
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
