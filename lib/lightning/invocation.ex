@@ -381,35 +381,37 @@ defmodule Lightning.Invocation do
     end)
   end
 
-  def filter_run_body_and_logs_where(_search_term, search_fields)
-      when search_fields == [] do
-    dynamic(true)
-  end
+  def filter_run_body_and_logs_where(search_term, search_fields) do
+    if is_nil(search_term) do
+      dynamic(true)
+    else
+      Enum.reduce(search_fields || [], dynamic(false), fn
+        :log, query ->
+          dynamic(
+            [log_lines: l],
+            ^query or
+              fragment(
+                "cast(?  as VARCHAR) ilike ?",
+                l.body,
+                ^"%#{search_term}%"
+              )
+          )
 
-  def filter_run_body_and_logs_where(search_term, search_fields)
-      when search_fields != [] do
-    Enum.reduce(search_fields, dynamic(false), fn
-      :log, query ->
-        dynamic(
-          [log_lines: l],
-          ^query or
-            fragment(
-              "cast(?  as VARCHAR) ilike ?",
-              l.body,
-              ^"%#{search_term}%"
-            )
-        )
+        :body, query ->
+          dynamic(
+            [input: i],
+            ^query or
+              fragment(
+                "cast(?  as VARCHAR) ilike ?",
+                i.body,
+                ^"%#{search_term}%"
+              )
+          )
 
-      :body, query ->
-        dynamic(
-          [input: i],
-          ^query or
-            fragment("cast(?  as VARCHAR) ilike ?", i.body, ^"%#{search_term}%")
-        )
-
-      _, query ->
-        query
-    end)
+        _, query ->
+          query
+      end)
+    end
   end
 
   def list_work_orders_for_project_query(
