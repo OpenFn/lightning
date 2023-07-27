@@ -111,6 +111,18 @@ defmodule Lightning.ProjectsTest do
       assert project.name == "some-updated-name"
     end
 
+    test "update_project/2 updates the MFA requirement" do
+      project = project_fixture()
+
+      refute project.requires_mfa
+      update_attrs = %{requires_mfa: true}
+
+      assert {:ok, %Project{} = project} =
+               Projects.update_project(project, update_attrs)
+
+      assert project.requires_mfa
+    end
+
     test "update_project/2 with invalid data returns error changeset" do
       project = project_fixture() |> unload_relation(:project_users)
 
