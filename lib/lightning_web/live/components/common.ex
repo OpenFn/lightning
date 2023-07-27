@@ -4,6 +4,39 @@ defmodule LightningWeb.Components.Common do
 
   alias Phoenix.LiveView.JS
 
+  @spec version_tuple(any, any, any, any) ::
+          {any, <<_::64, _::_*8>>, :edge | :no_docker | :release | :warn}
+  def version_tuple(image, branch, commit, vsn) do
+    cond do
+      # If running in docker on edge, display commit SHA.
+      image == "edge" ->
+        {commit,
+         "Docker image tag found: '#{image}' unreleased build from #{commit} on #{branch}",
+         :edge}
+
+      # If running in docker and tag matches :vsn, display :vsn and standard message.
+      image == vsn ->
+        {vsn,
+         "Docker image tag found: '#{image}' tagged release build from #{commit}",
+         :release}
+
+      # If running in docker and tag doesn't match :vsn, display image tag.
+      image != nil and image != vsn and image != "edge" ->
+        {image,
+         "Detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
+         :warn}
+
+      # If running in docker and tag doesn't match :vsn, display commit.
+      image != nil and image != vsn ->
+        {commit,
+         "Detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
+         :warn}
+
+      true ->
+        {vsn, "Lightning #{vsn}", :no_docker}
+    end
+  end
+
   def version_chip(assigns) do
     image_info = Application.get_env(:lightning, :image_info)
     image = image_info[:image_tag]
@@ -11,29 +44,7 @@ defmodule LightningWeb.Components.Common do
     commit = image_info[:commit]
     vsn = "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
 
-    {display, message, type} =
-      cond do
-        # If running in docker on edge, display commit SHA.
-        image == "edge" ->
-          {commit,
-           "Docker image tag found: '#{image}' unreleased build from #{commit} on #{branch}",
-           :edge}
-
-        # If running in docker and tag matches :vsn, display :vsn and standard message.
-        image == vsn ->
-          {vsn,
-           "Docker image tag found: '#{image}' tagged release build from #{commit}",
-           :release}
-
-        # If running in docker and tag doesn't match :vsn, display :vsn and warning.
-        image != nil and image != vsn ->
-          {commit,
-           "Warning: detected image tag that does not match application version #{vsn}; image tag '#{image}' built from #{commit}",
-           :warn}
-
-        true ->
-          {vsn, "Lightning #{vsn}", :no_docker}
-      end
+    {display, message, type} = version_tuple(image, branch, commit, vsn)
 
     icon_classes = "h-4 w-4 inline-block mr-1"
 
