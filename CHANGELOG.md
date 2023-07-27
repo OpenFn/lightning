@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Project owners can require MFA for their users
+  [892](https://github.com/OpenFn/Lightning/issues/892)
+
 ### Changed
 
 - Moved to Elixir 1.15 and Erlang 26.0.2 to sort our an annoying ElixirLS issue
