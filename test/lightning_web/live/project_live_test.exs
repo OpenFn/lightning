@@ -485,6 +485,27 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ credential.user.email
     end
 
+    test "project admin can view project security page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#security"
+        )
+
+      assert html =~ "Require Multi-Factor Authentication"
+    end
+
     test "project admin can't edit project name and description with invalid data",
          %{
            conn: conn,
@@ -670,6 +691,54 @@ defmodule LightningWeb.ProjectLiveTest do
              |> render_change() =~ "Project user updated successfuly"
 
       assert view |> has_element?("#{form_id} option[selected]", "Daily")
+    end
+
+    test "project admin can toggle MFA requirement",
+         %{
+           conn: conn,
+           user: user
+         } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Project settings"
+
+      assert view
+             |> element("#toggle-mfa-switch")
+             |> render_click() =~ "Project MFA requirement updated successfully"
+    end
+
+    test "project viewers cannot toggle MFA requirement", %{
+      conn: conn,
+      user: user
+    } do
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          project_users: [%{user_id: user.id, role: :viewer}]
+        })
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Project settings"
+
+      refute has_element?(view, "#toggle-mfa-switch")
+
+      assert render_click(view, "toggle-mfa") =~
+               "You are not authorized to perform this action."
     end
   end
 end
