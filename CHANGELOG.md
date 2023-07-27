@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.7.0-pre4] - 2023-07-27
+
+### Added
+
+### Changed
+
 - Don't add cast fragments if the search_term is nil
   [#968](https://github.com/OpenFn/Lightning/issues/968)
 
