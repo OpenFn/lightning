@@ -107,13 +107,6 @@ config :lightning,
        System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
        |> String.to_atom()
 
-# If you've booted up with a SENTRY_DSN environment variable, use Sentry!
-config :sentry,
-  filter: Lightning.SentryEventFilter,
-  environment_name: config_env(),
-  included_environments:
-    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
-
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
 # automatically configure Mailgun if an API key has been provided. See
@@ -248,3 +241,27 @@ if config_env() == :test do
   config :lightning, Lightning.Repo,
     pool_size: :erlang.system_info(:schedulers_online) + 4
 end
+
+release =
+  case Application.get_env(:lightning, :image_info) do
+    [image_tag: image_tag, branch: _branch, commit: commit] ->
+      if Enum.member?(["edge", "latest"], image_tag),
+        do: commit,
+        else: image_tag
+
+    _other ->
+      "mix-v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+  end
+
+config :sentry,
+  filter: Lightning.SentryEventFilter,
+  environment_name: config_env(),
+  tags: %{
+    host: Application.get_env(:lightning, LightningWeb.Endpoint)[:url][:host]
+  },
+  # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
+  included_environments:
+    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: []),
+  release: release,
+  enable_source_code_context: true,
+  root_source_code_path: File.cwd!()
