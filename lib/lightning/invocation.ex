@@ -346,8 +346,11 @@ defmodule Lightning.Invocation do
 
   def filter_run_finished_after_where(date_after) do
     case date_after do
-      d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.finished_at >= ^date_after)
+      d when d in ["", nil] ->
+        dynamic(true)
+
+      _ ->
+        dynamic([runs: r], r.finished_at >= ^date_after or is_nil(r.finished_at))
     end
   end
 
