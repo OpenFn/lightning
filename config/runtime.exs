@@ -242,7 +242,6 @@ if config_env() == :test do
     pool_size: :erlang.system_info(:schedulers_online) + 4
 end
 
-# If you've booted up with a SENTRY_DSN environment variable, use Sentry!
 release =
   case Application.get_env(:lightning, :image_info) do
     [image_tag: image_tag, branch: _branch, commit: commit] ->
@@ -260,6 +259,7 @@ config :sentry,
   tags: %{
     host: Application.get_env(:lightning, LightningWeb.Endpoint)[:url][:host]
   },
+  # If you've booted up with a SENTRY_DSN environment variable, use Sentry!
   included_environments:
     if(System.get_env("SENTRY_DSN"), do: [config_env()], else: []),
   release: release,
