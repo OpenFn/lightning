@@ -8,10 +8,10 @@ defmodule LightningWeb.JobLive.CredentialPicker do
 
   alias LightningWeb.Components.Form
 
-  attr(:form, :map, required: true)
-  attr(:disabled, :boolean, default: false)
-  attr(:credentials, :list, required: true)
-  attr(:on_change, :any, default: nil)
+  attr :form, :map, required: true
+  attr :disabled, :boolean, default: false
+  attr :credentials, :list, required: true
+  attr :on_change, :any, default: nil
 
   @impl true
   def render(assigns) do
