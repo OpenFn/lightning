@@ -717,28 +717,33 @@ defmodule LightningWeb.ProjectLiveTest do
              |> render_click() =~ "Project MFA requirement updated successfully"
     end
 
-    test "project viewers cannot toggle MFA requirement", %{
+    test "only users with admin level role can toggle MFA requirement", %{
       conn: conn,
       user: user
     } do
       {:ok, project} =
         Lightning.Projects.create_project(%{
           name: "project-1",
-          project_users: [%{user_id: user.id, role: :viewer}]
+          project_users: [%{user_id: user.id, role: :admin}]
         })
 
-      {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_project_settings_path(conn, :index, project.id)
-        )
+      ~w(editor viewer)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
 
-      assert html =~ "Project settings"
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id)
+          )
 
-      refute has_element?(view, "#toggle-mfa-switch")
+        assert html =~ "Project settings"
 
-      assert render_click(view, "toggle-mfa") =~
-               "You are not authorized to perform this action."
+        refute has_element?(view, "#toggle-mfa-switch")
+
+        assert render_click(view, "toggle-mfa") =~
+                 "You are not authorized to perform this action."
+      end)
     end
   end
 end
