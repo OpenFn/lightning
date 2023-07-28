@@ -14,6 +14,10 @@ and this project adheres to
 
 ### Fixed
 
+- Fix issue creating a new credential from the Job editor where the new
+  credential was not being set on the job.
+  [#951](https://github.com/OpenFn/Lightning/issues/951)
+
 ## [v0.7.0-pre5] - 2023-07-28
 
 ### Added
