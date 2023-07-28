@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.7.0-pre5] - 2023-07-28
+
+### Added
+
+### Changed
+
 - Unless otherwise specified, only show workorders with activity in last 14 days
   [#968](https://github.com/OpenFn/Lightning/issues/968)
 
