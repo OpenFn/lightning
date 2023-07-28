@@ -284,6 +284,16 @@ defmodule Lightning.WorkflowLive.Helpers do
     view |> element("div[phx-hook=WorkflowEditor]")
   end
 
+  def selected_adaptor_version_element(view, job) do
+    view |> element("#job-pane-#{job.id} #adaptor-version option[selected]")
+  end
+
+  def selected_credential(view, job) do
+    view
+    |> element("#job-pane-#{job.id} select[id$=credential_id] option[selected]")
+    |> render()
+  end
+
   def job_panel_element(view, job) do
     view |> element("#job-pane-#{job.id}")
   end

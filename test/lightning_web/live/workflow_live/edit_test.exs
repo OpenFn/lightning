@@ -3,6 +3,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
 
+  alias LightningWeb.CredentialLiveHelpers
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -53,10 +55,28 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       view |> fill_job_fields(job, %{name: "My Job"})
 
-      refute view |> element("#adaptor-version option[selected]") |> render() =~
+      refute view |> selected_adaptor_version_element(job) |> render() =~
                ~r(value="@openfn/[a-z-]+@latest"),
              "should not have @latest selected by default"
 
+      view |> element("#new-credential-launcher") |> render_click()
+
+      view |> CredentialLiveHelpers.select_credential_type("dhis2")
+
+      view |> CredentialLiveHelpers.click_continue()
+
+      # Creating a new credential from the Job panel
+      view
+      |> CredentialLiveHelpers.fill_credential(%{
+        name: "My Credential",
+        body: %{username: "foo", password: "bar", hostUrl: "baz"}
+      })
+
+      view |> CredentialLiveHelpers.click_save()
+
+      assert view |> selected_credential(job) =~ "My Credential"
+
+      # Editing the Jobs' body
       view |> click_edit(job)
 
       view |> change_editor_text("some body")
