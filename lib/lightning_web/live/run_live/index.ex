@@ -86,7 +86,8 @@ defmodule LightningWeb.RunLive.Index do
     do: %{
       "body" => "true",
       "crash" => "true",
-      "date_after" => "",
+      "date_after" =>
+        Timex.now() |> Timex.shift(days: -30) |> DateTime.to_string(),
       "date_before" => "",
       "failure" => "true",
       "log" => "true",
@@ -101,33 +102,18 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
-    if is_nil(Map.get(params, "filters")) do
-      params = Map.put(params, "filters", socket.assigns.filters)
-
-      {:noreply,
-       socket
-       |> assign(
-         page_title: "History",
-         run: %Run{},
-         filters_changeset: filters_changeset(socket.assigns.filters)
-       )
-       |> push_patch(
-         to: ~p"/projects/#{socket.assigns.project.id}/runs?#{params}"
-       )}
-    else
-      {:noreply,
-       socket
-       |> assign(
-         page_title: "History",
-         run: %Run{},
-         filters_changeset: filters_changeset(socket.assigns.filters)
-       )
-       |> apply_action(socket.assigns.live_action, params)}
-    end
+    {:noreply,
+     socket
+     |> assign(
+       page_title: "History",
+       run: %Run{},
+       filters_changeset: filters_changeset(socket.assigns.filters)
+     )
+     |> apply_action(socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :index, params) do
-    filters = Map.get(params, "filters") |> SearchParams.new()
+    filters = Map.get(params, "filters", init_filters()) |> SearchParams.new()
 
     socket
     |> assign(
