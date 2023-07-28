@@ -105,10 +105,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         conn,
         Routes.project_run_index_path(conn, :index, project.id)
       )
-      |> IO.inspect()
 
       Routes.project_run_index_path(conn, :index, project.id)
-      |> IO.inspect()
 
       # assert destination =~
       #          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]="
@@ -1136,7 +1134,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       run = run_fixture(started_at: started_at, finished_at: finished_at)
 
       html =
-        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        render_component(&LightningWeb.RunLive.Components.run_details/1,
+          run: run
+        )
         |> Floki.parse_fragment!()
 
       assert html
@@ -1162,7 +1162,9 @@ defmodule LightningWeb.RunWorkOrderTest do
       run = run_fixture(started_at: started_at)
 
       html =
-        render_component(&LightningWeb.RunLive.Components.run_details/1, run: run)
+        render_component(&LightningWeb.RunLive.Components.run_details/1,
+          run: run
+        )
         |> Floki.parse_fragment!()
 
       assert html

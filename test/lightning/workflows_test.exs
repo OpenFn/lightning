@@ -207,7 +207,10 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, workflow} =
                Lightning.Workflows.update_workflow(workflow, valid_attrs)
 
-      assert Repo.get_by(Lightning.Jobs.Job, id: job_id, name: "some-job-renamed")
+      assert Repo.get_by(Lightning.Jobs.Job,
+               id: job_id,
+               name: "some-job-renamed"
+             )
 
       assert workflow.name == "some-name"
       assert workflow.edges |> List.first() == edge
