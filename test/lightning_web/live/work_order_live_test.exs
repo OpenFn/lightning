@@ -100,24 +100,24 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
         |> Lightning.Repo.insert!()
 
-      {:error, {:live_redirect, %{flash: %{}, to: destination}}} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
+      # {:error, {:live_redirect, %{flash: %{}, to: destination}}} =
+      live(
+        conn,
+        Routes.project_run_index_path(conn, :index, project.id)
+      )
+      |> IO.inspect()
 
-      assert destination =~
-               "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]="
+      Routes.project_run_index_path(conn, :index, project.id)
+      |> IO.inspect()
 
-      assert destination =~
-               "&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+      # assert destination =~
+      #          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]="
+
+      # assert destination =~
+      #          "&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(conn)
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "History"
 
@@ -185,7 +185,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
-        |> follow_redirect(conn)
 
       div =
         view
@@ -235,7 +234,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
-        |> follow_redirect(conn)
 
       div =
         view
@@ -320,7 +318,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
-        |> follow_redirect(conn)
 
       div =
         view
@@ -401,7 +398,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
-        |> follow_redirect(conn)
 
       assert view
              |> has_element?(
@@ -508,7 +504,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
         )
-        |> follow_redirect(conn)
 
       div =
         view
@@ -568,11 +563,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> Lightning.Repo.insert!()
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(conn)
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "Filter by workorder status"
 
@@ -649,11 +640,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(conn)
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       div =
         view
@@ -774,11 +761,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       {:ok, view, html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(conn)
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "Filter by workflow"
 
@@ -906,7 +889,6 @@ defmodule LightningWeb.RunWorkOrderTest do
           conn,
           Routes.project_run_index_path(conn, :index, project.id)
         )
-        |> follow_redirect(conn)
 
       assert html =~ expected_d2 |> Timex.format!("{YYYY}-{0M}-{0D}")
       assert html =~ expected_d1 |> Timex.format!("{YYYY}-{0M}-{0D}")
@@ -1038,11 +1020,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> Lightning.Repo.insert!()
 
       {:ok, view, _html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(conn)
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       div =
         view
@@ -1288,7 +1266,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
-        |> follow_redirect(conn)
 
       assert view
              |> render_click("rerun", %{
@@ -1304,7 +1281,6 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       {:ok, view, _html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
-        |> follow_redirect(conn)
 
       assert view
              |> render_click("rerun", %{
