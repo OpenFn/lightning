@@ -15,6 +15,8 @@ and this project adheres to
 - Moved to Elixir 1.15 and Erlang 26.0.2 to sort our an annoying ElixirLS issue
   that was slowing down our engineers.
 - Update Debian base to use bookworm (Debian 12) for our Docker images
+- Change new credential modal to take up less space on the screen
+  [#931](https://github.com/OpenFn/Lightning/issues/931)
 
 ### Fixed
 

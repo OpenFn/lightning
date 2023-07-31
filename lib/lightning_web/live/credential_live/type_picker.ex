@@ -7,16 +7,16 @@ defmodule LightningWeb.CredentialLive.TypePicker do
   def render(assigns) do
     ~H"""
     <div class="mt-10 sm:mt-0">
-      <div class="lg:grid md:grid-cols-3 md:gap-6">
-        <div class="md:col-span-1 hidden @2xl:block">
+      <div class="lg:grid lg:grid-cols-3 md:gap-6">
+        <div class="lg:col-span-1 hidden @2xl:block">
           <div class="px-4 sm:px-0">
             <p class="mt-1 text-sm text-gray-600">
               Decide which type credential you would like to create.
             </p>
           </div>
         </div>
-        <div class="mt-5 md:col-span-2 md:mt-0">
-          <div class="overflow-hidden shadow sm:rounded-md">
+        <div class="mt-5 lg:col-span-3 xl:col-span-2 md:mt-0">
+          <div class="shadow sm:rounded-md">
             <div class="space-y-6 bg-white px-4 py-5 sm:p-6">
               <fieldset>
                 <legend class="contents text-base font-medium text-gray-900">
@@ -34,10 +34,10 @@ defmodule LightningWeb.CredentialLive.TypePicker do
                   phx-change="type_changed"
                   phx-submit="confirm_type"
                 >
-                  <div class="mt-4 space-y-4">
+                  <div class="md:columns-3 columns-2">
                     <div
                       :for={{name, key} <- @type_options}
-                      class="flex items-center"
+                      class="flex items-center pt-4"
                     >
                       <%= radio_button(f, :selected, key,
                         class:
