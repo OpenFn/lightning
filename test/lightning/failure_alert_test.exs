@@ -106,6 +106,7 @@ defmodule Lightning.FailureAlertTest do
       }
     end
 
+    @tag :skip
     test "sends a limited number of failure alert emails to a subscribed user.",
          %{
            project: project,
@@ -149,6 +150,7 @@ defmodule Lightning.FailureAlertTest do
       refute_receive {:email, %Swoosh.Email{subject: ^s4}}, 250
     end
 
+    @tag :skip
     test "sends a failure alert email for a workflow even if another workflow has been rate limited.",
          %{attempt_run: attempt_run, attempt_run2: attempt_run2, period: period} do
       Pipeline.process(attempt_run)

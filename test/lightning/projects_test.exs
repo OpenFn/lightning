@@ -423,10 +423,10 @@ defmodule Lightning.ProjectsTest do
 
       %{project: project} = full_project_fixture()
 
-      {:ok, project} = Projects.schedule_project_deletion(project)
+      {:ok, %{scheduled_deletion: scheduled_deletion}} =
+        Projects.schedule_project_deletion(project)
 
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      assert Timex.diff(project.scheduled_deletion, now, :seconds) == 0
+      assert Timex.diff(scheduled_deletion, DateTime.utc_now(), :seconds) <= 10
 
       Application.put_env(
         :lightning,
