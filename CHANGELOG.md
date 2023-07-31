@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Moved to Elixir 1.15 and Erlang 26.0.2 to sort our an annoying ElixirLS issue
+  that was slowing down our engineers.
+
 ### Fixed
 
 - Fix issue creating a new credential from the Job editor where the new

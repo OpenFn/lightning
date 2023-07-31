@@ -5,7 +5,7 @@ defmodule Lightning.MixProject do
     [
       app: :lightning,
       version: "0.7.0",
-      elixir: "~> 1.13",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,

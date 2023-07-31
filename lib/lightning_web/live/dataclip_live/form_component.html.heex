@@ -10,7 +10,9 @@
   >
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :type, class: "block text-sm font-medium text-secondary-700") %>
+        <%= label(f, :type,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <div class="flex w-full items-center gap-2 pb-3">
           <div class="grow">
             <.select_field
@@ -26,7 +28,9 @@
     </div>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :body, class: "block text-sm font-medium text-secondary-700") %>
+        <%= label(f, :body,
+          class: "block text-sm font-medium text-secondary-700"
+        ) %>
         <%= textarea(f, :body,
           disabled: true,
           class:

@@ -92,7 +92,7 @@ defmodule Mix.Tasks.Lightning.InstallSchemas do
         write_schema(dir, package_name, body)
 
       {:ok, %HTTPoison.Response{status_code: status_code}} ->
-        Logger.warn(
+        Logger.warning(
           "Unable to fetch #{package_name} configuration schema. status=#{status_code}"
         )
     end
