@@ -2,6 +2,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
+  import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
 
@@ -15,6 +16,42 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
 
       assert view
              |> element("#workflows-#{project.id}", "No workflows yet")
+    end
+
+    test "only users with MFA enabled can access workflows for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = user_with_mfa_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      create_workflow(%{project: project})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w"
+        )
+
+      assert element(view, "#workflows-#{project.id}", "No workflows yet")
+
+      ~w(editor viewer admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(
+                   conn,
+                   ~p"/projects/#{project.id}/w"
+                 )
+      end)
     end
 
     test "lists all workflows for a project", %{
@@ -77,6 +114,42 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> follow_redirect(conn, "/projects/#{project.id}/w/new")
 
       assert view |> element("div[id^=workflow-edit-]") |> has_element?()
+    end
+
+    test "only users with MFA enabled can create workflows for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = user_with_mfa_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      create_workflow(%{project: project})
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/w"
+        )
+
+      assert html =~ "Create new workflow"
+
+      ~w(editor admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(
+                   conn,
+                   ~p"/projects/#{project.id}/w"
+                 )
+      end)
     end
   end
 

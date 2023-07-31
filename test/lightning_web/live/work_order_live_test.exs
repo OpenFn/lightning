@@ -6,6 +6,7 @@ defmodule LightningWeb.RunWorkOrderTest do
   alias Lightning.Attempt
   alias Lightning.Workorders.SearchParams
 
+  import Lightning.AccountsFixtures
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
   import Lightning.WorkflowsFixtures
@@ -16,6 +17,44 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :create_project_for_current_user
 
   describe "Index" do
+    test "only users with MFA enabled can access workorders for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = user_with_mfa_fixture()
+      conn = log_in_user(conn, user)
+
+      {:ok, project} =
+        Lightning.Projects.create_project(%{
+          name: "project-1",
+          requires_mfa: true,
+          project_users: [%{user_id: user.id, role: :admin}]
+        })
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+        |> follow_redirect(
+          conn,
+          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
+
+      assert html =~ "History"
+
+      ~w(editor viewer admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(
+                   conn,
+                   Routes.project_run_index_path(conn, :index, project.id)
+                 )
+      end)
+    end
+
     test "WorkOrderComponent", %{
       project: project
     } do
