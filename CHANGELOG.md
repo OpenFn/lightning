@@ -21,6 +21,8 @@ and this project adheres to
 - Fix issue creating a new credential from the Job editor where the new
   credential was not being set on the job.
   [#951](https://github.com/OpenFn/Lightning/issues/951)
+- Fix issue where checking a credential type radio button shows as unchecked on
+  first click. [#976](https://github.com/OpenFn/Lightning/issues/976)
 
 ## [v0.7.0-pre5] - 2023-07-28
 

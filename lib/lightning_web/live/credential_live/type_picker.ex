@@ -28,7 +28,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
                 <.form
                   :let={f}
                   id="credential-type-picker"
-                  for={%{}}
+                  for={%{"selected" => @selected}}
                   as={:type}
                   phx-target={@myself}
                   phx-change="type_changed"
