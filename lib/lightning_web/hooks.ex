@@ -29,14 +29,19 @@ defmodule LightningWeb.Hooks do
       ProjectUsers
       |> Permissions.can?(:access_project, current_user, project)
 
-    if can_access_project do
-      {:cont,
-       socket
-       |> assign_new(:project_user, fn -> project_user end)
-       |> assign_new(:project, fn -> project end)
-       |> assign_new(:projects, fn -> projects end)}
-    else
-      {:halt, redirect(socket, to: "/") |> put_flash(:nav, :not_found)}
+    cond do
+      can_access_project and project.requires_mfa and !current_user.mfa_enabled ->
+        {:halt, redirect(socket, to: "/mfa_required")}
+
+      can_access_project ->
+        {:cont,
+         socket
+         |> assign_new(:project_user, fn -> project_user end)
+         |> assign_new(:project, fn -> project end)
+         |> assign_new(:projects, fn -> projects end)}
+
+      true ->
+        {:halt, redirect(socket, to: "/") |> put_flash(:nav, :not_found)}
     end
   end
 

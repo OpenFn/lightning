@@ -105,6 +105,8 @@ defmodule LightningWeb.Router do
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
+      live "/mfa_required", ProjectLive.MFARequired, :index
+
       scope "/projects/:project_id", as: :project do
         live "/jobs", JobLive.Index, :index
 
