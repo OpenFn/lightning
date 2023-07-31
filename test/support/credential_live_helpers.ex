@@ -1,10 +1,17 @@
 defmodule LightningWeb.CredentialLiveHelpers do
   import Phoenix.LiveViewTest
+  import ExUnit.Assertions
 
   def select_credential_type(live, type) do
-    live
-    |> form("#credential-type-picker", type: %{selected: type})
-    |> render_change()
+    html =
+      live
+      |> form("#credential-type-picker", type: %{selected: type})
+      |> render_change()
+
+    assert Floki.parse_fragment!(html)
+           |> Floki.find("input[type=radio][value=#{type}][checked]")
+           |> Enum.any?(),
+           "Expected #{type} to be selected"
   end
 
   def click_continue(live) do
