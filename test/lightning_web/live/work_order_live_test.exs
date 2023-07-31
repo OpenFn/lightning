@@ -32,14 +32,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         })
 
       {:ok, _view, html} =
-        live(
-          conn,
-          Routes.project_run_index_path(conn, :index, project.id)
-        )
-        |> follow_redirect(
-          conn,
-          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]=&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
-        )
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
       assert html =~ "History"
 
