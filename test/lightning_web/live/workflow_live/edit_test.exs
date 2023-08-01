@@ -48,7 +48,15 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
+      workflow_name = view |> get_workflow_params() |> Map.get("name")
+
+      refute workflow_name == "", "the workflow should have a pre-filled name"
+
+      assert view |> element("#workflow_name_form") |> render() =~ workflow_name
+      assert view |> save_is_disabled?()
+
       view |> fill_workflow_name("My Workflow")
+
       assert view |> save_is_disabled?()
 
       {job, _, _} = view |> select_first_job()

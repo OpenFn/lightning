@@ -27,7 +27,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       assigns
       |> assign(
         base_url:
-          ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}",
+          case assigns.live_action do
+            :new ->
+              ~p"/projects/#{assigns.project}/w/new"
+
+            :edit ->
+              ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          end,
         workflow_form: to_form(assigns.changeset)
       )
 
@@ -320,10 +326,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, url, socket) do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
-     |> apply_selection_params(params)}
+     |> apply_selection_params(params)
+     |> assign_url(url)}
   end
 
   def apply_action(socket, :new, _params) do
@@ -331,7 +338,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
     else
       socket
-      |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
+      |> assign_workflow(%Workflow{
+        project_id: socket.assigns.project.id,
+        name: Lightning.Name.generate(),
+        id: Ecto.UUID.generate()
+      })
     end
     |> assign(page_title: "New Workflow")
   end
@@ -429,7 +440,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params
         end
 
-      socket = socket |> apply_params(next_params)
+      socket =
+        socket
+        |> apply_params(next_params)
 
       socket =
         Lightning.Repo.insert_or_update(socket.assigns.changeset)
@@ -437,6 +450,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:ok, workflow} ->
             socket
             |> assign_workflow(workflow)
+            |> push_patch(to: build_next_path(socket, workflow), replace: true)
             |> put_flash(:info, "Workflow saved")
 
           {:error, changeset} ->
@@ -649,6 +663,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
     end
+  end
+
+  defp assign_url(socket, url) do
+    socket
+    |> assign(url: URI.parse(url))
+  end
+
+  defp build_next_path(socket, workflow) do
+    %{project: project, selection_params: selection_params} = socket.assigns
+
+    ~p"/projects/#{project}/w/#{workflow}?#{selection_params |> Map.reject(&match?({_, nil}, &1))}"
   end
 
   # find the changeset for the selected item

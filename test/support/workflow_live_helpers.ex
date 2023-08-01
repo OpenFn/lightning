@@ -178,6 +178,10 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> Enum.find_index(fn j -> j["id"] == job.id end)
   end
 
+  def get_workflow_params(view) do
+    :sys.get_state(view.pid).socket.assigns.workflow_params
+  end
+
   @doc """
   This helper replicates the data sent to the server when a new workflow is
   created, and the WorkflowDiagram component is mounted and determines the
