@@ -166,6 +166,7 @@ export default {
   getWorkflowParams() {
     this.pushEventTo(this.el, 'get-initial-state', {});
   },
+  // TODO this is where a new workflow is created
   handleWorkflowParams({ workflow_params: payload }) {
     this.workflowStore.setState(_state => payload);
 
