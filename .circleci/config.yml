@@ -34,7 +34,7 @@ jobs:
       elixir_version:
         description: Elixir version
         type: string
-        default: "1.14.1"
+        default: "1.15.4" # Looks like it's pinned at OTP26
       nodejs_version:
         description: NodeJS version
         type: string
@@ -46,7 +46,7 @@ jobs:
     parallelism: 1
     docker:
       - image: elixir:<< parameters.elixir_version >>
-      - image: cimg/postgres:14.2
+      - image: cimg/postgres:15.3
 
     steps:
       - checkout

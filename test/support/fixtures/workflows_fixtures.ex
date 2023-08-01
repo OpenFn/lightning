@@ -18,7 +18,7 @@ defmodule Lightning.WorkflowsFixtures do
       |> Enum.into(%{
         name:
           Enum.take_random(
-            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ',
+            ~c"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ",
             10
           )
           |> to_string()

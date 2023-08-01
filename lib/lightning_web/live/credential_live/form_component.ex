@@ -23,7 +23,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div id="credential-#{@id}" class="@container">
+    <div id={"credential-#{@id}"} class="@container">
       <.live_component
         :if={!@type}
         module={LightningWeb.CredentialLive.TypePicker}

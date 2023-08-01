@@ -27,7 +27,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       assigns
       |> assign(
         base_url:
-          ~p"/projects/#{assigns.project}/w/#{assigns.workflow.id || "new"}",
+          case assigns.live_action do
+            :new ->
+              ~p"/projects/#{assigns.project}/w/new"
+
+            :edit ->
+              ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
+          end,
         workflow_form: to_form(assigns.changeset)
       )
 
@@ -72,7 +78,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @selection_mode == "expand"}
-            class="absolute hidden inset-0 z-20"
+            class="fixed left-0 top-0 right-0 bottom-0 m-8 hidden inset-0 z-50
+            bg-white fixed inset-0 z-10 overflow-y-auto rounded-lg shadow-xl"
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
           >
@@ -87,7 +94,26 @@ defmodule LightningWeb.WorkflowLive.Edit do
                 "#{@base_url}?s=#{@selected_job.id}"
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
-            />
+            >
+              <:footer>
+                <.with_changes_indicator changeset={@changeset}>
+                  <div class="flex flex-row gap-2">
+                    <Heroicons.lock_closed
+                      :if={!@can_edit_job}
+                      class="w-5 h-5 place-self-center text-gray-300"
+                    />
+                    <Form.submit_button
+                      class=""
+                      phx-disable-with="Saving..."
+                      disabled={!@can_edit_job or !@changeset.valid?}
+                      form="workflow-form"
+                    >
+                      Save
+                    </Form.submit_button>
+                  </div>
+                </.with_changes_indicator>
+              </:footer>
+            </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
         </div>
         <.form
@@ -126,7 +152,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <:footer>
                 <div class="flex flex-row">
                   <.link
-                    patch={ "#{@base_url}?s=#{@selected_job.id}&m=expand" }
+                    patch={"#{@base_url}?s=#{@selected_job.id}&m=expand"}
                     class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                   >
                     <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
@@ -300,10 +326,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
+  def handle_params(params, url, socket) do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
-     |> apply_selection_params(params)}
+     |> apply_selection_params(params)
+     |> assign_url(url)}
   end
 
   def apply_action(socket, :new, _params) do
@@ -311,7 +338,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
     else
       socket
-      |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
+      |> assign_workflow(%Workflow{
+        project_id: socket.assigns.project.id,
+        name: Lightning.Name.generate(),
+        id: Ecto.UUID.generate()
+      })
     end
     |> assign(page_title: "New Workflow")
   end
@@ -352,7 +383,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     } = socket.assigns
 
     with true <- can_edit_job || :not_authorized,
-         false <- has_child_edges?(changeset, id) || :has_child_edges do
+         true <- !has_child_edges?(changeset, id) || :has_child_edges do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -368,6 +399,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:noreply,
        socket
+       |> push_patch(
+         to:
+           ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}",
+         replace: true
+       )
        |> apply_params(next_params)
        |> push_patches_applied(initial_params)}
     else
@@ -404,7 +440,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params
         end
 
-      socket = socket |> apply_params(next_params)
+      socket =
+        socket
+        |> apply_params(next_params)
 
       socket =
         Lightning.Repo.insert_or_update(socket.assigns.changeset)
@@ -412,6 +450,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:ok, workflow} ->
             socket
             |> assign_workflow(workflow)
+            |> push_patch(to: build_next_path(socket, workflow), replace: true)
             |> put_flash(:info, "Workflow saved")
 
           {:error, changeset} ->
@@ -624,6 +663,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
     end
+  end
+
+  defp assign_url(socket, url) do
+    socket
+    |> assign(url: URI.parse(url))
+  end
+
+  defp build_next_path(socket, workflow) do
+    %{project: project, selection_params: selection_params} = socket.assigns
+
+    ~p"/projects/#{project}/w/#{workflow}?#{selection_params |> Map.reject(&match?({_, nil}, &1))}"
   end
 
   # find the changeset for the selected item

@@ -24,20 +24,20 @@ import type { WorkflowState } from '../workflow-editor/store';
 import type { Flow, Positions } from './types';
 
 type WorkflowDiagramProps = {
+  selection?: string | null;
   onSelectionChange: (id?: string) => void;
   store: StoreApi<WorkflowState>;
-  initialSelection?: string | null;
 };
 
 type ChartCache = {
   positions: Positions;
-  selectedId?: string;
+  lastSelection?: string;
   lastLayout?: string;
 };
 
 export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
-    const { onSelectionChange, store, initialSelection } = props;
+    const { selection, onSelectionChange, store } = props;
 
     const add = useStore(store!, state => state.add);
     const remove = useStore(store!, state => state.remove);
@@ -57,7 +57,8 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
     const chartCache = useRef<ChartCache>({
       positions: {},
-      selectedId: initialSelection,
+      // This will set the initial selection into the cache
+      lastSelection: selection ?? undefined,
       lastLayout: undefined,
     });
 
@@ -67,9 +68,14 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     // This usually means the workflow has changed or its the first load, so we don't want to animate
     // Later, if responding to changes from other users live, we may want to animate
     useEffect(() => {
-      const { positions, selectedId } = chartCache.current;
-      const newModel = fromWorkflow(workflow, positions, selectedId);
-      //console.log('UPDATING WORKFLOW', newModel, selectedId);
+      const { positions } = chartCache.current;
+      const newModel = fromWorkflow(
+        workflow,
+        positions,
+        // Re-render the model based on whatever was last selected
+        // This handles first load and new node safely
+        chartCache.current.lastSelection
+      );
       if (flow && newModel.nodes.length) {
         const layoutId = shouldLayout(
           newModel.edges,
@@ -97,6 +103,15 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       }
     }, [workflow, flow]);
 
+    useEffect(() => {
+      let newSelection = selection ?? undefined; // indirection is mostly for type safety
+      if (chartCache.current.lastSelection != newSelection) {
+        chartCache.current.lastSelection = newSelection;
+        const updatedModel = updateSelectionStyles(model, newSelection);
+        setModel(updatedModel);
+      }
+    }, [model, selection]);
+
     const onNodesChange = useCallback(
       (changes: NodeChange[]) => {
         const newNodes = applyNodeChanges(changes, model.nodes);
@@ -107,16 +122,11 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const updateSelection = useCallback(
       (id?: string) => {
-        const { selectedId } = chartCache.current;
-        if (id !== selectedId) {
-          chartCache.current.selectedId = id;
+        if (id !== selection) {
           onSelectionChange(id);
-
-          const updatedModel = updateSelectionStyles(model, id);
-          setModel(updatedModel);
         }
       },
-      [onSelectionChange, model]
+      [onSelectionChange, model, selection]
     );
 
     const handleNodeClick = useCallback(
@@ -157,7 +167,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
         // Ensure the starting position is set
         chartCache.current.positions[newNode.id] = newNode.position;
         // Mark the new node as selected for the next render
-        chartCache.current.selectedId = newNode.id;
+        chartCache.current.lastSelection = newNode.id;
         onSelectionChange(newNode.id);
 
         // Push the changes

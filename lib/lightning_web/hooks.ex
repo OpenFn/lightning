@@ -22,7 +22,8 @@ defmodule LightningWeb.Hooks do
 
     projects = Lightning.Projects.get_projects_for_user(current_user)
 
-    project_user = Lightning.Projects.get_project_user(project, current_user)
+    project_user =
+      project && Lightning.Projects.get_project_user(project, current_user)
 
     can_access_project =
       ProjectUsers

@@ -152,7 +152,7 @@ docker create \
   --mount source=lightning-postgres-data,target=/var/lib/postgresql/data \
   --publish 5432:5432 \
   -e POSTGRES_PASSWORD=postgres \
-  postgres:14.1-alpine
+  postgres:15.3-alpine
 
 docker start lightning-postgres
 ```

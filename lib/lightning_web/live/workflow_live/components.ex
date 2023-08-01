@@ -14,7 +14,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
         <%= for workflow <- @workflows do %>
           <.workflow_card
-            can_create_workflow={@can_create_workflow}
             can_delete_workflow={@can_delete_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
@@ -25,45 +24,56 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  attr :project, :map, required: true
+  attr :can_delete_workflow, :boolean, default: false
+  attr :workflow, :map, required: true
+
   def workflow_card(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        relative_updated_at:
+          Timex.Format.DateTime.Formatters.Relative.format!(
+            assigns.workflow.updated_at,
+            "{relative}"
+          )
+      )
+
     ~H"""
     <div>
-      <.link
-        id={"workflow-card-#{@workflow.id}"}
-        navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
-        class="col-span-1 rounded-md shadow-sm"
-        role="button"
-      >
-        <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
-          <div class="flex-1 truncate px-4 py-2 text-sm">
+      <div class="flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 bg-white hover:bg-gray-50">
+        <.link
+          id={"workflow-card-#{@workflow.id}"}
+          navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
+          class="flex-1 rounded-md shadow-sm"
+          role="button"
+        >
+          <div class="truncate px-4 py-2 text-sm">
             <span class="font-medium text-gray-900 hover:text-gray-600">
               <%= @workflow.name %>
             </span>
             <p class="text-gray-500 text-xs">
-              Created <%= Timex.Format.DateTime.Formatters.Relative.format!(
-                @workflow.updated_at,
-                "{relative}"
-              ) %>
+              Created <%= @relative_updated_at %>
             </p>
           </div>
-          <div class="flex-shrink-0 pr-2">
-            <div
-              :if={@can_delete_workflow}
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        </.link>
+        <div class="flex-shrink-0 pr-2">
+          <div
+            :if={@can_delete_workflow}
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <.link
+              href="#"
+              phx-click="delete_workflow"
+              phx-value-id={@workflow.id}
+              data-confirm="Are you sure you'd like to delete this workflow?"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
-              <.link
-                href="#"
-                phx-click="delete_workflow"
-                phx-value-id={@workflow.id}
-                data-confirm="Are you sure you'd like to delete this workflow?"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-transparent text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-              >
-                <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
-              </.link>
-            </div>
+              <Icon.trash class="h-5 w-5 text-slate-300 hover:text-rose-700" />
+            </.link>
           </div>
         </div>
-      </.link>
+      </div>
     </div>
     """
   end
@@ -232,6 +242,11 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :on_change, :any, required: true
 
   def trigger_form(assigns) do
+    assigns =
+      assign(assigns,
+        type: assigns.form.source |> Ecto.Changeset.get_field(:type)
+      )
+
     ~H"""
     <%= hidden_inputs_for(@form) %>
     <div class="col-span-6 @md:col-span-4">
@@ -258,7 +273,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           disabled={@disabled}
         />
       <% end %>
-      <%= case @form |> input_value(:type) do %>
+      <%= case @type do %>
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>

@@ -4,8 +4,8 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "0.6.7",
-      elixir: "~> 1.13",
+      version: "0.7.0",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
@@ -85,7 +85,7 @@ defmodule Lightning.MixProject do
       {:phoenix_html, "~> 3.3"},
       {:phoenix_live_dashboard, "~> 0.8.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.19.3"},
+      {:phoenix_live_view, "~> 0.19.5"},
       {:phoenix_storybook, "~> 0.5.2"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},

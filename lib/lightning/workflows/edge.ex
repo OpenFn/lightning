@@ -68,6 +68,7 @@ defmodule Lightning.Workflows.Edge do
     |> assoc_constraint(:source_trigger)
     |> assoc_constraint(:source_job)
     |> assoc_constraint(:target_job)
+    |> validate_required([:condition])
     |> validate_node_in_same_workflow()
     |> foreign_key_constraint(:workflow_id)
     |> validate_exclusive(

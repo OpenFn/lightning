@@ -14,19 +14,19 @@ defmodule LightningWeb.WorkflowLive.JobView do
   def container(assigns) do
     ~H"""
     <div class="relative h-full flex bg-white" id={@id}>
-      <div class="grow flex min-h-full flex-col ">
+      <div class="grow flex min-h-full flex-col">
         <div class="h-14 border-b relative">
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
-        <div class="grow flex">
+        <div class="grow flex h-5/6">
           <%= for slot <- @column do %>
             <div class={"flex-1 px-4 py-6 #{Map.get(slot, :class, "")}"}>
               <%= render_slot(slot) %>
             </div>
           <% end %>
         </div>
-        <div class="h-14 flex border-t">
+        <div class="h-14 flex border-t p-2 justify-end">
           <%= render_slot(@bottom) %>
         </div>
       </div>
@@ -42,6 +42,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :socket, :any, required: true
   attr :on_run, :any, required: true, doc: "Callback to run a job manually"
   attr :follow_run_id, :any, default: nil
+
+  slot :footer
 
   def job_edit_view(assigns) do
     ~H"""
@@ -84,24 +86,32 @@ defmodule LightningWeb.WorkflowLive.JobView do
       </:column>
       <:column>
         <!-- Right column area -->
-        <%= if @follow_run_id do %>
-          <div class="h-full">
-            <%= live_render(
-              @socket,
-              LightningWeb.RunLive.RunViewerLive,
-              id: "run-viewer-#{@follow_run_id}",
-              session: %{"run_id" => @follow_run_id},
-              sticky: true
-            ) %>
+        <div>
+          <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+            Output & Logs
           </div>
-        <% else %>
-          <div class="w-1/2 h-16 text-center m-auto pt-4">
-            <div class="font-semibold text-gray-500 pb-2">
-              No Run
+          <%= if @follow_run_id do %>
+            <div class="h-full">
+              <%= live_render(
+                @socket,
+                LightningWeb.RunLive.RunViewerLive,
+                id: "run-viewer-#{@follow_run_id}",
+                session: %{"run_id" => @follow_run_id},
+                sticky: true
+              ) %>
             </div>
-          </div>
-        <% end %>
+          <% else %>
+            <div class="w-1/2 h-16 text-center m-auto pt-4">
+              <div class="text-gray-500 pb-2">
+                After you click run, the logs and output will be visible here.
+              </div>
+            </div>
+          <% end %>
+        </div>
       </:column>
+      <:bottom>
+        <%= render_slot(@footer) %>
+      </:bottom>
     </.container>
     """
   end
@@ -129,20 +139,25 @@ defmodule LightningWeb.WorkflowLive.JobView do
       end)
 
     ~H"""
-    <%= if @is_persisted do %>
-      <.live_component
-        module={LightningWeb.JobLive.ManualRunComponent}
-        id={"manual-job-#{@job.id}"}
-        job={@job}
-        dataclips={@dataclips}
-        project={@project}
-        user={@user}
-        on_run={@on_run}
-        can_run_job={@can_run_job}
-      />
-    <% else %>
-      <p>Please save your Job first.</p>
-    <% end %>
+    <div>
+      <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+        Input
+      </div>
+      <%= if @is_persisted do %>
+        <.live_component
+          module={LightningWeb.JobLive.ManualRunComponent}
+          id={"manual-job-#{@job.id}"}
+          job={@job}
+          dataclips={@dataclips}
+          project={@project}
+          user={@user}
+          on_run={@on_run}
+          can_run_job={@can_run_job}
+        />
+      <% else %>
+        <p>Please save your Job first.</p>
+      <% end %>
+    </div>
     """
   end
 

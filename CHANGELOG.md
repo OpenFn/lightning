@@ -7,12 +7,70 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Added ability for a user to enable MFA on their account;
-  using 2FA apps like Authy, Google Authenticator etc
-  [#890](https://github.com/OpenFn/Lightning/issues/890)
 
 ### Added
 
+### Changed
+
+- Moved to Elixir 1.15 and Erlang 26.0.2 to sort our an annoying ElixirLS issue
+  that was slowing down our engineers.
+- Update Debian base to use bookworm (Debian 12) for our Docker images
+- Change new credential modal to take up less space on the screen
+  [#931](https://github.com/OpenFn/Lightning/issues/931)
+
+### Fixed
+
+- Fix issue creating a new credential from the Job editor where the new
+  credential was not being set on the job.
+  [#951](https://github.com/OpenFn/Lightning/issues/951)
+- Fix issue where checking a credential type radio button shows as unchecked on
+  first click. [#976](https://github.com/OpenFn/Lightning/issues/976)
+- Return the pre-filled workflow names
+  [#971](https://github.com/OpenFn/Lightning/issues/971)
+
+## [v0.7.0-pre5] - 2023-07-28
+
+### Added
+
+### Changed
+
+- Unless otherwise specified, only show workorders with activity in last 14 days
+  [#968](https://github.com/OpenFn/Lightning/issues/968)
+
+### Fixed
+
+## [v0.7.0-pre4] - 2023-07-27
+
+### Added
+
+### Changed
+
+- Don't add cast fragments if the search_term is nil
+  [#968](https://github.com/OpenFn/Lightning/issues/968)
+
+### Fixed
+
+## [v0.7.0-pre3] - 2023-07-26
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed an issue with newly created edges that prevented downstream jobs
+  [977](https://github.com/OpenFn/Lightning/issues/977)
+
+## [v0.7.0-pre2] - 2023-07-26
+
+Note that this is a pre-release with a couple of known bugs that are tracked in
+the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
+
+### Added
+
+- Added ability for a user to enable MFA on their account; using 2FA apps like
+  Authy, Google Authenticator etc
+  [#890](https://github.com/OpenFn/Lightning/issues/890)
 - Write/run sql script to convert triggers
   [#875](https://github.com/OpenFn/Lightning/issues/875)
 - Export projects as `.yaml` via UI
@@ -20,11 +78,24 @@ and this project adheres to
 
 ### Changed
 
+- In `v0.7.0` we change the underlying workflow building and execution
+  infrastructure to align with a standard "nodes and edges" design for directed
+  acyclic graphs (DAGs). Make sure to run the migrations!
+  [793](<(https://github.com/OpenFn/Lightning/issues/793)>)
+
 ### Fixed
+
+- Propagate url pushState/changes to Workflow Diagram selection
+  [#944](https://github.com/OpenFn/Lightning/issues/944)
+- Fix issue when deleting nodes from the workflow editor
+  [#830](https://github.com/OpenFn/Lightning/issues/830)
+- Fix issue when clicking a trigger on a new/unsaved workflow
+  [#954](https://github.com/OpenFn/Lightning/issues/954)
 
 ## [0.6.7] - 2023-07-13
 
 ### Added
+
 - Add feature to bulk rerun work orders from a specific step in their workflow;
   e.g., "rerun these 50 work orders, starting each at step 4."
   [#906](https://github.com/OpenFn/Lightning/pull/906)

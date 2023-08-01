@@ -54,7 +54,7 @@ defmodule Lightning.TaskWorker do
     GenServer.start_link(__MODULE__, init_opts, opts)
   end
 
-  @spec start_task(worker :: GenServer.name(), (() -> any)) ::
+  @spec start_task(worker :: GenServer.name(), (-> any)) ::
           {:error, :too_many_processes} | term()
   def start_task(worker, fun) when is_function(fun, 0) do
     GenServer.call(worker, :checkout)

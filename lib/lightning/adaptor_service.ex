@@ -85,7 +85,9 @@ defmodule Lightning.AdaptorService do
     """
     @callback list_local(path :: String.t()) :: list(Adaptor.t())
     def list_local(path, _depth \\ 4) when is_binary(path) do
-      System.cmd("npm", ~w[list --global --json --long --prefix #{path}], env: [])
+      System.cmd("npm", ~w[list --global --json --long --prefix #{path}],
+        env: []
+      )
       |> case do
         {stdout, 0} ->
           stdout

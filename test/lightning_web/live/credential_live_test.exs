@@ -2,6 +2,7 @@ defmodule LightningWeb.CredentialLiveTest do
   use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
+  import LightningWeb.CredentialLiveHelpers
 
   import Lightning.{
     JobsFixtures,
@@ -179,8 +180,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert new_live |> submit_disabled()
 
       assert new_live
-             |> form("#credential-form")
-             |> render_submit() =~ "can&#39;t be blank"
+             |> click_save() =~ "can&#39;t be blank"
 
       refute_redirected(new_live, ~p"/credentials")
 
@@ -203,13 +203,11 @@ defmodule LightningWeb.CredentialLiveTest do
              )
 
       assert new_live
-             |> form("#credential-form",
-               credential: %{
-                 name: "My Credential",
-                 body: %{username: "foo", password: "bar", hostUrl: "baz"}
-               }
-             )
-             |> render_change() =~ "expected to be a URI"
+             |> fill_credential(%{
+               name: "My Credential",
+               body: %{username: "foo", password: "bar", hostUrl: "baz"}
+             }) =~
+               "expected to be a URI"
 
       assert new_live
              |> form("#credential-form",
@@ -221,8 +219,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, _index_live, _html} =
         new_live
-        |> form("#credential-form")
-        |> render_submit()
+        |> click_save()
         |> follow_redirect(conn, ~p"/credentials")
 
       {_path, flash} = assert_redirect(new_live)
@@ -252,8 +249,7 @@ defmodule LightningWeb.CredentialLiveTest do
       assert new_live |> submit_disabled()
 
       assert new_live
-             |> form("#credential-form")
-             |> render_submit() =~ "can&#39;t be blank"
+             |> click_save() =~ "can&#39;t be blank"
 
       refute_redirected(new_live, ~p"/credentials")
 
@@ -273,8 +269,7 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, _index_live, _html} =
         new_live
-        |> form("#credential-form")
-        |> render_submit()
+        |> click_save()
         |> follow_redirect(
           conn,
           ~p"/credentials"
@@ -306,12 +301,8 @@ defmodule LightningWeb.CredentialLiveTest do
 
       {:ok, _index_live, html} =
         form_live
-        |> form("#credential-form", credential: @update_attrs)
-        |> render_submit()
-        |> follow_redirect(
-          conn,
-          ~p"/credentials"
-        )
+        |> click_save(%{credential: @update_attrs})
+        |> follow_redirect(conn, ~p"/credentials")
 
       {_path, flash} = assert_redirect(form_live)
       assert flash == %{"info" => "Credential updated successfully"}
@@ -986,23 +977,5 @@ defmodule LightningWeb.CredentialLiveTest do
 
   defp submit_disabled(live) do
     live |> has_element?("button[disabled][type=submit]")
-  end
-
-  defp select_credential_type(live, type) do
-    live
-    |> form("#credential-type-picker", type: %{selected: type})
-    |> render_change()
-  end
-
-  defp click_continue(live) do
-    live
-    |> element("button", "Continue")
-    |> render_click()
-  end
-
-  defp fill_credential(live, params) when is_map(params) do
-    live
-    |> form("#credential-form", credential: params)
-    |> render_change()
   end
 end

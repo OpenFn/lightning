@@ -28,14 +28,12 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         form={@form}
         field={:project_credential_id}
         title="Credential"
-        for="credentialField"
         tooltip="If the system you're working with requires authentication, choose a credential with login details (secrets) that will allow this job to connect. If you're not connecting to an external system you don't need a credential."
       />
       <%= error_tag(@form, :project_credential_id, class: "block w-full") %>
       <Form.select_field
         form={@form}
         name={:project_credential_id}
-        id="credentialField"
         prompt=""
         values={@credential_options}
         disabled={@disabled}
@@ -57,12 +55,38 @@ defmodule LightningWeb.JobLive.CredentialPicker do
   end
 
   @impl true
+  def mount(socket) do
+    {:ok, socket |> assign(credentials: [], selected_project_credential_id: nil)}
+  end
+
+  @impl true
   def update(%{project_user: project_user} = assigns, socket) do
     socket =
       socket
       |> assign(assigns)
-      |> assign_new(:credentials, fn ->
-        Lightning.Projects.list_project_credentials(project_user.project)
+      |> update(:selected_project_credential_id, fn _, %{form: form} ->
+        form.source |> Ecto.Changeset.get_field(:project_credential_id)
+      end)
+      |> then(fn socket ->
+        %{
+          credentials: credentials,
+          selected_project_credential_id: selected_project_credential_id
+        } = socket.assigns
+
+        selected_in_list? =
+          credentials
+          |> Enum.any?(&match?(%{id: ^selected_project_credential_id}, &1))
+
+        if selected_in_list? &&
+             !changed?(socket, :selected_project_credential_id) do
+          socket
+        else
+          socket
+          |> assign(
+            credentials:
+              Lightning.Projects.list_project_credentials(project_user.project)
+          )
+        end
       end)
 
     {:ok, socket}

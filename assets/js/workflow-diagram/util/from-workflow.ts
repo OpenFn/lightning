@@ -71,13 +71,13 @@ const fromWorkflow = (
         model.source = edge.source_trigger_id || edge.source_job_id;
         model.target = edge.target_job_id;
         model.type = 'step';
-        model.label = getEdgeLabel(edge.condition ?? 'always');
+        model.label = getEdgeLabel(edge.condition);
         model.markerEnd = {
           type: 'arrowclosed',
           width: 32,
           height: 32,
         };
-
+        model.data = { condition: edge.condition };
         styleEdge(model);
       }
 

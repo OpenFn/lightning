@@ -61,20 +61,21 @@ defmodule LightningWeb.ModalPortal do
         aria-hidden="true"
       >
       </div>
+
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center px-4 my-4 overflow-hidden transform sm:px-6"
+        class="fixed inset-0 z-50 justify-center items-center flex px-4 my-4 transform sm:px-6"
         role="dialog"
         aria-modal="true"
       >
         <div
-          class={"w-full max-h-full overflow-auto bg-white shadow-lg rounded-xl dark:bg-gray-800 #{@rest[:class]}"}
+          class={"flex flex-col isolate bg-white shadow-lg rounded-xl md:min-w-[50%] min-w-full dark:bg-gray-800 #{@rest[:class]}"}
           role="document"
           phx-click-away={on_hide(@close_modal_target, @id)}
           phx-window-keydown={on_hide(@close_modal_target, @id)}
           phx-key="escape"
         >
           <!-- Header -->
-          <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+          <div class="flex-none px-5 py-3 border-b border-gray-100 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <div class="font-semibold text-gray-800 dark:text-gray-200">
                 <%= @title %>
@@ -85,14 +86,12 @@ defmodule LightningWeb.ModalPortal do
                 class="text-gray-400 hover:text-gray-500"
               >
                 <div class="sr-only">Close</div>
-                <svg class="w-4 h-4 fill-current">
-                  <path d="M7.95 6.536l4.242-4.243a1 1 0 111.415 1.414L9.364 7.95l4.243 4.242a1 1 0 11-1.415 1.415L7.95 9.364l-4.243 4.243a1 1 0 01-1.414-1.415L6.536 7.95 2.293 3.707a1 1 0 011.414-1.414L7.95 6.536z" />
-                </svg>
+                <Heroicons.x_mark class="w-4 h-4" />
               </button>
             </div>
           </div>
           <!-- Content -->
-          <div class="p-5">
+          <div class="grow w-full p-5 overflow-y-auto">
             <%= render_slot(@inner_block) %>
           </div>
         </div>

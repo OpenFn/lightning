@@ -43,6 +43,12 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> render_submit()
   end
 
+  def click_delete_job(view, job) do
+    view
+    |> delete_job_button(job)
+    |> render_click()
+  end
+
   def click_close_error_flash(view) do
     view |> render_click("lv:clear-flash", %{key: "error"})
 
@@ -172,6 +178,10 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> Enum.find_index(fn j -> j["id"] == job.id end)
   end
 
+  def get_workflow_params(view) do
+    :sys.get_state(view.pid).socket.assigns.workflow_params
+  end
+
   @doc """
   This helper replicates the data sent to the server when a new workflow is
   created, and the WorkflowDiagram component is mounted and determines the
@@ -200,6 +210,7 @@ defmodule Lightning.WorkflowLive.Helpers do
           %{
             "id" => Ecto.UUID.generate(),
             "source_trigger_id" => trigger_id,
+            "condition" => :always,
             "target_job_id" => job_id
           }
         ],
@@ -250,8 +261,8 @@ defmodule Lightning.WorkflowLive.Helpers do
   end
 
   def delete_job_button_is_disabled?(view, %Job{} = job) do
-    view
-    |> element("#job-pane-#{job.id} button[phx-click='delete_node'][disabled]")
+    delete_job_button(view, job)
+    |> Map.update!(:selector, &(&1 <> "[disabled]"))
     |> has_element?()
   end
 
@@ -277,6 +288,16 @@ defmodule Lightning.WorkflowLive.Helpers do
     view |> element("div[phx-hook=WorkflowEditor]")
   end
 
+  def selected_adaptor_version_element(view, job) do
+    view |> element("#job-pane-#{job.id} #adaptor-version option[selected]")
+  end
+
+  def selected_credential(view, job) do
+    view
+    |> element("#job-pane-#{job.id} select[id$=credential_id] option[selected]")
+    |> render()
+  end
+
   def job_panel_element(view, job) do
     view |> element("#job-pane-#{job.id}")
   end
@@ -287,6 +308,11 @@ defmodule Lightning.WorkflowLive.Helpers do
 
   def workflow_card(view, workflow) do
     view |> element("#workflow-card-#{workflow.id}", workflow.name)
+  end
+
+  def delete_job_button(view, %Job{} = job) do
+    view
+    |> element("#job-pane-#{job.id} button[phx-click='delete_node']")
   end
 
   def delete_workflow_link(view, workflow) do
@@ -326,7 +352,7 @@ defmodule Lightning.WorkflowLive.Helpers do
       build(:workflow, project: project)
       |> with_job(job_1)
       |> with_trigger(trigger)
-      |> with_edge({trigger, job_1})
+      |> with_edge({trigger, job_1}, %{condition: :always})
       |> with_job(job_2)
       |> with_edge({job_1, job_2}, %{condition: :on_job_success})
       |> insert()

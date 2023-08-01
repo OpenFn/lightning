@@ -3,6 +3,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
 
+  alias LightningWeb.CredentialLiveHelpers
+
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
@@ -46,17 +48,43 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
       assert view |> push_patches_to_view(initial_workflow_patchset(project))
 
+      workflow_name = view |> get_workflow_params() |> Map.get("name")
+
+      refute workflow_name == "", "the workflow should have a pre-filled name"
+
+      assert view |> element("#workflow_name_form") |> render() =~ workflow_name
+      assert view |> save_is_disabled?()
+
       view |> fill_workflow_name("My Workflow")
+
       assert view |> save_is_disabled?()
 
       {job, _, _} = view |> select_first_job()
 
       view |> fill_job_fields(job, %{name: "My Job"})
 
-      refute view |> element("#adaptor-version option[selected]") |> render() =~
+      refute view |> selected_adaptor_version_element(job) |> render() =~
                ~r(value="@openfn/[a-z-]+@latest"),
              "should not have @latest selected by default"
 
+      view |> element("#new-credential-launcher") |> render_click()
+
+      view |> CredentialLiveHelpers.select_credential_type("dhis2")
+
+      view |> CredentialLiveHelpers.click_continue()
+
+      # Creating a new credential from the Job panel
+      view
+      |> CredentialLiveHelpers.fill_credential(%{
+        name: "My Credential",
+        body: %{username: "foo", password: "bar", hostUrl: "baz"}
+      })
+
+      view |> CredentialLiveHelpers.click_save()
+
+      assert view |> selected_credential(job) =~ "My Credential"
+
+      # Editing the Jobs' body
       view |> click_edit(job)
 
       view |> change_editor_text("some body")
@@ -108,15 +136,38 @@ defmodule LightningWeb.WorkflowLive.EditTest do
       assert view |> save_is_disabled?()
     end
 
-    @tag skip: true
-    test "can delete a job" do
-      # can't delete if there are downstream jobs
-      # assert view |> render_click("delete_job", %{"id" => job.id}) =~
-      #          "Unable to delete jobs with downstream jobs or runs."
+    @tag role: :editor
+    test "can delete a job", %{conn: conn, project: project, workflow: workflow} do
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      [job_1, job_2] = workflow.jobs
+      view |> select_node(job_1)
+
+      assert view |> delete_job_button_is_disabled?(job_1)
+
+      # Test that the delete event doesn't work even if the button is disabled.
+      assert view |> force_event(:delete_node, job_1) =~
+               "Delete all descendant jobs first."
+
+      view |> select_node(job_2)
+      assert_patched(view, ~p"/projects/#{project}/w/#{workflow}?s=#{job_2}")
+
+      refute view |> delete_job_button_is_disabled?(job_2)
+
+      view |> click_delete_job(job_2)
+
+      assert_push_event(view, "patches-applied", %{
+        patches: [
+          %{op: "remove", path: "/jobs/1"},
+          %{op: "remove", path: "/edges/1"}
+        ]
+      })
+
+      assert_patched(view, ~p"/projects/#{project}/w/#{workflow}")
     end
 
     @tag role: :viewer
-    test "viewers can't edit existing workflows", %{
+    test "viewers can't edit existing jobs", %{
       conn: conn,
       project: project,
       workflow: workflow
