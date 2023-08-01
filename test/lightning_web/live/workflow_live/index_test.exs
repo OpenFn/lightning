@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> click_create_workflow()
         |> follow_redirect(conn, "/projects/#{project.id}/w/new")
 
-      assert view |> element("#workflow-edit-") |> has_element?()
+      assert view |> element("div[id^=workflow-edit-]") |> has_element?()
     end
   end
 

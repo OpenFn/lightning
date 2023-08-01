@@ -82,7 +82,7 @@ export default {
     });
 
     this.handleEvent('navigate', (e: { href: string }) => {
-      const id = new URL(e.href).searchParams.get('s');
+      const id = new URL(e.href, window.location.href).searchParams.get('s');
       this.component?.render(id);
     });
 
