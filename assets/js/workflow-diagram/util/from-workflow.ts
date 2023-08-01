@@ -21,7 +21,7 @@ function getEdgeLabel(condition: string) {
 const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
-  placeholders = { nodes: [], edges: [] },
+  placeholders: Flow.Model = { nodes: [], edges: [] },
   selectedId?: string
 ): Flow.Model => {
   // const workflowWithPlaceholders = identify(workflow);
