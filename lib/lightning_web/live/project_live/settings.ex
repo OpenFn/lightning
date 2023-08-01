@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.VersionControl
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.ProjectUser
   alias Lightning.Policies.Permissions
@@ -181,6 +182,19 @@ defmodule LightningWeb.ProjectLive.Settings do
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
     end
+  end
+
+  def handle_event("install_app", _, socket) do
+    user_id = socket.assigns.current_user.id
+    project_id = socket.assigns.project.id
+
+    {:ok, _connection} =
+      VersionControl.create_github_connection(%{
+        user_id: user_id,
+        project_id: project_id
+      })
+
+    {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
   end
 
   defp dispatch_flash(change_result, socket) do
