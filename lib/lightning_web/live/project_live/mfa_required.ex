@@ -6,6 +6,8 @@ defmodule LightningWeb.ProjectLive.MFARequired do
 
   on_mount __MODULE__
 
+  on_mount({LightningWeb.Hooks, :user_scope})
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok, assign(socket, active_menu_item: nil)}
