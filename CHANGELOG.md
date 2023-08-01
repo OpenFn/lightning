@@ -20,6 +20,7 @@ and this project adheres to
 - Update Debian base to use bookworm (Debian 12) for our Docker images
 - Change new credential modal to take up less space on the screen
   [#931](https://github.com/OpenFn/Lightning/issues/931)
+- Placeholder nodes are now purely handled client-side
 
 ### Fixed
 
@@ -32,6 +33,9 @@ and this project adheres to
   [#971](https://github.com/OpenFn/Lightning/issues/971)
 - Fix version reporting and external reset_demo() call via
   Application.spec()[#1010](https://github.com/OpenFn/Lightning/issues/1010)
+- Fixed issue where entering a placeholder name through the form would result an
+  in unsaveable workflow
+  [#1001](https://github.com/OpenFn/Lightning/issues/1001)
 
 ## [v0.7.0-pre5] - 2023-07-28
 
