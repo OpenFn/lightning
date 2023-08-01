@@ -25,6 +25,8 @@ and this project adheres to
   [#951](https://github.com/OpenFn/Lightning/issues/951)
 - Fix issue where checking a credential type radio button shows as unchecked on
   first click. [#976](https://github.com/OpenFn/Lightning/issues/976)
+- Return the pre-filled workflow names
+  [#971](https://github.com/OpenFn/Lightning/issues/971)
 
 ## [v0.7.0-pre5] - 2023-07-28
 
