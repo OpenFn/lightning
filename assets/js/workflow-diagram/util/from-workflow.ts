@@ -87,7 +87,14 @@ const fromWorkflow = (
     });
   };
 
-  const nodes = [...placeholders.nodes] as Flow.Node[];
+  const nodes = [
+    ...placeholders.nodes.map(n => {
+      if (selectedId == n.id) {
+        n.selected = true;
+      }
+      return n;
+    }),
+  ] as Flow.Node[];
   const edges = [...placeholders.edges] as Flow.Edge[];
 
   process(workflow.jobs, nodes, 'job');
