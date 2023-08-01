@@ -43,6 +43,9 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const remove = useStore(store!, state => state.remove);
     const change = useStore(store!, state => state.change);
 
+    // TODO in new-workflow, we need to take a placeholder as a prop
+    const [placeholders, setPlaceholders] = useState({ nodes: [], edges: [] });
+
     const workflow = useStore(
       store!,
       state => ({
@@ -72,6 +75,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       const newModel = fromWorkflow(
         workflow,
         positions,
+        placeholders,
         // Re-render the model based on whatever was last selected
         // This handles first load and new node safely
         chartCache.current.lastSelection
@@ -101,7 +105,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       } else {
         chartCache.current.positions = {};
       }
-    }, [workflow, flow]);
+    }, [workflow, flow, placeholders]);
 
     useEffect(() => {
       let newSelection = selection ?? undefined; // indirection is mostly for type safety
@@ -163,15 +167,22 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       (parentNode: Flow.Node) => {
         // Generate a placeholder node and edge
         const diff = placeholder.add(model, parentNode);
-        const [newNode] = diff.nodes;
-        // Ensure the starting position is set
-        chartCache.current.positions[newNode.id] = newNode.position;
-        // Mark the new node as selected for the next render
-        chartCache.current.lastSelection = newNode.id;
-        onSelectionChange(newNode.id);
+        setPlaceholders(diff);
 
-        // Push the changes
-        add(toWorkflow(diff));
+        // clear the selection
+        // TODO need to put the chart in placeholder mode
+        chartCache.current.lastSelection = undefined;
+        onSelectionChange(diff.nodes[0].id);
+
+        // const [newNode] = diff.nodes;
+        // // Ensure the starting position is set
+        // chartCache.current.positions[newNode.id] = newNode.position;
+        // // Mark the new node as selected for the next render
+        // chartCache.current.lastSelection = newNode.id;
+        // onSelectionChange(newNode.id);
+
+        // // Push the changes
+        // add(toWorkflow(diff));
       },
       [add, model]
     );
@@ -180,22 +191,21 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       (evt: CustomEvent<any>) => {
         const { id, name } = evt.detail;
 
+        // reset the chart
+        setPlaceholders({ nodes: [], edges: [] });
+
         // Update the store
-        change({
-          jobs: [{ id, name, body: DEFAULT_TEXT }],
-        });
+        placeholders.nodes[0].data.name = name;
+        add(toWorkflow(placeholders));
 
         onSelectionChange(id);
       },
-      [change]
+      [change, placeholders]
     );
 
     const cancelPlaceholder = useCallback(
       (evt: CustomEvent<any>) => {
-        const { id } = evt.detail;
-
-        const e = model.edges.find(({ target }) => target === id);
-        remove({ jobs: [id], edges: [e?.id] });
+        setPlaceholders({ nodes: [], edges: [] });
         onSelectionChange(undefined);
       },
       [remove, model]

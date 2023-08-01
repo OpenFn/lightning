@@ -6,7 +6,7 @@
  * if it's going to help yet
  */
 import { Flow } from './types';
-import { isPlaceholder } from './util/placeholder';
+// import { isPlaceholder } from './util/placeholder';
 
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
@@ -42,7 +42,7 @@ export const styleEdge = (edge: Flow.Edge) => {
     stroke: edge.selected ? EDGE_COLOR_SELECTED : EDGE_COLOR,
   };
 
-  if (isPlaceholder(edge)) {
+  if (edge.data?.placeholder) {
     edge.style.strokeDasharray = '4, 4';
     edge.style.strokeWidth = '1.5px';
   }

@@ -13,20 +13,22 @@ const CustomEdge: FC<EdgeProps> = props => {
   return (
     <>
       <StepEdge {...stepEdgeProps} />
-      <EdgeLabelRenderer>
-        <div
-          style={{
-            position: 'absolute',
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            background: 'white',
-            pointerEvents: 'all',
-            ...labelStyles(selected),
-          }}
-          className="nodrag nopan"
-        >
-          {label}
-        </div>
-      </EdgeLabelRenderer>
+      {label && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+              background: 'white',
+              pointerEvents: 'all',
+              ...labelStyles(selected),
+            }}
+            className="nodrag nopan"
+          >
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
     </>
   );
 };
