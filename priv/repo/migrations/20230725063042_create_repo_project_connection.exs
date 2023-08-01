@@ -9,6 +9,7 @@ defmodule Lightning.Repo.Migrations.CreateRepoProjectConnection do
       add :repo, :string
       add :branch, :string
       add :project_id, references(:projects, type: :binary_id)
+      add :user_id, references(:users, type: :binary_id)
 
       timestamps()
     end
