@@ -42,7 +42,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const updateSelection = useCallback(
       (id?: string) => {
         if (id !== selection) {
-          console.log('> ', id);
           chartCache.current.lastSelection = id;
           onSelectionChange(id);
         }

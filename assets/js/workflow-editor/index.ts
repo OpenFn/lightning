@@ -1,4 +1,5 @@
 // Hook for Workflow Editor Component
+import { DEFAULT_TEXT } from '../editor/Editor';
 import { PhoenixHook } from '../hooks/PhoenixHook';
 import type { mount } from './component';
 import {
@@ -37,6 +38,9 @@ const createNewWorkflow = () => {
   const jobs = [
     {
       id: crypto.randomUUID(),
+      name: 'New job',
+      adaptor: '@openfn/language-common@latest',
+      body: DEFAULT_TEXT,
     },
   ];
 
@@ -174,6 +178,11 @@ export default {
       // Create a placeholder chart and push it back up to the server
       const diff = createNewWorkflow();
       this.workflowStore.getState().add(diff);
+
+      // Select the first job
+      // TODO should the workflow name have focus instead?
+      const selected = diff.jobs[0].id;
+      this.onSelectionChange(selected);
     }
 
     this.maybeMountComponent();
