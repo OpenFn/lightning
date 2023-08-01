@@ -331,7 +331,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket
     else
       socket
-      |> assign_workflow(%Workflow{project_id: socket.assigns.project.id})
+      |> assign_workflow(%Workflow{
+        project_id: socket.assigns.project.id,
+        name: Lightning.Name.generate()
+      })
     end
     |> assign(page_title: "New Workflow")
   end
