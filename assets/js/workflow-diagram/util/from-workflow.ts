@@ -1,5 +1,4 @@
 import { Lightning, Flow, Positions } from '../types';
-// import { identify, isPlaceholder } from './placeholder';
 import { styleEdge } from '../styles';
 
 function getEdgeLabel(condition: string) {
@@ -24,10 +23,6 @@ const fromWorkflow = (
   placeholders: Flow.Model = { nodes: [], edges: [] },
   selectedId?: string
 ): Flow.Model => {
-  // const workflowWithPlaceholders = identify(workflow);
-  // const allowPlaceholder = workflowWithPlaceholders.jobs.every(
-  //   j => !isPlaceholder(j)
-  // );
   const allowPlaceholder = placeholders.nodes.length === 0;
 
   const process = (
@@ -56,10 +51,6 @@ const fromWorkflow = (
         if (positions && positions[node.id]) {
           model.position = positions[node.id];
         }
-
-        // This is a work of fantasy
-        // model.width = NODE_WIDTH;
-        // model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
 
