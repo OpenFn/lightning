@@ -1,6 +1,7 @@
 // Hook for Workflow Editor Component
 import { DEFAULT_TEXT } from '../editor/Editor';
 import { PhoenixHook } from '../hooks/PhoenixHook';
+import { Lightning } from '../workflow-diagram/types';
 import type { mount } from './component';
 import {
   Patch,
@@ -16,6 +17,9 @@ type WorkflowEditorEntrypoint = PhoenixHook<{
   component: ReturnType<typeof mount> | null;
   componentModule: Promise<{ mount: typeof mount }>;
   getWorkflowParams(): void;
+  getItem(
+    id?: string
+  ): Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
   handleWorkflowParams(payload: { workflow_params: WorkflowProps }): void;
   maybeMountComponent(): void;
   onSelectionChange(id?: string): void;
@@ -98,19 +102,38 @@ export default {
     // between the current state and the server state and send those diffs
     // to the server.
   },
+  getItem(id?: string) {
+    if (id) {
+      const { jobs, triggers, edges } = this.workflowStore.getState();
+      const everything = [...jobs, ...triggers, ...edges];
+      for (const i of everything) {
+        if (id === i.id) {
+          return i;
+        }
+      }
+    }
+  },
   onSelectionChange(id?: string) {
     const currentUrl = new URL(window.location.href);
     const nextUrl = new URL(currentUrl);
 
-    if (!id) {
-      console.debug('Unselecting');
-
+    const idExists = this.getItem(id);
+    if (!idExists) {
       nextUrl.searchParams.delete('s');
       nextUrl.searchParams.delete('m');
+      nextUrl.searchParams.set('placeholder', true);
     } else {
-      console.debug('Selecting', id);
+      nextUrl.searchParams.delete('placeholder');
+      if (!id) {
+        console.debug('Unselecting');
 
-      nextUrl.searchParams.set('s', id);
+        nextUrl.searchParams.delete('s');
+        nextUrl.searchParams.delete('m');
+      } else {
+        console.debug('Selecting', id);
+
+        nextUrl.searchParams.set('s', id);
+      }
     }
 
     if (
