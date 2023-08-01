@@ -26,23 +26,29 @@ defmodule LightningWeb.LayoutComponents do
         <% end %>
       </div>
     <% else %>
-    <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-        <%= if Enum.count(@projects) > 1 do %>
-          <.dropdown placement="right" label="Go to project" js_lib="live_view_js">
-            <%= for project <- @projects do %>
+      <%= if assigns[:projects] do %>
+      <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+          <%= if Enum.count(@projects) > 1 do %>
+            <.dropdown placement="right" label="Go to project" js_lib="live_view_js">
+              <%= for project <- @projects do %>
 
-                <.dropdown_menu_item
-                  link_type="live_redirect"
-                  to={~p"/projects/#{project.id}/w"}
-                  label={project.name}
-                />
+                  <.dropdown_menu_item
+                    link_type="live_redirect"
+                    to={~p"/projects/#{project.id}/w"}
+                    label={project.name}
+                  />
 
-            <% end %>
-          </.dropdown>
-        <% else %>
-          <span class="inline-block align-middle">Select a project</span>
-        <% end %>
-      </div>
+              <% end %>
+            </.dropdown>
+          <% else %>
+            <span class="inline-block align-middle text-sm">
+              You don't have access to any projects
+            </span>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="mb-4" />
+      <% end %>
     <% end %>
 
     <%= if assigns[:project] do %>
