@@ -48,4 +48,18 @@ defmodule LightningWeb.Hooks do
   def on_mount(:project_scope, _, _session, socket) do
     {:cont, socket}
   end
+
+  def on_mount(:user_scope, _, _session, socket) do
+    %{current_user: current_user} = socket.assigns
+
+    projects = Lightning.Projects.get_projects_for_user(current_user)
+
+    {:cont,
+      socket
+      |> assign_new(:projects, fn -> projects end)}
+  end
+
+  def on_mount(:user_scope, _, _session, socket) do
+    {:cont, socket}
+  end
 end

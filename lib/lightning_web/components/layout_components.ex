@@ -26,7 +26,23 @@ defmodule LightningWeb.LayoutComponents do
         <% end %>
       </div>
     <% else %>
-      <div class="mb-4" />
+    <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
+        <%= if Enum.count(@projects) > 1 do %>
+          <.dropdown placement="right" label="Go to project" js_lib="live_view_js">
+            <%= for project <- @projects do %>
+
+                <.dropdown_menu_item
+                  link_type="live_redirect"
+                  to={~p"/projects/#{project.id}/w"}
+                  label={project.name}
+                />
+
+            <% end %>
+          </.dropdown>
+        <% else %>
+          <span class="inline-block align-middle">Select a project</span>
+        <% end %>
+      </div>
     <% end %>
 
     <%= if assigns[:project] do %>
@@ -62,9 +78,6 @@ defmodule LightningWeb.LayoutComponents do
       <span class="inline-block align-middle">Dataclips</span>
     </Settings.menu_item> -->
     <% else %>
-      <Settings.menu_item to={~p"/"}>
-        <Heroicons.squares_2x2 class="h-5 w-5 inline-block mr-2" /> Projects
-      </Settings.menu_item>
       <Settings.menu_item to={~p"/profile"} active={@active_menu_item == :profile}>
         <Heroicons.user_circle class="h-5 w-5 inline-block mr-2" /> User Profile
       </Settings.menu_item>
