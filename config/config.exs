@@ -113,6 +113,9 @@ config :lightning, LightningWeb,
   allow_credential_transfer: false,
   enable_google_credential: true
 
+# Rather than default  since httpc doesnt have certificate checking
+config :tesla, adapter: Tesla.Adapter.Hackney
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
