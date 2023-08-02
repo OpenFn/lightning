@@ -347,22 +347,91 @@
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
           <div>
-            <h6 class="font-medium text-black">Sync to Github</h6>
-            <small class="block my-1 text-xs text-gray-600">
-              Install out Github app to your repository to start syncing your project
-            </small>
-            <button
-              type="button"
-              phx-click="install_app"
-              phx-value-id={@project.id}
-              class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
-            >
-              Install Github app
-            </button>
+            <%= if @show_github_setup do %>
+              <h6 class="font-medium text-black">Sync to Github</h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Install our Github app to your repository to start syncing your project
+              </small>
+              <button
+                type="button"
+                phx-click="install_app"
+                phx-value-id={@project.id}
+                class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
+              >
+                Install Github app
+              </button>
+            <% end %>
           </div>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
+          <%= if @show_repo_setup do %>
+            <div>
+              <h6 class="font-medium text-black">Sync to Github</h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Configure the settings below to start Syncing
+              </small>
+
+              <.form
+                :let={f}
+                for={@project_repo}
+                id="project-vcs-form"
+                phx-submit="save_repo"
+              >
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-2"></div>
+                </div>
+                <div class="grid grid-cols gap-6">
+                  <div class="md:col-span-2">
+                    <LightningWeb.Components.Form.select_field
+                      form={f}
+                      disabled={!@can_edit_project_name}
+                      name={:repo}
+                      id="project-repo"
+                      phx-change="repo_selected"
+                      values={@repos}
+                    />
+                  </div>
+                </div>
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-3"></div>
+                </div>
+                <div class="grid grid-cols gap-6">
+                  <div class="md:col-span-2">
+                    <LightningWeb.Components.Form.select_field
+                      form={f}
+                      disabled={!@can_edit_project_description}
+                      name={:branch}
+                      id="project-branch"
+                      values={@branches}
+                    />
+                  </div>
+                </div>
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-4"></div>
+                </div>
+                <div class="grid grid-cols gap-6">
+                  <div class="md:col-span-2">
+                    <LightningWeb.Components.Form.submit_button phx-disable-with="Saving">
+                      Save
+                    </LightningWeb.Components.Form.submit_button>
+                  </div>
+                </div>
+              </.form>
+            </div>
+          <% end %>
+          <%= if @show_sync_button do %>
+            <div>
+              <button
+                type="button"
+                phx-click="install_app"
+                phx-value-id={@project.id}
+                class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
+              >
+                Sync Project
+              </button>
+            </div>
+          <% end %>
         </LightningWeb.Components.Common.panel_content>
       </div>
     </div>

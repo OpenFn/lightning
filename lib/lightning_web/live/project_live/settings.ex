@@ -15,8 +15,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def mount(_params, _session, socket) do
-    project_users =
-      Projects.get_project_with_users!(socket.assigns.project.id).project_users
+    project_users = Projects.get_project_with_users!(socket.assigns.project.id).project_users
 
     credentials = Credentials.list_credentials(socket.assigns.project)
 
@@ -44,6 +43,41 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket.assigns.project
       )
 
+    repo_connection = VersionControl.get_repo_connection(socket.assigns.project.id)
+
+    # hide github install if our project has a repo connection
+    show_github_setup =
+      case repo_connection do
+        nil -> true
+        _ -> false
+      end
+
+    show_repo_setup =
+      case repo_connection do
+        nil ->
+          false
+
+        conn ->
+          case conn.repo do
+            nil -> true
+            _ -> false
+          end
+      end
+
+    show_sync_button =
+      case repo_connection do
+        nil ->
+          false
+
+        conn ->
+          case conn.repo && conn.branch do
+            nil -> false
+            _ -> true
+          end
+      end
+
+    project_repo = %{"repo" => nil, "branch" => nil}
+
     {:ok,
      socket
      |> assign(
@@ -54,8 +88,21 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
-       can_edit_project_description: can_edit_project_description
+       can_edit_project_description: can_edit_project_description,
+       show_github_setup: show_github_setup,
+       show_repo_setup: show_repo_setup,
+       show_sync_button: show_sync_button,
+       project_repo: project_repo,
+       repos: collect_project_repos(socket.assigns.project.id),
+       branches: []
      )}
+  end
+
+  # we should only run this if repo setting is pending
+  defp collect_project_repos(project_id) do
+    {:ok, repos} = VersionControl.fetch_installation_repos(project_id)
+
+    repos
   end
 
   defp can_edit_digest_alert(
@@ -197,6 +244,27 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
   end
 
+  def handle_event("save_repo", params, socket) do
+    {:ok, _connection} =
+      VersionControl.add_github_repo_and_branch(
+        socket.assigns.project.id,
+        params["repo"],
+        params["branch"]
+      )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("repo_selected", params, socket) do
+    {:ok, branches} =
+      VersionControl.fetch_repo_branches(
+        socket.assigns.project.id,
+        params["repo"]
+      )
+
+    {:noreply, socket |> assign(:branches, branches)}
+  end
+
   defp dispatch_flash(change_result, socket) do
     case change_result do
       {:ok, %ProjectUser{}} ->
@@ -219,8 +287,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     assigns =
       assigns
       |> assign(
-        can_edit_failure_alert:
-          can_edit_failure_alert(assigns.current_user, assigns.project_user)
+        can_edit_failure_alert: can_edit_failure_alert(assigns.current_user, assigns.project_user)
       )
 
     ~H"""
@@ -250,8 +317,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     assigns =
       assigns
       |> assign(
-        can_edit_digest_alert:
-          can_edit_digest_alert(assigns.current_user, assigns.project_user)
+        can_edit_digest_alert: can_edit_digest_alert(assigns.current_user, assigns.project_user)
       )
 
     ~H"""
