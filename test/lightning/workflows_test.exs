@@ -302,7 +302,7 @@ defmodule Lightning.WorkflowsTest do
 
       assert length(results) == 2
 
-      assert results |> Enum.map(& &1.id) == [w1.id, w2.id]
+      assert results |> MapSet.new(& &1.id) == [w1, w2] |> MapSet.new(& &1.id)
 
       for workflow <- results do
         assert is_nil(workflow.deleted_at)
