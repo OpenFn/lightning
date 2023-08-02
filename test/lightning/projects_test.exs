@@ -112,7 +112,7 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "update_project/2 updates the MFA requirement" do
-      project = project_fixture()
+      project = insert(:project)
 
       refute project.requires_mfa
       update_attrs = %{requires_mfa: true}

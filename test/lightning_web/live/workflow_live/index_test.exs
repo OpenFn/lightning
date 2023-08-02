@@ -25,20 +25,15 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       user = user_with_mfa_fixture()
       conn = log_in_user(conn, user)
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
+      project =
+        insert(:project,
           requires_mfa: true,
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+          project_users: [%{user: user, role: :admin}]
+        )
 
       create_workflow(%{project: project})
 
-      {:ok, view, _html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w"
-        )
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w")
 
       assert element(view, "#workflows-#{project.id}", "No workflows yet")
 
@@ -47,10 +42,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         {conn, _user} = setup_project_user(conn, project, role)
 
         assert {:error, {:redirect, %{to: "/mfa_required"}}} =
-                 live(
-                   conn,
-                   ~p"/projects/#{project.id}/w"
-                 )
+                 live(conn, ~p"/projects/#{project}/w")
       end)
     end
 
@@ -123,20 +115,15 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       user = user_with_mfa_fixture()
       conn = log_in_user(conn, user)
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
+      project =
+        insert(:project,
           requires_mfa: true,
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+          project_users: [%{user: user, role: :admin}]
+        )
 
       create_workflow(%{project: project})
 
-      {:ok, _view, html} =
-        live(
-          conn,
-          ~p"/projects/#{project.id}/w"
-        )
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project}/w")
 
       assert html =~ "Create new workflow"
 
@@ -145,10 +132,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         {conn, _user} = setup_project_user(conn, project, role)
 
         assert {:error, {:redirect, %{to: "/mfa_required"}}} =
-                 live(
-                   conn,
-                   ~p"/projects/#{project.id}/w"
-                 )
+                 live(conn, ~p"/projects/#{project}/w")
       end)
     end
   end
