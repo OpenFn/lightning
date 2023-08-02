@@ -10,7 +10,7 @@ defmodule LightningWeb.CredentialLive.Edit do
   alias Lightning.Projects
   alias Lightning.Policies.Permissions
 
-  on_mount({LightningWeb.Hooks, :user_scope})
+  on_mount({LightningWeb.Hooks, :assign_projects})
 
   @impl true
   def render(assigns) do
