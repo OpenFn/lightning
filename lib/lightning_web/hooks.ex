@@ -58,8 +58,4 @@ defmodule LightningWeb.Hooks do
      socket
      |> assign_new(:projects, fn -> projects end)}
   end
-
-  def on_mount(:user_scope, _, _session, socket) do
-    {:cont, socket}
-  end
 end
