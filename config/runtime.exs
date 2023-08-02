@@ -12,10 +12,14 @@ if System.get_env("PHX_SERVER") && System.get_env("RELEASE_NAME") do
   config :lightning, LightningWeb.Endpoint, server: true
 end
 
+image_tag = System.get_env("IMAGE_TAG")
+branch = System.get_env("BRANCH")
+commit = System.get_env("COMMIT")
+
 config :lightning, :image_info,
-  image_tag: System.get_env("IMAGE_TAG"),
-  branch: System.get_env("BRANCH"),
-  commit: System.get_env("COMMIT")
+  image_tag: image_tag,
+  branch: branch,
+  commit: commit
 
 config :lightning, :email_addresses,
   admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
@@ -243,14 +247,10 @@ if config_env() == :test do
 end
 
 release =
-  case Application.get_env(:lightning, :image_info) do
-    [image_tag: image_tag, branch: _branch, commit: commit] ->
-      if Enum.member?(["edge", "latest"], image_tag),
-        do: commit,
-        else: image_tag
-
-    _other ->
-      "mix-v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+  case image_tag do
+    nil -> "mix-v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+    "edge" -> commit
+    _other -> image_tag
   end
 
 config :sentry,
