@@ -27,6 +27,8 @@ and this project adheres to
   first click. [#976](https://github.com/OpenFn/Lightning/issues/976)
 - Return the pre-filled workflow names
   [#971](https://github.com/OpenFn/Lightning/issues/971)
+- Fix version reporting and external reset_demo() call via
+  Application.spec()[#1010](https://github.com/OpenFn/Lightning/issues/1010)
 
 ## [v0.7.0-pre5] - 2023-07-28
 

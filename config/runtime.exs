@@ -250,7 +250,7 @@ release =
         else: image_tag
 
     _other ->
-      "mix-v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+      "mix-v#{Application.spec(:lightning, :vsn)}"
   end
 
 config :sentry,
