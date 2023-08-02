@@ -646,8 +646,10 @@ defmodule Lightning.Accounts do
   Checks if the given two factor token for the user is valid
   """
   def two_factor_session_token_valid?(user, token) do
-    base_query = UserToken.verify_token_query(token, "two_factor_session")
-    query = from t in UserToken, where: t.user_id == ^user.id
+    {:ok, token_query} =
+      UserToken.verify_token_query(token, "two_factor_session")
+
+    query = from t in token_query, where: t.user_id == ^user.id
     Repo.exists?(query)
   end
 

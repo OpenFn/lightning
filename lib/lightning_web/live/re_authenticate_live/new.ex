@@ -66,10 +66,12 @@ defmodule LightningWeb.ReAuthenticateLive.New do
     "Invalid OTP code!. Try again"
   end
 
+  defp append_token(nil, _token), do: "/"
+
   defp append_token(path, token) do
     uri = URI.new!(path)
     current_query = URI.decode_query(uri.query || "")
-    updated_query = Map.merge(current_query, %{"token" => token})
+    updated_query = Map.merge(current_query, %{"sudo_token" => token})
 
     uri = %{uri | query: URI.encode_query(updated_query)}
     URI.to_string(uri)

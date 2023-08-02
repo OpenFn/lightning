@@ -68,7 +68,7 @@
             <li>
               <a
                 href={
-                  ~p"/users/two-factor/app?authentication_type=#{invert_chosen_type(@authentication_type)}&user[remember_me]=#{@remember_me}"
+                  ~p"/users/two-factor/app?authentication_type=#{invert_chosen_type(@authentication_type)}&user[remember_me]=#{@remember_me || false}"
                 }
                 class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
               >

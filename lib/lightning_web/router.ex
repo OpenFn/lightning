@@ -89,16 +89,16 @@ defmodule LightningWeb.Router do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end
 
-    live_session :reauth,
-      session: {LightningWeb.UserAuth, :reauthentication_session, []},
+    live_session :sudo_auth,
+      session: {LightningWeb.UserAuth, :sudo_session, []},
       on_mount: [
         {LightningWeb.InitAssigns, :default},
-        {LightningWeb.UserAuth, :ensure_reauthenticated}
+        {LightningWeb.UserAuth, :ensure_sudo}
       ] do
       scope "/" do
         pipe_through [
-          :reauthenticate_user,
-          :require_reauthenticated_user
+          :reauth_sudo_mode,
+          :require_sudo_user
         ]
 
         live "/profile/auth/backup_codes", BackupCodesLive.Index, :index
