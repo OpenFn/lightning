@@ -8,7 +8,7 @@ defmodule LightningWeb.Components.CommonTest do
       prev = Application.get_env(:lightning, :image_info)
 
       Application.put_env(:lightning, :image_info,
-        image_tag: "v#{elem(:application.get_key(:lightning, :vsn), 1)}",
+        image_tag: "v#{Application.spec(:lightning, :vsn)}",
         branch: "main",
         commit: "abcdef7"
       )
@@ -27,7 +27,7 @@ defmodule LightningWeb.Components.CommonTest do
 
       assert html =~ "Docker image tag found"
       assert html =~ "tagged release build"
-      assert html =~ "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+      assert html =~ "v#{Application.spec(:lightning, :vsn)}"
     end
   end
 
