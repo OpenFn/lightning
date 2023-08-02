@@ -4,7 +4,7 @@ defmodule LightningWeb.ProfileLive.Edit do
   """
   use LightningWeb, :live_view
 
-  on_mount({LightningWeb.Hooks, :assign_projects})
+  on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do
