@@ -8,7 +8,7 @@ defmodule LightningWeb.TokensLive.Index do
   alias Lightning.Policies.Users
   alias Lightning.Accounts
 
-  on_mount({LightningWeb.Hooks, :user_scope})
+  on_mount({LightningWeb.Hooks, :assign_projects})
 
   @impl true
   def mount(_params, _session, socket) do
