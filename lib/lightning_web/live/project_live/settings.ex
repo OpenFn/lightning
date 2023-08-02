@@ -10,7 +10,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do

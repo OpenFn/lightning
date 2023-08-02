@@ -6,7 +6,7 @@ defmodule LightningWeb.ProjectLive.MFARequired do
 
   on_mount __MODULE__
 
-  on_mount({LightningWeb.Hooks, :assign_projects})
+  on_mount {LightningWeb.Hooks, :assign_projects}
 
   @impl true
   def mount(_params, _session, socket) do
