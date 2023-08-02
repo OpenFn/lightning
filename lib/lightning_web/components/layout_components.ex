@@ -28,7 +28,7 @@ defmodule LightningWeb.LayoutComponents do
     <% else %>
       <%= if assigns[:projects] do %>
         <div class="p-2 mb-4 mt-4 text-center text-primary-300 bg-primary-800">
-          <%= if Enum.count(@projects) > 1 do %>
+          <%= if Enum.count(@projects) >= 1 do %>
             <.dropdown placement="right" label="Go to project" js_lib="live_view_js">
               <%= for project <- @projects do %>
                 <.dropdown_menu_item
