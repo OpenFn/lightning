@@ -248,7 +248,7 @@ end
 
 release =
   case image_tag do
-    nil -> "mix-v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+    nil -> "mix-v#{Application.spec(:lightning, :vsn)}"
     "edge" -> commit
     _other -> image_tag
   end

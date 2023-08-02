@@ -9,7 +9,7 @@ defmodule LightningWeb.Components.Common do
     image = image_info[:image_tag]
     branch = image_info[:branch]
     commit = image_info[:commit]
-    vsn = "v#{elem(:application.get_key(:lightning, :vsn), 1)}"
+    vsn = "v#{Application.spec(:lightning, :vsn)}"
 
     {display, message, type} =
       cond do
