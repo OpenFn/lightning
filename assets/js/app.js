@@ -91,7 +91,7 @@ topbar.config({ barColors: { 0: '#29d' }, shadowColor: 'rgba(0, 0, 0, .3)' });
 
 let topBarScheduled = undefined;
 
-window.addEventListener('phx:project-scoped', e => {
+window.addEventListener('project-scoped', e => {
   console.log(e.detail.id);
   localStorage.setItem('lightning.last-project', e.detail.id);
 });

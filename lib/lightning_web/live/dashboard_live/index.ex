@@ -29,7 +29,7 @@ defmodule LightningWeb.DashboardLive.Index do
 
     project =
       Projects.select_first_project_for_user(socket.assigns.current_user)
-      |> IO.inspect(label: "BLAh!")
+      |> IO.inspect(label: "The 'first' project is...")
 
     if project != nil do
       can_access_project =
