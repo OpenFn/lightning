@@ -36,8 +36,6 @@ defmodule LightningWeb.Router do
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
-    get "/download/yaml", DownloadsController, :download_project_yaml
-    get "/setup_vcs", VersionControlController, :index
   end
 
   ## JSON API
@@ -81,6 +79,9 @@ defmodule LightningWeb.Router do
 
     get "/users/two-factor", UserTOTPController, :new
     post "/users/two-factor", UserTOTPController, :create
+    get "/setup_vcs", VersionControlController, :index
+    get "/download/yaml", DownloadsController, :download_project_yaml
+
 
     get "/profile/confirm_email/:token",
         UserConfirmationController,

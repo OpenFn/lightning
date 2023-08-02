@@ -5,16 +5,16 @@ defmodule LightningWeb.VersionControlController do
   alias Lightning.VersionControl
 
   def index(conn, params) do
-    token = get_session(conn, :user_token)
-    logged_in_user = Accounts.get_user_by_session_token(token)
-    # add installation id to project repo 
+    # add installation id to project repo
+    # {:error, %{reason: "Can't find a pending connection."}}
+
     {:ok, project_repo} =
       VersionControl.add_github_installation_id(
-        logged_in_user.id,
+        conn.assigns.current_user.id,
         params["installation_id"]
       )
 
     # get project repo connection and forward to project settings
-    redirect(conn, to: "/projects/" <> project_repo.project_id <> "/settings#vcs")
+    redirect(conn, to: ~p"/projects/#{project_repo.project_id}/settings#vcs")
   end
 end
