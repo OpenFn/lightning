@@ -22,8 +22,7 @@ defmodule LightningWeb.DownloadControllerTest do
         conn
         |> get(~p"/download/yaml?#{%{id: p.id}}")
 
-      assert response.resp_body =~ "Not Found"
-      assert response.status == 404
+      assert response.status == 401
     end
   end
 

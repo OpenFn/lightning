@@ -5,7 +5,7 @@ defmodule LightningWeb.DownloadsController do
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
 
-  action_fallback LightningWeb.FallbackController
+  action_fallback(LightningWeb.FallbackController)
 
   def download_project_yaml(conn, %{"id" => id}) do
     with %Projects.Project{} = project <-
