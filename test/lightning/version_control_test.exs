@@ -6,6 +6,12 @@ defmodule Lightning.VersionControlTest do
   import Lightning.Factories
 
   describe "Version Control" do
+    test "fetches a project repo using a project id" do
+      project_repo = insert(:project_repo)
+
+      assert %ProjectRepo{} = VersionControl.get_repo_connection(project_repo.project_id)
+    end
+
     test "creates a project github repo connection record when project and user id are present" do
       project = insert(:project)
       user = insert(:user)
@@ -15,8 +21,7 @@ defmodule Lightning.VersionControlTest do
         user_id: user.id
       }
 
-      assert {:ok, repo_connection} =
-               VersionControl.create_github_connection(attrs)
+      assert {:ok, repo_connection} = VersionControl.create_github_connection(attrs)
 
       assert repo_connection.project_id == project.id
     end
