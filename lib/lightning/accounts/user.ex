@@ -32,6 +32,7 @@ defmodule Lightning.Accounts.User do
     field :mfa_enabled, :boolean, default: false
     field :scheduled_deletion, :utc_datetime
 
+    has_one :user_totp, Lightning.Accounts.UserTOTP
     has_many :credentials, Lightning.Credentials.Credential
     has_many :project_users, Lightning.Projects.ProjectUser
     has_many :projects, through: [:project_users, :project]

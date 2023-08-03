@@ -2,8 +2,8 @@ defmodule LightningWeb.DataclipLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Lightning.AccountsFixtures
   import Lightning.InvocationFixtures
+  import Lightning.Factories
 
   defp create_dataclip(%{project: project}) do
     dataclip = dataclip_fixture(project_id: project.id)
@@ -47,18 +47,16 @@ defmodule LightningWeb.DataclipLiveTest do
          %{
            conn: conn
          } do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = log_in_user(conn, user)
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
+      project =
+        insert(:project,
           requires_mfa: true,
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+          project_users: [%{user: user, role: :admin}]
+        )
 
-      dataclip_fixture(project_id: project.id)
-      dataclip_fixture(project_id: project.id)
+      insert_list(2, :dataclip, project: project)
 
       {:ok, _view, html} =
         live(

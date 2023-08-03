@@ -2,7 +2,6 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
 
-  import Lightning.AccountsFixtures
   import Lightning.Factories
   import Lightning.WorkflowLive.Helpers
 
@@ -22,7 +21,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
          %{
            conn: conn
          } do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = log_in_user(conn, user)
 
       project =
@@ -112,7 +111,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
          %{
            conn: conn
          } do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = log_in_user(conn, user)
 
       project =

@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   @create_attrs %{
     raw_name: "some name"
@@ -750,15 +751,14 @@ defmodule LightningWeb.ProjectLiveTest do
          %{
            conn: conn
          } do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = log_in_user(conn, user)
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
+      project =
+        insert(:project,
           requires_mfa: true,
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+          project_users: [%{user: user, role: :admin}]
+        )
 
       {:ok, _view, html} =
         live(

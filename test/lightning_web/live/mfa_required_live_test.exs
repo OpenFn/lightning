@@ -2,7 +2,7 @@ defmodule LightningWeb.MFARequiredLiveTest do
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-  import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
@@ -21,7 +21,7 @@ defmodule LightningWeb.MFARequiredLiveTest do
       conn: conn,
       project: project
     } do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = setup_project_user(conn, project, user, :editor)
 
       assert {:error, {:redirect, %{to: "/"}}} = live(conn, "/mfa_required")
