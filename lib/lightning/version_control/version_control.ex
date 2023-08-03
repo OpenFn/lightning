@@ -54,7 +54,9 @@ defmodule Lightning.VersionControl do
     with %ProjectRepo{} = repo_connection <-
            Repo.get_by(ProjectRepo, project_id: project_id),
          {:ok, repos} <-
-           GithubClient.installation_repos(repo_connection.github_installation_id) do
+           GithubClient.installation_repos(
+             repo_connection.github_installation_id
+           ) do
       {:ok, repos}
     else
       _ -> {:ok, []}

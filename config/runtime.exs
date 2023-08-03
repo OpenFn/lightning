@@ -25,7 +25,8 @@ config :lightning, :image_info,
   branch: branch,
   commit: commit
 
-config :lightning, :email_addresses, admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
+config :lightning, :email_addresses,
+  admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
 
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
@@ -44,9 +45,12 @@ config :lightning,
 base_oban_cron = [
   {"* * * * *", Lightning.Jobs.Scheduler},
   {"* * * * *", ObanPruner},
-  {"0 10 * * *", Lightning.DigestEmailWorker, args: %{"type" => "daily_project_digest"}},
-  {"0 10 * * 1", Lightning.DigestEmailWorker, args: %{"type" => "weekly_project_digest"}},
-  {"0 10 1 * *", Lightning.DigestEmailWorker, args: %{"type" => "monthly_project_digest"}}
+  {"0 10 * * *", Lightning.DigestEmailWorker,
+   args: %{"type" => "daily_project_digest"}},
+  {"0 10 * * 1", Lightning.DigestEmailWorker,
+   args: %{"type" => "weekly_project_digest"}},
+  {"0 10 1 * *", Lightning.DigestEmailWorker,
+   args: %{"type" => "monthly_project_digest"}}
 ]
 
 conditional_cron =
@@ -249,7 +253,8 @@ end
 if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
-  config :lightning, Lightning.Repo, pool_size: :erlang.system_info(:schedulers_online) + 4
+  config :lightning, Lightning.Repo,
+    pool_size: :erlang.system_info(:schedulers_online) + 4
 end
 
 release =

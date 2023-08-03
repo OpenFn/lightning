@@ -15,7 +15,8 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   @impl true
   def mount(_params, _session, socket) do
-    project_users = Projects.get_project_with_users!(socket.assigns.project.id).project_users
+    project_users =
+      Projects.get_project_with_users!(socket.assigns.project.id).project_users
 
     credentials = Credentials.list_credentials(socket.assigns.project)
 
@@ -43,7 +44,8 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket.assigns.project
       )
 
-    repo_connection = VersionControl.get_repo_connection(socket.assigns.project.id)
+    repo_connection =
+      VersionControl.get_repo_connection(socket.assigns.project.id)
 
     # hide github install if our project has a repo connection
     show_github_setup =
@@ -287,7 +289,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     assigns =
       assigns
       |> assign(
-        can_edit_failure_alert: can_edit_failure_alert(assigns.current_user, assigns.project_user)
+        can_edit_failure_alert:
+          can_edit_failure_alert(assigns.current_user, assigns.project_user)
       )
 
     ~H"""
@@ -317,7 +320,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     assigns =
       assigns
       |> assign(
-        can_edit_digest_alert: can_edit_digest_alert(assigns.current_user, assigns.project_user)
+        can_edit_digest_alert:
+          can_edit_digest_alert(assigns.current_user, assigns.project_user)
       )
 
     ~H"""
