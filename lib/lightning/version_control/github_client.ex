@@ -1,6 +1,5 @@
 defmodule Lightning.VersionControl.GithubClient do
   use Tesla
-  alias Lightning.VersionControl.GithubClient
   alias Lightning.VersionControl.GithubToken
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
@@ -47,11 +46,6 @@ defmodule Lightning.VersionControl.GithubClient do
          ]}
       ])
 
-    # build url to fetch installation repos 
-    # repos =
-    # client
-    # |> get("/app/installations/39991761")
-
     {:ok, token} =
       client
       |> post("/app/installations/" <> installation_id <> "/access_tokens", "")
@@ -66,12 +60,16 @@ defmodule Lightning.VersionControl.GithubClient do
     ])
   end
 
-  @pem File.read!("priv/openfn.2023-07-31.private-key.pem")
-  defp build_token(app_id \\ 362_637) do
-    signer = Joken.Signer.create("RS256", %{"pem" => @pem})
+  def build_token() do
+    github_config = Application.get_env(:lightning, :github_app)
 
-    issued_at =
-      DateTime.add(DateTime.utc_now(), -60, :second) |> DateTime.to_unix()
+    pem = File.read!(github_config[:cert_path])
+
+    app_id = github_config[:app_id] |> String.to_integer()
+
+    signer = Joken.Signer.create("RS256", %{"pem" => pem})
+
+    issued_at = DateTime.add(DateTime.utc_now(), -60, :second) |> DateTime.to_unix()
 
     exp = DateTime.add(DateTime.utc_now(), 10, :minute) |> DateTime.to_unix()
 

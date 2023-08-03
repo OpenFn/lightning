@@ -16,13 +16,16 @@ image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
 
+config :lightning, :github_app,
+  cert_path: System.get_env("GITHUB_CERT_PATH"),
+  app_id: System.get_env("GITHUB_APP_ID")
+
 config :lightning, :image_info,
   image_tag: image_tag,
   branch: branch,
   commit: commit
 
-config :lightning, :email_addresses,
-  admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
+config :lightning, :email_addresses, admin: System.get_env("EMAIL_ADMIN", "admin@openfn.org")
 
 config :lightning, :adaptor_service,
   adaptors_path: System.get_env("ADAPTORS_PATH", "./priv/openfn")
@@ -41,12 +44,9 @@ config :lightning,
 base_oban_cron = [
   {"* * * * *", Lightning.Jobs.Scheduler},
   {"* * * * *", ObanPruner},
-  {"0 10 * * *", Lightning.DigestEmailWorker,
-   args: %{"type" => "daily_project_digest"}},
-  {"0 10 * * 1", Lightning.DigestEmailWorker,
-   args: %{"type" => "weekly_project_digest"}},
-  {"0 10 1 * *", Lightning.DigestEmailWorker,
-   args: %{"type" => "monthly_project_digest"}}
+  {"0 10 * * *", Lightning.DigestEmailWorker, args: %{"type" => "daily_project_digest"}},
+  {"0 10 * * 1", Lightning.DigestEmailWorker, args: %{"type" => "weekly_project_digest"}},
+  {"0 10 1 * *", Lightning.DigestEmailWorker, args: %{"type" => "monthly_project_digest"}}
 ]
 
 conditional_cron =
@@ -110,6 +110,13 @@ config :lightning,
        :init_project_for_new_user,
        System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
        |> String.to_atom()
+
+# If you've booted up with a SENTRY_DSN environment variable, use Sentry!
+config :sentry,
+  filter: Lightning.SentryEventFilter,
+  environment_name: config_env(),
+  included_environments:
+    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
@@ -242,8 +249,7 @@ end
 if config_env() == :test do
   # When running tests, set the number of database connections to the number
   # of cores available.
-  config :lightning, Lightning.Repo,
-    pool_size: :erlang.system_info(:schedulers_online) + 4
+  config :lightning, Lightning.Repo, pool_size: :erlang.system_info(:schedulers_online) + 4
 end
 
 release =
