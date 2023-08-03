@@ -6,7 +6,6 @@ defmodule LightningWeb.RunWorkOrderTest do
   alias Lightning.Attempt
   alias Lightning.Workorders.SearchParams
 
-  import Lightning.AccountsFixtures
   import Lightning.JobsFixtures
   import Lightning.InvocationFixtures
   import Lightning.WorkflowsFixtures
@@ -21,15 +20,14 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{
            conn: conn
          } do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
       conn = log_in_user(conn, user)
 
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
+      project =
+        insert(:project,
           requires_mfa: true,
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+          project_users: [%{user: user, role: :admin}]
+        )
 
       {:ok, _view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))

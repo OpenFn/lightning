@@ -2,6 +2,8 @@ defmodule LightningWeb.UserSessionControllerTest do
   use LightningWeb.ConnCase, async: false
 
   import Lightning.AccountsFixtures
+  import Lightning.Factories
+
   alias Lightning.AuthProviders
 
   def create_handler(endpoint_url) do
@@ -136,7 +138,7 @@ defmodule LightningWeb.UserSessionControllerTest do
 
     test "logs the user in but marks totp as pending for users wth MFA enabled",
          %{conn: conn} do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
       conn =
         post(conn, Routes.user_session_path(conn, :create), %{
@@ -200,7 +202,7 @@ defmodule LightningWeb.UserSessionControllerTest do
 
     test "a user with MFA logging in with remember is redirected to TOTP page with remember_me query param",
          %{conn: conn} do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
       conn =
         post(conn, Routes.user_session_path(conn, :create), %{
