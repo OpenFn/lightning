@@ -1,4 +1,8 @@
 defmodule Lightning.VersionControl.GithubClient do
+  @moduledoc """
+  Tesla github http client we use this to make any network requests 
+  to github from Lightning
+  """
   use Tesla
   alias Lightning.VersionControl.GithubToken
 
@@ -69,7 +73,8 @@ defmodule Lightning.VersionControl.GithubClient do
 
     signer = Joken.Signer.create("RS256", %{"pem" => pem})
 
-    issued_at = DateTime.add(DateTime.utc_now(), -60, :second) |> DateTime.to_unix()
+    issued_at =
+      DateTime.add(DateTime.utc_now(), -60, :second) |> DateTime.to_unix()
 
     exp = DateTime.add(DateTime.utc_now(), 10, :minute) |> DateTime.to_unix()
 
