@@ -491,11 +491,10 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
 
       {:ok, _view, html} =
         live(
@@ -699,11 +698,10 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
 
       {:ok, view, html} =
         live(
@@ -722,11 +720,10 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
 
       ~w(editor viewer)a
       |> Enum.each(fn role ->
