@@ -99,17 +99,14 @@ defmodule LightningWeb.UserAuth do
   def log_out_user(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
-    reauthenticate_token = fetch_cookies(conn, signed: [@reauthenticated_cookie])
-    reauthenticate_token && Accounts.delete_two_factor_session_token(user_token)
-
-    if live_socket_id = get_session(conn, :live_socket_id) do
-      LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
-    end
+    sudo_token = get_session(conn, :sudo_token)
+    sudo_token && Accounts.delete_two_factor_session_token(sudo_token)
+    live_socket_id = get_session(conn, :live_socket_id) 
+    live_socket_id &&  LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
 
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> delete_resp_cookie(@reauthenticated_cookie)
     |> redirect(to: "/")
   end
 
