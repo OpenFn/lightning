@@ -14,6 +14,16 @@ and this project adheres to
 
 ### Fixed
 
+## [v0.7.1] - 2023-08-04
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Fixed flickery icons on new workflow job creation.
+
 ## [v0.7.0] - 2023-08-04
 
 ### Added
