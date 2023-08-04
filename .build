@@ -136,6 +136,7 @@ LightningWeb.ProfileLive.FormComponent.html
 LightningWeb.ProfileLive.MfaComponent.html
 LightningWeb.ProjectLive.FormComponent.html
 LightningWeb.ProjectLive.Index.html
+LightningWeb.ProjectLive.MFARequired.html
 LightningWeb.ProjectLive.Settings.html
 LightningWeb.RouteHelpers.html
 LightningWeb.Router.html
@@ -195,8 +196,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-96D45647.js
-dist/sidebar_items-08FEF45F.js
+dist/search_items-5981A1E2.js
+dist/sidebar_items-F37A4A78.js
 index.html
 provisioning.html
 readme.html
