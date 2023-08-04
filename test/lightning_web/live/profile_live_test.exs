@@ -240,11 +240,7 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "user can successfully add MFA to their account", %{conn: conn} do
-      Application.put_env(
-        :lightning,
-        :totp_client,
-        LightningTest.TOTP
-      )
+      Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
       {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
@@ -314,11 +310,7 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "user can successfully setup another device", %{conn: conn} do
-      Application.put_env(
-        :lightning,
-        :totp_client,
-        LightningTest.TOTP
-      )
+      Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
       {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
 

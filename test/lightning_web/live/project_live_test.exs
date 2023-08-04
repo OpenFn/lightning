@@ -491,10 +491,7 @@ defmodule LightningWeb.ProjectLiveTest do
            conn: conn,
            user: user
          } do
-      project =
-        insert(:project,
-          project_users: [%{user: user, role: :admin}]
-        )
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
 
       {:ok, _view, html} =
         live(
