@@ -1164,6 +1164,51 @@ defmodule Lightning.AccountsTest do
     end
   end
 
+  describe "SUDO mode" do
+    setup do
+      %{user: user_fixture()}
+    end
+
+    test "generates sudo session token", %{user: user} do
+      token = Accounts.generate_sudo_session_token(user)
+
+      assert user_token = Repo.get_by(UserToken, token: token)
+      assert user_token.context == "sudo_session"
+
+      assert_raise Ecto.ConstraintError, fn ->
+        Repo.insert!(%UserToken{
+          token: user_token.token,
+          user_id: user_fixture().id,
+          context: "sudo_session"
+        })
+      end
+    end
+
+    test "validates sudo session token", %{user: user} do
+      token = Accounts.generate_sudo_session_token(user)
+      assert Accounts.sudo_session_token_valid?(user, token)
+
+      user2 = user_fixture()
+      refute Accounts.sudo_session_token_valid?(user2, token)
+      token_schema = Repo.get_by(UserToken, token: token)
+      query = "update user_tokens set inserted_at=$1 where token=$2"
+
+      Ecto.Adapters.SQL.query(Repo, query, [
+        Timex.shift(token_schema.inserted_at, minutes: -5),
+        token
+      ])
+
+      refute Accounts.sudo_session_token_valid?(user, token)
+    end
+
+    test "deletes sudo session token", %{user: user} do
+      token = Accounts.generate_sudo_session_token(user)
+      assert Repo.get_by(UserToken, token: token)
+      Accounts.delete_sudo_session_token(token)
+      refute Repo.get_by(UserToken, token: token)
+    end
+  end
+
   describe "inspect/2" do
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
