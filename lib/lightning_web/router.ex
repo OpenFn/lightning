@@ -90,7 +90,6 @@ defmodule LightningWeb.Router do
     end
 
     live_session :sudo_auth,
-      session: {LightningWeb.UserAuth, :sudo_session, []},
       on_mount: [
         {LightningWeb.InitAssigns, :default},
         {LightningWeb.UserAuth, :ensure_sudo}

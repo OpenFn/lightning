@@ -264,7 +264,7 @@ defmodule LightningWeb.UserAuth do
   def on_mount(:ensure_sudo, _params, session, socket) do
     socket = mount_sudo_mode(session, socket)
 
-    if socket.assigns.sudo_mode? do
+    if socket.assigns[:sudo_mode?] do
       {:cont, socket}
     else
       socket =
@@ -290,17 +290,6 @@ defmodule LightningWeb.UserAuth do
         Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
           nil
         end)
-    end
-  end
-
-  @doc """
-  Fetches the sudo token to be used in LiveView sessions
-  """
-  def sudo_session(conn) do
-    if sudo_token = conn |> ensure_sudo_token() |> get_session(:sudo_token) do
-      %{"sudo_token" => sudo_token}
-    else
-      %{}
     end
   end
 
