@@ -37,7 +37,7 @@ defmodule LightningWeb.ReAuthenticateLive.New do
 
     if valid_user_input?(current_user, params) do
       token = Accounts.generate_sudo_session_token(current_user)
-      return_to = append_token(socket.assigns.return_to, Base.encode32(token))
+      return_to = append_token(socket.assigns.return_to, Base.encode64(token))
 
       {:noreply, socket |> push_navigate(to: return_to)}
     else
