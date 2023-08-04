@@ -80,6 +80,12 @@ defmodule Lightning.Factories do
     }
   end
 
+  def user_totp_factory do
+    %Lightning.Accounts.UserTOTP{
+      secret: NimbleTOTP.secret()
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

@@ -16,6 +16,36 @@ defmodule LightningWeb.RunWorkOrderTest do
   setup :create_project_for_current_user
 
   describe "Index" do
+    test "only users with MFA enabled can access workorders for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      conn = log_in_user(conn, user)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      {:ok, _view, html} =
+        live(conn, Routes.project_run_index_path(conn, :index, project.id))
+
+      assert html =~ "History"
+
+      ~w(editor viewer admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(
+                   conn,
+                   Routes.project_run_index_path(conn, :index, project.id)
+                 )
+      end)
+    end
+
     test "WorkOrderComponent", %{
       project: project
     } do

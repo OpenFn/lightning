@@ -8,14 +8,12 @@ import ReactFlow, {
 import { useStore, StoreApi } from 'zustand';
 import { shallow } from 'zustand/shallow';
 
-import { DEFAULT_TEXT } from '../editor/Editor';
 import layout from './layout';
 import nodeTypes from './nodes';
 import edgeTypes from './edges';
+import usePlaceholders from './usePlaceholders';
 import fromWorkflow from './util/from-workflow';
-import * as placeholder from './util/placeholder';
 import throttle from './util/throttle';
-import toWorkflow from './util/to-workflow';
 import updateSelectionStyles from './util/update-selection';
 import { FIT_DURATION, FIT_PADDING } from './constants';
 import shouldLayout from './util/should-layout';
@@ -39,9 +37,23 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
   (props, ref) => {
     const { selection, onSelectionChange, store } = props;
 
-    const add = useStore(store!, state => state.add);
-    const remove = useStore(store!, state => state.remove);
-    const change = useStore(store!, state => state.change);
+    const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
+
+    const updateSelection = useCallback(
+      (id?: string) => {
+        if (id !== selection) {
+          chartCache.current.lastSelection = id;
+          onSelectionChange(id);
+        }
+      },
+      [onSelectionChange, selection]
+    );
+
+    const { placeholders, add: addPlaceholder } = usePlaceholders(
+      ref,
+      store,
+      updateSelection
+    );
 
     const workflow = useStore(
       store!,
@@ -52,7 +64,6 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       }),
       shallow
     );
-    const [model, setModel] = useState<Flow.Model>({ nodes: [], edges: [] });
 
     // Track positions and selection on a ref, as a passive cache, to prevent re-renders
     const chartCache = useRef<ChartCache>({
@@ -72,6 +83,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       const newModel = fromWorkflow(
         workflow,
         positions,
+        placeholders,
         // Re-render the model based on whatever was last selected
         // This handles first load and new node safely
         chartCache.current.lastSelection
@@ -101,7 +113,7 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       } else {
         chartCache.current.positions = {};
       }
-    }, [workflow, flow]);
+    }, [workflow, flow, placeholders]);
 
     useEffect(() => {
       let newSelection = selection ?? undefined; // indirection is mostly for type safety
@@ -120,19 +132,10 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
       [setModel, model]
     );
 
-    const updateSelection = useCallback(
-      (id?: string) => {
-        if (id !== selection) {
-          onSelectionChange(id);
-        }
-      },
-      [onSelectionChange, model, selection]
-    );
-
     const handleNodeClick = useCallback(
       (event: React.MouseEvent, node: Flow.Node) => {
         if ((event.target as HTMLElement).closest('[name=add-node]')) {
-          addNode(node);
+          addPlaceholder(node);
         } else {
           updateSelection(node.id);
         }
@@ -149,77 +152,12 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
 
     const handleBackgroundClick = useCallback(
       (event: React.MouseEvent) => {
-        if (
-          event.target.classList &&
-          event.target.classList.contains('react-flow__pane')
-        ) {
+        if (event.target.classList?.contains('react-flow__pane')) {
           updateSelection(undefined);
         }
       },
       [updateSelection]
     );
-
-    const addNode = useCallback(
-      (parentNode: Flow.Node) => {
-        // Generate a placeholder node and edge
-        const diff = placeholder.add(model, parentNode);
-        const [newNode] = diff.nodes;
-        // Ensure the starting position is set
-        chartCache.current.positions[newNode.id] = newNode.position;
-        // Mark the new node as selected for the next render
-        chartCache.current.lastSelection = newNode.id;
-        onSelectionChange(newNode.id);
-
-        // Push the changes
-        add(toWorkflow(diff));
-      },
-      [add, model]
-    );
-
-    const commitPlaceholder = useCallback(
-      (evt: CustomEvent<any>) => {
-        const { id, name } = evt.detail;
-
-        // Update the store
-        change({
-          jobs: [{ id, name, body: DEFAULT_TEXT }],
-        });
-
-        onSelectionChange(id);
-      },
-      [change]
-    );
-
-    const cancelPlaceholder = useCallback(
-      (evt: CustomEvent<any>) => {
-        const { id } = evt.detail;
-
-        const e = model.edges.find(({ target }) => target === id);
-        remove({ jobs: [id], edges: [e?.id] });
-        onSelectionChange(undefined);
-      },
-      [remove, model]
-    );
-
-    useEffect(() => {
-      if (ref) {
-        ref.addEventListener<any>('commit-placeholder', commitPlaceholder);
-        ref.addEventListener<any>('cancel-placeholder', cancelPlaceholder);
-
-        return () => {
-          if (ref) {
-            ref.removeEventListener<any>(
-              'commit-placeholder',
-              commitPlaceholder
-            );
-            ref.removeEventListener<any>(
-              'cancel-placeholder',
-              cancelPlaceholder
-            );
-          }
-        };
-      }
-    }, [commitPlaceholder, cancelPlaceholder, ref]);
 
     // Trigger a fit when the parent div changes size
     useEffect(() => {

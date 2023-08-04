@@ -4,7 +4,7 @@ defmodule LightningWeb.DashboardLive.Index do
   alias Lightning.Projects
   alias Lightning.Policies.{Permissions, ProjectUsers}
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do

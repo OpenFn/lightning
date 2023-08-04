@@ -13,6 +13,7 @@ defmodule Lightning.AccountsTest do
 
   alias Lightning.Accounts.{User, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
     user = AccountsFixtures.user_fixture()
@@ -156,7 +157,7 @@ defmodule Lightning.AccountsTest do
 
   describe "valid_user_totp?/2" do
     setup do
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
       %{totp: Accounts.get_user_totp(user), user: user}
     end

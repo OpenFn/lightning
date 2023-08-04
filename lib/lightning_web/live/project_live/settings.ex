@@ -10,7 +10,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -73,10 +73,10 @@ defmodule LightningWeb.ProjectLive.Settings do
          ProjectUsers
          |> Permissions.can?(:edit_failure_alerts, current_user, project_user)
 
-  defp can_edit_project(socket),
+  defp can_edit_project(assigns),
     do:
-      socket.assigns.can_edit_project_name and
-        socket.assigns.can_edit_project_description
+      assigns.can_edit_project_name and
+        assigns.can_edit_project_description
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -108,12 +108,33 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("save", %{"project" => project_params}, socket) do
-    if can_edit_project(socket) do
+    if can_edit_project(socket.assigns) do
       save_project(socket, project_params)
     else
       {:noreply,
        socket
        |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
+  def handle_event("toggle-mfa", _params, socket) do
+    if can_edit_project(socket.assigns) do
+      project = socket.assigns.project
+
+      {:ok, project} =
+        Projects.update_project(project, %{requires_mfa: !project.requires_mfa})
+
+      {:noreply,
+       socket
+       |> assign(:project, project)
+       |> put_flash(:info, "Project MFA requirement updated successfully")}
+    else
+      {:noreply,
+       put_flash(
+         socket,
+         :error,
+         "You are not authorized to perform this action."
+       )}
     end
   end
 

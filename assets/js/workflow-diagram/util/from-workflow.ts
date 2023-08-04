@@ -1,5 +1,4 @@
 import { Lightning, Flow, Positions } from '../types';
-import { identify, isPlaceholder } from './placeholder';
 import { styleEdge } from '../styles';
 
 function getEdgeLabel(condition: string) {
@@ -21,12 +20,10 @@ function getEdgeLabel(condition: string) {
 const fromWorkflow = (
   workflow: Lightning.Workflow,
   positions: Positions,
+  placeholders: Flow.Model = { nodes: [], edges: [] },
   selectedId?: string
 ): Flow.Model => {
-  const workflowWithPlaceholders = identify(workflow);
-  const allowPlaceholder = workflowWithPlaceholders.jobs.every(
-    j => !isPlaceholder(j)
-  );
+  const allowPlaceholder = placeholders.nodes.length === 0;
 
   const process = (
     items: Array<Lightning.Node | Lightning.Edge>,
@@ -49,15 +46,11 @@ const fromWorkflow = (
 
       if (/(job|trigger)/.test(type)) {
         const node = item as Lightning.Node;
-        model.type = isPlaceholder(node) ? 'placeholder' : type;
+        model.type = type;
 
         if (positions && positions[node.id]) {
           model.position = positions[node.id];
         }
-
-        // This is a work of fantasy
-        // model.width = NODE_WIDTH;
-        // model.height = NODE_HEIGHT;
 
         model.data.allowPlaceholder = allowPlaceholder;
 
@@ -85,12 +78,19 @@ const fromWorkflow = (
     });
   };
 
-  const nodes = [] as Flow.Node[];
-  const edges = [] as Flow.Edge[];
+  const nodes = [
+    ...placeholders.nodes.map(n => {
+      if (selectedId == n.id) {
+        n.selected = true;
+      }
+      return n;
+    }),
+  ] as Flow.Node[];
+  const edges = [...placeholders.edges] as Flow.Edge[];
 
-  process(workflowWithPlaceholders.jobs, nodes, 'job');
-  process(workflowWithPlaceholders.triggers, nodes, 'trigger');
-  process(workflowWithPlaceholders.edges, edges, 'edge');
+  process(workflow.jobs, nodes, 'job');
+  process(workflow.triggers, nodes, 'trigger');
+  process(workflow.edges, edges, 'edge');
 
   return { nodes, edges };
 };

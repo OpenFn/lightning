@@ -17,6 +17,34 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
              |> element("#workflows-#{project.id}", "No workflows yet")
     end
 
+    test "only users with MFA enabled can access workflows for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      conn = log_in_user(conn, user)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      create_workflow(%{project: project})
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w")
+
+      assert element(view, "#workflows-#{project.id}", "No workflows yet")
+
+      ~w(editor viewer admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(conn, ~p"/projects/#{project}/w")
+      end)
+    end
+
     test "lists all workflows for a project", %{
       conn: conn,
       project: project
@@ -77,6 +105,34 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
         |> follow_redirect(conn, "/projects/#{project.id}/w/new")
 
       assert view |> element("div[id^=workflow-edit-]") |> has_element?()
+    end
+
+    test "only users with MFA enabled can create workflows for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      conn = log_in_user(conn, user)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      create_workflow(%{project: project})
+
+      {:ok, _view, html} = live(conn, ~p"/projects/#{project}/w")
+
+      assert html =~ "Create new workflow"
+
+      ~w(editor admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(conn, ~p"/projects/#{project}/w")
+      end)
     end
   end
 

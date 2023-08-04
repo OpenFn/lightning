@@ -25,6 +25,7 @@ export namespace Lightning {
 
   export interface JobNode extends Node {
     body?: string;
+    adaptor?: string;
   }
 
   export interface Edge {

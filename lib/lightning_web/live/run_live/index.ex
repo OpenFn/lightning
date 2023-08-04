@@ -28,7 +28,7 @@ defmodule LightningWeb.RunLive.Index do
     pending: :boolean
   }
 
-  on_mount({LightningWeb.Hooks, :project_scope})
+  on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
   def mount(params, _session, socket) do

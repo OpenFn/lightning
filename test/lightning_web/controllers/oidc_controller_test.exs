@@ -3,6 +3,8 @@ defmodule LightningWeb.OidcControllerTest do
 
   import Lightning.BypassHelpers
   import Lightning.AccountsFixtures
+  import Lightning.Factories
+
   alias Lightning.AuthProviders
 
   def setup_handler(_) do
@@ -90,7 +92,7 @@ defmodule LightningWeb.OidcControllerTest do
          } do
       expect_token(bypass, handler.wellknown)
 
-      user = user_with_mfa_fixture()
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
 
       expect_userinfo(bypass, handler.wellknown, %{"email" => user.email})
 

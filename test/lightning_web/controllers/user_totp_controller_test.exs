@@ -1,12 +1,12 @@
 defmodule LightningWeb.UserTOTPControllerTest do
   use LightningWeb.ConnCase, async: false
 
-  import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   @totp_session :user_totp_pending
 
   setup %{conn: conn} do
-    user = user_with_mfa_fixture()
+    user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
     conn = conn |> log_in_user(user) |> put_session(@totp_session, true)
     %{user: user, conn: conn}
   end

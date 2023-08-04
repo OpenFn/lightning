@@ -218,13 +218,6 @@ defmodule LightningWeb.ProfileLiveTest do
     end
   end
 
-  defmodule LightningWeb.ProfileLiveTest.TOTP do
-    def secret do
-      <<4, 70, 0, 227, 26, 97, 234, 162, 13, 44, 36, 56, 102, 50, 59, 143, 157,
-        4, 157, 18>>
-    end
-  end
-
   describe "MFA Component for a user without MFA enabled" do
     setup :register_and_log_in_user
 
@@ -247,11 +240,7 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "user can successfully add MFA to their account", %{conn: conn} do
-      Application.put_env(
-        :lightning,
-        :totp_client,
-        LightningWeb.ProfileLiveTest.TOTP
-      )
+      Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
       {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
@@ -262,7 +251,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert view |> form("#set_totp_form") |> has_element?()
 
-      secret = LightningWeb.ProfileLiveTest.TOTP.secret()
+      secret = LightningTest.TOTP.secret()
       valid_code = NimbleTOTP.verification_code(secret)
 
       view
@@ -321,11 +310,7 @@ defmodule LightningWeb.ProfileLiveTest do
     end
 
     test "user can successfully setup another device", %{conn: conn} do
-      Application.put_env(
-        :lightning,
-        :totp_client,
-        LightningWeb.ProfileLiveTest.TOTP
-      )
+      Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
       {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
 
@@ -336,7 +321,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert view |> form("#set_totp_form") |> has_element?()
 
-      secret = LightningWeb.ProfileLiveTest.TOTP.secret()
+      secret = LightningTest.TOTP.secret()
       valid_code = NimbleTOTP.verification_code(secret)
 
       view

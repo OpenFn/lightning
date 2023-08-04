@@ -4,6 +4,7 @@ defmodule LightningWeb.ProjectLiveTest do
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
+  import Lightning.Factories
 
   @create_attrs %{
     raw_name: "some name"
@@ -485,6 +486,23 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ credential.user.email
     end
 
+    test "project admin can view project security page",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project = insert(:project, project_users: [%{user: user, role: :admin}])
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id) <>
+            "#security"
+        )
+
+      assert html =~ "Multi-Factor Authentication"
+    end
+
     test "project admin can't edit project name and description with invalid data",
          %{
            conn: conn,
@@ -670,6 +688,90 @@ defmodule LightningWeb.ProjectLiveTest do
              |> render_change() =~ "Project user updated successfuly"
 
       assert view |> has_element?("#{form_id} option[selected]", "Daily")
+    end
+
+    test "project admin can toggle MFA requirement",
+         %{
+           conn: conn,
+           user: user
+         } do
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      {:ok, view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Project settings"
+
+      assert view
+             |> element("#toggle-mfa-switch")
+             |> render_click() =~ "Project MFA requirement updated successfully"
+    end
+
+    test "only users with admin level role can toggle MFA requirement", %{
+      conn: conn,
+      user: user
+    } do
+      project =
+        insert(:project,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      ~w(editor viewer)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        {:ok, view, html} =
+          live(
+            conn,
+            Routes.project_project_settings_path(conn, :index, project.id)
+          )
+
+        assert html =~ "Project settings"
+
+        refute has_element?(view, "#toggle-mfa-switch")
+
+        assert render_click(view, "toggle-mfa") =~
+                 "You are not authorized to perform this action."
+      end)
+    end
+
+    test "only users with MFA enabled can access settings for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      conn = log_in_user(conn, user)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Project settings"
+
+      ~w(editor viewer admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(
+                   conn,
+                   Routes.project_project_settings_path(conn, :index, project.id)
+                 )
+      end)
     end
   end
 end

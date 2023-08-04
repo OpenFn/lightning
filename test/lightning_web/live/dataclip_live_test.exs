@@ -3,6 +3,7 @@ defmodule LightningWeb.DataclipLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.InvocationFixtures
+  import Lightning.Factories
 
   defp create_dataclip(%{project: project}) do
     dataclip = dataclip_fixture(project_id: project.id)
@@ -40,6 +41,41 @@ defmodule LightningWeb.DataclipLiveTest do
       table = view |> element("section#inner_content") |> render()
       assert table =~ "dataclip-#{dataclip.id}"
       refute table =~ "dataclip-#{other_dataclip.id}"
+    end
+
+    test "only users with MFA enabled can access dataclips for a project with MFA requirement",
+         %{
+           conn: conn
+         } do
+      user = insert(:user, mfa_enabled: true, user_totp: build(:user_totp))
+      conn = log_in_user(conn, user)
+
+      project =
+        insert(:project,
+          requires_mfa: true,
+          project_users: [%{user: user, role: :admin}]
+        )
+
+      insert_list(2, :dataclip, project: project)
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_dataclip_index_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Dataclips"
+
+      ~w(editor viewer admin)a
+      |> Enum.each(fn role ->
+        {conn, _user} = setup_project_user(conn, project, role)
+
+        assert {:error, {:redirect, %{to: "/mfa_required"}}} =
+                 live(
+                   conn,
+                   Routes.project_dataclip_index_path(conn, :index, project.id)
+                 )
+      end)
     end
 
     # Commented for #515 Hide the dataclips tab for beta

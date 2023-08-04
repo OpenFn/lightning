@@ -36,7 +36,6 @@ defmodule LightningWeb.Router do
     get "/authenticate/callback", OidcController, :new
     get "/authenticate/:provider", OidcController, :show
     get "/authenticate/:provider/callback", OidcController, :new
-    get "/download/yaml", DownloadsController, :download_project_yaml
   end
 
   ## JSON API
@@ -85,6 +84,8 @@ defmodule LightningWeb.Router do
         UserConfirmationController,
         :confirm_email
 
+    get "/download/yaml", DownloadsController, :download_project_yaml
+
     live_session :auth, on_mount: LightningWeb.InitAssigns do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end
@@ -125,6 +126,8 @@ defmodule LightningWeb.Router do
     end
 
     live_session :default, on_mount: LightningWeb.InitAssigns do
+      live "/mfa_required", ProjectLive.MFARequired, :index
+
       scope "/projects/:project_id", as: :project do
         live "/jobs", JobLive.Index, :index
 
