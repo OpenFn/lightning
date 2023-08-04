@@ -36,6 +36,7 @@ and this project adheres to
 - Fixed issue where entering a placeholder name through the form would result an
   in unsaveable workflow
   [#1001](https://github.com/OpenFn/Lightning/issues/1001)
+- Ensure the DownloadController checks for authentication and authorisation.
 
 ## [v0.7.0-pre5] - 2023-07-28
 

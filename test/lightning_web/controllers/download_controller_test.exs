@@ -32,9 +32,9 @@ defmodule LightningWeb.DownloadControllerTest do
         conn
         |> get("/download/yaml?id=#{Ecto.UUID.generate()}")
 
-      # fill in what the actual response
-      assert response.resp_body =~ "redirected"
       assert response.status == 302
+      assert response.resp_headers
+      assert {"location", "/users/log_in"} in response.resp_headers
     end
   end
 end
