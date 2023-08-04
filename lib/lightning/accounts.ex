@@ -657,9 +657,7 @@ defmodule Lightning.Accounts do
   Deletes the signed token with the given context.
   """
   def delete_sudo_session_token(token) do
-    Repo.delete_all(
-      UserToken.token_and_context_query(token, "sudo_session")
-    )
+    Repo.delete_all(UserToken.token_and_context_query(token, "sudo_session"))
 
     :ok
   end

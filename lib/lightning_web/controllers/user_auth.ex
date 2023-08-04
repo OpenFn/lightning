@@ -101,8 +101,10 @@ defmodule LightningWeb.UserAuth do
     user_token && Accounts.delete_session_token(user_token)
     sudo_token = get_session(conn, :sudo_token)
     sudo_token && Accounts.delete_sudo_session_token(sudo_token)
-    live_socket_id = get_session(conn, :live_socket_id) 
-    live_socket_id &&  LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
+    live_socket_id = get_session(conn, :live_socket_id)
+
+    live_socket_id &&
+      LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
 
     conn
     |> renew_session()
@@ -138,7 +140,7 @@ defmodule LightningWeb.UserAuth do
   Re-Authenticates the user by using the sudo token
   """
   def reauth_sudo_mode(conn, _opts) do
-    conn = ensure_two_factor_token(conn)
+    conn = ensure_sudo_token(conn)
     user = conn.assigns[:current_user]
     sudo_token = get_session(conn, :sudo_token)
 
@@ -146,13 +148,13 @@ defmodule LightningWeb.UserAuth do
       user && sudo_token &&
         Accounts.sudo_session_token_valid?(
           user,
-          Base.decode32!(sudo_token)
+          Base.decode64!(sudo_token)
         )
 
     assign(conn, :sudo_mode?, valid?)
   end
 
-  defp ensure_two_factor_token(conn) do
+  defp ensure_sudo_token(conn) do
     conn = fetch_query_params(conn)
 
     if token = conn.query_params["sudo_token"],
@@ -260,9 +262,9 @@ defmodule LightningWeb.UserAuth do
   Used for LiveView routes that require the user to be re-authenticated.
   """
   def on_mount(:ensure_sudo, _params, session, socket) do
-    socket = mount_sudo_user(session, socket)
+    socket = mount_sudo_mode(session, socket)
 
-    if socket.assigns.current_user do
+    if socket.assigns.sudo_mode? do
       {:cont, socket}
     else
       socket =
@@ -277,11 +279,11 @@ defmodule LightningWeb.UserAuth do
     end
   end
 
-  defp mount_sudo_user(session, socket) do
+  defp mount_sudo_mode(session, socket) do
     with %{} = user <- socket.assigns.current_user,
-         %{"sudo_token" => user_token} <- session do
+         %{"sudo_token" => sudo_token} <- session do
       Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
-        Accounts.sudo_session_token_valid?(user, user_token)
+        Accounts.sudo_session_token_valid?(user, sudo_token)
       end)
     else
       _other ->
@@ -295,8 +297,8 @@ defmodule LightningWeb.UserAuth do
   Fetches the sudo token to be used in LiveView sessions
   """
   def sudo_session(conn) do
-    if user_token = conn |> ensure_two_factor_token() |> get_session(:sudo_token) do
-      %{"sudo_token" => user_token}
+    if sudo_token = conn |> ensure_sudo_token() |> get_session(:sudo_token) do
+      %{"sudo_token" => sudo_token}
     else
       %{}
     end
