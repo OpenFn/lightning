@@ -34,7 +34,7 @@ defmodule Lightning.Accounts.UserToken do
   @confirm_validity_in_days 7
   @change_email_validity_in_days 7
   @session_validity_in_days 60
-  @two_factor_session_validity_in_seconds 60 * 5
+  @sudo_session_validity_in_seconds 60 * 5
   @auth_validity_in_seconds 30
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -137,13 +137,13 @@ defmodule Lightning.Accounts.UserToken do
     {:ok, query}
   end
 
-  def verify_token_query(token, "two_factor_session" = context) do
+  def verify_token_query(token, "sudo_session" = context) do
     query =
       from(token in token_and_context_query(token, context),
         join: user in assoc(token, :user),
         where:
           token.inserted_at >
-            ago(@two_factor_session_validity_in_seconds, "second"),
+            ago(@sudo_session_validity_in_seconds, "second"),
         select: user
       )
 

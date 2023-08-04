@@ -636,27 +636,29 @@ defmodule Lightning.Accounts do
   @doc """
   Generates a 2FA session token.
   """
-  def generate_two_factor_session_token(user) do
-    {token, user_token} = UserToken.build_token(user, "two_factor_session")
+  def generate_sudo_session_token(user) do
+    {token, user_token} = UserToken.build_token(user, "sudo_session")
     Repo.insert!(user_token)
     token
   end
 
   @doc """
-  Checks if the given two factor token for the user is valid
+  Checks if the given sudo token for the user is valid
   """
-  def two_factor_session_token_valid?(user, token) do
-    base_query = UserToken.verify_token_query(token, "two_factor_session")
-    query = from t in UserToken, where: t.user_id == ^user.id
+  def sudo_session_token_valid?(user, token) do
+    {:ok, token_query} =
+      UserToken.verify_token_query(token, "sudo_session")
+
+    query = from t in token_query, where: t.user_id == ^user.id
     Repo.exists?(query)
   end
 
   @doc """
   Deletes the signed token with the given context.
   """
-  def delete_two_factor_session_token(token) do
+  def delete_sudo_session_token(token) do
     Repo.delete_all(
-      UserToken.token_and_context_query(token, "two_factor_session")
+      UserToken.token_and_context_query(token, "sudo_session")
     )
 
     :ok
