@@ -53,6 +53,7 @@
           phx-submit="reauthenticate-user"
           as={:user}
           class="space-y-4 md:space-y-6"
+          id="reauthentication-form"
         >
           <div>
             <%= if @active_option == :password do %>
@@ -85,9 +86,9 @@
           </button>
           <p class="text-sm font-light text-gray-500 dark:text-gray-400">
             <%= if @active_option == :totp do %>
-              Enter your password to confirm access
-            <% else %>
               Open your two-factor authenticator (TOTP) app or browser extension to view your authentication code.
+            <% else %>
+              Enter your password to confirm access
             <% end %>
           </p>
         </.form>
@@ -99,29 +100,28 @@
         <p class="">
           Having problems?
           <ul class="list-disc pl-4">
-            <%= if @active_option == :password do %>
-              <li>
-                <a
-                  href="#"
-                  phx-click="toggle-option"
-                  phx-value-option="totp"
-                  class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                >
-                  Use your authenticator app
-                </a>
-              </li>
-            <% else %>
-              <li>
-                <a
-                  href="#"
-                  phx-click="toggle-option"
-                  phx-value-option="password"
-                  class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                >
-                  Use your password
-                </a>
-              </li>
-            <% end %>
+            <li :if={@active_option == :password and @current_user.mfa_enabled}>
+              <a
+                id="use-totp"
+                href="#"
+                phx-click="toggle-option"
+                phx-value-option="totp"
+                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+              >
+                Use your authenticator app instead
+              </a>
+            </li>
+            <li :if={@active_option == :totp}>
+              <a
+                id="use-password"
+                href="#"
+                phx-click="toggle-option"
+                phx-value-option="password"
+                class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+              >
+                Use your password instead
+              </a>
+            </li>
           </ul>
         </p>
       </div>
