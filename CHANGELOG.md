@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.7.0] - 2023-08-04
+
+### Added
+
 - Project owners can require MFA for their users
   [892](https://github.com/OpenFn/Lightning/issues/892)
 

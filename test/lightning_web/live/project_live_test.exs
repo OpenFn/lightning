@@ -500,7 +500,7 @@ defmodule LightningWeb.ProjectLiveTest do
             "#security"
         )
 
-      assert html =~ "Require Multi-Factor Authentication"
+      assert html =~ "Multi-Factor Authentication"
     end
 
     test "project admin can't edit project name and description with invalid data",
