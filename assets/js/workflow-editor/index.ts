@@ -10,27 +10,38 @@ import {
   createWorkflowStore,
 } from './store';
 
-type WorkflowEditorEntrypoint = PhoenixHook<{
-  _isMounting: boolean;
-  _pendingWorker: Promise<void>;
-  abortController: AbortController | null;
-  component: ReturnType<typeof mount> | null;
-  componentModule: Promise<{ mount: typeof mount }>;
-  getWorkflowParams(): void;
-  getItem(
-    id?: string
-  ): Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
-  handleWorkflowParams(payload: { workflow_params: WorkflowProps }): void;
-  maybeMountComponent(): void;
-  onSelectionChange(id?: string): void;
-  pendingChanges: PendingAction[];
-  processPendingChanges(): void;
-  pushPendingChange(
-    pendingChange: PendingAction,
-    abortController: AbortController
-  ): Promise<boolean>;
-  workflowStore: ReturnType<typeof createWorkflowStore>;
-}>;
+type AttributeMutationRecord = MutationRecord & {
+  attributeName: string;
+  oldValue: string;
+};
+
+type WorkflowEditorEntrypoint = PhoenixHook<
+  {
+    _isMounting: boolean;
+    _pendingWorker: Promise<void>;
+    abortController: AbortController | null;
+    component: ReturnType<typeof mount> | null;
+    componentModule: Promise<{ mount: typeof mount }>;
+    getWorkflowParams(): void;
+    getItem(
+      id?: string
+    ): Lightning.TriggerNode | Lightning.JobNode | Lightning.Edge | undefined;
+    handleWorkflowParams(payload: { workflow_params: WorkflowProps }): void;
+    maybeMountComponent(): void;
+    onSelectionChange(id?: string): void;
+    pendingChanges: PendingAction[];
+    processPendingChanges(): void;
+    pushPendingChange(
+      pendingChange: PendingAction,
+      abortController: AbortController
+    ): Promise<boolean>;
+    workflowStore: ReturnType<typeof createWorkflowStore>;
+    observer: MutationObserver | null;
+    setupObserver(): void;
+    baseUrl: string | null;
+  },
+  { baseUrl: string | null }
+>;
 
 const createNewWorkflow = () => {
   const triggers = [
@@ -61,6 +72,17 @@ const createNewWorkflow = () => {
 
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
+    // Workaround for situations where the hook is mounted before the
+    // browser has updated window.location.href - it's rare, but it happens.
+    // Without it, the hook will try to push a history patch to the wrong
+    // URL.
+    const { baseUrl } = this.el.dataset;
+    if (!baseUrl) {
+      throw new Error('WorkflowEditor requires a data-base-url attribute');
+    }
+
+    this.baseUrl = baseUrl;
+
     console.debug('WorkflowEditor hook mounted');
 
     this._pendingWorker = Promise.resolve();
@@ -102,6 +124,26 @@ export default {
     // between the current state and the server state and send those diffs
     // to the server.
   },
+  setupObserver() {
+    this.observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        const { attributeName, oldValue } = mutation as AttributeMutationRecord;
+
+        if (attributeName == 'data-base-url') {
+          const newValue = this.el.getAttribute(attributeName);
+
+          if (oldValue !== newValue) {
+            this.baseUrl = newValue;
+          }
+        }
+      });
+    });
+
+    this.observer.observe(this.el, {
+      attributeFilter: ['data-base-url'],
+      attributeOldValue: true,
+    });
+  },
   getItem(id?: string) {
     if (id) {
       const { jobs, triggers, edges } = this.workflowStore.getState();
@@ -114,7 +156,7 @@ export default {
     }
   },
   onSelectionChange(id?: string) {
-    const currentUrl = new URL(window.location.href);
+    const currentUrl = new URL(this.baseUrl!);
     const nextUrl = new URL(currentUrl);
 
     const idExists = this.getItem(id);
@@ -143,13 +185,9 @@ export default {
     }
   },
   destroyed() {
-    if (this.component) {
-      this.component.unmount();
-    }
-
-    if (this.abortController) {
-      this.abortController.abort();
-    }
+    this.component?.unmount();
+    this.abortController?.abort();
+    this.observer?.disconnect();
 
     console.debug('WorkflowEditor destroyed');
   },

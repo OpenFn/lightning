@@ -67,6 +67,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-hook="WorkflowEditor"
           class="grow"
           id={"editor-#{@workflow.id}"}
+          data-base-url={@current_url}
           phx-update="ignore"
         >
           <%!-- Before Editor component has mounted --%>
@@ -312,6 +313,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> authorize()
      |> assign(
        active_menu_item: :projects,
+       current_url: nil,
        expanded_job: nil,
        follow_run_id: nil,
        page_title: "",
@@ -319,9 +321,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selected_job: nil,
        selected_trigger: nil,
        selection_mode: nil,
+       selection_params: %{"s" => nil, "m" => nil},
        workflow: nil,
-       workflow_params: %{},
-       selection_params: %{"s" => nil, "m" => nil}
+       workflow_params: %{}
      )}
   end
 
@@ -330,7 +332,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
      |> apply_selection_params(params)
-     |> assign_url(url)}
+     |> assign(current_url: url)}
   end
 
   def apply_action(socket, :new, _params) do
@@ -663,11 +665,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
     end
-  end
-
-  defp assign_url(socket, url) do
-    socket
-    |> assign(url: URI.parse(url))
   end
 
   defp build_next_path(socket, workflow) do
