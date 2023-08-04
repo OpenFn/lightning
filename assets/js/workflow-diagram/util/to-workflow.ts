@@ -18,6 +18,7 @@ const model = (model: Flow.Model) => {
       id: node.id,
       name: node.data?.name,
       body: node.data?.body,
+      adaptor: node.data?.adaptor,
       // TODO workflow id?
     };
 

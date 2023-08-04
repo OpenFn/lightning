@@ -28,6 +28,7 @@ export const create = (parentNode: Flow.Node) => {
     },
     data: {
       body: DEFAULT_TEXT,
+      adaptor: '@openfn/language-common@latest',
     },
   });
 
