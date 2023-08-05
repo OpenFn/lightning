@@ -7,6 +7,8 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Support Backup Codes for Multi-Factor Authentication
+  [937](https://github.com/OpenFn/Lightning/issues/937)
 
 ### Added
 
