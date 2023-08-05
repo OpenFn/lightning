@@ -3,6 +3,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
   import Phoenix.LiveViewTest
   import Lightning.AccountsFixtures
+  import Lightning.Factories
   import Swoosh.TestAssertions
 
   @update_password_attrs %{
@@ -239,7 +240,10 @@ defmodule LightningWeb.ProfileLiveTest do
       refute render(view) =~ "Scan the QR code"
     end
 
-    test "user can successfully add MFA to their account", %{conn: conn} do
+    test "user can successfully add MFA to their account", %{
+      conn: conn,
+      user: user
+    } do
       Application.put_env(:lightning, :totp_client, LightningTest.TOTP)
 
       {:ok, view, _html} = live(conn, Routes.profile_edit_path(conn, :edit))
@@ -258,26 +262,34 @@ defmodule LightningWeb.ProfileLiveTest do
       |> form("#set_totp_form", user_totp: %{code: valid_code})
       |> render_submit()
 
-      flash = assert_redirected(view, Routes.profile_edit_path(conn, :edit))
+      user_token =
+        Lightning.Repo.get_by!(Lightning.Accounts.UserToken,
+          user_id: user.id,
+          context: "sudo_session"
+        )
+
+      flash =
+        assert_redirected(
+          view,
+          Routes.backup_codes_index_path(conn, :index,
+            sudo_token: Base.encode64(user_token.token)
+          )
+        )
+
       assert flash["info"] == "MFA Setup successfully!"
     end
   end
 
   describe "MFA Component for a user with MFA enabled" do
-    setup args do
-      %{user: user} = setup = register_and_log_in_user(args)
+    setup %{conn: conn} do
+      user =
+        insert(:user,
+          mfa_enabled: true,
+          user_totp: build(:user_totp),
+          backup_codes: build_list(10, :backup_code)
+        )
 
-      user_totp = %Lightning.Accounts.UserTOTP{
-        secret: NimbleTOTP.secret(),
-        user_id: user.id
-      }
-
-      valid_code = NimbleTOTP.verification_code(user_totp.secret)
-
-      {:ok, _totp} =
-        Lightning.Accounts.upsert_user_totp(user_totp, %{code: valid_code})
-
-      setup
+      %{user: user, conn: log_in_user(conn, user)}
     end
 
     test "the user sees an option to setup another device", %{

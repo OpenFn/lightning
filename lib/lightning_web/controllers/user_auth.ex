@@ -230,7 +230,7 @@ defmodule LightningWeb.UserAuth do
         end
 
       get_format(conn) == "html" && totp_pending?(conn) &&
-          conn.path_info != ["users", "two-factor", "app"] ->
+          conn.path_info != ["users", "two-factor"] ->
         conn
         |> redirect(to: Routes.user_totp_path(conn, :new))
         |> halt()
@@ -252,7 +252,7 @@ defmodule LightningWeb.UserAuth do
         :error,
         "You must verify yourself again in order to access this page."
       )
-      |> maybe_store_return_to()
+      |> maybe_store_return_to_without_sudo_token()
       |> redirect(to: ~p"/auth/confirm_access")
       |> halt()
     end
@@ -264,7 +264,7 @@ defmodule LightningWeb.UserAuth do
   def on_mount(:ensure_sudo, _params, session, socket) do
     socket = mount_sudo_mode(session, socket)
 
-    if socket.assigns[:sudo_mode?] do
+    if socket.assigns.sudo_mode? do
       {:cont, socket}
     else
       socket =
@@ -280,12 +280,15 @@ defmodule LightningWeb.UserAuth do
   end
 
   defp mount_sudo_mode(session, socket) do
-    with %{} = user <- socket.assigns.current_user,
-         %{"sudo_token" => sudo_token} <- session do
-      Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
-        Accounts.sudo_session_token_valid?(user, sudo_token)
-      end)
-    else
+    case session do
+      %{"sudo_token" => sudo_token} ->
+        user = socket.assigns[:current_user]
+        decoded_token = Base.decode64!(sudo_token)
+
+        Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
+          user && Accounts.sudo_session_token_valid?(user, decoded_token)
+        end)
+
       _other ->
         Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
           nil
@@ -310,6 +313,24 @@ defmodule LightningWeb.UserAuth do
   end
 
   defp maybe_store_return_to(conn), do: conn
+
+  defp maybe_store_return_to_without_sudo_token(conn) do
+    conn = conn |> maybe_store_return_to() |> fetch_query_params()
+    return_to = get_session(conn, :user_return_to)
+
+    if return_to && conn.query_params["sudo_token"] do
+      uri = URI.new!(return_to)
+      updated_query = Map.drop(conn.query_params, ["sudo_token"])
+
+      uri = %{uri | query: Plug.Conn.Query.encode(updated_query)}
+
+      path = URI.to_string(uri)
+
+      put_session(conn, :user_return_to, path)
+    else
+      conn
+    end
+  end
 
   defp signed_in_path(_conn), do: "/"
 end

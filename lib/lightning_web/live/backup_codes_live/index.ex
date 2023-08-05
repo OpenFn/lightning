@@ -21,6 +21,17 @@ defmodule LightningWeb.BackupCodesLive.Index do
      )}
   end
 
+  @impl true
+  def handle_event("regenerate-backup-codes", _params, socket) do
+    current_user = socket.assigns.current_user
+    {:ok, user} = Accounts.regenerate_user_backup_codes(current_user)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "New Backup Codes Generated!")
+     |> assign(backup_codes: user.backup_codes)}
+  end
+
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Two-factor backup codes")

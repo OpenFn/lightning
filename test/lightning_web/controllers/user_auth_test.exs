@@ -390,7 +390,9 @@ defmodule LightningWeb.UserAuthTest do
       socket: socket,
       user: user
     } do
-      sudo_token = Accounts.generate_sudo_session_token(user)
+      sudo_token =
+        user |> Accounts.generate_sudo_session_token() |> Base.encode64()
+
       session = conn |> put_session(:sudo_token, sudo_token) |> get_session()
 
       {:cont, updated_socket} =
@@ -409,7 +411,7 @@ defmodule LightningWeb.UserAuthTest do
            conn: conn,
            socket: socket
          } do
-      sudo_token = "invalid_token"
+      sudo_token = Base.encode64("invalid_token")
       session = conn |> put_session(:sudo_token, sudo_token) |> get_session()
 
       {:halt, updated_socket} =

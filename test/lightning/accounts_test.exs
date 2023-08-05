@@ -11,9 +11,10 @@ defmodule Lightning.AccountsTest do
   alias Lightning.Accounts
   alias Lightning.Projects.ProjectUser
 
-  alias Lightning.Accounts.{User, UserToken, UserTOTP}
+  alias Lightning.Accounts.{User, UserBackupCode, UserToken, UserTOTP}
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import Ecto.Query
 
   test "has_activity_in_projects?/1 returns true if user is has activity in a project (is associated to invocation reasons) and false otherwise." do
     user = AccountsFixtures.user_fixture()
@@ -153,6 +154,85 @@ defmodule Lightning.AccountsTest do
       updated_user = Repo.get(User, user.id)
       assert updated_user.mfa_enabled
     end
+
+    test "generates backup codes", %{user: user} do
+      assert Repo.preload(user, [:backup_codes]).backup_codes == []
+
+      user_totp = %UserTOTP{secret: NimbleTOTP.secret(), user_id: user.id}
+      valid_code = NimbleTOTP.verification_code(user_totp.secret)
+
+      assert {:ok, _totp} =
+               Accounts.upsert_user_totp(user_totp, %{code: valid_code})
+
+      assert Repo.preload(user, [:backup_codes]).backup_codes |> Enum.count() ==
+               10
+    end
+
+    test "backup codes are not regenerated if there are existing ones" do
+      user =
+        insert(:user,
+          mfa_enabled: true,
+          user_totp: build(:user_totp),
+          backup_codes: build_list(10, :backup_code)
+        )
+
+      user_totp = %{user.user_totp | secret: NimbleTOTP.secret()}
+      valid_code = NimbleTOTP.verification_code(user_totp.secret)
+
+      assert {:ok, _totp} =
+               Accounts.upsert_user_totp(user_totp, %{code: valid_code})
+
+      query = from b in UserBackupCode, where: b.user_id == ^user.id
+      backup_codes = Repo.all(query)
+      assert Enum.count(backup_codes) == 10
+
+      for backup_code <- backup_codes do
+        assert backup_code in user.backup_codes
+      end
+    end
+  end
+
+  describe "regenerate_user_backup_codes/1" do
+    setup do
+      user =
+        insert(:user,
+          mfa_enabled: true,
+          user_totp: build(:user_totp),
+          backup_codes: build_list(10, :backup_code)
+        )
+
+      %{user: user}
+    end
+
+    test "generates new user backup codes", %{user: user} do
+      {:ok, updated_user} = Accounts.regenerate_user_backup_codes(user)
+      assert Enum.count(updated_user.backup_codes) == 10
+
+      query = from b in UserBackupCode, where: b.user_id == ^user.id
+      updated_backup_codes = Repo.all(query)
+
+      for backup_code <- user.backup_codes do
+        refute backup_code in updated_backup_codes
+      end
+    end
+  end
+
+  describe "list_user_backup_codes/1" do
+    setup do
+      user =
+        insert(:user,
+          mfa_enabled: true,
+          user_totp: build(:user_totp),
+          backup_codes: build_list(8, :backup_code)
+        )
+
+      %{user: user}
+    end
+
+    test "lists all backup codes for the user", %{user: user} do
+      backup_codes = Accounts.list_user_backup_codes(user)
+      assert Enum.count(backup_codes) == Enum.count(user.backup_codes)
+    end
   end
 
   describe "valid_user_totp?/2" do
@@ -169,6 +249,36 @@ defmodule Lightning.AccountsTest do
     test "returns true for valid totp", %{user: user, totp: totp} do
       code = NimbleTOTP.verification_code(totp.secret)
       assert Accounts.valid_user_totp?(user, code) == true
+    end
+  end
+
+  describe "valid_user_backup_code?/2" do
+    setup do
+      user =
+        insert(:user,
+          mfa_enabled: true,
+          user_totp: build(:user_totp),
+          backup_codes: build_list(10, :backup_code)
+        )
+
+      %{user: user}
+    end
+
+    test "returns false if the code is not valid", %{user: user} do
+      assert Accounts.valid_user_backup_code?(user, "invalid") == false
+    end
+
+    test "returns true for valid code", %{user: user} do
+      backup_code = Enum.random(user.backup_codes)
+      assert Accounts.valid_user_backup_code?(user, backup_code.code) == true
+
+      # backup code accanot be used again
+      assert Accounts.valid_user_backup_code?(user, backup_code.code) == false
+
+      for another_backup_code <- user.backup_codes -- [backup_code] do
+        assert Accounts.valid_user_backup_code?(user, another_backup_code.code) ==
+                 true
+      end
     end
   end
 

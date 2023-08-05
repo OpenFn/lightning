@@ -7,6 +7,10 @@ defmodule LightningWeb.ReAuthenticateLiveTest do
   setup :register_and_log_in_user
 
   describe "New" do
+    setup %{conn: conn} do
+      %{conn: put_session(conn, :user_return_to, "/return_here")}
+    end
+
     test "load reauthentication page", %{conn: conn} do
       {:ok, _live, html} = live(conn, ~p"/auth/confirm_access")
 

@@ -86,6 +86,12 @@ defmodule Lightning.Factories do
     }
   end
 
+  def backup_code_factory do
+    %Lightning.Accounts.UserBackupCode{
+      code: Lightning.Accounts.UserBackupCode.generate_backup_code()
+    }
+  end
+
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------

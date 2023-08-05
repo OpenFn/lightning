@@ -77,8 +77,8 @@ defmodule LightningWeb.Router do
   scope "/", LightningWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    get "/users/two-factor/app", UserTOTPController, :new
-    post "/users/two-factor/app", UserTOTPController, :create
+    get "/users/two-factor", UserTOTPController, :new
+    post "/users/two-factor", UserTOTPController, :create
 
     get "/profile/confirm_email/:token",
         UserConfirmationController,
@@ -90,17 +90,17 @@ defmodule LightningWeb.Router do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
     end
 
-    live_session :sudo_auth,
-      on_mount: [
-        {LightningWeb.InitAssigns, :default},
-        {LightningWeb.UserAuth, :ensure_sudo}
-      ] do
-      scope "/" do
-        pipe_through [
-          :reauth_sudo_mode,
-          :require_sudo_user
-        ]
+    scope "/" do
+      pipe_through [
+        :reauth_sudo_mode,
+        :require_sudo_user
+      ]
 
+      live_session :sudo_auth,
+        on_mount: [
+          {LightningWeb.InitAssigns, :default}
+          # {LightningWeb.UserAuth, :ensure_sudo}
+        ] do
         live "/profile/auth/backup_codes", BackupCodesLive.Index, :index
         get "/profile/auth/backup_codes/print", BackupCodesController, :print
       end

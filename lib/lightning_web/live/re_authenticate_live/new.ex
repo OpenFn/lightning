@@ -6,12 +6,12 @@ defmodule LightningWeb.ReAuthenticateLive.New do
   alias Lightning.Accounts
 
   @impl true
-  def mount(params, session, socket) do
+  def mount(_params, %{"user_return_to" => return_to}, socket) do
     {:ok,
      assign(socket,
        authentication_options: [:password, :totp],
        active_option: :password,
-       return_to: params["return_to"] || session["user_return_to"],
+       return_to: return_to,
        error_message: nil
      ), layout: {LightningWeb.Layouts, :app}}
   end
@@ -39,7 +39,7 @@ defmodule LightningWeb.ReAuthenticateLive.New do
       token = Accounts.generate_sudo_session_token(current_user)
       return_to = append_token(socket.assigns.return_to, Base.encode64(token))
 
-      {:noreply, socket |> push_navigate(to: return_to)}
+      {:noreply, socket |> push_navigate(to: return_to, replace: true)}
     else
       {:noreply, assign(socket, error_message: error_msg(params))}
     end

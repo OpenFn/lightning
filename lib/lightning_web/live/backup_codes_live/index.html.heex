@@ -95,7 +95,7 @@
               <%= backup_code.code %>
             </div>
           </div>
-          <div class="flex justify-center items-center gap-4 px-4 py-5 sm:px-6">
+          <div class="flex justify-center items-center gap-4 px-4 py-5 sm:px-6 border-y border-gray-300">
             <div>
               <button
                 type="button"
@@ -186,6 +186,23 @@
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+          <div class="border-t border-gray-300 bg-white px-4 py-5 sm:px-6">
+            <h3 class="text-base font-semibold leading-6 text-gray-900">
+              Generate new backup codes
+            </h3>
+            <p class="mt-1 text-sm text-gray-500">
+              When you generate new backup codes, you must copy or print the new codes. Your old codes won't work anymore.
+            </p>
+            <div class="mt-2">
+              <button
+                type="button"
+                phx-click="regenerate-backup-codes"
+                class="inline-flex items-center gap-x-2 rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+              >
+                Generate new backup codes
+              </button>
             </div>
           </div>
         </div>

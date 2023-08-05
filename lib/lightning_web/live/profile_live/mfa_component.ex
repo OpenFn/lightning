@@ -55,13 +55,10 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
 
     case Accounts.upsert_user_totp(editing_totp, params) do
       {:ok, _totp} ->
-        token = Accounts.generate_sudo_session_token(socket.assigns.user)
-        params = %{token: Base.encode64(token)}
-
         {:noreply,
          socket
          |> put_flash(:info, "MFA Setup successfully!")
-         |> push_navigate(to: ~p"/profile/auth/backup_codes?#{params}")}
+         |> maybe_redirect_to_backup_codes()}
 
       {:error, changeset} ->
         {:noreply, assign(socket, totp_changeset: changeset)}
@@ -86,6 +83,17 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
            "Oops! Could not disable 2FA from your account. Please try again later"
          )
          |> push_navigate(to: ~p"/profile")}
+    end
+  end
+
+  defp maybe_redirect_to_backup_codes(socket) do
+    if socket.assigns.user.mfa_enabled do
+      push_navigate(socket, to: ~p"/profile")
+    else
+      token = Accounts.generate_sudo_session_token(socket.assigns.user)
+      params = %{sudo_token: Base.encode64(token)}
+
+      push_navigate(socket, to: ~p"/profile/auth/backup_codes?#{params}")
     end
   end
 
