@@ -98,8 +98,8 @@ defmodule LightningWeb.Router do
 
       live_session :sudo_auth,
         on_mount: [
-          {LightningWeb.InitAssigns, :default}
-          # {LightningWeb.UserAuth, :ensure_sudo}
+          {LightningWeb.InitAssigns, :default},
+          {LightningWeb.UserAuth, :ensure_sudo}
         ] do
         live "/profile/auth/backup_codes", BackupCodesLive.Index, :index
         get "/profile/auth/backup_codes/print", BackupCodesController, :print
