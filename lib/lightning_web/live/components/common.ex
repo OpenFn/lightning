@@ -81,24 +81,12 @@ defmodule LightningWeb.Components.Common do
   def tooltip(assigns) do
     classes = ~w"
       relative ml-1 cursor-pointer tooltip
-      hover:after:content-[attr(aria-label)]
-      hover:after:absolute
-      hover:after:top-3
-      hover:after:left-3
-      hover:after:min-w-[12rem]
-      hover:after:max-w-fit
-      hover:after:rounded-md
-      hover:after:px-3
-      hover:after:p-2
-      hover:after:z-10
-      hover:after:bg-slate-900
-      hover:after:text-slate-100
     "
 
     assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
 
     ~H"""
-    <span class={@class} id={@id} aria-label={@title}>
+    <span class={@class} id={@id} aria-label={@title} phx-hook="Tooltip">
       <Heroicons.information_circle
         solid
         class="w-4 h-4 text-primary-600 opacity-50"

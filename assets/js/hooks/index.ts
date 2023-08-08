@@ -1,3 +1,6 @@
+import tippy from 'tippy.js';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/themes/material.css';
 import { PhoenixHook } from './PhoenixHook';
 
 export const Flash = {
@@ -15,6 +18,16 @@ export const Flash = {
     clearTimeout(this.timer);
   },
 } as PhoenixHook<{ timer: ReturnType<typeof setTimeout> }>;
+
+export const Tooltip = {
+  mounted() {
+    let content = this.el.ariaLabel;
+    tippy(this.el, {
+      content: `${content}`,
+      theme: 'material',
+    });
+  },
+} as PhoenixHook<{}>;
 
 export const AssocListChange = {
   mounted() {
