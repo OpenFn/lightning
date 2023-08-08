@@ -22,16 +22,16 @@ defmodule Lightning.VersionControl.ProjectRepo do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "project_repos" do
-    field :github_installation_id, :string
-    field :repo, :string
-    field :branch, :string
-    belongs_to :project, Project
-    belongs_to :user, User
+    field(:github_installation_id, :string)
+    field(:repo, :string)
+    field(:branch, :string)
+    belongs_to(:project, Project)
+    belongs_to(:user, User)
 
     timestamps()
   end
 
-  @fields ~w(github_installation_id target_id repo branch)a
+  @fields ~w(github_installation_id repo branch)a
   @required_fields ~w(user_id  project_id)a
   def changeset(project_repo, attrs) do
     project_repo

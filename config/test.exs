@@ -13,10 +13,7 @@ MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUp
 """
 
 System.put_env("GITHUB_CERT", Base.encode64(cert))
-
-config :lightning, :github_app,
-  cert: cert,
-  app_id: "111111"
+System.put_env("GITHUB_APP_ID", "111111")
 
 # Configure your database
 #
