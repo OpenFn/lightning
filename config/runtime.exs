@@ -17,8 +17,9 @@ branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
 
 config :lightning, :github_app,
-  cert_path: System.get_env("GITHUB_CERT_PATH"),
-  app_id: System.get_env("GITHUB_APP_ID")
+  cert_path:
+    System.get_env("GITHUB_CERT_PATH", "priv/openfn.2023-07-31.private-key.pem"),
+  app_id: System.get_env("GITHUB_APP_ID", "362637")
 
 config :lightning, :image_info,
   image_tag: image_tag,

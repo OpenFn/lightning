@@ -9,6 +9,7 @@ defmodule Lightning.VersionControlTest do
     test "fetches a project repo using a project id" do
       project_repo = insert(:project_repo)
 
+
       assert %ProjectRepo{} =
                VersionControl.get_repo_connection(project_repo.project_id)
     end
