@@ -13,7 +13,6 @@ defmodule Lightning.VersionControl.ProjectRepo do
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
           github_installation_id: String.t() | nil,
-          target_id: String.t() | nil,
           repo: String.t() | nil,
           branch: String.t() | nil,
           project: nil | Project.t() | Ecto.Association.NotLoaded,
@@ -24,7 +23,6 @@ defmodule Lightning.VersionControl.ProjectRepo do
   @foreign_key_type :binary_id
   schema "project_repos" do
     field :github_installation_id, :string
-    field :target_id, :string
     field :repo, :string
     field :branch, :string
     belongs_to :project, Project
