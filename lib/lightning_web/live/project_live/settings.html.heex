@@ -46,7 +46,7 @@
               hash="vcs"
             >
               <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
-              <span class="inline-block align-middle">Version Control</span>
+              <span class="inline-block align-middle">Sync to Github</span>
             </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
@@ -346,27 +346,31 @@
           <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
-          <div>
-            <%= if @show_github_setup do %>
-              <h6 class="font-medium text-black">Sync to Github</h6>
+          <div :if={@can_edit_project_name}>
+            <div :if={@show_github_setup} class="bg-white p-4 rouded-md">
+              <h6 class="font-medium text-black">
+                Install Github App to get started
+              </h6>
               <small class="block my-1 text-xs text-gray-600">
-                Install our Github app to your repository to start syncing your project
+                Easily keep your Project synced to a Github Repository
               </small>
+              <small class="block my-1 text-xs text-gray-600">
+                To get started you will need to install the OpenFn Github application admin access required
+              </small>
+
               <button
                 type="button"
                 phx-click="install_app"
                 phx-value-id={@project.id}
-                class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
+                class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 my-8"
               >
-                Install Github app
+                Install Github
               </button>
-            <% end %>
-          </div>
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-2"></div>
-          </div>
-          <%= if @show_repo_setup do %>
-            <div>
+            </div>
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-2"></div>
+            </div>
+            <div :if={@show_repo_setup} class="bg-white p-4 rouded-md">
               <h6 class="font-medium text-black">Sync to Github</h6>
               <small class="block my-1 text-xs text-gray-600">
                 Configure the settings below to start Syncing
@@ -383,27 +387,53 @@
                 </div>
                 <div class="grid grid-cols gap-6">
                   <div class="md:col-span-2">
+                    <small class="font-medium my-1 text-xs text-black">
+                      Repository
+                    </small>
                     <LightningWeb.Components.Form.select_field
                       form={f}
-                      disabled={!@can_edit_project_name}
                       name={:repo}
                       id="project-repo"
                       phx-change="repo_selected"
+                      prompt="Select a Repository"
                       values={@repos}
                     />
+                    <div>
+                      <small class=" my-2 text-xs text-black">
+                        Need to add or remove repos
+                      </small>
+                      <button
+                        type="button"
+                        phx-click="install_app"
+                        phx-value-id={@project.id}
+                        class="my-2 text-xs text-primary-600"
+                      >
+                        Reconfigure your github permissions (admin access required)
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div class="hidden sm:block" aria-hidden="true">
-                  <div class="py-3"></div>
+                  <div class="py-1"></div>
                 </div>
                 <div class="grid grid-cols gap-6">
                   <div class="md:col-span-2">
+                    <small class="font-medium my-1 text-xs text-black">
+                      Branch
+                    </small>
+                    <svg
+                      :if={@loading_branches}
+                      class="animate-spin h-5 w-5 mr-3 bg-primary-600"
+                      viewBox="0 0 24 24"
+                    >
+                    </svg>
+
                     <LightningWeb.Components.Form.select_field
                       form={f}
-                      disabled={!@can_edit_project_description}
                       name={:branch}
                       id="project-branch"
                       values={@branches}
+                      prompt="Select a branch"
                     />
                   </div>
                 </div>
@@ -413,23 +443,21 @@
                 <div class="grid grid-cols gap-6">
                   <div class="md:col-span-2">
                     <LightningWeb.Components.Form.submit_button phx-disable-with="Saving">
-                      Save
+                      Sync
                     </LightningWeb.Components.Form.submit_button>
                   </div>
                 </div>
               </.form>
             </div>
-          <% end %>
-          <%= if @show_sync_button do %>
-            <div>
-              <button
-                type="button"
-                phx-click="install_app"
-                phx-value-id={@project.id}
-                class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
-              >
-                Sync Project
-              </button>
+          </div>
+          <%= if !@can_delete_project do %>
+            <div :if={@show_github_setup} class="bg-white p-4 rouded-md">
+              <h6 class="font-medium text-black">
+                Sync to Github
+              </h6>
+              <small class="block my-1 text-xs text-gray-600">
+                Ask an admin to install our github app to start syncing your project
+              </small>
             </div>
           <% end %>
         </LightningWeb.Components.Common.panel_content>

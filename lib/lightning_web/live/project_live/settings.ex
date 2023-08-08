@@ -96,7 +96,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        show_sync_button: show_sync_button,
        project_repo: project_repo,
        repos: collect_project_repos(socket.assigns.project.id),
-       branches: []
+       branches: [],
+       loading_branches: false
      )}
   end
 
@@ -258,13 +259,24 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("repo_selected", params, socket) do
-    {:ok, branches} =
-      VersionControl.fetch_repo_branches(
-        socket.assigns.project.id,
-        params["repo"]
-      )
+    pid = self()
 
-    {:noreply, socket |> assign(:branches, branches)}
+    Task.start(fn ->
+      {:ok, branches} =
+        VersionControl.fetch_repo_branches(
+          socket.assigns.project.id,
+          params["repo"]
+        )
+
+      send(pid, {:branches_fetched, branches})
+    end)
+
+    {:noreply, socket |> assign(:loading_branches, true)}
+  end
+
+  @impl true
+  def handle_info({:branches_fetched, branches}, socket) do
+    {:noreply, socket |> assign(loading_branches: false, branches: branches)}
   end
 
   defp dispatch_flash(change_result, socket) do
