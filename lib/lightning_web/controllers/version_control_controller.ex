@@ -1,7 +1,6 @@
 defmodule LightningWeb.VersionControlController do
   use LightningWeb, :controller
 
-  alias Lightning.Accounts
   alias Lightning.VersionControl
 
   def index(conn, params) do

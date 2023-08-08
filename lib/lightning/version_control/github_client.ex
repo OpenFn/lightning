@@ -67,7 +67,7 @@ defmodule Lightning.VersionControl.GithubClient do
   def build_token() do
     github_config = Application.get_env(:lightning, :github_app)
 
-    pem = File.read!(github_config[:cert_path])
+    pem = github_config[:cert]
 
     app_id = github_config[:app_id] |> String.to_integer()
 

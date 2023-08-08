@@ -12,7 +12,6 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
   describe "Github Client" do
     setup do
-
       Lightning.ApplicationHelpers.put_temporary_env(:lightning, :github_app,
         cert: @cert,
         app_id: "111111"
@@ -21,32 +20,34 @@ defmodule Lightning.VersionControl.GithubClientTest do
       :ok = Ecto.Adapters.SQL.Sandbox.checkout(Lightning.Repo)
 
       Tesla.Mock.mock(fn env ->
-        case env.url do 
+        case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 200, body: %{"token" =>  "some-token"}}
+            %Tesla.Env{status: 200, body: %{"token" => "some-token"}}
 
           "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{status: 200, body: %{"repositories" => [%{"full_name" => "org/repo"}]}}
-          
+            %Tesla.Env{
+              status: 200,
+              body: %{"repositories" => [%{"full_name" => "org/repo"}]}
+            }
+
           "https://api.github.com/repos/some/repo/branches" ->
             %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
-          
-        end 
+        end
       end)
-
     end
 
     test "client can fetch installation repos" do
       p_repo = insert(:project_repo)
 
-      assert {:ok, ["org/repo"]} = VersionControl.fetch_installation_repos(p_repo.project_id)
+      assert {:ok, ["org/repo"]} =
+               VersionControl.fetch_installation_repos(p_repo.project_id)
     end
 
-
-    test "client can fetch repo branches" do 
+    test "client can fetch repo branches" do
       p_repo = insert(:project_repo)
 
-      assert {:ok , ["master"]} = VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
+      assert {:ok, ["master"]} =
+               VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
   end
 end
