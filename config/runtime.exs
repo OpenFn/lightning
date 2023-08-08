@@ -16,10 +16,18 @@ image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
 
+github_cert = System.get_env("GITHUB_CERT") || :notset
+github_app_id = System.get_env("GITHUB_APP_ID") || :no_app_id
+
+decoded_cert =
+  case github_cert do
+    :noset -> :notset
+    other -> Base.decode64!(other)
+  end
+
 config :lightning, :github_app,
-  cert_path:
-    System.get_env("GITHUB_CERT_PATH", "priv/openfn.2023-07-31.private-key.pem"),
-  app_id: System.get_env("GITHUB_APP_ID", "362637")
+  cert: decoded_cert,
+  app_id: github_app_id
 
 config :lightning, :image_info,
   image_tag: image_tag,
