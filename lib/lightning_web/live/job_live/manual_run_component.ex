@@ -60,17 +60,16 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         phx-submit="run"
       >
         <.dataclip_selector form={f} phx-target={@myself} dataclips={@dataclips} />
-        <div :if={is_nil(@selected_dataclip)} class="flex-1 flex flex-col">
-          <Form.text_area form={f} field={:body} phx-debounce="300" />
-        </div>
-        <div :if={@selected_dataclip} class="flex-1 flex flex-col gap-4">
+        <div class="flex-1 flex flex-col gap-4">
           <div>
             <div class="flex flex-row">
               <div class="basis-1/2 font-semibold text-secondary-700">
                 Dataclip Type
               </div>
               <div class="basis-1/2 text-right">
-                <Common.dataclip_type_pill dataclip={@selected_dataclip} />
+                <Common.dataclip_type_pill dataclip={
+                  @selected_dataclip || %{id: "", body: [], type: :saved_input}
+                } />
               </div>
             </div>
             <div class="flex flex-row mt-4">
@@ -78,7 +77,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
                 State Assembly
               </div>
               <div class="text-right text-sm">
-                <%= if(@selected_dataclip.type == :http_request) do %>
+                <%= if(not is_nil(@selected_dataclip) and @selected_dataclip.type == :http_request) do %>
                   The JSON shown here is the <em>body</em>
                   of an HTTP request. The state assembler will place this payload into
                   <code>state.data</code>
@@ -91,10 +90,13 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
               </div>
             </div>
           </div>
-          <div class="h-32 overflow-y-auto">
+          <div :if={@selected_dataclip} class="h-32 overflow-y-auto">
             <LightningWeb.RunLive.Components.log_view log={
               format_dataclip_body(@selected_dataclip)
             } />
+          </div>
+          <div :if={is_nil(@selected_dataclip)}>
+            <Form.text_area form={f} field={:body} phx-debounce="300" />
           </div>
         </div>
         <div class="flex-none flex place-content-end">
@@ -289,6 +291,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         dataclip
       end
 
-    socket |> assign(selected_dataclip: selected_dataclip)
+    socket
+    |> assign(selected_dataclip: selected_dataclip)
   end
 end
