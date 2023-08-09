@@ -80,7 +80,7 @@ defmodule LightningWeb.Components.Common do
 
   def tooltip(assigns) do
     classes = ~w"
-      relative ml-1 cursor-pointer tooltip
+      relative ml-1 cursor-pointer
     "
 
     assigns = assign(assigns, class: classes ++ List.wrap(assigns.class))
