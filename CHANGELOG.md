@@ -30,6 +30,9 @@ and this project adheres to
 
 ### Fixed
 
+- Dataclip type and state assembly notice for creating new dataclip dropped
+  during refactor [#975](https://github.com/OpenFn/Lightning/issues/975)
+
 ## [v0.7.1] - 2023-08-04
 
 ### Added
