@@ -66,8 +66,16 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_repo: project_repo,
        repos: [],
        branches: [],
-       loading_branches: false
+       loading_branches: false,
+       can_install_github: can_install_github(socket)
      )}
+  end
+
+  defp can_install_github(socket) do
+    case socket.assigns.project_user.role do
+      :viewer -> false
+      _ -> true
+    end
   end
 
   defp repo_settings(socket) do
@@ -249,12 +257,18 @@ defmodule LightningWeb.ProjectLive.Settings do
         params["branch"]
       )
 
-    {:noreply, socket}
+    {:noreply,
+     socket
+     |> push_patch(to: "/projects/#{socket.assigns.project.id}/settings#vcs")}
   end
 
-  def handle_event("run_sync", params, socket) do
-    {:ok, :fired} = VersionControl.run_sync(params["id"])
-    {:noreply, socket}
+  def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do
+    user_name = u.first_name <> " " <> u.last_name
+
+    {:ok, :fired} =
+      VersionControl.run_sync(params["id"], user_name)
+
+    {:noreply, socket |> put_flash(:info, "Sync Initialized")}
   end
 
   def handle_event("repo_selected", params, socket) do
