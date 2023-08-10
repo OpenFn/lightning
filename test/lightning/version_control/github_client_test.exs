@@ -20,6 +20,9 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
           "https://api.github.com/repos/some/repo/branches" ->
             %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
+
+          "https://api.github.com/repos/some/repo/dispatches" ->
+            %Tesla.Env{status: 204}
         end
       end)
     end
@@ -36,6 +39,12 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:ok, ["master"]} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
+    end
+
+    test "client can fire repository dispatch event" do
+      p_repo = insert(:project_repo)
+
+      assert {:ok, :fired} = VersionControl.run_sync(p_repo.project_id)
     end
   end
 end
