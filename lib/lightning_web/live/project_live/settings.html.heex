@@ -392,10 +392,11 @@
                     </small>
                     <LightningWeb.Components.Form.select_field
                       form={f}
+                      disabled={@show_sync_button}
                       name={:repo}
                       id="project-repo"
                       phx-change="repo_selected"
-                      prompt="Select a Repository"
+                      prompt={@project_repo["repo"] || "Select a Repository"}
                       values={@repos}
                     />
                     <div>
@@ -430,10 +431,11 @@
 
                     <LightningWeb.Components.Form.select_field
                       form={f}
+                      disabled={@show_sync_button}
                       name={:branch}
                       id="project-branch"
                       values={@branches}
-                      prompt="Select a branch"
+                      prompt={@project_repo["branch"] || "Select a branch"}
                     />
                   </div>
                 </div>
@@ -442,9 +444,21 @@
                 </div>
                 <div class="grid grid-cols gap-6">
                   <div class="md:col-span-2">
-                    <LightningWeb.Components.Form.submit_button phx-disable-with="Saving">
-                      Sync
+                    <LightningWeb.Components.Form.submit_button
+                      :if={!@show_sync_button}
+                      phx-disable-with="Saving"
+                    >
+                      Save
                     </LightningWeb.Components.Form.submit_button>
+                    <button
+                      :if={@show_sync_button}
+                      type="button"
+                      phx-click="run_sync"
+                      phx-value-id={@project.id}
+                      class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 my-8"
+                    >
+                      Sync
+                    </button>
                   </div>
                 </div>
               </.form>

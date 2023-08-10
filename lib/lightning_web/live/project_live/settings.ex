@@ -44,41 +44,10 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket.assigns.project
       )
 
-    repo_connection =
-      VersionControl.get_repo_connection(socket.assigns.project.id)
+    {show_github_setup, show_repo_setup, show_sync_button, project_repo} =
+      repo_settings(socket)
 
-    # hide github install if our project has a repo connection
-    show_github_setup =
-      case repo_connection do
-        nil -> true
-        _ -> false
-      end
-
-    show_repo_setup =
-      case repo_connection do
-        nil ->
-          false
-
-        conn ->
-          case conn.repo do
-            nil -> true
-            _ -> false
-          end
-      end
-
-    show_sync_button =
-      case repo_connection do
-        nil ->
-          false
-
-        conn ->
-          case conn.repo && conn.branch do
-            nil -> false
-            _ -> true
-          end
-      end
-
-    project_repo = %{"repo" => nil, "branch" => nil}
+    collect_project_repos(socket.assigns.project.id)
 
     {:ok,
      socket
@@ -95,17 +64,42 @@ defmodule LightningWeb.ProjectLive.Settings do
        show_repo_setup: show_repo_setup,
        show_sync_button: show_sync_button,
        project_repo: project_repo,
-       repos: collect_project_repos(socket.assigns.project.id),
+       repos: [],
        branches: [],
        loading_branches: false
      )}
   end
 
+  defp repo_settings(socket) do
+    repo_connection =
+      VersionControl.get_repo_connection(socket.assigns.project.id)
+
+    project_repo = %{"repo" => nil, "branch" => nil}
+
+    # {show_github_setup, show_repo_setup, show_sync_button}
+    repo_settings =
+      case repo_connection do
+        nil ->
+          {true, false, false, project_repo}
+
+        %{repo: nil} ->
+          {false, true, false, project_repo}
+
+        %{repo: r, branch: b} ->
+          {false, true, true, %{"repo" => r, "branch" => b}}
+      end
+
+    repo_settings
+  end
+
   # we should only run this if repo setting is pending
   defp collect_project_repos(project_id) do
-    {:ok, repos} = VersionControl.fetch_installation_repos(project_id)
+    pid = self()
 
-    repos
+    Task.start(fn ->
+      {:ok, repos} = VersionControl.fetch_installation_repos(project_id)
+      send(pid, {:repos_fetched, repos})
+    end)
   end
 
   defp can_edit_digest_alert(
@@ -258,6 +252,11 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, socket}
   end
 
+  def handle_event("run_sync", params, socket) do
+    {:ok, :fired} = VersionControl.run_sync(params["id"])
+    {:noreply, socket}
+  end
+
   def handle_event("repo_selected", params, socket) do
     pid = self()
 
@@ -277,6 +276,10 @@ defmodule LightningWeb.ProjectLive.Settings do
   @impl true
   def handle_info({:branches_fetched, branches}, socket) do
     {:noreply, socket |> assign(loading_branches: false, branches: branches)}
+  end
+
+  def handle_info({:repos_fetched, repos}, socket) do
+    {:noreply, socket |> assign(repos: repos)}
   end
 
   defp dispatch_flash(change_result, socket) do
