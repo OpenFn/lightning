@@ -17,7 +17,7 @@ defmodule LightningWeb.EndToEndTest do
     quote do
       case unquote(dep) do
         :node ->
-          assert unquote(string) =~ ~r/(?=.*node.js)(?=.*18.12)/
+          assert unquote(string) =~ ~r/(?=.*node.js)(?=.*18.17)/
 
         :cli ->
           assert unquote(string) =~ ~r/(?=.*cli)(?=.*0.0.35)/
