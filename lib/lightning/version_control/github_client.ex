@@ -37,6 +37,16 @@ defmodule Lightning.VersionControl.GithubClient do
     {:ok, branch_names}
   end
 
+  def fire_repository_dispatch(installation_id, repo_name) do
+    installation_client = get_installation_client(installation_id)
+
+    {:ok, %{status: 204}} =
+      installation_client
+      |> post("/repos/" <> repo_name <> "/dispatches", %{})
+
+    {:ok, :fired}
+  end
+
   defp get_installation_client(installation_id) do
     # build token
     {:ok, token, _} = build_token()

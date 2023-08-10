@@ -76,4 +76,16 @@ defmodule Lightning.VersionControl do
       _ -> {:ok, []}
     end
   end
+
+  def run_sync(project_id) do
+    with %ProjectRepo{} = repo_connection <-
+           Repo.get_by(ProjectRepo, project_id: project_id),
+         {:ok, :fired} <-
+           GithubClient.fire_repository_dispatch(
+             repo_connection.github_installation_id,
+             repo_connection.repo
+           ) do
+      {:ok, :fired}
+    end
+  end
 end
