@@ -14,6 +14,16 @@ and this project adheres to
 
 ### Fixed
 
+## [v0.7.2] - 2023-08-10
+
+### Added
+
+### Changed
+
+### Fixed
+
+- NodeJs security patch [1009](https://github.com/OpenFn/Lightning/pull/1009)
+
 ## [v0.7.1] - 2023-08-04
 
 ### Added
