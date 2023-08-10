@@ -44,7 +44,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
     test "client can fire repository dispatch event" do
       p_repo = insert(:project_repo)
 
-      assert {:ok, :fired} = VersionControl.run_sync(p_repo.project_id)
+      assert {:ok, :fired} =
+               VersionControl.run_sync(p_repo.project_id, "some-user-name")
     end
   end
 end

@@ -20,6 +20,14 @@ defmodule Lightning.VersionControl do
     |> Repo.insert()
   end
 
+  @doc """
+  Deletes a github connection used when re installing
+  """
+  def remove_github_connection(project_id) do
+    Repo.one(from(p in ProjectRepo, where: p.project_id == ^project_id))
+    |> Repo.delete()
+  end
+
   def get_repo_connection(project_id) do
     Repo.one(from(p in ProjectRepo, where: p.project_id == ^project_id))
   end

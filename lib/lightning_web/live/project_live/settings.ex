@@ -249,6 +249,21 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
   end
 
+  def handle_event("reinstall_app", _, socket) do
+    user_id = socket.assigns.current_user.id
+    project_id = socket.assigns.project.id
+
+    {:ok, _} = VersionControl.remove_github_connection(project_id)
+
+    {:ok, _connection} =
+      VersionControl.create_github_connection(%{
+        user_id: user_id,
+        project_id: project_id
+      })
+
+    {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
+  end
+
   def handle_event("save_repo", params, socket) do
     {:ok, _connection} =
       VersionControl.add_github_repo_and_branch(
