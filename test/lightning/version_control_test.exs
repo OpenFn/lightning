@@ -38,9 +38,7 @@ defmodule Lightning.VersionControlTest do
 
       assert Repo.aggregate(ProjectRepo, :count) == 0
 
-      Enum.map([attrs1, attrs2], fn a ->
-        VersionControl.create_github_connection(a)
-      end)
+      Enum.each([attrs1, attrs2], &VersionControl.create_github_connection/1)
 
       assert Repo.aggregate(ProjectRepo, :count) == 2
 

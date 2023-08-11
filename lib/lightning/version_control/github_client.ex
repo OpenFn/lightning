@@ -10,7 +10,7 @@ defmodule Lightning.VersionControl.GithubClient do
   plug(Tesla.Middleware.JSON)
 
   def installation_repos(installation_id) do
-    installation_client = get_installation_client(installation_id)
+    installation_client = build_client(installation_id)
 
     {:ok, repos} =
       installation_client
@@ -24,11 +24,11 @@ defmodule Lightning.VersionControl.GithubClient do
   end
 
   def get_repo_branches(installation_id, repo_name) do
-    installation_client = get_installation_client(installation_id)
+    installation_client = build_client(installation_id)
 
     {:ok, branches} =
       installation_client
-      |> get("/repos/" <> repo_name <> "/branches")
+      |> get("/repos/#{repo_name}/branches")
 
     branch_names =
       branches.body
@@ -38,18 +38,18 @@ defmodule Lightning.VersionControl.GithubClient do
   end
 
   def fire_repository_dispatch(installation_id, repo_name, user_name) do
-    installation_client = get_installation_client(installation_id)
+    installation_client = build_client(installation_id)
 
     {:ok, %{status: 204}} =
       installation_client
-      |> post("/repos/" <> repo_name <> "/dispatches", %{
+      |> post("/repos/#{repo_name}/dispatches", %{
         event_type: "Sync by: #{user_name}"
       })
 
     {:ok, :fired}
   end
 
-  defp get_installation_client(installation_id) do
+  defp build_client(installation_id) do
     %{cert: cert, app_id: app_id} =
       Application.get_env(:lightning, :github_app)
       |> Map.new()
@@ -60,13 +60,13 @@ defmodule Lightning.VersionControl.GithubClient do
       Tesla.client([
         {Tesla.Middleware.Headers,
          [
-           {"Authorization", "Bearer " <> token}
+           {"Authorization", "Bearer #{token}"}
          ]}
       ])
 
     {:ok, token} =
       client
-      |> post("/app/installations/" <> installation_id <> "/access_tokens", "")
+      |> post("/app/installations/#{installation_id}/access_tokens", "")
 
     installation_token = token.body["token"]
 

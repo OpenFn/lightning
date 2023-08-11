@@ -1,6 +1,6 @@
 defmodule Lightning.VersionControl do
   @moduledoc """
-  Boundary module for handling Version control activities for project, jobs 
+  Boundary module for handling Version control activities for project, jobs
   workflows etc
   Use this module to create, modify and delete connections as well
   as running any associated sync jobs
@@ -94,5 +94,12 @@ defmodule Lightning.VersionControl do
         user_name
       )
     end
+  end
+
+  def github_enabled?() do
+    Application.get_env(:lightning, :github_app, [])
+    |> then(fn config ->
+      Keyword.get(config, :cert) && Keyword.get(config, :app_id)
+    end)
   end
 end

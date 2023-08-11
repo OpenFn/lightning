@@ -386,14 +386,9 @@ defmodule LightningWeb.ProjectLiveTest do
 
   describe "projects settings page" do
     setup :register_and_log_in_user
+    setup :create_project_for_current_user
 
-    test "access project settings page", %{conn: conn, user: user} do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id}]
-        })
-
+    test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
         live(
           conn,
@@ -403,83 +398,55 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
     end
 
-    test "project admin can view github sync page", %{conn: conn, user: user} do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
-
-      project_users =
-        Lightning.Projects.get_project_with_users!(project.id).project_users
-
-      assert 1 == length(project_users)
-
+    @tag role: :admin
+    test "project admin can view github sync page", %{
+      conn: conn,
+      project: project
+    } do
       {:ok, _view, html} =
         live(
           conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#vcs"
+          Routes.project_project_settings_path(conn, :index, project.id)
         )
 
       assert html =~ "Install Github App to get started"
     end
 
-    @tag :skip
-    test "project admin can view github setup", %{conn: conn, user: user} do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
-
+    @tag role: :admin
+    test "project admin can view github setup", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
       insert(:project_repo, %{
-        project_id: project.id,
         project: project,
-        user_id: user.id,
         user: user,
         repo: nil,
         branch: nil
       })
 
-      project_users =
-        Lightning.Projects.get_project_with_users!(project.id).project_users
-
-      assert 1 == length(project_users)
-
       {:ok, _view, html} =
         live(
           conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#vcs"
+          Routes.project_project_settings_path(conn, :index, project.id)
         )
 
       assert html =~ "Select a Repository"
     end
 
-    test "project admin can view project collaboration page",
-         %{
-           conn: conn,
-           user: user
-         } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
-
-      project_users =
+    @tag role: :admin
+    test "project admin can view project collaboration page", %{
+      conn: conn,
+      project: project
+    } do
+      project_user =
         Lightning.Projects.get_project_with_users!(project.id).project_users
-
-      assert 1 == length(project_users)
-
-      project_user = List.first(project_users)
+        |> List.first()
 
       {:ok, _view, html} =
         live(
           conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#collaboration"
+          Routes.project_project_settings_path(conn, :index, project.id)
         )
 
       assert html =~ "Collaborator"

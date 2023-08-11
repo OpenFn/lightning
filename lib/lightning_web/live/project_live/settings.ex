@@ -11,6 +11,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
 
+  alias LightningWeb.Components.Form
+
   on_mount {LightningWeb.Hooks, :project_scope}
 
   @impl true
@@ -67,6 +69,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        repos: [],
        branches: [],
        loading_branches: false,
+       github_enabled: VersionControl.github_enabled?(),
        can_install_github: can_install_github(socket)
      )}
   end
