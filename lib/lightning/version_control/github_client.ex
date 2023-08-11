@@ -77,7 +77,8 @@ defmodule Lightning.VersionControl.GithubClient do
   end
 
   def build_token() do
-    github_config = Application.get_env(:lightning, :github_app)
+    github_config =
+      Application.get_env(:lightning, :github_app)
 
     pem = github_config[:cert]
 

@@ -16,12 +16,12 @@ image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
 
-github_cert = System.get_env("GITHUB_CERT") || :notset
-github_app_id = System.get_env("GITHUB_APP_ID") || :no_app_id
+github_cert = System.get_env("GITHUB_CERT")
+github_app_id = System.get_env("GITHUB_APP_ID")
 
 decoded_cert =
   case github_cert do
-    :noset -> :notset
+    nil -> nil
     other -> Base.decode64!(other)
   end
 
@@ -123,13 +123,6 @@ config :lightning,
        :init_project_for_new_user,
        System.get_env("INIT_PROJECT_FOR_NEW_USER", "false")
        |> String.to_atom()
-
-# If you've booted up with a SENTRY_DSN environment variable, use Sentry!
-config :sentry,
-  filter: Lightning.SentryEventFilter,
-  environment_name: config_env(),
-  included_environments:
-    if(System.get_env("SENTRY_DSN"), do: [config_env()], else: [])
 
 # To actually send emails you need to configure the mailer to use a real
 # adapter. You may configure the swoosh api client of your choice. We
