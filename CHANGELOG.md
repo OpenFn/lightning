@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 - Introduces Github sync feature, users can now setup our github app on their instance
 and sync projects using our latest portability spec
+[#970](https://github.com/OpenFn/Lightning/issues/970)
 
 - Support Backup Codes for Multi-Factor Authentication
   [937](https://github.com/OpenFn/Lightning/issues/937)
