@@ -16,14 +16,36 @@ image_tag = System.get_env("IMAGE_TAG")
 branch = System.get_env("BRANCH")
 commit = System.get_env("COMMIT")
 
-github_cert = System.get_env("GITHUB_CERT")
-github_app_id = System.get_env("GITHUB_APP_ID")
-
 decoded_cert =
-  case github_cert do
-    nil -> nil
-    other -> Base.decode64!(other)
-  end
+  System.get_env("GITHUB_CERT")
+  |> case do
+    nil ->
+      nil
+
+    str ->
+      case Base.decode64(str) do
+        :error ->
+          raise """
+          Could not decode GITHUB_CERT.
+
+          Ensure you have encoded the certificate as a base64 string.
+
+          For example:
+
+              cat private-key.pem | base64 -w 0
+          """
+
+        {:ok, decoded} ->
+          decoded
+      end
+  end ||
+    Application.get_env(:lightning, :github_app, [])
+    |> Keyword.get(:cert, nil)
+
+github_app_id =
+  System.get_env("GITHUB_APP_ID") ||
+    Application.get_env(:lightning, :github_app, [])
+    |> Keyword.get(:app_id, nil)
 
 config :lightning, :github_app,
   cert: decoded_cert,
