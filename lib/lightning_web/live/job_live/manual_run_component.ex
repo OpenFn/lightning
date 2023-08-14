@@ -104,7 +104,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
             phx-disable-with="Enqueuing..."
             disabled={!@changeset.valid?}
           >
-            Run
+            Save & Run
           </Form.submit_button>
         </div>
       </.form>
