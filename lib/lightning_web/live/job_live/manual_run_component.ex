@@ -67,8 +67,8 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
                 Dataclip Type
               </div>
               <div class="basis-1/2 text-right">
-                <Common.dataclip_type_pill dataclip={
-                  @selected_dataclip || %{id: "", body: [], type: :saved_input}
+                <Common.dataclip_type_pill type={
+                  (@selected_dataclip && @selected_dataclip.type) || :saved_input
                 } />
               </div>
             </div>
