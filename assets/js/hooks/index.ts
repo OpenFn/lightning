@@ -1,4 +1,4 @@
-import tippy from 'tippy.js';
+import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { PhoenixHook } from './PhoenixHook';
 
 export const Flash = {
@@ -19,12 +19,20 @@ export const Flash = {
 
 export const Tooltip = {
   mounted() {
+    if (!this.el.ariaLabel) {
+      console.warn('Tooltip element missing aria-label attribute', this.el);
+      return;
+    }
+
     let content = this.el.ariaLabel;
-    tippy(this.el, {
-      content: `${content}`,
+    this._tippyInstance = tippy(this.el, {
+      content: content,
     });
   },
-} as PhoenixHook<{}>;
+  destroyed() {
+    if (this._tippyInstance) this._tippyInstance.unmount();
+  },
+} as PhoenixHook<{ _tippyInstance: TippyInstance | null }>;
 
 export const AssocListChange = {
   mounted() {
