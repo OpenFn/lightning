@@ -460,10 +460,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params
         end
 
-      socket =
-        socket
-        |> apply_params(next_params)
-        |> save_workflow(socket.assigns.changeset)
+      socket = apply_params(socket, next_params)
+      socket = save_workflow(socket.assigns.changeset, socket)
 
       {:noreply, socket |> push_patches_applied(initial_params)}
     else
@@ -503,22 +501,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
   end
 
-  defp status(socket) do
-    socket
-    |> Map.get(:assigns)
-    |> Map.get(:changeset)
-    |> Map.get(:action)
-    |> case do
-      nil -> :successful
-      _ -> :failure
-    end
-  end
-
   def handle_info({:save_form_and_reply, params, job_id}, socket) do
     status =
       Map.update!(socket.assigns.changeset, :action, fn _ -> :update end)
       |> save_workflow(socket)
-      |> status()
+      |> get_status()
 
     send_update(ManualRunComponent,
       id: "manual-job-#{job_id}",
@@ -527,6 +514,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
     )
 
     {:noreply, socket}
+  end
+
+  defp get_status(socket) do
+    socket
+    |> Map.get(:assigns)
+    |> Map.get(:changeset)
+    |> Map.get(:action)
+    |> case do
+      nil -> :successful
+      _ -> :failure
+    end
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
