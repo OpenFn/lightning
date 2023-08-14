@@ -183,10 +183,6 @@ defmodule LightningWeb.ProjectLive.Settings do
     end
   end
 
-  def handle_event("export_project", %{"id" => id}, socket) do
-    {:noreply, push_navigate(socket, to: "/download/yaml?id=#{id}")}
-  end
-
   defp dispatch_flash(change_result, socket) do
     case change_result do
       {:ok, %ProjectUser{}} ->
