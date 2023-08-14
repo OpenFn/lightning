@@ -17,15 +17,18 @@ and this project adheres to
 
 ### Fixed
 
+- Tooltip for credential select in Job Edit form is cut off
+  [#972](https://github.com/OpenFn/Lightning/issues/972)
+
 ## [v0.7.2] - 2023-08-10
 
 ### Added
 
 ### Changed
 
-### Fixed
-
 - NodeJs security patch [1009](https://github.com/OpenFn/Lightning/pull/1009)
+
+### Fixed
 
 ## [v0.7.1] - 2023-08-04
 
