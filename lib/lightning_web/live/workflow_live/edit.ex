@@ -369,6 +369,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
     end
   end
 
+  defp save_workflow(changeset, socket) do
+    Lightning.Repo.insert_or_update(changeset)
+    |> case do
+      {:ok, workflow} ->
+        socket
+        |> assign_workflow(workflow)
+        |> push_patch(to: build_next_path(socket, workflow), replace: true)
+        |> put_flash(:info, "Workflow saved")
+
+      {:error, changeset} ->
+        socket
+        |> assign_changeset(changeset)
+        |> mark_validated()
+        |> put_flash(:error, "Workflow could not be saved")
+    end
+  end
+
   @impl true
   def handle_event("get-initial-state", _params, socket) do
     {:noreply,
@@ -446,25 +463,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
       socket =
         socket
         |> apply_params(next_params)
+        |> save_workflow(socket.assigns.changeset)
 
-      socket =
-        Lightning.Repo.insert_or_update(socket.assigns.changeset)
-        |> case do
-          {:ok, workflow} ->
-            socket
-            |> assign_workflow(workflow)
-            |> push_patch(to: build_next_path(socket, workflow), replace: true)
-            |> put_flash(:info, "Workflow saved")
-
-          {:error, changeset} ->
-            socket
-            |> assign_changeset(changeset)
-            |> mark_validated()
-            |> put_flash(:error, "Workflow could not be saved")
-        end
-        |> push_patches_applied(initial_params)
-
-      {:noreply, socket}
+      {:noreply, socket |> push_patches_applied(initial_params)}
     else
       {:noreply,
        socket
@@ -502,25 +503,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
   end
 
-  def handle_info({:save_form_and_reply, params, job_id}, socket) do
-    socket.assigns.changeset
-    |> Map.update!(:action, fn _ -> :update end)
-    |> Lightning.Repo.insert_or_update()
+  defp status(socket) do
+    socket
+    |> Map.get(:assigns)
+    |> Map.get(:changeset)
+    |> Map.get(:action)
     |> case do
-      {:ok, workflow} ->
-        send_update(ManualRunComponent,
-          id: "manual-job-#{job_id}",
-          manual_workorder: params,
-          save_status: :successful
-        )
-
-      {:error, changeset} ->
-        send_update(ManualRunComponent,
-          id: "manual-job-#{job_id}",
-          manual_workorder: params,
-          save_status: :failure
-        )
+      nil -> :successful
+      _ -> :failure
     end
+  end
+
+  def handle_info({:save_form_and_reply, params, job_id}, socket) do
+    status =
+      Map.update!(socket.assigns.changeset, :action, fn _ -> :update end)
+      |> save_workflow(socket)
+      |> status()
+
+    send_update(ManualRunComponent,
+      id: "manual-job-#{job_id}",
+      manual_workorder: params,
+      save_status: status
+    )
 
     {:noreply, socket}
   end
