@@ -28,7 +28,7 @@
           <.td>
             <%= dataclip.inserted_at |> Calendar.strftime("%c %Z") %>
           </.td>
-          <.td><Common.dataclip_type_pill dataclip={dataclip} /></.td>
+          <.td><Common.dataclip_type_pill type={dataclip.type} /></.td>
           <.td>
             <code>
               <%= dataclip.body

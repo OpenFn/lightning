@@ -286,6 +286,10 @@ defmodule LightningWeb.Components.Common do
     )
   end
 
+  attr :type, :atom,
+    required: true,
+    values: [:run_result, :http_request, :global, :saved_input]
+
   def dataclip_type_pill(assigns) do
     base_classes = ~w[
       px-2 py-1 rounded-full inline-block text-sm font-mono
@@ -293,7 +297,7 @@ defmodule LightningWeb.Components.Common do
 
     class =
       base_classes ++
-        case assigns[:dataclip].type do
+        case assigns[:type] do
           :run_result -> ~w[bg-purple-500 text-purple-900]
           :http_request -> ~w[bg-green-500 text-green-900]
           :global -> ~w[bg-blue-500 text-blue-900]
@@ -305,7 +309,7 @@ defmodule LightningWeb.Components.Common do
 
     ~H"""
     <div class={@class}>
-      <%= @dataclip.type %>
+      <%= @type %>
     </div>
     """
   end
