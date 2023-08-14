@@ -492,6 +492,18 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
+  def handle_event("save_form", _, socket) do
+    IO.inspect("Here", label: "Are we here")
+    {:noreply, assign(socket, :save_status, :successful)}
+    # case save_form_function() do
+    #   :ok ->
+    #     {:noreply, assign(socket, :save_status, :successful)}
+
+    #   {:error, reason} ->
+    #     {:noreply, assign(socket, :save_status, {:error, reason})}
+    # end
+  end
+
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params)}
@@ -499,6 +511,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:follow_run, attempt_run}, socket) do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
+  def handle_info({:save_form_and_reply, _params, manual_run_pid}, socket) do
+    IO.inspect(manual_run_pid, label: "Save form and reply")
+    send(manual_run_pid, {:save_successful})
+    {:noreply, socket}
+    # case save_form_logic(params) do
+    #   :ok ->
+    #     send(ManualRunComponent, {:save_successful})
+    #     {:noreply, socket}
+
+    #   {:error, reason} ->
+    #     send(ManualRunComponent, {:save_failed, reason})
+    #     {:noreply, socket}
+    # end
+  end
+
+  def handle_info(_unexpected_message, socket) do
+    {:noreply, socket}
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
