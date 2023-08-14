@@ -119,14 +119,19 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   @impl true
   def update(
-        %{save_status: save_status, manual_workorder: manual_workorder},
+        %{save_status: :successful, manual_workorder: manual_workorder},
         socket
       ) do
-    if save_status == :successful do
-      run(socket, manual_workorder)
-    else
-      {:ok, socket |> put_flash(:error, "Failure")}
-    end
+    run(socket, manual_workorder)
+  end
+
+  def update(
+        %{save_status: :failure},
+        socket
+      ) do
+    {:ok,
+     socket
+     |> put_flash(:error, "Can't save job.")}
   end
 
   def update(
