@@ -42,8 +42,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   @impl true
   def render(assigns) do
-    Map.get(assigns, :save_status, nil) |> IO.inspect(label: "Status")
-
     assigns =
       assigns
       |> assign(
@@ -121,6 +119,17 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   @impl true
   def update(
+        %{save_status: save_status, manual_workorder: manual_workorder},
+        socket
+      ) do
+    if save_status == :successful do
+      run(socket, manual_workorder)
+    else
+      {:ok, socket |> put_flash(:error, "Failure")}
+    end
+  end
+
+  def update(
         %{
           id: id,
           job: job,
@@ -157,48 +166,35 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
      |> set_selected_dataclip()}
   end
 
-  # def handle_info({:save_successful}, socket) do
-  #   # Logic for running the job after successful save
-  #   IO.inspect("Save successfull")
+  defp run(socket, params) do
+    case socket.assigns.can_run_job do
+      true ->
+        ManualWorkorder.changeset(socket.assigns, params)
+        |> create_manual_workorder()
+        |> case do
+          {:ok, %{attempt_run: attempt_run}} ->
+            socket.assigns.on_run.(attempt_run)
 
-  #   {:noreply, socket}
-  # end
+            {:ok, socket}
 
-  # def handle_info({:save_failed, reason}, socket) do
-  #   # Logic for handling failed save, e.g., show error message
+          {:error, changeset} ->
+            {:ok,
+             socket
+             |> assign(changeset: changeset |> Map.put(:action, :validate))}
+        end
 
-  #   IO.inspect("Save failure")
-
-  #   {:noreply, assign(socket, error: reason)}
-  # end
+      false ->
+        {:ok,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")
+         |> push_patch(to: socket.assigns.return_to)}
+    end
+  end
 
   @impl true
   def handle_event("run", %{"manual_workorder" => params}, socket) do
-    IO.inspect(self(), label: "What is in self")
-    # send(self(), {:save_form_and_reply, params, self()})
-    {:noreply, push_event(socket, "save_form", %{})}
-    # case socket.assigns.can_run_job do
-    #   true ->
-    #     ManualWorkorder.changeset(socket.assigns, params)
-    #     |> create_manual_workorder()
-    #     |> case do
-    #       {:ok, %{attempt_run: attempt_run}} ->
-    #         socket.assigns.on_run.(attempt_run)
-
-    #         {:noreply, socket}
-
-    #       {:error, changeset} ->
-    #         {:noreply,
-    #          socket
-    #          |> assign(changeset: changeset |> Map.put(:action, :validate))}
-    #     end
-
-    #   false ->
-    #     {:noreply,
-    #      socket
-    #      |> put_flash(:error, "You are not authorized to perform this action.")
-    #      |> push_patch(to: socket.assigns.return_to)}
-    # end
+    send(self(), {:save_form_and_reply, params, socket.assigns.job.id})
+    {:noreply, socket}
   end
 
   def handle_event("change", %{"manual_workorder" => params}, socket) do
