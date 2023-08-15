@@ -283,10 +283,14 @@ defmodule LightningWeb.ProjectLive.Settings do
   def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do
     user_name = u.first_name <> " " <> u.last_name
 
-    {:ok, :fired} =
-      VersionControl.run_sync(params["id"], user_name)
-
-    {:noreply, socket |> put_flash(:info, "Sync Initialized")}
+    with {:ok, :fired} <-
+           VersionControl.run_sync(params["id"], user_name) do
+      {:noreply, socket |> put_flash(:info, "Sync Initialized")}
+    else
+      _err ->
+        # we should log or instrument this situation
+        {:noreply, socket |> put_flash(:error, "Sync Error")}
+    end
   end
 
   def handle_event("repo_selected", params, socket) do
