@@ -54,8 +54,10 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         :let={f}
         for={@changeset}
         as={:manual_workorder}
+        id="manual-run-form"
         class="h-full flex flex-col gap-4"
         phx-target={@myself}
+        phx-hook="SaveAndRunViaCtrlEnter"
         phx-change="change"
         phx-submit="run"
       >
