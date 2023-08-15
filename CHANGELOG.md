@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.7.3] - 2023-08-15
+
+### Added
+
+### Changed
+
 - Version control in project settings is now named Export your project
   [#1015](https://github.com/OpenFn/Lightning/issues/1015)
 
