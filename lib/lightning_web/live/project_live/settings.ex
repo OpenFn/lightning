@@ -277,7 +277,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     {:noreply,
      socket
-     |> push_patch(to: "/projects/#{socket.assigns.project.id}/settings#vcs")}
+     |> assign(show_repo_setup: false, show_sync_button: true)}
   end
 
   def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do

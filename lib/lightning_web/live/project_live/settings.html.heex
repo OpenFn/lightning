@@ -356,7 +356,7 @@
                   Easily keep your Project synced to a Github Repository
                 </small>
                 <small class="block my-1 text-xs text-gray-600">
-                  To get started you will need to install the OpenFn Github application admin access required
+                  To get started you will need to install the OpenFn Github application (admin access require)
                 </small>
 
                 <button
@@ -371,7 +371,7 @@
               <div class="hidden sm:block" aria-hidden="true">
                 <div class="py-2"></div>
               </div>
-              <div :if={@show_repo_setup} class="bg-white p-4 rounded-md">
+              <div :if={!@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">Sync to Github</h6>
                 <small class="block my-1 text-xs text-gray-600">
                   Configure the settings below to start Syncing
@@ -389,9 +389,18 @@
                   <div class="grid grid-cols gap-6">
                     <div class="md:col-span-2">
                       <small class="font-medium my-1 text-xs text-black">
-                        Repository
+                        <span>
+                          <%= if @show_repo_setup && !@show_sync_button do %>
+                            Repository
+                          <% end %>
+                          <%= if @show_sync_button do %>
+                            Repository: <%= @project_repo["repo"] %>
+                          <% end %>
+                        </span>
                       </small>
+
                       <Form.select_field
+                        :if={@show_repo_setup && !@show_sync_button}
                         form={f}
                         disabled={@show_sync_button}
                         name={:repo}
@@ -400,19 +409,6 @@
                         prompt={@project_repo["repo"] || "Select a Repository"}
                         values={@repos}
                       />
-                      <div>
-                        <small class=" my-2 text-xs text-black">
-                          Need to add or remove repos
-                        </small>
-                        <button
-                          type="button"
-                          phx-click="reinstall_app"
-                          phx-value-id={@project.id}
-                          class="my-2 text-xs text-primary-600"
-                        >
-                          Reconfigure your github permissions (admin access required)
-                        </button>
-                      </div>
                     </div>
                   </div>
                   <div class="hidden sm:block" aria-hidden="true">
@@ -421,11 +417,19 @@
                   <div class="grid grid-cols gap-6">
                     <div class="md:col-span-2">
                       <small class="font-medium my-1 text-xs text-black">
-                        Branch
+                        <span>
+                          <%= if @show_repo_setup && !@show_sync_button do %>
+                            Branch
+                          <% end %>
+                          <%= if @show_sync_button do %>
+                            Branch: <%= @project_repo["branch"] %>
+                          <% end %>
+                        </span>
                       </small>
                       <Form.select_field
+                        :if={@show_repo_setup && !@show_sync_button}
                         form={f}
-                        disabled={@show_sync_button || @loading_branches}
+                        disabled={@loading_branches}
                         name={:branch}
                         id="project-branch"
                         values={@branches}
@@ -438,11 +442,17 @@
                   </div>
                   <div class="grid grid-cols gap-6">
                     <div class="md:col-span-2">
+                      <Common.tooltip
+                        :if={@loading_branches}
+                        id="loading-branches"
+                        title="Please wait while loading branches"
+                      >
+                      </Common.tooltip>
                       <Form.submit_button
                         :if={!@show_sync_button}
                         phx-disable-with="Saving"
                       >
-                        Save
+                        Connect Branch
                       </Form.submit_button>
                       <button
                         :if={@show_sync_button}
@@ -451,7 +461,7 @@
                         phx-value-id={@project.id}
                         class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 my-8"
                       >
-                        Sync
+                        Sync to Branch
                       </button>
                     </div>
                   </div>
