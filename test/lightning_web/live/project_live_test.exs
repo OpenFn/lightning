@@ -495,6 +495,82 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
+    test "can install github app", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("install_app", %{})
+    end
+
+    @tag role: :admin
+    test "can reinstall github app", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      insert(:project_repo, %{project_id: project.id, project: nil})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("reinstall_app", %{})
+    end
+
+    @tag role: :admin
+    test "can delete github repo connection", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      insert(:project_repo, %{project_id: project.id, project: nil})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("delete_repo_connection", %{}) =~
+               "Install Github"
+    end
+
+    @tag role: :admin
+    test "can save github repo connection", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project_id: project.id,
+        project: nil,
+        branch: nil,
+        repo: nil
+      })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view
+             |> render_click("save_repo", %{branch: "b", repo: "r"}) =~
+               "Repository:"
+    end
+
+    @tag role: :admin
     test "project admin can view project collaboration page", %{
       conn: conn,
       project: project
