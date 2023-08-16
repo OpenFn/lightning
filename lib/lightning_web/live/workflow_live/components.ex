@@ -387,7 +387,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           ) %>
         <% else %>
           <%= wokflow_name_from_form(@form) %>
-          <button phx-click="edit" type="button">
+          <button phx-click="edit" type="button" id="edit_workflow_name">
             <Icon.pencil class="h-5 w-5 mx-2 inline-block" />
           </button>
         <% end %>
@@ -402,7 +402,10 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
-  defp wokflow_name_from_form(%{data: %{name: workflow_name}}) when is_binary(workflow_name), do: workflow_name
+  defp wokflow_name_from_form(%{data: %{name: workflow_name}})
+       when is_binary(workflow_name),
+       do: workflow_name
+
   defp wokflow_name_from_form(_), do: nil
 
   defp error_to_string({message, _}) when is_binary(message), do: message
