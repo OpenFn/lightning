@@ -268,7 +268,6 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("delete_repo_connection", _, socket) do
-    user_id = socket.assigns.current_user.id
     project_id = socket.assigns.project.id
 
     {:ok, _} = VersionControl.remove_github_connection(project_id)
