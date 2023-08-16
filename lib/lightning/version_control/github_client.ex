@@ -40,13 +40,11 @@ defmodule Lightning.VersionControl.GithubClient do
   def fire_repository_dispatch(installation_id, repo_name, user_name) do
     installation_client = build_client(installation_id)
 
-    with {:ok, %{status: 204}} <-
-           installation_client
-           |> post("/repos/#{repo_name}/dispatches", %{
-             event_type: "Sync by: #{user_name}"
-           }) do
-      {:ok, :fired}
-    else
+    case installation_client
+         |> post("/repos/#{repo_name}/dispatches", %{
+           event_type: "Sync by: #{user_name}"
+         }) do
+      {:ok, %{status: 204}} -> {:ok, :fired}
       _ -> {:error, "Error Initiating sync"}
     end
   end
