@@ -362,6 +362,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :form, :map, required: true
+  attr :editing, :boolean, required: true
 
   def workflow_name_field(assigns) do
     ~H"""
@@ -372,26 +373,38 @@ defmodule LightningWeb.WorkflowLive.Components do
       phx-change="validate"
       id="workflow_name_form"
     >
-      <div class="relative">
-        <%= text_input(
-          f,
-          :name,
-          class: "peer block w-full
-            text-2xl font-bold text-secondary-900
-            border-0 py-1.5 focus:ring-0",
-          required: true,
-          placeholder: "Untitled"
-        ) %>
-        <div
-          class="absolute inset-x-0 bottom-0
-                 peer-hover:border-t peer-hover:border-gray-300
-                 peer-focus:border-t-2 peer-focus:border-indigo-600
-                 peer-invalid:border-t-2 peer-invalid:border-rose-400"
-          aria-hidden="true"
-        >
-        </div>
+      <div class="relative flex items-center space-x-4">
+        <%= if @editing do %>
+          <%= text_input(
+            f,
+            :name,
+            class: "block w-full
+              text-2xl font-bold text-secondary-900
+              border-0 py-1.5 focus:ring-0",
+            required: true,
+            placeholder: "Untitled",
+            phx_blur: "cancel_edit"
+          ) %>
+        <% else %>
+          <%= wokflow_name_from_form(@form) %>
+          <button phx-click="edit" type="button">
+            <Icon.pencil class="h-5 w-5 mx-2 inline-block" />
+          </button>
+        <% end %>
+        <%= if f.errors[:name] do %>
+          <span class="absolute left-[-1rem] mx-0 bottom-[-2rem] text-sm text-red-600 bg-red-100 px-2 py-1 rounded whitespace-nowrap z-10">
+            <Icon.info class="h-5 w-5 mx-2 inline-block" />
+            <%= error_to_string(f.errors[:name]) %>
+          </span>
+        <% end %>
       </div>
     </.form>
     """
   end
+
+  defp wokflow_name_from_form(%{data: %{name: workflow_name}}) when is_binary(workflow_name), do: workflow_name
+  defp wokflow_name_from_form(_), do: nil
+
+  defp error_to_string({message, _}) when is_binary(message), do: message
+  defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 end

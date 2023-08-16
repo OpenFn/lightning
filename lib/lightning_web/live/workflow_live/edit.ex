@@ -42,7 +42,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       <:header>
         <LayoutComponents.header current_user={@current_user}>
           <:title>
-            <.workflow_name_field form={@workflow_form} />
+            <.workflow_name_field editing={@editing} form={@workflow_form} />
           </:title>
           <.with_changes_indicator changeset={@changeset}>
             <div class="flex flex-row gap-2">
@@ -323,7 +323,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selection_mode: nil,
        selection_params: %{"s" => nil, "m" => nil},
        workflow: nil,
-       workflow_params: %{}
+       workflow_params: %{},
+       editing: false
      )}
   end
 
@@ -490,6 +491,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply,
      socket
      |> put_flash(:info, "Copied webhook URL to clipboard")}
+  end
+
+  def handle_event("edit", _params, socket) do
+    {:noreply, assign(socket, editing: true)}
+  end
+
+  def handle_event("cancel_edit", _params, socket) do
+    {:noreply, assign(socket, editing: false)}
   end
 
   @impl true
