@@ -459,10 +459,38 @@
                         type="button"
                         phx-click="run_sync"
                         phx-value-id={@project.id}
-                        class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 my-8"
+                        class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                       >
                         Sync to Branch
                       </button>
+                    </div>
+                    <div>
+                      <div>
+                        <small>
+                          Need to change the repository or branch?
+                        </small>
+                        <button
+                          type="button"
+                          phx-click="reinstall_clip"
+                          phx-value-id={@project.id}
+                          class="my-2 text-xs text-primary-600"
+                        >
+                          Re-configure your Github permissions (admin access required)
+                        </button>
+                      </div>
+                      <div>
+                        <small>
+                          No longer need to sync your project?
+                        </small>
+                        <button
+                          type="button"
+                          phx-click="delete_repo_connection"
+                          phx-value-id={@project.id}
+                          class="my-2 text-xs text-danger-500"
+                        >
+                          Remove github connection
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </.form>
