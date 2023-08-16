@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Improve feedback when a Workflow name is invalid
+  [#961](https://github.com/OpenFn/Lightning/issues/961)
+
 ### Changed
 
 ### Fixed
