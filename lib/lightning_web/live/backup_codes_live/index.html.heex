@@ -92,7 +92,20 @@
               :for={backup_code <- @backup_codes}
               class="text-center tracking-widest"
             >
-              <%= backup_code.code %>
+              <%= if backup_code.used_at do %>
+                <span class="text-sm text-gray-300">
+                  <span class="line-through">
+                    <%= backup_code.code %>
+                  </span>
+                  <Common.tooltip
+                    id="associated-runs-trigger-tooltip"
+                    title={"Code used on #{NaiveDateTime.truncate(backup_code.used_at, :second)}"}
+                    class="inline-block"
+                  />
+                </span>
+              <% else %>
+                <%= backup_code.code %>
+              <% end %>
             </div>
           </div>
           <div class="flex justify-center items-center gap-4 px-4 py-5 sm:px-6 border-y border-gray-300">
