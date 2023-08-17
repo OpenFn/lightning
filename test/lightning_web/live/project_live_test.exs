@@ -567,7 +567,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view
              |> render_click("save_repo", %{branch: "b", repo: "r"}) =~
-               "Repository:"
+               "Repository: r"
     end
 
     @tag role: :admin
