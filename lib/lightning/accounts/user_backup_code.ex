@@ -13,7 +13,7 @@ defmodule Lightning.Accounts.UserBackupCode do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "users_backup_codes" do
+  schema "user_backup_codes" do
     field :code, :string,
       redact: true,
       autogenerate: {__MODULE__, :generate_backup_code, []}
