@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Log a warning in the console when the Editor/docs component is given latest
+  [#958](https://github.com/OpenFn/Lightning/issues/958)
+
 ### Changed
 
 ### Fixed
