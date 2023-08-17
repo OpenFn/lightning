@@ -14,7 +14,7 @@ defmodule Lightning.Accounts.UserBackupCode do
   @foreign_key_type :binary_id
 
   schema "user_backup_codes" do
-    field :code, :string,
+    field :code, Lightning.Encrypted.Binary,
       redact: true,
       autogenerate: {__MODULE__, :generate_backup_code, []}
 
