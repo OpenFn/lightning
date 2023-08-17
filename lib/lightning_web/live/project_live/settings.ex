@@ -286,7 +286,11 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     {:noreply,
      socket
-     |> assign(show_repo_setup: false, show_sync_button: true)}
+     |> assign(
+       show_repo_setup: false,
+       show_sync_button: true,
+       project_repo: %{"branch" => params["branch"], "repo" => params["repo"]}
+     )}
   end
 
   def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do
