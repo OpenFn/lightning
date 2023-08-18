@@ -70,7 +70,6 @@ export default {
   },
   render() {
     const { adaptor, source, disabled } = this.el.dataset;
-    console.log(adaptor.split('@').at(-1));
     if (adaptor.split('@').at(-1) === 'latest') {
       console.warn(
         "job-editor hook received an adaptor with @latest as it's version - to load docs a specific version must be provided"
