@@ -1,3 +1,4 @@
+import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { PhoenixHook } from './PhoenixHook';
 
 export const Flash = {
@@ -15,6 +16,23 @@ export const Flash = {
     clearTimeout(this.timer);
   },
 } as PhoenixHook<{ timer: ReturnType<typeof setTimeout> }>;
+
+export const Tooltip = {
+  mounted() {
+    if (!this.el.ariaLabel) {
+      console.warn('Tooltip element missing aria-label attribute', this.el);
+      return;
+    }
+
+    let content = this.el.ariaLabel;
+    this._tippyInstance = tippy(this.el, {
+      content: content,
+    });
+  },
+  destroyed() {
+    if (this._tippyInstance) this._tippyInstance.unmount();
+  },
+} as PhoenixHook<{ _tippyInstance: TippyInstance | null }>;
 
 export const AssocListChange = {
   mounted() {

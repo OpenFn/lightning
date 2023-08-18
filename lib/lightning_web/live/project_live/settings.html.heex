@@ -123,21 +123,19 @@
           </div>
           <div id="project-settings-#" class="bg-white p-4 rounded-md">
             <div>
-              <h6 class="font-medium text-black">Version control</h6>
+              <h6 class="font-medium text-black">Export your Project</h6>
               <p class="block my-1 text-xs text-gray-600">
                 Export your project as code, to save this version or edit your project locally.
               </p>
               <div class="hidden sm:block" aria-hidden="true">
                 <div class="py-2"></div>
               </div>
-              <button
-                type="button"
-                phx-click="export_project"
-                phx-value-id={@project.id}
+              <a
+                href={~p"/download/yaml?id=#{@project.id}"}
                 class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 "
               >
                 Export project
-              </button>
+              </a>
             </div>
           </div>
           <%= if @can_delete_project do %>

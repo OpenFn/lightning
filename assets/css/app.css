@@ -108,6 +108,15 @@
   animation: 0.2s ease-out 0s normal forwards 1 fade-out-keys;
 }
 
+div[id^='tippy-'] {
+  color: rgb(241 245 249);
+  background: rgb(15 23 42);
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  z-index: 9999;
+  margin: 2px;
+}
+
 @keyframes fade-in-scale-keys {
   0% {
     scale: 0.95;

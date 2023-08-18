@@ -12,8 +12,36 @@ and this project adheres to
 
 - Support Backup Codes for Multi-Factor Authentication
   [937](https://github.com/OpenFn/Lightning/issues/937)
+- Log a warning in the console when the Editor/docs component is given latest
+  [#958](https://github.com/OpenFn/Lightning/issues/958)
 
 ### Changed
+
+### Fixed
+
+## [v0.7.3] - 2023-08-15
+
+### Added
+
+### Changed
+
+- Version control in project settings is now named Export your project
+  [#1015](https://github.com/OpenFn/Lightning/issues/1015)
+
+### Fixed
+
+- Tooltip for credential select in Job Edit form is cut off
+  [#972](https://github.com/OpenFn/Lightning/issues/972)
+- Dataclip type and state assembly notice for creating new dataclip dropped
+  during refactor [#975](https://github.com/OpenFn/Lightning/issues/975)
+
+## [v0.7.2] - 2023-08-10
+
+### Added
+
+### Changed
+
+- NodeJs security patch [1009](https://github.com/OpenFn/Lightning/pull/1009)
 
 ### Fixed
 

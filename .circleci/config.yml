@@ -38,7 +38,7 @@ jobs:
       nodejs_version:
         description: NodeJS version
         type: string
-        default: "18.12.0"
+        default: "18.17.1"
       execute:
         description: What steps to execute after build
         type: steps
