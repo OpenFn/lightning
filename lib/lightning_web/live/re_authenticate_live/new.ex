@@ -59,11 +59,11 @@ defmodule LightningWeb.ReAuthenticateLive.New do
   end
 
   defp error_msg(%{"password" => _password}) do
-    "Invalid password!. Try again"
+    "Invalid password! Try again."
   end
 
   defp error_msg(%{"code" => _code}) do
-    "Invalid OTP code!. Try again"
+    "Invalid OTP code! Try again."
   end
 
   defp append_token(nil, _token), do: "/"
