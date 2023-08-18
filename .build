@@ -1,6 +1,7 @@
 404.html
 Lightning.Accounts.User.RolesEnum.html
 Lightning.Accounts.User.html
+Lightning.Accounts.UserBackupCode.html
 Lightning.Accounts.UserNotifier.html
 Lightning.Accounts.UserTOTP.html
 Lightning.Accounts.UserToken.html
@@ -94,6 +95,8 @@ LightningWeb.API.RunController.html
 LightningWeb.AuditLive.Index.html
 LightningWeb.AuthProvidersLive.FormComponent.html
 LightningWeb.AuthProvidersLive.Index.html
+LightningWeb.BackupCodesController.html
+LightningWeb.BackupCodesLive.Index.html
 LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
 LightningWeb.Components.Modal.html
@@ -138,6 +141,7 @@ LightningWeb.ProjectLive.FormComponent.html
 LightningWeb.ProjectLive.Index.html
 LightningWeb.ProjectLive.MFARequired.html
 LightningWeb.ProjectLive.Settings.html
+LightningWeb.ReAuthenticateLive.New.html
 LightningWeb.RouteHelpers.html
 LightningWeb.Router.html
 LightningWeb.RunLive.Index.html
@@ -196,8 +200,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-B985A452.js
-dist/sidebar_items-5070E7AC.js
+dist/search_items-072BE944.js
+dist/sidebar_items-5381408C.js
 index.html
 provisioning.html
 readme.html
