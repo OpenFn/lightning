@@ -12,6 +12,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   alias Lightning.{Projects, Credentials}
 
   alias LightningWeb.Components.Form
+  alias LightningWeb.ProjectLive.DeleteConnectionModal
 
   on_mount {LightningWeb.Hooks, :project_scope}
 

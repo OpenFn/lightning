@@ -346,7 +346,7 @@
           <% end %>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
-          <%= if @github_enabled do %>
+          <%= if  @github_enabled do %>
             <div :if={@can_edit_project_name}>
               <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">
@@ -480,7 +480,11 @@
                         </small>
                         <button
                           type="button"
-                          phx-click="delete_repo_connection"
+                          phx-click={
+                            LightningWeb.CoreComponents.show_modal(
+                              "delete_connection_modal"
+                            )
+                          }
                           phx-value-id={@project.id}
                           class="my-2 text-xs text-danger-500"
                         >
@@ -491,6 +495,9 @@
                   </div>
                 </.form>
               </div>
+              <DeleteConnectionModal.modal id="delete_connection_modal">
+                <span> Here is the stuff</span>
+              </DeleteConnectionModal.modal>
             </div>
             <div :if={!@can_install_github} class="bg-white p-4 rounded-md">
               <h6 class="font-medium text-black">
