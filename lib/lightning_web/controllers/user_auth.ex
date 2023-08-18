@@ -5,6 +5,7 @@ defmodule LightningWeb.UserAuth do
 
   import Plug.Conn
   import Phoenix.Controller
+  use LightningWeb, :verified_routes
 
   alias Lightning.Accounts
   alias LightningWeb.Router.Helpers, as: Routes
@@ -98,10 +99,12 @@ defmodule LightningWeb.UserAuth do
   def log_out_user(conn) do
     user_token = get_session(conn, :user_token)
     user_token && Accounts.delete_session_token(user_token)
+    sudo_token = get_session(conn, :sudo_token)
+    sudo_token && Accounts.delete_sudo_session_token(sudo_token)
+    live_socket_id = get_session(conn, :live_socket_id)
 
-    if live_socket_id = get_session(conn, :live_socket_id) do
+    live_socket_id &&
       LightningWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
-    end
 
     conn
     |> renew_session()
@@ -131,6 +134,32 @@ defmodule LightningWeb.UserAuth do
         {nil, conn}
       end
     end
+  end
+
+  @doc """
+  Re-Authenticates the user by using the sudo token
+  """
+  def reauth_sudo_mode(conn, _opts) do
+    conn = ensure_sudo_token(conn)
+    user = conn.assigns[:current_user]
+    sudo_token = get_session(conn, :sudo_token)
+
+    valid? =
+      user && sudo_token &&
+        Accounts.sudo_session_token_valid?(
+          user,
+          Base.decode64!(sudo_token)
+        )
+
+    assign(conn, :sudo_mode?, valid?)
+  end
+
+  defp ensure_sudo_token(conn) do
+    conn = fetch_query_params(conn)
+
+    if token = conn.query_params["sudo_token"],
+      do: put_session(conn, :sudo_token, token),
+      else: conn
   end
 
   defp update_last_used(token) do
@@ -201,13 +230,69 @@ defmodule LightningWeb.UserAuth do
         end
 
       get_format(conn) == "html" && totp_pending?(conn) &&
-          conn.path_info != ["users", "two-factor", "app"] ->
+          conn.path_info != ["users", "two-factor"] ->
         conn
         |> redirect(to: Routes.user_totp_path(conn, :new))
         |> halt()
 
       true ->
         conn
+    end
+  end
+
+  @doc """
+  Used for routes that require the user to be re-authenticated.
+  """
+  def require_sudo_user(conn, _opts) do
+    if conn.assigns[:sudo_mode?] do
+      conn
+    else
+      conn
+      |> put_flash(
+        :error,
+        "You must verify yourself again in order to access this page."
+      )
+      |> maybe_store_return_to_without_sudo_token()
+      |> redirect(to: ~p"/auth/confirm_access")
+      |> halt()
+    end
+  end
+
+  @doc """
+  Used for LiveView routes that require the user to be re-authenticated.
+  """
+  def on_mount(:ensure_sudo, _params, session, socket) do
+    socket = mount_sudo_mode(session, socket)
+
+    if socket.assigns.sudo_mode? do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> Phoenix.LiveView.put_flash(
+          :error,
+          "You must verify yourself again in order to access this page."
+        )
+        |> Phoenix.LiveView.redirect(to: ~p"/auth/confirm_access")
+
+      {:halt, socket}
+    end
+  end
+
+  defp mount_sudo_mode(session, socket) do
+    case session do
+      %{"sudo_token" => sudo_token} ->
+        user = socket.assigns[:current_user]
+        decoded_token = Base.decode64!(sudo_token)
+
+        Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
+          user && Accounts.sudo_session_token_valid?(user, decoded_token)
+        end)
+
+      _other ->
+        Phoenix.Component.assign_new(socket, :sudo_mode?, fn ->
+          nil
+        end)
     end
   end
 
@@ -228,6 +313,24 @@ defmodule LightningWeb.UserAuth do
   end
 
   defp maybe_store_return_to(conn), do: conn
+
+  defp maybe_store_return_to_without_sudo_token(conn) do
+    conn = conn |> maybe_store_return_to() |> fetch_query_params()
+    return_to = get_session(conn, :user_return_to)
+
+    if return_to && conn.query_params["sudo_token"] do
+      uri = URI.new!(return_to)
+      updated_query = Map.drop(conn.query_params, ["sudo_token"])
+
+      uri = %{uri | query: Plug.Conn.Query.encode(updated_query)}
+
+      path = URI.to_string(uri)
+
+      put_session(conn, :user_return_to, path)
+    else
+      conn
+    end
+  end
 
   defp signed_in_path(_conn), do: "/"
 end

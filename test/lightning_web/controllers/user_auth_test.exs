@@ -264,4 +264,178 @@ defmodule LightningWeb.UserAuthTest do
       assert redirected_to(conn) == Routes.user_totp_path(conn, :new)
     end
   end
+
+  describe "reauth_sudo_mode/2" do
+    test "sets sudo mode from session", %{conn: conn, user: user} do
+      sudo_token = Accounts.generate_sudo_session_token(user)
+
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> put_session(:sudo_token, Base.encode64(sudo_token))
+        |> UserAuth.reauth_sudo_mode([])
+
+      assert conn.assigns.sudo_mode? == true
+    end
+
+    test "sets sudo mode from query params", %{conn: conn, user: user} do
+      sudo_token = Accounts.generate_sudo_session_token(user)
+
+      conn = %{conn | query_params: %{"sudo_token" => Base.encode64(sudo_token)}}
+      conn = assign(conn, :current_user, user)
+
+      refute conn.assigns[:sudo_mode?]
+      refute get_session(conn, :sudo_token)
+
+      conn = UserAuth.reauth_sudo_mode(conn, [])
+
+      assert conn.assigns.sudo_mode? == true
+      assert get_session(conn, :sudo_token) == Base.encode64(sudo_token)
+    end
+
+    test "does not reauthenticate if current_user assign is missing", %{
+      conn: conn,
+      user: user
+    } do
+      sudo_token = Accounts.generate_sudo_session_token(user)
+      conn = %{conn | query_params: %{"sudo_token" => Base.encode64(sudo_token)}}
+      conn = UserAuth.reauth_sudo_mode(conn, [])
+
+      refute conn.assigns.sudo_mode?
+    end
+
+    test "does not reauthenticate if sudo_token session is missing", %{
+      conn: conn,
+      user: user
+    } do
+      refute get_session(conn, :sudo_token)
+
+      Accounts.generate_sudo_session_token(user)
+
+      conn = UserAuth.reauth_sudo_mode(conn, [])
+
+      refute conn.assigns.sudo_mode?
+    end
+  end
+
+  describe "require_sudo_user/2" do
+    test "redirects if sudo mode is not set", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+      conn = conn |> fetch_flash() |> UserAuth.require_sudo_user([])
+      assert conn.halted
+      assert redirected_to(conn) == ~p"/auth/confirm_access"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               "You must verify yourself again in order to access this page."
+    end
+
+    test "stores the path to redirect to on GET", %{conn: conn, user: user} do
+      conn = log_in_user(conn, user)
+
+      halted_conn =
+        %{conn | path_info: ["foo"], query_string: ""}
+        |> fetch_flash()
+        |> UserAuth.require_sudo_user([])
+
+      assert halted_conn.halted
+      assert get_session(halted_conn, :user_return_to) == "/foo"
+
+      halted_conn =
+        %{conn | path_info: ["foo"], query_string: "bar=baz"}
+        |> fetch_flash()
+        |> UserAuth.require_sudo_user([])
+
+      assert halted_conn.halted
+      assert get_session(halted_conn, :user_return_to) == "/foo?bar=baz"
+
+      halted_conn =
+        %{conn | path_info: ["foo"], query_string: "bar", method: "POST"}
+        |> fetch_flash()
+        |> UserAuth.require_sudo_user([])
+
+      assert halted_conn.halted
+      refute get_session(halted_conn, :user_return_to)
+    end
+
+    test "does not redirect if sudo mode is already set", %{
+      conn: conn,
+      user: user
+    } do
+      conn = log_in_user(conn, user)
+
+      conn =
+        conn
+        |> assign(:sudo_mode?, true)
+        |> UserAuth.require_sudo_user([])
+
+      refute conn.halted
+      refute conn.status
+    end
+  end
+
+  describe "on_mount: ensure_sudo" do
+    setup %{user: user} do
+      socket =
+        %Phoenix.LiveView.Socket{
+          endpoint: LightningWeb.Endpoint,
+          assigns: %{__changed__: %{}, flash: %{}}
+        }
+        |> Phoenix.Component.assign_new(:current_user, fn -> user end)
+
+      %{socket: socket}
+    end
+
+    test "reauthenticates current_user based on a valid sudo_token ", %{
+      conn: conn,
+      socket: socket,
+      user: user
+    } do
+      sudo_token =
+        user |> Accounts.generate_sudo_session_token() |> Base.encode64()
+
+      session = conn |> put_session(:sudo_token, sudo_token) |> get_session()
+
+      {:cont, updated_socket} =
+        UserAuth.on_mount(
+          :ensure_sudo,
+          %{},
+          session,
+          socket
+        )
+
+      assert updated_socket.assigns.sudo_mode? == true
+    end
+
+    test "redirects to confirm access page if there isn't a valid sudo_token ",
+         %{
+           conn: conn,
+           socket: socket
+         } do
+      sudo_token = Base.encode64("invalid_token")
+      session = conn |> put_session(:sudo_token, sudo_token) |> get_session()
+
+      {:halt, updated_socket} =
+        UserAuth.on_mount(:ensure_sudo, %{}, session, socket)
+
+      assert updated_socket.assigns.sudo_mode? == false
+
+      assert {:redirect, %{to: ~p"/auth/confirm_access"}} ==
+               updated_socket.redirected
+    end
+
+    test "redirects to confirm access page if there isn't a sudo_token ", %{
+      conn: conn,
+      socket: socket
+    } do
+      session = conn |> get_session()
+
+      {:halt, updated_socket} =
+        UserAuth.on_mount(:ensure_sudo, %{}, session, socket)
+
+      assert updated_socket.assigns.sudo_mode? == nil
+
+      assert {:redirect, %{to: ~p"/auth/confirm_access"}} ==
+               updated_socket.redirected
+    end
+  end
 end
