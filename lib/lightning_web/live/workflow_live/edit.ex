@@ -460,10 +460,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params
         end
 
-      socket = apply_params(socket, next_params)
-      socket = save_workflow(socket.assigns.changeset, socket)
+      # socket =
+      #   socket
+      #   |> apply_params(next_params)
+      socket =
+        save_workflow(
+          socket.assigns.changeset,
+          socket |> apply_params(next_params)
+        )
 
-      {:noreply, socket |> push_patches_applied(initial_params)}
+      IO.inspect(socket.assigns.changeset, label: "Changeset before push patch")
+
+      {:noreply,
+       socket
+       |> push_patches_applied(initial_params)
+       |> IO.inspect(socket.assigns.changeset,
+         label: "Changeset after push patch"
+       )}
     else
       {:noreply,
        socket
@@ -513,7 +526,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       save_status: status
     )
 
-    {:noreply, socket}
+    {:noreply, socket |> push_patches_applied(socket.assigns.workflow_params)}
   end
 
   defp get_status(socket) do
@@ -734,6 +747,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp with_changes_indicator(assigns) do
+    IO.inspect(assigns.changeset, label: "with_changes_indicator")
+
     ~H"""
     <div class="relative">
       <div
