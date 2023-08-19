@@ -45,7 +45,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <:title>
             <.workflow_name_field form={@workflow_form} />
           </:title>
-          <.with_changes_indicator changeset={@changeset}>
+          <.with_changes_indicator
+            changeset={@changeset}
+            selected_job={@selected_job}
+            save_and_run={@save_and_run}
+          >
             <div class="flex flex-row gap-2">
               <Heroicons.lock_closed
                 :if={!@can_edit_job}
@@ -98,7 +102,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
               <:footer>
-                <.with_changes_indicator changeset={@changeset}>
+                <.with_changes_indicator
+                  changeset={@changeset}
+                  selected_job={@selected_job}
+                  save_and_run={@save_and_run}
+                >
                   <div class="flex flex-row gap-2">
                     <Heroicons.lock_closed
                       :if={!@can_edit_job}
@@ -107,10 +115,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     <Form.submit_button
                       class=""
                       phx-disable-with="Saving..."
-                      disabled={!@can_edit_job or !@changeset.valid?}
+                      disabled={
+                        !@can_edit_job or !@changeset.valid? or @force_disable_button
+                      }
                       form="workflow-form"
                     >
-                      Save
+                      <%= if @force_disable_button do %>
+                        Saving...
+                      <% else %>
+                        Save
+                      <% end %>
                     </Form.submit_button>
                   </div>
                 </.with_changes_indicator>
@@ -324,7 +338,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
        selection_mode: nil,
        selection_params: %{"s" => nil, "m" => nil},
        workflow: nil,
-       workflow_params: %{}
+       workflow_params: %{},
+       save_and_run: false,
+       force_disable_button: false
      )}
   end
 
@@ -460,23 +476,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params
         end
 
-      # socket =
-      #   socket
-      #   |> apply_params(next_params)
-      socket =
-        save_workflow(
-          socket.assigns.changeset,
-          socket |> apply_params(next_params)
-        )
+      socket = apply_params(socket, next_params)
+      socket = save_workflow(socket.assigns.changeset, socket)
 
-      IO.inspect(socket.assigns.changeset, label: "Changeset before push patch")
-
-      {:noreply,
-       socket
-       |> push_patches_applied(initial_params)
-       |> IO.inspect(socket.assigns.changeset,
-         label: "Changeset after push patch"
-       )}
+      {:noreply, socket |> push_patches_applied(initial_params)}
     else
       {:noreply,
        socket
@@ -507,7 +510,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
-    {:noreply, handle_new_params(socket, params)}
+    {:noreply, handle_new_params(socket, params) |> assign(:save_and_run, false)}
   end
 
   def handle_info({:follow_run, attempt_run}, socket) do
@@ -526,7 +529,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
       save_status: status
     )
 
-    {:noreply, socket |> push_patches_applied(socket.assigns.workflow_params)}
+    Process.send_after(self(), :reenable_button, 300)
+
+    {:noreply, socket |> assign(save_and_run: true, force_disable_button: true)}
+  end
+
+  def handle_info(:reenable_button, socket) do
+    {:noreply, assign(socket, force_disable_button: false)}
   end
 
   defp get_status(socket) do
@@ -746,13 +755,36 @@ defmodule LightningWeb.WorkflowLive.Edit do
     """
   end
 
-  defp with_changes_indicator(assigns) do
-    IO.inspect(assigns.changeset, label: "with_changes_indicator")
+  defp render_indicator(assigns) do
+    changes = assigns.changeset.changes
 
+    case changes do
+      # If the changes map is empty
+      %{} when map_size(changes) == 0 ->
+        false
+
+      # If the changes map has only the :jobs key
+      %{jobs: jobs} when map_size(changes) == 1 ->
+        matching_changesets =
+          Enum.filter(jobs, fn changeset ->
+            map_size(changeset.changes) > 0 and
+              changeset.data.id == assigns.selected_job.id
+          end)
+
+        # Check that there's only one matching changeset and that `assigns.save_and_run` is true
+        not (length(matching_changesets) == 1 and assigns.save_and_run)
+
+      # For all other cases
+      _ ->
+        true
+    end
+  end
+
+  defp with_changes_indicator(assigns) do
     ~H"""
     <div class="relative">
       <div
-        :if={@changeset.changes |> Enum.any?()}
+        :if={render_indicator(assigns)}
         class="absolute -m-1 rounded-full bg-danger-500 w-3 h-3 top-0 right-0"
         data-is-dirty="true"
       >
