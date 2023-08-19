@@ -98,20 +98,27 @@ defmodule LightningWeb.WorkflowLive.Edit do
             >
               <:footer>
                 <.with_changes_indicator changeset={@changeset}>
-                  <div class="flex flex-row gap-2">
-                    <Heroicons.lock_closed
-                      :if={!@can_edit_job}
-                      class="w-5 h-5 place-self-center text-gray-300"
-                    />
-                    <Form.submit_button
-                      class=""
-                      phx-disable-with="Saving..."
-                      disabled={!@can_edit_job or !@changeset.valid?}
-                      form="workflow-form"
-                    >
-                      Save
-                    </Form.submit_button>
-                  </div>
+                  <span
+                    :if={editor_is_empty(@workflow_form, @selected_job)}
+                    class="text-sm text-red-600 mx-2 rounded whitespace-nowrap z-10"
+                  >
+                    <Icon.info class="h-5 w-5 mx-2 inline-block" />
+                    The editor can't be empty
+                  </span>
+                  <%!-- <div class="flex flex-row gap-2"> --%>
+                  <Heroicons.lock_closed
+                    :if={!@can_edit_job}
+                    class="w-5 h-5 place-self-center text-gray-300"
+                  />
+                  <Form.submit_button
+                    class=""
+                    phx-disable-with="Saving..."
+                    disabled={!@can_edit_job or !@changeset.valid?}
+                    form="workflow-form"
+                  >
+                    Save
+                  </Form.submit_button>
+                  <%!-- </div> --%>
                 </.with_changes_indicator>
               </:footer>
             </LightningWeb.WorkflowLive.JobView.job_edit_view>
@@ -152,12 +159,21 @@ defmodule LightningWeb.WorkflowLive.Edit do
               />
               <:footer>
                 <div class="flex flex-row">
-                  <.link
-                    patch={"#{@base_url}?s=#{@selected_job.id}&m=expand"}
-                    class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                  >
-                    <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
-                  </.link>
+                  <div>
+                    <.link
+                      patch={"#{@base_url}?s=#{@selected_job.id}&m=expand"}
+                      class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                    >
+                      <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
+                    </.link>
+                    <span
+                      :if={editor_is_empty(@workflow_form, @selected_job)}
+                      class="text-sm text-red-600 mx-2 rounded whitespace-nowrap z-10"
+                    >
+                      <Icon.info class="h-5 w-5 mx-2 inline-block" />
+                      The editor can't be empty
+                    </span>
+                  </div>
                   <div class="grow flex justify-end">
                     <label>
                       <Common.button
@@ -499,6 +515,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:follow_run, attempt_run}, socket) do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
+  defp editor_is_empty(form, job) do
+    single_inputs_for(form, :jobs, job.id)
+    |> Map.get(:source)
+    |> Map.get(:errors)
+    |> Keyword.has_key?(:body)
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
