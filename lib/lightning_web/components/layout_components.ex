@@ -177,6 +177,8 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
+
+
   def nav(assigns) do
     ~H"""
     <nav class="bg-secondary-800">
@@ -196,4 +198,71 @@ defmodule LightningWeb.LayoutComponents do
     </nav>
     """
   end
+
+# New Components
+
+  def cover(assigns) do
+    ~H"""
+    <div class="max-w-full md:px-24 py-6 sm:px-6">
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
+  def header_cover(assigns) do
+    ~H"""
+    <div class="flex-none bg-white shadow-sm z-30">
+      <div class="max-w-full md:px-24 h-20 sm:px-6 flex items-center">
+        <h1 class="text-3xl font-bold text-secondary-900 flex items-center">
+          <%= if assigns[:title], do: render_slot(@title) %>
+        </h1>
+        <div class="grow"></div>
+        <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
+        <%= if assigns[:current_user] do %>
+          <div class="w-5" />
+          <.dropdown js_lib="live_view_js">
+            <:trigger_element>
+              <div class="inline-flex items-center justify-center w-full align-middle focus:outline-none">
+                <.avatar
+                  size="sm"
+                  name={
+                    String.at(@current_user.first_name, 0) <>
+                      if is_nil(@current_user.last_name),
+                        do: "",
+                        else: String.at(@current_user.last_name, 0)
+                  }
+                />
+                <Heroicons.chevron_down
+                  solid
+                  class="w-4 h-4 ml-1 -mr-1 text-secondary-400 dark:text-secondary-100"
+                />
+              </div>
+            </:trigger_element>
+            <.dropdown_menu_item link_type="live_redirect" to={~p"/profile"}>
+              <Heroicons.user_circle class="w-5 h-5 text-secondary-500" />
+              User Profile
+            </.dropdown_menu_item>
+            <.dropdown_menu_item link_type="live_redirect" to={~p"/credentials"}>
+              <Heroicons.key class="w-5 h-5 text-secondary-500" /> Credentials
+            </.dropdown_menu_item>
+            <.dropdown_menu_item link_type="live_redirect" to={~p"/profile/tokens"}>
+              <Heroicons.command_line class="w-5 h-5 text-secondary-500" />
+              API Tokens
+            </.dropdown_menu_item>
+            <.dropdown_menu_item link_type="live_redirect" to={~p"/users/log_out"}>
+              <Heroicons.arrow_right_on_rectangle class="w-5 h-5 text-secondary-500" />
+              Log out
+            </.dropdown_menu_item>
+          </.dropdown>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+
+
+
+
+
 end
