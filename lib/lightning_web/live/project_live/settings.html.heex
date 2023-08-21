@@ -432,6 +432,7 @@
                         :if={@show_repo_setup && !@show_sync_button}
                         form={f}
                         disabled={@loading_branches}
+                        phx-change="branch_selected"
                         name={:branch}
                         id="project-branch"
                         values={@branches}
@@ -447,6 +448,9 @@
                       <Form.submit_button
                         :if={!@show_sync_button}
                         phx-disable-with="Saving"
+                        disabled={
+                          !@project_repo["repo"] || !@project_repo["branch"]
+                        }
                       >
                         Connect Branch
                       </Form.submit_button>

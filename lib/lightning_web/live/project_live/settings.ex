@@ -321,7 +321,23 @@ defmodule LightningWeb.ProjectLive.Settings do
       send(pid, {:branches_fetched, branches})
     end)
 
-    {:noreply, socket |> assign(:loading_branches, true)}
+    {:noreply,
+     socket
+     |> assign(
+       loading_branches: true,
+       project_repo: %{socket.assigns.project_repo | "repo" => params["repo"]}
+     )}
+  end
+
+  def handle_event("branch_selected", params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       project_repo: %{
+         socket.assigns.project_repo
+         | "branch" => params["branch"]
+       }
+     )}
   end
 
   @impl true

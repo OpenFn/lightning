@@ -52,15 +52,15 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
                 </div>
                 <div class="text-black">
                   Heads up! Removing the connection from GitHub here only severs the link between OpenFn and GitHub.
-                  To fully remove the OpenFn application from GitHub, please follow the instructions in this
+                  To fully remove the OpenFn application from GitHub, please follow the instructions in
                   <.link
                     class="text-blue-600"
                     href="https://docs.github.com/en/apps/using-github-apps/reviewing-and-revoking-authorization-of-github-apps"
                   >
-                    link.
+                    this link.
                   </.link>
                 </div>
-                <div class="my-2 items-center">
+                <div class="my-4 items-center">
                   <button
                     phx-click={
                       LightningWeb.CoreComponents.hide_modal(
