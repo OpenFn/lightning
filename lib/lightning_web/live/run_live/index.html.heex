@@ -109,10 +109,10 @@
                 <thead class="bg-gray-100">
                   <tr>
                     <th
-                      scope="col"
+                      colspan="2"
                       class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
                     >
-                      <div class="flex gap-8 items-center">
+                      <div class="flex gap-24 items-center">
                         <div class="">
                           <.form
                             :let={f}
@@ -135,6 +135,7 @@
                             ) %>
                           </.form>
                         </div>
+
                         <div>
                           <%= if none_selected?(@selected_work_orders) do %>
                             <div>
@@ -231,69 +232,19 @@
                   </tr>
                 </thead>
 
-                <tbody class="bg-white divide-y divide-gray-200 text-gray-500">
+                <tbody
+                  data-entity="work_order_list"
+                  class="bg-white divide-y divide-gray-200 text-gray-500"
+                >
                   <!-- Table Row 1-->
-                  <tr>
-                    <td class="px-4 py-4 text-sm whitespace-nowrap">
-                      <div class="flex gap-8 items-center">
-                        <form>
-                          <input
-                            type="checkbox"
-                            class="h-5 w-5 rounded-lg border border-gray-200"
-                          />
-                        </form>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="h-6 w-6"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                        <div>
-                          <h1 class="text-sm mb-1">Cron Test</h1>
-                          <span class="mt-2 text-gray-700">
-                            f50dbd60 . 12/Dec/2022, 11:31:15
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="px-12 py-4 text-sm whitespace-nowrap">
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">12/Dec/2023</h1>
-                        <span class="text-gray-700 mt-2">11:23:14</span>
-                      </div>
-                    </td>
-                    <td class="px-4 py-4 text-sm whitespace-nowrap">
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">12/Dec/2023</h1>
-                        <span class="text-gray-700 mt-2">11:23:14</span>
-                      </div>
-                    </td>
-                    <td class="px-4 py-4 text-sm whitespace-nowrap">
-                      <div class="flex items-center">
-                        - -
-                      </div>
-                    </td>
-
-                    <td class="px-4 py-4 text-sm whitespace-nowrap">
-                      <div class="flex items-center">
-                        - -
-                      </div>
-                    </td>
-
-                    <td class="px-4 py-4 text-sm whitespace-nowrap">
-                      <div class="flex">
-                        <h1 class="text-sm text-green-800 mb-1 bg-green-200 text-center rounded-xl px-2">
-                          Success
-                        </h1>
-                      </div>
-                    </td>
-                  </tr>
+                   <%= for wo <- @page.entries do %>
+                      <.live_component
+                        module={LightningWeb.RunLive.WorkOrderComponent}
+                        id={wo.id}
+                        project={@project}
+                        can_rerun_job={@can_rerun_job}
+                      />
+                    <% end %>
                 </tbody>
               </table>
             </div>
@@ -307,16 +258,9 @@
         data-entity="work_order_index"
         class="flex-1 flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
       >
-        <div data-entity="work_order_list" class="bg-gray-100">
-          <%= for wo <- @page.entries do %>
-            <.live_component
-              module={LightningWeb.RunLive.WorkOrderComponent}
-              id={wo.id}
-              project={@project}
-              can_rerun_job={@can_rerun_job}
-            />
-          <% end %>
-        </div>
+        <%!-- <div data-entity="work_order_list" class="bg-gray-100">
+         
+        </div> --%>
         <LightningWeb.Pagination.pagination_bar
           page={@page}
           url={@pagination_path}
