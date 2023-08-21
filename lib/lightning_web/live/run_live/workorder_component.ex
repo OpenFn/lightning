@@ -118,16 +118,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           </.form>
         </div>
         <button
-            class="w-auto rounded-full p-3 hover:bg-gray-100 mr-4"
-            phx-click="toggle_details"
-            phx-target={@myself}
-          >
-            <%= if @show_details do %>
-              <Heroicons.chevron_up outline class="h-3 w-3" />
-            <% else %>
-              <Heroicons.chevron_down outline class="h-3 w-3" />
-            <% end %>
-          </button>
+          class="w-auto rounded-full p-3 hover:bg-gray-100 mr-4"
+          phx-click="toggle_details"
+          phx-target={@myself}
+        >
+          <%= if @show_details do %>
+            <Heroicons.chevron_up outline class="h-3 w-3" />
+          <% else %>
+            <Heroicons.chevron_down outline class="h-3 w-3" />
+          <% end %>
+        </button>
 
         <div class="ml-3">
           <%= @workflow_name %>
@@ -153,19 +153,19 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         <%= @last_run_finished_at %>
       </div>
       <div class="flex content-center justify-between">
-          <%= case @last_run.exit_code do %>
-            <% nil -> %>
-              <%= if @last_run.finished_at do %>
-                <.failure_pill>Timeout</.failure_pill>
-              <% else %>
-                <.pending_pill>Pending</.pending_pill>
-              <% end %>
-            <% val when val == 0 -> %>
-              <.success_pill>Success</.success_pill>
-            <% val when val > 0 -> %>
-              <.failure_pill>Failure</.failure_pill>
-          <% end %>
-        </div>
+        <%= case @last_run.exit_code do %>
+          <% nil -> %>
+            <%= if @last_run.finished_at do %>
+              <.failure_pill>Timeout</.failure_pill>
+            <% else %>
+              <.pending_pill>Pending</.pending_pill>
+            <% end %>
+          <% val when val == 0 -> %>
+            <.success_pill>Success</.success_pill>
+          <% val when val > 0 -> %>
+            <.failure_pill>Failure</.failure_pill>
+        <% end %>
+      </div>
       <%= if @show_details do %>
         <%= for attempt <- @attempts do %>
           <.attempt_item
