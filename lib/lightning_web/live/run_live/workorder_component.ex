@@ -98,8 +98,10 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       data-entity="work_order"
       class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}
     >
-      <td class="px-4 py-4 text-sm whitespace-nowrap">
-        <div class="flex gap-8 items-center">
+      <td
+      scope="col"
+      class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" >
+        <div class="flex gap-4 items-center">
           <.form
             :let={f}
             for={selection_params(@work_order, @entry_selected)}
@@ -110,22 +112,22 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <%= checkbox(f, :selected,
               id: "select_#{@work_order.id}",
               class:
-                "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                "left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
             ) %>
           </.form>
           <button
-            class="w-auto rounded-full p-3 hover:bg-gray-100"
+            class="w-auto rounded-full p-3 hover:bg-gray-100 mr-2"
             phx-click="toggle_details"
             phx-target={@myself}
           >
             <%= if @show_details do %>
-              <Heroicons.chevron_up outline class="h-3 w-3" />
+              <Heroicons.chevron_up outline class="h-5 w-5 Rounded-lg" />
             <% else %>
-              <Heroicons.chevron_down outline class="h-3 w-3" />
+              <Heroicons.chevron_down outline class="h-5 w-5 rounded-lg" />
             <% end %>
           </button>
 
-          <div class="ml-3">
+          <div class="ml-3 py-4">
             <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
               <%= @workflow_name %>
             </h1>
@@ -139,26 +141,30 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           </div>
         </div>
       </td>
-      <%!-- <div class="my-auto p-4"><%= @work_order.reason.type %></div> --%>
-      <div class="my-auto p-4">
-        <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
-          <span
-            title={@work_order.reason.dataclip_id}
-            class="font-normal text-xs whitespace-nowrap text-ellipsis
-            bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
-            underline-offset-2 hover:text-indigo-500"
-          >
-            <%= display_short_uuid(@work_order.reason.dataclip_id) %>
-          </span>
-        <% end %>
-      </div>
-      <div class="my-auto p-4">
-        <%= @work_order_inserted_at %>
-      </div>
-      <div class="my-auto p-4">
-        <%= @last_run_finished_at %>
-      </div>
-      <div class="flex content-center justify-between">
+      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+        <%= Timex.format!(
+                @work_order.inserted_at,
+                "%d/%b/%y",
+                :strftime
+              ) %><br>
+              <%= Timex.format!(@work_order.inserted_at, "%H:%M:%S", :strftime) %>
+      </td>
+      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+        <%!-- <%= @last_run_finished_at %> --%>
+        <%= Timex.format!(
+                @last_run.finished_at,
+                "%d/%b/%y",
+                :strftime
+              ) %> <br>
+              <%= Timex.format!(@last_run.finished_at, "%H:%M:%S", :strftime) %>
+      </td>
+      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+      --
+      </td>
+      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+      --
+      </td>
+      <td class="flex justify-center py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
         <%= case @last_run.exit_code do %>
           <% nil -> %>
             <%= if @last_run.finished_at do %>
@@ -171,7 +177,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           <% val when val > 0 -> %>
             <.failure_pill>Failure</.failure_pill>
         <% end %>
-      </div>
+      </td>
+
       <%= if @show_details do %>
         <%= for attempt <- @attempts do %>
           <.attempt_item
@@ -181,7 +188,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% end %>
       <% end %>
-    </tr>
+      </tr>
     """
   end
 
