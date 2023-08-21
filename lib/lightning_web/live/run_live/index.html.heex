@@ -6,8 +6,8 @@
   </:header>
   <LayoutComponents.cover>
     <div>
-     <%!-- Search Bar --%>
-        <div class="top-0 self-start mb-8">
+      <%!-- Search Bar --%>
+      <div class="top-0 self-start mb-8">
         <.form
           :let={f}
           for={@filters_changeset}
@@ -16,215 +16,295 @@
           phx-change="apply_filters"
           phx-submit="search"
         >
-        <div>
-          <div class="flex gap-2">
           <div>
-              <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">Workflow</div>
-              <LightningWeb.Components.Form.select_field
-                form={f}
-                name={:workflow_id}
-                id="workflowField"
-                prompt="Show all"
-                values={@workflows}
-              />
+            <div class="flex gap-2">
+              <div>
+                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
+                  Workflow
+                </div>
+                <LightningWeb.Components.Form.select_field
+                  form={f}
+                  name={:workflow_id}
+                  id="workflowField"
+                  prompt="Show all"
+                  values={@workflows}
+                />
+              </div>
+              <div>
+                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
+                  Status
+                </div>
+                <LightningWeb.Components.Form.select_field
+                  form={f}
+                  name={:workflow_id}
+                  id="workflowField"
+                  prompt="Show all"
+                  values={@workflows}
+                />
+              </div>
+              <div>
+                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
+                  Time
+                </div>
+                <LightningWeb.Components.Form.select_field
+                  form={f}
+                  name={:workflow_id}
+                  id="workflowField"
+                  prompt="Show all"
+                  values={@workflows}
+                />
+              </div>
+              <div>
+                <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">
+                  Job Name
+                </div>
+                <LightningWeb.Components.Form.select_field
+                  form={f}
+                  name={:workflow_id}
+                  id="workflowField"
+                  prompt="Show all"
+                  values={@workflows}
+                />
+              </div>
             </div>
-            <div>
-              <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">Status</div>
-              <LightningWeb.Components.Form.select_field
-                form={f}
-                name={:workflow_id}
-                id="workflowField"
-                prompt="Show all"
-                values={@workflows}
-              />
-            </div>
-            <div>
-              <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">Time</div>
-              <LightningWeb.Components.Form.select_field
-                form={f}
-                name={:workflow_id}
-                id="workflowField"
-                prompt="Show all"
-                values={@workflows}
-              />
-            </div>
-            <div>
-              <div class="font-medium mt-4 mb-2 text-gray-500 text-sm">Job Name</div>
-              <LightningWeb.Components.Form.select_field
-                form={f}
-                name={:workflow_id}
-                id="workflowField"
-                prompt="Show all"
-                values={@workflows}
-              />
-            </div>
-          </div>
           </div>
 
           <div>
-          <div class="mt-8">
-            <div class="flex justify-between items-center">
-              <div>
-                <h1 class="text-xl text-gray-500 font-medium">Work Orders</h1>
-              </div>
-              <div>
-              <div>
-              <div class="w-full">
-                <%= text_input(f, :search_term,
-                  placeholder: "Search",
-                  class:
-                    "rounded-lg border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 py-2"
-                ) %>
-                <button
-                type="submit"
-                phx-submit="validate"
-                class="focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white py-2 px-6 rounded-lg"
-                >Search</button>
-              </div>
-              </div>
+            <div class="mt-8">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h1 class="text-xl text-gray-500 font-medium">Work Orders</h1>
+                </div>
+                <div>
+                  <div>
+                    <div class="w-full">
+                      <%= text_input(f, :search_term,
+                        placeholder: "Search",
+                        class:
+                          "rounded-lg border-secondary-300 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50 py-2"
+                      ) %>
+                      <button
+                        type="submit"
+                        phx-submit="validate"
+                        class="focus:ring-primary-500 bg-primary-600 hover:bg-primary-700 text-white py-2 px-6 rounded-lg"
+                      >
+                        Search
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>  
           </div>
         </.form>
       </div>
     </div>
 
-
-
     <div>
-
-      <div class="flex flex-col mt-4">
-      <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-      <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-      <div class="overflow-hidden border border-gray-200 md:rounded-lg">
-          <table class="min-w-full divide-y divide-gray-200">
+      <div class="mt-4">
+        <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+            <div class="overflow-hidden border border-gray-200 md:rounded-lg">
+              <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-100">
-                <tr>
-                  <th scope="col" class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500">
+                  <tr>
+                    <th
+                      scope="col"
+                      class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    >
                       <div class="flex gap-8 items-center">
-                      <div class="">
-                      <.form
-                        :let={f}
-                        for={
-                          %{
-                            "all_selections" =>
-                              all_selected?(@selected_work_orders, @page.entries)
-                          }
-                        }
-                        phx-change="toggle_all_selections"
-                      >
-                        <%= checkbox(f, :all_selections,
-                          id: "select_all",
-                          phx_hook: "CheckboxIndeterminate",
-                          class:
-                            "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"
-                        ) %>
-                      </.form>
-                    </div>
-                    <Heroicons.chevron_down outline class="h-4 w-4 text-gray-700 " />
-                      <div>
-                        <h1 class="text-sm mb-1">Workflow Name</h1>
-                        <span class="text-gray-700 mt-2 font-medium">WORK ORDER ID . DATE & TIME</span>
+                        <div class="">
+                          <.form
+                            :let={f}
+                            for={
+                              %{
+                                "all_selections" =>
+                                  all_selected?(
+                                    @selected_work_orders,
+                                    @page.entries
+                                  )
+                              }
+                            }
+                            phx-change="toggle_all_selections"
+                          >
+                            <%= checkbox(f, :all_selections,
+                              id: "select_all",
+                              phx_hook: "CheckboxIndeterminate",
+                              class:
+                                "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"
+                            ) %>
+                          </.form>
+                        </div>
+                        <div>
+                          <%= if none_selected?(@selected_work_orders) do %>
+                            <div>
+                              <h1 class="text-sm mb-1">Workflow Name</h1>
+                              <span class="text-gray-700 mt-2 font-medium">
+                                WORK ORDER ID . DATE & TIME
+                              </span>
+                            </div>
+                          <% else %>
+                            <button
+                              type="button"
+                              class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                              phx-click={
+                                show_modal("bulk-rerun-from-start-modal")
+                              }
+                            >
+                              Rerun
+                            </button>
+                            <button
+                              :if={
+                                selected_workflow_count(@selected_work_orders) ==
+                                  1
+                              }
+                              id="bulk-rerun-from-job-modal-trigger"
+                              type="button"
+                              class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                              phx-click={show_modal("bulk-rerun-from-job-modal")}
+                            >
+                              Rerun from...
+                            </button>
+                          <% end %>
+                        </div>
                       </div>
-                    </div>
-                        </th>
-                        <th scope="col" class="px-12 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">
-                            <div>
-                                <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                                <span class="text-gray-700 mt-2 font-medium">RECIEVED AT</span>
-                            </div>
-                        </th>
+                    </th>
+                    <th
+                      scope="col"
+                      class="px-12 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    >
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                        <span class="text-gray-700 mt-2 font-medium">
+                          RECIEVED AT
+                        </span>
+                      </div>
+                    </th>
 
-                        <th scope="col" class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">
-                            <div>
-                                <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                                <span class="text-gray-700 mt-2 font-medium">LAST ACTIVITY</span>
-                            </div>
-                        </th>
+                    <th
+                      scope="col"
+                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    >
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                        <span class="text-gray-700 mt-2 font-medium">
+                          LAST ACTIVITY
+                        </span>
+                      </div>
+                    </th>
 
-                        <th scope="col" class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">
-                            <div>
-                                <h1 class="text-sm text-gray-500 mb-1">Run</h1>
-                                <span class="text-gray-700 mt-2 font-medium">STARTED AT</span>
-                          </div>
-                        </th>
+                    <th
+                      scope="col"
+                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    >
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">Run</h1>
+                        <span class="text-gray-700 mt-2 font-medium">
+                          STARTED AT
+                        </span>
+                      </div>
+                    </th>
 
-                        <th scope="col" class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">
-                            <div>
-                                <h1 class="text-sm text-gray-500 mb-1">Run</h1>
-                                <span class="text-gray-700 mt-2 font-medium">FINISHED AT</span>
-                            </div>
-                        </th>
+                    <th
+                      scope="col"
+                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    >
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">Run</h1>
+                        <span class="text-gray-700 mt-2 font-medium">
+                          FINISHED AT
+                        </span>
+                      </div>
+                    </th>
 
-                        <th scope="col" class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500">
-                            <div>
-                                <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                                <span class="text-gray-700 mt-2 font-medium">STATUS</span>
-                            </div>
-                        </th>
-                    </tr>
-                      </thead>
+                    <th
+                      scope="col"
+                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    >
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                        <span class="text-gray-700 mt-2 font-medium">
+                          STATUS
+                        </span>
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
 
-                      <tbody class="bg-white divide-y divide-gray-200 text-gray-500">
-                            <!-- Table Row 1-->
-                            <tr>
-                                <td class="px-4 py-4 text-sm whitespace-nowrap">
-                                    <div class="flex gap-8 items-center">
-                                        <input type="checkbox" class="h-5 w-5 rounded-lg border border-gray-200">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                            </svg>
-                                            <div>
-                                            <h1 class="text-sm mb-1">Cron Test</h1>
-                                            <span class="mt-2 text-gray-700">f50dbd60 . 12/Dec/2022, 11:31:15</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-12 py-4 text-sm whitespace-nowrap">
-                                    <div>
-                                        <h1 class="text-sm text-gray-500 mb-1">12/Dec/2023</h1>
-                                        <span class="text-gray-700 mt-2">11:23:14</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-4 text-sm whitespace-nowrap">
-                                    <div>
-                                        <h1 class="text-sm text-gray-500 mb-1">12/Dec/2023</h1>
-                                        <span class="text-gray-700 mt-2">11:23:14</span>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-4 text-sm whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        - -
-                                    </div>
-                                </td>
+                <tbody class="bg-white divide-y divide-gray-200 text-gray-500">
+                  <!-- Table Row 1-->
+                  <tr>
+                    <td class="px-4 py-4 text-sm whitespace-nowrap">
+                      <div class="flex gap-8 items-center">
+                        <input
+                          type="checkbox"
+                          class="h-5 w-5 rounded-lg border border-gray-200"
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-6 w-6"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                        <div>
+                          <h1 class="text-sm mb-1">Cron Test</h1>
+                          <span class="mt-2 text-gray-700">
+                            f50dbd60 . 12/Dec/2022, 11:31:15
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-12 py-4 text-sm whitespace-nowrap">
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">12/Dec/2023</h1>
+                        <span class="text-gray-700 mt-2">11:23:14</span>
+                      </div>
+                    </td>
+                    <td class="px-4 py-4 text-sm whitespace-nowrap">
+                      <div>
+                        <h1 class="text-sm text-gray-500 mb-1">12/Dec/2023</h1>
+                        <span class="text-gray-700 mt-2">11:23:14</span>
+                      </div>
+                    </td>
+                    <td class="px-4 py-4 text-sm whitespace-nowrap">
+                      <div class="flex items-center">
+                        - -
+                      </div>
+                    </td>
 
-                                <td class="px-4 py-4 text-sm whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        - -
-                                    </div>
-                                </td>
+                    <td class="px-4 py-4 text-sm whitespace-nowrap">
+                      <div class="flex items-center">
+                        - -
+                      </div>
+                    </td>
 
-                                <td class="px-4 py-4 text-sm whitespace-nowrap">
-                                    <div class="flex">
-                                        <h1 class="text-sm text-green-800 mb-1 bg-green-200 text-center rounded-xl px-2">Success</h1>
-                                    </div>
-                                </td>
-                            </tr>
-                      </tbody>
-                </table>
-
-                </div>
+                    <td class="px-4 py-4 text-sm whitespace-nowrap">
+                      <div class="flex">
+                        <h1 class="text-sm text-green-800 mb-1 bg-green-200 text-center rounded-xl px-2">
+                          Success
+                        </h1>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-          </div>
+        </div>
+      </div>
     </div>
 
     <div class="bg-gray-100 dark:bg-gray-700 relative flex">
       <div
         data-entity="work_order_index"
         class="flex-1 flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
-      >      
+      >
         <div class="sticky top-0 bg-gray-100 text-xs uppercase text-gray-400 dark:text-gray-400">
           <%!-- <div class="grid grid-cols-6 gap-0">
             <div class={"py-3 px-4 font-medium relative flex items-center #{unless none_selected?(@selected_work_orders), do: "col-span-2"}"}>
@@ -332,7 +412,7 @@
         >
           <div>
 
-          
+
             <div class="font-semibold mt-4">
               Search associated runs
               <Common.tooltip

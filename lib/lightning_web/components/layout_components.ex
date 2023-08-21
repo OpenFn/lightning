@@ -177,8 +177,6 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
-
-
   def nav(assigns) do
     ~H"""
     <nav class="bg-secondary-800">
@@ -199,7 +197,7 @@ defmodule LightningWeb.LayoutComponents do
     """
   end
 
-# New Components
+  # New Components
 
   def cover(assigns) do
     ~H"""
@@ -259,10 +257,4 @@ defmodule LightningWeb.LayoutComponents do
     </div>
     """
   end
-
-
-
-
-
-
 end
