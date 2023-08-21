@@ -96,13 +96,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     ~H"""
     <div
       data-entity="work_order"
-      class={"my-4 grid grid-cols-6 gap-0 rounded-lg #{if @entry_selected, do: "bg-gray-50", else: "bg-white"}"}
+      class={"grid grid-cols-6 gap-0 border border-gray-100 #{if @entry_selected, do: "bg-gray-50", else: "bg-white"}"}
     >
-      <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white relative flex items-start #{unless @show_details, do: "truncate"}"}>
+      <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white relative flex items-center #{unless @show_details, do: "truncate"}"}>
         <%= if @entry_selected do %>
           <div class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"></div>
         <% end %>
-        <div class="">
+        <div class="mr-4">
           <.form
             :let={f}
             for={selection_params(@work_order, @entry_selected)}
@@ -117,11 +117,23 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             ) %>
           </.form>
         </div>
+        <button
+            class="w-auto rounded-full p-3 hover:bg-gray-100 mr-4"
+            phx-click="toggle_details"
+            phx-target={@myself}
+          >
+            <%= if @show_details do %>
+              <Heroicons.chevron_up outline class="h-3 w-3" />
+            <% else %>
+              <Heroicons.chevron_down outline class="h-3 w-3" />
+            <% end %>
+          </button>
+
         <div class="ml-3">
           <%= @workflow_name %>
         </div>
       </div>
-      <div class="my-auto p-4"><%= @work_order.reason.type %></div>
+      <%!-- <div class="my-auto p-4"><%= @work_order.reason.type %></div> --%>
       <div class="my-auto p-4">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
           <span
@@ -140,8 +152,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <div class="my-auto p-4">
         <%= @last_run_finished_at %>
       </div>
-      <div class="my-auto p-4">
-        <div class="flex content-center justify-between">
+      <div class="flex content-center justify-between">
           <%= case @last_run.exit_code do %>
             <% nil -> %>
               <%= if @last_run.finished_at do %>
@@ -154,20 +165,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <% val when val > 0 -> %>
               <.failure_pill>Failure</.failure_pill>
           <% end %>
-
-          <button
-            class="w-auto rounded-full bg-gray-50 p-3 hover:bg-gray-100"
-            phx-click="toggle_details"
-            phx-target={@myself}
-          >
-            <%= if @show_details do %>
-              <Heroicons.chevron_up outline class="h-3 w-3" />
-            <% else %>
-              <Heroicons.chevron_down outline class="h-3 w-3" />
-            <% end %>
-          </button>
         </div>
-      </div>
       <%= if @show_details do %>
         <%= for attempt <- @attempts do %>
           <.attempt_item
