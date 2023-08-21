@@ -62,9 +62,9 @@ defmodule LightningWeb.API.ProvisioningController do
     with %Projects.Project{} = project <-
            Lightning.Projects.get_project(id) || {:error, :not_found},
          :ok <-
-           ProjectUsers
-           |> Permissions.can(
-             :access_project,
+           Permissions.can(
+             Provisioning,
+             :describe_project,
              conn.assigns.current_user,
              project
            ) do

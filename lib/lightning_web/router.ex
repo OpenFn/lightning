@@ -83,11 +83,9 @@ defmodule LightningWeb.Router do
     get "/setup_vcs", VersionControlController, :index
     get "/download/yaml", DownloadsController, :download_project_yaml
 
-
     get "/profile/confirm_email/:token",
         UserConfirmationController,
         :confirm_email
-
 
     live_session :auth, on_mount: LightningWeb.InitAssigns do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
