@@ -94,15 +94,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div
+    <tr
       data-entity="work_order"
-      class={"grid grid-cols-6 gap-0 border border-gray-100 #{if @entry_selected, do: "bg-gray-50", else: "bg-white"}"}
+      class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}
     >
-      <div class={"my-auto p-4 font-medium text-gray-900 dark:text-white relative flex items-center #{unless @show_details, do: "truncate"}"}>
-        <%= if @entry_selected do %>
-          <div class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"></div>
-        <% end %>
-        <div class="mr-4">
+      <td class="px-4 py-4 text-sm whitespace-nowrap">
+        <div class="flex gap-8 items-center">
           <.form
             :let={f}
             for={selection_params(@work_order, @entry_selected)}
@@ -116,23 +113,32 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
             ) %>
           </.form>
-        </div>
-        <button
-          class="w-auto rounded-full p-3 hover:bg-gray-100 mr-4"
-          phx-click="toggle_details"
-          phx-target={@myself}
-        >
-          <%= if @show_details do %>
-            <Heroicons.chevron_up outline class="h-3 w-3" />
-          <% else %>
-            <Heroicons.chevron_down outline class="h-3 w-3" />
-          <% end %>
-        </button>
+          <button
+            class="w-auto rounded-full p-3 hover:bg-gray-100"
+            phx-click="toggle_details"
+            phx-target={@myself}
+          >
+            <%= if @show_details do %>
+              <Heroicons.chevron_up outline class="h-3 w-3" />
+            <% else %>
+              <Heroicons.chevron_down outline class="h-3 w-3" />
+            <% end %>
+          </button>
 
-        <div class="ml-3">
-          <%= @workflow_name %>
+          <div class="ml-3">
+            <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
+              <%= @workflow_name %>
+            </h1>
+            <span class="mt-2 text-gray-700">
+              <%= String.slice(@work_order.id, 0..7) %> . <%= Timex.format!(
+                @work_order.inserted_at,
+                "%d/%b/%y",
+                :strftime
+              ) %>, <%= Timex.format!(@work_order.inserted_at, "%H:%M:%S", :strftime) %>
+            </span>
+          </div>
         </div>
-      </div>
+      </td>
       <%!-- <div class="my-auto p-4"><%= @work_order.reason.type %></div> --%>
       <div class="my-auto p-4">
         <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
@@ -175,7 +181,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% end %>
       <% end %>
-    </div>
+    </tr>
     """
   end
 
