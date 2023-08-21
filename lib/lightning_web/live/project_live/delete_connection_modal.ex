@@ -62,12 +62,23 @@ defmodule LightningWeb.ProjectLive.DeleteConnectionModal do
                 </div>
                 <div class="my-2 items-center">
                   <button
+                    phx-click={
+                      LightningWeb.CoreComponents.hide_modal(
+                        "delete_connection_modal"
+                      )
+                    }
                     type="button"
-                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-black  focus:outline-none focus:ring-2 focus:ring-offset-2"
+                    class="inline-flex justify-center py-2 px-4 border shadow-sm text-sm font-medium rounded-md text-black  focus:outline-none focus:ring-2 focus:ring-offset-2"
                   >
                     Cancel
                   </button>
                   <button
+                    phx-click={
+                      JS.push("delete_repo_connection")
+                      |> LightningWeb.CoreComponents.hide_modal(
+                        "delete_connection_modal"
+                      )
+                    }
                     type="button"
                     class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-danger-500 hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500"
                   >

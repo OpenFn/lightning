@@ -274,7 +274,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:ok, _} = VersionControl.remove_github_connection(project_id)
 
     {:noreply,
-     socket |> assign(show_github_setup: true, show_sync_button: false)}
+     socket
+     |> assign(show_github_setup: true, show_sync_button: false)}
   end
 
   def handle_event("save_repo", params, socket) do
