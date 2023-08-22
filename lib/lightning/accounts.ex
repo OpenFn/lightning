@@ -10,7 +10,15 @@ defmodule Lightning.Accounts do
   import Ecto.Query, warn: false
   alias Ecto.Multi
   alias Lightning.Repo
-  alias Lightning.Accounts.{User, UserToken, UserTOTP, UserNotifier}
+
+  alias Lightning.Accounts.{
+    User,
+    UserBackupCode,
+    UserToken,
+    UserTOTP,
+    UserNotifier
+  }
+
   alias Lightning.Credentials
 
   require Logger
@@ -175,7 +183,17 @@ defmodule Lightning.Accounts do
     |> Multi.insert_or_update(:totp, UserTOTP.changeset(totp, attrs))
     |> Multi.update(:user, fn %{totp: totp} ->
       totp = Repo.preload(totp, [:user])
+
       Ecto.Changeset.change(totp.user, %{mfa_enabled: true})
+    end)
+    |> Multi.run(:backup_codes, fn _repo, %{user: user} ->
+      user = Repo.preload(user, [:backup_codes])
+
+      if user.backup_codes == [] do
+        regenerate_user_backup_codes(user)
+      else
+        {:ok, user}
+      end
     end)
     |> Repo.transaction()
     |> case do
@@ -211,6 +229,70 @@ defmodule Lightning.Accounts do
     totp = Repo.get_by!(UserTOTP, user_id: user.id)
 
     UserTOTP.valid_totp?(totp, code)
+  end
+
+  @doc """
+  Validates if the given Backup code is valid.
+  """
+  @spec valid_user_backup_code?(User.t(), String.t()) :: true | false
+  def valid_user_backup_code?(user, code) do
+    backup_codes = list_user_backup_codes(user)
+
+    with {backup_codes, true} <- validate_backup_codes(backup_codes, code),
+         {:ok, _user} <- update_user_backup_codes(user, backup_codes) do
+      true
+    else
+      _other ->
+        false
+    end
+  end
+
+  defp validate_backup_codes(backup_codes, user_code) do
+    Enum.map_reduce(backup_codes, false, fn backup, valid? ->
+      if Plug.Crypto.secure_compare(backup.code, user_code) and
+           is_nil(backup.used_at) do
+        {Ecto.Changeset.change(backup, %{used_at: NaiveDateTime.utc_now()}),
+         true}
+      else
+        {backup, valid?}
+      end
+    end)
+  end
+
+  defp update_user_backup_codes(user, backup_codes) do
+    user
+    |> Repo.preload([:backup_codes])
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:backup_codes, backup_codes)
+    |> Repo.update()
+  end
+
+  @doc """
+  Regenerates the user backup codes
+  """
+  @spec regenerate_user_backup_codes(User.t()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def regenerate_user_backup_codes(user) do
+    new_backup_codes =
+      Enum.map(1..10, fn _n ->
+        %UserBackupCode{code: UserBackupCode.generate_backup_code()}
+      end)
+
+    user
+    |> Repo.preload([:backup_codes])
+    |> Ecto.Changeset.change(%{})
+    |> Ecto.Changeset.put_assoc(:backup_codes, new_backup_codes)
+    |> Repo.update()
+  end
+
+  @doc """
+  Lists the user backup codes
+  """
+  @spec list_user_backup_codes(User.t()) :: [UserBackupCode.t(), ...] | []
+  def list_user_backup_codes(user) do
+    query = from b in UserBackupCode, where: b.user_id == ^user.id
+
+    Repo.all(query)
   end
 
   @doc """
@@ -567,6 +649,37 @@ defmodule Lightning.Accounts do
   """
   def delete_session_token(token) do
     Repo.delete_all(UserToken.token_and_context_query(token, "session"))
+    :ok
+  end
+
+  ## 2FA Session
+
+  @doc """
+  Generates a 2FA session token.
+  """
+  def generate_sudo_session_token(user) do
+    {token, user_token} = UserToken.build_token(user, "sudo_session")
+    Repo.insert!(user_token)
+    token
+  end
+
+  @doc """
+  Checks if the given sudo token for the user is valid
+  """
+  def sudo_session_token_valid?(user, token) do
+    {:ok, token_query} =
+      UserToken.verify_token_query(token, "sudo_session")
+
+    query = from t in token_query, where: t.user_id == ^user.id
+    Repo.exists?(query)
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_sudo_session_token(token) do
+    Repo.delete_all(UserToken.token_and_context_query(token, "sudo_session"))
+
     :ok
   end
 

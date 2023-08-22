@@ -16,7 +16,7 @@ defmodule Lightning.Accounts.UserTOTP do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "users_totps" do
+  schema "user_totps" do
     field :secret, :binary, redact: true
     field :code, :string, virtual: true
     belongs_to :user, Lightning.Accounts.User

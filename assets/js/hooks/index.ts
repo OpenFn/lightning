@@ -66,11 +66,15 @@ export const SubmitViaCtrlS = {
 export const Copy = {
   mounted() {
     let { to } = this.el.dataset;
+    const phxThenAttribute = this.el.getAttribute('phx-then');
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
       let text = document.querySelector(to).value;
       navigator.clipboard.writeText(text).then(() => {
         console.log('Copied!');
+        if (phxThenAttribute !== null) {
+          this.liveSocket.execJS(this.el, phxThenAttribute);
+        }
       });
     });
   },
