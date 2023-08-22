@@ -96,7 +96,7 @@ defmodule LightningWeb.RunLive.Components do
     <div role="row" class="grid grid-cols-8 items-center">
       <div
         role="cell"
-        class="col-span-3 flex py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="col-span-3 flex py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500 px-28"
       >
         <%= case @run.exit_code do %>
           <% nil -> %>
@@ -124,10 +124,10 @@ defmodule LightningWeb.RunLive.Components do
         <% end %>
         <%= @run.job.name %>
       </div>
-      <div role="cell">
+      <div role="cell" class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500">
         --
       </div>
-      <div role="cell">
+      <div role="cell" class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500">
         --
       </div>
       <div
