@@ -105,134 +105,134 @@
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
             <div class="overflow-hidden border border-gray-200 md:rounded-lg">
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-100">
-                  <tr>
-                    <th
-                      colspan="1"
-                      class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
-                    >
-                      <div class="flex gap-24 items-center">
-                        <div class="">
-                          <.form
-                            :let={f}
-                            for={
-                              %{
-                                "all_selections" =>
-                                  all_selected?(
-                                    @selected_work_orders,
-                                    @page.entries
-                                  )
-                              }
+              <div
+                class="min-w-full divide-y divide-gray-200"
+                role="table"
+                data-entity="work_order_index"
+              >
+                <div class="bg-gray-100 grid grid-cols-8" role="row">
+                  <div
+                    role="columnheader"
+                    class="col-span-3 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div class="flex gap-8 items-center">
+                      <div class="">
+                        <.form
+                          :let={f}
+                          for={
+                            %{
+                              "all_selections" =>
+                                all_selected?(
+                                  @selected_work_orders,
+                                  @page.entries
+                                )
                             }
-                            phx-change="toggle_all_selections"
+                          }
+                          phx-change="toggle_all_selections"
+                        >
+                          <%= checkbox(f, :all_selections,
+                            id: "select_all",
+                            phx_hook: "CheckboxIndeterminate",
+                            class:
+                              "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"
+                          ) %>
+                        </.form>
+                      </div>
+
+                      <div>
+                        <%= if none_selected?(@selected_work_orders) do %>
+                          <div>
+                            <h1 class="text-sm mb-1">Workflow Name</h1>
+                            <span class="text-gray-700 mt-2 font-medium">
+                              WORK ORDER ID . DATE & TIME
+                            </span>
+                          </div>
+                        <% else %>
+                          <button
+                            type="button"
+                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            phx-click={show_modal("bulk-rerun-from-start-modal")}
                           >
-                            <%= checkbox(f, :all_selections,
-                              id: "select_all",
-                              phx_hook: "CheckboxIndeterminate",
-                              class:
-                                "left-4 top-1/2  h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 #{if partially_selected?(@selected_work_orders, @page.entries), do: "indeterminate"}"
-                            ) %>
-                          </.form>
-                        </div>
-
-                        <div>
-                          <%= if none_selected?(@selected_work_orders) do %>
-                            <div>
-                              <h1 class="text-sm mb-1">Workflow Name</h1>
-                              <span class="text-gray-700 mt-2 font-medium">
-                                WORK ORDER ID . DATE & TIME
-                              </span>
-                            </div>
-                          <% else %>
-                            <button
-                              type="button"
-                              class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                              phx-click={
-                                show_modal("bulk-rerun-from-start-modal")
-                              }
-                            >
-                              Rerun
-                            </button>
-                            <button
-                              :if={
-                                selected_workflow_count(@selected_work_orders) ==
-                                  1
-                              }
-                              id="bulk-rerun-from-job-modal-trigger"
-                              type="button"
-                              class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                              phx-click={show_modal("bulk-rerun-from-job-modal")}
-                            >
-                              Rerun from...
-                            </button>
-                          <% end %>
-                        </div>
+                            Rerun
+                          </button>
+                          <button
+                            :if={
+                              selected_workflow_count(@selected_work_orders) ==
+                                1
+                            }
+                            id="bulk-rerun-from-job-modal-trigger"
+                            type="button"
+                            class="rounded bg-white px-2 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                            phx-click={show_modal("bulk-rerun-from-job-modal")}
+                          >
+                            Rerun from...
+                          </button>
+                        <% end %>
                       </div>
-                    </th>
-                    <th
-                      scope="col"
-                      class="px-12 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                    >
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                        <span class="text-gray-700 mt-2 font-medium">
-                          RECIEVED AT
-                        </span>
-                      </div>
-                    </th>
+                    </div>
+                  </div>
+                  <div
+                    role="columnheader"
+                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div>
+                      <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                      <span class="text-gray-700 mt-2 font-medium">
+                        RECIEVED AT
+                      </span>
+                    </div>
+                  </div>
 
-                    <th
-                      scope="col"
-                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                    >
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                        <span class="text-gray-700 mt-2 font-medium">
-                          LAST ACTIVITY
-                        </span>
-                      </div>
-                    </th>
+                  <div
+                    role="columnheader"
+                    class="px-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div>
+                      <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                      <span class="text-gray-700 mt-2 font-medium">
+                        LAST ACTIVITY
+                      </span>
+                    </div>
+                  </div>
 
-                    <th
-                      scope="col"
-                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                    >
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">Run</h1>
-                        <span class="text-gray-700 mt-2 font-medium">
-                          STARTED AT
-                        </span>
-                      </div>
-                    </th>
+                  <div
+                    role="columnheader"
+                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div>
+                      <h1 class="text-sm text-gray-500 mb-1">Run</h1>
+                      <span class="text-gray-700 mt-2 font-medium">
+                        STARTED AT
+                      </span>
+                    </div>
+                  </div>
 
-                    <th
-                      scope="col"
-                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                    >
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">Run</h1>
-                        <span class="text-gray-700 mt-2 font-medium">
-                          FINISHED AT
-                        </span>
-                      </div>
-                    </th>
+                  <div
+                    role="columnheader"
+                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div>
+                      <h1 class="text-sm text-gray-500 mb-1">Run</h1>
+                      <span class="text-gray-700 mt-2 font-medium">
+                        FINISHED AT
+                      </span>
+                    </div>
+                  </div>
 
-                    <th
-                      scope="col"
-                      class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
-                    >
-                      <div>
-                        <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
-                        <span class="text-gray-700 mt-2 font-medium">
-                          STATUS
-                        </span>
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
+                  <div
+                    role="columnheader"
+                    class="px-4 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+                  >
+                    <div>
+                      <h1 class="text-sm text-gray-500 mb-1">Work Order</h1>
+                      <span class="text-gray-700 mt-2 font-medium">
+                        STATUS
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-                <tbody
+                <div
                   data-entity="work_order_list"
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
@@ -245,8 +245,13 @@
                       can_rerun_job={@can_rerun_job}
                     />
                   <% end %>
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+              <LightningWeb.Pagination.pagination_bar
+                page={@page}
+                url={@pagination_path}
+              />
             </div>
           </div>
         </div>
@@ -254,18 +259,6 @@
     </div>
 
     <div class="bg-gray-100 dark:bg-gray-700 relative flex">
-      <div
-        data-entity="work_order_index"
-        class="flex-1 flex flex-col h-full w-full border-separate border-spacing-y-4 text-left text-sm text-gray-500 dark:text-gray-400"
-      >
-        <%!-- <div data-entity="work_order_list" class="bg-gray-100">
-         
-        </div> --%>
-        <LightningWeb.Pagination.pagination_bar
-          page={@page}
-          url={@pagination_path}
-        />
-      </div>
       <Components.bulk_rerun_modal
         id="bulk-rerun-from-start-modal"
         page_number={@page.page_number}
