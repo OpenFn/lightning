@@ -510,8 +510,8 @@ defmodule LightningWeb.ProjectLiveTest do
       insert(:project_repo, %{
         project: project,
         user: user,
-        repo: nil,
-        branch: nil,
+        repo: "some-repo",
+        branch: "some-branch",
         github_installation_id: "wrong-cert"
       })
 

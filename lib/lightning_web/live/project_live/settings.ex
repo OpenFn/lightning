@@ -50,7 +50,9 @@ defmodule LightningWeb.ProjectLive.Settings do
     {show_github_setup, show_repo_setup, show_sync_button, project_repo} =
       repo_settings(socket)
 
-    collect_project_repos(socket.assigns.project.id)
+    if show_repo_setup do
+      collect_project_repos(socket.assigns.project.id)
+    end
 
     {:ok,
      socket
@@ -356,8 +358,13 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:error, %{message: message}} ->
         {:noreply, socket |> put_flash(:error, message)}
 
-      repos ->
+      {:ok, [_ | _] = repos} ->
         {:noreply, socket |> assign(repos: repos)}
+
+      # while it's possible to trigger this state when testing 
+      # Github makes it pretty impossible to arrive here
+      _ ->
+        {:noreply, socket}
     end
   end
 
