@@ -109,7 +109,7 @@
                 <thead class="bg-gray-100">
                   <tr>
                     <th
-                      colspan="2"
+                      colspan="1"
                       class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
                     >
                       <div class="flex gap-24 items-center">
@@ -237,14 +237,14 @@
                   class="bg-white divide-y divide-gray-200 text-gray-500"
                 >
                   <!-- Table Row 1-->
-                   <%= for wo <- @page.entries do %>
-                      <.live_component
-                        module={LightningWeb.RunLive.WorkOrderComponent}
-                        id={wo.id}
-                        project={@project}
-                        can_rerun_job={@can_rerun_job}
-                      />
-                    <% end %>
+                  <%= for wo <- @page.entries do %>
+                    <.live_component
+                      module={LightningWeb.RunLive.WorkOrderComponent}
+                      id={wo.id}
+                      project={@project}
+                      can_rerun_job={@can_rerun_job}
+                    />
+                  <% end %>
                 </tbody>
               </table>
             </div>
