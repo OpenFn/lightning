@@ -19,11 +19,11 @@ defmodule LightningWeb.RunLive.Components do
       |> assign(last_run: last_run, run_list: runs)
 
     ~H"""
-    <div
+    <td
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"attempt-#{@attempt.id}"}
       data-entity="attempt"
-      class="col-span-6 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
+      class="mx-3 mb-3 rounded-lg bg-gray-100 p-6"
     >
       <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
         <li>
@@ -72,7 +72,7 @@ defmodule LightningWeb.RunLive.Components do
           </ol>
         </li>
       </ul>
-    </div>
+    </td>
     """
   end
 
