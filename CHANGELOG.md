@@ -14,6 +14,8 @@ and this project adheres to
   [937](https://github.com/OpenFn/Lightning/issues/937)
 - Log a warning in the console when the Editor/docs component is given latest
   [#958](https://github.com/OpenFn/Lightning/issues/958)
+- Improve feedback when a Workflow name is invalid
+  [#961](https://github.com/OpenFn/Lightning/issues/961)
 
 ### Changed
 
