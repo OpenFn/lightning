@@ -10,42 +10,74 @@ defmodule Lightning.VersionControl.GithubClient do
   plug(Tesla.Middleware.JSON)
 
   def installation_repos(installation_id) do
-    installation_client = build_client(installation_id)
+    with {:ok, installation_client} <- build_client(installation_id),
+         {:ok, %{status: 200} = repos_resp} <-
+           installation_client
+           |> get("/installation/repositories") do
+      {:ok,
+       repos_resp.body["repositories"]
+       |> Enum.map(fn g_repo -> g_repo["full_name"] end)}
+    else
+      {:error, :installation_not_found} ->
+        installation_id_error()
 
-    {:ok, repos} =
-      installation_client
-      |> get("/installation/repositories")
+      {:error, :invalid_pem} ->
+        invalid_pem_error()
+    end
+  end
 
-    repo_names =
-      repos.body["repositories"]
-      |> Enum.map(fn g_repo -> g_repo["full_name"] end)
+  defp installation_id_error do
+    {:error,
+     %{
+       message:
+         "Invalid installation ID, ensure to use the ID provided by Github"
+     }}
+  end
 
-    {:ok, repo_names}
+  defp invalid_pem_error do
+    {:error,
+     %{
+       message:
+         "Invalid Github PEM KEY, ensure to use the KEY provided by Github"
+     }}
   end
 
   def get_repo_branches(installation_id, repo_name) do
-    installation_client = build_client(installation_id)
+    with {:ok, installation_client} <- build_client(installation_id),
+         {:ok, %{status: 200} = branches} <-
+           installation_client
+           |> get("/repos/#{repo_name}/branches") do
+      branch_names =
+        branches.body
+        |> Enum.map(fn b -> b["name"] end)
 
-    {:ok, branches} =
-      installation_client
-      |> get("/repos/#{repo_name}/branches")
+      {:ok, branch_names}
+    else
+      {:error, :installation_not_found} ->
+        installation_id_error()
 
-    branch_names =
-      branches.body
-      |> Enum.map(fn b -> b["name"] end)
-
-    {:ok, branch_names}
+      {:error, :invalid_pem} ->
+        invalid_pem_error()
+    end
   end
 
   def fire_repository_dispatch(installation_id, repo_name, user_name) do
-    installation_client = build_client(installation_id)
+    with {:ok, installation_client} <- build_client(installation_id),
+         {:ok, %{status: 204}} <-
+           installation_client
+           |> post("/repos/#{repo_name}/dispatches", %{
+             event_type: "Sync by: #{user_name}"
+           }) do
+      {:ok, :fired}
+    else
+      {:error, :installation_not_found} ->
+        installation_id_error()
 
-    case installation_client
-         |> post("/repos/#{repo_name}/dispatches", %{
-           event_type: "Sync by: #{user_name}"
-         }) do
-      {:ok, %{status: 204}} -> {:ok, :fired}
-      _ -> {:error, "Error Initiating sync"}
+      {:error, :invalid_pem} ->
+        invalid_pem_error()
+
+      _ ->
+        {:error, "Error Initiating sync"}
     end
   end
 
@@ -54,28 +86,35 @@ defmodule Lightning.VersionControl.GithubClient do
       Application.get_env(:lightning, :github_app)
       |> Map.new()
 
-    {:ok, token, _} = GithubToken.build(cert, app_id)
+    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id),
+         client <-
+           Tesla.client([
+             {Tesla.Middleware.Headers,
+              [
+                {"Authorization", "Bearer #{auth_token}"}
+              ]}
+           ]),
+         {:ok, installation_token_resp} <-
+           client
+           |> post("/app/installations/#{installation_id}/access_tokens", ""),
+         200 <-
+           installation_token_resp.status do
+      installation_token = installation_token_resp.body["token"]
 
-    client =
-      Tesla.client([
-        {Tesla.Middleware.Headers,
-         [
-           {"Authorization", "Bearer #{token}"}
-         ]}
-      ])
+      {:ok,
+       Tesla.client([
+         {Tesla.Middleware.Headers,
+          [
+            {"Authorization", "Bearer " <> installation_token}
+          ]}
+       ])}
+    else
+      404 ->
+        {:error, :installation_not_found}
 
-    {:ok, token} =
-      client
-      |> post("/app/installations/#{installation_id}/access_tokens", "")
-
-    installation_token = token.body["token"]
-
-    Tesla.client([
-      {Tesla.Middleware.Headers,
-       [
-         {"Authorization", "Bearer " <> installation_token}
-       ]}
-    ])
+      _unused_status ->
+        {:error, :invalid_pem}
+    end
   end
 end
 

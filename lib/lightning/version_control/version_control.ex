@@ -66,8 +66,6 @@ defmodule Lightning.VersionControl do
              repo_connection.github_installation_id
            ) do
       {:ok, repos}
-    else
-      _ -> {:ok, []}
     end
   end
 

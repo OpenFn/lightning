@@ -109,8 +109,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     pid = self()
 
     Task.start(fn ->
-      {:ok, repos} = VersionControl.fetch_installation_repos(project_id)
-      send(pid, {:repos_fetched, repos})
+      resp = VersionControl.fetch_installation_repos(project_id)
+      send(pid, {:repos_fetched, resp})
     end)
   end
 
@@ -341,12 +341,24 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   @impl true
-  def handle_info({:branches_fetched, branches}, socket) do
-    {:noreply, socket |> assign(loading_branches: false, branches: branches)}
+  def handle_info({:branches_fetched, branches_result}, socket) do
+    case branches_result do
+      {:error, %{message: message}} ->
+        {:noreply, socket |> put_flash(:error, message)}
+
+      branches ->
+        {:noreply, socket |> assign(loading_branches: false, branches: branches)}
+    end
   end
 
-  def handle_info({:repos_fetched, repos}, socket) do
-    {:noreply, socket |> assign(repos: repos)}
+  def handle_info({:repos_fetched, result}, socket) do
+    case result do
+      {:error, %{message: message}} ->
+        {:noreply, socket |> put_flash(:error, message)}
+
+      repos ->
+        {:noreply, socket |> assign(repos: repos)}
+    end
   end
 
   defp dispatch_flash(change_result, socket) do
