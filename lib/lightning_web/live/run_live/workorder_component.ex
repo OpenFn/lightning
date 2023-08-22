@@ -218,9 +218,27 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% else %>
           <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <p class="bg-gray-300 pl-28 text-sm py-2 text-gray-800">
-              Attempt <%= index %> of <%= Enum.count(@attempts) %> . date here . Started at job
-            </p>
+            <div>
+              <div class="flex gap-2 items-center bg-gray-300 pl-28 ">
+                <p class="text-sm py-2 text-gray-800">
+                Attempt <%= index %> of <%= Enum.count(@attempts) %>
+                </p>
+                <p>.</p>
+                <div class="text-sm">
+                <%= Timex.format!(
+                    @last_run.finished_at,
+                    "%d/%b/%y",
+                    :strftime
+                  ) %>, <%= Timex.format!(@last_run.finished_at, "%H:%M:%S", :strftime) %>
+                </div>
+                <p class="text-sm">. Started at job</p>
+                <p class="text-sm px-2 py-1 text-gray-800 bg-white rounded">
+                <%= index %> of <%= Enum.count(@attempts) %>
+                </p>
+                <p class="text-sm ml-4 text-blue-600">Show previous attempts</p>
+              </div>
+            </div>
+
             <.attempt_item
               can_rerun_job={@can_rerun_job}
               attempt={attempt}
