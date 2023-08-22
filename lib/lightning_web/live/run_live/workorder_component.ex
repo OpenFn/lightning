@@ -211,15 +211,24 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
         </div>
       </div>
       <%= if @show_details do %>
-        <div role="row">
-          <%= for attempt <- @attempts do %>
+        <%= if length(@attempts) == 1 do %>
+          <.attempt_item
+            can_rerun_job={@can_rerun_job}
+            attempt={hd(@attempts)}
+            project={@project}
+          />
+        <% else %>
+          <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
+            <p class="bg-gray-300">
+              Attempt <%= index %> of <%= Enum.count(@attempts) %> . date here . Started at job
+            </p>
             <.attempt_item
               can_rerun_job={@can_rerun_job}
               attempt={attempt}
               project={@project}
             />
           <% end %>
-        </div>
+        <% end %>
       <% end %>
     </div>
     """

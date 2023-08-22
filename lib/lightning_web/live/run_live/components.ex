@@ -19,13 +19,23 @@ defmodule LightningWeb.RunLive.Components do
       |> assign(last_run: last_run, run_list: runs)
 
     ~H"""
-    <td
+    <div
+      role="rowgroup"
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"attempt-#{@attempt.id}"}
       data-entity="attempt"
-      class="mx-3 mb-3 rounded-lg bg-gray-100 p-6"
+      class="bg-gray-100"
     >
-      <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
+      <%= for run <- @run_list do %>
+        <.run_list_item
+          can_rerun_job={@can_rerun_job}
+          project_id={@project.id}
+          attempt={@attempt}
+          run={run}
+        />
+      <% end %>
+
+      <%!-- <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
         <li>
           <span class="flex items-center">
             <Heroicons.clock solid class="mr-1 h-5 w-5" />
@@ -71,8 +81,8 @@ defmodule LightningWeb.RunLive.Components do
             <% end %>
           </ol>
         </li>
-      </ul>
-    </td>
+      </ul> --%>
+    </div>
     """
   end
 
@@ -83,8 +93,71 @@ defmodule LightningWeb.RunLive.Components do
 
   def run_list_item(assigns) do
     ~H"""
-    <li>
-      <span class="my-4 flex">
+    <div role="row" class="grid grid-cols-8 items-center">
+      <div
+        role="cell"
+        class="col-span-3 flex py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
+        <%= case @run.exit_code do %>
+          <% nil -> %>
+            <%= if @run.finished_at do %>
+              <Heroicons.x_circle
+                solid
+                class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
+              />
+            <% else %>
+              <Heroicons.ellipsis_horizontal_circle
+                solid
+                class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
+              />
+            <% end %>
+          <% val when val > 0-> %>
+            <Heroicons.x_circle
+              solid
+              class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
+            />
+          <% val when val == 0 -> %>
+            <Heroicons.check_circle
+              solid
+              class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
+            />
+        <% end %>
+        <%= @run.job.name %>
+      </div>
+      <div role="cell">
+        --
+      </div>
+      <div role="cell">
+        --
+      </div>
+      <div
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        role="cell"
+      >
+        <%= Timex.format!(
+          @run.started_at,
+          "%d/%b/%y",
+          :strftime
+        ) %><br />
+        <span class="font-medium text-gray-700">
+          <%= Timex.format!(@run.started_at, "%H:%M:%S", :strftime) %>
+        </span>
+      </div>
+      <div
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        role="cell"
+      >
+        <%= Timex.format!(
+          @run.finished_at,
+          "%d/%b/%y",
+          :strftime
+        ) %><br />
+        <span class="font-medium text-gray-700">
+          <%= Timex.format!(@run.finished_at, "%H:%M:%S", :strftime) %>
+        </span>
+      </div>
+      <div role="cell"></div>
+      <%!-- <span class="my-4 flex">
         &vdash;
         <span class="mx-2 flex">
           <%= case @run.exit_code do %>
@@ -133,8 +206,8 @@ defmodule LightningWeb.RunLive.Components do
             </span>
           <% end %>
         </span>
-      </span>
-    </li>
+      </span> --%>
+    </div>
     """
   end
 
