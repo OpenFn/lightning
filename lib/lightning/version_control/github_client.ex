@@ -66,7 +66,9 @@ defmodule Lightning.VersionControl.GithubClient do
          {:ok, %{status: 204}} <-
            installation_client
            |> post("/repos/#{repo_name}/dispatches", %{
-             event_type: "Sync by: #{user_name}"
+             event_type: "Sync by: #{user_name}",
+             client_payload:
+               "#{user_name} is synced a new project spec and state"
            }) do
       {:ok, :fired}
     else
