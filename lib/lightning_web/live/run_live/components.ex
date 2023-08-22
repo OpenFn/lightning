@@ -98,8 +98,8 @@ defmodule LightningWeb.RunLive.Components do
         role="cell"
         class="col-span-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
-        <p class="mb-2 px-28">Trigger</p>
-        <div class="flex px-28">
+        <p class="mb-2 pl-28">Trigger</p>
+        <div class="flex pl-28">
           <%= case @run.exit_code do %>
             <% nil -> %>
               <%= if @run.finished_at do %>
@@ -125,11 +125,11 @@ defmodule LightningWeb.RunLive.Components do
               />
           <% end %>
           <div class="text-gray-800 flex gap-2 text-sm">
-            <%= @run.job.name %>
+            <span><%= @run.job.name %></span>
             <div class="flex gap-1">
-              <p class="text-blue-800">Code</p>
-              <p class="text-blue-800">|</p>
-              <p class="text-blue-800">Canvas</p>
+              <span class="text-blue-800">Code</span>
+              <span class="text-blue-800">|</span>
+              <span class="text-blue-800">Canvas</span>
             </div>
           </div>
         </div>
@@ -150,27 +150,13 @@ defmodule LightningWeb.RunLive.Components do
         class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <%= Timex.format!(
-          @run.started_at,
-          "%d/%b/%y",
-          :strftime
-        ) %><br />
-        <span class="font-medium text-gray-700">
-          <%= Timex.format!(@run.started_at, "%H:%M:%S", :strftime) %>
-        </span>
+        <.timestamp timestamp={@run.started_at} style={:wrapped} />
       </div>
       <div
         class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
-        <%= Timex.format!(
-          @run.finished_at,
-          "%d/%b/%y",
-          :strftime
-        ) %><br />
-        <span class="font-medium text-gray-700">
-          <%= Timex.format!(@run.finished_at, "%H:%M:%S", :strftime) %>
-        </span>
+        <.timestamp timestamp={@run.finished_at} style={:wrapped} />
       </div>
       <div role="cell"></div>
       <%!-- <span class="my-4 flex">
@@ -224,6 +210,37 @@ defmodule LightningWeb.RunLive.Components do
         </span>
       </span> --%>
     </div>
+    """
+  end
+
+  attr :timestamp, :any, required: true
+  attr :style, :atom, default: :default
+
+  def timestamp(assigns) do
+    ~H"""
+    <%= if is_nil(@timestamp) do %>
+      <span>--</span>
+    <% else %>
+      <%= case @style do %>
+        <% :default -> %>
+          <%= Timex.format!(
+            @timestamp,
+            "%d/%b/%y, %H:%M:%S",
+            :strftime
+          ) %>
+        <% :wrapped -> %>
+          <%= Timex.format!(
+            @timestamp,
+            "%d/%b/%y",
+            :strftime
+          ) %><br />
+          <span class="font-medium text-gray-700">
+            <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
+          </span>
+        <% :time_only -> %>
+          <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
+      <% end %>
+    <% end %>
     """
   end
 
