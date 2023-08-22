@@ -170,7 +170,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%!-- <%= @last_run_finished_at %> --%>
           <%= Timex.format!(
             @last_run.finished_at,
             "%d/%b/%y",
