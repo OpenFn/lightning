@@ -99,8 +99,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       class={if @entry_selected, do: "bg-gray-50", else: "bg-white"}
     >
       <td
-      scope="col"
-      class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" >
+        scope="col"
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
         <div class="flex gap-4 items-center">
           <.form
             :let={f}
@@ -127,7 +128,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
             <% end %>
           </button>
 
-          <div class="ml-3 py-4">
+          <div class="ml-3 py-4 ">
             <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
               <%= @workflow_name %>
             </h1>
@@ -141,30 +142,50 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           </div>
         </div>
       </td>
-      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+      <td
+        class="py-3.5 pl-12 text-sm font-normal text-left rtl:text-right text-gray-500"
+        scope="col"
+      >
         <%= Timex.format!(
-                @work_order.inserted_at,
-                "%d/%b/%y",
-                :strftime
-              ) %><br>
-              <%= Timex.format!(@work_order.inserted_at, "%H:%M:%S", :strftime) %>
+          @work_order.inserted_at,
+          "%d/%b/%y",
+          :strftime
+        ) %><br />
+        <span class="font-medium text-gray-700">
+          <%= Timex.format!(@work_order.inserted_at, "%H:%M:%S", :strftime) %>
+        </span>
       </td>
-      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+      <td
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        scope="col"
+      >
         <%!-- <%= @last_run_finished_at %> --%>
         <%= Timex.format!(
-                @last_run.finished_at,
-                "%d/%b/%y",
-                :strftime
-              ) %> <br>
-              <%= Timex.format!(@last_run.finished_at, "%H:%M:%S", :strftime) %>
+          @last_run.finished_at,
+          "%d/%b/%y",
+          :strftime
+        ) %> <br />
+        <span class="font-medium text-gray-700">
+          <%= Timex.format!(@last_run.finished_at, "%H:%M:%S", :strftime) %>
+        </span>
+
       </td>
-      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
-      --
+      <td
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        scope="col"
+      >
+        --
       </td>
-      <td class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
-      --
+      <td
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        scope="col"
+      >
+        --
       </td>
-      <td class="flex justify-center py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500" scope="col">
+      <td
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        scope="col"
+      >
         <%= case @last_run.exit_code do %>
           <% nil -> %>
             <%= if @last_run.finished_at do %>
@@ -188,7 +209,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% end %>
       <% end %>
-      </tr>
+    </tr>
     """
   end
 
