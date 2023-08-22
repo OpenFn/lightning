@@ -60,24 +60,18 @@ defmodule Lightning.VersionControl do
 
   def fetch_installation_repos(project_id) do
     with %ProjectRepo{} = repo_connection <-
-           Repo.get_by(ProjectRepo, project_id: project_id),
-         {:ok, repos} <-
-           GithubClient.installation_repos(
-             repo_connection.github_installation_id
-           ) do
-      {:ok, repos}
+           Repo.get_by(ProjectRepo, project_id: project_id) do
+      GithubClient.installation_repos(repo_connection.github_installation_id)
     end
   end
 
   def fetch_repo_branches(project_id, repo_name) do
     with %ProjectRepo{} = repo_connection <-
-           Repo.get_by(ProjectRepo, project_id: project_id),
-         {:ok, branches} <-
-           GithubClient.get_repo_branches(
-             repo_connection.github_installation_id,
-             repo_name
-           ) do
-      {:ok, branches}
+           Repo.get_by(ProjectRepo, project_id: project_id) do
+      GithubClient.get_repo_branches(
+        repo_connection.github_installation_id,
+        repo_name
+      )
     end
   end
 
