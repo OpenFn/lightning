@@ -373,25 +373,45 @@ defmodule LightningWeb.WorkflowLive.Components do
       id="workflow_name_form"
     >
       <div class="relative">
-        <%= text_input(
-          f,
-          :name,
-          class: "peer block w-full
-            text-2xl font-bold text-secondary-900
-            border-0 py-1.5 focus:ring-0",
-          required: true,
-          placeholder: "Untitled"
-        ) %>
+        <div class="flex items-center">
+          <%= text_input(
+            f,
+            :name,
+            class:
+              "peer block w-full text-2xl font-bold text-secondary-900 border-0 py-1.5 focus:ring-0",
+            required: true,
+            placeholder: "Untitled"
+          ) %>
+          <!-- Pencil Icon, becomes invisible when input is focused -->
+          <button
+            phx-hook="FocusInput"
+            class="peer-focus:invisible"
+            type="button"
+            id="edit_workflow_name"
+          >
+            <Icon.pencil class="h-5 w-5 inline-block" />
+          </button>
+        </div>
+        <!-- Underline styled by peer focus -->
         <div
           class="absolute inset-x-0 bottom-0
-                 peer-hover:border-t peer-hover:border-gray-300
-                 peer-focus:border-t-2 peer-focus:border-indigo-600
-                 peer-invalid:border-t-2 peer-invalid:border-rose-400"
+             peer-hover:border-t peer-hover:border-gray-300
+             peer-focus:border-t-2 peer-focus:border-indigo-600
+             peer-invalid:border-t-2 peer-invalid:border-rose-400"
           aria-hidden="true"
         >
         </div>
+        <!-- Display Error -->
+        <%= if f.errors[:name] do %>
+          <span class="absolute left-0 bottom-[-1.5rem] text-sm text-red-600 bg-red-100 px-2 py-1 rounded whitespace-nowrap z-10">
+            <%= error_to_string(f.errors[:name]) %>
+          </span>
+        <% end %>
       </div>
     </.form>
     """
   end
+
+  defp error_to_string({message, _}) when is_binary(message), do: message
+  defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 end
