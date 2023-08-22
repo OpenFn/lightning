@@ -78,8 +78,6 @@ defmodule Lightning.VersionControl do
              repo_name
            ) do
       {:ok, branches}
-    else
-      _ -> {:ok, []}
     end
   end
 

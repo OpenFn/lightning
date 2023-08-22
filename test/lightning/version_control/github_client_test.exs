@@ -31,7 +31,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Invalid installtion ID, ensure to use the ID provided by Github"
+                  "Invalid installation ID, ensure to use the ID provided by Github"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end

@@ -496,7 +496,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      assert render(view) =~ "Invalid Installation ID"
+      assert render(view) =~ "Invalid installation ID"
     end
 
     @tag role: :admin
