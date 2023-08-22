@@ -10,6 +10,44 @@ defmodule Lightning.VersionControl.GithubClientTest do
   -----END RSA PRIVATE KEY-----
   """
 
+  describe "Non success Github Client" do
+    setup do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      Tesla.Mock.mock(fn env ->
+        case env.url do
+          "https://api.github.com/app/installations/some-id/access_tokens" ->
+            %Tesla.Env{status: 404}
+
+          "https://api.github.com/app/installations/fail-id/access_tokens" ->
+            %Tesla.Env{status: 400}
+        end
+      end)
+    end
+
+    test "client can handle invalid  application message from github" do
+      p_repo = insert(:project_repo)
+
+      assert {:error,
+              %{
+                message:
+                  "Invalid installtion ID, ensure to use the ID provided by Github"
+              }} =
+               VersionControl.fetch_installation_repos(p_repo.project_id)
+    end
+
+    test "client can handle invalid PEM message from github" do
+      p_repo = insert(:project_repo, github_installation_id: "fail-id")
+
+      assert {:error,
+              %{
+                message:
+                  "Invalid Github PEM KEY, ensure to use the KEY provided by Github"
+              }} =
+               VersionControl.run_sync(p_repo.project_id, "some-user-name")
+    end
+  end
+
   describe "Github Client" do
     setup do
       put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")

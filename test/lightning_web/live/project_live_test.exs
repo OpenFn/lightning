@@ -398,6 +398,12 @@ defmodule LightningWeb.ProjectLiveTest do
     setup do
       Tesla.Mock.mock_global(fn env ->
         case env.url do
+          "https://api.github.com/app/installations/bad-id/access_tokens" ->
+            %Tesla.Env{status: 404}
+
+          "https://api.github.com/app/installations/wrong-cert/access_tokens" ->
+            %Tesla.Env{status: 201}
+
           "https://api.github.com/app/installations/some-id/access_tokens" ->
             %Tesla.Env{status: 200, body: %{"token" => "some-token"}}
 
@@ -466,6 +472,56 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert html =~ "Repository"
+    end
+
+    @tag role: :admin
+    test "Flashes an error when APP ID is wrong", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project: project,
+        user: user,
+        repo: nil,
+        branch: nil,
+        github_installation_id: "bad-id"
+      })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert render(view) =~ "Invalid Installation ID"
+    end
+
+    @tag role: :admin
+    test "Flashes an error when PEM CERT is corrupt", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project: project,
+        user: user,
+        repo: nil,
+        branch: nil,
+        github_installation_id: "wrong-cert"
+      })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert render(view) =~ "Invalid Github PEM KEY"
     end
 
     @tag role: :admin
