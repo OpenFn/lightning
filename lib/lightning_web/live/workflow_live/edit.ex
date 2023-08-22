@@ -160,19 +160,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
               <:footer>
                 <div class="flex flex-row">
                   <div>
-                    <.link
-                      patch={"#{@base_url}?s=#{@selected_job.id}&m=expand"}
-                      class="inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                    >
-                      <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
-                    </.link>
-                    <span
-                      :if={editor_is_empty(@workflow_form, @selected_job)}
-                      class="text-sm text-red-600 mx-2 rounded whitespace-nowrap z-10"
-                    >
-                      <Icon.info class="h-5 w-5 mx-2 inline-block" />
-                      The editor can't be empty
-                    </span>
+                    <.expand_job_editor
+                      base_url={@base_url}
+                      job={@selected_job}
+                      form={@workflow_form}
+                    />
                   </div>
                   <div class="grow flex justify-end">
                     <label>
@@ -247,6 +239,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </.form>
       </div>
     </LayoutComponents.page_content>
+    """
+  end
+
+  defp expand_job_editor(assigns) do
+    is_empty = editor_is_empty(assigns.form, assigns.job)
+
+    button_base_classes =
+      ~w(
+        inline-flex items-center rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset hover:bg-gray-50)
+
+    button_classes =
+      button_base_classes ++
+        if is_empty,
+          do: ~w(ring-red-300),
+          else: ~w(ring-gray-300)
+
+    assigns = assign(assigns, is_empty: is_empty, button_classes: button_classes)
+
+    ~H"""
+    <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
+      <Heroicons.code_bracket class="w-4 h-4 -ml-0.5" />
+    </.link>
+    <span
+      :if={@is_empty}
+      class="text-sm text-red-600 mx-2 rounded whitespace-nowrap z-10"
+    >
+      <Icon.info class="h-5 w-5 mx-2 inline-block" />The editor can't be empty
+    </span>
     """
   end
 
