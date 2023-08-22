@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-5381408C.js"></script>
+    <script src="dist/sidebar_items-0263EBFD.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,6 +133,9 @@ Lightning
 
       </div>
 
+        <div class="summary-synopsis"><p>Creates or updates a project based on a JSON payload that may or may not
+contain UUIDs for existing resources.</p></div>
+
     </div>
 
     <div class="summary-row">
@@ -140,6 +143,20 @@ Lightning
         <a href="#show/2" translate="no">show(conn, params)</a>
 
       </div>
+
+        <div class="summary-synopsis"><p>Returns a project &quot;state.json&quot;, complete with UUIDs to enable idempotent
+project deployments and updates to existing projects via the CLI.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#show_yaml/2" translate="no">show_yaml(conn, map)</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>Returns a description of the project as yaml. Same as the export project to
+yaml button (see Downloads Controller) but made for the API.</p></div>
 
     </div>
 
@@ -166,7 +183,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create(conn, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/provisioning_controller.ex#L11" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/provisioning_controller.ex#L15" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -176,7 +193,8 @@ Functions
 
   <section class="docstring">
 
-
+<p>Creates or updates a project based on a JSON payload that may or may not
+contain UUIDs for existing resources.</p>
   </section>
 </section>
 <section class="detail" id="show/2">
@@ -188,7 +206,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">show(conn, params)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/provisioning_controller.ex#L33" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/provisioning_controller.ex#L41" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -198,7 +216,31 @@ Functions
 
   <section class="docstring">
 
+<p>Returns a project &quot;state.json&quot;, complete with UUIDs to enable idempotent
+project deployments and updates to existing projects via the CLI.</p>
+  </section>
+</section>
+<section class="detail" id="show_yaml/2">
 
+  <div class="detail-header">
+    <a href="#show_yaml/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">show_yaml(conn, map)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/controllers/api/provisioning_controller.ex#L61" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+<p>Returns a description of the project as yaml. Same as the export project to
+yaml button (see Downloads Controller) but made for the API.</p>
   </section>
 </section>
 
