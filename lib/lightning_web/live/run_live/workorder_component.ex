@@ -65,6 +65,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
      )}
   end
 
+  def handle_event("toggle_attempts", %{}, socket) do
+    {:noreply,
+     assign(
+       socket,
+       :show_prev_attempts,
+       !socket.assigns[:show_prev_attempts]
+     )}
+  end
+
   def handle_event("toggle_selection", %{}, %{assigns: assigns} = socket) do
     send(
       self(),
@@ -94,6 +103,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   attr :show_details, :boolean, default: false
+  attr :show_prev_attempts, :boolean, default: false
   attr :entry_selected, :boolean, default: false
 
   @impl true
@@ -140,15 +150,8 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                 <%= @workflow_name %>
               </h1>
               <span class="mt-2 text-gray-700">
-                <%= display_short_uuid(@work_order.id) %> . <%= Timex.format!(
-                  @work_order.inserted_at,
-                  "%d/%b/%y",
-                  :strftime
-                ) %>, <%= Timex.format!(
-                  @work_order.inserted_at,
-                  "%H:%M:%S",
-                  :strftime
-                ) %>
+                <%= display_short_uuid(@work_order.id) %> .
+                <.timestamp timestamp={@work_order.inserted_at} />
               </span>
             </div>
           </div>
@@ -157,27 +160,13 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= Timex.format!(
-            @work_order.inserted_at,
-            "%d/%b/%y",
-            :strftime
-          ) %><br />
-          <span class="font-medium text-gray-700">
-            <%= Timex.format!(@work_order.inserted_at, "%H:%M:%S", :strftime) %>
-          </span>
+          <.timestamp timestamp={@work_order.inserted_at} style={:wrapped} />
         </div>
         <div
           class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= Timex.format!(
-            @last_run.finished_at,
-            "%d/%b/%y",
-            :strftime
-          ) %> <br />
-          <span class="font-medium text-gray-700">
-            <%= Timex.format!(@last_run.finished_at, "%H:%M:%S", :strftime) %>
-          </span>
+          <.timestamp timestamp={@last_run.finished_at} style={:wrapped} />
         </div>
         <div
           class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -218,32 +207,42 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% else %>
           <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <div>
-              <div class="flex gap-2 items-center bg-gray-300 pl-28 ">
-                <p class="text-sm py-2 text-gray-800">
-                Attempt <%= index %> of <%= Enum.count(@attempts) %>
-                </p>
-                <p>.</p>
-                <div class="text-sm">
-                <%= Timex.format!(
-                    @last_run.finished_at,
-                    "%d/%b/%y",
-                    :strftime
-                  ) %>, <%= Timex.format!(@last_run.finished_at, "%H:%M:%S", :strftime) %>
+            <div class={
+              if index != Enum.count(@attempts) and !@show_prev_attempts,
+                do: "hidden",
+                else: ""
+            }>
+              <div>
+                <div class="flex gap-2 items-center bg-gray-300 pl-28 ">
+                  <p class="text-sm py-2 text-gray-800">
+                    Attempt <%= index %> of <%= Enum.count(@attempts) %>
+                  </p>
+                  <p>.</p>
+                  <div class="text-sm">
+                    <.timestamp timestamp={List.last(attempt.runs).finished_at} />
+                  </div>
+                  <p class="text-sm">. Started at job</p>
+                  <p class="text-sm px-2 py-1 text-gray-800 bg-white rounded">
+                    <%= "-" %> of <%= Enum.count(@attempts) %>
+                  </p>
+                  <a
+                    :if={index == Enum.count(@attempts)}
+                    href="#"
+                    class="text-sm ml-4 text-blue-600"
+                    phx-click="toggle_attempts"
+                    phx-target={@myself}
+                  >
+                    <%= if @show_prev_attempts, do: "Hide", else: "Show" %> previous attempts
+                  </a>
                 </div>
-                <p class="text-sm">. Started at job</p>
-                <p class="text-sm px-2 py-1 text-gray-800 bg-white rounded">
-                <%= index %> of <%= Enum.count(@attempts) %>
-                </p>
-                <p class="text-sm ml-4 text-blue-600">Show previous attempts</p>
               </div>
-            </div>
 
-            <.attempt_item
-              can_rerun_job={@can_rerun_job}
-              attempt={attempt}
-              project={@project}
-            />
+              <.attempt_item
+                can_rerun_job={@can_rerun_job}
+                attempt={attempt}
+                project={@project}
+              />
+            </div>
           <% end %>
         <% end %>
       <% end %>
