@@ -63,6 +63,17 @@ export const SubmitViaCtrlS = {
   handleEvent: (e: KeyboardEvent) => void;
 }>;
 
+export const FocusInput = {
+  mounted() {
+    this.el.addEventListener('click', e => {
+      let input = this.el.closest('.relative').querySelector('input');
+      if (input) {
+        input.focus();
+      }
+    });
+  },
+};
+
 export const Copy = {
   mounted() {
     let { to } = this.el.dataset;
