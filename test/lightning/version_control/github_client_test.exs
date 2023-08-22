@@ -21,6 +21,12 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
           "https://api.github.com/app/installations/fail-id/access_tokens" ->
             %Tesla.Env{status: 400}
+
+          "https://api.github.com/installation/repositories" ->
+            %Tesla.Env{status: 404}
+
+          "https://api.github.com/repos/some/repo/branches" ->
+            %Tesla.Env{status: 201}
         end
       end)
     end
@@ -45,6 +51,28 @@ defmodule Lightning.VersionControl.GithubClientTest do
                   "Invalid Github PEM KEY, ensure to use the KEY provided by Github"
               }} =
                VersionControl.run_sync(p_repo.project_id, "some-user-name")
+    end
+
+    test "fetch repo branches can handle fail" do
+      p_repo = insert(:project_repo)
+
+      assert {:error,
+              %{
+                message:
+                  "Invalid installation ID, ensure to use the ID provided by Github"
+              }} =
+               VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
+    end
+
+    test "client can fetch installation repos" do
+      p_repo = insert(:project_repo)
+
+      assert {:error,
+              %{
+                message:
+                  "Invalid installation ID, ensure to use the ID provided by Github"
+              }} =
+               VersionControl.fetch_installation_repos(p_repo.project_id)
     end
   end
 
