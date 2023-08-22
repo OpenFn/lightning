@@ -94,11 +94,14 @@ defmodule LightningWeb.RunLive.Components do
   def run_list_item(assigns) do
     ~H"""
     <div role="row" class="grid grid-cols-8 items-center">
+
       <div
         role="cell"
-        class="col-span-3 flex py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500 px-28"
+        class="col-span-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
-        <%= case @run.exit_code do %>
+      <p class="mb-2 px-28">Trigger</p>
+      <div class="flex px-28">
+      <%= case @run.exit_code do %>
           <% nil -> %>
             <%= if @run.finished_at do %>
               <Heroicons.x_circle
@@ -122,12 +125,27 @@ defmodule LightningWeb.RunLive.Components do
               class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
             />
         <% end %>
+        <div class="text-gray-800 flex gap-2 text-sm">
         <%= @run.job.name %>
+        <div class="flex gap-1">
+          <p class="text-blue-800">Code</p>
+          <p class="text-blue-800">|</p>
+          <p class="text-blue-800">Canvas</p>
+        </div>
+        </div>
+    </div>
+
       </div>
-      <div role="cell" class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500">
+      <div
+        role="cell"
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
         --
       </div>
-      <div role="cell" class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500">
+      <div
+        role="cell"
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
         --
       </div>
       <div
