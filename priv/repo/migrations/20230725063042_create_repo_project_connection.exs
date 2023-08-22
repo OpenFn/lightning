@@ -7,8 +7,8 @@ defmodule Lightning.Repo.Migrations.CreateRepoProjectConnection do
       add :github_installation_id, :string
       add :repo, :string
       add :branch, :string
-      add :project_id, references(:projects, type: :binary_id)
-      add :user_id, references(:users, type: :binary_id)
+      add :project_id, references(:projects, type: :binary_id, on_delete: :delete_all)
+      add :user_id, references(:users, type: :binary_id, on_delete: :nilify_all)
 
       timestamps()
     end
