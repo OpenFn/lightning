@@ -219,7 +219,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% else %>
           <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <p class="bg-gray-300">
+            <p class="bg-gray-300 pl-28 text-sm py-2 text-gray-800">
               Attempt <%= index %> of <%= Enum.count(@attempts) %> . date here . Started at job
             </p>
             <.attempt_item
