@@ -9,9 +9,10 @@ and this project adheres to
 ## [Unreleased]
 
 ### Added
-- Introduces Github sync feature, users can now setup our github app on their instance
-and sync projects using our latest portability spec
-[#970](https://github.com/OpenFn/Lightning/issues/970)
+
+- Introduces Github sync feature, users can now setup our github app on their
+  instance and sync projects using our latest portability spec
+  [#970](https://github.com/OpenFn/Lightning/issues/970)
 
 - Support Backup Codes for Multi-Factor Authentication
   [937](https://github.com/OpenFn/Lightning/issues/937)
@@ -19,6 +20,8 @@ and sync projects using our latest portability spec
   [#958](https://github.com/OpenFn/Lightning/issues/958)
 - Improve feedback when a Workflow name is invalid
   [#961](https://github.com/OpenFn/Lightning/issues/961)
+- Show that the jobs' body is invalid
+  [#957](https://github.com/OpenFn/Lightning/issues/957)
 
 ### Changed
 
