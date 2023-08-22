@@ -4,11 +4,15 @@ defmodule LightningWeb.ProjectLive.Settings do
   """
   use LightningWeb, :live_view
 
+  alias Lightning.VersionControl
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Projects.ProjectUser
   alias Lightning.Policies.Permissions
   alias Lightning.Accounts.User
   alias Lightning.{Projects, Credentials}
+
+  alias LightningWeb.Components.Form
+  alias LightningWeb.ProjectLive.DeleteConnectionModal
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -43,6 +47,13 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket.assigns.project
       )
 
+    {show_github_setup, show_repo_setup, show_sync_button, project_repo} =
+      repo_settings(socket)
+
+    if show_repo_setup do
+      collect_project_repos(socket.assigns.project.id)
+    end
+
     {:ok,
      socket
      |> assign(
@@ -53,8 +64,56 @@ defmodule LightningWeb.ProjectLive.Settings do
        project_changeset: Projects.change_project(socket.assigns.project),
        can_delete_project: can_delete_project,
        can_edit_project_name: can_edit_project_name,
-       can_edit_project_description: can_edit_project_description
+       can_edit_project_description: can_edit_project_description,
+       show_github_setup: show_github_setup,
+       show_repo_setup: show_repo_setup,
+       show_sync_button: show_sync_button,
+       project_repo: project_repo,
+       repos: [],
+       branches: [],
+       loading_branches: false,
+       github_enabled: VersionControl.github_enabled?(),
+       can_install_github: can_install_github(socket)
      )}
+  end
+
+  defp can_install_github(socket) do
+    case socket.assigns.project_user.role do
+      :viewer -> false
+      _ -> true
+    end
+  end
+
+  defp repo_settings(socket) do
+    repo_connection =
+      VersionControl.get_repo_connection(socket.assigns.project.id)
+
+    project_repo = %{"repo" => nil, "branch" => nil}
+
+    # {show_github_setup, show_repo_setup, show_sync_button}
+    repo_settings =
+      case repo_connection do
+        nil ->
+          {true, false, false, project_repo}
+
+        %{repo: nil} ->
+          {false, true, false, project_repo}
+
+        %{repo: r, branch: b} ->
+          {false, true, true, %{"repo" => r, "branch" => b}}
+      end
+
+    repo_settings
+  end
+
+  # we should only run this if repo setting is pending
+  defp collect_project_repos(project_id) do
+    pid = self()
+
+    Task.start(fn ->
+      resp = VersionControl.fetch_installation_repos(project_id)
+      send(pid, {:repos_fetched, resp})
+    end)
   end
 
   defp can_edit_digest_alert(
@@ -180,6 +239,132 @@ defmodule LightningWeb.ProjectLive.Settings do
       digest ->
         Projects.update_project_user(project_user, %{digest: digest})
         |> dispatch_flash(socket)
+    end
+  end
+
+  def handle_event("install_app", _, socket) do
+    user_id = socket.assigns.current_user.id
+    project_id = socket.assigns.project.id
+
+    {:ok, _connection} =
+      VersionControl.create_github_connection(%{
+        user_id: user_id,
+        project_id: project_id
+      })
+
+    {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
+  end
+
+  def handle_event("reinstall_app", _, socket) do
+    user_id = socket.assigns.current_user.id
+    project_id = socket.assigns.project.id
+
+    {:ok, _} = VersionControl.remove_github_connection(project_id)
+
+    {:ok, _connection} =
+      VersionControl.create_github_connection(%{
+        user_id: user_id,
+        project_id: project_id
+      })
+
+    {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
+  end
+
+  def handle_event("delete_repo_connection", _, socket) do
+    project_id = socket.assigns.project.id
+
+    {:ok, _} = VersionControl.remove_github_connection(project_id)
+
+    {:noreply,
+     socket
+     |> assign(show_github_setup: true, show_sync_button: false)}
+  end
+
+  def handle_event("save_repo", params, socket) do
+    {:ok, _connection} =
+      VersionControl.add_github_repo_and_branch(
+        socket.assigns.project.id,
+        params["repo"],
+        params["branch"]
+      )
+
+    {:noreply,
+     socket
+     |> assign(
+       show_repo_setup: false,
+       show_sync_button: true,
+       project_repo: %{"branch" => params["branch"], "repo" => params["repo"]}
+     )}
+  end
+
+  def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do
+    user_name = u.first_name <> " " <> u.last_name
+
+    case VersionControl.run_sync(params["id"], user_name) do
+      {:ok, :fired} ->
+        {:noreply, socket |> put_flash(:info, "Sync Initialized")}
+
+      _err ->
+        # we should log or instrument this situation
+        {:noreply, socket |> put_flash(:error, "Sync Error")}
+    end
+  end
+
+  def handle_event("repo_selected", params, socket) do
+    pid = self()
+
+    Task.start(fn ->
+      {:ok, branches} =
+        VersionControl.fetch_repo_branches(
+          socket.assigns.project.id,
+          params["repo"]
+        )
+
+      send(pid, {:branches_fetched, branches})
+    end)
+
+    {:noreply,
+     socket
+     |> assign(
+       loading_branches: true,
+       project_repo: %{socket.assigns.project_repo | "repo" => params["repo"]}
+     )}
+  end
+
+  def handle_event("branch_selected", params, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       project_repo: %{
+         socket.assigns.project_repo
+         | "branch" => params["branch"]
+       }
+     )}
+  end
+
+  @impl true
+  def handle_info({:branches_fetched, branches_result}, socket) do
+    case branches_result do
+      {:error, %{message: message}} ->
+        {:noreply, socket |> put_flash(:error, message)}
+
+      branches ->
+        {:noreply, socket |> assign(loading_branches: false, branches: branches)}
+    end
+  end
+
+  def handle_info({:repos_fetched, result}, socket) do
+    case result do
+      {:error, %{message: message}} ->
+        {:noreply, socket |> put_flash(:error, message)}
+
+      {:ok, [_ | _] = repos} ->
+        {:noreply, socket |> assign(repos: repos)}
+
+      # while it's possible to trigger this state when testing 
+      # Github makes it pretty impossible to arrive here
+      _ ->
+        {:noreply, socket}
     end
   end
 

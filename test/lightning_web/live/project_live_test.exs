@@ -1,10 +1,17 @@
 defmodule LightningWeb.ProjectLiveTest do
-  use LightningWeb.ConnCase, async: true
+  use LightningWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.Factories
+  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+
+  @cert """
+  -----BEGIN RSA PRIVATE KEY-----
+  MIICWwIBAAKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvEOfou0/gCFQsHUfQrSDv+MuSUMAe8jzKE4qW+jK+xQU9a03GUnKHkkle+Q0pX/g6jXZ7r1/xAK5Do2kQ+X5xK9cipRgEKwIDAQABAoGAD+onAtVye4ic7VR7V50DF9bOnwRwNXrARcDhq9LWNRrRGElESYYTQ6EbatXS3MCyjjX2eMhu/aF5YhXBwkppwxg+EOmXeh+MzL7Zh284OuPbkglAaGhV9bb6/5CpuGb1esyPbYW+Ty2PC0GSZfIXkXs76jXAu9TOBvD0ybc2YlkCQQDywg2R/7t3Q2OE2+yo382CLJdrlSLVROWKwb4tb2PjhY4XAwV8d1vy0RenxTB+K5Mu57uVSTHtrMK0GAtFr833AkEA6avx20OHo61Yela/4k5kQDtjEf1N0LfI+BcWZtxsS3jDM3i1Hp0KSu5rsCPb8acJo5RO26gGVrfAsDcIXKC+bQJAZZ2XIpsitLyPpuiMOvBbzPavd4gY6Z8KWrfYzJoI/Q9FuBo6rKwl4BFoToD7WIUS+hpkagwWiz+6zLoX1dbOZwJACmH5fSSjAkLRi54PKJ8TFUeOP15h9sQzydI8zJU+upvDEKZsZc/UhT/SySDOxQ4G/523Y0sz/OZtSWcol/UMgQJALesy++GdvoIDLfJX5GBQpuFgFenRiRDabxrE9MNUZ2aPFaFp+DyAe+b4nDwuJaW2LURbr8AEZga7oQj0uYxcYw==
+  -----END RSA PRIVATE KEY-----
+  """
 
   @create_attrs %{
     raw_name: "some name"
@@ -386,14 +393,38 @@ defmodule LightningWeb.ProjectLiveTest do
 
   describe "projects settings page" do
     setup :register_and_log_in_user
+    setup :create_project_for_current_user
 
-    test "access project settings page", %{conn: conn, user: user} do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id}]
-        })
+    setup do
+      Tesla.Mock.mock_global(fn env ->
+        case env.url do
+          "https://api.github.com/app/installations/bad-id/access_tokens" ->
+            %Tesla.Env{status: 404}
 
+          "https://api.github.com/app/installations/wrong-cert/access_tokens" ->
+            %Tesla.Env{status: 201}
+
+          "https://api.github.com/app/installations/some-id/access_tokens" ->
+            %Tesla.Env{status: 200, body: %{"token" => "some-token"}}
+
+          "https://api.github.com/installation/repositories" ->
+            %Tesla.Env{
+              status: 200,
+              body: %{"repositories" => [%{"full_name" => "org/repo"}]}
+            }
+
+          "https://api.github.com/repos/some/repo/branches" ->
+            %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
+
+          "https://api.github.com/repos/some/repo/dispatches" ->
+            %Tesla.Env{status: 204}
+        end
+      end)
+
+      :ok
+    end
+
+    test "access project settings page", %{conn: conn, project: project} do
       {:ok, _view, html} =
         live(
           conn,
@@ -403,29 +434,211 @@ defmodule LightningWeb.ProjectLiveTest do
       assert html =~ "Project settings"
     end
 
-    test "project admin can view project collaboration page",
-         %{
-           conn: conn,
-           user: user
-         } do
-      {:ok, project} =
-        Lightning.Projects.create_project(%{
-          name: "project-1",
-          project_users: [%{user_id: user.id, role: :admin}]
-        })
-
-      project_users =
-        Lightning.Projects.get_project_with_users!(project.id).project_users
-
-      assert 1 == length(project_users)
-
-      project_user = List.first(project_users)
+    @tag role: :admin
+    test "project admin can view github sync page", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
 
       {:ok, _view, html} =
         live(
           conn,
-          Routes.project_project_settings_path(conn, :index, project.id) <>
-            "#collaboration"
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert html =~ "Install Github App to get started"
+    end
+
+    @tag role: :admin
+    test "project admin can view github setup", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project: project,
+        user: user,
+        repo: nil,
+        branch: nil
+      })
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert html =~ "Repository"
+    end
+
+    @tag role: :admin
+    test "Flashes an error when APP ID is wrong", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project: project,
+        user: user,
+        repo: nil,
+        branch: nil,
+        github_installation_id: "bad-id"
+      })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert render(view) =~ "Invalid installation ID"
+    end
+
+    @tag role: :admin
+    test "Flashes an error when PEM CERT is corrupt", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project: project,
+        user: user,
+        repo: "some-repo",
+        branch: "some-branch",
+        github_installation_id: "wrong-cert"
+      })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert render(view) =~ "Invalid Github PEM KEY"
+    end
+
+    @tag role: :admin
+    test "can view github sync", %{
+      conn: conn,
+      project: project,
+      user: user
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      repository = "some-repo"
+
+      insert(:project_repo, %{
+        project: project,
+        user: user,
+        repo: repository,
+        branch: "some-branch"
+      })
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert html =~ repository
+    end
+
+    @tag role: :admin
+    test "can install github app", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("install_app", %{})
+    end
+
+    @tag role: :admin
+    test "can reinstall github app", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      insert(:project_repo, %{project_id: project.id, project: nil})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("reinstall_app", %{})
+    end
+
+    @tag role: :admin
+    test "can delete github repo connection", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      insert(:project_repo, %{project_id: project.id, project: nil})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("delete_repo_connection", %{}) =~
+               "Install Github"
+    end
+
+    @tag role: :admin
+    test "can save github repo connection", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+
+      insert(:project_repo, %{
+        project_id: project.id,
+        project: nil,
+        branch: nil,
+        repo: nil
+      })
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view
+             |> render_click("save_repo", %{branch: "b", repo: "r"}) =~
+               "Repository: r"
+    end
+
+    @tag role: :admin
+    test "project admin can view project collaboration page", %{
+      conn: conn,
+      project: project
+    } do
+      project_user =
+        Lightning.Projects.get_project_with_users!(project.id).project_users
+        |> List.first()
+
+      {:ok, _view, html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
         )
 
       assert html =~ "Collaborator"

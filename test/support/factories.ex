@@ -1,6 +1,16 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
 
+  def project_repo_factory do
+    %Lightning.VersionControl.ProjectRepo{
+      project: build(:project),
+      user: build(:user),
+      repo: "some/repo",
+      branch: "branch",
+      github_installation_id: "some-id"
+    }
+  end
+
   def project_factory do
     %Lightning.Projects.Project{
       name: sequence(:project_name, &"project-#{&1}")

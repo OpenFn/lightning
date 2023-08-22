@@ -41,6 +41,13 @@
               <Heroicons.lock_closed class="h-5 w-5 inline-block mr-2" />
               <span class="inline-block align-middle">Security</span>
             </LightningWeb.Components.Common.tab_item>
+            <LightningWeb.Components.Common.tab_item
+              orientation="vertical"
+              hash="vcs"
+            >
+              <Heroicons.arrow_path class="h-5 w-5 inline-block mr-2" />
+              <span class="inline-block align-middle">Sync to Github</span>
+            </LightningWeb.Components.Common.tab_item>
           </LightningWeb.Components.Common.tab_bar>
         </div>
       </div>
@@ -75,7 +82,7 @@
               </div>
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
-                  <LightningWeb.Components.Form.text_field
+                  <Form.text_field
                     form={f}
                     disabled={!@can_edit_project_name}
                     label="Project name"
@@ -88,7 +95,7 @@
               </div>
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
-                  <LightningWeb.Components.Form.text_area
+                  <Form.text_area
                     class="mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
                     form={f}
                     disabled={!@can_edit_project_description}
@@ -105,7 +112,7 @@
               </div>
               <div class="grid grid-cols gap-6">
                 <div class="md:col-span-2">
-                  <LightningWeb.Components.Form.submit_button
+                  <Form.submit_button
                     disabled={
                       !(@project_changeset.valid? and @can_edit_project_name and
                           @can_edit_project_description)
@@ -113,7 +120,7 @@
                     phx-disable-with="Saving"
                   >
                     Save
-                  </LightningWeb.Components.Form.submit_button>
+                  </Form.submit_button>
                 </div>
               </div>
             </.form>
@@ -335,6 +342,183 @@
                   </span>
                 </div>
               </div>
+            </div>
+          <% end %>
+        </LightningWeb.Components.Common.panel_content>
+        <LightningWeb.Components.Common.panel_content for_hash="vcs">
+          <%= if  @github_enabled do %>
+            <div :if={@can_edit_project_name}>
+              <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
+                <h6 class="font-medium text-black">
+                  Install Github App to get started
+                </h6>
+                <small class="block my-1 text-xs text-gray-600">
+                  Easily keep your Project synced to a Github Repository
+                </small>
+                <small class="block my-1 text-xs text-gray-600">
+                  To get started you will need to install the OpenFn Github application (admin access require)
+                </small>
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-2"></div>
+                </div>
+                <button
+                  type="button"
+                  phx-click="install_app"
+                  phx-value-id={@project.id}
+                  class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  Install Github
+                </button>
+              </div>
+              <div class="hidden sm:block" aria-hidden="true">
+                <div class="py-2"></div>
+              </div>
+              <div :if={!@show_github_setup} class="bg-white p-4 rounded-md">
+                <h6 class="font-medium text-black">Sync to Github</h6>
+                <small class="block my-1 text-xs text-gray-600">
+                  Configure the settings below to start Syncing
+                </small>
+
+                <.form
+                  :let={f}
+                  for={@project_repo}
+                  id="project-vcs-form"
+                  phx-submit="save_repo"
+                >
+                  <div class="hidden sm:block" aria-hidden="true">
+                    <div class="py-2"></div>
+                  </div>
+                  <div class="grid grid-cols gap-6">
+                    <div class="md:col-span-2">
+                      <small class="font-medium my-1 text-xs text-black">
+                        <span>
+                          <%= if @show_repo_setup && !@show_sync_button do %>
+                            Repository
+                          <% end %>
+                          <%= if @show_sync_button do %>
+                            Repository: <%= @project_repo["repo"] %>
+                          <% end %>
+                        </span>
+                      </small>
+
+                      <Form.select_field
+                        :if={@show_repo_setup && !@show_sync_button}
+                        form={f}
+                        disabled={@show_sync_button}
+                        name={:repo}
+                        id="project-repo"
+                        phx-change="repo_selected"
+                        prompt={@project_repo["repo"] || "Select a Repository"}
+                        values={@repos}
+                      />
+                    </div>
+                  </div>
+                  <div class="hidden sm:block" aria-hidden="true">
+                    <div class="py-1"></div>
+                  </div>
+                  <div class="grid grid-cols gap-6">
+                    <div class="md:col-span-2">
+                      <small class="font-medium my-1 text-xs text-black">
+                        <span>
+                          <%= if @show_repo_setup && !@show_sync_button do %>
+                            Branch
+                          <% end %>
+                          <%= if @show_sync_button do %>
+                            Branch: <%= @project_repo["branch"] %>
+                          <% end %>
+                        </span>
+                      </small>
+                      <Form.select_field
+                        :if={@show_repo_setup && !@show_sync_button}
+                        form={f}
+                        disabled={@loading_branches}
+                        phx-change="branch_selected"
+                        name={:branch}
+                        id="project-branch"
+                        values={@branches}
+                        prompt={@project_repo["branch"] || "Select a branch"}
+                      />
+                    </div>
+                  </div>
+                  <div class="hidden sm:block" aria-hidden="true">
+                    <div class="py-4"></div>
+                  </div>
+                  <div class="grid grid-cols gap-6">
+                    <div class="md:col-span-2">
+                      <Form.submit_button
+                        :if={!@show_sync_button}
+                        phx-disable-with="Saving"
+                        disabled={
+                          !@project_repo["repo"] || !@project_repo["branch"]
+                        }
+                      >
+                        Connect Branch
+                      </Form.submit_button>
+                      <button
+                        :if={@show_sync_button}
+                        type="button"
+                        phx-click="run_sync"
+                        phx-value-id={@project.id}
+                        class="bg-primary-600 hover:bg-primary-700 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                      >
+                        Sync to Branch
+                      </button>
+                    </div>
+                    <div>
+                      <div>
+                        <small>
+                          Need to change the repository or branch?
+                        </small>
+                        <button
+                          type="button"
+                          phx-click="reinstall_clip"
+                          phx-value-id={@project.id}
+                          class="my-2 text-xs text-primary-600"
+                        >
+                          Re-configure your Github permissions (admin access required)
+                        </button>
+                      </div>
+                      <div>
+                        <small>
+                          No longer need to sync your project?
+                        </small>
+                        <button
+                          type="button"
+                          phx-click={
+                            LightningWeb.CoreComponents.show_modal(
+                              "delete_connection_modal"
+                            )
+                          }
+                          phx-value-id={@project.id}
+                          class="my-2 text-xs text-danger-500"
+                        >
+                          Remove github connection
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </.form>
+              </div>
+              <DeleteConnectionModal.modal id="delete_connection_modal">
+                <span> Here is the stuff</span>
+              </DeleteConnectionModal.modal>
+            </div>
+            <div :if={!@can_install_github} class="bg-white p-4 rounded-md">
+              <h6 class="font-medium text-black">
+                Sync to Github
+              </h6>
+              <small class="block mt-1 text-xs text-gray-600">
+                Ask an admin to install our github app to start syncing your project
+              </small>
+            </div>
+          <% else %>
+            <div class="bg-white p-4 rounded-md">
+              <h6 class="font-medium text-black">
+                Sync to Github
+              </h6>
+              <small class="block mt-1 text-xs text-gray-600">
+                Version Control is not configured for this Lightning instance. Contact the superuser for more information.
+              </small>
             </div>
           <% end %>
         </LightningWeb.Components.Common.panel_content>

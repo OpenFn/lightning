@@ -47,6 +47,7 @@ defmodule LightningWeb.Router do
       :require_authenticated_user
     ]
 
+    get "/provision/yaml", API.ProvisioningController, :show_yaml
     resources "/provision", API.ProvisioningController, only: [:create, :show]
 
     resources "/projects", API.ProjectController, only: [:index, :show] do
@@ -79,12 +80,12 @@ defmodule LightningWeb.Router do
 
     get "/users/two-factor", UserTOTPController, :new
     post "/users/two-factor", UserTOTPController, :create
+    get "/setup_vcs", VersionControlController, :index
+    get "/download/yaml", DownloadsController, :download_project_yaml
 
     get "/profile/confirm_email/:token",
         UserConfirmationController,
         :confirm_email
-
-    get "/download/yaml", DownloadsController, :download_project_yaml
 
     live_session :auth, on_mount: LightningWeb.InitAssigns do
       live "/auth/confirm_access", ReAuthenticateLive.New, :new
