@@ -98,7 +98,7 @@ defmodule Lightning.AttemptServiceTest do
         insert(:attempt,
           work_order: work_order,
           runs: attempt_runs,
-          reason_id: work_order.reason_id
+          reason: work_order.reason
         )
 
       # find the failed run for this attempt
