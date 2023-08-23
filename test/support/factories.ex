@@ -83,7 +83,7 @@ defmodule Lightning.Factories do
   end
 
   def workorder_factory do
-    %Lightning.WorkOrder{workflow: build(:workflow)}
+    %Lightning.WorkOrder{workflow: build(:workflow), reason: build(:reason)}
   end
 
   def user_factory do
