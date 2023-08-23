@@ -15,6 +15,8 @@ defmodule LightningWeb.Components.Icon do
 
   def pencil(assigns), do: Heroicons.pencil(assigns)
 
+  def exclamation_circle(assigns), do: Heroicons.exclamation_circle(assigns)
+
   def settings(assigns), do: Heroicons.cog_8_tooth(assigns)
 
   def dataclips(assigns), do: Heroicons.cube(assigns)

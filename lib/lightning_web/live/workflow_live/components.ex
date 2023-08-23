@@ -374,41 +374,49 @@ defmodule LightningWeb.WorkflowLive.Components do
     >
       <div class="relative">
         <div class="flex items-center">
-          <%= text_input(
-            f,
-            :name,
-            class:
-              "peer block w-full text-2xl font-bold text-secondary-900 border-0 py-1.5 focus:ring-0",
-            required: true,
-            placeholder: "Untitled"
-          ) %>
-          <!-- Pencil Icon, becomes invisible when input is focused -->
-          <button
-            phx-hook="FocusInput"
-            class="peer-focus:invisible"
-            type="button"
-            id="edit_workflow_name"
-          >
-            <Icon.pencil class="h-5 w-5 inline-block" />
-          </button>
+          <.text_input form={f} has_errors={f.errors[:name]} />
+          <%= if !f.errors[:name] do %>
+            <button
+              phx-hook="FocusInput"
+              class="peer-focus:invisible"
+              type="button"
+              id="edit_workflow_name"
+            >
+              <Icon.pencil class="h-5 w-5 mx-2 text-gray-500 inline-block" />
+            </button>
+          <% else %>
+            <span class="text-sm text-red-600 font-normal mx-2 px-2 py-2 rounded whitespace-nowrap z-10">
+              <Icon.exclamation_circle class="h-5 w-5 inline-block" />
+              <%= error_to_string(f.errors[:name]) %>
+            </span>
+          <% end %>
         </div>
-        <!-- Underline styled by peer focus -->
-        <div
-          class="absolute inset-x-0 bottom-0
-             peer-hover:border-t peer-hover:border-gray-300
-             peer-focus:border-t-2 peer-focus:border-indigo-600
-             peer-invalid:border-t-2 peer-invalid:border-rose-400"
-          aria-hidden="true"
-        >
-        </div>
-        <!-- Display Error -->
-        <%= if f.errors[:name] do %>
-          <span class="absolute left-0 bottom-[-1.5rem] text-sm text-red-600 bg-red-100 px-2 py-1 rounded whitespace-nowrap z-10">
-            <%= error_to_string(f.errors[:name]) %>
-          </span>
-        <% end %>
       </div>
     </.form>
+    """
+  end
+
+  defp text_input(assigns) do
+    base_classes =
+      ~w(peer block w-full text-2xl font-bold text-secondary-900 border-0 py-1.5 rounded-md
+    focus:ring-1 focus:ring-inset focus:text-gray-900 focus:placeholder:text-gray-400)
+
+    classes =
+      if assigns.has_errors,
+        do:
+          base_classes ++ ~w(bg-red-100 ring-1 ring-red-600 focus:ring-red-600),
+        else: base_classes ++ ~w(focus:ring-gray-500)
+
+    assigns = Map.put_new(assigns, :classes, classes)
+
+    ~H"""
+    <%= text_input(
+      @form,
+      :name,
+      class: @classes,
+      required: true,
+      placeholder: "Untitled"
+    ) %>
     """
   end
 
