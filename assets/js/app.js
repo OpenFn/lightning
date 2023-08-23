@@ -25,14 +25,7 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
-import {
-  AssocListChange,
-  Copy,
-  Flash,
-  SubmitViaCtrlS,
-  Tooltip,
-  FocusInput,
-} from './hooks';
+import { AssocListChange, Copy, Flash, SubmitViaCtrlS, Tooltip } from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
@@ -48,7 +41,6 @@ let Hooks = {
   AssocListChange,
   Copy,
   SubmitViaCtrlS,
-  FocusInput,
 };
 
 // Sets the checkbox to indeterminate state if the element has the
