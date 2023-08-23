@@ -2,6 +2,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
   Index Liveview for Runs
   """
+  alias Lightning.VersionControl.GithubClient
   use LightningWeb, :live_view
 
   alias Lightning.VersionControl
@@ -246,28 +247,58 @@ defmodule LightningWeb.ProjectLive.Settings do
     user_id = socket.assigns.current_user.id
     project_id = socket.assigns.project.id
 
-    {:ok, _connection} =
-      VersionControl.create_github_connection(%{
-        user_id: user_id,
-        project_id: project_id
-      })
+    case Application.get_env(:lightning, :github_app) |> Map.new() do
+      %{app_name: nil} ->
+        # Send to sentry and show cozy error
 
-    {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
+        GithubClient.send_sentry_error("Github App Name Misconfigured")
+
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
+         )}
+
+      %{app_name: app_name} ->
+        {:ok, _connection} =
+          VersionControl.create_github_connection(%{
+            user_id: user_id,
+            project_id: project_id
+          })
+
+        {:noreply,
+         redirect(socket, external: "https://github.com/apps/#{app_name}")}
+    end
   end
 
   def handle_event("reinstall_app", _, socket) do
     user_id = socket.assigns.current_user.id
     project_id = socket.assigns.project.id
 
-    {:ok, _} = VersionControl.remove_github_connection(project_id)
+    case Application.get_env(:lightning, :github_app) |> Map.new() do
+      %{app_name: nil} ->
+        GithubClient.send_sentry_error("Github App Name Misconfigured")
 
-    {:ok, _connection} =
-      VersionControl.create_github_connection(%{
-        user_id: user_id,
-        project_id: project_id
-      })
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
+         )}
 
-    {:noreply, redirect(socket, external: "https://github.com/apps/openfn")}
+      %{app_name: app_name} ->
+        {:ok, _} = VersionControl.remove_github_connection(project_id)
+
+        {:ok, _connection} =
+          VersionControl.create_github_connection(%{
+            user_id: user_id,
+            project_id: project_id
+          })
+
+        {:noreply,
+         redirect(socket, external: "https://github.com/apps/#{app_name}")}
+    end
   end
 
   def handle_event("delete_repo_connection", _, socket) do
@@ -298,9 +329,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   def handle_event("run_sync", params, %{assigns: %{current_user: u}} = socket) do
-    user_name = u.first_name <> " " <> u.last_name
-
-    case VersionControl.run_sync(params["id"], user_name) do
+    case VersionControl.run_sync(params["id"], u.email) do
       {:ok, :fired} ->
         {:noreply, socket |> put_flash(:info, "Sync Initialized")}
 

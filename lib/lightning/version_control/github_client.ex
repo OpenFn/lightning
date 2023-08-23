@@ -4,6 +4,7 @@ defmodule Lightning.VersionControl.GithubClient do
   to github from Lightning
   """
   use Tesla
+  require Logger
   alias Lightning.VersionControl.GithubToken
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
@@ -26,22 +27,6 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
-  defp installation_id_error do
-    {:error,
-     %{
-       message:
-         "Invalid installation ID, ensure to use the ID provided by Github"
-     }}
-  end
-
-  defp invalid_pem_error do
-    {:error,
-     %{
-       message:
-         "Invalid Github PEM KEY, ensure to use the KEY provided by Github"
-     }}
-  end
-
   def get_repo_branches(installation_id, repo_name) do
     with {:ok, installation_client} <- build_client(installation_id),
          {:ok, %{status: 200} = branches} <-
@@ -61,14 +46,15 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
-  def fire_repository_dispatch(installation_id, repo_name, user_name) do
+  def fire_repository_dispatch(installation_id, repo_name, user_email) do
     with {:ok, installation_client} <- build_client(installation_id),
          {:ok, %{status: 204}} <-
            installation_client
            |> post("/repos/#{repo_name}/dispatches", %{
-             event_type: "Sync by: #{user_name}",
-             client_payload:
-               "#{user_name} is synced a new project spec and state"
+             event_type: "Sync by: #{user_email}",
+             client_payload: %{
+               message: "#{user_email} initiated a sync from Lightning"
+             }
            }) do
       {:ok, :fired}
     else
@@ -78,9 +64,37 @@ defmodule Lightning.VersionControl.GithubClient do
       {:error, :invalid_pem} ->
         invalid_pem_error()
 
-      _ ->
+      err ->
+        Logger.error(inspect(err))
         {:error, "Error Initiating sync"}
     end
+  end
+
+  def send_sentry_error(msg) do
+    Sentry.capture_message("Github configuration error",
+      message: msg,
+      tags: %{type: "github"}
+    )
+  end
+
+  defp installation_id_error do
+    send_sentry_error("Github Installation APP ID is misconfigured")
+
+    {:error,
+     %{
+       message:
+         "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+     }}
+  end
+
+  defp invalid_pem_error do
+    send_sentry_error("Github Cert is misconfigured")
+
+    {:error,
+     %{
+       message:
+         "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+     }}
   end
 
   defp build_client(installation_id) do
@@ -99,7 +113,7 @@ defmodule Lightning.VersionControl.GithubClient do
          {:ok, installation_token_resp} <-
            client
            |> post("/app/installations/#{installation_id}/access_tokens", ""),
-         200 <-
+         201 <-
            installation_token_resp.status do
       installation_token = installation_token_resp.body["token"]
 

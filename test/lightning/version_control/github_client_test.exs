@@ -12,7 +12,11 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
   describe "Non success Github Client" do
     setup do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
 
       Tesla.Mock.mock(fn env ->
         case env.url do
@@ -26,7 +30,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
             %Tesla.Env{status: 404}
 
           "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 201}
+            %Tesla.Env{status: 400}
         end
       end)
     end
@@ -37,7 +41,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Invalid installation ID, ensure to use the ID provided by Github"
+                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -48,7 +52,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Invalid Github PEM KEY, ensure to use the KEY provided by Github"
+                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.run_sync(p_repo.project_id, "some-user-name")
     end
@@ -59,7 +63,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Invalid installation ID, ensure to use the ID provided by Github"
+                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
@@ -70,7 +74,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Invalid installation ID, ensure to use the ID provided by Github"
+                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -78,12 +82,16 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
   describe "Github Client" do
     setup do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
 
       Tesla.Mock.mock(fn env ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 200, body: %{"token" => "some-token"}}
+            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
 
           "https://api.github.com/installation/repositories" ->
             %Tesla.Env{

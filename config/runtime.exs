@@ -47,9 +47,15 @@ github_app_id =
     Application.get_env(:lightning, :github_app, [])
     |> Keyword.get(:app_id, nil)
 
+github_app_name =
+  System.get_env("GITHUB_APP_NAME") ||
+    Application.get_env(:lightning, :github_app, [])
+    |> Keyword.get(:app_id, nil)
+
 config :lightning, :github_app,
   cert: decoded_cert,
-  app_id: github_app_id
+  app_id: github_app_id,
+  app_name: github_app_name
 
 config :lightning, :image_info,
   image_tag: image_tag,
