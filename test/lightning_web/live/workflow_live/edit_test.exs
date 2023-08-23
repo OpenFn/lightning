@@ -2,6 +2,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   use LightningWeb.ConnCase, async: true
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
+  import Lightning.WorkflowsFixtures
 
   alias LightningWeb.CredentialLiveHelpers
 
@@ -110,6 +111,40 @@ defmodule LightningWeb.WorkflowLive.EditTest do
 
   describe "edit" do
     setup :create_workflow
+
+    test "click on pencil icon activates workflow name edit mode", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      another_workflow =
+        workflow_fixture(name: "A random workflow", project_id: project.id)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      assert view |> has_element?(~s(input[name="workflow[name]"]))
+
+      assert view
+             |> form("#workflow_name_form", %{"workflow" => %{"name" => ""}})
+             |> render_change() =~ "can&#39;t be blank"
+
+      html =
+        view
+        |> form("#workflow_name_form", %{
+          "workflow" => %{"name" => another_workflow.name}
+        })
+        |> render_submit()
+
+      assert html =~ "A workflow with this name already exists in this project."
+      assert html =~ "Workflow could not be saved"
+
+      assert view
+             |> form("#workflow_name_form", %{
+               "workflow" => %{"name" => "some new name"}
+             })
+             |> render_submit() =~ "Workflow saved"
+    end
 
     test "users can edit an existing workflow", %{
       conn: conn,

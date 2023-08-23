@@ -368,30 +368,57 @@ defmodule LightningWeb.WorkflowLive.Components do
     <.form
       :let={f}
       for={@form}
+      class="grow"
       phx-submit="save"
       phx-change="validate"
       id="workflow_name_form"
     >
-      <div class="relative">
-        <%= text_input(
-          f,
-          :name,
-          class: "peer block w-full
-            text-2xl font-bold text-secondary-900
-            border-0 py-1.5 focus:ring-0",
-          required: true,
-          placeholder: "Untitled"
-        ) %>
-        <div
-          class="absolute inset-x-0 bottom-0
-                 peer-hover:border-t peer-hover:border-gray-300
-                 peer-focus:border-t-2 peer-focus:border-indigo-600
-                 peer-invalid:border-t-2 peer-invalid:border-rose-400"
-          aria-hidden="true"
-        >
+      <div class="relative grow">
+        <div class="flex items-center">
+          <.text_input form={f} has_errors={f.errors[:name]} />
+          <%= if f.errors[:name] do %>
+            <span class="text-sm text-red-600 font-normal mx-2 px-2 py-2 rounded whitespace-nowrap z-10">
+              <Icon.exclamation_circle class="h-5 w-5 inline-block" />
+              <%= error_to_string(f.errors[:name]) %>
+            </span>
+          <% end %>
         </div>
       </div>
     </.form>
     """
   end
+
+  defp text_input(assigns) do
+    base_classes =
+      ~w(block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1
+        ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2
+        focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 peer)
+
+    classes =
+      if assigns.has_errors,
+        do:
+          base_classes ++ ~w(bg-red-100 ring-1 ring-red-600 focus:ring-red-600),
+        else: base_classes ++ ~w(focus:ring-gray-500)
+
+    assigns = Map.put_new(assigns, :classes, classes)
+
+    ~H"""
+    <div class="relative w-full max-w-sm rounded-md shadow-sm">
+      <%= text_input(
+        @form,
+        :name,
+        class: @classes,
+        required: true,
+        placeholder: "Untitled"
+      ) %>
+      <div class="pointer-events-none absolute inset-y-0 right-0 flex
+      items-center pr-3 peer-focus:invisible">
+        <Icon.pencil solid class="h-4 w-4 text-gray-400" />
+      </div>
+    </div>
+    """
+  end
+
+  defp error_to_string({message, _}) when is_binary(message), do: message
+  defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 end
