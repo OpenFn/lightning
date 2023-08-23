@@ -4,6 +4,7 @@ defmodule Lightning.VersionControl.GithubClient do
   to github from Lightning
   """
   use Tesla
+  require Logger
   alias Lightning.VersionControl.GithubToken
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
@@ -45,14 +46,15 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
-  def fire_repository_dispatch(installation_id, repo_name, user_name) do
+  def fire_repository_dispatch(installation_id, repo_name, user_email) do
     with {:ok, installation_client} <- build_client(installation_id),
          {:ok, %{status: 204}} <-
            installation_client
            |> post("/repos/#{repo_name}/dispatches", %{
-             event_type: "Sync by: #{user_name}",
-             client_payload:
-               "#{user_name} is synced a new project spec and state"
+             event_type: "Sync by: #{user_email}",
+             client_payload: %{
+               message: "#{user_email} initiated a sync from Lightning"
+             }
            }) do
       {:ok, :fired}
     else
@@ -62,7 +64,8 @@ defmodule Lightning.VersionControl.GithubClient do
       {:error, :invalid_pem} ->
         invalid_pem_error()
 
-      _ ->
+      err ->
+        Logger.error(inspect(err))
         {:error, "Error Initiating sync"}
     end
   end
