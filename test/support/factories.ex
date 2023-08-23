@@ -60,7 +60,10 @@ defmodule Lightning.Factories do
   end
 
   def attempt_factory do
-    %Lightning.Attempt{}
+    %Lightning.Attempt{
+      work_order: build(:workorder),
+      reason: build(:reason)
+    }
   end
 
   def reason_factory do
@@ -79,7 +82,7 @@ defmodule Lightning.Factories do
   end
 
   def workorder_factory do
-    %Lightning.WorkOrder{workflow: build(:workflow)}
+    %Lightning.WorkOrder{workflow: build(:workflow), reason: build(:reason)}
   end
 
   def user_factory do
