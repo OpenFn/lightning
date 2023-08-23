@@ -92,7 +92,7 @@ defmodule LightningWeb.Components.Form do
         <% end %>
       </div>
       <div class="grow text-right">
-        <.error form={@form} field={@field} />
+        <.error form={@form} field={@field} class="text-red-500" />
       </div>
     </div>
     <%= textarea(@form, @field, @opts) %>
