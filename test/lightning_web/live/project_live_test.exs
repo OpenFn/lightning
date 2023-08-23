@@ -402,10 +402,10 @@ defmodule LightningWeb.ProjectLiveTest do
             %Tesla.Env{status: 404}
 
           "https://api.github.com/app/installations/wrong-cert/access_tokens" ->
-            %Tesla.Env{status: 201}
+            %Tesla.Env{status: 200}
 
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 200, body: %{"token" => "some-token"}}
+            %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
 
           "https://api.github.com/installation/repositories" ->
             %Tesla.Env{
@@ -439,7 +439,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       {:ok, _view, html} =
         live(
@@ -456,7 +456,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project,
       user: user
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       insert(:project_repo, %{
         project: project,
@@ -480,7 +480,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project,
       user: user
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       insert(:project_repo, %{
         project: project,
@@ -496,7 +496,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      assert render(view) =~ "Invalid installation ID"
+      assert render(view) =~ "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
     end
 
     @tag role: :admin
@@ -505,7 +505,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project,
       user: user
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       insert(:project_repo, %{
         project: project,
@@ -521,7 +521,7 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      assert render(view) =~ "Invalid Github PEM KEY"
+      assert render(view) =~ "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
     end
 
     @tag role: :admin
@@ -530,7 +530,7 @@ defmodule LightningWeb.ProjectLiveTest do
       project: project,
       user: user
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       repository = "some-repo"
 
@@ -555,7 +555,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       {:ok, view, _html} =
         live(
@@ -571,7 +571,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
       insert(:project_repo, %{project_id: project.id, project: nil})
 
       {:ok, view, _html} =
@@ -588,7 +588,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
       insert(:project_repo, %{project_id: project.id, project: nil})
 
       {:ok, view, _html} =
@@ -606,7 +606,7 @@ defmodule LightningWeb.ProjectLiveTest do
       conn: conn,
       project: project
     } do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111")
+      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
 
       insert(:project_repo, %{
         project_id: project.id,
