@@ -62,7 +62,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </.with_changes_indicator>
         </LayoutComponents.header>
       </:header>
-      <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
+      <div
+        class="relative h-full flex"
+        id={"workflow-edit-#{@workflow.id}"}
+        phx-hook="UnsavedChanges"
+      >
         <div
           phx-hook="WorkflowEditor"
           class="grow"
@@ -422,6 +426,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("validate", %{"workflow" => params}, socket) do
+    send(self(), :changes_detected)
     {:noreply, handle_new_params(socket, params)}
   end
 
@@ -450,6 +455,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Lightning.Repo.insert_or_update(socket.assigns.changeset)
         |> case do
           {:ok, workflow} ->
+            send(self(), :changes_saved)
+
             socket
             |> assign_workflow(workflow)
             |> push_patch(to: build_next_path(socket, workflow), replace: true)
@@ -499,6 +506,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:follow_run, attempt_run}, socket) do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
+  def handle_info(:changes_detected, socket) do
+    {:noreply, push_event(socket, "changes_detected", %{})}
+  end
+
+  def handle_info(:changes_saved, socket) do
+    {:noreply, push_event(socket, "changes_saved", %{})}
   end
 
   defp has_child_edges?(workflow_changeset, job_id) do
