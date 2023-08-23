@@ -29,7 +29,7 @@ defmodule LightningWeb.JobLive.ManualRunComponentTest do
       |> Floki.parse_fragment!()
 
     assert html
-           |> Floki.find("textarea#manual_workorder_body")
+           |> Floki.find("textarea#manual_run_form_body")
            |> Enum.any?()
   end
 
