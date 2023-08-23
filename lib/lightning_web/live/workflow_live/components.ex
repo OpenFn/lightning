@@ -368,23 +368,15 @@ defmodule LightningWeb.WorkflowLive.Components do
     <.form
       :let={f}
       for={@form}
+      class="grow"
       phx-submit="save"
       phx-change="validate"
       id="workflow_name_form"
     >
-      <div class="relative">
+      <div class="relative grow">
         <div class="flex items-center">
           <.text_input form={f} has_errors={f.errors[:name]} />
-          <%= if !f.errors[:name] do %>
-            <button
-              phx-hook="FocusInput"
-              class="peer-focus:invisible"
-              type="button"
-              id="edit_workflow_name"
-            >
-              <Icon.pencil class="h-5 w-5 mx-2 text-gray-500 inline-block" />
-            </button>
-          <% else %>
+          <%= if f.errors[:name] do %>
             <span class="text-sm text-red-600 font-normal mx-2 px-2 py-2 rounded whitespace-nowrap z-10">
               <Icon.exclamation_circle class="h-5 w-5 inline-block" />
               <%= error_to_string(f.errors[:name]) %>
@@ -398,8 +390,9 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   defp text_input(assigns) do
     base_classes =
-      ~w(peer block w-full text-2xl font-bold text-secondary-900 border-0 py-1.5 rounded-md
-    focus:ring-1 focus:ring-inset focus:text-gray-900 focus:placeholder:text-gray-400)
+      ~w(block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1
+        ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2
+        focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 peer)
 
     classes =
       if assigns.has_errors,
@@ -410,13 +403,19 @@ defmodule LightningWeb.WorkflowLive.Components do
     assigns = Map.put_new(assigns, :classes, classes)
 
     ~H"""
-    <%= text_input(
-      @form,
-      :name,
-      class: @classes,
-      required: true,
-      placeholder: "Untitled"
-    ) %>
+    <div class="relative w-full max-w-sm rounded-md shadow-sm">
+      <%= text_input(
+        @form,
+        :name,
+        class: @classes,
+        required: true,
+        placeholder: "Untitled"
+      ) %>
+      <div class="pointer-events-none absolute inset-y-0 right-0 flex
+      items-center pr-3 peer-focus:invisible">
+        <Icon.pencil solid class="h-4 w-4 text-gray-400" />
+      </div>
+    </div>
     """
   end
 
