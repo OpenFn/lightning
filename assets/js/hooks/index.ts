@@ -79,3 +79,20 @@ export const Copy = {
     });
   },
 } as PhoenixHook<{}, { to: string }>;
+
+export const UnsavedChanges = {
+  mounted() {
+    this.handleEvent('changes_detected', () => {
+      window.addEventListener('beforeunload', this.preventNav);
+    });
+
+    this.handleEvent('changes_saved', () => {
+      window.removeEventListener('beforeunload', this.preventNav);
+    });
+  },
+
+  preventNav(e) {
+    e.preventDefault();
+    e.returnValue = 'You have unsaved changes! Are you sure you want to leave?';
+  },
+};
