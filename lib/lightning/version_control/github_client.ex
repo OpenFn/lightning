@@ -26,22 +26,6 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
-  defp installation_id_error do
-    {:error,
-     %{
-       message:
-         "Invalid installation ID, ensure to use the ID provided by Github"
-     }}
-  end
-
-  defp invalid_pem_error do
-    {:error,
-     %{
-       message:
-         "Invalid Github PEM KEY, ensure to use the KEY provided by Github"
-     }}
-  end
-
   def get_repo_branches(installation_id, repo_name) do
     with {:ok, installation_client} <- build_client(installation_id),
          {:ok, %{status: 200} = branches} <-
@@ -83,6 +67,33 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
+  def send_sentry_error(msg) do
+    Sentry.capture_message("Github configuration error",
+      message: msg,
+      tags: %{type: "github"}
+    )
+  end
+
+  defp installation_id_error do
+    send_sentry_error("Github Installation APP ID is misconfigured")
+
+    {:error,
+     %{
+       message:
+         "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+     }}
+  end
+
+  defp invalid_pem_error do
+    send_sentry_error("Github Cert is misconfigured")
+
+    {:error,
+     %{
+       message:
+         "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+     }}
+  end
+
   defp build_client(installation_id) do
     %{cert: cert, app_id: app_id} =
       Application.get_env(:lightning, :github_app)
@@ -99,7 +110,7 @@ defmodule Lightning.VersionControl.GithubClient do
          {:ok, installation_token_resp} <-
            client
            |> post("/app/installations/#{installation_id}/access_tokens", ""),
-         200 <-
+         201 <-
            installation_token_resp.status do
       installation_token = installation_token_resp.body["token"]
 

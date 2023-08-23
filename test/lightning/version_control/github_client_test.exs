@@ -12,7 +12,11 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
   describe "Non success Github Client" do
     setup do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
 
       Tesla.Mock.mock(fn env ->
         case env.url do
@@ -78,7 +82,11 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
   describe "Github Client" do
     setup do
-      put_temporary_env(:lightning, :github_app, cert: @cert, app_id: "111111", app_name: "test-github")
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: "111111",
+        app_name: "test-github"
+      )
 
       Tesla.Mock.mock(fn env ->
         case env.url do
