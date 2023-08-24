@@ -156,7 +156,6 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        current, _ ->
          current
      end)
-     |> IO.inspect(label: "UPDATE MOUNT")
      |> set_selected_dataclip()}
   end
 
