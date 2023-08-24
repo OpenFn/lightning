@@ -22,14 +22,18 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       |> put_embed(:job, job)
       |> put_embed(:user, user)
       |> validate_required([:project, :job, :user])
-      |> Lightning.Validators.validate_exclusive(
-        [:dataclip_id, :body],
-        "Dataclip and custom body are mutually exclusive."
-      )
+      |> remove_body_if_dataclip_present()
       |> Lightning.Validators.validate_one_required(
         [:dataclip_id, :body],
         "Either a dataclip or a custom body must be present."
       )
+    end
+
+    defp remove_body_if_dataclip_present(changeset) do
+      case get_change(changeset, :dataclip_id) do
+        nil -> changeset
+        _ -> Ecto.Changeset.delete_change(changeset, :body)
+      end
     end
   end
 
@@ -152,6 +156,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
        current, _ ->
          current
      end)
+     |> IO.inspect(label: "UPDATE MOUNT")
      |> set_selected_dataclip()}
   end
 
