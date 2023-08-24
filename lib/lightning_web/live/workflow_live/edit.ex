@@ -264,7 +264,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp empty_editor_error(assigns) do
     ~H"""
     <span class="flex items-center font-medium text-sm text-red-600 mx-1 rounded whitespace-nowrap z-10">
-      <Icon.exclamation_circle class="h-5 w-5 mx-1 p-0" />The editor can't be empty
+      <Icon.exclamation_circle class="h-5 w-5 mx-1 p-0" />The job can't be blank
     </span>
     """
   end
