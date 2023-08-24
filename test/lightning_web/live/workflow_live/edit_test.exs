@@ -146,6 +146,31 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> render_submit() =~ "Workflow saved"
     end
 
+    test "when a job has an empty body an error message is rendered", %{
+      conn: conn,
+      project: project,
+      workflow: workflow
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{workflow.id}")
+
+      job = workflow.jobs |> Enum.at(1)
+
+      view |> select_node(job)
+
+      view |> click_edit(job)
+
+      view |> change_editor_text("some body")
+
+      refute view |> render() =~
+               "The job can&#39;t be blank"
+
+      view |> change_editor_text("")
+
+      assert view |> render() =~
+               "The job can&#39;t be blank"
+    end
+
     test "users can edit an existing workflow", %{
       conn: conn,
       project: project,
