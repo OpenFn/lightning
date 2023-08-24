@@ -61,6 +61,7 @@ defmodule Lightning.Factories do
 
   def attempt_factory do
     %Lightning.Attempt{
+      id: fn -> Ecto.UUID.generate() end,
       work_order: build(:workorder),
       reason: build(:reason)
     }
@@ -167,6 +168,20 @@ defmodule Lightning.Factories do
             })
           )
     }
+  end
+
+  def simple_workflow_factory(attrs) do
+    trigger = build(:trigger, type: :webhook)
+
+    job =
+      build(:job,
+        body: ~s[fn(state => { return {...state, extra: "data"} })]
+      )
+
+    build(:workflow, attrs)
+    |> with_job(job)
+    |> with_trigger(trigger)
+    |> with_edge({trigger, job})
   end
 
   def with_project_user(%Lightning.Projects.Project{} = project, user, role) do

@@ -14,7 +14,8 @@ defmodule Lightning.Attempt do
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
-          reason: InvocationReason.t() | Ecto.Association.NotLoaded.t()
+          reason: InvocationReason.t() | Ecto.Association.NotLoaded.t(),
+          work_order: WorkOrder.t() | Ecto.Association.NotLoaded.t()
         }
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -24,7 +25,12 @@ defmodule Lightning.Attempt do
     belongs_to :reason, InvocationReason
     many_to_many :runs, Run, join_through: AttemptRun
 
-    timestamps(type: :utc_datetime_usec)
+    field :state, :string, default: "available"
+
+    field :claimed_at, :utc_datetime_usec
+    field :resolved_at, :utc_datetime_usec
+
+    timestamps type: :utc_datetime_usec, updated_at: false
   end
 
   def new(attrs \\ %{}) do
