@@ -102,7 +102,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     :if={editor_is_empty(@workflow_form, @selected_job)}
                     class="text-sm text-red-600 mx-2 rounded whitespace-nowrap z-10"
                   >
-                    <Icon.info class="h-5 w-5 mx-2 inline-block" />
+                    <Icon.exclamation_circle class="h-5 w-5 mx-2 inline-block" />
                     The editor can't be empty
                   </span>
                   <%!-- <div class="flex flex-row gap-2"> --%>
@@ -263,9 +263,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     </.link>
     <span
       :if={@is_empty}
-      class="text-sm text-red-600 mx-2 rounded whitespace-nowrap z-10"
+      class="inline-block align-middle text-sm text-red-600 mx-1 rounded whitespace-nowrap z-10"
     >
-      <Icon.info class="h-5 w-5 mx-2 inline-block" />The editor can't be empty
+      <Icon.exclamation_circle class="h-5 w-5 mx-1 inline-block" />The editor can't be empty
     </span>
     """
   end
