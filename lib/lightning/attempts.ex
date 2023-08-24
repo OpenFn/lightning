@@ -20,9 +20,10 @@ defmodule Lightning.Attempts do
 
   alias Lightning.{Repo, Attempt}
   alias Lightning.Attempts.Handlers
-  import Ecto.Query
 
   @behaviour Adaptor
+
+  import Ecto.Query
 
   @doc """
   Enqueue an attempt to be processed.
