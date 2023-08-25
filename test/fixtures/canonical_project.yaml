@@ -7,7 +7,7 @@ workflows:
     name: workflow 1
     jobs:
       webhook-job:
-        name: webhook-job
+        name: webhook job
         adaptor: '@openfn/language-common@latest'
         enabled: true
         # credential:
@@ -16,7 +16,7 @@ workflows:
           console.log('webhook job')
           fn(state => state)
       on-fail:
-        name: on-fail
+        name: on fail
         adaptor: '@openfn/language-common@latest'
         enabled: true
         # credential:
@@ -25,7 +25,7 @@ workflows:
           console.log('on fail')
           fn(state => state)
       on-success:
-        name: on-success
+        name: on success
         adaptor: '@openfn/language-common@latest'
         enabled: true
         # credential:
@@ -52,7 +52,7 @@ workflows:
     name: workflow 2
     jobs:
       some-cronjob:
-        name: some-cronjob
+        name: some cronjob
         adaptor: '@openfn/language-common@latest'
         enabled: true
         # credential:
@@ -60,7 +60,7 @@ workflows:
         body: |
           console.log('hello!');
       on-cron-failure:
-        name: on-cron-failure
+        name: on cron failure
         adaptor: '@openfn/language-common@latest'
         enabled: true
         # credential:

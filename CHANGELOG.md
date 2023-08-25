@@ -27,6 +27,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fixed issue where job names were being incorrectly hyphenated during
+  project.yaml export [#1050](https://github.com/OpenFn/Lightning/issues/1050)
+
 ## [v0.7.3] - 2023-08-15
 
 ### Added

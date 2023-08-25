@@ -11,12 +11,17 @@ defmodule Lightning.ExportUtils do
     Workflows
   }
 
-  defp job_to_treenode(job) do
-    job_name = job.name |> String.replace(" ", "-")
+  defp hyphenate(string) when is_binary(string) do
+    string |> String.replace(" ", "-")
+  end
 
+  defp hyphenate(other), do: other
+
+  defp job_to_treenode(job) do
     %{
-      id: job.id,
-      name: job_name,
+      # The identifier here for our YAML reducer will be the hyphenated name
+      id: hyphenate(job.name),
+      name: job.name,
       node_type: :job,
       adaptor: job.adaptor,
       body: job.body,
@@ -42,7 +47,7 @@ defmodule Lightning.ExportUtils do
   defp edge_to_treenode(%{source_job_id: nil} = edge, triggers) do
     edge = Repo.preload(edge, [:source_trigger, :target_job])
     trigger_name = edge.source_trigger.type |> Atom.to_string()
-    target_name = edge.target_job.name |> String.replace(" ", "-")
+    target_name = edge.target_job.name |> hyphenate()
 
     %{
       name: "#{trigger_name}->#{target_name}",
@@ -55,8 +60,8 @@ defmodule Lightning.ExportUtils do
 
   defp edge_to_treenode(%{source_trigger_id: nil} = edge, _unused_triggers) do
     edge = Repo.preload(edge, [:source_job, :target_job])
-    source_job = edge.source_job.name |> String.replace(" ", "-")
-    target_job = edge.target_job.name |> String.replace(" ", "-")
+    source_job = edge.source_job.name |> hyphenate()
+    target_job = edge.target_job.name |> hyphenate()
 
     %{
       name: "#{source_job}->#{target_job}",
@@ -71,26 +76,6 @@ defmodule Lightning.ExportUtils do
     [trigger] = Enum.filter(triggers, fn t -> t.id == edge.source_trigger_id end)
 
     trigger.name
-  end
-
-  defp handle_bitstring(k, v, i) do
-    case k do
-      :body ->
-        indented_expression =
-          String.split(v, "\n")
-          |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
-
-        "body: |\n#{indented_expression}"
-
-      :adaptor ->
-        "#{k}: '#{v}'"
-
-      :cron_expression ->
-        "#{k}: '#{v}'"
-
-      _ ->
-        "#{k}: #{v}"
-    end
   end
 
   defp pick_and_sort(map) do
@@ -124,8 +109,28 @@ defmodule Lightning.ExportUtils do
     )
   end
 
-  defp handle_input(key, value, indentation) when is_bitstring(value) do
-    "#{indentation}#{handle_bitstring(key, value, indentation)}"
+  defp handle_binary(k, v, i) do
+    case k do
+      :body ->
+        indented_expression =
+          String.split(v, "\n")
+          |> Enum.map_join("\n", fn line -> "#{i}  #{line}" end)
+
+        "body: |\n#{indented_expression}"
+
+      :adaptor ->
+        "#{k}: '#{v}'"
+
+      :cron_expression ->
+        "#{k}: '#{v}'"
+
+      _ ->
+        "#{k}: #{v}"
+    end
+  end
+
+  defp handle_input(key, value, indentation) when is_binary(value) do
+    "#{indentation}#{handle_binary(key, value, indentation)}"
   end
 
   defp handle_input(key, value, indentation) when is_number(value) do
@@ -141,11 +146,11 @@ defmodule Lightning.ExportUtils do
   end
 
   defp handle_input(key, value, indentation) when is_map(value) do
-    "#{indentation}#{key}:\n#{to_new_yaml(value, "#{indentation}  ")}"
+    "#{indentation}#{hyphenate(key)}:\n#{to_new_yaml(value, "#{indentation}  ")}"
   end
 
   defp handle_input(key, value, indentation) when is_list(value) do
-    "#{indentation}#{key}:\n#{Enum.map_join(value, "\n", fn map -> "#{indentation}  #{map.name}:\n#{to_new_yaml(map, "#{indentation}    ")}" end)}"
+    "#{indentation}#{hyphenate(key)}:\n#{Enum.map_join(value, "\n", fn map -> "#{indentation}  #{hyphenate(map.name)}:\n#{to_new_yaml(map, "#{indentation}    ")}" end)}"
   end
 
   defp to_new_yaml(map, indentation \\ "") do
@@ -172,7 +177,7 @@ defmodule Lightning.ExportUtils do
     workflows_map =
       Enum.reduce(workflows, %{}, fn workflow, acc ->
         ytree = build_workflow_yaml_tree(workflow)
-        Map.put(acc, String.replace(workflow.name, " ", "-"), ytree)
+        Map.put(acc, hyphenate(workflow.name), ytree)
       end)
 
     %{
