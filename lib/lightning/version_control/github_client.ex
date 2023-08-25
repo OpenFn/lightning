@@ -19,8 +19,8 @@ defmodule Lightning.VersionControl.GithubClient do
        repos_resp.body["repositories"]
        |> Enum.map(fn g_repo -> g_repo["full_name"] end)}
     else
-      {:error, :installation_not_found} ->
-        installation_id_error()
+      {:error, :installation_not_found, meta} ->
+        installation_id_error(meta)
 
       {:error, :invalid_pem} ->
         invalid_pem_error()
@@ -38,8 +38,8 @@ defmodule Lightning.VersionControl.GithubClient do
 
       {:ok, branch_names}
     else
-      {:error, :installation_not_found} ->
-        installation_id_error()
+      {:error, :installation_not_found, meta} ->
+        installation_id_error(meta)
 
       {:error, :invalid_pem} ->
         invalid_pem_error()
@@ -51,15 +51,15 @@ defmodule Lightning.VersionControl.GithubClient do
          {:ok, %{status: 204}} <-
            installation_client
            |> post("/repos/#{repo_name}/dispatches", %{
-             event_type: "Sync by: #{user_email}",
+             event_type: "sync_project",
              client_payload: %{
                message: "#{user_email} initiated a sync from Lightning"
              }
            }) do
       {:ok, :fired}
     else
-      {:error, :installation_not_found} ->
-        installation_id_error()
+      {:error, :installation_not_found, meta} ->
+        installation_id_error(meta)
 
       {:error, :invalid_pem} ->
         invalid_pem_error()
@@ -70,15 +70,17 @@ defmodule Lightning.VersionControl.GithubClient do
     end
   end
 
-  def send_sentry_error(msg) do
+  def send_sentry_error(msg, meta \\ %{}) do
     Sentry.capture_message("Github configuration error",
+      level: "warning",
+      extra: meta,
       message: msg,
       tags: %{type: "github"}
     )
   end
 
-  defp installation_id_error do
-    send_sentry_error("Github Installation APP ID is misconfigured")
+  defp installation_id_error(meta) do
+    send_sentry_error("Github Installation APP ID is misconfigured", meta)
 
     {:error,
      %{
@@ -113,8 +115,7 @@ defmodule Lightning.VersionControl.GithubClient do
          {:ok, installation_token_resp} <-
            client
            |> post("/app/installations/#{installation_id}/access_tokens", ""),
-         201 <-
-           installation_token_resp.status do
+         %{status: 201} <- installation_token_resp do
       installation_token = installation_token_resp.body["token"]
 
       {:ok,
@@ -125,8 +126,8 @@ defmodule Lightning.VersionControl.GithubClient do
           ]}
        ])}
     else
-      404 ->
-        {:error, :installation_not_found}
+      %{status: 404} = err ->
+        {:error, :installation_not_found, err}
 
       _unused_status ->
         {:error, :invalid_pem}
