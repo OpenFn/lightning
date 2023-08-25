@@ -487,7 +487,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
           {:ok, workflow} ->
             socket
             |> assign_workflow(workflow)
-            |> push_patch(to: build_next_path(socket, workflow), replace: true)
             |> put_flash(:info, "Workflow saved")
 
           {:error, changeset} ->
@@ -707,12 +706,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     else
       socket
     end
-  end
-
-  defp build_next_path(socket, workflow) do
-    %{project: project, selection_params: selection_params} = socket.assigns
-
-    ~p"/projects/#{project}/w/#{workflow}?#{selection_params |> Map.reject(&match?({_, nil}, &1))}"
   end
 
   # find the changeset for the selected item

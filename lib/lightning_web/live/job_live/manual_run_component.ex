@@ -22,6 +22,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       |> put_embed(:job, job)
       |> put_embed(:user, user)
       |> validate_required([:project, :job, :user])
+      |> remove_body_if_dataclip_present()
       |> Lightning.Validators.validate_exclusive(
         [:dataclip_id, :body],
         "Dataclip and custom body are mutually exclusive."
@@ -30,6 +31,13 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         [:dataclip_id, :body],
         "Either a dataclip or a custom body must be present."
       )
+    end
+
+    defp remove_body_if_dataclip_present(changeset) do
+      case get_change(changeset, :dataclip_id) do
+        nil -> changeset
+        _ -> Ecto.Changeset.delete_change(changeset, :body)
+      end
     end
   end
 
