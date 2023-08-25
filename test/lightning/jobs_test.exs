@@ -231,6 +231,32 @@ defmodule Lightning.JobsTest do
       assert job.name == "some name"
     end
 
+    test "with the same name as another job in that project fails" do
+      job_1 = %{
+        body: "some body",
+        enabled: true,
+        name: "The Same",
+        adaptor: "@openfn/language-common",
+        workflow_id: workflow_fixture().id
+      }
+
+      assert {:ok, %Job{}} = Jobs.create_job(job_1)
+
+      job_2 = %{
+        body: "other body",
+        enabled: true,
+        name: "The Same",
+        adaptor: "@openfn/language-common",
+        workflow_id: workflow_fixture().id
+      }
+
+      refute {:ok, %Job{}} = Jobs.create_job(job_2)
+      # TODO - show that the appropriate error message is sent back.
+      # |> unique_constraint([:name, :project_id],
+      #   message: "A job with this name already exists in this project."
+      # )
+    end
+
     test "with an upstream job returns a job with the upstream job's workflow_id" do
       workflow = workflow_fixture()
 

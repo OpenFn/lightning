@@ -78,6 +78,9 @@ defmodule Lightning.Jobs.Job do
     changeset
     |> validate_required([:name, :body, :enabled, :adaptor])
     |> assoc_constraint(:workflow)
+    |> unique_constraint([:name, :project_id],
+      message: "A job with this name already exists in this project."
+    )
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
   end
