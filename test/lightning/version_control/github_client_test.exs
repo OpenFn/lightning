@@ -21,10 +21,10 @@ defmodule Lightning.VersionControl.GithubClientTest do
       Tesla.Mock.mock(fn env ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 404}
+            %Tesla.Env{status: 400}
 
           "https://api.github.com/app/installations/fail-id/access_tokens" ->
-            %Tesla.Env{status: 400}
+            %Tesla.Env{status: 404}
 
           "https://api.github.com/installation/repositories" ->
             %Tesla.Env{status: 404}
@@ -35,13 +35,13 @@ defmodule Lightning.VersionControl.GithubClientTest do
       end)
     end
 
-    test "client can handle invalid  application message from github" do
+    test "client can handle invalid application message from github" do
       p_repo = insert(:project_repo)
 
       assert {:error,
               %{
                 message:
-                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -52,7 +52,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.run_sync(p_repo.project_id, "some-user-name")
     end
@@ -63,7 +63,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
@@ -74,7 +74,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       assert {:error,
               %{
                 message:
-                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
