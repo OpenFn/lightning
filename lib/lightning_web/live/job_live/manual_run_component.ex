@@ -23,6 +23,10 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       |> put_embed(:user, user)
       |> validate_required([:project, :job, :user])
       |> remove_body_if_dataclip_present()
+      |> Lightning.Validators.validate_exclusive(
+        [:dataclip_id, :body],
+        "Dataclip and custom body are mutually exclusive."
+      )
       |> Lightning.Validators.validate_one_required(
         [:dataclip_id, :body],
         "Either a dataclip or a custom body must be present."
