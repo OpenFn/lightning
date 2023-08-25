@@ -29,48 +29,8 @@ defmodule Lightning.SetupUtils do
   Creates initial data and returns the created records.
   """
   def setup_demo(opts \\ [create_super: false]) do
-    {:ok, super_user} =
-      if opts[:create_super] do
-        Accounts.register_superuser(%{
-          first_name: "Sizwe",
-          last_name: "Super",
-          email: "super@openfn.org",
-          password: "welcome123"
-        })
-      else
-        {:ok, nil}
-      end
-
-    Lightning.Repo.insert!(%Lightning.Accounts.UserToken{
-      user_id: super_user.id,
-      context: "api",
-      token:
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJKb2tlbiIsImlhdCI6MTY4ODAzNzE4NSwiaXNzIjoiSm9rZW4iLCJqdGkiOiIydG1ocG8zYm0xdmR0MDZvZDgwMDAwdTEiLCJuYmYiOjE2ODgwMzcxODUsInVzZXJfaWQiOiIzZjM3OGU2Yy02NjBhLTRiOTUtYWI5Ni02YmQwZGMyNjNkMzMifQ.J1FnACGpqtQbmXNvyUCwCY4mS5S6CohRU3Ey-N0prP4"
-    })
-
-    {:ok, admin} =
-      Accounts.register_user(%{
-        first_name: "Amy",
-        last_name: "Admin",
-        email: "demo@openfn.org",
-        password: "welcome123"
-      })
-
-    {:ok, editor} =
-      Accounts.register_user(%{
-        first_name: "Esther",
-        last_name: "Editor",
-        email: "editor@openfn.org",
-        password: "welcome123"
-      })
-
-    {:ok, viewer} =
-      Accounts.register_user(%{
-        first_name: "Vikram",
-        last_name: "Viewer",
-        email: "viewer@openfn.org",
-        password: "welcome123"
-      })
+    %{super_user: super_user, admin: admin, editor: editor, viewer: viewer} =
+      create_users(opts)
 
     %{
       project: openhie_project,
@@ -79,6 +39,7 @@ defmodule Lightning.SetupUtils do
       workorder: openhie_workorder
     } =
       create_openhie_project([
+        %{user_id: super_user.id, role: :admin},
         %{user_id: admin.id, role: :admin},
         %{user_id: editor.id, role: :editor},
         %{user_id: viewer.id, role: :viewer}
@@ -130,6 +91,56 @@ defmodule Lightning.SetupUtils do
       })
 
     credential
+  end
+
+  def create_users(opts) do
+    super_user =
+      if opts[:create_super] do
+        {:ok, super_user} =
+          Accounts.register_superuser(%{
+            first_name: "Sizwe",
+            last_name: "Super",
+            email: "super@openfn.org",
+            password: "welcome123"
+          })
+
+        Lightning.Repo.insert!(%Lightning.Accounts.UserToken{
+          user_id: super_user.id,
+          context: "api",
+          token:
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJKb2tlbiIsImlhdCI6MTY4ODAzNzE4NSwiaXNzIjoiSm9rZW4iLCJqdGkiOiIydG1ocG8zYm0xdmR0MDZvZDgwMDAwdTEiLCJuYmYiOjE2ODgwMzcxODUsInVzZXJfaWQiOiIzZjM3OGU2Yy02NjBhLTRiOTUtYWI5Ni02YmQwZGMyNjNkMzMifQ.J1FnACGpqtQbmXNvyUCwCY4mS5S6CohRU3Ey-N0prP4"
+        })
+
+        super_user
+      else
+        nil
+      end
+
+    {:ok, admin} =
+      Accounts.register_user(%{
+        first_name: "Amy",
+        last_name: "Admin",
+        email: "demo@openfn.org",
+        password: "welcome123"
+      })
+
+    {:ok, editor} =
+      Accounts.register_user(%{
+        first_name: "Esther",
+        last_name: "Editor",
+        email: "editor@openfn.org",
+        password: "welcome123"
+      })
+
+    {:ok, viewer} =
+      Accounts.register_user(%{
+        first_name: "Vikram",
+        last_name: "Viewer",
+        email: "viewer@openfn.org",
+        password: "welcome123"
+      })
+
+    %{super_user: super_user, admin: admin, editor: editor, viewer: viewer}
   end
 
   def create_starter_project(name, project_users) do
@@ -418,6 +429,7 @@ defmodule Lightning.SetupUtils do
     {:ok, openhie_project} =
       Projects.create_project(%{
         name: "openhie-project",
+        id: "4adf2644-ed4e-4f97-a24c-ab35b3cb1efa",
         project_users: project_users
       })
 

@@ -29,6 +29,8 @@ and this project adheres to
 
 - Fixed issue where job names were being incorrectly hyphenated during
   project.yaml export [#1050](https://github.com/OpenFn/Lightning/issues/1050)
+- Allows the demo script to set a project id during creation to help with cli
+  deploy/pull/Github integration testing.
 
 ## [v0.7.3] - 2023-08-15
 
