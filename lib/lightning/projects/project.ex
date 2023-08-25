@@ -37,7 +37,7 @@ defmodule Lightning.Projects.Project do
   # TODO: schedule_deletion shouldn't be changed by user input
   def changeset(project, attrs) do
     project
-    |> cast(attrs, [:name, :description, :scheduled_deletion, :requires_mfa])
+    |> cast(attrs, [:id, :name, :description, :scheduled_deletion, :requires_mfa])
     |> cast_assoc(:project_users)
     |> validate()
   end
