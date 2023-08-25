@@ -543,6 +543,8 @@ defmodule Lightning.ProjectsTest do
     workflow_1_job =
       insert(:job,
         name: "webhook job",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 0),
         project: project,
         workflow: workflow_1,
         project_credential: %{credential: credential, project: project},
@@ -563,6 +565,8 @@ defmodule Lightning.ProjectsTest do
       target_job:
         insert(:job,
           name: "on fail",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 1),
           workflow: workflow_1,
           body: "console.log('on fail')\nfn(state => state)"
         )
@@ -575,6 +579,8 @@ defmodule Lightning.ProjectsTest do
       target_job:
         insert(:job,
           name: "on success",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 2),
           workflow: workflow_1
         )
     )
@@ -582,6 +588,8 @@ defmodule Lightning.ProjectsTest do
     workflow_2_job =
       insert(:job,
         name: "some cronjob",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 3),
         workflow: workflow_2
       )
 
@@ -604,6 +612,8 @@ defmodule Lightning.ProjectsTest do
       target_job:
         insert(:job,
           name: "on cron failure",
+          # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+          inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 4),
           workflow: workflow_2
         )
     )

@@ -448,6 +448,8 @@ defmodule Lightning.SetupUtils do
     {:ok, fhir_standard_data} =
       Jobs.create_job(%{
         name: "Transform data to FHIR standard",
+        # Note: we can drop inserted_at once there's a reliable way to         sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 0),
         body: """
         fn(state => state);
         """,
@@ -467,6 +469,8 @@ defmodule Lightning.SetupUtils do
     {:ok, send_to_openhim} =
       Jobs.create_job(%{
         name: "Send to OpenHIM to route to SHR",
+        # Note: we can drop inserted_at once there's a reliable way to         sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 1),
         body: """
         fn(state => state);
         """,
@@ -486,6 +490,8 @@ defmodule Lightning.SetupUtils do
     {:ok, notify_upload_successful} =
       Jobs.create_job(%{
         name: "Notify CHW upload successful",
+        # Note: we can drop inserted_at once there's a reliable way to         sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 2),
         body: """
         fn(state => state);
         """,
@@ -505,6 +511,8 @@ defmodule Lightning.SetupUtils do
     {:ok, notify_upload_failed} =
       Jobs.create_job(%{
         name: "Notify CHW upload failed",
+        # Note: we can drop inserted_at once there's a reliable way to         sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 3),
         body: """
         fn(state => state);
         """,
@@ -634,6 +642,8 @@ defmodule Lightning.SetupUtils do
     {:ok, get_dhis2_data} =
       Jobs.create_job(%{
         name: "Get DHIS2 data",
+        # Note: we can drop inserted_at once there's a reliable way to         sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 0),
         body: """
         get('trackedEntityInstances/PQfMcpmXeFE');
         """,
@@ -662,6 +672,8 @@ defmodule Lightning.SetupUtils do
     {:ok, upload_to_google_sheet} =
       Jobs.create_job(%{
         name: "Upload to Google Sheet",
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        inserted_at: NaiveDateTime.utc_now() |> Timex.shift(seconds: 1),
         body: """
         fn(state => state);
         """,

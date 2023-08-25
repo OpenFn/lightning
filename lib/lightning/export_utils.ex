@@ -175,7 +175,9 @@ defmodule Lightning.ExportUtils do
 
   def build_yaml_tree(workflows, project) do
     workflows_map =
-      Enum.reduce(workflows, %{}, fn workflow, acc ->
+      workflows
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.reduce(%{}, fn workflow, acc ->
         ytree = build_workflow_yaml_tree(workflow)
         Map.put(acc, hyphenate(workflow.name), ytree)
       end)
@@ -191,9 +193,20 @@ defmodule Lightning.ExportUtils do
   end
 
   defp build_workflow_yaml_tree(workflow) do
-    jobs = Enum.map(workflow.jobs, fn j -> job_to_treenode(j) end)
-    triggers = Enum.map(workflow.triggers, fn t -> trigger_to_treenode(t) end)
-    edges = Enum.map(workflow.edges, fn e -> edge_to_treenode(e, triggers) end)
+    jobs =
+      workflow.jobs
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(fn j -> job_to_treenode(j) end)
+
+    triggers =
+      workflow.triggers
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(fn t -> trigger_to_treenode(t) end)
+
+    edges =
+      workflow.edges
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(fn e -> edge_to_treenode(e, triggers) end)
 
     flow_map = %{jobs: jobs, edges: edges, triggers: triggers}
 
