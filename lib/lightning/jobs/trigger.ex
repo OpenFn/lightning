@@ -32,6 +32,8 @@ defmodule Lightning.Jobs.Trigger do
     field :cron_expression, :string
     belongs_to :workflow, Workflow
 
+    has_many :edges, Lightning.Workflows.Edge, foreign_key: :source_trigger_id
+
     field :type, Ecto.Enum, values: @trigger_types, default: :webhook
 
     field :delete, :boolean, virtual: true
