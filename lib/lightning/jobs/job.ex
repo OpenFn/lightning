@@ -17,10 +17,12 @@ defmodule Lightning.Jobs.Job do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query
 
   alias Lightning.Credentials.Credential
   alias Lightning.Workflows.Workflow
   alias Lightning.Projects.{ProjectCredential}
+  alias Lightning.Repo
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -56,7 +58,6 @@ defmodule Lightning.Jobs.Job do
     change(%__MODULE__{}, attrs)
   end
 
-  @doc false
   def changeset(job, attrs) do
     change =
       job
@@ -78,11 +79,9 @@ defmodule Lightning.Jobs.Job do
     changeset
     |> validate_required([:name, :body, :enabled, :adaptor])
     |> assoc_constraint(:workflow)
-    |> unique_constraint([:name, :project_id],
-      message: "A job with this name already exists in this project."
-    )
     |> validate_length(:name, max: 100)
     |> validate_format(:name, ~r/^[a-zA-Z0-9_\- ]*$/)
+    |> validate_unique_job_name_in_project()
   end
 
   @doc """
@@ -123,5 +122,32 @@ defmodule Lightning.Jobs.Job do
   def put_project_credential(job, project_credential) do
     job
     |> Ecto.Changeset.put_assoc(:project_credential, project_credential)
+  end
+
+  defp validate_unique_job_name_in_project(changeset) do
+    name = get_field(changeset, :name)
+
+    workflow_ids =
+      from(w in Workflow, where: w.project_id == w.project_id, select: w.id)
+
+    job_names =
+      from(j in "jobs",
+        where: j.workflow_id in subquery(workflow_ids),
+        select: j.name
+      )
+      |> Repo.all()
+
+    case name in job_names do
+      true ->
+        new_errors =
+          Enum.concat(changeset.errors,
+            name: {"A job with this name already exists in this project.", []}
+          )
+
+        %{changeset | errors: new_errors, valid?: false}
+
+      false ->
+        changeset
+    end
   end
 end

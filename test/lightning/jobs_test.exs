@@ -250,11 +250,10 @@ defmodule Lightning.JobsTest do
         workflow_id: workflow_fixture().id
       }
 
-      refute {:ok, %Job{}} = Jobs.create_job(job_2)
-      # TODO - show that the appropriate error message is sent back.
-      # |> unique_constraint([:name, :project_id],
-      #   message: "A job with this name already exists in this project."
-      # )
+      assert {:error, %{errors: errors}} = Jobs.create_job(job_2)
+
+      assert errors[:name] ==
+               {"A job with this name already exists in this project.", []}
     end
 
     test "with an upstream job returns a job with the upstream job's workflow_id" do
