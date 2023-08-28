@@ -33,12 +33,17 @@ defmodule Lightning.WorkOrderServiceTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         WorkOrderService.subscribe(job.workflow.project_id)
 
-        {:ok, %{attempt: attempt, attempt_run: attempt_run}} =
+        {:ok, %{attempt: attempt}} =
           WorkOrderService.create_webhook_workorder(edge, dataclip_body)
 
         assert_receive {Lightning.WorkOrderService,
                         %Lightning.Workorders.Events.AttemptCreated{}},
                        100
+
+        attempt_run =
+          Lightning.AttemptRun
+          |> Repo.get_by!(attempt_id: attempt.id)
+          |> Repo.preload([:run, [attempt: :reason]])
 
         assert_enqueued(
           worker: Lightning.Pipeline,

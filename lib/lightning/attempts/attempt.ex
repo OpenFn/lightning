@@ -10,6 +10,9 @@ defmodule Lightning.Attempt do
   alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
   alias Lightning.AttemptRun
+  # alias Lightning.Jobs.Job
+  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Node
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -23,6 +26,10 @@ defmodule Lightning.Attempt do
   schema "attempts" do
     belongs_to :work_order, WorkOrder
     belongs_to :reason, InvocationReason
+    belongs_to :starting_node, Node
+
+    has_one :trigger, through: [:starting_node, :trigger]
+
     many_to_many :runs, Run, join_through: AttemptRun
 
     field :state, :string, default: "available"

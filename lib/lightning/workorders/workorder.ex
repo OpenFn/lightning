@@ -7,11 +7,15 @@ defmodule Lightning.WorkOrder do
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Workflows.Workflow
+  alias Lightning.Jobs.Trigger
+  alias Lightning.Invocation.Dataclip
   alias Lightning.{InvocationReason, Attempt}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
           id: Ecto.UUID.t() | nil,
+          trigger: Trigger.t() | Ecto.Association.NotLoaded.t(),
+          dataclip: Dataclip.t() | Ecto.Association.NotLoaded.t(),
           workflow: Workflow.t() | Ecto.Association.NotLoaded.t(),
           reason: InvocationReason.t() | Ecto.Association.NotLoaded.t()
         }
@@ -20,6 +24,10 @@ defmodule Lightning.WorkOrder do
   @foreign_key_type :binary_id
   schema "work_orders" do
     belongs_to :workflow, Workflow
+
+    belongs_to :trigger, Trigger
+    belongs_to :dataclip, Dataclip
+
     belongs_to :reason, InvocationReason
     has_many :attempts, Attempt
     has_many :jobs, through: [:workflow, :jobs]
@@ -40,9 +48,8 @@ defmodule Lightning.WorkOrder do
     |> validate()
   end
 
-  defp validate(changeset) do
+  def validate(changeset) do
     changeset
     |> assoc_constraint(:workflow)
-    |> assoc_constraint(:reason)
   end
 end

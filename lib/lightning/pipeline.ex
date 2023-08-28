@@ -17,13 +17,55 @@ defmodule Lightning.Pipeline do
   alias Lightning.{AttemptService, AttemptRun}
   import Ecto.Query
 
+  def enqueue(oban_job) do
+    # HACK: Oban's testing functions only apply to `self` and LiveView
+    # tests run in child processes, so for now we need to set the testing
+    # mode from within the process.
+    if is_nil(Process.get(:oban_testing)) do
+      Process.put(:oban_testing, :manual)
+    end
+
+    case oban_job do
+      jobs when is_list(jobs) ->
+        Oban.insert_all(jobs)
+
+      _ ->
+        Oban.insert(oban_job)
+    end
+  end
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"attempt_run_id" => attempt_run_id}}) do
     Repo.get!(AttemptRun, attempt_run_id)
     |> process()
   end
 
-  @spec process(AttemptRun.t()) :: :ok
+  @spec process(AttemptRun.t() | Lightning.Attempt.t()) :: :ok
+  def process(%Lightning.Attempt{} = attempt) do
+    # find the edge for a trigger, and then find the job for that edge
+    attempt =
+      attempt
+      |> Repo.preload(reason: [trigger: [edges: [:target_job]]])
+
+    job =
+      attempt.reason.trigger.edges
+      |> List.first()
+      |> Map.get(:target_job)
+
+    dataclip = attempt.reason.dataclip
+
+    {:ok, attempt_run} =
+      AttemptService.append(
+        attempt,
+        Run.new(%{
+          job_id: job.id,
+          input_dataclip_id: dataclip.id
+        })
+      )
+
+    process(attempt_run)
+  end
+
   def process(%AttemptRun{} = attempt_run) do
     run = Ecto.assoc(attempt_run, :run) |> Repo.one!()
     result = Runner.start(run)
@@ -38,15 +80,14 @@ defmodule Lightning.Pipeline do
       next_dataclip_id = get_next_dataclip_id(result, run)
 
       jobs
-      |> Enum.map(fn %{id: job_id, workflow: %{project_id: project_id}} ->
+      |> Enum.map(fn %{id: job_id} ->
         # create a new run for the same attempt
         {:ok, attempt_run} =
           AttemptService.append(
             attempt_run,
             Run.changeset(%Run{}, %{
               job_id: job_id,
-              input_dataclip_id: next_dataclip_id,
-              project_id: project_id
+              input_dataclip_id: next_dataclip_id
             })
           )
 

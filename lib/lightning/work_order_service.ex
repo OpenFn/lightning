@@ -27,31 +27,15 @@ defmodule Lightning.WorkOrderService do
 
   @pubsub Lightning.PubSub
 
-  defp enqueue(oban_job) do
-    # HACK: Oban's testing functions only apply to `self` and LiveView
-    # tests run in child processes, so for now we need to set the testing
-    # mode from within the process.
-    if is_nil(Process.get(:oban_testing)) do
-      Process.put(:oban_testing, :manual)
-    end
-
-    case oban_job do
-      jobs when is_list(jobs) ->
-        Oban.insert_all(jobs)
-
-      _ ->
-        Oban.insert(oban_job)
-    end
-  end
-
   def create_webhook_workorder(edge, dataclip_body) do
     multi_for(:webhook, edge, dataclip_body)
+    |> Multi.run(:attempt, fn _repo, models ->
+      AttemptService.build_attempt(models.work_order, models.reason)
+      |> Lightning.Attempts.enqueue()
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, models} ->
-        Pipeline.new(%{attempt_run_id: models.attempt_run.id})
-        |> enqueue()
-
         job = edge.target_job |> Repo.preload(:workflow)
 
         broadcast(
@@ -71,8 +55,8 @@ defmodule Lightning.WorkOrderService do
     |> Repo.transaction()
     |> case do
       {:ok, models} ->
-        Lightning.Pipeline.new(%{attempt_run_id: models.attempt_run.id})
-        |> enqueue()
+        Pipeline.new(%{attempt_run_id: models.attempt_run.id})
+        |> Pipeline.enqueue()
 
         broadcast(
           models.job.workflow.project_id,
@@ -97,7 +81,7 @@ defmodule Lightning.WorkOrderService do
     with {:ok, %{attempt_run: attempt_run, attempt: attempt} = changes} <-
            Repo.transaction(multi) do
       Pipeline.new(%{attempt_run_id: attempt_run.id})
-      |> enqueue()
+      |> Pipeline.enqueue()
 
       project_id =
         from(r in Run,
@@ -140,12 +124,10 @@ defmodule Lightning.WorkOrderService do
 
     with {:ok, %{attempt_runs: {_count, attempt_runs}} = changes} <-
            Repo.transaction(multi) do
-      jobs =
-        Enum.map(attempt_runs, fn attempt_run ->
-          Pipeline.new(%{attempt_run_id: attempt_run.id})
-        end)
-
-      enqueue(jobs)
+      Enum.map(attempt_runs, fn attempt_run ->
+        Pipeline.new(%{attempt_run_id: attempt_run.id})
+      end)
+      |> Pipeline.enqueue()
 
       {:ok, changes}
     end
@@ -212,22 +194,27 @@ defmodule Lightning.WorkOrderService do
     |> Multi.insert(:work_order, fn %{reason: reason, job: job} ->
       build(job.workflow, reason)
     end)
-    |> Multi.insert(:attempt, fn %{work_order: work_order, reason: reason} ->
-      AttemptService.build_attempt(work_order, reason)
-    end)
-    |> Multi.insert(:attempt_run, fn %{
-                                       attempt: attempt,
-                                       dataclip: dataclip,
-                                       job: job
-                                     } ->
-      AttemptRun.new(
-        attempt,
-        Run.new(%{
-          job_id: job.id,
-          input_dataclip_id: dataclip.id
-        })
-      )
-    end)
+
+    # ----- snip ----
+    # this is where the attempt is created
+    # for pipeline, inserted as claimed
+    # but must have an attempt run to be claimed
+    # |> Multi.insert(:attempt, fn %{work_order: work_order, reason: reason} ->
+    #   AttemptService.build_attempt(work_order, reason)
+    # end)
+    # |> Multi.insert(:attempt_run, fn %{
+    #                                    attempt: attempt,
+    #                                    dataclip: dataclip,
+    #                                    job: job
+    #                                  } ->
+    #   AttemptRun.new(
+    #     attempt,
+    #     Run.new(%{
+    #       job_id: job.id,
+    #       input_dataclip_id: dataclip.id
+    #     })
+    #   )
+    # end)
   end
 
   defp put_job(multi, job) do

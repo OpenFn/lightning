@@ -28,8 +28,10 @@ defmodule Lightning.Workflows.Workflow do
 
     has_many :edges, Edge, on_replace: :delete_if_exists
 
-    has_many :jobs, Job, on_replace: :delete
-    has_many :triggers, Trigger
+    many_to_many :jobs, Job, join_through: "workflow_nodes"
+    many_to_many :triggers, Trigger, join_through: "workflow_nodes"
+    # has_many :jobs, Job, on_replace: :delete
+    # has_many :triggers, Trigger
 
     has_many :work_orders, Lightning.WorkOrder
     has_many :attempts, through: [:work_orders, :attempts]

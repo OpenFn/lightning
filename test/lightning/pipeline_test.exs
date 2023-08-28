@@ -8,8 +8,29 @@ defmodule Lightning.PipelineTest do
 
   import Lightning.Factories
 
-  describe "process/1" do
-    @tag :skip
+  @tag :skip
+  describe "process/1 with an attempt" do
+    test "creates an initial attempt run" do
+      workflow = insert(:simple_workflow)
+
+      dataclip = insert(:dataclip, project: workflow.project)
+
+      reason =
+        insert(:reason,
+          dataclip: dataclip,
+          trigger: workflow.triggers |> List.first(),
+          type: :webhook
+        )
+
+      work_order = insert(:workorder, workflow: workflow, reason: reason)
+      attempt = insert(:attempt, reason: reason, work_order: work_order)
+
+      Pipeline.process(attempt)
+      # IO.inspect(workflow)
+    end
+  end
+
+  describe "process/1 with an attempt run" do
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
       workflow = insert(:workflow)
 
