@@ -219,12 +219,12 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   </p>
                   <p>.</p>
                   <div class="text-sm">
-                    <.timestamp timestamp={List.last(attempt.runs).finished_at} />
+                    <%= if last_run = List.last(attempt.runs) do %>
+                      <.timestamp timestamp={last_run.finished_at} />
+                    <% else %>
+                      Running...
+                    <% end %>
                   </div>
-                  <p class="text-sm">. Started at job</p>
-                  <p class="text-sm px-2 py-1 text-gray-800 bg-white rounded">
-                    <%= "-" %> of <%= Enum.count(@attempts) %>
-                  </p>
                   <a
                     :if={index == Enum.count(@attempts)}
                     href="#"

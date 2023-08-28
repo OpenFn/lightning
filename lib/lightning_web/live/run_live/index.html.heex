@@ -1,10 +1,10 @@
 <LayoutComponents.page_content>
   <:header>
-    <LayoutComponents.header_cover current_user={@current_user}>
+    <LayoutComponents.header current_user={@current_user}>
       <:title><%= @page_title %></:title>
-    </LayoutComponents.header_cover>
+    </LayoutComponents.header>
   </:header>
-  <LayoutComponents.cover>
+  <LayoutComponents.centered>
     <div>
       <%!-- Search Bar --%>
       <div class="top-0 self-start mb-8">
@@ -411,5 +411,5 @@
         </.form>
       </div> --%>
     </div>
-  </LayoutComponents.cover>
+  </LayoutComponents.centered>
 </LayoutComponents.page_content>

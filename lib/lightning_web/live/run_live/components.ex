@@ -34,54 +34,6 @@ defmodule LightningWeb.RunLive.Components do
           run={run}
         />
       <% end %>
-
-      <%!-- <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
-        <li>
-          <span class="flex items-center">
-            <Heroicons.clock solid class="mr-1 h-5 w-5" />
-            <span>
-              <%= if @last_run.finished_at do %>
-                Attempt finished at <%= @last_run.finished_at
-                |> Calendar.strftime("%c %Z") %>
-              <% else %>
-                Running...
-              <% end %>
-
-              <%= case @last_run.exit_code do %>
-                <% nil -> %>
-                  <%= if @last_run.finished_at do %>
-                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
-                      Timeout
-                    </span>
-                  <% else %>
-                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
-                      Pending
-                    </span>
-                  <% end %>
-                <% val when val > 0-> %>
-                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
-                    Failure
-                  </span>
-                <% val when val == 0 -> %>
-                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-green-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-green-800">
-                    Success
-                  </span>
-                <% _ -> %>
-              <% end %>
-            </span>
-          </span>
-          <ol class="mt-2 list-none space-y-4">
-            <%= for run <- @run_list do %>
-              <.run_list_item
-                can_rerun_job={@can_rerun_job}
-                project_id={@project.id}
-                attempt={@attempt}
-                run={run}
-              />
-            <% end %>
-          </ol>
-        </li>
-      </ul> --%>
     </div>
     """
   end
@@ -98,7 +50,6 @@ defmodule LightningWeb.RunLive.Components do
         role="cell"
         class="col-span-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
-        <p class="mb-2 pl-28">Trigger</p>
         <div class="flex pl-28">
           <%= case @run.exit_code do %>
             <% nil -> %>
@@ -125,11 +76,26 @@ defmodule LightningWeb.RunLive.Components do
               />
           <% end %>
           <div class="text-gray-800 flex gap-2 text-sm">
-            <span><%= @run.job.name %></span>
+            <.link
+              navigate={show_run_url(@project_id, @run.id)}
+              target="_blank"
+              class="hover:underline hover:underline-offset-2"
+            >
+              <span><%= @run.job.name %></span>
+            </.link>
             <div class="flex gap-1">
-              <span class="text-blue-800">Code</span>
-              <span class="text-blue-800">|</span>
-              <span class="text-blue-800">Canvas</span>
+              <%= if @can_rerun_job do %>
+                <span
+                  id={@run.id}
+                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                  phx-click="rerun"
+                  phx-value-attempt_id={@attempt.id}
+                  phx-value-run_id={@run.id}
+                  title="Rerun workflow from here"
+                >
+                  rerun
+                </span>
+              <% end %>
             </div>
           </div>
         </div>
@@ -159,56 +125,6 @@ defmodule LightningWeb.RunLive.Components do
         <.timestamp timestamp={@run.finished_at} style={:wrapped} />
       </div>
       <div role="cell"></div>
-      <%!-- <span class="my-4 flex">
-        &vdash;
-        <span class="mx-2 flex">
-          <%= case @run.exit_code do %>
-            <% nil -> %>
-              <%= if @run.finished_at do %>
-                <Heroicons.x_circle
-                  solid
-                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
-                />
-              <% else %>
-                <Heroicons.ellipsis_horizontal_circle
-                  solid
-                  class="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-500"
-                />
-              <% end %>
-            <% val when val > 0-> %>
-              <Heroicons.x_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-red-500"
-              />
-            <% val when val == 0 -> %>
-              <Heroicons.check_circle
-                solid
-                class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
-              />
-          <% end %>
-          <.link
-            navigate={show_run_url(@project_id, @run.id)}
-            class="hover:underline hover:underline-offset-2"
-          >
-            <b><%= @run.job.name %>&nbsp;</b>
-            <span :if={@run.finished_at}>
-              run at <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
-            </span>
-          </.link>
-          <%= if @can_rerun_job do %>
-            <span
-              id={@run.id}
-              class="pl-2 text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-              phx-click="rerun"
-              phx-value-attempt_id={@attempt.id}
-              phx-value-run_id={@run.id}
-              title="Rerun workflow from here"
-            >
-              rerun
-            </span>
-          <% end %>
-        </span>
-      </span> --%>
     </div>
     """
   end
