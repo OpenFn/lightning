@@ -33,15 +33,13 @@ defmodule Lightning.Attempts do
     adaptor().enqueue(attempt)
   end
 
-  # @doc """
-  # Claim an available attempt.
-  #
-  # The `demand` parameter is used to request more than a since attempt,
-  # all implementation should default to 1.
-  # """
   @impl true
   def claim(demand \\ 1) do
     adaptor().claim(demand)
+  end
+
+  defp adaptor do
+    Lightning.Config.attempts_adaptor()
   end
 
   # @doc """
