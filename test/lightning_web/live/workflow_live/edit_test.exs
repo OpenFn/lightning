@@ -3,11 +3,151 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
+  import Lightning.JobsFixtures
 
   alias LightningWeb.CredentialLiveHelpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+
+  def click_continue(live) do
+    live
+    |> element("button", "Continue")
+    |> render_click()
+  end
+
+  def select_credential_type(live, type) do
+    html =
+      live
+      |> form("#credential-type-picker", type: %{selected: type})
+      |> render_change()
+
+    assert Floki.parse_fragment!(html)
+           |> Floki.find("input[type=radio][value=#{type}][checked]")
+           |> Enum.any?(),
+           "Expected #{type} to be selected"
+  end
+
+  describe "New credential from project context " do
+    setup %{project: project} do
+      %{job: job} = workflow_job_fixture(project_id: project.id)
+      %{job: job}
+    end
+
+    test "open credential modal from the job inspector (edit_job)", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+
+      assert has_element?(view, "#builder-#{job.id}")
+
+      # open the new credential modal
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # assertions
+
+      assert has_element?(view, "#credential-type-picker")
+      view |> select_credential_type("http")
+      view |> click_continue()
+
+      refute has_element?(view, "#project_list")
+    end
+
+    test "create new credential from job inspector and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+
+      # open the new credential modal
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+      view |> select_credential_type("raw")
+      view |> click_continue()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+    end
+
+    test "create new credential from edit job form and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+
+      # change the job name so we can assert that the form state had been
+      # kept after saving the new credential
+      view
+      |> form("#job-form", job_form: %{name: "last typed name"})
+      |> render_change()
+
+      # open the new credential modal
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      # fill the modal and save
+
+      view |> select_credential_type("raw")
+      view |> click_continue()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      # assertions
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{#job-form select#credentialField option[selected=selected]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+
+      assert view
+             |> element(~S{#job-form input#job-form_name})
+             |> render() =~ "last typed name",
+             "Should have kept the job form state after saving the new credential"
+    end
+  end
 
   describe "new" do
     test "builds a new workflow", %{conn: conn, project: project} do
