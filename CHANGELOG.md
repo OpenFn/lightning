@@ -22,6 +22,8 @@ and this project adheres to
   [#961](https://github.com/OpenFn/Lightning/issues/961)
 - Show that the jobs' body is invalid
   [#957](https://github.com/OpenFn/Lightning/issues/957)
+- Reimplement skipped CredentialLive tests
+  [#962](https://github.com/OpenFn/Lightning/issues/962)
 
 ### Changed
 
