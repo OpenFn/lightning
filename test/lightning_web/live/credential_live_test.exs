@@ -4,10 +4,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
-  import Lightning.{
-    JobsFixtures,
-    CredentialsFixtures
-  }
+  import Lightning.CredentialsFixtures
 
   alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
