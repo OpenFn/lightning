@@ -10,24 +10,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   setup :register_and_log_in_user
   setup :create_project_for_current_user
 
-  def click_continue(live) do
-    live
-    |> element("button", "Continue")
-    |> render_click()
-  end
-
-  def select_credential_type(live, type) do
-    html =
-      live
-      |> form("#credential-type-picker", type: %{selected: type})
-      |> render_change()
-
-    assert Floki.parse_fragment!(html)
-           |> Floki.find("input[type=radio][value=#{type}][checked]")
-           |> Enum.any?(),
-           "Expected #{type} to be selected"
-  end
-
   describe "New credential from project context " do
     setup %{project: project} do
       %{job: job} = workflow_job_fixture(project_id: project.id)
@@ -49,8 +31,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> render_click()
 
       assert has_element?(view, "#credential-type-picker")
-      view |> select_credential_type("http")
-      view |> click_continue()
+      view |> CredentialLiveHelpers.select_credential_type("http")
+      view |> CredentialLiveHelpers.click_continue()
 
       refute has_element?(view, "#project_list")
     end
@@ -67,8 +49,8 @@ defmodule LightningWeb.WorkflowLive.EditTest do
              |> element("#new-credential-launcher", "New credential")
              |> render_click()
 
-      view |> select_credential_type("raw")
-      view |> click_continue()
+      view |> CredentialLiveHelpers.select_credential_type("raw")
+      view |> CredentialLiveHelpers.click_continue()
 
       view
       |> form("#credential-form",
