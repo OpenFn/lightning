@@ -273,7 +273,7 @@ defmodule LightningWeb.RunLive.Components do
         <div class="basis-1/2 font-semibold text-secondary-700">Job</div>
         <div class="basis-1/2 text-right"><%= @run_job %></div>
       </div>
-      <div class="flex gap-4 flex-row text-sm" id={"job-#{@run.id}"}>
+      <div class="flex gap-4 flex-row text-sm" id={"job-credential-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Credential</div>
         <div class="basis-1/2 text-right"><%= @run_credential || "n/a" %></div>
       </div>
