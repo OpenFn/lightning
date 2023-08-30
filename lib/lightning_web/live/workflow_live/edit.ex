@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class="fixed left-0 top-0 right-0 bottom-0 m-8 hidden inset-0
-            bg-white fixed inset-0 z-10 overflow-y-auto rounded-lg shadow-xl"
+            bg-white fixed inset-0 z-49 overflow-y-auto rounded-lg shadow-xl"
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
           >
