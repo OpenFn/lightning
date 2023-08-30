@@ -33,7 +33,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :edit ->
               ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
           end,
-        workflow_form: to_form(assigns.changeset)
+        workflow_form: to_form(assigns.changeset),
+        save_and_run_disabled: save_and_run_disabled?(assigns)
       )
 
     ~H"""
@@ -113,7 +114,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     type="submit"
                     class="mr-2 inline-flex items-center gap-x-1.5"
                     form={@manual_run_form.id}
-                    disabled={@manual_run_form.source.errors |> Enum.any?()}
+                    disabled={@save_and_run_disabled}
                   >
                     <.icon name="hero-play-solid" class="w-4 h-4" /> Save + Run
                   </.button>
@@ -273,7 +274,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
-      <Heroicons.code_bracket mini class="w-4 h-4 text-grey-400" />
+      <.icon name="hero-code-bracket-mini" class="w-4 h-4 text-grey-400" />
     </.link>
 
     <.save_is_blocked_error :if={@is_empty}>
@@ -373,6 +374,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
        current_url: nil,
        expanded_job: nil,
        follow_run_id: nil,
+       manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
        selected_job: nil,
@@ -559,9 +561,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
       )
       |> Map.put(:action, :validate)
 
-    {:noreply,
-     socket
-     |> assign(manual_run_form: to_form(changeset))}
+    {:noreply, socket |> assign_manual_run_form(changeset)}
   end
 
   def handle_event("manual_run_submit", %{"manual" => params}, socket) do
@@ -600,7 +600,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
          |> assign_workflow(workflow)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
-        {:noreply, socket |> assign(manual_run_form: to_form(changeset))}
+        {:noreply,
+         socket
+         |> assign_manual_run_form(changeset)}
 
       {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
         {
@@ -625,7 +627,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
       %{selected_job: nil} ->
-        socket |> assign(manual_run_form: nil, selectable_dataclips: [])
+        socket
+        |> assign(
+          manual_run_form: nil,
+          selectable_dataclips: []
+        )
 
       %{selected_job: job, selection_mode: "expand"} when not is_nil(job) ->
         changeset =
@@ -644,13 +650,32 @@ defmodule LightningWeb.WorkflowLive.Edit do
           })
 
         socket
-        |> assign(
-          manual_run_form: to_form(changeset),
-          selectable_dataclips: selectable_dataclips
-        )
+        |> assign_manual_run_form(changeset)
+        |> assign(selectable_dataclips: selectable_dataclips)
 
       _ ->
         socket
+    end
+  end
+
+  defp assign_manual_run_form(socket, changeset) do
+    socket
+    |> assign(manual_run_form: to_form(changeset, id: "manual_run_form"))
+  end
+
+  defp save_and_run_disabled?(attrs) do
+    case attrs do
+      %{manual_run_form: nil} ->
+        true
+
+      %{
+        manual_run_form: manual_run_form,
+        changeset: changeset,
+        can_edit_job: can_edit_job
+      } ->
+        manual_run_form.source.errors |> Enum.any?() or
+          !changeset.valid? or
+          !can_edit_job
     end
   end
 

@@ -55,10 +55,12 @@ defmodule Lightning.WorkOrders.Manual do
       "Dataclip and custom body are mutually exclusive."
     )
     |> then(fn changeset ->
-      with %{__meta__: %{state: :built}} <- get_field(changeset, :job) do
-        changeset |> add_error(:job, "Workflow must be saved first.")
-      else
-        _ -> changeset
+      case get_field(changeset, :job) do
+        %{__meta__: %{state: :built}} ->
+          changeset |> add_error(:job, "Workflow must be saved first.")
+
+        _ ->
+          changeset
       end
     end)
   end
