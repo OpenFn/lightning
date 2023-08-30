@@ -325,7 +325,10 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> assign(
        show_repo_setup: false,
        show_sync_button: true,
-       project_repo_connection: %{"branch" => params["branch"], "repo" => params["repo"]}
+       project_repo_connection: %{
+         "branch" => params["branch"],
+         "repo" => params["repo"]
+       }
      )}
   end
 
@@ -357,7 +360,10 @@ defmodule LightningWeb.ProjectLive.Settings do
      socket
      |> assign(
        loading_branches: true,
-       project_repo_connection: %{socket.assigns.project_repo_connection | "repo" => params["repo"]}
+       project_repo_connection: %{
+         socket.assigns.project_repo_connection
+         | "repo" => params["repo"]
+       }
      )}
   end
 
@@ -365,7 +371,7 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply,
      socket
      |> assign(
-      project_repo_connection: %{
+       project_repo_connection: %{
          socket.assigns.project_repo_connection
          | "branch" => params["branch"]
        }

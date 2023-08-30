@@ -24,19 +24,23 @@ defmodule Lightning.VersionControl do
   Deletes a github connection used when re installing
   """
   def remove_github_connection(project_id) do
-    Repo.one(from(p in ProjectRepoConnection, where: p.project_id == ^project_id))
+    Repo.one(
+      from(prc in ProjectRepoConnection, where: prc.project_id == ^project_id)
+    )
     |> Repo.delete()
   end
 
   def get_repo_connection(project_id) do
-    Repo.one(from(p in ProjectRepoConnection, where: p.project_id == ^project_id))
+    Repo.one(
+      from(prc in ProjectRepoConnection, where: prc.project_id == ^project_id)
+    )
   end
 
   def add_github_installation_id(user_id, installation_id) do
     pending_installation =
       Repo.one(
-        from(p in ProjectRepoConnection,
-          where: p.user_id == ^user_id and is_nil(p.github_installation_id)
+        from(prc in ProjectRepoConnection,
+          where: prc.user_id == ^user_id and is_nil(prc.github_installation_id)
         )
       )
 
@@ -48,8 +52,8 @@ defmodule Lightning.VersionControl do
   def add_github_repo_and_branch(project_id, repo, branch) do
     pending_installation =
       Repo.one(
-        from(p in ProjectRepoConnection,
-          where: p.project_id == ^project_id
+        from(prc in ProjectRepoConnection,
+          where: prc.project_id == ^project_id
         )
       )
 
