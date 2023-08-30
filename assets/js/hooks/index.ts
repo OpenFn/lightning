@@ -42,26 +42,38 @@ export const AssocListChange = {
   },
 } as PhoenixHook<{}, {}, HTMLSelectElement>;
 
-export const SubmitViaCtrlS = {
-  mounted() {
-    this.callback = this.handleEvent.bind(this);
-    window.addEventListener('keydown', this.callback);
-  },
-  handleEvent(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      this.el.dispatchEvent(
-        new Event('submit', { bubbles: true, cancelable: true })
-      );
-    }
-  },
-  destroyed() {
-    window.removeEventListener('keydown', this.callback);
-  },
-} as PhoenixHook<{
-  callback: (e: KeyboardEvent) => void;
-  handleEvent: (e: KeyboardEvent) => void;
-}>;
+function createKeyCombinationHook(
+  keyCheck: (e: KeyboardEvent) => boolean
+): PhoenixHook {
+  return {
+    mounted() {
+      this.callback = this.handleEvent.bind(this);
+      window.addEventListener('keydown', this.callback);
+    },
+    handleEvent(e: KeyboardEvent) {
+      if (keyCheck(e)) {
+        e.preventDefault();
+        this.el.dispatchEvent(
+          new Event('submit', { bubbles: true, cancelable: true })
+        );
+      }
+    },
+    destroyed() {
+      window.removeEventListener('keydown', this.callback);
+    },
+  } as PhoenixHook<{
+    callback: (e: KeyboardEvent) => void;
+    handleEvent: (e: KeyboardEvent) => void;
+  }>;
+}
+
+export const SubmitViaCtrlS = createKeyCombinationHook(
+  e => (e.ctrlKey || e.metaKey) && e.key === 's'
+);
+
+export const SubmitViaCtrlEnter = createKeyCombinationHook(
+  e => (e.ctrlKey || e.metaKey) && (e.key === 'Enter')
+);
 
 export const Copy = {
   mounted() {
@@ -79,3 +91,14 @@ export const Copy = {
     });
   },
 } as PhoenixHook<{}, { to: string }>;
+
+// Sets the checkbox to indeterminate state if the element has the
+// `indeterminate` class
+export const CheckboxIndeterminat = {
+  mounted() {
+    this.el.indeterminate = this.el.classList.contains('indeterminate');
+  },
+  updated() {
+    this.el.indeterminate = this.el.classList.contains('indeterminate');
+  },
+} as PhoenixHook;

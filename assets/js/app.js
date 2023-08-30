@@ -25,33 +25,18 @@ import { Socket } from 'phoenix';
 import { LiveSocket } from 'phoenix_live_view';
 
 import topbar from '../vendor/topbar';
-import { AssocListChange, Copy, Flash, SubmitViaCtrlS, Tooltip } from './hooks';
+import * as Hooks from './hooks';
 import JobEditor from './job-editor';
 import JobEditorResizer from './job-editor-resizer/mount';
 import TabSelector from './tab-selector';
 import WorkflowEditor from './workflow-editor';
 
-let Hooks = {
+let hooks = {
   TabSelector,
   JobEditor,
   JobEditorResizer,
   WorkflowEditor,
-  Flash,
-  Tooltip,
-  AssocListChange,
-  Copy,
-  SubmitViaCtrlS,
-};
-
-// Sets the checkbox to indeterminate state if the element has the
-// `indeterminate` class
-Hooks.CheckboxIndeterminate = {
-  mounted() {
-    this.el.indeterminate = this.el.classList.contains('indeterminate');
-  },
-  updated() {
-    this.el.indeterminate = this.el.classList.contains('indeterminate');
-  },
+  ...Hooks,
 };
 
 // @ts-ignore
@@ -61,7 +46,7 @@ let csrfToken = document
 
 let liveSocket = new LiveSocket('/live', Socket, {
   params: { _csrf_token: csrfToken },
-  hooks: Hooks,
+  hooks,
   dom: {
     onBeforeElUpdated(from, to) {
       // If an element has any of the 'lv-keep-*' attributes, copy across

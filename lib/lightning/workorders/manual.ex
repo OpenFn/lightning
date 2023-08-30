@@ -1,7 +1,16 @@
 defmodule Lightning.WorkOrders.Manual do
   @moduledoc """
-  This model is used to build WorkOrders that are manually created by users
+  A model is used to build WorkOrders with custom input data.
   """
+  @type t :: %__MODULE__{
+          project: Lightning.Projects.Project.t(),
+          job: Lightning.Jobs.Job.t(),
+          user: Lightning.Accounts.User.t(),
+          dataclip_id: String.t(),
+          body: String.t(),
+          is_persisted: boolean()
+        }
+
   use Ecto.Schema
 
   import Ecto.Changeset
