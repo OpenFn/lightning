@@ -381,7 +381,7 @@
 
                 <.form
                   :let={f}
-                  for={@project_repo}
+                  for={@project_repo_connection}
                   id="project-vcs-form"
                   phx-submit="save_repo"
                 >
@@ -396,7 +396,7 @@
                             Repository
                           <% end %>
                           <%= if @show_sync_button do %>
-                            Repository: <%= @project_repo["repo"] %>
+                            Repository: <%= @project_repo_connection["repo"] %>
                           <% end %>
                         </span>
                       </small>
@@ -408,7 +408,10 @@
                         name={:repo}
                         id="project-repo"
                         phx-change="repo_selected"
-                        prompt={@project_repo["repo"] || "Select a Repository"}
+                        prompt={
+                          @project_repo_connection["repo"] ||
+                            "Select a Repository"
+                        }
                         values={@repos}
                       />
                     </div>
@@ -424,7 +427,7 @@
                             Branch
                           <% end %>
                           <%= if @show_sync_button do %>
-                            Branch: <%= @project_repo["branch"] %>
+                            Branch: <%= @project_repo_connection["branch"] %>
                           <% end %>
                         </span>
                       </small>
@@ -436,7 +439,9 @@
                         name={:branch}
                         id="project-branch"
                         values={@branches}
-                        prompt={@project_repo["branch"] || "Select a branch"}
+                        prompt={
+                          @project_repo_connection["branch"] || "Select a branch"
+                        }
                       />
                     </div>
                   </div>
@@ -449,7 +454,8 @@
                         :if={!@show_sync_button}
                         phx-disable-with="Saving"
                         disabled={
-                          !@project_repo["repo"] || !@project_repo["branch"]
+                          !@project_repo_connection["repo"] ||
+                            !@project_repo_connection["branch"]
                         }
                       >
                         Connect Branch

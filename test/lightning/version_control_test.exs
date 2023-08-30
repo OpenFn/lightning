@@ -1,27 +1,31 @@
 defmodule Lightning.VersionControlTest do
   use Lightning.DataCase, async: true
   alias Lightning.VersionControl
-  alias Lightning.VersionControl.ProjectRepo
+  alias Lightning.VersionControl.ProjectRepoConnection
   alias Lightning.Repo
 
   import Lightning.Factories
 
   describe "Version Control" do
     test "deletes a project repo connection" do
-      project_repo = insert(:project_repo)
-      assert Repo.aggregate(ProjectRepo, :count, :id) == 1
+      project_repo_connection = insert(:project_repo_connection)
+      assert Repo.aggregate(ProjectRepoConnection, :count, :id) == 1
 
       assert {:ok, _} =
-               VersionControl.remove_github_connection(project_repo.project_id)
+               VersionControl.remove_github_connection(
+                 project_repo_connection.project_id
+               )
 
-      assert Repo.aggregate(ProjectRepo, :count, :id) == 0
+      assert Repo.aggregate(ProjectRepoConnection, :count, :id) == 0
     end
 
     test "fetches a project repo using a project id" do
-      project_repo = insert(:project_repo)
+      project_repo_connection = insert(:project_repo_connection)
 
-      assert %ProjectRepo{} =
-               VersionControl.get_repo_connection(project_repo.project_id)
+      assert %ProjectRepoConnection{} =
+               VersionControl.get_repo_connection(
+                 project_repo_connection.project_id
+               )
     end
 
     test "creates a project github repo connection record when project and user id are present" do
@@ -45,11 +49,11 @@ defmodule Lightning.VersionControlTest do
 
       attrs = %{project_id: project.id, user_id: user.id}
 
-      assert Repo.aggregate(ProjectRepo, :count) == 0
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
 
       VersionControl.create_github_connection(attrs)
 
-      assert Repo.aggregate(ProjectRepo, :count) == 1
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 1
 
       assert {:ok, updated_connection} =
                VersionControl.add_github_repo_and_branch(
@@ -71,11 +75,11 @@ defmodule Lightning.VersionControlTest do
 
       attrs2 = %{project_id: project.id, user_id: u2.id}
 
-      assert Repo.aggregate(ProjectRepo, :count) == 0
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
 
       Enum.each([attrs1, attrs2], &VersionControl.create_github_connection/1)
 
-      assert Repo.aggregate(ProjectRepo, :count) == 2
+      assert Repo.aggregate(ProjectRepoConnection, :count) == 2
 
       assert {:ok, updated_connection} =
                VersionControl.add_github_installation_id(
@@ -85,7 +89,7 @@ defmodule Lightning.VersionControlTest do
 
       assert updated_connection.user_id == u1.id
 
-      not_updated = Repo.get_by(ProjectRepo, user_id: u2.id)
+      not_updated = Repo.get_by(ProjectRepoConnection, user_id: u2.id)
 
       refute not_updated.id == updated_connection.id
       refute not_updated.github_installation_id

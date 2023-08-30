@@ -36,7 +36,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
     end
 
     test "client can handle invalid application message from github" do
-      p_repo = insert(:project_repo)
+      p_repo = insert(:project_repo_connection)
 
       assert {:error,
               %{
@@ -47,7 +47,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
     end
 
     test "client can handle invalid PEM message from github" do
-      p_repo = insert(:project_repo, github_installation_id: "fail-id")
+      p_repo =
+        insert(:project_repo_connection, github_installation_id: "fail-id")
 
       assert {:error,
               %{
@@ -58,7 +59,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
     end
 
     test "fetch repo branches can handle fail" do
-      p_repo = insert(:project_repo)
+      p_repo = insert(:project_repo_connection)
 
       assert {:error,
               %{
@@ -69,7 +70,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
     end
 
     test "client can fetch installation repos" do
-      p_repo = insert(:project_repo)
+      p_repo = insert(:project_repo_connection)
 
       assert {:error,
               %{
@@ -109,21 +110,21 @@ defmodule Lightning.VersionControl.GithubClientTest do
     end
 
     test "client can fetch installation repos" do
-      p_repo = insert(:project_repo)
+      p_repo = insert(:project_repo_connection)
 
       assert {:ok, ["org/repo"]} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
 
     test "client can fetch repo branches" do
-      p_repo = insert(:project_repo)
+      p_repo = insert(:project_repo_connection)
 
       assert {:ok, ["master"]} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
 
     test "client can fire repository dispatch event" do
-      p_repo = insert(:project_repo)
+      p_repo = insert(:project_repo_connection)
 
       assert {:ok, :fired} =
                VersionControl.run_sync(p_repo.project_id, "some-user-name")

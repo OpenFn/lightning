@@ -1,8 +1,8 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
 
-  def project_repo_factory do
-    %Lightning.VersionControl.ProjectRepo{
+  def project_repo_connection_factory do
+    %Lightning.VersionControl.ProjectRepoConnection{
       project: build(:project),
       user: build(:user),
       repo: "some/repo",
