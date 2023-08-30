@@ -95,6 +95,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
       schemas_options
       |> append_if_missing({"Raw JSON", "raw"})
       |> append_if_missing({"Googlesheets", "googlesheets"})
+      |> Enum.sort_by(&(&1), :asc)
       |> Enum.filter(fn {_, key} ->
         case key do
           "googlesheets" ->
