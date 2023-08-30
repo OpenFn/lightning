@@ -91,8 +91,13 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <:column>
         <!-- Right column area -->
         <div>
+        <div class="flex justify-between">
           <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
             Output & Logs
+          </div>
+          <div>
+            <Heroicons.minus_small class="w-6 h-6 text-gray-500" />
+          </div>
           </div>
           <%= if @follow_run_id do %>
             <div class="h-full">
@@ -143,9 +148,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
       end)
 
     ~H"""
-    <div>
+    <div class="">
+    <div class="flex justify-between">
       <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
         Input
+      </div>
+      <div>
+        <Heroicons.minus_small class="w-6 h-6 text-gray-500" />
+      </div>
       </div>
       <%= if @is_persisted do %>
         <.live_component

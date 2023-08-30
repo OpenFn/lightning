@@ -14,9 +14,16 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   def render(assigns) do
     ~H"""
     <div class="h-full">
+      <div class="flex justify-between">
       <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
         Editor
       </div>
+      <div>
+        <Heroicons.minus_small class="w-6 h-6 text-gray-500" />
+      </div>
+      </div>
+
+
       <div class={@class} id={@id}>
         <JobBuilderComponents.job_editor_component
           adaptor={@adaptor}
