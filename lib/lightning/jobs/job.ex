@@ -62,6 +62,8 @@ defmodule Lightning.Jobs.Job do
       job
       |> cast(attrs, [
         :id,
+        # Note: we can drop inserted_at once there's a reliable way to sort yaml for export
+        :inserted_at,
         :name,
         :body,
         :enabled,

@@ -11,14 +11,34 @@ defmodule LightningWeb.API.ProvisioningJSON do
 
   def as_json(%Project{} = project) do
     Ecto.embedded_dump(project, :json)
-    |> Map.put("workflows", Enum.map(project.workflows, &as_json/1))
+    |> Map.put(
+      "workflows",
+      project.workflows
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
   end
 
   def as_json(%Workflow{} = workflow) do
     Ecto.embedded_dump(workflow, :json)
-    |> Map.put("jobs", Enum.map(workflow.jobs, &as_json/1))
-    |> Map.put("triggers", Enum.map(workflow.triggers, &as_json/1))
-    |> Map.put("edges", Enum.map(workflow.edges, &as_json/1))
+    |> Map.put(
+      "jobs",
+      workflow.jobs
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
+    |> Map.put(
+      "triggers",
+      workflow.triggers
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
+    |> Map.put(
+      "edges",
+      workflow.edges
+      |> Enum.sort_by(& &1.inserted_at, NaiveDateTime)
+      |> Enum.map(&as_json/1)
+    )
   end
 
   def as_json(%Job{} = job) do
