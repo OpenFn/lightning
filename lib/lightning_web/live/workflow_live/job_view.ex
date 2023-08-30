@@ -51,6 +51,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <:top>
         <div class="flex h-14 place-content-stretch">
           <div class="basis-1/3 flex items-center gap-4 pl-4">
+          <a href="" class="flex gap-2 p-2 bg-gray-200 rounded items-center">
+            <Heroicons.arrow_right class="w-4 h-4 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
+            <p class="text-xs font-medium">History</p>
+          </a>
             <.adaptor_block adaptor={@job.adaptor} />
             <.credential_block credential={@job.credential} />
           </div>

@@ -72,6 +72,7 @@ defmodule LightningWeb.Components.Form do
       text-sm
       font-medium
       text-secondary-700
+      bg-gray-100
     ]
 
     assigns =
