@@ -90,6 +90,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               project={@project}
               socket={@socket}
               on_run={&follow_run/1}
+              can_run_job={@can_run_job}
               follow_run_id={@follow_run_id}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
@@ -337,8 +338,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
     can_edit_job =
       Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
 
+    can_run_job =
+      Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+
     socket
     |> assign(can_edit_job: can_edit_job)
+    |> assign(can_run_job: can_run_job)
   end
 
   @impl true

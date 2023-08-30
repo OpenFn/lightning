@@ -67,7 +67,12 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
         phx-change="change"
         phx-submit="run"
       >
-        <.dataclip_selector form={f} phx-target={@myself} dataclips={@dataclips} />
+        <.dataclip_selector
+          form={f}
+          phx-target={@myself}
+          dataclips={@dataclips}
+          disabled={!@can_run_job}
+        />
         <div class="flex-1 flex flex-col gap-4">
           <div>
             <div class="flex flex-row">
@@ -104,13 +109,18 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
             } />
           </div>
           <div :if={is_nil(@selected_dataclip)}>
-            <Form.text_area form={f} field={:body} phx-debounce="300" />
+            <Form.text_area
+              disabled={!@can_run_job}
+              form={f}
+              field={:body}
+              phx-debounce="300"
+            />
           </div>
         </div>
         <div class="flex-none flex place-content-end">
           <Form.submit_button
             phx-disable-with="Enqueuing..."
-            disabled={!@changeset.valid?}
+            disabled={@run_button_disabled}
           >
             Run
           </Form.submit_button>
@@ -184,8 +194,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
       false ->
         {:noreply,
          socket
-         |> put_flash(:error, "You are not authorized to perform this action.")
-         |> push_patch(to: socket.assigns.return_to)}
+         |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
@@ -199,6 +208,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
 
   attr :dataclips, :list, required: true
   attr :form, :map, required: true
+  attr :disabled, :boolean, required: true
   attr :rest, :global
 
   defp dataclip_selector(assigns) do
@@ -217,6 +227,7 @@ defmodule LightningWeb.JobLive.ManualRunComponent do
           name={:dataclip_id}
           values={@options}
           prompt="Create a new dataclip"
+          disabled={@disabled}
           {@rest}
         />
       </div>

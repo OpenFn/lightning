@@ -42,6 +42,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :socket, :any, required: true
   attr :on_run, :any, required: true, doc: "Callback to run a job manually"
   attr :follow_run_id, :any, default: nil
+  attr :can_run_job, :boolean, required: true
 
   slot :footer
 
@@ -71,6 +72,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           job={@job}
           on_run={@on_run}
           user={@current_user}
+          can_run_job={@can_run_job}
           project={@project}
         />
       </:column>
@@ -120,7 +122,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :user, :map, required: true
   attr :project, :map, required: true
   attr :on_run, :any, required: true, doc: "Callback to run a job manually"
-  attr :can_run_job, :boolean, default: true
+  attr :can_run_job, :boolean, required: true
 
   def input_pane(%{job: job} = assigns) do
     # TODO: move loading the dataclips either down into the ManualRunComponent

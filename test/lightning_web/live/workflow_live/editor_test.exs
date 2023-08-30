@@ -1,4 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditorTest do
+  alias Lightning.Invocation
+  alias Lightning.InvocationFixtures
   use LightningWeb.ConnCase, async: true
   use Oban.Testing, repo: Lightning.Repo
   import Phoenix.LiveViewTest
@@ -36,16 +38,94 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
   test "mounts the JobEditor with the correct attrs"
 
   describe "manual runs" do
-    test "viewers can't run a job" do
-      # view
-      # |> with_target("#manual-job-#{job.id}")
+    @tag role: :viewer
+    test "viewers can't run a job", %{
+      conn: conn,
+      project: p,
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      # dataclip dropdown is disabled
+      assert view
+             |> element(
+               ~s{#manual-job-#{job.id} form #manual_workorder_dataclip_id[disabled='disabled']}
+             )
+             |> has_element?()
+
+      # run button is disabled
+      assert view
+             |> element(
+               ~s{#manual-job-#{job.id} form button[type='submit'][disabled='disabled']}
+             )
+             |> has_element?()
+
+      # Why can't I see any Flash message while I can see it appear on the UI.
+      # assert view |> with_target("#manual-job-#{job.id}") |> render_click("run", %{"manual_workorder" => %{}}) =~ "You are not authorized to perform this action."
     end
 
-    test "can see the last 3 dataclips" do
+    @tag role: :admin
+    test "can see the last 3 dataclips", %{
+      conn: conn,
+      project: p,
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      first_dataclip =
+        InvocationFixtures.run_fixture(project_id: p.id, job_id: job.id)
+        |> Map.get(:input_dataclip_id)
+
+      last_3_dataclips =
+        for _ <- 1..3,
+            do:
+              InvocationFixtures.run_fixture(project_id: p.id, job_id: job.id)
+              |> Map.get(:input_dataclip_id)
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      last_3_dataclips
+      |> Enum.each(fn dataclip ->
+        assert view
+               |> element(
+                 ~s{#manual-job-#{job.id} form #manual_workorder_dataclip_id option[value='#{dataclip}']}
+               )
+               |> has_element?()
+      end)
+
+      refute view
+             |> element(
+               ~s{#manual-job-#{job.id} form #manual_workorder_dataclip_id option[value='#{first_dataclip}']}
+             )
+             |> has_element?()
     end
 
-    @tag skip: true
-    test "can create a new dataclip"
+    test "can create a new dataclip", %{
+      conn: conn,
+      project: p,
+      workflow: w
+    } do
+      job = w.jobs |> hd
+
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{p}/w/#{w}?#{[s: job, m: "expand"]}")
+
+      assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
+
+      view
+      |> form("#manual-job-#{job.id} form",
+        manual_workorder: %{
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 1
+    end
 
     test "can't with a new dataclip if it's invalid", %{
       conn: conn,
