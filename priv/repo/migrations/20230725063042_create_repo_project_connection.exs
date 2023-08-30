@@ -1,8 +1,8 @@
-defmodule Lightning.Repo.Migrations.CreateRepoProjectConnection do
+defmodule Lightning.Repo.Migrations.CreateProjectRepoConnections do
   use Ecto.Migration
 
   def change do
-    create table(:project_repos, primary_key: false) do
+    create table(:project_repo_connections, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :github_installation_id, :string
       add :repo, :string

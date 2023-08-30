@@ -13,7 +13,7 @@ defmodule LightningWeb.VersionControlControllerTest do
       user: user
     } do
       p_repo =
-        insert(:project_repo, %{
+        insert(:project_repo_connection, %{
           github_installation_id: nil,
           branch: nil,
           repo: nil,

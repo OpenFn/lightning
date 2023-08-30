@@ -48,7 +48,7 @@ defmodule Lightning.SetupUtils do
         %{user_id: viewer.id, role: :viewer}
       ])
 
-    Repo.insert!(%VersionControl.ProjectRepo{
+    Repo.insert!(%VersionControl.ProjectRepoConnection{
       github_installation_id: "39991761",
       repo: "OpenFn/demo-openhie",
       branch: "main",

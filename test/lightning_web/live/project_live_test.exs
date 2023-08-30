@@ -466,7 +466,7 @@ defmodule LightningWeb.ProjectLiveTest do
         app_name: "test-github"
       )
 
-      insert(:project_repo, %{
+      insert(:project_repo_connection, %{
         project: project,
         user: user,
         repo: nil,
@@ -494,7 +494,7 @@ defmodule LightningWeb.ProjectLiveTest do
         app_name: "test-github"
       )
 
-      insert(:project_repo, %{
+      insert(:project_repo_connection, %{
         project: project,
         user: user,
         repo: nil,
@@ -524,7 +524,7 @@ defmodule LightningWeb.ProjectLiveTest do
         app_name: "test-github"
       )
 
-      insert(:project_repo, %{
+      insert(:project_repo_connection, %{
         project: project,
         user: user,
         repo: "some-repo",
@@ -556,7 +556,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       repository = "some-repo"
 
-      insert(:project_repo, %{
+      insert(:project_repo_connection, %{
         project: project,
         user: user,
         repo: repository,
@@ -603,7 +603,7 @@ defmodule LightningWeb.ProjectLiveTest do
         app_name: "test-github"
       )
 
-      insert(:project_repo, %{project_id: project.id, project: nil})
+      insert(:project_repo_connection, %{project_id: project.id, project: nil})
 
       {:ok, view, _html} =
         live(
@@ -625,7 +625,7 @@ defmodule LightningWeb.ProjectLiveTest do
         app_name: "test-github"
       )
 
-      insert(:project_repo, %{project_id: project.id, project: nil})
+      insert(:project_repo_connection, %{project_id: project.id, project: nil})
 
       {:ok, view, _html} =
         live(
@@ -648,7 +648,7 @@ defmodule LightningWeb.ProjectLiveTest do
         app_name: "test-github"
       )
 
-      insert(:project_repo, %{
+      insert(:project_repo_connection, %{
         project_id: project.id,
         project: nil,
         branch: nil,

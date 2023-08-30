@@ -48,11 +48,12 @@ defmodule LightningWeb.ProjectLive.Settings do
         socket.assigns.project
       )
 
-    {show_github_setup, show_repo_setup, show_sync_button, project_repo} =
+    {show_github_setup, show_repo_setup, show_sync_button,
+     project_repo_connection} =
       repo_settings(socket)
 
     if show_repo_setup do
-      collect_project_repos(socket.assigns.project.id)
+      collect_project_repo_connections(socket.assigns.project.id)
     end
 
     {:ok,
@@ -69,7 +70,7 @@ defmodule LightningWeb.ProjectLive.Settings do
        show_github_setup: show_github_setup,
        show_repo_setup: show_repo_setup,
        show_sync_button: show_sync_button,
-       project_repo: project_repo,
+       project_repo_connection: project_repo_connection,
        repos: [],
        branches: [],
        loading_branches: false,
@@ -89,16 +90,16 @@ defmodule LightningWeb.ProjectLive.Settings do
     repo_connection =
       VersionControl.get_repo_connection(socket.assigns.project.id)
 
-    project_repo = %{"repo" => nil, "branch" => nil}
+    project_repo_connection = %{"repo" => nil, "branch" => nil}
 
     # {show_github_setup, show_repo_setup, show_sync_button}
     repo_settings =
       case repo_connection do
         nil ->
-          {true, false, false, project_repo}
+          {true, false, false, project_repo_connection}
 
         %{repo: nil} ->
-          {false, true, false, project_repo}
+          {false, true, false, project_repo_connection}
 
         %{repo: r, branch: b} ->
           {false, true, true, %{"repo" => r, "branch" => b}}
@@ -108,7 +109,7 @@ defmodule LightningWeb.ProjectLive.Settings do
   end
 
   # we should only run this if repo setting is pending
-  defp collect_project_repos(project_id) do
+  defp collect_project_repo_connections(project_id) do
     pid = self()
 
     Task.start(fn ->
@@ -324,7 +325,7 @@ defmodule LightningWeb.ProjectLive.Settings do
      |> assign(
        show_repo_setup: false,
        show_sync_button: true,
-       project_repo: %{"branch" => params["branch"], "repo" => params["repo"]}
+       project_repo_connection: %{"branch" => params["branch"], "repo" => params["repo"]}
      )}
   end
 
@@ -356,7 +357,7 @@ defmodule LightningWeb.ProjectLive.Settings do
      socket
      |> assign(
        loading_branches: true,
-       project_repo: %{socket.assigns.project_repo | "repo" => params["repo"]}
+       project_repo_connection: %{socket.assigns.project_repo_connection | "repo" => params["repo"]}
      )}
   end
 
@@ -364,8 +365,8 @@ defmodule LightningWeb.ProjectLive.Settings do
     {:noreply,
      socket
      |> assign(
-       project_repo: %{
-         socket.assigns.project_repo
+      project_repo_connection: %{
+         socket.assigns.project_repo_connection
          | "branch" => params["branch"]
        }
      )}
@@ -390,7 +391,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       {:ok, [_ | _] = repos} ->
         {:noreply, socket |> assign(repos: repos)}
 
-      # while it's possible to trigger this state when testing 
+      # while it's possible to trigger this state when testing
       # Github makes it pretty impossible to arrive here
       _ ->
         {:noreply, socket}
