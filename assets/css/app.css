@@ -44,12 +44,6 @@
   background-color: #1e1e1e;
 }
 
-/* LiveView specific classes for your customization */
-/* https://hexdocs.pm/phoenix_live_view/form-bindings.html#phx-feedback-for */
-.phx-no-feedback {
-  display: none;
-}
-
 .phx-click-loading {
   opacity: 0.5;
   transition: opacity 1s ease-out;
