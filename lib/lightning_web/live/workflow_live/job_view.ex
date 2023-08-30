@@ -5,6 +5,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   attr :id, :string, required: true
   slot :top
 
+  slot :inner_block, required: false
+
   slot :column do
     attr :class, :string, doc: "Extra CSS classes for the column"
   end
@@ -20,10 +22,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </div>
         <!-- 3 column wrapper -->
         <div class="grow flex h-5/6">
+          <%= render_slot(@inner_block) %>
           <%= for slot <- @column do %>
-            <div class={"flex-1 px-4 py-6 #{Map.get(slot, :class, "")}"}>
+            <.column class={slot[:class]}>
               <%= render_slot(slot) %>
-            </div>
+            </.column>
           <% end %>
         </div>
         <div class="h-14 flex border-t p-2 justify-end">
@@ -34,16 +37,30 @@ defmodule LightningWeb.WorkflowLive.JobView do
     """
   end
 
+  slot :inner_block, required: true
+  attr :class, :string, default: ""
+
+  defp column(assigns) do
+    ~H"""
+    <div class={["flex-1 px-4 py-6", @class]}>
+      <%= render_slot(@inner_block) %>
+    </div>
+    """
+  end
+
   attr :job, :map, required: true
   attr :form, :map, required: true, doc: "A form built from a job"
   attr :current_user, :map, required: true
   attr :project, :map, required: true
   attr :close_url, :any, required: true
   attr :socket, :any, required: true
-  attr :on_run, :any, required: true, doc: "Callback to run a job manually"
   attr :follow_run_id, :any, default: nil
 
   slot :footer
+
+  slot :column do
+    attr :class, :string, doc: "Extra CSS classes for the column"
+  end
 
   def job_edit_view(assigns) do
     ~H"""
@@ -66,14 +83,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
         </div>
       </:top>
-      <:column>
-        <.input_pane
-          job={@job}
-          on_run={@on_run}
-          user={@current_user}
-          project={@project}
-        />
-      </:column>
+      <%= for slot <- @column do %>
+        <.column class={slot[:class]}>
+          <%= render_slot(slot) %>
+        </.column>
+      <% end %>
       <:column class="h-full">
         <!-- Main area -->
         <.live_component
@@ -113,51 +127,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <%= render_slot(@footer) %>
       </:bottom>
     </.container>
-    """
-  end
-
-  attr :job, :map, required: true
-  attr :user, :map, required: true
-  attr :project, :map, required: true
-  attr :on_run, :any, required: true, doc: "Callback to run a job manually"
-  attr :can_run_job, :boolean, default: true
-
-  def input_pane(%{job: job} = assigns) do
-    # TODO: move loading the dataclips either down into the ManualRunComponent
-    # or up into the parent liveview
-    assigns =
-      assigns
-      |> assign(job_id: job.id, is_persisted: job.__meta__.state == :loaded)
-      |> assign_new(:dataclips, fn
-        %{job_id: job_id, is_persisted: true} ->
-          Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
-            id: job_id
-          })
-
-        %{is_persisted: false} ->
-          []
-      end)
-
-    ~H"""
-    <div>
-      <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
-        Input
-      </div>
-      <%= if @is_persisted do %>
-        <.live_component
-          module={LightningWeb.JobLive.ManualRunComponent}
-          id={"manual-job-#{@job.id}"}
-          job={@job}
-          dataclips={@dataclips}
-          project={@project}
-          user={@user}
-          on_run={@on_run}
-          can_run_job={@can_run_job}
-        />
-      <% else %>
-        <p>Please save your Job first.</p>
-      <% end %>
-    </div>
     """
   end
 
