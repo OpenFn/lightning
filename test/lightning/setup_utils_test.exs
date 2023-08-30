@@ -3,10 +3,7 @@ defmodule Lightning.SetupUtilsTest do
   use Lightning.DataCase, async: true
   # use Mimic
 
-  alias Lightning.Accounts
-  alias Lightning.Projects
-  alias Lightning.Workflows
-  alias Lightning.Jobs
+  alias Lightning.{Accounts, Projects, Workflows, Jobs, SetupUtils}
   alias Lightning.Accounts.User
 
   describe "Setup demo site seed data" do
@@ -395,6 +392,32 @@ defmodule Lightning.SetupUtilsTest do
              [CLI] ✔ Writing output to /tmp/output-1686850600-169521-1drewz.json
              [CLI] ✔ Done in 304ms! ✨
              """
+    end
+  end
+
+  describe "User setup" do
+    test "create_users with `create_super: true` returns 4 valid users" do
+      users = SetupUtils.create_users(create_super: true)
+
+      assert %{
+               super_user: %User{first_name: "Sizwe"},
+               admin: %User{first_name: "Amy"},
+               editor: %User{first_name: "Esther"},
+               viewer: %User{first_name: "Vikram"}
+             } =
+               users
+    end
+
+    test "create_users with `create_super: false` returns nil for super_user" do
+      users = SetupUtils.create_users(create_super: false)
+
+      assert %{
+               super_user: nil,
+               admin: %User{first_name: "Amy"},
+               editor: %User{first_name: "Esther"},
+               viewer: %User{first_name: "Vikram"}
+             } =
+               users
     end
   end
 

@@ -9,10 +9,11 @@ defmodule Lightning.SetupUtils do
     Workflows,
     Repo,
     Credentials,
-    AttemptRun
+    AttemptRun,
+    WorkOrderService,
+    VersionControl
   }
 
-  alias Lightning.WorkOrderService
   alias Lightning.Invocation.Run
   alias Ecto.Multi
 
@@ -29,8 +30,10 @@ defmodule Lightning.SetupUtils do
   Creates initial data and returns the created records.
   """
   def setup_demo(opts \\ [create_super: false]) do
+    users = create_users(opts)
+
     %{super_user: super_user, admin: admin, editor: editor, viewer: viewer} =
-      create_users(opts)
+      users
 
     %{
       project: openhie_project,
@@ -39,11 +42,19 @@ defmodule Lightning.SetupUtils do
       workorder: openhie_workorder
     } =
       create_openhie_project([
-        %{user_id: super_user.id, role: :admin},
+        %{user_id: super_user.id, role: :owner},
         %{user_id: admin.id, role: :admin},
         %{user_id: editor.id, role: :editor},
         %{user_id: viewer.id, role: :viewer}
       ])
+
+    Repo.insert!(%VersionControl.ProjectRepo{
+      github_installation_id: "39991761",
+      repo: "OpenFn/demo-openhie",
+      branch: "main",
+      project_id: openhie_project.id,
+      user_id: super_user.id
+    })
 
     %{
       project: dhis2_project,
@@ -104,7 +115,7 @@ defmodule Lightning.SetupUtils do
             password: "welcome123"
           })
 
-        Lightning.Repo.insert!(%Lightning.Accounts.UserToken{
+        Repo.insert!(%Lightning.Accounts.UserToken{
           user_id: super_user.id,
           context: "api",
           token:
