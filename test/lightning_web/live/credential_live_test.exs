@@ -4,10 +4,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import Phoenix.LiveViewTest
   import LightningWeb.CredentialLiveHelpers
 
-  import Lightning.{
-    JobsFixtures,
-    CredentialsFixtures
-  }
+  import Lightning.CredentialsFixtures
 
   alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
@@ -426,130 +423,6 @@ defmodule LightningWeb.CredentialLiveTest do
       # Once the transfer is made, the credential should not show up in the list
       assert html =~ "some name"
       refute html =~ "the one for giving away"
-    end
-  end
-
-  @tag skip: true
-  describe "New credential from project context " do
-    setup %{project: project} do
-      %{job: job} = workflow_job_fixture(project_id: project.id)
-      %{job: job}
-    end
-
-    test "open credential modal from the job inspector (edit_job)", %{
-      conn: conn,
-      project: project,
-      job: job
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
-
-      assert has_element?(view, "#builder-#{job.id}")
-
-      # open the new credential modal
-
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
-      # assertions
-
-      assert has_element?(view, "#credential-type-picker")
-      view |> select_credential_type("http")
-      view |> click_continue()
-
-      refute has_element?(view, "#project_list")
-    end
-
-    @tag skip: true
-    test "create new credential from job inspector and update the job form", %{
-      conn: conn,
-      project: project,
-      job: job
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
-
-      # open the new credential modal
-
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
-      # fill the modal and save
-      view |> select_credential_type("raw")
-      view |> click_continue()
-
-      view
-      |> form("#credential-form",
-        credential: %{
-          name: "newly created credential",
-          body: Jason.encode!(%{"a" => 1})
-        }
-      )
-      |> render_submit()
-
-      # assertions
-
-      refute has_element?(view, "#credential-form")
-
-      assert view
-             |> element(
-               ~S{#job-form select#credentialField option[selected=selected]}
-             )
-             |> render() =~ "newly created credential",
-             "Should have the project credential selected"
-    end
-
-    @tag skip: true
-    test "create new credential from edit job form and update the job form", %{
-      conn: conn,
-      project: project,
-      job: job
-    } do
-      {:ok, view, _html} =
-        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
-
-      # change the job name so we can assert that the form state had been
-      # kept after saving the new credential
-      view
-      |> form("#job-form", job_form: %{name: "last typed name"})
-      |> render_change()
-
-      # open the new credential modal
-      assert view
-             |> element("#new-credential-launcher", "New credential")
-             |> render_click()
-
-      # fill the modal and save
-
-      view |> select_credential_type("raw")
-      view |> click_continue()
-
-      view
-      |> form("#credential-form",
-        credential: %{
-          name: "newly created credential",
-          body: Jason.encode!(%{"a" => 1})
-        }
-      )
-      |> render_submit()
-
-      # assertions
-
-      refute has_element?(view, "#credential-form")
-
-      assert view
-             |> element(
-               ~S{#job-form select#credentialField option[selected=selected]}
-             )
-             |> render() =~ "newly created credential",
-             "Should have the project credential selected"
-
-      assert view
-             |> element(~S{#job-form input#job-form_name})
-             |> render() =~ "last typed name",
-             "Should have kept the job form state after saving the new credential"
     end
   end
 

@@ -3,11 +3,74 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Phoenix.LiveViewTest
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
+  import Lightning.JobsFixtures
 
   alias LightningWeb.CredentialLiveHelpers
 
   setup :register_and_log_in_user
   setup :create_project_for_current_user
+
+  describe "New credential from project context " do
+    setup %{project: project} do
+      %{job: job} = workflow_job_fixture(project_id: project.id)
+      %{job: job}
+    end
+
+    test "open credential modal from the job inspector (edit_job)", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+
+      assert has_element?(view, "#job-pane-#{job.id}")
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      assert has_element?(view, "#credential-type-picker")
+      view |> CredentialLiveHelpers.select_credential_type("http")
+      view |> CredentialLiveHelpers.click_continue()
+
+      refute has_element?(view, "#project_list")
+    end
+
+    test "create new credential from job inspector and update the job form", %{
+      conn: conn,
+      project: project,
+      job: job
+    } do
+      {:ok, view, _html} =
+        live(conn, ~p"/projects/#{project.id}/w/#{job.workflow_id}?s=#{job.id}")
+
+      assert view
+             |> element("#new-credential-launcher", "New credential")
+             |> render_click()
+
+      view |> CredentialLiveHelpers.select_credential_type("raw")
+      view |> CredentialLiveHelpers.click_continue()
+
+      view
+      |> form("#credential-form",
+        credential: %{
+          name: "newly created credential",
+          body: Jason.encode!(%{"a" => 1})
+        }
+      )
+      |> render_submit()
+
+      refute has_element?(view, "#credential-form")
+
+      assert view
+             |> element(
+               ~S{[name='workflow[jobs][0][project_credential_id]'] option[selected="selected"]}
+             )
+             |> render() =~ "newly created credential",
+             "Should have the project credential selected"
+    end
+  end
 
   describe "new" do
     test "builds a new workflow", %{conn: conn, project: project} do
