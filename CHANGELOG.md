@@ -33,6 +33,8 @@ and this project adheres to
   project.yaml export [#1050](https://github.com/OpenFn/Lightning/issues/1050)
 - Allows the demo script to set a project id during creation to help with cli
   deploy/pull/Github integration testing.
+- Fixed an issue where the monaco suggestion tooltip was offset from the main
+  editor
 
 ## [v0.7.3] - 2023-08-15
 
