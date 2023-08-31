@@ -156,7 +156,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.single_inputs_for
             :let={{jf, has_child_edges}}
             :if={@selected_job}
-            form={f}
+            form={@workflow_form}
             field={:jobs}
             id={@selected_job.id}
           >
@@ -206,7 +206,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.single_inputs_for
             :let={tf}
             :if={@selected_trigger}
-            form={f}
+            form={@workflow_form}
             field={:triggers}
             id={@selected_trigger.id}
           >
@@ -240,7 +240,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.single_inputs_for
             :let={ef}
             :if={@selected_edge}
-            form={f}
+            form={@workflow_form}
             field={:edges}
             id={@selected_edge.id}
           >
@@ -381,7 +381,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> authorize()
      |> assign(
        active_menu_item: :projects,
-       current_url: nil,
        expanded_job: nil,
        follow_run_id: nil,
        manual_run_form: nil,
@@ -397,12 +396,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_params(params, url, socket) do
+  def handle_params(params, _url, socket) do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
      |> apply_selection_params(params)
-     |> maybe_show_manual_run()
-     |> assign(current_url: url)}
+     |> maybe_show_manual_run()}
   end
 
   def apply_action(socket, :new, _params) do
