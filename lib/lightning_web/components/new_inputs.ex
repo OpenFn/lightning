@@ -117,7 +117,7 @@ defmodule LightningWeb.Components.NewInputs do
 
     ~H"""
     <div phx-feedback-for={@name}>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600">
+      <label class="flex items-center gap-4 text-sm leading-6 text-slate-600">
         <input type="hidden" name={@name} value="false" />
         <input
           type="checkbox"
@@ -125,7 +125,7 @@ defmodule LightningWeb.Components.NewInputs do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+          class="rounded border-slate-300 text-slate-900 focus:ring-0"
           {@rest}
         />
         <%= @label %>
@@ -142,7 +142,12 @@ defmodule LightningWeb.Components.NewInputs do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+        class={[
+          "mt-2 block w-full rounded-md border border-secondary-300 bg-white",
+          "text-sm shadow-sm",
+          "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
+          "disabled:cursor-not-allowed"
+        ]}
         multiple={@multiple}
         {@rest}
       >
@@ -162,10 +167,12 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "min-h-[6rem] phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "rounded-md shadow-sm font-mono proportional-nums text-sm",
+          "mt-2 block w-full focus:ring-0",
+          "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
+          "min-h-[6rem] phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
+          @errors == [] && "border-slate-300 focus:border-slate-400",
+          @errors != [] && "border-danger-400 focus:border-danger-400"
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
@@ -185,10 +192,10 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          "mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
+          @errors == [] && "border-slate-300 focus:border-slate-400",
+          @errors != [] && "border-danger-400 focus:border-danger-400"
         ]}
         {@rest}
       />
@@ -205,7 +212,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="block text-sm font-semibold leading-6 text-slate-800">
       <%= render_slot(@inner_block) %>
     </label>
     """
@@ -218,7 +225,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-rose-600 phx-no-feedback:hidden">
+    <p class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden">
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
     </p>
