@@ -64,24 +64,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </LayoutComponents.header>
       </:header>
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
-        <div
-          phx-hook="WorkflowEditor"
-          class="grow"
-          id={"editor-#{@workflow.id}"}
-          data-base-url={@current_url}
-          phx-update="ignore"
-        >
-          <%!-- Before Editor component has mounted --%>
-          <div class="flex place-content-center h-full cursor-wait">
-            <.box_loader />
-          </div>
-        </div>
         <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @selection_mode == "expand"}
-            class="fixed left-0 top-0 right-0 bottom-0 m-8 hidden inset-0
-            bg-white fixed inset-0 z-49 overflow-y-auto rounded-lg shadow-xl"
+            class={[
+              "fixed left-0 top-0 right-0 bottom-0 m-8",
+              "hidden opacity-0",
+              "bg-white inset-0 z-50 overflow-y-auto rounded-lg shadow-xl"
+            ]}
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
           >
@@ -143,8 +134,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
         </div>
+
+        <div
+          phx-hook="WorkflowEditor"
+          class="grow"
+          id={"editor-#{@workflow.id}"}
+          phx-update="ignore"
+        >
+          <%!-- Before Editor component has mounted --%>
+          <div class="flex place-content-center h-full cursor-wait">
+            <.box_loader />
+          </div>
+        </div>
         <.form
-          :let={f}
           id="workflow-form"
           for={@workflow_form}
           phx-submit="save"
