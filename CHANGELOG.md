@@ -24,6 +24,8 @@ and this project adheres to
   [#957](https://github.com/OpenFn/Lightning/issues/957)
 - Reimplement skipped CredentialLive tests
   [#962](https://github.com/OpenFn/Lightning/issues/962)
+- Reimplement skipped WorkflowLive.IndexTest test
+  [#964](https://github.com/OpenFn/Lightning/issues/964)
 
 ### Changed
 
