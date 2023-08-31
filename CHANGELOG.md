@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Output incorrectly shows "this run failed" when the run hasn't yet finished
+  [#1048](https://github.com/OpenFn/Lightning/issues/1048)
+
 ## [v0.8.2] - 2023-08-31
 
 ### Added
