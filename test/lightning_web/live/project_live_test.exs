@@ -663,7 +663,7 @@ defmodule LightningWeb.ProjectLiveTest do
 
       assert view
              |> render_click("save_repo", %{branch: "b", repo: "r"}) =~
-               "Repository: r"
+               "Repository:\n                            <a href=\"https://www.github.com/r\" target=\"_blank\" class=\"hover:underline text-primary-600\">\nr"
     end
 
     @tag role: :admin

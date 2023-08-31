@@ -10,10 +10,17 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.8.0]
+
+### Added
+
 - Introduces Github sync feature, users can now setup our github app on their
   instance and sync projects using our latest portability spec
   [#970](https://github.com/OpenFn/Lightning/issues/970)
-
 - Support Backup Codes for Multi-Factor Authentication
   [937](https://github.com/OpenFn/Lightning/issues/937)
 - Log a warning in the console when the Editor/docs component is given latest
@@ -24,6 +31,8 @@ and this project adheres to
   [#957](https://github.com/OpenFn/Lightning/issues/957)
 - Reimplement skipped CredentialLive tests
   [#962](https://github.com/OpenFn/Lightning/issues/962)
+- Show GitHub installation ID and repo link to help setup/debugging for version
+  control [1059](https://github.com/OpenFn/Lightning/issues/1059)
 
 ### Changed
 

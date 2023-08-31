@@ -101,8 +101,9 @@ defmodule LightningWeb.ProjectLive.Settings do
         %{repo: nil} ->
           {false, true, false, project_repo_connection}
 
-        %{repo: r, branch: b} ->
-          {false, true, true, %{"repo" => r, "branch" => b}}
+        %{repo: r, branch: b, github_installation_id: g} ->
+          {false, true, true,
+           %{"repo" => r, "branch" => b, "github_installation_id" => g}}
       end
 
     repo_settings
@@ -327,7 +328,8 @@ defmodule LightningWeb.ProjectLive.Settings do
        show_sync_button: true,
        project_repo_connection: %{
          "branch" => params["branch"],
-         "repo" => params["repo"]
+         "repo" => params["repo"],
+         "github_installation_id" => params["github_installation_id"]
        }
      )}
   end
