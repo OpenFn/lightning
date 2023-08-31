@@ -194,6 +194,17 @@ defmodule LightningWeb.RunLive.Components do
       </div>
       <div id="output_section" style="display: none;" class="@container">
         <%= cond  do %>
+          <% is_nil(@run.exit_code) -> %>
+            <.dataclip_view
+              dataclip={nil}
+              no_dataclip_message={
+                %{
+                  label: "This run has not yet finished.",
+                  description:
+                    "There is no output. See the logs for more information"
+                }
+              }
+            />
           <% @run.exit_code > 0 -> %>
             <.dataclip_view
               dataclip={nil}
