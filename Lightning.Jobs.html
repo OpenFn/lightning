@@ -5,15 +5,15 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.8.1">
+    <meta name="project" content="Lightning v0.8.2">
 
-    <title>Lightning.Jobs — Lightning v0.8.1</title>
+    <title>Lightning.Jobs — Lightning v0.8.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-A5562E02.js"></script>
+    <script src="dist/sidebar_items-068BD01D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <strong class="sidebar-projectVersion" translate="no">
-        v0.8.1
+        v0.8.2
       </strong>
     </div>
     <ul class="sidebar-listNav">
@@ -108,7 +108,7 @@ Lightning
     </a>
 
   <span translate="no">Lightning.Jobs</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.8.1)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.8.2)</small>
 
 </h1>
 
@@ -295,8 +295,8 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="5535055875-1">(</span><span class="n">job</span><span class="p" data-group-id="5535055875-1">)</span><span class="w">
-</span><span class="p" data-group-id="5535055875-2">%</span><span class="nc" data-group-id="5535055875-2">Ecto.Changeset</span><span class="p" data-group-id="5535055875-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="5535055875-3">%</span><span class="nc" data-group-id="5535055875-3">Job</span><span class="p" data-group-id="5535055875-3">{</span><span class="p" data-group-id="5535055875-3">}</span><span class="p" data-group-id="5535055875-2">}</span></code></pre>
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">change_job</span><span class="p" data-group-id="6212290436-1">(</span><span class="n">job</span><span class="p" data-group-id="6212290436-1">)</span><span class="w">
+</span><span class="p" data-group-id="6212290436-2">%</span><span class="nc" data-group-id="6212290436-2">Ecto.Changeset</span><span class="p" data-group-id="6212290436-2">{</span><span class="ss">data</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="6212290436-3">%</span><span class="nc" data-group-id="6212290436-3">Job</span><span class="p" data-group-id="6212290436-3">{</span><span class="p" data-group-id="6212290436-3">}</span><span class="p" data-group-id="6212290436-2">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="create_job/1">
@@ -326,11 +326,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="7944626876-1">(</span><span class="p" data-group-id="7944626876-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="7944626876-2">}</span><span class="p" data-group-id="7944626876-1">)</span><span class="w">
-</span><span class="p" data-group-id="7944626876-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7944626876-4">%</span><span class="nc" data-group-id="7944626876-4">Job</span><span class="p" data-group-id="7944626876-4">{</span><span class="p" data-group-id="7944626876-4">}</span><span class="p" data-group-id="7944626876-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="3990537863-1">(</span><span class="p" data-group-id="3990537863-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">value</span><span class="p" data-group-id="3990537863-2">}</span><span class="p" data-group-id="3990537863-1">)</span><span class="w">
+</span><span class="p" data-group-id="3990537863-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3990537863-4">%</span><span class="nc" data-group-id="3990537863-4">Job</span><span class="p" data-group-id="3990537863-4">{</span><span class="p" data-group-id="3990537863-4">}</span><span class="p" data-group-id="3990537863-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="7944626876-5">(</span><span class="p" data-group-id="7944626876-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7944626876-6">}</span><span class="p" data-group-id="7944626876-5">)</span><span class="w">
-</span><span class="p" data-group-id="7944626876-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7944626876-8">%</span><span class="nc" data-group-id="7944626876-8">Ecto.Changeset</span><span class="p" data-group-id="7944626876-8">{</span><span class="p" data-group-id="7944626876-8">}</span><span class="p" data-group-id="7944626876-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">create_job</span><span class="p" data-group-id="3990537863-5">(</span><span class="p" data-group-id="3990537863-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="3990537863-6">}</span><span class="p" data-group-id="3990537863-5">)</span><span class="w">
+</span><span class="p" data-group-id="3990537863-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="3990537863-8">%</span><span class="nc" data-group-id="3990537863-8">Ecto.Changeset</span><span class="p" data-group-id="3990537863-8">{</span><span class="p" data-group-id="3990537863-8">}</span><span class="p" data-group-id="3990537863-7">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="delete_job/1">
@@ -358,11 +358,11 @@ Functions
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="4435931707-1">(</span><span class="n">job</span><span class="p" data-group-id="4435931707-1">)</span><span class="w">
-</span><span class="p" data-group-id="4435931707-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4435931707-3">%</span><span class="nc" data-group-id="4435931707-3">Job</span><span class="p" data-group-id="4435931707-3">{</span><span class="p" data-group-id="4435931707-3">}</span><span class="p" data-group-id="4435931707-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="1555346413-1">(</span><span class="n">job</span><span class="p" data-group-id="1555346413-1">)</span><span class="w">
+</span><span class="p" data-group-id="1555346413-2">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1555346413-3">%</span><span class="nc" data-group-id="1555346413-3">Job</span><span class="p" data-group-id="1555346413-3">{</span><span class="p" data-group-id="1555346413-3">}</span><span class="p" data-group-id="1555346413-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="4435931707-4">(</span><span class="n">job</span><span class="p" data-group-id="4435931707-4">)</span><span class="w">
-</span><span class="p" data-group-id="4435931707-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="4435931707-6">%</span><span class="nc" data-group-id="4435931707-6">Ecto.Changeset</span><span class="p" data-group-id="4435931707-6">{</span><span class="p" data-group-id="4435931707-6">}</span><span class="p" data-group-id="4435931707-5">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">delete_job</span><span class="p" data-group-id="1555346413-4">(</span><span class="n">job</span><span class="p" data-group-id="1555346413-4">)</span><span class="w">
+</span><span class="p" data-group-id="1555346413-5">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="1555346413-6">%</span><span class="nc" data-group-id="1555346413-6">Ecto.Changeset</span><span class="p" data-group-id="1555346413-6">{</span><span class="p" data-group-id="1555346413-6">}</span><span class="p" data-group-id="1555346413-5">}</span></code></pre>
   </section>
 </section>
 <section class="detail" id="get_downstream_jobs_for/2">
@@ -448,10 +448,10 @@ when it called with a trigger that means we are starting from outside the pipeli
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="1050379109-1">(</span><span class="mi">123</span><span class="p" data-group-id="1050379109-1">)</span><span class="w">
-</span><span class="p" data-group-id="1050379109-2">%</span><span class="nc" data-group-id="1050379109-2">Job</span><span class="p" data-group-id="1050379109-2">{</span><span class="p" data-group-id="1050379109-2">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="2500207206-1">(</span><span class="mi">123</span><span class="p" data-group-id="2500207206-1">)</span><span class="w">
+</span><span class="p" data-group-id="2500207206-2">%</span><span class="nc" data-group-id="2500207206-2">Job</span><span class="p" data-group-id="2500207206-2">{</span><span class="p" data-group-id="2500207206-2">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="1050379109-3">(</span><span class="mi">456</span><span class="p" data-group-id="1050379109-3">)</span><span class="w">
+</span><span class="gp unselectable">iex&gt; </span><span class="n">get_job!</span><span class="p" data-group-id="2500207206-3">(</span><span class="mi">456</span><span class="p" data-group-id="2500207206-3">)</span><span class="w">
 </span><span class="gt">** (Ecto.NoResultsError)</span></code></pre>
   </section>
 </section>
@@ -637,11 +637,11 @@ when it called with a trigger that means we are starting from outside the pipeli
   </a>
   Examples
 </h2>
-<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="9339861048-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9339861048-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="9339861048-2">}</span><span class="p" data-group-id="9339861048-1">)</span><span class="w">
-</span><span class="p" data-group-id="9339861048-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9339861048-4">%</span><span class="nc" data-group-id="9339861048-4">Job</span><span class="p" data-group-id="9339861048-4">{</span><span class="p" data-group-id="9339861048-4">}</span><span class="p" data-group-id="9339861048-3">}</span><span class="w">
+<pre><code class="makeup elixir" translate="no"><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="7723944507-1">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7723944507-2">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">new_value</span><span class="p" data-group-id="7723944507-2">}</span><span class="p" data-group-id="7723944507-1">)</span><span class="w">
+</span><span class="p" data-group-id="7723944507-3">{</span><span class="ss">:ok</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7723944507-4">%</span><span class="nc" data-group-id="7723944507-4">Job</span><span class="p" data-group-id="7723944507-4">{</span><span class="p" data-group-id="7723944507-4">}</span><span class="p" data-group-id="7723944507-3">}</span><span class="w">
 
-</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="9339861048-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9339861048-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="9339861048-6">}</span><span class="p" data-group-id="9339861048-5">)</span><span class="w">
-</span><span class="p" data-group-id="9339861048-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="9339861048-8">%</span><span class="nc" data-group-id="9339861048-8">Ecto.Changeset</span><span class="p" data-group-id="9339861048-8">{</span><span class="p" data-group-id="9339861048-8">}</span><span class="p" data-group-id="9339861048-7">}</span></code></pre>
+</span><span class="gp unselectable">iex&gt; </span><span class="n">update_job</span><span class="p" data-group-id="7723944507-5">(</span><span class="n">job</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7723944507-6">%{</span><span class="ss">field</span><span class="p">:</span><span class="w"> </span><span class="n">bad_value</span><span class="p" data-group-id="7723944507-6">}</span><span class="p" data-group-id="7723944507-5">)</span><span class="w">
+</span><span class="p" data-group-id="7723944507-7">{</span><span class="ss">:error</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7723944507-8">%</span><span class="nc" data-group-id="7723944507-8">Ecto.Changeset</span><span class="p" data-group-id="7723944507-8">{</span><span class="p" data-group-id="7723944507-8">}</span><span class="p" data-group-id="7723944507-7">}</span></code></pre>
   </section>
 </section>
 
