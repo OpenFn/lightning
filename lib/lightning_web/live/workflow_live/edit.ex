@@ -324,6 +324,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
           can_edit_job:
             Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
         )
+        |> assign(
+          can_run_job:
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+        )
 
       {:error, _} ->
         socket
