@@ -7,6 +7,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   attr :id, :string, required: true
   attr :dataclips, :list, default: []
   attr :form, :map, required: true
+  attr :disabled, :boolean, default: true
 
   def component(assigns) do
     assigns =
@@ -42,6 +43,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
                 field={@form[:dataclip_id]}
                 options={@dataclips |> Enum.map(&{&1.id, &1.id})}
                 prompt="Create a new dataclip"
+                disabled={@disabled}
               />
             </div>
           </div>
@@ -80,7 +82,12 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
               <.log_view dataclip={@selected_dataclip} />
             </div>
             <div :if={is_nil(@selected_dataclip)}>
-              <.input type="textarea" field={@form[:body]} phx-debounce="300" />
+              <.input
+                type="textarea"
+                field={@form[:body]}
+                disabled={@disabled}
+                phx-debounce="300"
+              />
             </div>
           </div>
         </.form>

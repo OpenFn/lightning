@@ -13,11 +13,11 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="h-full">
+    <div class="h-full" id={@id}>
       <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
         Editor
       </div>
-      <div class={@class} id={@id}>
+      <div class={@class}>
         <JobBuilderComponents.job_editor_component
           adaptor={@adaptor}
           source={@source}

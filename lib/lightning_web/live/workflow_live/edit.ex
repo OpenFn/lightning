@@ -46,8 +46,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </:title>
           <.with_changes_indicator changeset={@changeset}>
             <div class="flex flex-row gap-2">
-              <Heroicons.lock_closed
+              <.icon
                 :if={!@can_edit_job}
+                name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
               <Form.submit_button
@@ -100,31 +101,34 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   id={"manual-job-#{@selected_job.id}"}
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
+                  disabled={!@can_run_job}
                 />
               </:column>
               <:footer>
-                <.save_is_blocked_error :if={
-                  editor_is_empty(@workflow_form, @selected_job)
-                }>
-                  The job can't be blank
-                </.save_is_blocked_error>
+                <div class="flex flex-row gap-x-2">
+                  <.save_is_blocked_error :if={
+                    editor_is_empty(@workflow_form, @selected_job)
+                  }>
+                    The job can't be blank
+                  </.save_is_blocked_error>
 
-                <div>
-                  <.button
-                    type="submit"
-                    class="mr-2 inline-flex items-center gap-x-1.5"
-                    form={@manual_run_form.id}
-                    disabled={@save_and_run_disabled}
-                  >
-                    <.icon name="hero-play-solid" class="w-4 h-4" /> Save + Run
-                  </.button>
-                </div>
-                <.with_changes_indicator changeset={@changeset}>
-                  <div class="flex flex-row gap-2">
-                    <Heroicons.lock_closed
-                      :if={!@can_edit_job}
-                      class="w-5 h-5 place-self-center text-gray-300"
-                    />
+                  <.icon
+                    :if={!@can_edit_job}
+                    name="hero-lock-closed"
+                    class="w-5 h-5 place-self-center text-gray-300"
+                  />
+                  <div>
+                    <.button
+                      type="submit"
+                      class="inline-flex items-center gap-x-1.5"
+                      form={@manual_run_form.id}
+                      disabled={@save_and_run_disabled}
+                    >
+                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save + Run
+                    </.button>
+                  </div>
+
+                  <.with_changes_indicator changeset={@changeset}>
                     <Form.submit_button
                       class=""
                       phx-disable-with="Saving..."
@@ -133,8 +137,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     >
                       Save
                     </Form.submit_button>
-                  </div>
-                </.with_changes_indicator>
+                  </.with_changes_indicator>
+                </div>
               </:footer>
             </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
@@ -344,7 +348,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(
           can_edit_job:
-            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
+            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
+          can_run_job:
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
         )
 
       {:error, _} ->
@@ -357,11 +363,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def authorize(%{assigns: %{live_action: :edit}} = socket) do
     %{project_user: project_user, current_user: current_user} = socket.assigns
 
-    can_edit_job =
-      Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
-
     socket
-    |> assign(can_edit_job: can_edit_job)
+    |> assign(
+      can_edit_job:
+        Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
+      can_run_job:
+        Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+    )
   end
 
   @impl true
@@ -569,29 +577,28 @@ defmodule LightningWeb.WorkflowLive.Edit do
       project: project,
       selected_job: selected_job,
       current_user: current_user,
-      workflow_params: workflow_params
-    } =
-      socket.assigns
+      workflow_params: workflow_params,
+      can_edit_job: can_edit_job,
+      can_run_job: can_run_job
+    } = socket.assigns
 
     socket = socket |> apply_params(workflow_params)
 
-    Lightning.Repo.transact(fn ->
-      with {:ok, workflow} <-
-             Lightning.Repo.insert_or_update(socket.assigns.changeset),
-           user_workorder <-
-             WorkOrders.Manual.changeset(
-               %{
-                 project: project,
-                 job: selected_job,
-                 user: current_user
-               },
-               params
-             ),
-           {:ok, %{attempt_run: attempt_run}} <-
-             Helpers.create_user_workorder(user_workorder) do
-        {:ok, %{attempt_run: attempt_run, workflow: workflow}}
-      end
-    end)
+    if can_run_job && can_edit_job do
+      Helpers.save_and_run(
+        socket.assigns.changeset,
+        WorkOrders.Manual.changeset(
+          %{
+            project: project,
+            job: selected_job,
+            user: current_user
+          },
+          params
+        )
+      )
+    else
+      {:error, :unauthorized}
+    end
     |> case do
       {:ok, %{attempt_run: attempt_run, workflow: workflow}} ->
         {:noreply,
@@ -612,6 +619,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
           |> mark_validated()
           |> put_flash(:error, "Workflow could not be saved")
         }
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
     end
   end
 
@@ -671,11 +683,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{
         manual_run_form: manual_run_form,
         changeset: changeset,
-        can_edit_job: can_edit_job
+        can_edit_job: can_edit_job,
+        can_run_job: can_run_job
       } ->
         manual_run_form.source.errors |> Enum.any?() or
           !changeset.valid? or
-          !can_edit_job
+          !(can_edit_job or can_run_job)
     end
   end
 

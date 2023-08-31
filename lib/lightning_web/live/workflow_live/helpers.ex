@@ -5,9 +5,30 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   alias Lightning.Repo
 
+  alias Lightning.Workflows
   alias Lightning.WorkOrders
   alias Lightning.AttemptRun
 
+  @spec save_and_run(
+          Ecto.Changeset.t(Workflows.Workflow.t()),
+          Ecto.Changeset.t(WorkOrders.Manual.t())
+        ) ::
+          {:ok, %{attempt_run: AttemptRun.t(), workflow: Workflows.Workflow.t()}}
+          | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
+          | {:error, Ecto.Changeset.t(WorkOrders.Manual.t())}
+  def save_and_run(workflow_changeset, manual_workorder_changeset) do
+    Lightning.Repo.transact(fn ->
+      with {:ok, workflow} <- save_workflow(workflow_changeset),
+           {:ok, %{attempt_run: attempt_run}} <-
+             create_user_workorder(manual_workorder_changeset) do
+        {:ok, %{attempt_run: attempt_run, workflow: workflow}}
+      end
+    end)
+  end
+
+  @spec save_workflow(Ecto.Changeset.t(Workflows.Workflow.t())) ::
+          {:ok, Workflows.Workflow.t()}
+          | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
   def save_workflow(changeset) do
     Repo.insert_or_update(changeset)
   end
@@ -40,7 +61,6 @@ defmodule LightningWeb.WorkflowLive.Helpers do
       end
     end)
   end
-
 
   defp find_or_create_dataclip(%{dataclip_id: dataclip_id, body: nil}) do
     Lightning.Invocation.get_dataclip(dataclip_id)
