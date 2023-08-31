@@ -9,17 +9,16 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Jobs.Job
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
+  alias LightningWeb.WorkflowLive.Helpers
+  alias Lightning.WorkOrders
 
+  import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
   attr :changeset, :map, required: true
   attr :project_user, :map, required: true
-
-  def follow_run(attempt_run) do
-    send(self(), {:follow_run, attempt_run})
-  end
 
   @impl true
   def render(assigns) do
@@ -34,7 +33,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
             :edit ->
               ~p"/projects/#{assigns.project}/w/#{assigns.workflow}"
           end,
-        workflow_form: to_form(assigns.changeset)
+        workflow_form: to_form(assigns.changeset),
+        save_and_run_disabled: save_and_run_disabled?(assigns)
       )
 
     ~H"""
@@ -46,8 +46,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           </:title>
           <.with_changes_indicator changeset={@changeset}>
             <div class="flex flex-row gap-2">
-              <Heroicons.lock_closed
+              <.icon
                 :if={!@can_edit_job}
+                name="hero-lock-closed"
                 class="w-5 h-5 place-self-center text-gray-300"
               />
               <Form.submit_button
@@ -63,24 +64,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </LayoutComponents.header>
       </:header>
       <div class="relative h-full flex" id={"workflow-edit-#{@workflow.id}"}>
-        <div
-          phx-hook="WorkflowEditor"
-          class="grow"
-          id={"editor-#{@workflow.id}"}
-          data-base-url={@current_url}
-          phx-update="ignore"
-        >
-          <%!-- Before Editor component has mounted --%>
-          <div class="flex place-content-center h-full cursor-wait">
-            <.box_loader />
-          </div>
-        </div>
         <%!-- Job Edit View --%>
         <div class="flex-none" id="job-editor-pane">
           <div
             :if={@selected_job && @selection_mode == "expand"}
-            class="fixed left-0 top-0 right-0 bottom-0 m-8 hidden inset-0
-            bg-white fixed inset-0 z-49 overflow-y-auto rounded-lg shadow-xl"
+            class={[
+              "fixed left-0 top-0 right-0 bottom-0 m-8",
+              "hidden opacity-0",
+              "bg-white inset-0 z-30 overflow-y-auto rounded-lg shadow-xl"
+            ]}
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
           >
@@ -89,23 +81,45 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user={@current_user}
               project={@project}
               socket={@socket}
-              on_run={&follow_run/1}
               follow_run_id={@follow_run_id}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
+              <:column>
+                <LightningWeb.WorkflowLive.ManualWorkorder.component
+                  id={"manual-job-#{@selected_job.id}"}
+                  form={@manual_run_form}
+                  dataclips={@selectable_dataclips}
+                  disabled={!@can_run_job}
+                />
+              </:column>
               <:footer>
-                <.with_changes_indicator changeset={@changeset}>
-                  <div class="flex flex-row gap-2">
-                    <.empty_editor_error :if={
-                      editor_is_empty(@workflow_form, @selected_job)
-                    } />
-                    <Heroicons.lock_closed
-                      :if={!@can_edit_job}
-                      class="w-5 h-5 place-self-center text-gray-300"
-                    />
+                <div class="flex flex-row gap-x-2">
+                  <.save_is_blocked_error :if={
+                    editor_is_empty(@workflow_form, @selected_job)
+                  }>
+                    The job can't be blank
+                  </.save_is_blocked_error>
+
+                  <.icon
+                    :if={!@can_edit_job}
+                    name="hero-lock-closed"
+                    class="w-5 h-5 place-self-center text-gray-300"
+                  />
+                  <div>
+                    <.button
+                      type="submit"
+                      class="inline-flex items-center gap-x-1.5"
+                      form={@manual_run_form.id}
+                      disabled={@save_and_run_disabled}
+                    >
+                      <.icon name="hero-play-solid" class="w-4 h-4" /> Save + Run
+                    </.button>
+                  </div>
+
+                  <.with_changes_indicator changeset={@changeset}>
                     <Form.submit_button
                       class=""
                       phx-disable-with="Saving..."
@@ -114,14 +128,25 @@ defmodule LightningWeb.WorkflowLive.Edit do
                     >
                       Save
                     </Form.submit_button>
-                  </div>
-                </.with_changes_indicator>
+                  </.with_changes_indicator>
+                </div>
               </:footer>
             </LightningWeb.WorkflowLive.JobView.job_edit_view>
           </div>
         </div>
+
+        <div
+          phx-hook="WorkflowEditor"
+          class="grow"
+          id={"editor-#{@workflow.id}"}
+          phx-update="ignore"
+        >
+          <%!-- Before Editor component has mounted --%>
+          <div class="flex place-content-center h-full cursor-wait">
+            <.box_loader />
+          </div>
+        </div>
         <.form
-          :let={f}
           id="workflow-form"
           for={@workflow_form}
           phx-submit="save"
@@ -131,7 +156,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.single_inputs_for
             :let={{jf, has_child_edges}}
             :if={@selected_job}
-            form={f}
+            form={@workflow_form}
             field={:jobs}
             id={@selected_job.id}
           >
@@ -181,7 +206,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.single_inputs_for
             :let={tf}
             :if={@selected_trigger}
-            form={f}
+            form={@workflow_form}
             field={:triggers}
             id={@selected_trigger.id}
           >
@@ -215,7 +240,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <.single_inputs_for
             :let={ef}
             :if={@selected_edge}
-            form={f}
+            form={@workflow_form}
             field={:edges}
             id={@selected_edge.id}
           >
@@ -255,16 +280,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     ~H"""
     <.link patch={"#{@base_url}?s=#{@job.id}&m=expand"} class={@button_classes}>
-      <Heroicons.code_bracket mini class="w-4 h-4 text-grey-400" />
+      <.icon name="hero-code-bracket-mini" class="w-4 h-4 text-grey-400" />
     </.link>
-    <.empty_editor_error :if={@is_empty} />
+
+    <.save_is_blocked_error :if={@is_empty}>
+      The job can't be blank
+    </.save_is_blocked_error>
     """
   end
 
-  defp empty_editor_error(assigns) do
+  defp save_is_blocked_error(assigns) do
     ~H"""
-    <span class="flex items-center font-medium text-sm text-red-600 mx-1 rounded whitespace-nowrap z-10">
-      <Icon.exclamation_circle class="h-5 w-5 mx-1 p-0" />The job can't be blank
+    <span class="flex items-center font-medium text-sm text-red-600 mr-4 gap-x-1.5">
+      <.icon name="hero-exclamation-circle" class="h-5 w-5" />
+      <%= render_slot(@inner_block) %>
     </span>
     """
   end
@@ -321,7 +350,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
         socket
         |> assign(
           can_edit_job:
-            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
+            Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
+          can_run_job:
+            Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
         )
 
       {:error, _} ->
@@ -334,11 +365,13 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def authorize(%{assigns: %{live_action: :edit}} = socket) do
     %{project_user: project_user, current_user: current_user} = socket.assigns
 
-    can_edit_job =
-      Permissions.can?(ProjectUsers, :edit_job, current_user, project_user)
-
     socket
-    |> assign(can_edit_job: can_edit_job)
+    |> assign(
+      can_edit_job:
+        Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
+      can_run_job:
+        Permissions.can?(ProjectUsers, :run_job, current_user, project_user)
+    )
   end
 
   @impl true
@@ -348,9 +381,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> authorize()
      |> assign(
        active_menu_item: :projects,
-       current_url: nil,
        expanded_job: nil,
        follow_run_id: nil,
+       manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
        selected_job: nil,
@@ -363,11 +396,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   @impl true
-  def handle_params(params, url, socket) do
+  def handle_params(params, _url, socket) do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
      |> apply_selection_params(params)
-     |> assign(current_url: url)}
+     |> maybe_show_manual_run()}
   end
 
   def apply_action(socket, :new, _params) do
@@ -477,9 +510,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket.assigns.workflow_params
         end
 
-      socket =
-        socket
-        |> apply_params(next_params)
+      socket = socket |> apply_params(next_params)
 
       socket =
         Lightning.Repo.insert_or_update(socket.assigns.changeset)
@@ -526,6 +557,76 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> put_flash(:info, "Copied webhook URL to clipboard")}
   end
 
+  def handle_event("manual_run_change", %{"manual" => params}, socket) do
+    changeset =
+      WorkOrders.Manual.changeset(
+        %{
+          project: socket.assigns.project,
+          job: socket.assigns.selected_job,
+          user: socket.assigns.current_user
+        },
+        params
+      )
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign_manual_run_form(changeset)}
+  end
+
+  def handle_event("manual_run_submit", %{"manual" => params}, socket) do
+    %{
+      project: project,
+      selected_job: selected_job,
+      current_user: current_user,
+      workflow_params: workflow_params,
+      can_edit_job: can_edit_job,
+      can_run_job: can_run_job
+    } = socket.assigns
+
+    socket = socket |> apply_params(workflow_params)
+
+    if can_run_job && can_edit_job do
+      Helpers.save_and_run(
+        socket.assigns.changeset,
+        WorkOrders.Manual.changeset(
+          %{
+            project: project,
+            job: selected_job,
+            user: current_user
+          },
+          params
+        )
+      )
+    else
+      {:error, :unauthorized}
+    end
+    |> case do
+      {:ok, %{attempt_run: attempt_run, workflow: workflow}} ->
+        {:noreply,
+         socket
+         |> assign(follow_run_id: attempt_run.run_id)
+         |> assign_workflow(workflow)}
+
+      {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
+        {:noreply,
+         socket
+         |> assign_manual_run_form(changeset)}
+
+      {:error, %Ecto.Changeset{data: %Workflow{}} = changeset} ->
+        {
+          :noreply,
+          socket
+          |> assign_changeset(changeset)
+          |> mark_validated()
+          |> put_flash(:error, "Workflow could not be saved")
+        }
+
+      {:error, :unauthorized} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You are not authorized to perform this action.")}
+    end
+  end
+
   @impl true
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params)}
@@ -533,6 +634,62 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_info({:follow_run, attempt_run}, socket) do
     {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
+  end
+
+  defp maybe_show_manual_run(socket) do
+    case socket.assigns do
+      %{selected_job: nil} ->
+        socket
+        |> assign(
+          manual_run_form: nil,
+          selectable_dataclips: []
+        )
+
+      %{selected_job: job, selection_mode: "expand"} when not is_nil(job) ->
+        changeset =
+          WorkOrders.Manual.changeset(
+            %{
+              project: socket.assigns.project,
+              job: socket.assigns.selected_job,
+              user: socket.assigns.current_user
+            },
+            %{}
+          )
+
+        selectable_dataclips =
+          Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
+            id: job.id
+          })
+
+        socket
+        |> assign_manual_run_form(changeset)
+        |> assign(selectable_dataclips: selectable_dataclips)
+
+      _ ->
+        socket
+    end
+  end
+
+  defp assign_manual_run_form(socket, changeset) do
+    socket
+    |> assign(manual_run_form: to_form(changeset, id: "manual_run_form"))
+  end
+
+  defp save_and_run_disabled?(attrs) do
+    case attrs do
+      %{manual_run_form: nil} ->
+        true
+
+      %{
+        manual_run_form: manual_run_form,
+        changeset: changeset,
+        can_edit_job: can_edit_job,
+        can_run_job: can_run_job
+      } ->
+        manual_run_form.source.errors |> Enum.any?() or
+          !changeset.valid? or
+          !(can_edit_job or can_run_job)
+    end
   end
 
   defp editor_is_empty(form, job) do

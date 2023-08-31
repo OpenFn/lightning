@@ -65,7 +65,7 @@ config :lightning, LightningWeb.Endpoint,
     patterns: [
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/lightning_web/(live|views)/.*(ex)$",
+      ~r"lib/lightning_web/(live|components|views)/.*(ex|heex)$",
       ~r"lib/lightning_web/templates/.*(eex)$",
       ~r"storybook/.*(exs)$"
     ]

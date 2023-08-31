@@ -12,6 +12,11 @@ and this project adheres to
 
 ### Changed
 
+- Moved Save and Run button to bottom of the Job edit modal
+  [#1026](https://github.com/OpenFn/Lightning/issues/1026)
+- Allow a manual workorder to save the workflow before creating the workorder
+  [#959](https://github.com/OpenFn/Lightning/issues/959)
+
 ### Fixed
 
 ## [v0.8.0]

@@ -19,6 +19,7 @@ type WorkflowEditorEntrypoint = PhoenixHook<
   {
     _isMounting: boolean;
     _pendingWorker: Promise<void>;
+    _updateBaseUrl: (e: CustomEvent<{ detail: { href: string } }>) => void;
     abortController: AbortController | null;
     component: ReturnType<typeof mount> | null;
     componentModule: Promise<{ mount: typeof mount }>;
@@ -72,16 +73,14 @@ const createNewWorkflow = () => {
 
 export default {
   mounted(this: WorkflowEditorEntrypoint) {
-    // Workaround for situations where the hook is mounted before the
-    // browser has updated window.location.href - it's rare, but it happens.
-    // Without it, the hook will try to push a history patch to the wrong
-    // URL.
-    const { baseUrl } = this.el.dataset;
-    if (!baseUrl) {
-      throw new Error('WorkflowEditor requires a data-base-url attribute');
-    }
+    // Listen to navigation events, so we can update the base url that is used
+    // to build urls to different nodes in the workflow.
+    this._updateBaseUrl = e => {
+      this.baseUrl = e.detail.href;
+    };
+    window.addEventListener('phx:navigate', this._updateBaseUrl);
 
-    this.baseUrl = baseUrl;
+    this.baseUrl = window.location.href;
 
     console.debug('WorkflowEditor hook mounted');
 
@@ -124,26 +123,6 @@ export default {
     // between the current state and the server state and send those diffs
     // to the server.
   },
-  setupObserver() {
-    this.observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        const { attributeName, oldValue } = mutation as AttributeMutationRecord;
-
-        if (attributeName == 'data-base-url') {
-          const newValue = this.el.getAttribute(attributeName);
-
-          if (oldValue !== newValue) {
-            this.baseUrl = newValue;
-          }
-        }
-      });
-    });
-
-    this.observer.observe(this.el, {
-      attributeFilter: ['data-base-url'],
-      attributeOldValue: true,
-    });
-  },
   getItem(id?: string) {
     if (id) {
       const { jobs, triggers, edges } = this.workflowStore.getState();
@@ -165,6 +144,8 @@ export default {
       nextUrl.searchParams.delete('m');
       nextUrl.searchParams.set('placeholder', true);
     } else {
+      console.log({ idExists, baseUrl: this.baseUrl, nextUrl });
+
       nextUrl.searchParams.delete('placeholder');
       if (!id) {
         console.debug('Unselecting');
@@ -185,6 +166,7 @@ export default {
     }
   },
   destroyed() {
+    window.removeEventListener('phx:navigate', this._updateBaseUrl);
     this.component?.unmount();
     this.abortController?.abort();
     this.observer?.disconnect();
