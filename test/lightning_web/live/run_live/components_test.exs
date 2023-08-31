@@ -24,7 +24,7 @@ defmodule LightningWeb.RunLive.ComponentsTest do
                  insert(:run, exit_code: nil, output_dataclip_id: nil)
                  |> Lightning.Repo.preload(:log_lines)
              ) =~
-               "This run failed"
+               "This run has not yet finished."
 
       assert render_component(&LightningWeb.RunLive.Components.run_viewer/1,
                run:
