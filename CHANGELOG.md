@@ -14,7 +14,18 @@ and this project adheres to
 
 ### Fixed
 
-## [v0.8.1]
+## [v0.8.2] - 2023-08-31
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Lack of differentiation between top of job editor modal and top menu was
+  disorienting. Added shadow.
+
+## [v0.8.1] - 2023-08-31
 
 ### Added
 
@@ -27,7 +38,7 @@ and this project adheres to
 
 ### Fixed
 
-## [v0.8.0]
+## [v0.8.0] - 2023-08-31
 
 ### Added
 
