@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-109EC65F.js"></script>
+    <script src="dist/sidebar_items-DB24FB2D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -560,6 +560,17 @@ depending on the adapter to obtain statistics for the given query.</p></div>
       </div>
 
         <div class="summary-synopsis"><p>A convenience function for SQL-based repositories that translates the given query to SQL.</p></div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#transact/2" translate="no">transact(fun, opts \\ [])</a>
+
+      </div>
+
+        <div class="summary-synopsis"><p>A small wrapper around <code class="inline">Repo.transaction/2'. Commits the transaction if the lambda returns</code>:ok<code class="inline">or</code><code class="inline">, rolling it back if the lambda returns</code>:error<code class="inline">or</code>`. In both
+cases, the function returns the result of the lambda.</p></div>
 
     </div>
 
@@ -1673,6 +1684,40 @@ depending on the adapter to obtain statistics for the given query.</p><p>See <a 
   <section class="docstring">
 
 <p>A convenience function for SQL-based repositories that translates the given query to SQL.</p><p>See <a href="https://hexdocs.pm/ecto_sql/3.10.1/Ecto.Adapters.SQL.html#to_sql/3"><code class="inline">Ecto.Adapters.SQL.to_sql/3</code></a> for more information.</p>
+  </section>
+</section>
+<section class="detail" id="transact/2">
+
+    <span id="transact/1"></span>
+
+  <div class="detail-header">
+    <a href="#transact/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">transact(fun, opts \\ [])</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/repo.ex#L21" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> transact(
+  (-&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()),
+  <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">keyword</a>()
+) :: {:ok, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()} | {:error, <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()}</pre>
+
+      </div>
+
+<p>A small wrapper around <code class="inline">Repo.transaction/2'. Commits the transaction if the lambda returns</code>:ok<code class="inline">or</code><code class="inline">, rolling it back if the lambda returns</code>:error<code class="inline">or</code>`. In both
+cases, the function returns the result of the lambda.</p>
   </section>
 </section>
 <section class="detail" id="transaction/2">

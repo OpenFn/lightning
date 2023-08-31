@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-109EC65F.js"></script>
+    <script src="dist/sidebar_items-DB24FB2D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -133,17 +133,7 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">top</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li><li><code class="inline">bottom</code></li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#input_pane/1" translate="no">input_pane(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">on_run</code> (<code class="inline">:any</code>) (required) - Callback to run a job manually.</li><li><code class="inline">can_run_job</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">top</code></li><li><code class="inline">inner_block</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li><li><code class="inline">bottom</code></li></ul></div>
 
     </div>
 
@@ -153,7 +143,7 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required) - A form built from a job.</li><li><code class="inline">current_user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">close_url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">on_run</code> (<code class="inline">:any</code>) (required) - Callback to run a job manually.</li><li><code class="inline">follow_run_id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">footer</code></li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required) - A form built from a job.</li><li><code class="inline">current_user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">close_url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">follow_run_id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">footer</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul></div>
 
     </div>
 
@@ -180,7 +170,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">container(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L14" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L16" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -202,35 +192,7 @@ Functions
   </a>
   Slots
 </h2>
-<ul><li><code class="inline">top</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li><li><code class="inline">bottom</code></li></ul>
-  </section>
-</section>
-<section class="detail" id="input_pane/1">
-
-  <div class="detail-header">
-    <a href="#input_pane/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">input_pane(assigns)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L125" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-<h2 id="input_pane/1-attributes" class="section-heading">
-  <a href="#input_pane/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">attributes</p>
-  </a>
-  Attributes
-</h2>
-<ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">on_run</code> (<code class="inline">:any</code>) (required) - Callback to run a job manually.</li><li><code class="inline">can_run_job</code> (<code class="inline">:boolean</code>) - Defaults to <code class="inline">true</code>.</li></ul>
+<ul><li><code class="inline">top</code></li><li><code class="inline">inner_block</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li><li><code class="inline">bottom</code></li></ul>
   </section>
 </section>
 <section class="detail" id="job_edit_view/1">
@@ -242,7 +204,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">job_edit_view(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L48" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L65" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -258,13 +220,13 @@ Functions
   </a>
   Attributes
 </h2>
-<ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required) - A form built from a job.</li><li><code class="inline">current_user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">close_url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">on_run</code> (<code class="inline">:any</code>) (required) - Callback to run a job manually.</li><li><code class="inline">follow_run_id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="job_edit_view/1-slots" class="section-heading">
+<ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required) - A form built from a job.</li><li><code class="inline">current_user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">close_url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">follow_run_id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2 id="job_edit_view/1-slots" class="section-heading">
   <a href="#job_edit_view/1-slots" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
   <p class="sr-only">slots</p>
   </a>
   Slots
 </h2>
-<ul><li><code class="inline">footer</code></li></ul>
+<ul><li><code class="inline">footer</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul>
   </section>
 </section>
 

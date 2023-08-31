@@ -85,6 +85,7 @@ Lightning.VersionControl.ProjectRepoConnection.html
 Lightning.VersionControl.html
 Lightning.WorkOrder.html
 Lightning.WorkOrderService.html
+Lightning.WorkOrders.Manual.html
 Lightning.Workflows.Edge.html
 Lightning.Workflows.Graph.html
 Lightning.Workflows.Workflow.html
@@ -104,6 +105,7 @@ LightningWeb.BackupCodesLive.Index.html
 LightningWeb.ChangesetJSON.html
 LightningWeb.ChangesetView.html
 LightningWeb.Components.Modal.html
+LightningWeb.Components.NewInputs.html
 LightningWeb.CredentialLive.Edit.html
 LightningWeb.CredentialLive.FormComponent.html
 LightningWeb.CredentialLive.GoogleSheetsComponent.html
@@ -127,10 +129,7 @@ LightningWeb.InitAssigns.html
 LightningWeb.JobLive.AdaptorPicker.html
 LightningWeb.JobLive.CredentialPicker.html
 LightningWeb.JobLive.CronSetupComponent.html
-LightningWeb.JobLive.JobBuilder.html
 LightningWeb.JobLive.JobBuilderComponents.html
-LightningWeb.JobLive.ManualRunComponent.ManualWorkorder.html
-LightningWeb.JobLive.ManualRunComponent.html
 LightningWeb.LiveHelpers.html
 LightningWeb.ModalPortal.html
 LightningWeb.OauthCredentialHelper.html
@@ -167,6 +166,7 @@ LightningWeb.UserTOTPController.html
 LightningWeb.VersionControlController.html
 LightningWeb.WebhooksController.html
 LightningWeb.WorkflowLive.EditorPane.html
+LightningWeb.WorkflowLive.Helpers.html
 LightningWeb.WorkflowLive.JobView.html
 LightningWeb.WorkflowNewLive.WorkflowParams.html
 LightningWeb.html
@@ -205,8 +205,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-FE74C693.js
-dist/sidebar_items-109EC65F.js
+dist/search_items-218821FA.js
+dist/sidebar_items-DB24FB2D.js
 index.html
 provisioning.html
 readme.html

@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.8.0">
 
-    <title>LightningWeb.JobLive.JobBuilder — Lightning v0.8.0</title>
+    <title>LightningWeb.WorkflowLive.Helpers — Lightning v0.8.0</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-109EC65F.js"></script>
+    <script src="dist/sidebar_items-DB24FB2D.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -102,19 +102,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">LightningWeb.JobLive.JobBuilder</span> 
+  <span translate="no">LightningWeb.WorkflowLive.Helpers</span> 
   <small class="app-vsn" translate="no">(Lightning v0.8.0)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>Job Builder Panel</p>
+<p>Helper functions for the Workflow LiveViews.</p>
   </section>
 
 
@@ -133,7 +133,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#delete_title/2" translate="no">delete_title(is_deletable, can_delete_job)</a>
+        <a href="#create_user_workorder/1" translate="no">create_user_workorder(changeset)</a>
 
       </div>
 
@@ -141,7 +141,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#follow_run/2" translate="no">follow_run(job_id, attempt_run)</a>
+        <a href="#save_and_run/2" translate="no">save_and_run(workflow_changeset, manual_workorder_changeset)</a>
 
       </div>
 
@@ -149,33 +149,7 @@ Lightning
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#render/1" translate="no">render(assigns)</a>
-
-      </div>
-
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">return_to</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">params</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">%{}</code>.</li><li><code class="inline">can_edit_job</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">can_run_job</code> (<code class="inline">:boolean</code>) (required)</li></ul></div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#send_adaptor/2" translate="no">send_adaptor(job_id, adaptor)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#send_credential/2" translate="no">send_credential(job_id, credential)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#update_cron_expression/2" translate="no">update_cron_expression(job_id, cron_expression)</a>
+        <a href="#save_workflow/1" translate="no">save_workflow(changeset)</a>
 
       </div>
 
@@ -195,16 +169,16 @@ Lightning
 Functions
     </h1>
     <div class="functions-list">
-<section class="detail" id="delete_title/2">
+<section class="detail" id="create_user_workorder/1">
 
   <div class="detail-header">
-    <a href="#delete_title/2" class="detail-link" title="Link to this function">
+    <a href="#create_user_workorder/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">delete_title(is_deletable, can_delete_job)</h1>
+    <h1 class="signature" translate="no">create_user_workorder(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L260" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L39" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -213,20 +187,28 @@ Functions
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> create_user_workorder(<a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrders.Manual.html#t:t/0">Lightning.WorkOrders.Manual.t</a>())) ::
+  {:ok, %{attempt_run: <a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>()}}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrders.Manual.html#t:t/0">Lightning.WorkOrders.Manual.t</a>())}</pre>
+
+      </div>
 
 
   </section>
 </section>
-<section class="detail" id="follow_run/2">
+<section class="detail" id="save_and_run/2">
 
   <div class="detail-header">
-    <a href="#follow_run/2" class="detail-link" title="Link to this function">
+    <a href="#save_and_run/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">follow_run(job_id, attempt_run)</h1>
+    <h1 class="signature" translate="no">save_and_run(workflow_changeset, manual_workorder_changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L41" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L19" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -235,20 +217,36 @@ Functions
   </div>
 
   <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> save_and_run(
+  <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()),
+  <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrders.Manual.html#t:t/0">Lightning.WorkOrders.Manual.t</a>())
+) ::
+  {:ok,
+   %{
+     attempt_run: <a href="Lightning.AttemptRun.html#t:t/0">Lightning.AttemptRun.t</a>(),
+     workflow: <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()
+   }}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.WorkOrders.Manual.html#t:t/0">Lightning.WorkOrders.Manual.t</a>())}</pre>
+
+      </div>
 
 
   </section>
 </section>
-<section class="detail" id="render/1">
+<section class="detail" id="save_workflow/1">
 
   <div class="detail-header">
-    <a href="#render/1" class="detail-link" title="Link to this function">
+    <a href="#save_workflow/1" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
       <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">render(assigns)</h1>
+    <h1 class="signature" translate="no">save_workflow(changeset)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L55" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/helpers.ex#L32" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -258,77 +256,13 @@ Functions
 
   <section class="docstring">
 
-<h2 id="render/1-attributes" class="section-heading">
-  <a href="#render/1-attributes" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
-  <p class="sr-only">attributes</p>
-  </a>
-  Attributes
-</h2>
-<ul><li><code class="inline">return_to</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">params</code> (<code class="inline">:map</code>) - Defaults to <code class="inline">%{}</code>.</li><li><code class="inline">can_edit_job</code> (<code class="inline">:boolean</code>) (required)</li><li><code class="inline">can_run_job</code> (<code class="inline">:boolean</code>) (required)</li></ul>
-  </section>
-</section>
-<section class="detail" id="send_adaptor/2">
+      <div class="specs">
 
-  <div class="detail-header">
-    <a href="#send_adaptor/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">send_adaptor(job_id, adaptor)</h1>
+          <pre translate="no"><span class="attribute">@spec</span> save_workflow(<a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())) ::
+  {:ok, <a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>()}
+  | {:error, <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Changeset.html#t:t/1">Ecto.Changeset.t</a>(<a href="Lightning.Workflows.Workflow.html#t:t/0">Lightning.Workflows.Workflow.t</a>())}</pre>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L17" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="send_credential/2">
-
-  <div class="detail-header">
-    <a href="#send_credential/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">send_credential(job_id, credential)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L25" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="update_cron_expression/2">
-
-  <div class="detail-header">
-    <a href="#update_cron_expression/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">update_cron_expression(job_id, cron_expression)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/job_live/job_builder.ex#L33" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
+      </div>
 
 
   </section>
