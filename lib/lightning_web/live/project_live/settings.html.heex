@@ -376,7 +376,17 @@
               <div :if={!@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">Sync to Github</h6>
                 <small class="block my-1 text-xs text-gray-600">
-                  Configure the settings below to start Syncing
+                  Configure a two-way sync between this lightning project and a
+                  GitHub repo. See
+                  <.link
+                    href="https://docs.openfn.org/documentation/portability"
+                    target="_blank"
+                    class="hover:underline text-primary-600"
+                  >
+                    portability docs
+                  </.link>
+                  for full documentation on associated GitHub actions and
+                  automated workflows.
                 </small>
 
                 <.form
@@ -396,7 +406,14 @@
                             Repository
                           <% end %>
                           <%= if @show_sync_button do %>
-                            Repository: <%= @project_repo_connection["repo"] %>
+                            Repository:
+                            <.link
+                              href={"https://www.github.com/" <> @project_repo_connection["repo"]}
+                              target="_blank"
+                              class="hover:underline text-primary-600"
+                            >
+                              <%= @project_repo_connection["repo"] %>
+                            </.link>
                           <% end %>
                         </span>
                       </small>
@@ -427,7 +444,10 @@
                             Branch
                           <% end %>
                           <%= if @show_sync_button do %>
-                            Branch: <%= @project_repo_connection["branch"] %>
+                            Branch:
+                            <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+                              <%= @project_repo_connection["branch"] %>
+                            </span>
                           <% end %>
                         </span>
                       </small>
@@ -445,6 +465,38 @@
                       />
                     </div>
                   </div>
+                  <%= if @show_sync_button do %>
+                    <div class="hidden sm:block" aria-hidden="true">
+                      <div class="py-1"></div>
+                    </div>
+                    <div class="grid grid-cols gap-6">
+                      <div class="md:col-span-2">
+                        <small class="font-medium my-1 text-xs text-black">
+                          <span>
+                            GitHub Installation ID:
+                            <span class="text-xs font-mono bg-gray-200 rounded-md p-1">
+                              <%= @project_repo_connection[
+                                "github_installation_id"
+                              ] %>
+                            </span>
+                          </span>
+                        </small>
+                        <Form.select_field
+                          :if={@show_repo_setup && !@show_sync_button}
+                          form={f}
+                          disabled={@loading_branches}
+                          phx-change="branch_selected"
+                          name={:branch}
+                          id="project-branch"
+                          values={@branches}
+                          prompt={
+                            @project_repo_connection["branch"] ||
+                              "Select a branch"
+                          }
+                        />
+                      </div>
+                    </div>
+                  <% end %>
                   <div class="hidden sm:block" aria-hidden="true">
                     <div class="py-4"></div>
                   </div>
