@@ -4,6 +4,8 @@ defmodule LightningWeb.RunLive.Index do
   """
   use LightningWeb, :live_view
 
+  import Ecto.Changeset, only: [get_change: 2]
+
   alias Lightning.Workorders.SearchParams
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -353,5 +355,9 @@ defmodule LightningWeb.RunLive.Index do
         event: :selection_toggled
       )
     end
+  end
+
+  defp maybe_humanize_date(date) do
+    date && Timex.format!(date, "{D}/{M}/{YY}")
   end
 end
