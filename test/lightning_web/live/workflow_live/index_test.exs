@@ -71,7 +71,7 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
   end
 
   describe "creating workflows" do
-    @tag role: :viewer, skip: true
+    @tag role: :viewer
     test "users with viewer role cannot create a workflow", %{
       conn: conn,
       project: project
@@ -87,6 +87,9 @@ defmodule LightningWeb.WorkflowLive.IndexTest do
       {:ok, _view, html} =
         view
         |> click_create_workflow()
+        # click create workflow redirects to ~p"/projects/8d498ad1-5ee0-4378-b687-805640b751df/w/new"
+        |> follow_redirect(conn)
+        # then because user is redirected back to ~p"/projects/8d498ad1-5ee0-4378-b687-805640b751df/w" due to lack of permission
         |> follow_redirect(conn)
 
       assert html =~ "You are not authorized to perform this action."
