@@ -263,10 +263,6 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
 
-  def handle_event("search", %{"filters" => filters} = _params, socket) do
-    apply_filters(filters, socket)
-  end
-
   def handle_event("apply_filters", %{"filters" => filters}, socket) do
     apply_filters(Map.merge(socket.assigns.filters, filters), socket)
   end

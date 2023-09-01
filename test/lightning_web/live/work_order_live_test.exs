@@ -825,22 +825,20 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert html =~ "Workflow"
 
       assert view
-             |> element("input[value=#{job.workflow_id}]")
+             |> element("#select-workflow-#{job.workflow_id}")
              |> has_element?()
 
       assert view
-             |> element("input[value=#{job_two.workflow_id}]")
+             |> element("#select-workflow-#{job_two.workflow_id}")
              |> has_element?()
 
       refute view
-             |> element("input[value=#{job_other_project.workflow_id}]")
+             |> element("#select-workflow-#{job_other_project.workflow_id}")
              |> has_element?()
 
       assert view
-             |> element("form#run-filter-form")
-             |> render_submit(%{
-               "filters[workflow_id]" => job_two.workflow_id
-             })
+             |> element("#select-workflow-#{job_two.workflow_id}")
+             |> render_click()
 
       div =
         view
@@ -853,10 +851,8 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "workflow 2"
 
       assert view
-             |> element("form#run-filter-form")
-             |> render_submit(%{
-               "filters[workflow_id]" => job.workflow_id
-             })
+             |> element("#select-workflow-#{job.workflow_id}")
+             |> render_click()
 
       div =
         view
@@ -2137,6 +2133,53 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       refute html =~ "Rerun all 25 matching workorders from selected job"
       assert html =~ "Rerun 5 selected workorders from selected job"
+    end
+  end
+
+  describe "timestamp" do
+    test "default option" do
+      now = NaiveDateTime.utc_now()
+
+      assert render_component(&LightningWeb.RunLive.Components.timestamp/1,
+               timestamp: now
+             ) =~
+               Timex.format!(
+                 now,
+                 "%d/%b/%y, %H:%M:%S",
+                 :strftime
+               )
+    end
+
+    test "wrapped option" do
+      now = NaiveDateTime.utc_now()
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.timestamp/1,
+          timestamp: now,
+          style: :wrapped
+        )
+
+      refute html =~ Timex.format!(now, "%d/%b/%y, %H:%M:%S", :strftime)
+
+      assert html =~ Timex.format!(now, "%d/%b/%y", :strftime)
+
+      assert html =~ Timex.format!(now, "%H:%M:%S", :strftime)
+    end
+
+    test "with time only option" do
+      now = NaiveDateTime.utc_now()
+
+      html =
+        render_component(&LightningWeb.RunLive.Components.timestamp/1,
+          timestamp: now,
+          style: :time_only
+        )
+
+      refute html =~ Timex.format!(now, "%d/%b/%y, %H:%M:%S", :strftime)
+
+      refute html =~ Timex.format!(now, "%d/%b/%y", :strftime)
+
+      assert html =~ Timex.format!(now, "%H:%M:%S", :strftime)
     end
   end
 end

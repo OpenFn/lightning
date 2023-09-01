@@ -26,7 +26,7 @@ defmodule LightningWeb.RunLive.Components do
       data-entity="attempt"
       class="bg-gray-100"
     >
-      <%= for run <- IO.inspect(@run_list) do %>
+      <%= for run <- @run_list do %>
         <.run_list_item
           can_rerun_job={@can_rerun_job}
           project_id={@project.id}

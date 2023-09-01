@@ -33,8 +33,11 @@
                       phx-click={show_dropdown("workflow_filter_dropdown")}
                     >
                       <span>
-                        <%= if get_change(@filters_changeset, :workflow_id) do %>
-                          1 Selected
+                        <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
+                          <%= Enum.find(@workflows, fn {_name, id} ->
+                            id == workflow_id
+                          end)
+                          |> elem(0) %>
                         <% else %>
                           All
                         <% end %>
@@ -63,19 +66,21 @@
                     phx-click-away={hide_dropdown("workflow_filter_dropdown")}
                   >
                     <div class="py-1" role="none">
-                      <%= for {workflow_name, workflow_id} <- @workflows do %>
-                        <div class="px-4 py-1 text-gray-700 text-sm">
-                          <div class="flex items-center">
-                            <%= radio_button(f, :workflow_id, workflow_id,
-                              class:
-                                "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-600"
-                            ) %>
-                            <%= label(f, :workflow_id, workflow_name,
-                              class:
-                                "ml-3 block text-sm font-medium leading-6 text-gray-900"
-                            ) %>
-                          </div>
-                        </div>
+                      <%= for {workflow_name, workflow_id} <- [{"All", nil}] ++ @workflows do %>
+                        <a
+                          href="#"
+                          phx-click={
+                            JS.push("apply_filters",
+                              value: %{filters: %{workflow_id: workflow_id}}
+                            )
+                          }
+                          class={"#{if(get_change(@filters_changeset, :workflow_id) == workflow_id, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
+                          role="menuitem"
+                          tabindex="-1"
+                          id={"select-workflow-#{workflow_id}"}
+                        >
+                          <%= workflow_name %>
+                        </a>
                       <% end %>
                     </div>
                   </div>
@@ -216,7 +221,7 @@
                           phx-click-away={
                             hide_dropdown("wo_date_received_filter")
                           }
-                          class="hidden absolute top-0 left-full ml-0.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                         >
                           <div class="py-3" role="none">
                             <div class="px-4 py-1 text-gray-500 text-sm">
@@ -256,7 +261,7 @@
                           phx-click-away={
                             hide_dropdown("wo_last_activity_filter")
                           }
-                          class="hidden absolute top-0 left-full ml-0.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                          class="hidden absolute top-0 left-full ml-1.5 z-10 mt-2 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                         >
                           <div class="py-3" role="none">
                             <div class="px-4 py-1 text-gray-500 text-sm">
@@ -556,7 +561,7 @@
                 <div class="bg-gray-100 grid grid-cols-8" role="row">
                   <div
                     role="columnheader"
-                    class="col-span-3 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+                    class="flex items-center col-span-3 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
                   >
                     <div class="flex gap-8 items-center">
                       <div class="">
