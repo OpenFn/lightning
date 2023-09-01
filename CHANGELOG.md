@@ -12,6 +12,11 @@ and this project adheres to
 
 ### Changed
 
+- Restyle history table
+  [#1029](https://github.com/OpenFn/Lightning/issues/1029)
+- Moved Filter and Search controls to the top of the history page
+  [#1027](https://github.com/OpenFn/Lightning/issues/1027)
+
 ### Fixed
 
 - Output incorrectly shows "this run failed" when the run hasn't yet finished
