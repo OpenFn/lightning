@@ -94,7 +94,7 @@ export const Copy = {
 
 // Sets the checkbox to indeterminate state if the element has the
 // `indeterminate` class
-export const CheckboxIndeterminat = {
+export const CheckboxIndeterminate = {
   mounted() {
     this.el.indeterminate = this.el.classList.contains('indeterminate');
   },
