@@ -145,7 +145,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <% end %>
             </button>
 
-            <div class="ml-3 py-4 ">
+            <div class="ml-3 py-2">
               <h1 class={"text-sm mb-1 #{unless @show_details, do: "truncate"}"}>
                 <%= @workflow_name %>
               </h1>
