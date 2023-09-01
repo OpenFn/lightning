@@ -7,7 +7,7 @@
   <LayoutComponents.centered>
     <div>
       <%!-- Search Bar --%>
-      <div class="top-0 self-start mb-8">
+      <div class="top-0 self-start mb-2">
         <div>
           <div class="flex gap-2">
             <div>
@@ -41,7 +41,7 @@
                 as={:filters}
                 phx-change="apply_filters"
               >
-                <.dropdown label="All" js_lib="live_view_js">
+                <.dropdown label="All" js_lib="live_view_js" class="">
                   <.dropdown_menu_item>
                     Workflow
                   </.dropdown_menu_item>
@@ -133,7 +133,7 @@
           </div>
         </div>
 
-        <div class="mt-4">
+        <div class="mt-2">
           <%= if workflow_id = get_change(@filters_changeset, :workflow_id) do %>
             <span class="inline-flex items-center gap-x-0.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
               Workflow: <%= Enum.find(@workflows, fn {_name, id} ->
@@ -263,7 +263,7 @@
         </div>
 
         <div>
-          <div class="mt-8">
+          <div class="mt-2">
             <div class="flex justify-between items-center">
               <div>
                 <p class="text-xl text-gray-500 font-medium">Work Orders</p>
@@ -338,7 +338,7 @@
     </div>
 
     <div>
-      <div class="mt-4">
+      <div class="mt-2">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div class="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
             <div class="overflow-hidden border border-gray-200 md:rounded-lg">

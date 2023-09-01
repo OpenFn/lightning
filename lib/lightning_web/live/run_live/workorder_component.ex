@@ -117,7 +117,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       <div role="row" class="grid grid-cols-8 items-center">
         <div
           role="cell"
-          class="col-span-3 py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="col-span-3 py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         >
           <div class="flex gap-4 items-center">
             <.form
@@ -157,31 +157,31 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           </div>
         </div>
         <div
-          class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
           <.timestamp timestamp={@work_order.inserted_at} style={:wrapped} />
         </div>
         <div
-          class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
           <.timestamp timestamp={@last_run.finished_at} style={:wrapped} />
         </div>
         <div
-          class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
           --
         </div>
         <div
-          class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
           --
         </div>
         <div
-          class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+          class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
           <%= case @last_run.exit_code do %>
