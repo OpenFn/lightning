@@ -12,9 +12,10 @@
           <.form
             :let={f}
             for={@filters_changeset}
-            id="workflow-filter-form"
+            id="run-filter-form"
             as={:filters}
             phx-change="apply_filters"
+            phx-submit="apply_filters"
           >
             <div class="flex gap-2">
               <div>
@@ -492,12 +493,10 @@
                         as={:filters}
                         phx-submit="apply_filters"
                         class="inline"
+                        id="run-both-search-form"
                       >
                         <%= for search_field <- @search_fields do %>
-                          <%= hidden_input(f, search_field.id,
-                            value: true,
-                            id: "both_#{search_field.id}"
-                          ) %>
+                          <%= hidden_input(f, search_field.id, value: true) %>
                         <% end %>
                         <button
                           type="submit"
@@ -513,12 +512,10 @@
                           as={:filters}
                           phx-submit="apply_filters"
                           class="inline"
+                          id={"run-#{search_field.id}-search-form"}
                         >
                           <%= for other_field <- @search_fields -- [search_field] do %>
-                            <%= hidden_input(f, other_field.id,
-                              value: false,
-                              id: "other_#{other_field.id}"
-                            ) %>
+                            <%= hidden_input(f, other_field.id, value: false) %>
                           <% end %>
                           <%= hidden_input(f, search_field.id, value: true) %>
                           <button
@@ -590,7 +587,7 @@
                           <div>
                             <p class="text-sm mb-1">Workflow Name</p>
                             <span class="text-gray-700 mt-2 font-medium">
-                              WORK ORDER ID . DATE & TIME
+                              WORK ORDER ID . INPUT
                             </span>
                           </div>
                         <% else %>

@@ -593,38 +593,69 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      assert html =~ "Filter by workorder status"
+      assert html =~ "Status"
 
       assert view
-             |> element("input#run-search-form_success[checked]")
+             |> element("input#run-filter-form_success[checked]")
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_failure[checked]")
+             |> element("input#run-filter-form_failure[checked]")
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_timeout[checked]")
+             |> element("input#run-filter-form_timeout[checked]")
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_crash[checked]")
+             |> element("input#run-filter-form_crash[checked]")
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_pending[checked]")
+             |> element("input#run-filter-form_pending[checked]")
              |> has_element?()
 
       assert view
              |> element("input#run-search-form_search_term")
              |> has_element?()
 
+      ## both log and body select
       assert view
-             |> element("input#run-search-form_body[checked]")
+             |> element(
+               "input#run-both-search-form_body[type='hidden'][value='true']"
+             )
              |> has_element?()
 
       assert view
-             |> element("input#run-search-form_log[checked]")
+             |> element(
+               "input#run-both-search-form_log[type='hidden'][value='true']"
+             )
+             |> has_element?()
+
+      ## individual search for body
+      assert view
+             |> element(
+               "input#run-body-search-form_body[type='hidden'][value='true']"
+             )
+             |> has_element?()
+
+      assert view
+             |> element(
+               "input#run-body-search-form_log[type='hidden'][value='false']"
+             )
+             |> has_element?()
+
+      ## individual search for log
+      assert view
+             |> element(
+               "input#run-log-search-form_body[type='hidden'][value='false']"
+             )
+             |> has_element?()
+
+      assert view
+             |> element(
+               "input#run-log-search-form_log[type='hidden'][value='true']"
+             )
              |> has_element?()
     end
 
@@ -682,7 +713,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # uncheck :failure
 
       view
-      |> form("#run-search-form", filters: %{"failure" => "false"})
+      |> form("#run-filter-form", filters: %{"failure" => "false"})
       |> render_submit()
 
       refute view
@@ -694,7 +725,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       # recheck failure
 
       view
-      |> form("#run-search-form", filters: %{"failure" => "true"})
+      |> form("#run-filter-form", filters: %{"failure" => "true"})
       |> render_submit()
 
       div =
@@ -791,22 +822,22 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
 
-      assert html =~ "Filter by workflow"
+      assert html =~ "Workflow"
 
       assert view
-             |> element("option[value=#{job.workflow_id}]")
+             |> element("input[value=#{job.workflow_id}]")
              |> has_element?()
 
       assert view
-             |> element("option[value=#{job_two.workflow_id}]")
+             |> element("input[value=#{job_two.workflow_id}]")
              |> has_element?()
 
       refute view
-             |> element("option[value=#{job_other_project.workflow_id}]")
+             |> element("input[value=#{job_other_project.workflow_id}]")
              |> has_element?()
 
       assert view
-             |> element("form#run-search-form")
+             |> element("form#run-filter-form")
              |> render_submit(%{
                "filters[workflow_id]" => job_two.workflow_id
              })
@@ -822,7 +853,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "workflow 2"
 
       assert view
-             |> element("form#run-search-form")
+             |> element("form#run-filter-form")
              |> render_submit(%{
                "filters[workflow_id]" => job.workflow_id
              })
@@ -918,46 +949,46 @@ defmodule LightningWeb.RunWorkOrderTest do
           Routes.project_run_index_path(conn, :index, project.id)
         )
 
-      assert html =~ expected_d2 |> Timex.format!("{YYYY}-{0M}-{0D}")
-      assert html =~ expected_d1 |> Timex.format!("{YYYY}-{0M}-{0D}")
+      assert html =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
+      assert html =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
 
       # set date after to 11 days ago, only see second workorder
 
       result =
         view
-        |> element("form#run-search-form")
+        |> element("form#run-filter-form")
         |> render_submit(%{
           "filters[date_after]" => Timex.now() |> Timex.shift(days: -11)
         })
 
-      refute result =~ expected_d1 |> Timex.format!("{YYYY}-{0M}-{0D}")
-      assert result =~ expected_d2 |> Timex.format!("{YYYY}-{0M}-{0D}")
+      refute result =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
+      assert result =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
 
       # set date before to 12 days ago, only see first workorder
 
       # reset after date
       view
-      |> element("form#run-search-form")
+      |> element("form#run-filter-form")
       |> render_submit(%{"filters[date_after]" => nil})
 
       result =
         view
-        |> element("form#run-search-form")
+        |> element("form#run-filter-form")
         |> render_submit(%{
           "filters[date_before]" => Timex.now() |> Timex.shift(days: -12)
         })
 
-      assert result =~ expected_d1 |> Timex.format!("{YYYY}-{0M}-{0D}")
-      refute result =~ expected_d2 |> Timex.format!("{YYYY}-{0M}-{0D}")
+      assert result =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
+      refute result =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
 
       # reset before date
       result =
         view
-        |> element("form#run-search-form")
+        |> element("form#run-filter-form")
         |> render_submit(%{"filters[date_before]" => nil})
 
-      assert result =~ expected_d1 |> Timex.format!("{YYYY}-{0M}-{0D}")
-      assert result =~ expected_d2 |> Timex.format!("{YYYY}-{0M}-{0D}")
+      assert result =~ expected_d1 |> Timex.format!("%d/%b/%y", :strftime)
+      assert result =~ expected_d2 |> Timex.format!("%d/%b/%y", :strftime)
     end
 
     test "Filter by run run_log and dataclip_body", %{

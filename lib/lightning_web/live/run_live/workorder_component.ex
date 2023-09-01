@@ -151,7 +151,16 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               </h1>
               <span class="mt-2 text-gray-700">
                 <%= display_short_uuid(@work_order.id) %> .
-                <.timestamp timestamp={@work_order.inserted_at} />
+                <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
+                  <span
+                    title={@work_order.reason.dataclip_id}
+                    class="font-normal text-xs whitespace-nowrap text-ellipsis
+                            bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
+                            underline-offset-2 hover:text-indigo-500"
+                  >
+                    <%= display_short_uuid(@work_order.reason.dataclip_id) %>
+                  </span>
+                <% end %>
               </span>
             </div>
           </div>
