@@ -13,6 +13,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.{AttemptService, Invocation}
   alias Lightning.Invocation.Run
   alias LightningWeb.RunLive.Components
+  alias Phoenix.LiveView.JS
 
   @filters_types %{
     search_term: :string,
