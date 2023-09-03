@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Validate job name in placeholder job node
+  [#1021](https://github.com/OpenFn/Lightning/issues/1021)
+
 ### Changed
 
 ### Fixed
