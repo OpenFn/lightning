@@ -275,12 +275,14 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
+          name: "job a",
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
       job_b =
         job_fixture(
+          name: "job b",
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
           workflow_id: job_a.workflow_id
@@ -288,6 +290,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       job_c =
         job_fixture(
+          name: "job c",
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => state)],
           workflow_id: job_a.workflow_id
@@ -463,12 +466,14 @@ defmodule LightningWeb.RunWorkOrderTest do
          %{conn: conn, project: project} do
       %{job: job_a, trigger: trigger} =
         workflow_job_fixture(
+          name: "job a",
           project_id: project.id,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
       job_b =
         job_fixture(
+          name: "job b",
           trigger: %{type: :on_job_success, upstream_job_id: job_a.id},
           body: ~s[fn(state => state)],
           workflow_id: job_a.workflow_id
@@ -476,6 +481,7 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       job_c =
         job_fixture(
+          name: "job c",
           trigger: %{type: :on_job_success, upstream_job_id: job_b.id},
           body: ~s[fn(state => state)],
           workflow_id: job_a.workflow_id

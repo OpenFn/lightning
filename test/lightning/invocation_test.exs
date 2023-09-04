@@ -127,8 +127,8 @@ defmodule Lightning.InvocationTest do
 
     test "list_runs_for_project/2 returns runs ordered by inserted at desc" do
       workflow = workflow_fixture() |> Repo.preload(:project)
-      job_one = job_fixture(workflow_id: workflow.id)
-      job_two = job_fixture(workflow_id: workflow.id)
+      job_one = job_fixture(name: "job 1", workflow_id: workflow.id)
+      job_two = job_fixture(name: "job 2", workflow_id: workflow.id)
 
       first_run =
         run_fixture(job_id: job_one.id)

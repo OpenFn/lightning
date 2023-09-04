@@ -15,11 +15,13 @@ defmodule Lightning.PipelineTest do
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
       %{job: job, trigger: trigger} =
         workflow_job_fixture(
+          name: "job 1",
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
 
       %{id: downstream_job_id} =
         job_fixture(
+          name: "job 2",
           trigger: %{type: :on_job_failure, upstream_job_id: job.id},
           body: ~s[fn(state => state)],
           workflow_id: job.workflow_id,

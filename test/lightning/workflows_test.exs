@@ -63,8 +63,8 @@ defmodule Lightning.WorkflowsTest do
     test "delete_workflow/1 deletes the workflow" do
       workflow = WorkflowsFixtures.workflow_fixture()
 
-      job_1 = JobsFixtures.job_fixture(workflow_id: workflow.id)
-      job_2 = JobsFixtures.job_fixture(workflow_id: workflow.id)
+      job_1 = JobsFixtures.job_fixture(name: "job 1", workflow_id: workflow.id)
+      job_2 = JobsFixtures.job_fixture(name: "job 2", workflow_id: workflow.id)
 
       assert {:ok, %Workflows.Workflow{}} = Workflows.delete_workflow(workflow)
 
@@ -348,8 +348,8 @@ defmodule Lightning.WorkflowsTest do
 
       assert w2.deleted_at == nil
 
-      job_1 = JobsFixtures.job_fixture(workflow_id: w1.id)
-      job_2 = JobsFixtures.job_fixture(workflow_id: w1.id)
+      job_1 = JobsFixtures.job_fixture(name: "job 1", workflow_id: w1.id)
+      job_2 = JobsFixtures.job_fixture(name: "job 2", workflow_id: w1.id)
 
       # mark delete at request of a workflows and disable all associated jobs
       assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)

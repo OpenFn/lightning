@@ -73,11 +73,17 @@ defmodule Lightning.JobsTest do
       workflow_1 = workflow_fixture()
       workflow_2 = workflow_fixture()
 
-      workflow_1_job_1 = job_fixture(workflow_id: workflow_1.id)
-      workflow_1_job_2 = job_fixture(workflow_id: workflow_1.id)
+      workflow_1_job_1 =
+        job_fixture(name: "workflow 1 job 1", workflow_id: workflow_1.id)
 
-      workflow_2_job_1 = job_fixture(workflow_id: workflow_2.id)
-      workflow_2_job_2 = job_fixture(workflow_id: workflow_2.id)
+      workflow_1_job_2 =
+        job_fixture(name: "workflow 1 job 2", workflow_id: workflow_1.id)
+
+      workflow_2_job_1 =
+        job_fixture(name: "workflow 2 job 1", workflow_id: workflow_2.id)
+
+      workflow_2_job_2 =
+        job_fixture(name: "workflow 2 job 2", workflow_id: workflow_2.id)
 
       assert Jobs.get_upstream_jobs_for(workflow_1_job_1) == [
                Jobs.get_job!(workflow_1_job_2.id)
@@ -236,9 +242,9 @@ defmodule Lightning.JobsTest do
 
       {:ok, %Job{} = upstream_job} =
         Jobs.create_job(%{
+          name: "job 1",
           body: "some body",
           enabled: true,
-          name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
           workflow_id: workflow.id
@@ -246,9 +252,9 @@ defmodule Lightning.JobsTest do
 
       {:ok, %Job{} = job} =
         Jobs.create_job(%{
+          name: "job 2",
           body: "some body",
           enabled: true,
-          name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           workflow_id: workflow.id
@@ -264,7 +270,7 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
-          name: "some name",
+          name: "job 1",
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
           workflow_id: workflow.id
@@ -276,7 +282,7 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
-          name: "some name",
+          name: "job 2",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           workflow_id: workflow.id
