@@ -73,6 +73,7 @@
                             JS.push("apply_filters",
                               value: %{filters: %{workflow_id: workflow_id}}
                             )
+                            |> JS.hide(to: "#workflow_filter_dropdown")
                           }
                           class={"#{if(get_change(@filters_changeset, :workflow_id) == workflow_id, do: "bg-gray-100 text-gray-900", else: "text-gray-700")} block px-4 py-2 text-sm hover:bg-gray-100"}
                           role="menuitem"

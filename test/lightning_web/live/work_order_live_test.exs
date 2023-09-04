@@ -1238,6 +1238,225 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> Floki.text() =~
                "?"
     end
+
+    test "by default only the latest attempt is present when there are multiple attempts",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{role: :admin, user: user}]
+        )
+
+      workflow =
+        insert(
+          :workflow,
+          %{
+            name: "test workflow",
+            project: project
+          }
+        )
+
+      project_credential =
+        insert(:project_credential,
+          credential: %{
+            name: "dummy",
+            body: %{"test" => "dummy"}
+          },
+          project: project
+        )
+
+      job =
+        insert(:job, %{
+          body: "fn(state => state)",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          workflow: workflow,
+          project_credential: project_credential
+        })
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook
+        )
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition: :always
+      )
+
+      dataclip = insert(:dataclip, project: project)
+
+      reason =
+        insert(:reason,
+          type: :webhook,
+          dataclip: dataclip,
+          trigger: trigger
+        )
+
+      workorder = insert(:workorder, workflow: workflow, reason: reason)
+
+      now = Timex.now()
+
+      attempt_1 =
+        insert(:attempt,
+          work_order: workorder,
+          reason: reason,
+          inserted_at: now |> Timex.shift(minutes: -5),
+          runs:
+            build_list(1, :run, %{
+              job: job,
+              started_at: now |> Timex.shift(seconds: -40),
+              finished_at: now |> Timex.shift(seconds: -20),
+              exit_code: nil,
+              input_dataclip: dataclip
+            })
+        )
+
+      attempt_2 =
+        insert(:attempt,
+          work_order: workorder,
+          reason: reason,
+          runs:
+            build_list(1, :run,
+              job: job,
+              started_at: Timex.shift(now, seconds: -20),
+              finished_at: now,
+              exit_code: nil,
+              input_dataclip: dataclip
+            )
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      view |> element("#toggle_details_for_#{workorder.id}") |> render_click()
+
+      assert has_element?(view, "#attempt_#{attempt_1.id}.hidden")
+      refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
+      assert has_element?(view, "#attempt_#{attempt_2.id}")
+    end
+
+    test "user can toggle to see all attempts",
+         %{conn: conn, user: user} do
+      project =
+        insert(:project,
+          project_users: [%{role: :admin, user: user}]
+        )
+
+      workflow =
+        insert(
+          :workflow,
+          %{
+            name: "test workflow",
+            project: project
+          }
+        )
+
+      project_credential =
+        insert(:project_credential,
+          credential: %{
+            name: "dummy",
+            body: %{"test" => "dummy"}
+          },
+          project: project
+        )
+
+      job =
+        insert(:job, %{
+          body: "fn(state => state)",
+          enabled: true,
+          name: "some name",
+          adaptor: "@openfn/language-common",
+          workflow: workflow,
+          project_credential: project_credential
+        })
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          type: :webhook
+        )
+
+      insert(:edge,
+        workflow: workflow,
+        source_trigger: trigger,
+        target_job: job,
+        condition: :always
+      )
+
+      dataclip = insert(:dataclip, project: project)
+
+      reason =
+        insert(:reason,
+          type: :webhook,
+          dataclip: dataclip,
+          trigger: trigger
+        )
+
+      workorder = insert(:workorder, workflow: workflow, reason: reason)
+
+      now = Timex.now()
+
+      attempt_1 =
+        insert(:attempt,
+          work_order: workorder,
+          reason: reason,
+          inserted_at: now |> Timex.shift(minutes: -5),
+          runs:
+            build_list(1, :run, %{
+              job: job,
+              started_at: now |> Timex.shift(seconds: -40),
+              finished_at: now |> Timex.shift(seconds: -20),
+              exit_code: nil,
+              input_dataclip: dataclip
+            })
+        )
+
+      attempt_2 =
+        insert(:attempt,
+          work_order: workorder,
+          reason: reason,
+          runs:
+            build_list(1, :run,
+              job: job,
+              started_at: Timex.shift(now, seconds: -20),
+              finished_at: now,
+              exit_code: nil,
+              input_dataclip: dataclip
+            )
+        )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_run_index_path(conn, :index, project.id)
+        )
+
+      view |> element("#toggle_details_for_#{workorder.id}") |> render_click()
+
+      assert has_element?(view, "#attempt_#{attempt_1.id}.hidden")
+      refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
+      assert has_element?(view, "#attempt_#{attempt_2.id}")
+
+      # show all
+      view |> element("#toggle_attempts_for_#{workorder.id}") |> render_click()
+      refute has_element?(view, "#attempt_#{attempt_1.id}.hidden")
+      refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
+      assert has_element?(view, "#attempt_#{attempt_1.id}")
+      assert has_element?(view, "#attempt_#{attempt_2.id}")
+
+      # hide some
+      view |> element("#toggle_attempts_for_#{workorder.id}") |> render_click()
+      assert has_element?(view, "#attempt_#{attempt_1.id}.hidden")
+      refute has_element?(view, "#attempt_#{attempt_2.id}.hidden")
+      assert has_element?(view, "#attempt_#{attempt_2.id}")
+    end
   end
 
   def search_for(view, term, types) when types == [] do

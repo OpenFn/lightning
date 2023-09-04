@@ -134,6 +134,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               ) %>
             </.form>
             <button
+              id={"toggle_details_for_#{@work_order.id}"}
               class="w-auto rounded-full p-3 hover:bg-gray-100"
               phx-click="toggle_details"
               phx-target={@myself}
@@ -216,11 +217,14 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           />
         <% else %>
           <%= for {attempt, index} <- @attempts |> Enum.reverse() |> Enum.with_index(1) |> Enum.reverse() do %>
-            <div class={
-              if index != Enum.count(@attempts) and !@show_prev_attempts,
-                do: "hidden",
-                else: ""
-            }>
+            <div
+              id={"attempt_#{attempt.id}"}
+              class={
+                if index != Enum.count(@attempts) and !@show_prev_attempts,
+                  do: "hidden",
+                  else: ""
+              }
+            >
               <div>
                 <div class="flex gap-2 items-center bg-gray-300 pl-28 ">
                   <p class="text-sm py-2 text-gray-800">
@@ -236,6 +240,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   </div>
                   <a
                     :if={index == Enum.count(@attempts)}
+                    id={"toggle_attempts_for_#{@work_order.id}"}
                     href="#"
                     class="text-sm ml-4 text-blue-600"
                     phx-click="toggle_attempts"
