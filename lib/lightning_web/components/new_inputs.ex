@@ -96,6 +96,8 @@ defmodule LightningWeb.Components.NewInputs do
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
+  attr :class, :string, default: nil
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -143,7 +145,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-md border border-secondary-300 bg-white",
+          "block w-full rounded-md border border-secondary-300 bg-white",
           "text-sm shadow-sm",
           "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
           "disabled:cursor-not-allowed"
@@ -161,7 +163,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name}>
+    <div phx-feedback-for={@name} class={@class}>
       <.label for={@id}><%= @label %></.label>
       <textarea
         id={@id}
@@ -170,9 +172,10 @@ defmodule LightningWeb.Components.NewInputs do
           "rounded-md shadow-sm font-mono proportional-nums text-sm",
           "mt-2 block w-full focus:ring-0",
           "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
-          "min-h-[6rem] phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
+          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
           @errors == [] && "border-slate-300 focus:border-slate-400",
-          @errors != [] && "border-danger-400 focus:border-danger-400"
+          @errors != [] && "border-danger-400 focus:border-danger-400",
+          @class
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
@@ -225,7 +228,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden">
+    <p class="inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden">
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
     </p>

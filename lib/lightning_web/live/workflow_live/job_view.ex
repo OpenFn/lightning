@@ -2,34 +2,35 @@ defmodule LightningWeb.WorkflowLive.JobView do
   use LightningWeb, :component
   alias LightningWeb.WorkflowLive.EditorPane
 
+  import LightningWeb.WorkflowLive.Components
+
   attr :id, :string, required: true
   slot :top
 
   slot :inner_block, required: false
 
+  slot :bottom
+
   slot :column do
     attr :class, :string, doc: "Extra CSS classes for the column"
   end
 
-  slot :bottom
-
   def container(assigns) do
     ~H"""
     <div class="relative h-full flex bg-white" id={@id}>
-      <div class="grow flex min-h-full flex-col">
-        <div class="h-14 border-b relative">
+      <div class="grow flex h-full flex-col">
+        <div class="">
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
-        <div class="grow flex h-5/6">
+        <div
+          class="grow flex h-5/6 gap-3 mx-4"
+          phx-hook="collapsiblePanel"
+          id="collapsibles"
+        >
           <%= render_slot(@inner_block) %>
-          <%= for slot <- @column do %>
-            <.column class={slot[:class]}>
-              <%= render_slot(slot) %>
-            </.column>
-          <% end %>
         </div>
-        <div class="h-14 flex border-t p-2 justify-end">
+        <div class="flex p-2 justify-end">
           <%= render_slot(@bottom) %>
         </div>
       </div>
@@ -39,10 +40,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   slot :inner_block, required: true
   attr :class, :string, default: ""
+  attr :id, :string, required: true
 
   defp column(assigns) do
     ~H"""
-    <div class={["flex-1 px-4 py-6", @class]}>
+    <div id={@id} class={["flex-1 px-4 pt-4 collapsible-panel", @class]}>
       <%= render_slot(@inner_block) %>
     </div>
     """
@@ -58,7 +60,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   slot :footer
 
-  slot :column do
+  slot :collapsible_panel do
+    attr :id, :string, required: true
+    attr :panel_title, :string, required: true
     attr :class, :string, doc: "Extra CSS classes for the column"
   end
 
@@ -83,13 +87,21 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
         </div>
       </:top>
-      <%= for slot <- @column do %>
-        <.column class={slot[:class]}>
+      <%= for slot <- @collapsible_panel do %>
+        <.collapsible_panel
+          id={slot[:id]}
+          panel_title={slot[:panel_title]}
+          class={"#{slot[:class]} h-full border"}
+        >
+
           <%= render_slot(slot) %>
-        </.column>
+        </.collapsible_panel>
       <% end %>
-      <:column class="h-full">
-        <!-- Main area -->
+      <.collapsible_panel
+        id="job-editor-panel"
+        class="border h-full"
+        panel_title="Editor"
+      >
         <.live_component
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
@@ -97,32 +109,27 @@ defmodule LightningWeb.WorkflowLive.JobView do
           disabled={false}
           class="h-full"
         />
-      </:column>
-      <:column>
-        <!-- Right column area -->
-        <div>
-          <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
-            Output & Logs
+      </.collapsible_panel>
+      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border h-full">
+        <%= if @follow_run_id do %>
+          <div class="h-full">
+            <%= live_render(
+              @socket,
+              LightningWeb.RunLive.RunViewerLive,
+              id: "run-viewer-#{@follow_run_id}",
+              session: %{"run_id" => @follow_run_id},
+              sticky: true,
+              container: {:div, class: "h-full"}
+            ) %>
           </div>
-          <%= if @follow_run_id do %>
-            <div class="h-full">
-              <%= live_render(
-                @socket,
-                LightningWeb.RunLive.RunViewerLive,
-                id: "run-viewer-#{@follow_run_id}",
-                session: %{"run_id" => @follow_run_id},
-                sticky: true
-              ) %>
+        <% else %>
+          <div class="w-1/2 h-16 text-center m-auto pt-4">
+            <div class="text-gray-500 pb-2">
+              After you click run, the logs and output will be visible here.
             </div>
-          <% else %>
-            <div class="w-1/2 h-16 text-center m-auto pt-4">
-              <div class="text-gray-500 pb-2">
-                After you click run, the logs and output will be visible here.
-              </div>
-            </div>
-          <% end %>
-        </div>
-      </:column>
+          </div>
+        <% end %>
+      </.collapsible_panel>
       <:bottom>
         <%= render_slot(@footer) %>
       </:bottom>

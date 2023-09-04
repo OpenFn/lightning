@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
+  alias Phoenix.LiveView.JS
 
   def workflow_list(assigns) do
     ~H"""
@@ -421,4 +422,50 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   defp error_to_string({message, _}) when is_binary(message), do: message
   defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
+
+  slot :inner_block, required: true
+  attr :class, :string, default: ""
+  attr :id, :string, required: true
+  attr :panel_title, :string, required: true
+
+  def collapsible_panel(assigns) do
+    ~H"""
+    <div id={@id} lv-keep-class class={["w-full flex flex-col px-4 py-6 collapsible-panel", @class]}>
+    <div class="flex-0">
+      <div
+        id={"#{@id}-panel-header"}
+        class="flex justify-between items-center panel-header"
+      >
+        <div
+          id={"#{@id}-panel-header-title"}
+          class="text-center font-semibold text-secondary-700 mb-2 panel-header-title"
+        >
+          <%= @panel_title %>
+        </div>
+        <div class="close-button">
+          <a
+            id={"#{@id}-panel-collapse-icon"}
+            class="panel-collapse-icon"
+            href="#"
+            phx-click={JS.dispatch("collapse", to: "##{@id}")}
+          >
+            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+          </a>
+          <a
+            id={"#{@id}-panel-ezxpand-icon"}
+            href="#"
+            class="hidden panel-expand-icon"
+            phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
+          >
+            <Heroicons.plus class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+          </a>
+        </div>
+      </div>
+      </div>
+      <div id={"#{@id}-panel-content"} class="panel-content min-h-0 min-w-0 flex-1 pt-2">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
 end
