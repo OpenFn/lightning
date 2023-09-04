@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Handle, NodeProps } from 'reactflow';
 import Shape from '../components/Shape';
 import { nodeIconStyles, nodeLabelStyles } from '../styles';
+import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 type NodeData = any;
 
@@ -11,11 +12,56 @@ type BaseNodeProps = NodeProps<NodeData> & {
   label?: string;
   sublabel?: string;
   toolbar?: any;
+  errors?: any;
 };
 
-const Label = ({ children }: React.PropsWithChildren) => {
+type ErrorMessageProps = {
+  message?: string;
+};
+
+type ErrorObject = {
+  [key: string]: string[];
+};
+
+type LabelProps = React.PropsWithChildren<{
+  hasErrors?: boolean;
+}>;
+
+function errorsMessage(errors: ErrorObject): string {
+  const messages = Object.entries(errors).map(([key, errorArray]) => {
+    return `${key} ${errorArray.join(', ')}`;
+  });
+
+  return messages.join(', ');
+}
+
+const hasErrors = (errors: ErrorObject | null | undefined): boolean => {
+  if (!errors) return false;
+
+  return Object.values(errors).some(errorArray => errorArray.length > 0);
+};
+
+const Label: React.FC<LabelProps> = ({ children, hasErrors = false }) => {
+  const textColorClass = hasErrors ? 'text-red-500' : '';
+
   if (children && (children as any).length) {
-    return <p className="line-clamp-2 align-left text-m">{children}</p>;
+    return (
+      <p className={`line-clamp-2 align-left text-m ${textColorClass}`}>
+        {children}
+      </p>
+    );
+  }
+  return null;
+};
+
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
+  if (message && message.length) {
+    return (
+      <p className="line-clamp-2 align-left text-xs text-red-500 flex items-center">
+        <ExclamationCircleIcon className="mr-1 w-5" />
+        {message}
+      </p>
+    );
   }
   return null;
 };
@@ -44,9 +90,13 @@ const Node = ({
   label, // main label which appears to the right
   sublabel, // A smaller label to the right
   icon, // displayed inside the SVG shape
+
+  errors,
 }: BaseNodeProps) => {
-  const { width, height, anchorx, strokeWidth, style } =
-    nodeIconStyles(selected);
+  const { width, height, anchorx, strokeWidth, style } = nodeIconStyles(
+    selected,
+    hasErrors(errors)
+  );
 
   return (
     <div className="group">
@@ -108,7 +158,12 @@ const Node = ({
           />
         )}
         <div className="flex flex-col flex-1 justify-center ml-2">
-          <Label>{label}</Label>
+          <Label hasErrors={hasErrors(errors)}>{label}</Label>
+          {hasErrors(errors) && (
+            <ErrorMessage
+              message={errorsMessage(errors) || 'An error occurred'}
+            />
+          )}
           <SubLabel>{sublabel}</SubLabel>
         </div>
       </div>
