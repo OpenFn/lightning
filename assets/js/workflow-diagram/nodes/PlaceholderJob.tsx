@@ -9,6 +9,11 @@ import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
 type NodeData = any;
 
+type ValidationResult = {
+  isValid: boolean;
+  message: string;
+};
+
 const iconBaseStyle = 'mx-1';
 const iconNormalStyle =
   iconBaseStyle + ' text-primary-500 hover:text-primary-900';
@@ -31,12 +36,20 @@ const dispatch = (
 
 const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   const textRef = useRef<HTMLInputElement>();
-  const [validationResult, setValidationResult] = useState({
+
+  const [validationResult, setValidationResult] = useState<ValidationResult>({
     isValid: true,
     message: '',
   });
 
-  const handleKeyDown = evt => {
+  const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+    if (evt.target.value.trim() === '') {
+      setValidationResult({
+        isValid: false,
+        message: 'Name cannot be empty.',
+      });
+      return;
+    }
     if (evt.code === 'Enter') {
       validationResult.isValid && handleCommit();
     }
@@ -45,12 +58,11 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
     }
   };
 
-  const handleChange = evt => {
+  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     setValidationResult(validateName(evt.target.value));
   };
 
-  function validateName(name) {
-    // Validate maximum length
+  const validateName = (name: string): ValidationResult => {
     if (name.length > 100) {
       return {
         isValid: false,
@@ -58,7 +70,6 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
       };
     }
 
-    // Validate format
     const regex = /^[a-zA-Z0-9_\- ]*$/;
     if (!regex.test(name)) {
       return {
@@ -68,12 +79,11 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
       };
     }
 
-    // If both validations pass
     return {
       isValid: true,
       message: 'Valid name.',
     };
-  }
+  };
 
   // TODO what if a name hasn't been entered?
   const handleCommit = useCallback(() => {
