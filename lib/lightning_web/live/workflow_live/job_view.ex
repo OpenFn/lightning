@@ -31,7 +31,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.column>
           <% end %>
         </div>
-        <div class="h-14 flex border-t p-2 justify-end mt-4">
+        <div class="h-14 flex border-t p-2 justify-end">
           <%= render_slot(@bottom) %>
         </div>
       </div>
@@ -86,27 +86,27 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
         </div>
       </:top>
-      <:column class="panel-1-content-collapse overflow-y-scroll">
+      <:column class="panel-1-content-collapse overflow-y-auto border">
       <%= for slot <- @column do %>
-        <.column class={slot[:class]}>
+        <div class={slot[:class]}>
           <%= render_slot(slot) %>
-        </.column>
+        </div>
       <% end %>
       </:column>
-      <:column class="panel-2-content-collapse overflow-y-scroll">
+      <:column class="panel-2-content-collapse overflow-y-auto border">
         <!-- Main area -->
         <.live_component
           module={EditorPane}
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
           disabled={false}
-          class="h-full"
+          class="h-full pb-16"
         />
       </:column>
-      <:column class="panel-3-content-collapse overflow-y-scroll">
+      <:column class="panel-3-content-collapse overflow-y-auto border">
         <!-- Right column area -->
         <div>
-        <div class=" flex justify-between items-center header_3_class ">
+        <div class="flex justify-between items-center header_3_class ">
           <div class="text-xl text-center font-semibold text-secondary-700 mb-2 panel-3-header-title">
             Output & Logs
           </div>
