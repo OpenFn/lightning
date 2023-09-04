@@ -24,16 +24,21 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       )
 
     ~H"""
-    <div id={@id} class="h-full">
-      <div>
-        <div class="flex justify-between items-center">
-        <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+    <div id={@id}>
+        <div class="flex justify-between items-center header_1_class">
+        <div class="text-xl text-center font-semibold text-secondary-700 mb-2 panel-1-header-title">
           Input
         </div>
-        <div class="" phx-click={hide_panel_1()}>
-            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg"/>
+        <div class="panel_1_icons">
+          <div phx-click={hide_panel_1()}>
+            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg header-icon-before"/>
+          </div>
+          <div phx-click={show_panel_1()}>
+            <Heroicons.plus class="hidden w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg header-icon-after"/>
+          </div>
           </div>
         </div>
+        <div id="panel-1-content">
         <.form
           for={@form}
           id={@form.id}
@@ -98,7 +103,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             </div>
           </div>
         </.form>
-      </div>
+        </div>
     </div>
     """
   end
