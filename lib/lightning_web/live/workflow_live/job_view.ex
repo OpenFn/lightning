@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
   use LightningWeb, :component
   alias LightningWeb.WorkflowLive.EditorPane
 
+  import LightningWeb.WorkflowLive.Components
+
   attr :id, :string, required: true
   slot :top
 
@@ -83,12 +85,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
         </div>
       </:top>
+      <:column class="panel-1-content">
       <%= for slot <- @column do %>
         <.column class={slot[:class]}>
           <%= render_slot(slot) %>
         </.column>
       <% end %>
-      <:column class="h-full">
+      </:column>
+      <:column class="h-full panel-2-content">
         <!-- Main area -->
         <.live_component
           module={EditorPane}
@@ -98,12 +102,18 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </:column>
-      <:column>
+      <:column class="panel-3-content">
         <!-- Right column area -->
         <div>
+        <div class=" flex justify-between items-center">
           <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
             Output & Logs
           </div>
+          <div phx-click={hide_panel_3()}>
+            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg"/>
+          </div>
+        </div>
+
           <%= if @follow_run_id do %>
             <div class="h-full">
               <%= live_render(

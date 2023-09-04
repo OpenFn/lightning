@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   use LightningWeb, :component
 
   import LightningWeb.Components.NewInputs
+  import LightningWeb.WorkflowLive.Components
 
   attr :id, :string, required: true
   attr :dataclips, :list, default: []
@@ -25,8 +26,13 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
     ~H"""
     <div id={@id} class="h-full">
       <div>
+        <div class="flex justify-between items-center">
         <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
           Input
+        </div>
+        <div class="" phx-click={hide_panel_1()}>
+            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg"/>
+          </div>
         </div>
         <.form
           for={@form}
