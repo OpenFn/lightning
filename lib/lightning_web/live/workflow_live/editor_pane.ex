@@ -15,16 +15,20 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   def render(assigns) do
     ~H"""
     <div class="h-full" id={@id}>
-    <div class="flex justify-between items-center">
-    <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+    <div class="flex justify-between items-center header_2_class">
+    <div class="text-xl text-center font-semibold text-secondary-700 panel-2-header-title">
         Editor
       </div>
-      <div phx-click={hide_panel_2()}>
-        <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg"/>
-      </div>
+      <div class="panel_2_icons">
+        <div phx-click={hide_panel_2()}>
+          <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg header-icon-before-2"/>
+        </div>
+        <div phx-click={show_panel_2()}>
+          <Heroicons.plus class="hidden w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg header-icon-after-2"/>
+        </div>
+        </div>
     </div>
-
-      <div class={@class}>
+    <div class={@class} id="panel-2-content">
         <JobBuilderComponents.job_editor_component
           adaptor={@adaptor}
           source={@source}
@@ -32,7 +36,8 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
           disabled={@disabled}
           phx-target={@myself}
         />
-      </div>
+    </div>
+
     </div>
     """
   end

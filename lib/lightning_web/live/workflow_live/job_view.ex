@@ -31,7 +31,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             </.column>
           <% end %>
         </div>
-        <div class="h-14 flex border-t p-2 justify-end">
+        <div class="h-14 flex border-t p-2 justify-end mt-4">
           <%= render_slot(@bottom) %>
         </div>
       </div>
@@ -44,9 +44,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp column(assigns) do
     ~H"""
-    <div class={["flex-1 px-4 py-6", @class]}>
+    <div class={["flex-1 px-4 pt-4", @class]}>
       <%= render_slot(@inner_block) %>
     </div>
+
     """
   end
 
@@ -85,14 +86,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
         </div>
       </:top>
-      <:column class="panel-1-content">
+      <:column class="panel-1-content-collapse overflow-y-scroll">
       <%= for slot <- @column do %>
         <.column class={slot[:class]}>
           <%= render_slot(slot) %>
         </.column>
       <% end %>
       </:column>
-      <:column class="h-full panel-2-content">
+      <:column class="panel-2-content-collapse overflow-y-scroll">
         <!-- Main area -->
         <.live_component
           module={EditorPane}
@@ -102,19 +103,24 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </:column>
-      <:column class="panel-3-content">
+      <:column class="panel-3-content-collapse overflow-y-scroll">
         <!-- Right column area -->
         <div>
-        <div class=" flex justify-between items-center">
-          <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+        <div class=" flex justify-between items-center header_3_class ">
+          <div class="text-xl text-center font-semibold text-secondary-700 mb-2 panel-3-header-title">
             Output & Logs
           </div>
+          <div class="panel_3_icons">
           <div phx-click={hide_panel_3()}>
-            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg"/>
+            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg header-icon-before-3"/>
+          </div>
+          <div phx-click={show_panel_3()}>
+            <Heroicons.plus class="hidden w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg header-icon-after-3"/>
+          </div>
           </div>
         </div>
-
-          <%= if @follow_run_id do %>
+        <div id="panel-3-content">
+        <%= if @follow_run_id do %>
             <div class="h-full">
               <%= live_render(
                 @socket,
@@ -131,6 +137,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
               </div>
             </div>
           <% end %>
+        </div>
+
         </div>
       </:column>
       <:bottom>

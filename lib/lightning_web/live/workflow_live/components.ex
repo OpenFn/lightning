@@ -426,24 +426,75 @@ defmodule LightningWeb.WorkflowLive.Components do
 
 
 
-def hide_panel_1(js \\ %JS{}) do
-  js
-  |> JS.hide(transition: "fade-out", to: ".panel-1-content")
-  end
 
-  def hide_panel_2(js \\ %JS{}) do
+  def hide_panel_1(js \\ %JS{}) do
   js
-  |> JS.hide(transition: "fade-out", to: ".panel-2-content")
-  end
-
-  def hide_panel_3(js \\ %JS{}) do
-  js
-  |> JS.hide(transition: "fade-out", to: ".panel-3-content")
+  |> JS.hide(to: "#panel-1-content")
+  |> JS.remove_class("flex-1", to: ".panel-1-content-collapse")
+  |> JS.remove_class("hidden", to: ".header-icon-after")
+  |> JS.add_class("hidden", to: ".header-icon-before")
+  |> JS.add_class("flex-col-reverse", to: ".header_1_class")
+  |> JS.add_class("-rotate-90", to: ".panel-1-header-title")
+  |> JS.add_class("pb-4", to: ".panel_1_icons")
   end
 
   def show_panel_1(js \\ %JS{}) do
   js
-  # |> JS.add_class("block", to: ".show-collapse-1")
-  |> JS.show(transition: "fade-in", to: ".panel-1-content")
+  |> JS.show(to: "#panel-1-content")
+  |> JS.add_class("flex-1", to: ".panel-1-content-collapse")
+  |> JS.remove_class("hidden", to: ".header-icon-before")
+  |> JS.add_class("hidden", to: ".header-icon-after")
+  |> JS.remove_class("flex-col-reverse", to: ".header_1_class")
+  |> JS.remove_class("-rotate-90", to: ".panel-1-header-title")
+  |> JS.remove_class("pb-4", to: ".panel_1_icons")
   end
+
+
+  def hide_panel_3(js \\ %JS{}) do
+    js
+    |> JS.hide(to: "#panel-3-content")
+    |> JS.remove_class("flex-1", to: ".panel-3-content-collapse")
+    |> JS.remove_class("hidden", to: ".header-icon-after-3")
+    |> JS.add_class("hidden", to: ".header-icon-before-3")
+    |> JS.add_class("flex-col-reverse", to: ".header_3_class")
+    |> JS.add_class("-rotate-90", to: ".panel-3-header-title")
+    |> JS.add_class("mb-16", to: ".panel_3_icons")
+    end
+
+    def show_panel_3(js \\ %JS{}) do
+      js
+      |> JS.show(to: "#panel-3-content")
+      |> JS.add_class("flex-1", to: ".panel-3-content-collapse")
+      |> JS.add_class("column", to: ".panel-3-content-collapse")
+      |> JS.remove_class("hidden", to: ".header-icon-before-3")
+      |> JS.add_class("hidden", to: ".header-icon-after-3")
+      |> JS.remove_class("flex-col-reverse", to: ".header_3_class")
+      |> JS.remove_class("-rotate-90", to: ".panel-3-header-title")
+      |> JS.remove_class("mb-16", to: ".panel_3_icons")
+      end
+
+
+
+    def hide_panel_2(js \\ %JS{}) do
+    js
+    |> JS.hide(to: "#panel-2-content")
+    |> JS.remove_class("flex-1", to: ".panel-2-content-collapse")
+    |> JS.remove_class("hidden", to: ".header-icon-after-2")
+    |> JS.add_class("hidden", to: ".header-icon-before-2")
+    |> JS.add_class("flex-col-reverse", to: ".header_2_class")
+    |> JS.add_class("-rotate-90", to: ".panel-2-header-title")
+    |> JS.add_class("mb-8", to: ".panel_2_icons")
+    end
+
+    def show_panel_2(js \\ %JS{}) do
+      js
+      |> JS.show(to: "#panel-2-content")
+      |> JS.add_class("flex-1", to: ".panel-2-content-collapse")
+      |> JS.add_class("column", to: ".panel-2-content-collapse")
+      |> JS.remove_class("hidden", to: ".header-icon-before-2")
+      |> JS.add_class("hidden", to: ".header-icon-after-2")
+      |> JS.remove_class("flex-col-reverse", to: ".header_2_class")
+      |> JS.remove_class("-rotate-90", to: ".panel-2-header-title")
+      |> JS.remove_class("mb-8", to: ".panel_2_icons")
+      end
 end
