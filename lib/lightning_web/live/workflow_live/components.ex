@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
+  alias Phoenix.LiveView.JS
 
   def workflow_list(assigns) do
     ~H"""
@@ -421,4 +422,28 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   defp error_to_string({message, _}) when is_binary(message), do: message
   defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
+
+
+
+
+def hide_panel_1(js \\ %JS{}) do
+  js
+  |> JS.hide(transition: "fade-out", to: ".panel-1-content")
+  end
+
+  def hide_panel_2(js \\ %JS{}) do
+  js
+  |> JS.hide(transition: "fade-out", to: ".panel-2-content")
+  end
+
+  def hide_panel_3(js \\ %JS{}) do
+  js
+  |> JS.hide(transition: "fade-out", to: ".panel-3-content")
+  end
+
+  def show_panel_1(js \\ %JS{}) do
+  js
+  # |> JS.add_class("block", to: ".show-collapse-1")
+  |> JS.show(transition: "fade-in", to: ".panel-1-content")
+  end
 end
