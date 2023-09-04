@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.JobView do
   use LightningWeb, :component
   alias LightningWeb.WorkflowLive.EditorPane
+  import LightningWeb.WorkflowLive.Components
 
   attr :id, :string, required: true
   slot :top
@@ -51,10 +52,10 @@ defmodule LightningWeb.WorkflowLive.JobView do
       <:top>
         <div class="flex h-14 place-content-stretch">
           <div class="basis-1/3 flex items-center gap-4 pl-4">
-          <a href="" class="flex gap-2 p-2 bg-gray-200 rounded items-center">
-            <Heroicons.arrow_right class="w-4 h-4 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
-            <p class="text-xs font-medium">History</p>
-          </a>
+            <a href="" class="flex gap-2 p-2 bg-gray-200 rounded items-center">
+              <Heroicons.arrow_right class="w-4 h-4 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
+              <p class="text-xs font-medium">History</p>
+            </a>
             <.adaptor_block adaptor={@job.adaptor} />
             <.credential_block credential={@job.credential} />
           </div>
@@ -70,15 +71,15 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
         </div>
       </:top>
-      <:column>
-        <.input_pane
+      <:column class="panel-1-content">
+      <.input_pane
           job={@job}
           on_run={@on_run}
           user={@current_user}
           project={@project}
         />
       </:column>
-      <:column class="h-full">
+      <:column class="h-full panel-2-content">
         <!-- Main area -->
         <.live_component
           module={EditorPane}
@@ -88,16 +89,16 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </:column>
-      <:column>
+      <:column class="panel-3-content">
         <!-- Right column area -->
         <div>
-        <div class="flex justify-between">
-          <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
-            Output & Logs
-          </div>
-          <div>
-            <Heroicons.minus_small class="w-6 h-6 text-gray-500" />
-          </div>
+          <div class="flex justify-between">
+            <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+              Output & Logs
+            </div>
+            <div phx-click={hide_panel_3()}>
+              <Heroicons.minus_small class="w-10 text-gray-500 p-2 hover:bg-gray-100 rounded-lg" />
+            </div>
           </div>
           <%= if @follow_run_id do %>
             <div class="h-full">
@@ -147,30 +148,34 @@ defmodule LightningWeb.WorkflowLive.JobView do
           []
       end)
 
+
     ~H"""
-    <div class="">
-    <div class="flex justify-between">
-      <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
-        Input
+    <div id="panel_1"
+    >
+      <div class="flex justify-between">
+        <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+          Input
+        </div>
+        <div class="p-1" phx-click={hide_panel_1()}>
+          <Heroicons.minus_small class="w-10 text-gray-500 p-2 hover:bg-gray-100 rounded-lg" />
+        </div>
       </div>
       <div>
-        <Heroicons.minus_small class="w-6 h-6 text-gray-500" />
+        <%= if @is_persisted do %>
+          <.live_component
+            module={LightningWeb.JobLive.ManualRunComponent}
+            id={"manual-job-#{@job.id}"}
+            job={@job}
+            dataclips={@dataclips}
+            project={@project}
+            user={@user}
+            on_run={@on_run}
+            can_run_job={@can_run_job}
+          />
+        <% else %>
+          <p>Please save your Job first.</p>
+        <% end %>
       </div>
-      </div>
-      <%= if @is_persisted do %>
-        <.live_component
-          module={LightningWeb.JobLive.ManualRunComponent}
-          id={"manual-job-#{@job.id}"}
-          job={@job}
-          dataclips={@dataclips}
-          project={@project}
-          user={@user}
-          on_run={@on_run}
-          can_run_job={@can_run_job}
-        />
-      <% else %>
-        <p>Please save your Job first.</p>
-      <% end %>
     </div>
     """
   end

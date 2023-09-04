@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
   alias LightningWeb.JobLive.JobBuilderComponents
+  import LightningWeb.WorkflowLive.Components
 
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
@@ -15,14 +16,13 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
     ~H"""
     <div class="h-full">
       <div class="flex justify-between">
-      <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
-        Editor
+        <div class="text-xl text-center font-semibold text-secondary-700 mb-2">
+          Editor
+        </div>
+        <div phx-click={hide_panel_2()}>
+          <Heroicons.minus_small class="w-10 text-gray-500 p-2 hover:bg-gray-100 rounded-lg" />
+        </div>
       </div>
-      <div>
-        <Heroicons.minus_small class="w-6 h-6 text-gray-500" />
-      </div>
-      </div>
-
 
       <div class={@class} id={@id}>
         <JobBuilderComponents.job_editor_component
