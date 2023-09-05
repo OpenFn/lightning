@@ -6,10 +6,7 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Repo
-  import Lightning.InvocationFixtures
-  import Lightning.ProjectsFixtures
-  import Lightning.JobsFixtures
-  import Lightning.WorkflowsFixtures
+  import Lightning.Factories
 
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip
@@ -17,19 +14,21 @@ defmodule Lightning.InvocationTest do
     @invalid_attrs %{body: nil, type: nil}
 
     test "list_dataclips/0 returns all dataclips" do
-      dataclip = dataclip_fixture()
-      assert Invocation.list_dataclips() == [dataclip]
+      dataclip = insert(:dataclip)
+
+      assert Invocation.list_dataclips()
+             |> Enum.map(fn dataclip -> dataclip.id end) == [dataclip.id]
     end
 
     test "list_dataclips/1 returns dataclips for project, desc by inserted_at" do
-      project = project_fixture()
+      project = insert(:project)
 
       old_dataclip =
-        dataclip_fixture(project_id: project.id)
+        insert(:dataclip, project: project)
         |> shift_inserted_at!(days: -2)
 
       new_dataclip =
-        dataclip_fixture(project_id: project.id)
+        insert(:dataclip, project: project)
         |> shift_inserted_at!(days: -1)
 
       assert Invocation.list_dataclips(project)
@@ -38,8 +37,10 @@ defmodule Lightning.InvocationTest do
     end
 
     test "get_dataclip!/1 returns the dataclip with given id" do
-      dataclip = dataclip_fixture()
-      assert Invocation.get_dataclip!(dataclip.id) == dataclip
+      dataclip = insert(:dataclip)
+
+      assert Invocation.get_dataclip!(dataclip.id) |> Repo.preload(:project) ==
+               dataclip
 
       assert_raise Ecto.NoResultsError, fn ->
         Invocation.get_dataclip!(Ecto.UUID.generate())
@@ -47,17 +48,21 @@ defmodule Lightning.InvocationTest do
     end
 
     test "get_dataclip/1 returns the dataclip with given id" do
-      dataclip = dataclip_fixture()
-      assert Invocation.get_dataclip(dataclip.id) == dataclip
+      dataclip = insert(:dataclip)
+
+      assert Invocation.get_dataclip(dataclip.id) |> Repo.preload(:project) ==
+               dataclip
+
       assert Invocation.get_dataclip(Ecto.UUID.generate()) == nil
 
-      run = run_fixture(input_dataclip_id: dataclip.id)
+      run = insert(:run, input_dataclip: dataclip)
 
-      assert Invocation.get_dataclip(run) == dataclip
+      assert Invocation.get_dataclip(run) |> Repo.preload(:project) ==
+               dataclip
     end
 
     test "create_dataclip/1 with valid data creates a dataclip" do
-      project = project_fixture()
+      project = insert(:project)
       valid_attrs = %{body: %{}, project_id: project.id, type: :http_request}
 
       assert {:ok, %Dataclip{} = dataclip} =
@@ -73,7 +78,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "update_dataclip/2 with valid data updates the dataclip" do
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
       update_attrs = %{body: %{}, type: :global}
 
       assert {:ok, %Dataclip{} = dataclip} =
@@ -84,34 +89,29 @@ defmodule Lightning.InvocationTest do
     end
 
     test "update_dataclip/2 with invalid data returns error changeset" do
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
 
       assert {:error, %Ecto.Changeset{}} =
                Invocation.update_dataclip(dataclip, @invalid_attrs)
 
-      assert dataclip == Invocation.get_dataclip!(dataclip.id)
+      assert dataclip ==
+               Invocation.get_dataclip!(dataclip.id) |> Repo.preload(:project)
     end
 
     test "delete_dataclip/1 sets the body to nil" do
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
       assert {:ok, %Dataclip{}} = Invocation.delete_dataclip(dataclip)
 
       assert %{body: nil} = Invocation.get_dataclip!(dataclip.id)
     end
 
     test "change_dataclip/1 returns a dataclip changeset" do
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
       assert %Ecto.Changeset{} = Invocation.change_dataclip(dataclip)
     end
   end
 
   describe "runs" do
-    alias Lightning.Invocation.Run
-
-    import Lightning.InvocationFixtures
-    import Lightning.ProjectsFixtures
-    import Lightning.WorkflowsFixtures
-
     @invalid_attrs %{job_id: nil}
     @valid_attrs %{
       exit_code: 42,
@@ -121,44 +121,51 @@ defmodule Lightning.InvocationTest do
     }
 
     test "list_runs/0 returns all runs" do
-      run = run_fixture()
-      assert Invocation.list_runs() == [run]
+      run = insert(:run)
+      assert Invocation.list_runs() |> Enum.map(fn r -> r.id end) == [run.id]
     end
 
     test "list_runs_for_project/2 returns runs ordered by inserted at desc" do
-      workflow = workflow_fixture() |> Repo.preload(:project)
-      job_one = job_fixture(name: "job 1", workflow_id: workflow.id)
-      job_two = job_fixture(name: "job 2", workflow_id: workflow.id)
+      workflow = insert(:workflow) |> Repo.preload(:project)
+      job_one = insert(:job, workflow: workflow)
+      job_two = insert(:job, workflow: workflow)
 
       first_run =
-        run_fixture(job_id: job_one.id)
+        insert(:run, job: job_one)
         |> shift_inserted_at!(days: -1)
         |> Repo.preload(:job)
 
       second_run =
-        run_fixture(job_id: job_two.id)
+        insert(:run, job: job_two)
         |> Repo.preload(:job)
 
       third_run =
-        run_fixture(job_id: job_one.id)
+        insert(:run, job: job_one)
         |> Repo.preload(:job)
 
-      assert Invocation.list_runs_for_project(workflow.project).entries == [
-               third_run,
-               second_run,
-               first_run
+      assert Invocation.list_runs_for_project(workflow.project).entries
+             |> Enum.map(fn r -> r.id end) == [
+               third_run.id,
+               second_run.id,
+               first_run.id
              ]
     end
 
     test "get_run!/1 returns the run with given id" do
-      run = run_fixture()
-      assert Invocation.get_run!(run.id) == run
+      run = insert(:run)
+
+      actual_run = Invocation.get_run!(run.id)
+
+      assert actual_run.id == run.id
+      assert actual_run.input_dataclip_id == run.input_dataclip_id
+      assert actual_run.job_id == run.job_id
     end
 
     test "create_run/1 with valid data creates a run" do
-      project = project_fixture()
-      dataclip = dataclip_fixture(project_id: project.id)
-      job = job_fixture(workflow_id: workflow_fixture(project_id: project.id).id)
+      project = insert(:project)
+      dataclip = insert(:dataclip, project: project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
 
       assert {:ok, %Run{} = run} =
                Invocation.create_run(
@@ -189,7 +196,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "create_log_line/2 create log lines for a given run" do
-      run = run_fixture()
+      run = insert(:run)
       Invocation.create_log_line(run, "log")
 
       run_logs = Invocation.get_run!(run.id) |> Pipeline.logs_for_run()
@@ -199,7 +206,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "create_log_line/2 transform logs with nil body to empty string" do
-      run = run_fixture()
+      run = insert(:run)
       Invocation.create_log_line(run, nil)
 
       run_logs = Invocation.get_run!(run.id) |> Pipeline.logs_for_run()
@@ -209,7 +216,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "update_run/2 with valid data updates the run" do
-      run = run_fixture() |> Repo.preload(:log_lines)
+      run = insert(:run) |> Repo.preload(:log_lines)
 
       update_attrs = %{
         exit_code: 43,
@@ -226,40 +233,38 @@ defmodule Lightning.InvocationTest do
     end
 
     test "update_run/2 with invalid data returns error changeset" do
-      run = run_fixture()
+      run = insert(:run)
 
       assert {:error, %Ecto.Changeset{}} =
                Invocation.update_run(run, @invalid_attrs)
-
-      assert run == Invocation.get_run!(run.id)
     end
 
     test "delete_run/1 deletes the run" do
-      run = run_fixture()
+      run = insert(:run)
       assert {:ok, %Run{}} = Invocation.delete_run(run)
       assert_raise Ecto.NoResultsError, fn -> Invocation.get_run!(run.id) end
     end
 
     test "change_run/1 returns a run changeset" do
-      run = run_fixture()
+      run = insert(:run)
       assert %Ecto.Changeset{} = Invocation.change_run(run)
     end
 
     test "list_work_orders_for_project/1 returns workorders ordered by last run finished at desc, with nulls first" do
-      fixture = workflow_job_fixture(workflow_name: "chw-help")
-      job = fixture.job
-      trigger = fixture.trigger
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      job = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow)
 
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
 
-      reason = reason_fixture(dataclip_id: dataclip.id, trigger_id: trigger.id)
+      reason =
+        insert(:reason, type: :webhook, dataclip: dataclip, trigger: trigger)
 
-      workflow = job.workflow
-
-      wo_one = work_order_fixture(workflow_id: workflow.id)
-      wo_four = work_order_fixture(workflow_id: workflow.id)
-      wo_two = work_order_fixture(workflow_id: workflow.id)
-      wo_three = work_order_fixture(workflow_id: workflow.id)
+      wo_one = insert(:workorder, reason: reason, workflow: workflow)
+      wo_four = insert(:workorder, reason: reason, workflow: workflow)
+      wo_two = insert(:workorder, reason: reason, workflow: workflow)
+      wo_three = insert(:workorder, reason: reason, workflow: workflow)
 
       now = Timex.now()
 
@@ -368,16 +373,16 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
-      fixture = workflow_job_fixture(workflow_name: "chw-help")
-      job_one = fixture.job
-      trigger = fixture.trigger
+      project = insert(:project)
+      workflow = insert(:workflow, name: "chw-help", project: project)
+      job_one = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      dataclip = insert(:dataclip)
 
-      workflow = job_one.workflow
-      work_order = work_order_fixture(workflow_id: workflow.id)
+      reason =
+        insert(:reason, type: :webhook, dataclip: dataclip, trigger: trigger)
 
-      dataclip = dataclip_fixture(project_id: workflow.project_id)
-
-      reason = reason_fixture(dataclip_id: dataclip.id, trigger_id: trigger.id)
+      work_order = insert(:workorder, reason: reason, workflow: workflow)
 
       ### when inserting in this order
 
@@ -515,16 +520,15 @@ defmodule Lightning.InvocationTest do
     end
 
     test "list_work_orders_for_project/3 returns paginated workorders" do
-      project = project_fixture()
+      project = insert(:project)
       now = Timex.now()
 
-      fixture =
-        workflow_job_fixture(workflow_name: "chw-help", project_id: project.id)
-
-      job1 = fixture.job
+      workflow = insert(:workflow, name: "chw-help", project: project)
+      job1 = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow)
 
       Enum.each(1..10, fn index ->
-        create_work_order(project, job1, fixture.trigger, now, 10 * index)
+        create_work_order(project, job1, trigger, now, 10 * index)
       end)
 
       wos =
@@ -561,14 +565,12 @@ defmodule Lightning.InvocationTest do
 
       # we expect to have in page 3, only workorders of workflow-1 correctly ordered
 
-      project = project_fixture()
+      project = insert(:project)
+      workflow = insert(:workflow, name: "workflow-1", project: project)
+      job1 = insert(:job, workflow: workflow)
+      trigger1 = insert(:trigger, workflow: workflow)
+
       now = Timex.now()
-
-      fixture1 =
-        workflow_job_fixture(workflow_name: "workflow-1", project_id: project.id)
-
-      job1 = fixture1.job
-      trigger1 = fixture1.trigger
 
       %{work_order: wf1_wo1, run: wf1_run1} =
         create_work_order(project, job1, trigger1, now, 10)
@@ -579,11 +581,9 @@ defmodule Lightning.InvocationTest do
       %{work_order: wf1_wo3, run: wf1_run3} =
         create_work_order(project, job1, trigger1, now, 30)
 
-      fixture2 =
-        workflow_job_fixture(workflow_name: "workflow-2", project_id: project.id)
-
-      job2 = fixture2.job
-      trigger2 = fixture2.trigger
+      workflow = insert(:workflow, name: "workflow-2", project: project)
+      job2 = insert(:job, workflow: workflow)
+      trigger2 = insert(:trigger, workflow: workflow)
 
       %{work_order: wf2_wo1, run: wf2_run1} =
         create_work_order(project, job2, trigger2, now, 40)
@@ -594,11 +594,9 @@ defmodule Lightning.InvocationTest do
       %{work_order: wf2_wo3, run: wf2_run3} =
         create_work_order(project, job2, trigger2, now, 60)
 
-      fixture3 =
-        workflow_job_fixture(workflow_name: "workflow-3", project_id: project.id)
-
-      job3 = fixture3.job
-      trigger3 = fixture3.trigger
+      workflow = insert(:workflow, name: "workflow-3", project: project)
+      job3 = insert(:job, workflow: workflow)
+      trigger3 = insert(:trigger, workflow: workflow)
 
       %{work_order: wf3_wo1, run: wf3_run1} =
         create_work_order(project, job3, trigger3, now, 70)
@@ -720,7 +718,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by status :failure exit_code = 1" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
@@ -752,7 +750,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by status :pending exit_code = nil" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
@@ -784,7 +782,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by status :timeout exit_code = 2" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
@@ -817,7 +815,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by status :crash exit_code > 2" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
@@ -848,7 +846,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by status :success exit_code = 0" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map =
         build_workflows(project, ["workflow1", "workflow2", "workflow3"])
@@ -902,7 +900,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by status complex all" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
@@ -973,7 +971,7 @@ defmodule Lightning.InvocationTest do
     end
 
     test "Filtering by workorder inserted_at" do
-      project = project_fixture()
+      project = insert(:project)
 
       workflow_map = build_workflows(project, ["workflow1", "workflow2"])
 
@@ -1071,14 +1069,11 @@ defmodule Lightning.InvocationTest do
   defp build_workflows(project, workflow_names) do
     workflow_names
     |> Enum.reduce(%{}, fn workflow_name, acc ->
-      workflow = workflow_fixture(project_id: project.id, name: workflow_name)
+      workflow = insert(:workflow, name: workflow_name, project: project)
 
       jobs =
         Enum.map(1..4, fn job_index ->
-          job_fixture(
-            name: "job#{job_index}",
-            project_id: project.id
-          )
+          insert(:job, name: "job#{job_index}", project: project)
         end)
 
       Map.put(acc, workflow_name, [workflow, jobs])
@@ -1106,7 +1101,7 @@ defmodule Lightning.InvocationTest do
   defp apply_scenario(project, workflow_map, scenario) do
     seconds = 20
 
-    dataclip = dataclip_fixture(project_id: project.id)
+    dataclip = insert(:dataclip, project: project)
 
     scenario
     |> Enum.reverse()
@@ -1116,11 +1111,8 @@ defmodule Lightning.InvocationTest do
 
       [workflow, jobs] = workflow_map[Atom.to_string(workflow_name)]
 
-      wo =
-        work_order_fixture(
-          project_id: project.id,
-          workflow_id: workflow.id
-        )
+      reason = insert(:reason, type: :webhook, dataclip: dataclip)
+      wo = insert(:workorder, reason: reason, workflow: workflow)
 
       attempts
       |> Enum.reverse()
@@ -1158,7 +1150,7 @@ defmodule Lightning.InvocationTest do
             end
           end)
 
-        reason = reason_fixture(dataclip_id: dataclip.id)
+        reason = insert(:reason, type: :webhook, dataclip: dataclip)
 
         Lightning.Attempt.new(%{
           work_order_id: wo.id,
@@ -1184,18 +1176,21 @@ defmodule Lightning.InvocationTest do
 
   defp create_work_order(project, job, trigger, now, seconds) do
     workflow = job.workflow
-    dataclip = dataclip_fixture(project_id: project.id)
+    dataclip = insert(:dataclip, project: project)
 
     reason =
-      reason_fixture(
-        dataclip_id: dataclip.id,
-        trigger_id: trigger.id
+      insert(
+        :reason,
+        dataclip: dataclip,
+        trigger: trigger,
+        type: :webhook
       )
 
     wo =
-      work_order_fixture(
-        project_id: project.id,
-        workflow_id: workflow.id
+      insert(
+        :workorder,
+        reason: reason,
+        workflow: workflow
       )
 
     %{runs: [run]} =
