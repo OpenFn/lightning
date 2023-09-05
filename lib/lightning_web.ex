@@ -16,7 +16,9 @@ defmodule LightningWeb do
   below. Instead, define any helper function in modules
   and import those modules here.
   """
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  def static_paths,
+    do: ~w(assets fonts images favicon.ico apple-touch-icon.png favicon-32x32.png
+      favicon-16x16.png safari-pinned-tab.svg robots.txt)
 
   def router do
     quote do
