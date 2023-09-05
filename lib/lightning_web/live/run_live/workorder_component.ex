@@ -230,7 +230,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   <p class="text-sm py-2 text-gray-800">
                     Attempt <%= index %> of <%= Enum.count(@attempts) %>
                   </p>
-                  <p>.</p>
                   <div class="text-sm">
                     <%= if last_run = List.last(attempt.runs) do %>
                       <.timestamp timestamp={last_run.finished_at} />

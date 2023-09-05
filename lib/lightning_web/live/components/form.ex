@@ -409,10 +409,9 @@ defmodule LightningWeb.Components.Form do
   def select_field(assigns) do
     select_classes = ~w[
       mt-1
-      text-gray-700
       block
       w-full
-      rounded-lg
+      rounded-md
       border-secondary-300
       shadow-sm
       text-md

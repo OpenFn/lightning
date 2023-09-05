@@ -1864,7 +1864,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           }
         )
 
-      assert html =~ "whose run Input Body contain TestSearch"
+      assert html =~ "whose run Input contain TestSearch"
 
       html =
         render_component(
@@ -1878,7 +1878,7 @@ defmodule LightningWeb.RunWorkOrderTest do
           }
         )
 
-      assert html =~ "whose run Input Body and Logs contain TestSearch"
+      assert html =~ "whose run Input and Logs contain TestSearch"
 
       # workflow
       html =

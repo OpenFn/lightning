@@ -58,7 +58,7 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     search_fields = [
-      %{id: :body, label: "Input body", value: true},
+      %{id: :body, label: "Input", value: true},
       %{id: :log, label: "Logs", value: true}
     ]
 
