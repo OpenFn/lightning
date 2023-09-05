@@ -1,11 +1,23 @@
-import React, { memo, useCallback, useRef } from 'react';
+import React, { memo, useCallback, useRef, useState } from 'react';
 import { Handle, NodeProps, Position } from 'reactflow';
-import { CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  CheckCircleIcon,
+  InformationCircleIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { NODE_HEIGHT, NODE_WIDTH } from '../constants';
 
 type NodeData = any;
 
-const iconStyle = 'mx-1 text-primary-500 hover:text-primary-900';
+type ValidationResult = {
+  isValid: boolean;
+  message: string;
+};
+
+const iconBaseStyle = 'mx-1';
+const iconNormalStyle =
+  iconBaseStyle + ' text-primary-500 hover:text-primary-900';
+const iconErrorStyle = iconBaseStyle + 'text-red-500 hover:text-red-600';
 
 // Dispatch an event up to the WorkflowDiagram
 // This works better than interfacing to the store correctly
@@ -25,13 +37,52 @@ const dispatch = (
 const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
   const textRef = useRef<HTMLInputElement>();
 
-  const handleKeyDown = evt => {
+  const [validationResult, setValidationResult] = useState<ValidationResult>({
+    isValid: true,
+    message: '',
+  });
+
+  const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
+    if (evt.target.value.trim() === '') {
+      setValidationResult({
+        isValid: false,
+        message: 'Name cannot be empty.',
+      });
+      return;
+    }
     if (evt.code === 'Enter') {
-      handleCommit();
+      validationResult.isValid && handleCommit();
     }
     if (evt.code === 'Escape') {
       handleCancel();
     }
+  };
+
+  const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    setValidationResult(validateName(evt.target.value));
+  };
+
+  const validateName = (name: string): ValidationResult => {
+    if (name.length > 100) {
+      return {
+        isValid: false,
+        message: 'Name should not exceed 100 characters.',
+      };
+    }
+
+    const regex = /^[a-zA-Z0-9_\- ]*$/;
+    if (!regex.test(name)) {
+      return {
+        isValid: false,
+        message:
+          'Name can only contain alphanumeric characters, underscores, dashes, and spaces.',
+      };
+    }
+
+    return {
+      isValid: true,
+      message: 'Valid name.',
+    };
   };
 
   // TODO what if a name hasn't been entered?
@@ -63,7 +114,9 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
         'text-xs',
         'border-dashed',
         'border-2',
-        'border-indigo-500',
+        validationResult.isValid
+          ? 'border-indigo-500'
+          : 'border-red-500 text-red-500',
         selected ? 'border-opacity-70' : 'border-opacity-30',
       ].join(' ')}
       style={{
@@ -104,7 +157,11 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
             .join(' ')}
         >
           <XMarkIcon
-            className={`${iconStyle}`}
+            className={
+              validationResult.isValid
+                ? `${iconNormalStyle}`
+                : `${iconErrorStyle}`
+            }
             title="Cancel creation of this job"
             onClick={handleCancel}
           />
@@ -124,12 +181,20 @@ const PlaceholderJobNode = ({ id, selected }: NodeProps<NodeData>) => {
               'text-xs',
             ].join(' ')}
             onKeyDown={handleKeyDown}
+            onChange={handleChange}
           />
-          <CheckCircleIcon
-            className={`${iconStyle}`}
-            title="Create this job"
-            onClick={handleCommit}
-          />
+          {validationResult.isValid ? (
+            <CheckCircleIcon
+              className={iconNormalStyle}
+              title="Create this job"
+              onClick={handleCommit}
+            />
+          ) : (
+            <InformationCircleIcon
+              className={iconErrorStyle}
+              title={validationResult.message}
+            />
+          )}
         </div>
       </div>
     </div>
