@@ -87,4 +87,24 @@ defmodule LightningWeb.CoreComponents do
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
     |> JS.pop_focus()
   end
+
+  def show_dropdown(js \\ %JS{}, id) when is_binary(id) do
+    js
+    |> JS.show(
+      to: "##{id}",
+      transition:
+        {"transition ease-out duration-100", "transform opacity-0 scale-95",
+         "transform opacity-100 scale-100"}
+    )
+  end
+
+  def hide_dropdown(js \\ %JS{}, id) do
+    js
+    |> JS.hide(
+      to: "##{id}",
+      transition:
+        {"transition ease-in duration-75", "transform opacity-100 scale-100",
+         "transform opacity-0 scale-95"}
+    )
+  end
 end

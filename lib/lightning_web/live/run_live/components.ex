@@ -20,58 +20,20 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div
+      role="rowgroup"
       phx-mounted={JS.transition("fade-in-scale", time: 500)}
       id={"attempt-#{@attempt.id}"}
       data-entity="attempt"
-      class="col-span-6 mx-3 mb-3 rounded-lg bg-gray-100 p-6"
+      class="bg-gray-100"
     >
-      <ul class="list-inside list-none space-y-4 text-gray-500 dark:text-gray-400">
-        <li>
-          <span class="flex items-center">
-            <Heroicons.clock solid class="mr-1 h-5 w-5" />
-            <span>
-              <%= if @last_run.finished_at do %>
-                Attempt finished at <%= @last_run.finished_at
-                |> Calendar.strftime("%c %Z") %>
-              <% else %>
-                Running...
-              <% end %>
-
-              <%= case @last_run.exit_code do %>
-                <% nil -> %>
-                  <%= if @last_run.finished_at do %>
-                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
-                      Timeout
-                    </span>
-                  <% else %>
-                    <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-grey-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-grey-800">
-                      Pending
-                    </span>
-                  <% end %>
-                <% val when val > 0-> %>
-                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-red-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-red-800">
-                    Failure
-                  </span>
-                <% val when val == 0 -> %>
-                  <span class="my-auto ml-2 whitespace-nowrap rounded-full bg-green-200 py-2 px-4 text-center align-baseline text-xs font-medium leading-none text-green-800">
-                    Success
-                  </span>
-                <% _ -> %>
-              <% end %>
-            </span>
-          </span>
-          <ol class="mt-2 list-none space-y-4">
-            <%= for run <- @run_list do %>
-              <.run_list_item
-                can_rerun_job={@can_rerun_job}
-                project_id={@project.id}
-                attempt={@attempt}
-                run={run}
-              />
-            <% end %>
-          </ol>
-        </li>
-      </ul>
+      <%= for run <- @run_list do %>
+        <.run_list_item
+          can_rerun_job={@can_rerun_job}
+          project_id={@project.id}
+          attempt={@attempt}
+          run={run}
+        />
+      <% end %>
     </div>
     """
   end
@@ -83,10 +45,12 @@ defmodule LightningWeb.RunLive.Components do
 
   def run_list_item(assigns) do
     ~H"""
-    <li>
-      <span class="my-4 flex">
-        &vdash;
-        <span class="mx-2 flex">
+    <div role="row" class="grid grid-cols-8 items-center">
+      <div
+        role="cell"
+        class="col-span-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
+        <div class="flex pl-28">
           <%= case @run.exit_code do %>
             <% nil -> %>
               <%= if @run.finished_at do %>
@@ -111,30 +75,88 @@ defmodule LightningWeb.RunLive.Components do
                 class="mr-1.5 h-5 w-5 flex-shrink-0 text-green-500"
               />
           <% end %>
-          <.link
-            navigate={show_run_url(@project_id, @run.id)}
-            class="hover:underline hover:underline-offset-2"
-          >
-            <b><%= @run.job.name %>&nbsp;</b>
-            <span :if={@run.finished_at}>
-              run at <%= @run.finished_at |> Calendar.strftime("%c %Z") %>
-            </span>
-          </.link>
-          <%= if @can_rerun_job do %>
-            <span
-              id={@run.id}
-              class="pl-2 text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
-              phx-click="rerun"
-              phx-value-attempt_id={@attempt.id}
-              phx-value-run_id={@run.id}
-              title="Rerun workflow from here"
+          <div class="text-gray-800 flex gap-2 text-sm">
+            <.link
+              navigate={show_run_url(@project_id, @run.id)}
+              target="_blank"
+              class="hover:underline hover:underline-offset-2"
             >
-              rerun
-            </span>
-          <% end %>
-        </span>
-      </span>
-    </li>
+              <span><%= @run.job.name %></span>
+            </.link>
+            <div class="flex gap-1">
+              <%= if @can_rerun_job do %>
+                <span
+                  id={@run.id}
+                  class="text-indigo-400 hover:underline hover:underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                  phx-click="rerun"
+                  phx-value-attempt_id={@attempt.id}
+                  phx-value-run_id={@run.id}
+                  title="Rerun workflow from here"
+                >
+                  rerun
+                </span>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        role="cell"
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
+        --
+      </div>
+      <div
+        role="cell"
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+      >
+        --
+      </div>
+      <div
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        role="cell"
+      >
+        <.timestamp timestamp={@run.started_at} style={:wrapped} />
+      </div>
+      <div
+        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        role="cell"
+      >
+        <.timestamp timestamp={@run.finished_at} style={:wrapped} />
+      </div>
+      <div role="cell"></div>
+    </div>
+    """
+  end
+
+  attr :timestamp, :any, required: true
+  attr :style, :atom, default: :default
+
+  def timestamp(assigns) do
+    ~H"""
+    <%= if is_nil(@timestamp) do %>
+      <span>--</span>
+    <% else %>
+      <%= case @style do %>
+        <% :default -> %>
+          <%= Timex.format!(
+            @timestamp,
+            "%d/%b/%y, %H:%M:%S",
+            :strftime
+          ) %>
+        <% :wrapped -> %>
+          <%= Timex.format!(
+            @timestamp,
+            "%d/%b/%y",
+            :strftime
+          ) %><br />
+          <span class="font-medium text-gray-700">
+            <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
+          </span>
+        <% :time_only -> %>
+          <%= Timex.format!(@timestamp, "%H:%M:%S", :strftime) %>
+      <% end %>
+    <% end %>
     """
   end
 
@@ -764,7 +786,7 @@ defmodule LightningWeb.RunLive.Components do
   defp humanize_field(search_field) do
     case to_string(search_field) do
       "log" -> "Logs"
-      "body" -> "Input Body"
+      "body" -> "Input"
       other -> other |> to_string |> String.capitalize()
     end
   end

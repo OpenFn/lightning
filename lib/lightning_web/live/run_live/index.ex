@@ -4,6 +4,8 @@ defmodule LightningWeb.RunLive.Index do
   """
   use LightningWeb, :live_view
 
+  import Ecto.Changeset, only: [get_change: 2]
+
   alias Lightning.Workorders.SearchParams
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
@@ -11,6 +13,7 @@ defmodule LightningWeb.RunLive.Index do
   alias Lightning.{AttemptService, Invocation}
   alias Lightning.Invocation.Run
   alias LightningWeb.RunLive.Components
+  alias Phoenix.LiveView.JS
 
   @filters_types %{
     search_term: :string,
@@ -55,7 +58,7 @@ defmodule LightningWeb.RunLive.Index do
     ]
 
     search_fields = [
-      %{id: :body, label: "Input body", value: true},
+      %{id: :body, label: "Input", value: true},
       %{id: :log, label: "Logs", value: true}
     ]
 
@@ -260,10 +263,6 @@ defmodule LightningWeb.RunLive.Index do
     {:noreply, assign(socket, selected_work_orders: work_orders)}
   end
 
-  def handle_event("search", %{"filters" => filters} = _params, socket) do
-    apply_filters(filters, socket)
-  end
-
   def handle_event("apply_filters", %{"filters" => filters}, socket) do
     apply_filters(Map.merge(socket.assigns.filters, filters), socket)
   end
@@ -353,5 +352,9 @@ defmodule LightningWeb.RunLive.Index do
         event: :selection_toggled
       )
     end
+  end
+
+  defp maybe_humanize_date(date) do
+    date && Timex.format!(date, "{D}/{M}/{YY}")
   end
 end
