@@ -150,3 +150,31 @@ div[id^='tippy-'] {
     opacity: 0;
   }
 }
+
+/* Collapsible panels */
+.collapsible-panel.collapsed {
+    flex: 0 0 0% !important;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+}
+
+.collapsible-panel.collapsed .panel-content {
+    display: none !important;
+}
+
+.collapsible-panel.collapsed .panel-expand-icon {
+    display: block !important;
+}
+
+.collapsible-panel.collapsed .panel-collapse-icon {
+    display: none !important;
+}
+
+.collapsible-panel.collapsed .panel-header {
+    flex-direction: column-reverse !important;
+    gap: 1rem;
+}
+
+.collapsible-panel.collapsed .panel-header-title  {
+    transform: rotate(-90deg) !important;
+}
