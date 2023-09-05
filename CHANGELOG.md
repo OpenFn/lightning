@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- Add favicons [#1079](https://github.com/OpenFn/Lightning/issues/1079)
 - Validate job name in placeholder job node
   [#1021](https://github.com/OpenFn/Lightning/issues/1021)
 
@@ -26,8 +27,7 @@ and this project adheres to
 
 ### Changed
 
-- Restyle history table
-  [#1029](https://github.com/OpenFn/Lightning/issues/1029)
+- Restyle history table [#1029](https://github.com/OpenFn/Lightning/issues/1029)
 - Moved Filter and Search controls to the top of the history page
   [#1027](https://github.com/OpenFn/Lightning/issues/1027)
 
