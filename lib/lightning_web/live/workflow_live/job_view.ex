@@ -19,7 +19,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
-        <div class="grow flex h-5/6 gap-3">
+        <div class="grow flex h-5/6 gap-3 mx-4">
           <%= render_slot(@inner_block) %>
         </div>
         <div class="h-14 flex p-2 justify-end">
@@ -98,7 +98,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
           disabled={false}
-          class="h-full pb-16 border"
+          class="h-full pb-16"
         />
       </.collapsible_panel>
       <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border">
