@@ -1,7 +1,6 @@
 defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
   alias LightningWeb.JobLive.JobBuilderComponents
-  import LightningWeb.WorkflowLive.Components
 
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
@@ -14,7 +13,7 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class={@class}>
+    <div id={@id} class={@class}>
       <JobBuilderComponents.job_editor_component
         adaptor={@adaptor}
         source={@source}
