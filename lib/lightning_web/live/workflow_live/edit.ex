@@ -380,7 +380,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      socket
      |> authorize()
      |> assign(
-       active_menu_item: :projects,
+       active_menu_item: :overview,
        expanded_job: nil,
        follow_run_id: nil,
        manual_run_form: nil,

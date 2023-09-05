@@ -48,7 +48,7 @@ defmodule LightningWeb.RunLive.Components do
     <div role="row" class="grid grid-cols-8 items-center">
       <div
         role="cell"
-        class="col-span-3 py-3.5 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="col-span-3 py-2 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         <div class="flex pl-28">
           <%= case @run.exit_code do %>
@@ -102,24 +102,24 @@ defmodule LightningWeb.RunLive.Components do
       </div>
       <div
         role="cell"
-        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         --
       </div>
       <div
         role="cell"
-        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
       >
         --
       </div>
       <div
-        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
         <.timestamp timestamp={@run.started_at} style={:wrapped} />
       </div>
       <div
-        class="py-3.5 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
+        class="py-2 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
         role="cell"
       >
         <.timestamp timestamp={@run.finished_at} style={:wrapped} />
