@@ -2,45 +2,49 @@ defmodule Lightning.Repo.Migrations.TriggerJobsIntoNodes do
   use Ecto.Migration
 
   def change do
-    create table(:workflow_nodes, primary_key: false) do
-      add :id, :binary_id, primary_key: true, default: fragment("gen_random_uuid()")
-      add :workflow_id, references(:workflows, type: :binary_id, on_delete: :delete_all),
-        null: false
-
-      add :job_id, references(:jobs, type: :binary_id, on_delete: :delete_all), null: true
-
-      add :trigger_id, references(:triggers, type: :binary_id, on_delete: :delete_all),
+    alter table(:attempts) do
+      add :starting_trigger_id, references(:triggers, type: :binary_id, on_delete: :delete_all),
         null: true
-    end
 
-    create index(:workflow_nodes, [:workflow_id, :job_id], unique: true)
-    create index(:workflow_nodes, [:workflow_id, :trigger_id], unique: true)
+      add :starting_job_id, references(:jobs, type: :binary_id, on_delete: :delete_all),
+        null: true
+
+      add :dataclip_id, references(:dataclips, type: :binary_id, on_delete: :delete_all),
+        null: true
+
+      add :created_by_id, references(:users, type: :binary_id, on_delete: :delete_all), null: true
+    end
 
     create(
       constraint(
-        :workflow_nodes,
+        :attempts,
         :validate_job_or_trigger,
-        check: "(job_id IS NOT NULL) OR (trigger_id IS NOT NULL)"
+        check: "(starting_job_id IS NOT NULL) OR (starting_trigger_id IS NOT NULL)"
       )
     )
 
     execute """
-              INSERT INTO workflow_nodes (workflow_id, job_id, trigger_id)
-              SELECT workflow_id, id AS job_id, null AS trigger_id FROM jobs
-              UNION
-              SELECT workflow_id, null AS job_id, id AS trigger_id FROM triggers;
+            UPDATE attempts
+            SET starting_trigger_id = invocation_reasons.trigger_id,
+                starting_job_id = runs.job_id,
+                dataclip_id = invocation_reasons.dataclip_id
+            FROM invocation_reasons
+            JOIN runs ON runs.id = invocation_reasons.run_id
+            WHERE attempts.reason_id = invocation_reasons.id
             """,
             ""
 
-    alter table(:jobs) do
-      modify :workflow_id, :binary_id, null: true, from: {:binary_id, null: false}
-    end
+    # execute """
+    #   UPDATE work_orders
+    #   SET trigger_id = invocation_reasons.trigger_id,
+    #       dataclip_id = invocation_reasons.dataclip_id
+    #   FROM invocation_reasons
+    #   WHERE work_orders.reason_id = invocation_reasons.id
+    # """, ""
 
-    alter table(:triggers) do
-      modify :workflow_id, :binary_id, null: true, from: {:binary_id, null: false}
+    alter table(:attempts) do
+      modify :dataclip_id, :binary_id, null: true, from: {:binary_id, null: false}
+      modify :reason_id, :binary_id, null: true, from: {:binary_id, null: false}
     end
-
-    drop unique_index(:jobs, [:id, :workflow_id]), mode: :cascade
-    drop unique_index(:triggers, [:id, :workflow_id]), mode: :cascade
   end
 end

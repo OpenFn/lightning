@@ -1,56 +1,46 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
-  use Mimic
 
-  alias Lightning.{Invocation, Repo}
+  alias Lightning.WorkOrders
 
-  import Lightning.JobsFixtures
+  import Lightning.Factories
 
   require Record
   @fields Record.extract(:span, from: "deps/opentelemetry/include/otel_span.hrl")
   Record.defrecordp(:span, @fields)
 
   describe "a POST request to '/i'" do
-    setup %{conn: conn} do
-      %{job: job, trigger: trigger} = workflow_job_fixture()
+    test "with a valid trigger id instantiates a workorder", %{conn: conn} do
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
 
-      [conn: conn, job: job, trigger_id: trigger.id, message: %{"foo" => "bar"}]
+      message = %{"foo" => "bar"}
+      conn = post(conn, "/i/#{trigger.id}", message)
+
+      assert %{"work_order_id" => work_order_id} =
+               json_response(conn, 200)
+
+      work_order =
+        WorkOrders.get(work_order_id, include: [:attempts, :dataclip, :trigger])
+
+      assert work_order.dataclip.body == message
+      assert work_order.trigger.id == trigger.id
+
+      %{attempts: [attempt]} = work_order
+      assert attempt.starting_trigger_id == trigger.id
     end
 
-    test "with a valid trigger id instantiates a workorder", %{
-      conn: conn,
-      job: job,
-      trigger_id: trigger_id,
-      message: message
-    } do
-      Oban.Testing.with_testing_mode(:inline, fn ->
-        expect(Lightning.Pipeline.Runner, :start, fn _run ->
-          %Lightning.Runtime.Result{}
-        end)
-
-        conn = post(conn, "/i/#{trigger_id}", message)
-
-        assert %{"work_order_id" => _, "run_id" => run_id} =
-                 json_response(conn, 200)
-
-        %{job_id: job_id, input_dataclip: %{body: body}} =
-          Invocation.get_run!(run_id)
-          |> Repo.preload(:input_dataclip)
-
-        assert job_id == job.id
-        assert body == message
-      end)
-    end
-
-    test "triggers a custom telemetry event", %{
-      conn: conn,
-      trigger_id: trigger_id,
-      message: message
-    } do
+    test "triggers a custom telemetry event", %{conn: conn} do
       ref =
         :telemetry_test.attach_event_handlers(self(), [
           [:lightning, :workorder, :webhook, :stop]
         ])
+
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      trigger_id = trigger.id
+      message = %{"foo" => "bar"}
 
       post(conn, "/i/#{trigger_id}", message)
 
@@ -58,19 +48,21 @@ defmodule LightningWeb.WebhooksControllerTest do
         [:lightning, :workorder, :webhook, :stop],
         ^ref,
         %{},
-        %{source_trigger_id: ^trigger_id, status: :ok}
+        %{path: ^trigger_id, status: :ok}
       }
     end
 
-    test "executes a custom OpenTelemetry trace", %{
-      conn: conn,
-      trigger_id: trigger_id,
-      message: message
-    } do
+    test "executes a custom OpenTelemetry trace", %{conn: conn} do
       :otel_simple_processor.set_exporter(:otel_exporter_pid, self())
 
+      %{triggers: [trigger]} =
+        insert(:simple_workflow) |> Lightning.Repo.preload(:triggers)
+
+      trigger_id = trigger.id
+      message = %{"foo" => "bar"}
+
       attributes =
-        :otel_attributes.new([source_trigger_id: trigger_id], 128, :infinity)
+        :otel_attributes.new([path: trigger_id], 128, :infinity)
 
       post(conn, "/i/#{trigger_id}", message)
 
@@ -100,14 +92,14 @@ defmodule LightningWeb.WebhooksControllerTest do
         [:lightning, :workorder, :webhook, :stop],
         ^ref,
         %{},
-        %{source_trigger_id: "bar", status: :not_found}
+        %{path: "bar", status: :not_found}
       }
     end
   end
 
   describe "a disabled message" do
     setup %{conn: conn} do
-      %{trigger: trigger} = workflow_job_fixture(enabled: false)
+      %{triggers: [trigger]} = insert(:simple_workflow)
 
       [conn: conn, trigger_id: trigger.id, message: %{"foo" => "bar"}]
     end
@@ -141,7 +133,7 @@ defmodule LightningWeb.WebhooksControllerTest do
         [:lightning, :workorder, :webhook, :stop],
         ^ref,
         %{},
-        %{source_trigger_id: ^trigger_id, status: :forbidden}
+        %{path: ^trigger_id, status: :forbidden}
       }
     end
   end

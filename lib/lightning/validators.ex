@@ -56,4 +56,27 @@ defmodule Lightning.Validators do
         changeset
     end
   end
+
+  @doc """
+  Validate that an association is present
+
+  > **NOTE**
+  > This should only be used when using `put_assoc`, not `cast_assoc`.
+  > `cast_assoc` provides a `required: true` option.
+  > Unlike `validate_required`, this does not add the field to the `required`
+  > list in the schema.
+  """
+  @spec validate_required_assoc(Ecto.Changeset.t(), atom(), String.t()) ::
+          Ecto.Changeset.t()
+  def validate_required_assoc(changeset, assoc, message \\ "is required") do
+    changeset
+    |> get_field(assoc)
+    |> case do
+      nil ->
+        add_error(changeset, assoc, message)
+
+      _ ->
+        changeset
+    end
+  end
 end

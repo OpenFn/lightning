@@ -6,13 +6,16 @@ defmodule Lightning.Attempt do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Lightning.Validators
+
+  alias Lightning.Accounts.User
   alias Lightning.InvocationReason
   alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
   alias Lightning.AttemptRun
-  # alias Lightning.Jobs.Job
+  alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
-  alias Lightning.Workflows.Node
+  # alias Lightning.Workflows.Node
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -26,9 +29,11 @@ defmodule Lightning.Attempt do
   schema "attempts" do
     belongs_to :work_order, WorkOrder
     belongs_to :reason, InvocationReason
-    belongs_to :starting_node, Node
 
-    has_one :trigger, through: [:starting_node, :trigger]
+    belongs_to :starting_job, Job
+    belongs_to :starting_trigger, Trigger
+    belongs_to :created_by, User
+    belongs_to :dataclip, Lightning.Invocation.Dataclip
 
     many_to_many :runs, Run, join_through: AttemptRun
 
@@ -38,6 +43,26 @@ defmodule Lightning.Attempt do
     field :resolved_at, :utc_datetime_usec
 
     timestamps type: :utc_datetime_usec, updated_at: false
+  end
+
+  def for(%Trigger{} = trigger, attrs) do
+    %__MODULE__{}
+    |> change()
+    |> put_assoc(:starting_trigger, trigger)
+    |> put_assoc(:dataclip, attrs[:dataclip])
+    |> validate_required_assoc(:dataclip)
+    |> validate_required_assoc(:starting_trigger)
+  end
+
+  def for(%Job{} = job, attrs) do
+    %__MODULE__{}
+    |> change()
+    |> put_assoc(:starting_job, job)
+    |> put_assoc(:created_by, attrs[:created_by])
+    |> put_assoc(:dataclip, attrs[:dataclip])
+    |> validate_required_assoc(:dataclip)
+    |> validate_required_assoc(:starting_job)
+    |> validate_required_assoc(:created_by)
   end
 
   def new(attrs \\ %{}) do
@@ -52,12 +77,13 @@ defmodule Lightning.Attempt do
     |> cast(attrs, [:reason_id, :work_order_id])
     |> cast_assoc(:runs, required: false)
     |> validate_required([:reason_id, :work_order_id])
+    |> assoc_constraint(:work_order)
     |> validate()
   end
 
   defp validate(changeset) do
     changeset
     |> assoc_constraint(:work_order)
-    |> assoc_constraint(:reason)
+    |> check_constraint(:job, name: "validate_job_or_trigger")
   end
 end
