@@ -136,6 +136,5 @@ defmodule Lightning.Attempt do
     changeset
     |> assoc_constraint(:work_order)
     |> check_constraint(:job, name: "validate_job_or_trigger")
-    |> validate()
   end
 end

@@ -24,19 +24,12 @@ defmodule LightningWeb.WebhooksController do
     end)
   end
 
-  defp handle_create(conn, path_str) do
-    path_str
+  defp handle_create(conn, path) do
+    path
     |> Workflows.get_webhook_trigger(include: [:workflow, :edges])
     |> case do
       nil ->
         conn |> put_status(:not_found) |> json(%{})
-
-      %Workflows.Edge{target_job: %Workflows.Job{enabled: false}} ->
-        put_status(conn, :forbidden)
-        |> json(%{
-          message:
-            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-        })
 
       trigger ->
         if trigger.enabled do
