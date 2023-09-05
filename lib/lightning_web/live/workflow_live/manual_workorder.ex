@@ -3,7 +3,6 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   use LightningWeb, :component
 
   import LightningWeb.Components.NewInputs
-  import LightningWeb.WorkflowLive.Components
 
   attr :id, :string, required: true
   attr :dataclips, :list, default: []
