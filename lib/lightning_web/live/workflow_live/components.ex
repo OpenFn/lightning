@@ -53,7 +53,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               <%= @workflow.name %>
             </span>
             <p class="text-gray-500 text-xs">
-              Created <%= @relative_updated_at %>
+              Updated <%= @relative_updated_at %>
             </p>
           </div>
         </.link>
