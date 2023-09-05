@@ -1,8 +1,9 @@
 defmodule Lightning.Jobs.JobTest do
-  alias Lightning.WorkflowsFixtures
   use Lightning.DataCase, async: true
 
   alias Lightning.Jobs.Job
+
+  import Lightning.Factories
 
   defp random_job_name(length) do
     for _ <- 1..length,
@@ -15,7 +16,7 @@ defmodule Lightning.Jobs.JobTest do
 
   describe "changeset/2" do
     test "raises a constraint error when jobs in the same workflow have the same name" do
-      workflow = WorkflowsFixtures.workflow_fixture()
+      workflow = insert(:workflow)
 
       job_attrs = %{
         name: "Test Job",
