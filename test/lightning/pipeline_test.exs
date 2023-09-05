@@ -6,48 +6,49 @@ defmodule Lightning.PipelineTest do
   alias Lightning.{Attempt, AttemptRun}
   alias Lightning.Invocation.{Run}
 
-  import Lightning.InvocationFixtures
-  import Lightning.JobsFixtures
-  import Lightning.CredentialsFixtures
   import Lightning.Factories
 
   describe "process/1" do
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
-      %{job: job, trigger: trigger} =
-        workflow_job_fixture(
+      workflow = insert(:workflow)
+
+      job =
+        insert(:job,
           name: "job 1",
-          body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
+          body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })],
+          workflow: workflow
         )
 
       %{id: downstream_job_id} =
-        job_fixture(
-          name: "job 2",
-          trigger: %{type: :on_job_failure, upstream_job_id: job.id},
-          body: ~s[fn(state => state)],
-          workflow_id: job.workflow_id,
+        insert(:job,
+          workflow: workflow,
           project_credential_id:
-            project_credential_fixture(
-              name: "my credential",
-              body: %{"credential" => "body"}
+            insert(:project_credential,
+              credential:
+                insert(:credential,
+                  name: "my credential",
+                  body: %{"credential" => "body"}
+                )
             ).id
         )
 
       # add an edge to connect the two jobs
       insert(:edge, %{
         source_job_id: job.id,
-        workflow: job.workflow,
+        workflow: workflow,
         target_job_id: downstream_job_id,
         condition: :on_job_failure
       })
 
-      work_order = work_order_fixture(workflow_id: job.workflow_id)
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
 
       reason =
-        reason_fixture(
-          trigger_id: trigger.id,
+        insert(:reason,
+          type: :webhook,
           dataclip_id: dataclip.id
         )
+
+      work_order = insert(:workorder, reason: reason, workflow: workflow)
 
       {:ok, attempt_run} =
         AttemptRun.new(
@@ -139,14 +140,15 @@ defmodule Lightning.PipelineTest do
         condition: :on_job_success
       })
 
-      work_order = work_order_fixture(workflow_id: job.workflow_id)
-      dataclip = dataclip_fixture()
+      dataclip = insert(:dataclip)
 
       reason =
-        reason_fixture(
-          trigger_id: trigger.id,
-          dataclip_id: dataclip.id
+        insert(:reason,
+          type: :webhook,
+          dataclip: dataclip
         )
+
+      work_order = insert(:workorder, workflow: workflow, reason: reason)
 
       {:ok, attempt_run} =
         AttemptRun.new(
@@ -194,7 +196,7 @@ defmodule Lightning.PipelineTest do
   describe "run logs" do
     test "logs_for_run/1 returns an array of the logs for a given run" do
       run =
-        run_fixture(
+        insert(:run,
           log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
         )
 
@@ -211,7 +213,7 @@ defmodule Lightning.PipelineTest do
 
     test "assemble_logs_for_run/1 returns a string representation of the logs for a run" do
       run =
-        run_fixture(
+        insert(:run,
           log_lines: [%{body: "Hello"}, %{body: "I am a"}, %{body: "log"}]
         )
 
