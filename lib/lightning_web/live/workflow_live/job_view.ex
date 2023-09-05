@@ -89,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
         </.collapsible_panel>
       <% end %>
       <.collapsible_panel
-        id={"job-editor-pane-#{@job.id}"}
+        id="job-editor-panel"
         class="h-full border"
         panel_title="Editor"
       >
