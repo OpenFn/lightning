@@ -423,78 +423,70 @@ defmodule LightningWeb.WorkflowLive.Components do
   defp error_to_string({message, _}) when is_binary(message), do: message
   defp error_to_string(errors) when is_list(errors), do: Enum.join(errors, ", ")
 
+  slot :inner_block, required: true
+  attr :class, :string, default: ""
+  attr :id, :string, required: true
+  attr :panel_title, :string, required: true
 
-
-
-
-  def hide_panel_1(js \\ %JS{}) do
-  js
-  |> JS.hide(to: "#panel-1-content")
-  |> JS.remove_class("flex-1", to: ".panel-1-content-collapse")
-  |> JS.remove_class("hidden", to: ".header-icon-after")
-  |> JS.add_class("hidden", to: ".header-icon-before")
-  |> JS.add_class("flex-col-reverse", to: ".header_1_class")
-  |> JS.add_class("-rotate-90", to: ".panel-1-header-title")
-  |> JS.add_class("pb-4", to: ".panel_1_icons")
+  def collapsible_panel(assigns) do
+    ~H"""
+    <div id={@id} class={["flex-1 px-4 pt-4 collapsible-panel", @class]}>
+      <div
+        id={"#{@id}-panel-header"}
+        class="flex justify-between items-center panel-header"
+      >
+        <div
+          id={"#{@id}-panel-header-title"}
+          class="text-center font-semibold text-secondary-700 mb-2 panel-header-title"
+        >
+          <%= @panel_title %>
+        </div>
+        <div class="">
+          <a
+            id={"#{@id}-panel-collapse-icon"}
+            class="panel-collapse-icon"
+            href="#"
+            phx-click={hide_panel(@id)}
+          >
+            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+          </a>
+          <a
+            id={"#{@id}-panel-expand-icon"}
+            href="#"
+            class="hidden panel-expand-icon"
+            phx-click={show_panel(@id)}
+          >
+            <Heroicons.plus class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+          </a>
+        </div>
+      </div>
+      <div id={"#{@id}-panel-content"} class="panel-content h-full">
+        <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
   end
 
-  def show_panel_1(js \\ %JS{}) do
-  js
-  |> JS.show(to: "#panel-1-content")
-  |> JS.add_class("flex-1", to: ".panel-1-content-collapse")
-  |> JS.remove_class("hidden", to: ".header-icon-before")
-  |> JS.add_class("hidden", to: ".header-icon-after")
-  |> JS.remove_class("flex-col-reverse", to: ".header_1_class")
-  |> JS.remove_class("-rotate-90", to: ".panel-1-header-title")
-  |> JS.remove_class("pb-4", to: ".panel_1_icons")
+  def hide_panel(js \\ %JS{}, id) when is_binary(id) do
+    js
+    # |> JS.hide(to: "##{id}-panel-content")
+    # |> JS.show(to: "##{id}-panel-expand-icon")
+    # |> JS.hide(to: "##{id}-panel-collapse-icon")
+    # |> JS.add_class("flex-col-reverse gap-4", to: "##{id}-panel-header")
+    # |> JS.add_class("-rotate-90", to: "##{id}-panel-header-title")
+    # |> JS.remove_class("flex-1", to: "##{id}")
+    |> JS.add_class("collapsed", to: "##{id}")
   end
 
-
-  def hide_panel_3(js \\ %JS{}) do
+  def show_panel(js \\ %JS{}, id) when is_binary(id) do
     js
-    |> JS.hide(to: "#panel-3-content")
-    |> JS.remove_class("flex-1", to: ".panel-3-content-collapse")
-    |> JS.remove_class("hidden", to: ".header-icon-after-3")
-    |> JS.add_class("hidden", to: ".header-icon-before-3")
-    |> JS.add_class("flex-col-reverse", to: ".header_3_class")
-    |> JS.add_class("-rotate-90", to: ".panel-3-header-title")
-    |> JS.add_class("mb-16", to: ".panel_3_icons")
-    end
-
-    def show_panel_3(js \\ %JS{}) do
-      js
-      |> JS.show(to: "#panel-3-content")
-      |> JS.add_class("flex-1", to: ".panel-3-content-collapse")
-      |> JS.add_class("column", to: ".panel-3-content-collapse")
-      |> JS.remove_class("hidden", to: ".header-icon-before-3")
-      |> JS.add_class("hidden", to: ".header-icon-after-3")
-      |> JS.remove_class("flex-col-reverse", to: ".header_3_class")
-      |> JS.remove_class("-rotate-90", to: ".panel-3-header-title")
-      |> JS.remove_class("mb-16", to: ".panel_3_icons")
-      end
-
-
-
-    def hide_panel_2(js \\ %JS{}) do
-    js
-    |> JS.hide(to: "#panel-2-content")
-    |> JS.remove_class("flex-1", to: ".panel-2-content-collapse")
-    |> JS.remove_class("hidden", to: ".header-icon-after-2")
-    |> JS.add_class("hidden", to: ".header-icon-before-2")
-    |> JS.add_class("flex-col-reverse", to: ".header_2_class")
-    |> JS.add_class("-rotate-90", to: ".panel-2-header-title")
-    |> JS.add_class("mb-8", to: ".panel_2_icons")
-    end
-
-    def show_panel_2(js \\ %JS{}) do
-      js
-      |> JS.show(to: "#panel-2-content")
-      |> JS.add_class("flex-1", to: ".panel-2-content-collapse")
-      |> JS.add_class("column", to: ".panel-2-content-collapse")
-      |> JS.remove_class("hidden", to: ".header-icon-before-2")
-      |> JS.add_class("hidden", to: ".header-icon-after-2")
-      |> JS.remove_class("flex-col-reverse", to: ".header_2_class")
-      |> JS.remove_class("-rotate-90", to: ".panel-2-header-title")
-      |> JS.remove_class("mb-8", to: ".panel_2_icons")
-      end
+    # |> JS.show(to: "#panel-1-content")
+    # |> JS.add_class("flex-1", to: ".panel-1-content-collapse")
+    # |> JS.remove_class("hidden", to: ".header-icon-before")
+    # |> JS.add_class("hidden", to: ".header-icon-after")
+    # |> JS.remove_class("flex-col-reverse", to: ".header_1_class")
+    # |> JS.remove_class("-rotate-90", to: ".panel-1-header-title")
+    # |> JS.remove_class("pb-4", to: ".panel_1_icons")
+    |> JS.remove_class("collapsed", to: "##{id}")
+  end
 end

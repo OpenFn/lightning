@@ -87,14 +87,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
-              <:column>
+              <:collapsible_panel
+                id={"manual-job-#{@selected_job.id}"}
+                panel_title="Input"
+              >
                 <LightningWeb.WorkflowLive.ManualWorkorder.component
                   id={"manual-job-#{@selected_job.id}"}
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
                   disabled={!@can_run_job}
                 />
-              </:column>
+              </:collapsible_panel>
               <:footer>
                 <div class="flex flex-row gap-x-2">
                   <.save_is_blocked_error :if={
