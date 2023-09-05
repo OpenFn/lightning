@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           <.input
             type="textarea"
             field={@form[:body]}
-            rows="10"
+            rows="16"
             disabled={@disabled}
             phx-debounce="300"
           />
