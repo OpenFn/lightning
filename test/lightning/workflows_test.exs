@@ -5,21 +5,23 @@ defmodule Lightning.WorkflowsTest do
 
   alias Lightning.{
     Workflows,
-    Jobs,
-    WorkflowsFixtures,
-    JobsFixtures,
-    ProjectsFixtures
+    Jobs
   }
 
   describe "workflows" do
     test "list_workflows/0 returns all workflows" do
-      workflow = WorkflowsFixtures.workflow_fixture()
-      assert Workflows.list_workflows() == [workflow]
+      workflow = insert(:workflow)
+
+      assert Workflows.list_workflows() |> Enum.map(fn w -> w.id end) == [
+               workflow.id
+             ]
     end
 
     test "get_workflow!/1 returns the workflow with given id" do
-      workflow = WorkflowsFixtures.workflow_fixture()
-      assert Workflows.get_workflow!(workflow.id) == workflow
+      workflow = insert(:workflow)
+
+      assert Workflows.get_workflow!(workflow.id) |> unload_relation(:project) ==
+               workflow |> unload_relation(:project)
 
       assert_raise Ecto.NoResultsError, fn ->
         Workflows.get_workflow!(Ecto.UUID.generate())
@@ -29,12 +31,14 @@ defmodule Lightning.WorkflowsTest do
     test "get_workflow/1 returns the workflow with given id" do
       assert Workflows.get_workflow(Ecto.UUID.generate()) == nil
 
-      workflow = WorkflowsFixtures.workflow_fixture()
-      assert Workflows.get_workflow(workflow.id) == workflow
+      workflow = insert(:workflow)
+
+      assert Workflows.get_workflow(workflow.id) |> unload_relation(:project) ==
+               workflow |> unload_relation(:project)
     end
 
     test "create_workflow/1 with valid data creates a workflow" do
-      project = ProjectsFixtures.project_fixture()
+      project = insert(:project)
       valid_attrs = %{name: "some-name", project_id: project.id}
 
       assert {:ok, workflow} = Workflows.create_workflow(valid_attrs)
@@ -52,7 +56,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "update_workflow/2 with valid data updates the workflow" do
-      workflow = WorkflowsFixtures.workflow_fixture()
+      workflow = insert(:workflow)
       update_attrs = %{name: "some-updated-name"}
 
       assert {:ok, workflow} = Workflows.update_workflow(workflow, update_attrs)
@@ -61,10 +65,10 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "delete_workflow/1 deletes the workflow" do
-      workflow = WorkflowsFixtures.workflow_fixture()
+      workflow = insert(:workflow)
 
-      job_1 = JobsFixtures.job_fixture(name: "job 1", workflow_id: workflow.id)
-      job_2 = JobsFixtures.job_fixture(name: "job 2", workflow_id: workflow.id)
+      job_1 = insert(:job, name: "job 1", workflow: workflow)
+      job_2 = insert(:job, name: "job 2", workflow: workflow)
 
       assert {:ok, %Workflows.Workflow{}} = Workflows.delete_workflow(workflow)
 
@@ -82,15 +86,24 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "change_workflow/1 returns a workflow changeset" do
-      workflow = WorkflowsFixtures.workflow_fixture()
+      workflow = insert(:workflow)
       assert %Ecto.Changeset{} = Workflows.change_workflow(workflow)
     end
   end
 
   describe "workflows and edges" do
     test "get_edge_by_webhook/1 returns the job for a path" do
-      %{job: _job, trigger: trigger, edge: edge} =
-        JobsFixtures.workflow_job_fixture()
+      workflow = insert(:workflow)
+      job = insert(:job, workflow: workflow)
+      trigger = insert(:trigger, workflow: workflow)
+
+      edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger: trigger,
+          target_job: job,
+          condition: :always
+        )
 
       assert Workflows.get_edge_by_webhook(trigger.id).id == edge.id
 
@@ -134,7 +147,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "using create_workflow/1" do
-      project = ProjectsFixtures.project_fixture()
+      project = insert(:project)
       valid_attrs = %{name: "some-name", project_id: project.id}
 
       assert {:ok, workflow} = Lightning.Workflows.create_workflow(valid_attrs)
@@ -168,7 +181,7 @@ defmodule Lightning.WorkflowsTest do
     end
 
     test "using update_workflow/2" do
-      project = ProjectsFixtures.project_fixture()
+      project = insert(:project)
 
       job_id = Ecto.UUID.generate()
       trigger_id = Ecto.UUID.generate()
@@ -348,8 +361,8 @@ defmodule Lightning.WorkflowsTest do
 
       assert w2.deleted_at == nil
 
-      job_1 = JobsFixtures.job_fixture(name: "job 1", workflow_id: w1.id)
-      job_2 = JobsFixtures.job_fixture(name: "job 2", workflow_id: w1.id)
+      job_1 = insert(:job, name: "job 1", workflow: w1)
+      job_2 = insert(:job, name: "job 2", workflow: w1)
 
       # mark delete at request of a workflows and disable all associated jobs
       assert {:ok, _workflow} = Workflows.mark_for_deletion(w1)
