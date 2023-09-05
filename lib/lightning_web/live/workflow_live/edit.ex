@@ -291,7 +291,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp save_is_blocked_error(assigns) do
     ~H"""
-    <span class="flex items-center font-medium text-sm text-red-600 mr-4 gap-x-1.5">
+    <span class="flex items-center font-medium text-sm text-red-600 ml-1 mr-4 gap-x-1.5">
       <.icon name="hero-exclamation-circle" class="h-5 w-5" />
       <%= render_slot(@inner_block) %>
     </span>

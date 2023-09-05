@@ -11,6 +11,8 @@ import { Flow } from './types';
 export const EDGE_COLOR = '#b1b1b7';
 export const EDGE_COLOR_SELECTED = '#4f46e5';
 
+export const ERROR_COLOR = '#ef4444';
+
 export const labelStyles = (selected?: boolean) => {
   const primaryColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
   return {
@@ -56,7 +58,7 @@ export const styleEdge = (edge: Flow.Edge) => {
   return edge;
 };
 
-export const nodeIconStyles = (selected?: boolean) => {
+export const nodeIconStyles = (selected?: boolean, hasErrors?: boolean) => {
   const size = 100;
   const primaryColor = selected ? EDGE_COLOR_SELECTED : EDGE_COLOR;
   return {
@@ -65,7 +67,7 @@ export const nodeIconStyles = (selected?: boolean) => {
     anchorx: size / 2,
     strokeWidth: 2,
     style: {
-      stroke: primaryColor,
+      stroke: hasErrors ? ERROR_COLOR : primaryColor,
       fill: 'white',
     },
   };

@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Render error when workflow diagram node is invalid
+  [#956](https://github.com/OpenFn/Lightning/issues/956)
+
 ### Changed
 
 ### Fixed

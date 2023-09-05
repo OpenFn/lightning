@@ -26,6 +26,7 @@ const JobNode = ({
       sourcePosition={sourcePosition}
       allowSource
       toolbar={toolbar}
+      errors={props.data?.errors}
     />
   );
 };
