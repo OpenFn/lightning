@@ -5,9 +5,11 @@ defmodule Lightning.WorkOrdersTest do
 
   alias Lightning.WorkOrders
 
-  setup do
+  setup context do
+    trigger_type = context |> Map.get(:trigger_type, :webhook)
+
     job = build(:job)
-    trigger = build(:trigger)
+    trigger = build(:trigger, type: trigger_type)
 
     workflow =
       build(:workflow)
@@ -23,6 +25,7 @@ defmodule Lightning.WorkOrdersTest do
     }
   end
 
+  @tag trigger_type: :webhook
   test "creating a webhook triggered workorder", %{
     workflow: workflow,
     trigger: trigger
@@ -30,7 +33,7 @@ defmodule Lightning.WorkOrdersTest do
     dataclip = insert(:dataclip)
 
     {:ok, workorder} =
-      WorkOrders.create(workflow, trigger: trigger, dataclip: dataclip)
+      WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
 
     assert workorder.workflow_id == workflow.id
     assert workorder.trigger_id == trigger.id
@@ -38,8 +41,39 @@ defmodule Lightning.WorkOrdersTest do
 
     [attempt] = workorder.attempts
 
-    # assert attempt.trigger.id == trigger.id
+    assert attempt.starting_trigger.id == trigger.id
+  end
 
-    attempt |> Repo.reload!() |> Repo.preload(:trigger) |> IO.inspect()
+  @tag trigger_type: :cron
+  test "creating a cron triggered workorder", %{
+    workflow: workflow,
+    trigger: trigger
+  } do
+    dataclip = insert(:dataclip)
+
+    {:ok, workorder} =
+      WorkOrders.create_for(trigger, dataclip: dataclip, workflow: workflow)
+
+    assert workorder.workflow_id == workflow.id
+    assert workorder.trigger_id == trigger.id
+    assert workorder.dataclip_id == dataclip.id
+
+    [attempt] = workorder.attempts
+
+    assert attempt.starting_trigger.id == trigger.id
+  end
+
+  test "creating a manual workorder", %{workflow: workflow, job: job} do
+    dataclip = insert(:dataclip)
+    user = insert(:user)
+
+    {:ok, workorder} =
+      WorkOrders.create_for(job,
+        dataclip: dataclip,
+        workflow: workflow,
+        created_by: user
+      )
+
+    assert workorder
   end
 end

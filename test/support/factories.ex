@@ -130,7 +130,11 @@ defmodule Lightning.Factories do
   def with_trigger(workflow, trigger) do
     %{
       workflow
-      | triggers: merge_assoc(workflow.triggers, %{trigger | workflow: nil})
+      | triggers:
+          merge_assoc(
+            workflow.triggers,
+            merge_attributes(trigger, %{workflow: nil})
+          )
     }
   end
 

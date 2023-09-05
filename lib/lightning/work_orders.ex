@@ -29,45 +29,75 @@ defmodule Lightning.WorkOrders do
   Workorder.
   """
 
+  alias Lightning.Jobs.Job
+  alias Lightning.Jobs.Trigger
   alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.Attempt
 
+  import Ecto.Changeset
+  import Lightning.Validators
   import Ecto.Query
 
   # @doc """
   # Create a new Workorder.
-
-  # A workorder request
+  #
+  # **For a webhook**
+  #     create(trigger, workflow: workflow, dataclip: dataclip)
+  #
+  # **For a user**
+  #     create(job, workflow: workflow, dataclip: dataclip, user: user)
   # """
-
-  def create(workflow, opts) do
-    trigger = Keyword.get(opts, :trigger)
-    dataclip = Keyword.get(opts, :dataclip)
-
-    Repo.all(Lightning.Workflows.Node) |> IO.inspect()
-
-    workflow_node_id = from(n in Lightning.Workflows.Node,
-      where: n.workflow_id == ^workflow.id and n.trigger_id == ^trigger.id,
-      select: n.id
-    )
-    |> Repo.one()
-    |> IO.inspect()
-
-    %WorkOrder{}
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_assoc(:workflow, workflow)
-    |> Ecto.Changeset.put_assoc(:trigger, trigger)
-    |> Ecto.Changeset.put_assoc(:dataclip, dataclip)
-    |> Ecto.Changeset.put_assoc(:attempts, [%Attempt{starting_node_id: workflow_node_id}])
-    |> Ecto.Changeset.validate_required([:workflow, :trigger, :dataclip])
-    |> Ecto.Changeset.assoc_constraint(:workflow)
+  def create_for(%Trigger{} = trigger, opts) do
+    build_for(trigger, opts |> Map.new())
     |> Repo.insert()
   end
 
-  # defp build(workflow, trigger) do
-  #   WorkOrder.changeset(%WorkOrder{}, %{})
-  #   |> Ecto.Changeset.put_assoc(:workflow, workflow)
+  def create_for(%Job{} = job, opts) do
+    build_for(job, opts |> Map.new())
+    |> Repo.insert()
+  end
 
-  # end
+  def build_for(%Trigger{} = trigger, attrs) do
+    %WorkOrder{}
+    |> change()
+    |> put_assoc(:workflow, attrs[:workflow])
+    |> put_assoc(:trigger, trigger)
+    |> put_assoc(:dataclip, attrs[:dataclip])
+    |> put_assoc(:attempts, [
+      Attempt.for(trigger, %{dataclip: attrs[:dataclip]})
+    ])
+    |> validate_required_assoc(:workflow)
+    |> validate_required_assoc(:trigger)
+    |> validate_required_assoc(:dataclip)
+    |> assoc_constraint(:trigger)
+    |> assoc_constraint(:workflow)
+  end
+
+  def build_for(%Job{} = job, attrs) do
+    %WorkOrder{}
+    |> change()
+    |> put_assoc(:workflow, attrs[:workflow])
+    |> put_assoc(:dataclip, attrs[:dataclip])
+    |> put_assoc(:attempts, [
+      Attempt.for(job, %{
+        dataclip: attrs[:dataclip],
+        created_by: attrs[:created_by]
+      })
+    ])
+    |> validate_required_assoc(:workflow)
+    |> validate_required_assoc(:dataclip)
+    |> assoc_constraint(:trigger)
+    |> assoc_constraint(:workflow)
+  end
+
+  def get(id, opts \\ []) do
+    preloads = opts |> Keyword.get(:include, [])
+
+    from(w in WorkOrder,
+      where: w.id == ^id,
+      preload: ^preloads
+    )
+    |> Repo.one()
+  end
 end

@@ -3,11 +3,11 @@ defmodule Lightning.Workflows do
   The Workflows context.
   """
 
-  import Ecto.Query, warn: false
+  import Ecto.Query
   alias Lightning.Repo
   alias Lightning.Workflows.{Edge, Workflow}
   alias Lightning.Projects.Project
-  alias Lightning.{Jobs, Jobs.Trigger, Jobs.Job}
+  alias Lightning.{Jobs, Jobs.Trigger}
 
   @doc """
   Returns the list of workflows.
@@ -191,19 +191,17 @@ defmodule Lightning.Workflows do
   @doc """
   Gets a Single Edge by it's webhook trigger.
   """
-  def get_edge_by_webhook(path) when is_binary(path) do
-    from(e in Edge,
-      join: j in Job,
-      on: j.id == e.target_job_id,
-      join: t in Trigger,
-      on: e.source_trigger_id == t.id,
+  def get_webhook_trigger(path, opts \\ []) when is_binary(path) do
+    preloads = opts |> Keyword.get(:include, [])
+
+    from(t in Trigger,
       where:
         fragment(
           "coalesce(?, ?)",
           t.custom_path,
-          type(e.source_trigger_id, :string)
+          type(t.id, :string)
         ) == ^path,
-      preload: [:source_trigger, :target_job]
+      preload: ^preloads
     )
     |> Repo.one()
   end
