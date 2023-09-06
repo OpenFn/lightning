@@ -15,48 +15,34 @@ defmodule Lightning.Jobs.JobTest do
   end
 
   describe "changeset/2" do
-    test "raises a constraint error when jobs in the same workflow have the same / similar name" do
+    test "raises a constraint error when jobs in the same workflow have the same downcased and hyphenated name" do
       workflow = insert(:workflow)
 
-      valid_job_attrs = %{
-        name: "Validate form type",
+      base_job_attrs = %{
         body: ~s[fn(state => state)],
         workflow_id: workflow.id
       }
 
-      invalid_job_attrs = [
-        %{
-          name: "Validate form type",
-          body: ~s[fn(state => state)],
-          workflow_id: workflow.id
-        },
-        %{
-          name: "validate form type",
-          body: ~s[fn(state => state)],
-          workflow_id: workflow.id
-        },
-        %{
-          name: "validate-form-type",
-          body: ~s[fn(state => state)],
-          workflow_id: workflow.id
-        },
-        %{
-          name: "validate-FORM type",
-          body: ~s[fn(state => state)],
-          workflow_id: workflow.id
-        }
+      conflicting_job_names = [
+        "Validate form type",
+        "validate form type",
+        "validate-form-type",
+        "validate-FORM type"
       ]
 
       {:ok, _} =
         %Job{}
-        |> Job.changeset(valid_job_attrs)
+        |> Job.changeset(
+          Map.put(base_job_attrs, :name, hd(conflicting_job_names))
+        )
         |> Repo.insert()
 
-      invalid_job_attrs
-      |> Enum.each(fn job_attrs ->
+      Enum.each(conflicting_job_names, fn name ->
+        attrs = Map.put(base_job_attrs, :name, name)
+
         {:error, changeset} =
           %Job{}
-          |> Job.changeset(job_attrs)
+          |> Job.changeset(attrs)
           |> Repo.insert()
 
         refute changeset.valid?
