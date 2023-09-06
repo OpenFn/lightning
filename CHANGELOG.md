@@ -13,10 +13,15 @@ and this project adheres to
 - Add favicons [#1079](https://github.com/OpenFn/Lightning/issues/1079)
 - Validate job name in placeholder job node
   [#1021](https://github.com/OpenFn/Lightning/issues/1021)
+- Bring credential delete in line with new GDPR interpretation
+  [#802](https://github.com/OpenFn/Lightning/issues/802)
 
 ### Changed
 
 ### Fixed
+
+- Cannot delete some credentials via web UI
+  [#1072](https://github.com/OpenFn/Lightning/issues/1072)
 
 ## [v0.8.3] - 2023-09-05
 
