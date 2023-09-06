@@ -6,7 +6,7 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
   import Lightning.BypassHelpers
-  # import Lightning.Factories
+  import Lightning.Factories
 
   import Lightning.{
     JobsFixtures,
@@ -267,6 +267,25 @@ defmodule Lightning.CredentialsTest do
                user_id_3
              ) ==
                [project_id]
+    end
+  end
+
+  describe "has_activity_in_projects?/1" do
+    setup do
+      {:ok, credential: insert(:credential)}
+    end
+
+    test "returns true when there's at least one associated run", %{
+      credential: credential
+    } do
+      insert(:run, credential: credential)
+      assert Credentials.has_activity_in_projects?(credential)
+    end
+
+    test "returns false when there's no associated run", %{
+      credential: credential
+    } do
+      refute Credentials.has_activity_in_projects?(credential)
     end
   end
 

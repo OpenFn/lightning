@@ -220,6 +220,40 @@ defmodule Lightning.Credentials do
   end
 
   @doc """
+  Checks if a given `Credential` has any associated `Run` activity.
+
+  ## Parameters
+
+    - `_credential`: A `Credential` struct. Only the `id` field is used by the function.
+
+  ## Returns
+
+    - `true` if there's at least one `Run` associated with the given `Credential`.
+    - `false` otherwise.
+
+  ## Examples
+
+      iex> has_activity_in_projects?(%Credential{id: some_id})
+      true
+
+      iex> has_activity_in_projects?(%Credential{id: another_id})
+      false
+
+  ## Notes
+
+  This function leverages the association between `Run` and `Credential` to determine
+  if any runs exist for a given credential. It's a fast check that does not load
+  any records into memory, but simply checks for their existence.
+
+  """
+  def has_activity_in_projects?(%Credential{id: id} = _credential) do
+    from(run in Lightning.Invocation.Run,
+      where: run.credential_id == ^id
+    )
+    |> Repo.exists?()
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking credential changes.
 
   ## Examples
