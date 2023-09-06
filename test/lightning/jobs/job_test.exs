@@ -15,33 +15,59 @@ defmodule Lightning.Jobs.JobTest do
   end
 
   describe "changeset/2" do
-    test "raises a constraint error when jobs in the same workflow have the same name" do
+    test "raises a constraint error when jobs in the same workflow have the same / similar name" do
       workflow = insert(:workflow)
 
-      job_attrs = %{
-        name: "Test Job",
+      valid_job_attrs = %{
+        name: "Validate form type",
         body: ~s[fn(state => state)],
         workflow_id: workflow.id
       }
 
+      invalid_job_attrs = [
+        %{
+          name: "Validate form type",
+          body: ~s[fn(state => state)],
+          workflow_id: workflow.id
+        },
+        %{
+          name: "validate form type",
+          body: ~s[fn(state => state)],
+          workflow_id: workflow.id
+        },
+        %{
+          name: "validate-form-type",
+          body: ~s[fn(state => state)],
+          workflow_id: workflow.id
+        },
+        %{
+          name: "validate-FORM type",
+          body: ~s[fn(state => state)],
+          workflow_id: workflow.id
+        }
+      ]
+
       {:ok, _} =
         %Job{}
-        |> Job.changeset(job_attrs)
+        |> Job.changeset(valid_job_attrs)
         |> Repo.insert()
 
-      {:error, changeset} =
-        %Job{}
-        |> Job.changeset(job_attrs)
-        |> Repo.insert()
+      invalid_job_attrs
+      |> Enum.each(fn job_attrs ->
+        {:error, changeset} =
+          %Job{}
+          |> Job.changeset(job_attrs)
+          |> Repo.insert()
 
-      refute changeset.valid?
+        refute changeset.valid?
 
-      assert changeset.errors[:name] ==
-               {"has already been taken",
-                [
-                  constraint: :unique,
-                  constraint_name: "jobs_name_workflow_id_index"
-                ]}
+        assert changeset.errors[:name] ==
+                 {"has already been taken",
+                  [
+                    constraint: :unique,
+                    constraint_name: "jobs_name_workflow_id_index"
+                  ]}
+      end)
     end
 
     test "name can't be longer than 100 chars" do
