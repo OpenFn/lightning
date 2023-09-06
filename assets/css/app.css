@@ -173,6 +173,8 @@ div[id^='tippy-'] {
 .collapsible-panel.collapsed .panel-header {
     flex-direction: column-reverse !important;
     gap: 1rem;
+    height: 100%;
+    justify-content: flex-end;
 }
 
 .collapsible-panel.collapsed .panel-header-title  {

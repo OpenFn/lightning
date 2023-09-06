@@ -75,11 +75,11 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         <div :if={@selected_dataclip} class="h-32 overflow-y-auto">
           <.log_view dataclip={@selected_dataclip} />
         </div>
-        <div :if={is_nil(@selected_dataclip)}>
+        <div :if={is_nil(@selected_dataclip)} class="h-full">
           <.input
             type="textarea"
             field={@form[:body]}
-            rows="16"
+            rows="10"
             disabled={@disabled}
             phx-debounce="300"
           />
