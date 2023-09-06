@@ -8,6 +8,20 @@ defmodule Lightning.InvocationTest do
   alias Lightning.Repo
   import Lightning.Factories
 
+  defp build_workflow(opts) do
+    job = build(:job)
+    trigger = build(:trigger)
+
+    workflow =
+      build(:workflow, opts)
+      |> with_job(job)
+      |> with_trigger(trigger)
+      |> with_edge({trigger, job})
+      |> insert()
+
+    {workflow, trigger, job}
+  end
+
   describe "dataclips" do
     alias Lightning.Invocation.Dataclip
 
@@ -252,19 +266,24 @@ defmodule Lightning.InvocationTest do
 
     test "list_work_orders_for_project/1 returns workorders ordered by last run finished at desc, with nulls first" do
       project = insert(:project)
-      workflow = insert(:workflow, project: project)
-      job = insert(:job, workflow: workflow)
-      trigger = insert(:trigger, workflow: workflow)
+
+      job = build(:job)
+      trigger = build(:trigger)
+
+      workflow =
+        build(:workflow, name: "chw-help", project: project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
 
       dataclip = insert(:dataclip)
 
       reason =
-        insert(:reason, type: :webhook, dataclip: dataclip, trigger: trigger)
+        insert(:reason, type: :webhook, dataclip: dataclip)
 
-      wo_one = insert(:workorder, reason: reason, workflow: workflow)
-      wo_four = insert(:workorder, reason: reason, workflow: workflow)
-      wo_two = insert(:workorder, reason: reason, workflow: workflow)
-      wo_three = insert(:workorder, reason: reason, workflow: workflow)
+      [wo_one, wo_two, wo_three, wo_four] =
+        insert_list(4, :workorder, reason: reason, workflow: workflow)
 
       now = Timex.now()
 
@@ -374,13 +393,21 @@ defmodule Lightning.InvocationTest do
 
     test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
       project = insert(:project)
-      workflow = insert(:workflow, name: "chw-help", project: project)
-      job_one = insert(:job, workflow: workflow)
-      trigger = insert(:trigger, workflow: workflow)
+
+      job_one = build(:job)
+      trigger = build(:trigger)
+
+      workflow =
+        build(:workflow, name: "chw-help", project: project)
+        |> with_job(job_one)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_one})
+        |> insert()
+
       dataclip = insert(:dataclip)
 
       reason =
-        insert(:reason, type: :webhook, dataclip: dataclip, trigger: trigger)
+        insert(:reason, type: :webhook, dataclip: dataclip)
 
       work_order = insert(:workorder, reason: reason, workflow: workflow)
 
@@ -523,9 +550,8 @@ defmodule Lightning.InvocationTest do
       project = insert(:project)
       now = Timex.now()
 
-      workflow = insert(:workflow, name: "chw-help", project: project)
-      job1 = insert(:job, workflow: workflow)
-      trigger = insert(:trigger, workflow: workflow)
+      {_workflow, trigger, job1} =
+        build_workflow(project: project, name: "chw-help")
 
       Enum.each(1..10, fn index ->
         create_work_order(project, job1, trigger, now, 10 * index)
@@ -566,9 +592,9 @@ defmodule Lightning.InvocationTest do
       # we expect to have in page 3, only workorders of workflow-1 correctly ordered
 
       project = insert(:project)
-      workflow = insert(:workflow, name: "workflow-1", project: project)
-      job1 = insert(:job, workflow: workflow)
-      trigger1 = insert(:trigger, workflow: workflow)
+
+      {_workflow, trigger1, job1} =
+        build_workflow(project: project, name: "workflow-1")
 
       now = Timex.now()
 
@@ -581,9 +607,8 @@ defmodule Lightning.InvocationTest do
       %{work_order: wf1_wo3, run: wf1_run3} =
         create_work_order(project, job1, trigger1, now, 30)
 
-      workflow = insert(:workflow, name: "workflow-2", project: project)
-      job2 = insert(:job, workflow: workflow)
-      trigger2 = insert(:trigger, workflow: workflow)
+      {_workflow, trigger2, job2} =
+        build_workflow(project: project, name: "workflow-2")
 
       %{work_order: wf2_wo1, run: wf2_run1} =
         create_work_order(project, job2, trigger2, now, 40)
@@ -594,9 +619,8 @@ defmodule Lightning.InvocationTest do
       %{work_order: wf2_wo3, run: wf2_run3} =
         create_work_order(project, job2, trigger2, now, 60)
 
-      workflow = insert(:workflow, name: "workflow-3", project: project)
-      job3 = insert(:job, workflow: workflow)
-      trigger3 = insert(:trigger, workflow: workflow)
+      {_workflow, trigger3, job3} =
+        build_workflow(project: project, name: "workflow-3")
 
       %{work_order: wf3_wo1, run: wf3_run1} =
         create_work_order(project, job3, trigger3, now, 70)
