@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import LightningWeb.CredentialLiveHelpers
 
   import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
   alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
@@ -93,6 +94,22 @@ defmodule LightningWeb.CredentialLiveTest do
              |> render_click() =~ "Credential deleted"
 
       refute has_element?(index_live, "#credential-#{credential.id}")
+    end
+
+    test "cannot delete credential that has activity in projects", %{
+      conn: conn,
+      credential: credential
+    } do
+      insert(:run, credential: credential)
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+
+      assert index_live
+             |> element("#credential-#{credential.id} a", "Delete")
+             |> render_click() =~
+               "Cannot delete a credential that has activities in projects"
+
+      assert has_element?(index_live, "#credential-#{credential.id}")
     end
 
     test "user can only delete their own credential", %{

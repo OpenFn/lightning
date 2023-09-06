@@ -43,19 +43,28 @@ defmodule LightningWeb.CredentialLive.Index do
       )
 
     if can_delete_credential do
-      Credentials.delete_credential(credential)
-      |> case do
-        {:ok, _} ->
-          {:noreply,
-           socket
-           |> assign(
-             :credentials,
-             list_credentials(socket.assigns.current_user.id)
-           )
-           |> put_flash(:info, "Credential deleted successfully")}
+      if Credentials.has_activity_in_projects?(credential) do
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           "Cannot delete a credential that has activities in projects"
+         )}
+      else
+        Credentials.delete_credential(credential)
+        |> case do
+          {:ok, _} ->
+            {:noreply,
+             socket
+             |> assign(
+               :credentials,
+               list_credentials(socket.assigns.current_user.id)
+             )
+             |> put_flash(:info, "Credential deleted successfully")}
 
-        {:error, _changeset} ->
-          {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+          {:error, _changeset} ->
+            {:noreply, socket |> put_flash(:error, "Can't delete credential")}
+        end
       end
     else
       {:noreply,
