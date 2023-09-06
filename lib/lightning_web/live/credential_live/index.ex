@@ -30,6 +30,16 @@ defmodule LightningWeb.CredentialLive.Index do
     |> assign(:credential, nil)
   end
 
+  defp apply_action(socket, :delete, %{"id" => id}) do
+    credential = Credentials.get_credential!(id)
+    has_activity_in_projects = Credentials.has_activity_in_projects?(credential)
+
+    socket
+    |> assign(:page_title, "Credentials")
+    |> assign(:credential, credential)
+    |> assign(:has_activity_in_projects, has_activity_in_projects)
+  end
+
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
     credential = Credentials.get_credential!(id)
@@ -42,15 +52,23 @@ defmodule LightningWeb.CredentialLive.Index do
         credential
       )
 
-    if can_delete_credential do
-      if Credentials.has_activity_in_projects?(credential) do
+    has_activity_in_projects = Credentials.has_activity_in_projects?(credential)
+
+    cond do
+      not can_delete_credential ->
+        {:noreply,
+         put_flash(socket, :error, "You can't perform this action")
+         |> push_patch(to: ~p"/credentials")}
+
+      has_activity_in_projects ->
         {:noreply,
          socket
          |> put_flash(
            :error,
            "Cannot delete a credential that has activities in projects"
          )}
-      else
+
+      true ->
         Credentials.delete_credential(credential)
         |> case do
           {:ok, _} ->
@@ -60,17 +78,18 @@ defmodule LightningWeb.CredentialLive.Index do
                :credentials,
                list_credentials(socket.assigns.current_user.id)
              )
-             |> put_flash(:info, "Credential deleted successfully")}
+             |> put_flash(:info, "Credential deleted successfully")
+             |> push_patch(to: ~p"/credentials")}
 
           {:error, _changeset} ->
             {:noreply, socket |> put_flash(:error, "Can't delete credential")}
         end
-      end
-    else
-      {:noreply,
-       put_flash(socket, :error, "You can't perform this action")
-       |> push_patch(to: ~p"/credentials")}
     end
+  end
+
+  @impl true
+  def handle_event("close_modal", _, socket) do
+    {:noreply, push_redirect(socket, to: ~p"/credentials")}
   end
 
   defp list_credentials(user_id) do

@@ -102,14 +102,11 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       insert(:run, credential: credential)
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+      {:ok, _index_live, html} =
+        live(conn, ~p"/credentials/#{credential.id}/delete")
 
-      assert index_live
-             |> element("#credential-#{credential.id} a", "Delete")
-             |> render_click() =~
-               "Cannot delete a credential that has activities in projects"
-
-      assert has_element?(index_live, "#credential-#{credential.id}")
+      assert html =~
+               "This credential can&#39;t be deleted for now. It is involved in projects that has ongoing activities."
     end
 
     test "user can only delete their own credential", %{

@@ -45,19 +45,48 @@
             </span>
             |
             <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: credential.id,
-                data: [
-                  confirm:
-                    "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?"
-                ]
-              ) %>
+              <.link navigate={~p"/credentials/#{credential.id}/delete"}>
+                Delete
+              </.link>
             </span>
           </.td>
         </.tr>
       <% end %>
     </.table>
+    <PetalComponents.Modal.modal
+      :if={@live_action == :delete}
+      max_width="sm"
+      title="Delete user"
+    >
+      <%= if @has_activity_in_projects do %>
+        <p>
+          This credential can't be deleted for now. It is involved in projects that has ongoing activities.
+        </p>
+        <div class="flex justify-end">
+          <PetalComponents.Button.button
+            label="Ok, understood"
+            phx-click={PetalComponents.Modal.hide_modal()}
+          />
+        </div>
+      <% else %>
+        <p>
+          Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?
+        </p>
+        <div class="flex justify-end">
+          <PetalComponents.Button.button
+            label="Cancel"
+            phx-click={PetalComponents.Modal.hide_modal()}
+          /> &nbsp;
+          <LightningWeb.Components.Common.button
+            phx-click="delete"
+            phx-value-id={@credential.id}
+            color="red"
+            phx-disable-with="Deleting..."
+          >
+            Delete credential
+          </LightningWeb.Components.Common.button>
+        </div>
+      <% end %>
+    </PetalComponents.Modal.modal>
   </LayoutComponents.centered>
 </LayoutComponents.page_content>
