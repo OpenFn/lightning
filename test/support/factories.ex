@@ -59,11 +59,10 @@ defmodule Lightning.Factories do
     }
   end
 
-  def attempt_factory do
+  def attempt_factory() do
     %Lightning.Attempt{
       id: fn -> Ecto.UUID.generate() end,
-      work_order: build(:workorder),
-      reason: build(:reason)
+      work_order: build(:workorder)
     }
   end
 
@@ -83,7 +82,7 @@ defmodule Lightning.Factories do
   end
 
   def workorder_factory do
-    %Lightning.WorkOrder{workflow: build(:workflow), reason: build(:reason)}
+    %Lightning.WorkOrder{workflow: build(:workflow)}
   end
 
   def user_factory do
@@ -186,6 +185,11 @@ defmodule Lightning.Factories do
     |> with_job(job)
     |> with_trigger(trigger)
     |> with_edge({trigger, job})
+  end
+
+  def work_order_for(trigger_or_job, attrs) do
+    Lightning.WorkOrders.build_for(trigger_or_job, attrs)
+    |> Ecto.Changeset.apply_changes()
   end
 
   def with_project_user(%Lightning.Projects.Project{} = project, user, role) do

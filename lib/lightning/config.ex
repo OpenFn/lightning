@@ -7,7 +7,7 @@ defmodule Lightning.Config do
     Application.get_env(
       :lightning,
       :attempts_module,
-      Lightning.Attempts.Pipeline
+      Lightning.Attempts.Queue
     )
   end
 end
