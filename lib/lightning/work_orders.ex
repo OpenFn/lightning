@@ -29,6 +29,9 @@ defmodule Lightning.WorkOrders do
   Workorder.
   """
 
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Workflows.Workflow
+  alias Lightning.Accounts.User
   alias Lightning.Jobs.Job
   alias Lightning.Jobs.Trigger
   alias Lightning.Repo
@@ -39,6 +42,11 @@ defmodule Lightning.WorkOrders do
   import Lightning.Validators
   import Ecto.Query
 
+  @type work_order_option ::
+          {:workflow, Workflow.t()}
+          | {:dataclip, Dataclip.t()}
+          | {:created_by, User.t()}
+
   # @doc """
   # Create a new Workorder.
   #
@@ -48,6 +56,8 @@ defmodule Lightning.WorkOrders do
   # **For a user**
   #     create(job, workflow: workflow, dataclip: dataclip, user: user)
   # """
+  @spec create_for(Trigger.t() | Job.t(), [work_order_option()]) ::
+          {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
   def create_for(%Trigger{} = trigger, opts) do
     build_for(trigger, opts |> Map.new())
     |> Repo.insert()
@@ -91,6 +101,14 @@ defmodule Lightning.WorkOrders do
     |> assoc_constraint(:workflow)
   end
 
+  @doc """
+  Get a Workorder by id.
+
+  Optionally preload associations by passing a list of atoms to `:include`.
+
+      Lightning.WorkOrders.get(id, include: [:attempts])
+  """
+  @spec get(Ecto.UUID.t(), [{:include, [atom()]}]) :: %WorkOrder{} | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 

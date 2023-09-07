@@ -24,39 +24,40 @@ defmodule Lightning.WorkOrderServiceTest do
   end
 
   describe "create_webhook_workorder/2" do
+    @tag skip: "TODO: replaced by WorkOrders.create_for/3"
     test "creates a webhook workorder" do
-      %{job: job, trigger: trigger} = workflow_job_fixture()
+      # %{job: job, trigger: trigger} = workflow_job_fixture()
 
-      edge = Lightning.Workflows.get_edge_by_webhook(trigger.id)
-      dataclip_body = %{"foo" => "bar"}
+      # edge = Lightning.Workflows.get_edge_by_webhook(trigger.id)
+      # dataclip_body = %{"foo" => "bar"}
 
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        WorkOrderService.subscribe(job.workflow.project_id)
+      # Oban.Testing.with_testing_mode(:manual, fn ->
+      #   WorkOrderService.subscribe(job.workflow.project_id)
 
-        {:ok, %{attempt: attempt}} =
-          WorkOrderService.create_webhook_workorder(edge, dataclip_body)
+      #   {:ok, %{attempt: attempt}} =
+      #     WorkOrderService.create_webhook_workorder(edge, dataclip_body)
 
-        assert_receive {Lightning.WorkOrderService,
-                        %Lightning.Workorders.Events.AttemptCreated{}},
-                       100
+      #   assert_receive {Lightning.WorkOrderService,
+      #                   %Lightning.Workorders.Events.AttemptCreated{}},
+      #                  100
 
-        attempt_run =
-          Lightning.AttemptRun
-          |> Repo.get_by!(attempt_id: attempt.id)
-          |> Repo.preload([:run, [attempt: :reason]])
+      #   attempt_run =
+      #     Lightning.AttemptRun
+      #     |> Repo.get_by!(attempt_id: attempt.id)
+      #     |> Repo.preload([:run, [attempt: :reason]])
 
-        assert_enqueued(
-          worker: Lightning.Pipeline,
-          args: %{attempt_run_id: attempt_run.id}
-        )
+      #   assert_enqueued(
+      #     worker: Lightning.Pipeline,
+      #     args: %{attempt_run_id: attempt_run.id}
+      #   )
 
-        assert attempt_run.run.job_id == job.id
+      #   assert attempt_run.run.job_id == job.id
 
-        assert attempt.reason.dataclip_id ==
-                 attempt_run.run.input_dataclip_id
+      #   assert attempt.reason.dataclip_id ==
+      #            attempt_run.run.input_dataclip_id
 
-        assert attempt_run.attempt.reason.type == :webhook
-      end)
+      #   assert attempt_run.attempt.reason.type == :webhook
+      # end)
     end
   end
 
