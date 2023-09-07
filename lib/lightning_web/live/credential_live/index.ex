@@ -40,58 +40,6 @@ defmodule LightningWeb.CredentialLive.Index do
     |> assign(:has_activity_in_projects, has_activity_in_projects)
   end
 
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    credential = Credentials.get_credential!(id)
-
-    can_delete_credential =
-      Lightning.Policies.Users
-      |> Lightning.Policies.Permissions.can?(
-        :delete_credential,
-        socket.assigns.current_user,
-        credential
-      )
-
-    has_activity_in_projects = Credentials.has_activity_in_projects?(credential)
-
-    cond do
-      not can_delete_credential ->
-        {:noreply,
-         put_flash(socket, :error, "You can't perform this action")
-         |> push_patch(to: ~p"/credentials")}
-
-      has_activity_in_projects ->
-        {:noreply,
-         socket
-         |> put_flash(
-           :error,
-           "Cannot delete a credential that has activities in projects"
-         )}
-
-      true ->
-        Credentials.delete_credential(credential)
-        |> case do
-          {:ok, _} ->
-            {:noreply,
-             socket
-             |> assign(
-               :credentials,
-               list_credentials(socket.assigns.current_user.id)
-             )
-             |> put_flash(:info, "Credential deleted successfully")
-             |> push_patch(to: ~p"/credentials")}
-
-          {:error, _changeset} ->
-            {:noreply, socket |> put_flash(:error, "Can't delete credential")}
-        end
-    end
-  end
-
-  @impl true
-  def handle_event("close_modal", _, socket) do
-    {:noreply, push_redirect(socket, to: ~p"/credentials")}
-  end
-
   defp list_credentials(user_id) do
     Credentials.list_credentials_for_user(user_id)
     |> Enum.map(fn c ->
