@@ -1,4 +1,5 @@
 defmodule Lightning.AttemptsTest do
+  alias Lightning.WorkOrders
   use Lightning.DataCase, async: true
   import Lightning.Factories
 
