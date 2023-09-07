@@ -95,6 +95,8 @@ conditional_cron =
     do:
       base_oban_cron ++
         [
+          {"0 2 * * *", Lightning.Credentials,
+           args: %{"type" => "purge_deleted"}},
           {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
           {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
         ],
