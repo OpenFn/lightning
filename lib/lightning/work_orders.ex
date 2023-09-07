@@ -37,6 +37,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.Attempt
+  alias Lightning.Attempts
 
   import Ecto.Changeset
   import Lightning.Validators
@@ -68,6 +69,8 @@ defmodule Lightning.WorkOrders do
     |> Repo.insert()
   end
 
+  @spec build_for(Trigger.t() | Job.t(), map()) ::
+          Ecto.Changeset.t(WorkOrder.t())
   def build_for(%Trigger{} = trigger, attrs) do
     %WorkOrder{}
     |> change()
@@ -99,6 +102,32 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:dataclip)
     |> assoc_constraint(:trigger)
     |> assoc_constraint(:workflow)
+  end
+
+  def retry(attempt, run, opts \\ []) do
+    attrs = Map.new(opts)
+
+    run = run |> Repo.preload(:job)
+
+    attempt =
+      from(a in Attempt,
+        where: a.id == ^attempt.id,
+        join: r in assoc(a, :runs),
+        where: r.id == ^run.id,
+        preload: [:work_order]
+      )
+      |> Repo.one()
+
+    Attempt.new()
+    |> put_assoc(:created_by, attrs[:created_by])
+    |> put_assoc(:work_order, attempt.work_order)
+    |> put_change(:dataclip_id, attempt.dataclip_id)
+    |> put_assoc(:work_order, attempt.work_order)
+    |> put_assoc(:starting_job, run.job)
+    |> validate_required(:dataclip_id)
+    |> validate_required_assoc(:work_order)
+    |> validate_required_assoc(:created_by)
+    |> Attempts.enqueue()
   end
 
   @doc """

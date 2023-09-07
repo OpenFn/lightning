@@ -54,7 +54,7 @@ defmodule Lightning.Repo.Migrations.TriggerJobsIntoNodes do
     )
 
     alter table(:attempts) do
-      modify :dataclip_id, :binary_id, null: true, from: {:binary_id, null: false}
+      modify :dataclip_id, :binary_id, null: false, from: {:binary_id, null: true}
       modify :reason_id, :binary_id, null: true, from: {:binary_id, null: false}
     end
   end

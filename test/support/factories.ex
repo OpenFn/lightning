@@ -54,6 +54,7 @@ defmodule Lightning.Factories do
 
   def run_factory do
     %Lightning.Invocation.Run{
+      id: fn -> Ecto.UUID.generate() end,
       job: build(:job),
       input_dataclip: build(:dataclip)
     }
