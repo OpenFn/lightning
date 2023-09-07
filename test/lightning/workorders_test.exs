@@ -65,18 +65,27 @@ defmodule Lightning.WorkOrdersTest do
     end
 
     test "creating a manual workorder", %{workflow: workflow, job: job} do
-      flunk("TODO")
-      dataclip = insert(:dataclip)
+      alias Lightning.WorkOrders.Manual
+
       user = insert(:user)
 
-      {:ok, workorder} =
-        WorkOrders.create_for(job,
-          dataclip: dataclip,
-          workflow: workflow,
-          created_by: user
-        )
+      Lightning.WorkOrders.subscribe(workflow.project_id)
 
-      assert workorder
+      assert {:ok, manual} =
+               Manual.new(%{"body" => ~s({"foo": "bar"})},
+                 workflow: workflow,
+                 project: workflow.project,
+                 job: job,
+                 created_by: user
+               )
+               |> Ecto.Changeset.apply_action(:validate)
+
+      assert {:ok, workorder} = WorkOrders.create_for(manual)
+      assert [attempt] = workorder.attempts
+
+      assert attempt.created_by.id == user.id
+
+      assert_received %Lightning.WorkOrders.Events.AttemptCreated{}
     end
   end
 

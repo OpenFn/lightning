@@ -18,12 +18,14 @@ defmodule Lightning.Attempts do
                 {:ok, Lightning.Attempt.t()}
   end
 
-  alias Lightning.{Repo, Attempt}
+  alias Lightning.Attempt
+  alias Lightning.Attempts.Events
   alias Lightning.Attempts.Handlers
-
-  @behaviour Adaptor
+  alias Lightning.Repo
 
   import Ecto.Query
+
+  @behaviour Adaptor
 
   @doc """
   Enqueue an attempt to be processed.
@@ -33,13 +35,15 @@ defmodule Lightning.Attempts do
     adaptor().enqueue(attempt)
   end
 
+  # @doc """
+  # Claim an available attempt.
+  #
+  # The `demand` parameter is used to request more than a since attempt,
+  # all implementation should default to 1.
+  # """
   @impl true
   def claim(demand \\ 1) do
     adaptor().claim(demand)
-  end
-
-  defp adaptor do
-    Lightning.Config.attempts_adaptor()
   end
 
   # @doc """
@@ -58,7 +62,7 @@ defmodule Lightning.Attempts do
       Lightning.Attempts.get(id, include: [:workflow])
   """
   @spec get(Ecto.UUID.t(), [{:include, [atom() | {atom(), [atom()]}]}]) ::
-          %Attempt{} | nil
+          Attempt.t() | nil
   def get(id, opts \\ []) do
     preloads = opts |> Keyword.get(:include, [])
 
@@ -69,7 +73,7 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
-  def get_dataclip_body(attempt = %Attempt{}) do
+  def get_dataclip_body(%Attempt{} = attempt) do
     from(d in Ecto.assoc(attempt, :dataclip),
       select: type(d.body, :string)
     )
@@ -77,7 +81,8 @@ defmodule Lightning.Attempts do
   end
 
   def start_attempt(%Attempt{} = attempt) do
-    Handlers.StartAttempt.call(attempt)
+    Attempt.start(attempt)
+    |> update_attempt()
   end
 
   def complete_attempt(attempt, status) do
@@ -94,28 +99,45 @@ defmodule Lightning.Attempts do
   def update_attempt(%Ecto.Changeset{data: %Attempt{}} = changeset) do
     attempt_id = Ecto.Changeset.get_field(changeset, :id)
 
-    Repo.transact(fn ->
-      # now = DateTime.utc_now()
+    attempt_query =
+      from(a in Attempt,
+        where: a.id == ^attempt_id,
+        lock: "FOR UPDATE"
+      )
 
-      attempt_query =
-        from(a in Attempt,
-          where: a.id == ^attempt_id,
-          lock: "FOR UPDATE"
-        )
+    update_query =
+      Attempt
+      |> with_cte("subset", as: ^attempt_query)
+      |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
+      |> select([a, _], a)
 
-      update_query =
-        Attempt
-        |> with_cte("subset", as: ^attempt_query)
-        |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
-        |> select([a, _], a)
-
-      with {1, [attempt]} <-
-             Repo.update_all(update_query,
-               set: changeset.changes |> Enum.into([])
-             ),
-           {:ok, _} <- Lightning.WorkOrders.update_state(attempt) do
+    update_attempts(update_query, changeset)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{attempts: {1, [attempt]}}} ->
         {:ok, attempt}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  def update_attempts(update_query, updates) do
+    updates =
+      case updates do
+        %Ecto.Changeset{changes: changes} -> [set: changes |> Enum.into([])]
+        updates when is_list(updates) -> updates
       end
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.update_all(:attempts, update_query, updates)
+    |> Ecto.Multi.run(:post, fn _, %{attempts: {_, attempts}} ->
+      Enum.each(attempts, fn attempt ->
+        {:ok, _} = Lightning.WorkOrders.update_state(attempt)
+        Events.attempt_updated(attempt)
+      end)
+
+      {:ok, nil}
     end)
   end
 
@@ -138,6 +160,14 @@ defmodule Lightning.Attempts do
       end
     end)
     |> Repo.insert()
+    |> case do
+      {:ok, log_line} ->
+        Events.log_appended(log_line)
+        {:ok, log_line}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -146,16 +176,18 @@ defmodule Lightning.Attempts do
   The Run is created with and marked as started at the current time.
   """
   @spec start_run(%{required(binary()) => Ecto.UUID.t()}) ::
-          {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
+          {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
   def start_run(params) do
     Handlers.StartRun.call(params)
   end
 
   @spec complete_run(%{required(binary()) => binary()}) ::
-          {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
+          {:ok, Lightning.Invocation.Run.t()} | {:error, Ecto.Changeset.t()}
   def complete_run(params) do
     Handlers.CompleteRun.call(params)
   end
+
+  defdelegate subscribe(attempt), to: Lightning.Attempts.Events
 
   def get_project_id_for_attempt(attempt) do
     Ecto.assoc(attempt, [:work_order, :workflow, :project])

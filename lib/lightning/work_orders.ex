@@ -1,6 +1,6 @@
 defmodule Lightning.WorkOrders do
   @moduledoc """
-  Context for creating Workorders.
+  Context for creating WorkOrders.
 
   ## Workorders
 
@@ -29,20 +29,27 @@ defmodule Lightning.WorkOrders do
   Workorder.
   """
 
-  alias Lightning.WorkOrders.Query
-  alias Lightning.Invocation.{Dataclip, Run}
-  alias Lightning.Workflows.Workflow
+  alias Ecto.Multi
   alias Lightning.Accounts.User
+  alias Lightning.Attempt
+  alias Lightning.Attempts
+  alias Lightning.Graph
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Run
+  alias Lightning.Repo
+
+  alias Lightning.WorkOrder
+  alias Lightning.WorkOrders.Events
+  alias Lightning.WorkOrders.Manual
+  alias Lightning.WorkOrders.Query
+
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
-  alias Lightning.Repo
-  alias Lightning.WorkOrder
-  alias Lightning.Attempt
-  alias Lightning.{Attempts, Graph}
+  alias Lightning.Workflows.Workflow
 
   import Ecto.Changeset
-  import Lightning.Validators
   import Ecto.Query
+  import Lightning.Validators
 
   @type work_order_option ::
           {:workflow, Workflow.t()}
@@ -68,6 +75,42 @@ defmodule Lightning.WorkOrders do
   def create_for(%Job{} = job, opts) do
     build_for(job, opts |> Map.new())
     |> Repo.insert()
+  end
+
+  def create_for(%Manual{} = manual) do
+    Multi.new()
+    |> get_or_insert_dataclip(manual)
+    |> Multi.insert(:workorder, fn %{dataclip: dataclip} ->
+      build_for(manual.job, %{
+        workflow: manual.workflow,
+        dataclip: dataclip,
+        created_by: manual.created_by
+      })
+    end)
+    |> Multi.run(:broadcast, fn _repo, %{workorder: %{attempts: [attempt]}} ->
+      {:ok, Events.attempt_created(manual.project.id, attempt)}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{workorder: workorder}} ->
+        {:ok, workorder}
+    end
+  end
+
+  defp get_or_insert_dataclip(multi, manual) do
+    if manual.dataclip_id do
+      multi |> Multi.one(:dataclip, where(Dataclip, id: ^manual.dataclip_id))
+    else
+      multi
+      |> Multi.insert(
+        :dataclip,
+        Dataclip.new(
+          body: manual.body |> Jason.decode!(),
+          project_id: manual.project.id,
+          type: :saved_input
+        )
+      )
+    end
   end
 
   @spec build_for(Trigger.t() | Job.t(), map()) ::
@@ -174,8 +217,8 @@ defmodule Lightning.WorkOrders do
     |> Attempts.enqueue()
   end
 
-  def retry(attempt, run, opts) do
-    retry(attempt.id, run.id, opts)
+  def retry(%Attempt{id: attempt_id}, %Run{id: run_id}, opts) do
+    retry(attempt_id, run_id, opts)
   end
 
   @doc """
@@ -218,5 +261,9 @@ defmodule Lightning.WorkOrders do
       preload: ^preloads
     )
     |> Repo.one()
+  end
+
+  def subscribe(project_id) do
+    Events.subscribe(project_id)
   end
 end
