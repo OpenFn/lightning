@@ -31,13 +31,27 @@ defmodule LightningWeb.CredentialLive.Index do
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
-    credential = Credentials.get_credential!(id)
-    has_activity_in_projects = Credentials.has_activity_in_projects?(credential)
-
     socket
     |> assign(:page_title, "Credentials")
-    |> assign(:credential, credential)
-    |> assign(:has_activity_in_projects, has_activity_in_projects)
+    |> assign(:credential, Credentials.get_credential!(id))
+  end
+
+  @impl true
+  def handle_event(
+        "cancel_deletion",
+        %{"id" => credential_id},
+        socket
+      ) do
+    Credentials.cancel_scheduled_deletion(credential_id)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Credential deletion canceled")
+     |> push_patch(to: ~p"/credentials")
+     |> assign(
+       :credentials,
+       list_credentials(socket.assigns.current_user.id)
+     )}
   end
 
   defp list_credentials(user_id) do
@@ -49,5 +63,40 @@ defmodule LightningWeb.CredentialLive.Index do
 
       Map.put(c, :project_names, project_names)
     end)
+  end
+
+  def delete_action(assigns) do
+    if assigns.credential.scheduled_deletion do
+      ~H"""
+      <span>
+        <%= link("Cancel deletion",
+          to: "#",
+          phx_click: "cancel_deletion",
+          phx_value_id: @credential.id,
+          id: "cancel-deletion-#{@credential.id}"
+        ) %>
+      </span>
+      |
+      <span>
+        <.link
+          id={"delete-now-#{@credential.id}"}
+          navigate={~p"/credentials/#{@credential.id}/delete"}
+        >
+          Delete now
+        </.link>
+      </span>
+      """
+    else
+      ~H"""
+      <span>
+        <.link
+          id={"delete-#{@credential.id}"}
+          navigate={~p"/credentials/#{@credential.id}/delete"}
+        >
+          Delete
+        </.link>
+      </span>
+      """
+    end
   end
 end

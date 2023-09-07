@@ -1,21 +1,32 @@
 defmodule LightningWeb.Components.CredentialDeletionModal do
   @moduledoc false
-  alias Lightning.Credentials
+  alias Lightning.Credentials.Credential
   use LightningWeb, :component
 
   use Phoenix.LiveComponent
 
-  alias Lightning.Accounts
-  alias Lightning.Accounts.User
+  alias Lightning.Credentials
 
   @impl true
-  def update(%{credential: credential} = assigns, socket) do
+  def update(
+        %{credential: credential, current_user: current_user} = assigns,
+        socket
+      ) do
+    can_delete_credential =
+      Lightning.Policies.Users
+      |> Lightning.Policies.Permissions.can?(
+        :delete_credential,
+        current_user,
+        credential
+      )
+
     {:ok,
      socket
      |> assign(
        delete_now?: !is_nil(credential.scheduled_deletion),
        has_activity_in_projects?:
-         Credentials.has_activity_in_projects?(credential)
+         Credentials.has_activity_in_projects?(credential),
+       can_delete_credential: can_delete_credential
      )
      |> assign(assigns)}
   end
@@ -24,42 +35,40 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   def handle_event("delete", %{"id" => id}, socket) do
     credential = Credentials.get_credential!(id)
 
-    can_delete_credential =
-      Lightning.Policies.Users
-      |> Lightning.Policies.Permissions.can?(
-        :delete_credential,
-        socket.assigns.current_user,
-        credential
-      )
-
-    has_activity_in_projects = Credentials.has_activity_in_projects?(credential)
-
     cond do
-      not can_delete_credential ->
+      not socket.assigns.can_delete_credential ->
         {:noreply,
          put_flash(socket, :error, "You can't perform this action")
          |> push_patch(to: ~p"/credentials")}
 
-      has_activity_in_projects ->
+      not socket.assigns.delete_now? ->
+        case Credentials.schedule_credential_deletion(credential) do
+          {:ok, %Credential{}} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, "Credential scheduled for deletion")
+             |> push_navigate(to: ~p"/credentials")}
+
+          {:error, %Ecto.Changeset{} = _changeset} ->
+            {:noreply, socket}
+        end
+
+      socket.assigns.has_activity_in_projects? ->
         {:noreply,
          socket
          |> put_flash(
            :error,
            "Cannot delete a credential that has activities in projects"
-         )}
+         )
+         |> push_patch(to: ~p"/credentials")}
 
       true ->
         Credentials.delete_credential(credential)
-        |> case do
-          {:ok, _} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, "Credential deleted successfully")
-             |> push_patch(to: ~p"/credentials")}
 
-          {:error, _changeset} ->
-            {:noreply, socket |> put_flash(:error, "Can't delete credential")}
-        end
+        {:noreply,
+         socket
+         |> put_flash(:info, "Credential deleted successfully")
+         |> push_navigate(to: ~p"/credentials")}
     end
   end
 
@@ -99,65 +108,36 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
         title="Delete user"
         close_modal_target={@myself}
       >
-        <.form
-          :let={f}
-          for={@scheduled_deletion_changeset}
-          phx-change="validate"
-          phx-submit="delete"
-          phx-target={@myself}
-          id="scheduled_deletion_form"
-        >
-          <span>
-            This user's account and credential data will be deleted. Please make sure none of these credentials are used in production workflows.
-          </span>
+        <p>
+          Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?
+        </p>
 
-          <%= if @has_activity_in_projects? do %>
-            <div class="hidden sm:block" aria-hidden="true">
-              <div class="py-2"></div>
-            </div>
-            <p>
-              *Note that this user still has activity related to active projects. We may not be able to delete them entirely from the app until those projects are deleted.
-            </p>
-          <% end %>
+        <%= if @has_activity_in_projects? do %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <div class="grid grid-cols-12 gap-12">
-            <div class="col-span-8">
-              <%= label(f, :scheduled_deletion_email, "User email",
-                class: "block text-sm font-medium text-secondary-700"
-              ) %>
-              <%= text_input(f, :scheduled_deletion_email,
-                class: "block w-full rounded-md",
-                phx_debounce: "blur"
-              ) %>
-              <%= error_tag(f, :scheduled_deletion_email,
-                class:
-                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-              ) %>
-            </div>
-          </div>
-
-          <%= hidden_input(f, :id) %>
-
-          <div class="hidden sm:block" aria-hidden="true">
-            <div class="py-5"></div>
-          </div>
-          <div class="flex justify-end">
-            <PetalComponents.Button.button
-              label="Cancel"
-              phx-click={PetalComponents.Modal.hide_modal(@myself)}
-            /> &nbsp;
-            <LightningWeb.Components.Common.button
-              type="submit"
-              color="red"
-              phx-disable-with="Deleting..."
-              disabled={!@scheduled_deletion_changeset.valid?}
-            >
-              Delete account
-            </LightningWeb.Components.Common.button>
-          </div>
-        </.form>
+          <p>
+            *Note that this credential still has activity related to active projects. We may not be able to delete it entirely from the app until those activities are expired.
+          </p>
+        <% end %>
+        <div class="hidden sm:block" aria-hidden="true">
+          <div class="py-2"></div>
+        </div>
+        <div class="flex justify-end">
+          <PetalComponents.Button.button
+            label="Cancel"
+            phx-click={PetalComponents.Modal.hide_modal(@myself)}
+          /> &nbsp;
+          <LightningWeb.Components.Common.button
+            phx-click="delete"
+            phx-value-id={@credential.id}
+            phx-target={@myself}
+            color="red"
+            phx-disable-with="Deleting..."
+          >
+            Delete credential
+          </LightningWeb.Components.Common.button>
+        </div>
       </PetalComponents.Modal.modal>
     </div>
     """
