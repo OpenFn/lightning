@@ -64,6 +64,7 @@ defmodule Lightning.WorkOrdersTest do
   end
 
   test "creating a manual workorder", %{workflow: workflow, job: job} do
+    flunk("TODO")
     dataclip = insert(:dataclip)
     user = insert(:user)
 
@@ -76,4 +77,59 @@ defmodule Lightning.WorkOrdersTest do
 
     assert workorder
   end
+
+  describe "retry/1" do
+    test "retrying an attempt from the start", %{
+      workflow: workflow,
+      trigger: trigger,
+      job: job
+    } do
+      user = insert(:user)
+      dataclip = insert(:dataclip)
+      # create existing complete attempt
+      %{attempts: [attempt]} =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip,
+          attempts: [
+            %{
+              state: "resolved",
+              dataclip: dataclip,
+              starting_trigger: trigger,
+              runs: [
+                run = insert(:run, job: job, input_dataclip: dataclip)
+              ]
+            }
+          ]
+        )
+
+      {:ok, retry_attempt} = WorkOrders.retry(attempt, run, created_by: user)
+
+      # expect the attempt to be a new one, but with the same workorder
+      # how do we distinguish between a new attempt and a retry?
+      # starting_trigger and created_by works for webhooks/cron
+      # but not for manual attempts
+      # do we care about being able to tell _where_ a retry came from?
+
+      refute retry_attempt.id == attempt.id
+      assert retry_attempt.dataclip_id == dataclip.id
+      assert retry_attempt.starting_job.id == job.id
+      assert retry_attempt.work_order_id == attempt.work_order_id
+      assert retry_attempt.state == "available"
+
+      assert retry_attempt |> Repo.preload(:runs) |> Map.get(:runs) == [],
+             "retrying an attempt from the start should not copy over runs"
+
+      # IO.inspect(work_order, label: "work_order")
+
+      # test retrying from the beginning
+      # test retrying from a specific run
+
+      # test retrying a manual attempt
+      # do manual attempts continue executing?
+    end
+  end
+
+  test "retrying an attempt from a run that isn't the first"
 end

@@ -1,4 +1,8 @@
 defmodule Lightning.Attempts.Adaptor do
+  @moduledoc """
+  Behaviour for implementing an adaptor for the Lightning.Attempts module.
+  """
+
   @doc """
   Enqueue an attempt to be processed.
   """
@@ -7,57 +11,27 @@ defmodule Lightning.Attempts.Adaptor do
                 Lightning.Attempt.t() | Ecto.Changeset.t(Lightning.Attempt.t())
             ) ::
               {:ok, Lightning.Attempt.t()}
+              | {:error, Ecto.Changeset.t(Lightning.Attempt.t())}
 
   # @doc """
   # Claim an available attempt.
-
-  # Returns `nil` if no attempt is available.
+  #
+  # The `demand` parameter is used to request more than a since attempt,
+  # all implementation should default to 1.
   # """
   @callback claim(demand :: non_neg_integer()) :: {:ok, [Lightning.Attempt.t()]}
-  # @callback dequeue(attempt :: Lightning.Attempt.t()) :: Lightning.Attempt.t()
-end
 
-defmodule Lightning.Attempts.Pipeline do
-  @behaviour Lightning.Attempts.Adaptor
+  # @doc """
+  # Removes an attempt from the queue.
+  # """
+  @callback dequeue(attempt :: Lightning.Attempt.t()) ::
+              {:ok, Lightning.Attempt.t()}
 
-  alias Lightning.{AttemptService, Repo}
-  alias Lightning.Invocation.Run
-
-  @doc """
-  Enqueue an attempt to be processed.
-  """
-  @impl true
-  def enqueue(attempt) do
-    Repo.transact(fn ->
-      with {:ok, attempt} <- Repo.insert(attempt),
-           %{reason: %{dataclip_id: dataclip_id, trigger: trigger}} <-
-             attempt
-             |> Repo.preload(reason: [trigger: [edges: [:target_job]]]),
-
-           # find the edge for a trigger, and then find the job for that edge
-           job when not is_nil(job) <-
-             trigger.edges |> List.first() |> Map.get(:target_job),
-           {:ok, attempt_run} <-
-             AttemptService.append(
-               attempt,
-               Run.new(%{
-                 job_id: job.id,
-                 input_dataclip_id: dataclip_id
-               })
-             ) do
-        %{attempt_run_id: attempt_run.id}
-        |> Lightning.Pipeline.new()
-        |> Lightning.Pipeline.enqueue()
-
-        {:ok, attempt}
-      end
-    end)
-  end
-
-  @impl true
-  def claim(_demand \\ 1) do
-    {:ok, []}
-  end
+  # @doc """
+  # Marks an attempt as resolved.
+  # """
+  @callback resolve(attempt :: Lightning.Attempt.t()) ::
+              {:ok, Lightning.Attempt.t()}
 end
 
 defmodule Lightning.Attempts.Queue do
@@ -108,6 +82,21 @@ defmodule Lightning.Attempts.Queue do
       jobs
     end)
   end
+
+  @impl true
+  def resolve(attempt) do
+    attempt
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_change(:state, "resolved")
+    |> Ecto.Changeset.put_change(:resolved_at, DateTime.utc_now())
+    |> Repo.update()
+  end
+
+  @impl true
+  def dequeue(attempt) do
+    attempt
+    |> Repo.delete()
+  end
 end
 
 defmodule Lightning.Attempts do
@@ -121,6 +110,16 @@ defmodule Lightning.Attempts do
   @impl true
   def claim(demand \\ 1) do
     adaptor().claim(demand)
+  end
+
+  @impl true
+  def resolve(attempt) do
+    adaptor().resolve(attempt)
+  end
+
+  @impl true
+  def dequeue(attempt) do
+    adaptor().dequeue(attempt)
   end
 
   defp adaptor do
