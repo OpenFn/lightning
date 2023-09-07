@@ -18,31 +18,21 @@ defmodule Lightning.Jobs.JobTest do
     test "raises a constraint error when jobs in the same workflow have the same downcased and hyphenated name" do
       workflow = insert(:workflow)
 
-      base_job_attrs = %{
-        body: ~s[fn(state => state)],
-        workflow_id: workflow.id
-      }
-
-      conflicting_job_names = [
+      [first | rest] = [
         "Validate form type",
         "validate form type",
         "validate-form-type",
         "validate-FORM type"
       ]
 
-      {:ok, _} =
-        %Job{}
-        |> Job.changeset(
-          Map.put(base_job_attrs, :name, hd(conflicting_job_names))
-        )
-        |> Repo.insert()
+      insert(:job, workflow: workflow, name: first)
 
-      Enum.each(conflicting_job_names, fn name ->
-        attrs = Map.put(base_job_attrs, :name, name)
-
+      Enum.each(rest, fn name ->
         {:error, changeset} =
-          %Job{}
-          |> Job.changeset(attrs)
+          Job.changeset(
+            %Job{},
+            params_with_assocs(:job, workflow: workflow, name: name)
+          )
           |> Repo.insert()
 
         refute changeset.valid?

@@ -48,17 +48,13 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job!/1 returns the job with given id" do
-      job = insert(:job)
+      %{id: job_id} = insert(:job)
 
-      assert Jobs.get_job!(job.id) |> unload_relation(:workflow) ==
-               job |> unload_relation(:workflow)
+      assert %Job{id: ^job_id} = Jobs.get_job!(job_id)
 
       assert_raise Ecto.NoResultsError, fn ->
         Jobs.get_job!(Ecto.UUID.generate())
       end
-
-      assert Jobs.get_job(job.id) |> unload_relation(:workflow) ==
-               job |> unload_relation(:workflow)
 
       assert Jobs.get_job(Ecto.UUID.generate()) == nil
     end

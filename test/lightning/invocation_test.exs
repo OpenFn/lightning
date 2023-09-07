@@ -553,6 +553,8 @@ defmodule Lightning.InvocationTest do
       {_workflow, trigger, job1} =
         build_workflow(project: project, name: "chw-help")
 
+      trigger |> Repo
+
       Enum.each(1..10, fn index ->
         create_work_order(project, job1, trigger, now, 10 * index)
       end)
