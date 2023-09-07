@@ -3,8 +3,13 @@ defmodule Lightning.Credentials do
   The Credentials context.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Accounts.UserNotifier
   alias Lightning.Credentials
   alias Lightning.AuthProviders.Google
   alias Lightning.Repo
@@ -12,6 +17,32 @@ defmodule Lightning.Credentials do
 
   alias Lightning.Credentials.{Audit, Credential, SensitiveValues}
   alias Lightning.Projects.Project
+
+  @doc """
+  Perform, when called with %{"type" => "purge_deleted"}
+  will find credentials that are ready for permanent deletion, set their bodies to null, and attempt to purge them.
+  """
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    credentials_to_delete =
+      from(c in Credential,
+        where: c.scheduled_deletion <= ago(0, "second")
+      )
+      |> Repo.all()
+      |> Enum.map(fn credential ->
+        {:ok, credential} = update_credential(credential, %{body: nil})
+        credential
+      end)
+      |> Enum.filter(fn credential -> has_activity_in_projects?(credential) end)
+
+    :ok =
+      Enum.each(credentials_to_delete, fn credential ->
+        delete_credential(credential)
+      end)
+
+    {:ok, %{credentials_deleted: credentials_to_delete}}
+  end
 
   @doc """
   Returns the list of credentials.
@@ -217,6 +248,66 @@ defmodule Lightning.Credentials do
       Audit.event("deleted", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
+  end
+
+  def schedule_credential_deletion(%Credential{} = credential) do
+    date =
+      case Application.get_env(:lightning, :purge_deleted_after_days) do
+        nil -> DateTime.utc_now()
+        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
+      end
+
+    Credential.changeset(credential, %{
+      "scheduled_deletion" => date
+    })
+    |> Repo.update()
+    |> case do
+      {:ok, credential} ->
+        credential
+        |> remove_credential_associations()
+        |> notify_owner()
+
+        {:ok, credential}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  def cancel_scheduled_deletion(credential_id) do
+    get_credential!(credential_id)
+    |> update_credential(%{
+      scheduled_deletion: nil
+    })
+  end
+
+  defp remove_credential_associations(
+         %Credential{id: credential_id} = credential
+       ) do
+    project_credential_ids_query =
+      from(pc in Lightning.Projects.ProjectCredential,
+        where: pc.credential_id == ^credential_id,
+        select: pc.id
+      )
+
+    project_credential_ids = Repo.all(project_credential_ids_query)
+
+    from(j in Lightning.Jobs.Job,
+      where: j.project_credential_id in ^project_credential_ids
+    )
+    |> Repo.update_all(set: [project_credential_id: nil])
+
+    Ecto.assoc(%Credential{id: credential_id}, :project_credentials)
+    |> Repo.delete_all()
+
+    credential
+  end
+
+  defp notify_owner(credential) do
+    credential
+    |> Repo.preload(:user)
+    |> Map.get(:user)
+    |> UserNotifier.send_credential_deletion_notification_email()
   end
 
   @doc """

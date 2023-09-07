@@ -113,6 +113,21 @@ defmodule Lightning.Accounts.UserNotifier do
     """)
   end
 
+  def send_credential_deletion_notification_email(user) do
+    deliver(user.email, "Credential Deletion", """
+
+
+    Hi #{user.first_name},
+
+    Your credential has been scheduled for deletion. It will be permanently deleted in #{permanent_deletion_grace()}.
+
+    Note that if your credential is associated to some ongoing activities in some projects, it won't be deleted until that activity expires.
+
+    If you don't want this to happen, please contact #{admin()} as soon as possible.
+
+    """)
+  end
+
   @doc """
   Deliver instructions to reset a user password.
   """
