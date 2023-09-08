@@ -1,4 +1,5 @@
 defmodule LightningWeb.RunWorkOrderTest do
+  alias Lightning.Repo
   use LightningWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -258,31 +259,22 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When run A,B and C are successful, work_order status is 'Success'",
          %{conn: conn, project: project} do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, type: :webhook, workflow: workflow)
-      job_a = insert(:job, workflow: workflow)
-      job_b = insert(:job, workflow: workflow)
-      job_c = insert(:job, workflow: workflow)
+      [job_a, job_b, job_c] = build_list(3, :job)
 
-      insert(:edge,
-        workflow: workflow,
-        source_trigger_id: trigger.id,
-        target_job_id: job_a.id
-      )
+      trigger = build(:trigger, type: :webhook)
 
-      insert(:edge, %{
-        workflow: workflow,
-        source_job: job_a,
-        target_job: job_b,
-        condition: :on_job_success
-      })
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b}, condition: :on_job_success)
+        |> with_edge({job_b, job_c}, condition: :on_job_success)
+        |> insert()
 
-      insert(:edge, %{
-        workflow: workflow,
-        source_job: job_b,
-        target_job: job_c,
-        condition: :on_job_success
-      })
+      trigger = Repo.reload!(trigger)
 
       dataclip = insert(:dataclip, project: project)
 
@@ -331,7 +323,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+          Routes.project_run_index_path(conn, :index, project.id)
         )
 
       div =
@@ -346,49 +338,38 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When run A and B are successful but C fails, work_order status is 'Failure'",
          %{conn: conn, project: project} do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, type: :webhook, workflow: workflow)
+      trigger = build(:trigger, type: :webhook)
 
       job_a =
-        insert(:job,
+        build(:job,
           name: "Job A",
-          workflow: workflow,
           body: ~s[fn(state => { return {...state, extra: "data"} })]
         )
 
       job_b =
-        insert(:job,
+        build(:job,
           name: "Job B",
-          workflow: workflow,
           body: ~s[fn(state => state)]
         )
 
       job_c =
-        insert(:job,
+        build(:job,
           name: "Job C",
-          workflow: workflow,
           body: ~s[fn(state => { throw new Error("I'm supposed to fail.") })]
         )
 
-      insert(:edge,
-        workflow: workflow,
-        source_trigger_id: trigger.id,
-        target_job_id: job_a.id
-      )
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b}, condition: :on_job_success)
+        |> with_edge({job_b, job_c}, condition: :on_job_success)
+        |> insert()
 
-      insert(:edge, %{
-        workflow: workflow,
-        source_job: job_a,
-        target_job: job_b,
-        condition: :on_job_success
-      })
-
-      insert(:edge, %{
-        workflow: workflow,
-        source_job: job_b,
-        target_job: job_c,
-        condition: :on_job_success
-      })
+      trigger = Repo.reload!(trigger)
 
       dataclip = insert(:dataclip, project: project)
 
@@ -435,7 +416,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+          Routes.project_run_index_path(conn, :index, project.id)
         )
 
       assert view
@@ -472,31 +453,21 @@ defmodule LightningWeb.RunWorkOrderTest do
 
     test "When run A and B are successful but C is pending, work_order status is 'Pending'",
          %{conn: conn, project: project} do
-      workflow = insert(:workflow, project: project)
-      trigger = insert(:trigger, type: :webhook, workflow: workflow)
-      job_a = insert(:job, workflow: workflow)
-      job_b = insert(:job, workflow: workflow)
-      job_c = insert(:job, workflow: workflow)
+      trigger = build(:trigger, type: :webhook)
+      [job_a, job_b, job_c] = build_list(3, :job)
 
-      insert(:edge,
-        workflow: workflow,
-        source_trigger_id: trigger.id,
-        target_job_id: job_a.id
-      )
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job_a)
+        |> with_job(job_b)
+        |> with_job(job_c)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job_a})
+        |> with_edge({job_a, job_b}, condition: :on_job_success)
+        |> with_edge({job_b, job_c}, condition: :on_job_success)
+        |> insert()
 
-      insert(:edge, %{
-        workflow: workflow,
-        source_job: job_a,
-        target_job: job_b,
-        condition: :on_job_success
-      })
-
-      insert(:edge, %{
-        workflow: workflow,
-        source_job: job_b,
-        target_job: job_c,
-        condition: :on_job_success
-      })
+      trigger = Repo.reload!(trigger)
 
       dataclip = insert(:dataclip, project: project)
 
@@ -544,7 +515,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       {:ok, view, _html} =
         live(
           conn,
-          Routes.project_run_index_path(conn, :index, job_a.workflow.project_id)
+          Routes.project_run_index_path(conn, :index, project.id)
         )
 
       div =

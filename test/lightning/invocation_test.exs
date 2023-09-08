@@ -387,15 +387,8 @@ defmodule Lightning.InvocationTest do
     test "list_work_orders_for_project/1 returns runs ordered by desc finished_at" do
       project = insert(:project)
 
-      job_one = build(:job)
-      trigger = build(:trigger)
-
-      workflow =
-        build(:workflow, name: "chw-help", project: project)
-        |> with_job(job_one)
-        |> with_trigger(trigger)
-        |> with_edge({trigger, job_one})
-        |> insert()
+      {workflow, _trigger, job_one} =
+        build_workflow(project: project, name: "chw-help")
 
       dataclip = insert(:dataclip)
 
