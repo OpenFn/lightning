@@ -29,7 +29,7 @@ defmodule LightningWeb.EndToEndTest do
           assert unquote(string) =~ ~r/(?=.*compiler)(?=.*0.0.29)/
 
         :adaptor ->
-          assert unquote(string) =~ ~r/(?=.*language-http)(?=.*5.0.2)/
+          assert unquote(string) =~ ~r/(?=.*language-http)(?=.*5.0.3)/
       end
     end
   end
