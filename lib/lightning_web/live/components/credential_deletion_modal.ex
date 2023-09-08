@@ -80,7 +80,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
   @impl true
   def render(%{delete_now?: true, has_activity_in_projects?: true} = assigns) do
     ~H"""
-    <div id={"user-#{@id}"}>
+    <div id={"credential-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
         title="Delete credential"
@@ -102,7 +102,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   def render(assigns) do
     ~H"""
-    <div id={"user-#{@id}"}>
+    <div id={"credential-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
         title="Delete credential"
