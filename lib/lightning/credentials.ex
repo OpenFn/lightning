@@ -25,23 +25,33 @@ defmodule Lightning.Credentials do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
-    credentials_to_delete =
+    credentials_to_update =
       from(c in Credential,
         where: c.scheduled_deletion <= ago(0, "second")
       )
       |> Repo.all()
-      |> Enum.map(fn credential ->
-        {:ok, credential} = update_credential(credential, %{body: nil})
-        credential
-      end)
-      |> Enum.filter(fn credential -> has_activity_in_projects?(credential) end)
 
-    :ok =
-      Enum.each(credentials_to_delete, fn credential ->
-        delete_credential(credential)
+    credentials_with_empty_body =
+      for credential <- credentials_to_update,
+          {:ok, updated_credential} <- [
+            update_credential(credential, %{body: %{}})
+          ],
+          do: updated_credential
+
+    credentials_to_delete =
+      Enum.filter(credentials_with_empty_body, fn credential ->
+        !has_activity_in_projects?(credential)
       end)
 
-    {:ok, %{credentials_deleted: credentials_to_delete}}
+    deleted_count =
+      Enum.reduce(credentials_to_delete, 0, fn credential, acc ->
+        case delete_credential(credential) do
+          :ok -> acc + 1
+          _error -> acc
+        end
+      end)
+
+    {:ok, %{deleted_count: deleted_count}}
   end
 
   @doc """
@@ -250,28 +260,58 @@ defmodule Lightning.Credentials do
     |> Repo.transaction()
   end
 
+  @doc """
+  Schedules a given credential for deletion.
+
+  The deletion date is determined based on the `:purge_deleted_after_days` configuration
+  in the application environment. If this configuration is absent, the credential is scheduled
+  for immediate deletion.
+
+  The function will also perform necessary side effects such as:
+    - Removing associations of the credential.
+    - Notifying the owner of the credential about the scheduled deletion.
+
+  ## Parameters
+
+    - `credential`: A `Credential` struct that is to be scheduled for deletion.
+
+  ## Returns
+
+    - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
+      update was successful.
+    - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
+
+  ## Examples
+
+      iex> schedule_credential_deletion(%Credential{id: some_id})
+      {:ok, %Credential{}}
+
+      iex> schedule_credential_deletion(%Credential{})
+      {:error, %Ecto.Changeset{}}
+
+  """
   def schedule_credential_deletion(%Credential{} = credential) do
-    date =
-      case Application.get_env(:lightning, :purge_deleted_after_days) do
-        nil -> DateTime.utc_now()
-        integer -> DateTime.utc_now() |> Timex.shift(days: integer)
-      end
+    date = scheduled_deletion_date()
 
-    Credential.changeset(credential, %{
-      "scheduled_deletion" => date
-    })
-    |> Repo.update()
-    |> case do
-      {:ok, credential} ->
-        credential
-        |> remove_credential_associations()
-        |> notify_owner()
+    changeset =
+      Credential.changeset(credential, %{
+        "scheduled_deletion" => date
+      })
 
-        {:ok, credential}
+    case Repo.update(changeset) do
+      {:ok, updated_credential} ->
+        remove_credential_associations(updated_credential)
+        notify_owner(updated_credential)
+        {:ok, updated_credential}
 
       {:error, changeset} ->
         {:error, changeset}
     end
+  end
+
+  defp scheduled_deletion_date do
+    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    DateTime.utc_now() |> Timex.shift(days: days)
   end
 
   def cancel_scheduled_deletion(credential_id) do
@@ -281,9 +321,7 @@ defmodule Lightning.Credentials do
     })
   end
 
-  defp remove_credential_associations(
-         %Credential{id: credential_id} = credential
-       ) do
+  defp remove_credential_associations(%Credential{id: credential_id}) do
     project_credential_ids_query =
       from(pc in Lightning.Projects.ProjectCredential,
         where: pc.credential_id == ^credential_id,
@@ -299,8 +337,6 @@ defmodule Lightning.Credentials do
 
     Ecto.assoc(%Credential{id: credential_id}, :project_credentials)
     |> Repo.delete_all()
-
-    credential
   end
 
   defp notify_owner(credential) do
