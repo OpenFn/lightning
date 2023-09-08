@@ -9,24 +9,15 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
 
   @impl true
   def update(
-        %{credential: credential, current_user: current_user} = assigns,
+        %{credential: credential} = assigns,
         socket
       ) do
-    can_delete_credential =
-      Lightning.Policies.Users
-      |> Lightning.Policies.Permissions.can?(
-        :delete_credential,
-        current_user,
-        credential
-      )
-
     {:ok,
      socket
      |> assign(
        delete_now?: !is_nil(credential.scheduled_deletion),
        has_activity_in_projects?:
-         Credentials.has_activity_in_projects?(credential),
-       can_delete_credential: can_delete_credential
+         Credentials.has_activity_in_projects?(credential)
      )
      |> assign(assigns)}
   end
@@ -36,11 +27,6 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
     credential = Credentials.get_credential!(id)
 
     cond do
-      not socket.assigns.can_delete_credential ->
-        {:noreply,
-         put_flash(socket, :error, "You can't perform this action")
-         |> push_patch(to: ~p"/credentials")}
-
       not socket.assigns.delete_now? ->
         case Credentials.schedule_credential_deletion(credential) do
           {:ok, %Credential{}} ->

@@ -31,9 +31,25 @@ defmodule LightningWeb.CredentialLive.Index do
   end
 
   defp apply_action(socket, :delete, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Credentials")
-    |> assign(:credential, Credentials.get_credential!(id))
+    credential = Credentials.get_credential!(id)
+
+    can_delete_credential =
+      Lightning.Policies.Users
+      |> Lightning.Policies.Permissions.can?(
+        :delete_credential,
+        socket.assigns.current_user,
+        credential
+      )
+
+    if can_delete_credential do
+      socket
+      |> assign(:page_title, "Credentials")
+      |> assign(:credential, credential)
+    else
+      socket
+      |> put_flash(:error, "You can't perform this action")
+      |> push_patch(to: ~p"/credentials")
+    end
   end
 
   @impl true
