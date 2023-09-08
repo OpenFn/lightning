@@ -18,6 +18,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix broken UI in credential type picker
+  [#1064](https://github.com/OpenFn/Lightning/issues/1064)
+
 ## [v0.8.3] - 2023-09-05
 
 ### Added
