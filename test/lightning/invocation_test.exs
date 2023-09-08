@@ -19,7 +19,7 @@ defmodule Lightning.InvocationTest do
       |> with_edge({trigger, job})
       |> insert()
 
-    {workflow, trigger, job}
+    {Repo.reload!(workflow), Repo.reload!(trigger), Repo.reload!(job)}
   end
 
   describe "dataclips" do
@@ -267,15 +267,8 @@ defmodule Lightning.InvocationTest do
     test "list_work_orders_for_project/1 returns workorders ordered by last run finished at desc, with nulls first" do
       project = insert(:project)
 
-      job = build(:job)
-      trigger = build(:trigger)
-
-      workflow =
-        build(:workflow, name: "chw-help", project: project)
-        |> with_job(job)
-        |> with_trigger(trigger)
-        |> with_edge({trigger, job})
-        |> insert()
+      {workflow, _trigger, job} =
+        build_workflow(project: project, name: "chw-help")
 
       dataclip = insert(:dataclip)
 
@@ -550,13 +543,11 @@ defmodule Lightning.InvocationTest do
       project = insert(:project)
       now = Timex.now()
 
-      {_workflow, trigger, job1} =
+      {workflow, trigger, job1} =
         build_workflow(project: project, name: "chw-help")
 
-      trigger |> Repo
-
       Enum.each(1..10, fn index ->
-        create_work_order(project, job1, trigger, now, 10 * index)
+        create_work_order(project, workflow, job1, trigger, now, 10 * index)
       end)
 
       wos =
@@ -595,43 +586,43 @@ defmodule Lightning.InvocationTest do
 
       project = insert(:project)
 
-      {_workflow, trigger1, job1} =
+      {workflow1, trigger1, job1} =
         build_workflow(project: project, name: "workflow-1")
 
       now = Timex.now()
 
       %{work_order: wf1_wo1, run: wf1_run1} =
-        create_work_order(project, job1, trigger1, now, 10)
+        create_work_order(project, workflow1, job1, trigger1, now, 10)
 
       %{work_order: wf1_wo2, run: wf1_run2} =
-        create_work_order(project, job1, trigger1, now, 20)
+        create_work_order(project, workflow1, job1, trigger1, now, 20)
 
       %{work_order: wf1_wo3, run: wf1_run3} =
-        create_work_order(project, job1, trigger1, now, 30)
+        create_work_order(project, workflow1, job1, trigger1, now, 30)
 
-      {_workflow, trigger2, job2} =
+      {workflow2, trigger2, job2} =
         build_workflow(project: project, name: "workflow-2")
 
       %{work_order: wf2_wo1, run: wf2_run1} =
-        create_work_order(project, job2, trigger2, now, 40)
+        create_work_order(project, workflow2, job2, trigger2, now, 40)
 
       %{work_order: wf2_wo2, run: wf2_run2} =
-        create_work_order(project, job2, trigger2, now, 50)
+        create_work_order(project, workflow2, job2, trigger2, now, 50)
 
       %{work_order: wf2_wo3, run: wf2_run3} =
-        create_work_order(project, job2, trigger2, now, 60)
+        create_work_order(project, workflow2, job2, trigger2, now, 60)
 
-      {_workflow, trigger3, job3} =
+      {workflow3, trigger3, job3} =
         build_workflow(project: project, name: "workflow-3")
 
       %{work_order: wf3_wo1, run: wf3_run1} =
-        create_work_order(project, job3, trigger3, now, 70)
+        create_work_order(project, workflow3, job3, trigger3, now, 70)
 
       %{work_order: wf3_wo2, run: wf3_run2} =
-        create_work_order(project, job3, trigger3, now, 80)
+        create_work_order(project, workflow3, job3, trigger3, now, 80)
 
       %{work_order: wf3_wo3, run: wf3_run3} =
-        create_work_order(project, job3, trigger3, now, 90)
+        create_work_order(project, workflow3, job3, trigger3, now, 90)
 
       ### PAGE 1 -----------------------------------------------------------------------
 
@@ -1200,8 +1191,7 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
-  defp create_work_order(project, job, trigger, now, seconds) do
-    workflow = job.workflow
+  defp create_work_order(project, workflow, job, trigger, now, seconds) do
     dataclip = insert(:dataclip, project: project)
 
     reason =
