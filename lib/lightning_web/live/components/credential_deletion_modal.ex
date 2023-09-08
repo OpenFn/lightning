@@ -83,7 +83,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
     <div id={"user-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
-        title="Delete user"
+        title="Delete credential"
         close_modal_target={@myself}
       >
         <p>
@@ -105,7 +105,7 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
     <div id={"user-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
-        title="Delete user"
+        title="Delete credential"
         close_modal_target={@myself}
       >
         <p>
