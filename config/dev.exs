@@ -71,6 +71,11 @@ config :lightning, LightningWeb.Endpoint,
     ]
   ]
 
+# NOTE(FRANK): Fix me
+config :lightning, Lightning.Runtime.RuntimeManager,
+  runtime_path: "priv/runtime/test",
+  max_restarts: 5
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :console, format: "[$level] $message\n"
 

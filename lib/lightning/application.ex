@@ -82,7 +82,8 @@ defmodule Lightning.Application do
       LightningWeb.Endpoint,
       adaptor_registry_childspec,
       adaptor_service_childspec,
-      {Lightning.TaskWorker, name: :cli_task_worker}
+      {Lightning.TaskWorker, name: :cli_task_worker},
+      Lightning.Runtime.RuntimeManager
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]
