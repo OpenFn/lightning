@@ -7,6 +7,7 @@ defmodule Lightning.Accounts.UserNotifierTest do
   alias Lightning.DigestEmailWorker
   alias Lightning.Accounts.{UserNotifier, User}
   alias Lightning.Projects.Project
+  alias Lightning.Credentials.Credential
 
   describe "Notification emails" do
     test "notify_project_deletion/2" do
@@ -99,10 +100,13 @@ defmodule Lightning.Accounts.UserNotifierTest do
       )
     end
 
-    test "send_credential_deletion_notification_email/1" do
-      UserNotifier.send_credential_deletion_notification_email(%User{
-        email: "real@email.com"
-      })
+    test "send_credential_deletion_notification_email/2" do
+      UserNotifier.send_credential_deletion_notification_email(
+        %User{
+          email: "real@email.com"
+        },
+        %Credential{name: "Test"}
+      )
 
       assert_email_sent(
         subject: "Credential Deletion",

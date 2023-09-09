@@ -343,7 +343,7 @@ defmodule Lightning.Credentials do
     credential
     |> Repo.preload(:user)
     |> Map.get(:user)
-    |> UserNotifier.send_credential_deletion_notification_email()
+    |> UserNotifier.send_credential_deletion_notification_email(credential)
   end
 
   @doc """

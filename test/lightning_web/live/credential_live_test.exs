@@ -94,7 +94,9 @@ defmodule LightningWeb.CredentialLiveTest do
       assert html =~ "Delete credential"
 
       assert html =~
-               "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you&#39;d like to delete the credential?"
+               "Deleting this credential will immediately remove it from all jobs"
+
+      refute html =~ "credential has been used in workflow attempts"
 
       assert index_live
              |> element("button", "Delete credential")
@@ -125,8 +127,8 @@ defmodule LightningWeb.CredentialLiveTest do
 
       assert html =~ "Delete credential"
 
-      assert html =~
-               "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you&#39;d like to delete the credential?"
+      assert html =~ "Deleting this credential will immediately"
+      assert html =~ "*This credential has been used in workflow attempts"
 
       assert index_live
              |> element("button", "Delete credential")
@@ -183,7 +185,9 @@ defmodule LightningWeb.CredentialLiveTest do
         live(conn, ~p"/credentials/#{credential.id}/delete")
 
       assert html =~
-               "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you&#39;d like to delete the credential?"
+               "Deleting this credential will immediately remove it from all jobs"
+
+      refute html =~ "credential has been used in workflow attempts"
 
       assert index_live
              |> element("button", "Delete credential")
@@ -208,8 +212,8 @@ defmodule LightningWeb.CredentialLiveTest do
       {:ok, index_live, html} =
         live(conn, ~p"/credentials/#{credential.id}/delete")
 
-      assert html =~
-               "This credential can&#39;t be deleted for now. It is involved in projects that has ongoing activities."
+      assert html =~ "This credential has been used in workflow attempts"
+      assert html =~ "will be made unavailable for future use immediately"
 
       assert index_live |> element("button", "Ok, understood") |> has_element?()
 

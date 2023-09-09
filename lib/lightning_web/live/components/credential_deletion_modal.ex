@@ -69,11 +69,19 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
     <div id={"credential-#{@id}"}>
       <PetalComponents.Modal.modal
         max_width="sm"
-        title="Delete credential"
+        title="Credential marked for deletion"
         close_modal_target={@myself}
       >
         <p>
-          This credential can't be deleted for now. It is involved in projects that has ongoing activities.
+          This credential has been used in workflow attempts that
+          are still monitored in at least one project's audit trail. The
+          credential will be made unavailable for future use immediately and
+          after a cooling-off period all secrets will be permanently scrubbed,
+          but the record itself will not be removed until related workflow
+          attempts have been purged.
+        </p>
+        <p class="py-2">
+          Contact your instance administrator for more details.
         </p>
         <div class="flex justify-end">
           <PetalComponents.Button.button
@@ -95,15 +103,23 @@ defmodule LightningWeb.Components.CredentialDeletionModal do
         close_modal_target={@myself}
       >
         <p>
-          Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?
+          Deleting this credential will immediately remove it from all jobs and
+          projects. If you later restore it, you will need to re-share it with
+          projects and re-associate it with jobs. Are you sure you'd like to
+          delete the credential?
         </p>
 
         <%= if @has_activity_in_projects? do %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
           </div>
-          <p>
-            *Note that this credential still has activity related to active projects. We may not be able to delete it entirely from the app until those activities are expired.
+          <p class="italic text-slate-500">
+            *This credential has been used in workflow attempts that
+            are still monitored in at least one project's audit trail. The
+            credential will be made unavailable for future use immediately and
+            after a cooling-off period all secrets will be permanently scrubbed,
+            but the record itself will not be removed until related workflow
+            attempts have been purged.
           </p>
         <% end %>
         <div class="hidden sm:block" aria-hidden="true">
