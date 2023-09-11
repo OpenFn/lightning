@@ -441,7 +441,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         >
           <%= @panel_title %>
         </div>
-        <div class="" id="close-button">
+        <div class="close-button">
           <a
             id={"#{@id}-panel-collapse-icon"}
             class="panel-collapse-icon"
