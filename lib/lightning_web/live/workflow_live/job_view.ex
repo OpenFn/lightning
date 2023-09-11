@@ -10,6 +10,9 @@ defmodule LightningWeb.WorkflowLive.JobView do
   slot :inner_block, required: false
 
   slot :bottom
+  slot :column do
+    attr :class, :string, doc: "Extra CSS classes for the column"
+  end
 
   def container(assigns) do
     ~H"""
@@ -36,7 +39,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
 
   defp column(assigns) do
     ~H"""
-    <div id={@id} class={["flex-1 shrink px-4 pt-4 collapsible-panel", @class]}>
+    <div id={@id} class={["flex-1 px-4 pt-4 collapsible-panel", @class]}>
       <%= render_slot(@inner_block) %>
     </div>
     """
