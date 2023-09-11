@@ -83,14 +83,14 @@ defmodule LightningWeb.WorkflowLive.JobView do
         <.collapsible_panel
           id={slot[:id]}
           panel_title={slot[:panel_title]}
-          class={"#{slot[:class]} h-full border"}
+          class={"#{slot[:class]} h-full border pb-16"}
         >
           <%= render_slot(slot) %>
         </.collapsible_panel>
       <% end %>
       <.collapsible_panel
         id="job-editor-panel"
-        class="h-full border"
+        class="border pb-16"
         panel_title="Editor"
       >
         <.live_component
@@ -98,12 +98,12 @@ defmodule LightningWeb.WorkflowLive.JobView do
           id={"job-editor-pane-#{@job.id}"}
           form={@form}
           disabled={false}
-          class="h-full pb-16"
+          class="h-full"
         />
       </.collapsible_panel>
-      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border">
+      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border pb-16">
         <%= if @follow_run_id do %>
-          <div class="h-full">
+          <div class="">
             <%= live_render(
               @socket,
               LightningWeb.RunLive.RunViewerLive,
