@@ -206,6 +206,7 @@ defmodule Lightning.Accounts.UserNotifier do
     - #{failed_workorders} work orders that failed, crashed or timed out
     Click the link below to view this in the history page:
     #{build_digest_url(workflow, start_date, end_date)}
+
     """
   end
 
