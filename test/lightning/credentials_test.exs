@@ -6,7 +6,8 @@ defmodule Lightning.CredentialsTest do
   alias Lightning.Credentials
   alias Lightning.Credentials.{Credential, Audit}
   import Lightning.BypassHelpers
-  # import Lightning.Factories
+  import Lightning.Factories
+  import Swoosh.TestAssertions
 
   import Lightning.{
     JobsFixtures,
@@ -234,6 +235,90 @@ defmodule Lightning.CredentialsTest do
       assert job.project_credential_id == nil
     end
 
+    test "schedule_credential_deletion/1 schedules a deletion date according to the :purge_deleted_after_days env" do
+      days = Application.get_env(:lightning, :purge_deleted_after_days)
+
+      user = insert(:user)
+      project = build(:project) |> with_project_user(user, :owner) |> insert()
+
+      credential =
+        insert(:credential,
+          name: "My Credential",
+          body: %{foo: :bar},
+          user: user
+        )
+
+      project_credential =
+        insert(:project_credential, credential: credential, project: project)
+
+      job = insert(:job, project_credential: project_credential)
+
+      # Ensure associations are existent before deletion
+      initial_project_credentials =
+        Repo.all(assoc(credential, :project_credentials))
+
+      assert not Enum.empty?(initial_project_credentials)
+
+      initial_job = Repo.reload!(job)
+      assert initial_job.project_credential_id == project_credential.id
+
+      refute_email_sent()
+
+      assert credential.scheduled_deletion == nil
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      {:ok, updated_credential} =
+        Credentials.schedule_credential_deletion(credential)
+
+      # Ensure scheduled_deletion is updated as expected
+      assert updated_credential.scheduled_deletion != nil
+
+      assert Timex.diff(updated_credential.scheduled_deletion, now, :days) ==
+               days
+
+      # Verify project_credential association removal
+      retrieved_project_credentials =
+        Repo.all(assoc(updated_credential, :project_credentials))
+
+      assert Enum.empty?(retrieved_project_credentials)
+
+      # Verify job's credential_id is set to nil
+      retrieved_job = Repo.reload!(job)
+      assert is_nil(retrieved_job.project_credential_id)
+
+      assert_email_sent(
+        subject: "Credential Deletion",
+        to: user.email
+      )
+    end
+
+    test "cancel_scheduled_deletion/1 sets scheduled_deletion to nil for a given credential" do
+      # Set up a credential with a scheduled_deletion date
+      # 1 hour from now, truncated to seconds
+      scheduled_date =
+        DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
+
+      credential =
+        insert(:credential,
+          user: insert(:user),
+          name: "My Credential",
+          body: %{foo: :bar},
+          scheduled_deletion: scheduled_date
+        )
+
+      # Ensure the initial setup is correct
+      assert DateTime.truncate(credential.scheduled_deletion, :second) ==
+               scheduled_date
+
+      # Call the function to cancel the scheduled deletion
+      {:ok, updated_credential} =
+        Credentials.cancel_scheduled_deletion(credential.id)
+
+      # Verify the scheduled_deletion field is set to nil
+      assert is_nil(updated_credential.scheduled_deletion)
+    end
+
     test "change_credential/1 returns a credential changeset" do
       user = user_fixture()
       credential = credential_fixture(user_id: user.id)
@@ -267,6 +352,25 @@ defmodule Lightning.CredentialsTest do
                user_id_3
              ) ==
                [project_id]
+    end
+  end
+
+  describe "has_activity_in_projects?/1" do
+    setup do
+      {:ok, credential: insert(:credential)}
+    end
+
+    test "returns true when there's at least one associated run", %{
+      credential: credential
+    } do
+      insert(:run, credential: credential)
+      assert Credentials.has_activity_in_projects?(credential)
+    end
+
+    test "returns false when there's no associated run", %{
+      credential: credential
+    } do
+      refute Credentials.has_activity_in_projects?(credential)
     end
   end
 
@@ -362,6 +466,88 @@ defmodule Lightning.CredentialsTest do
 
       assert is_integer(new_expiry)
       assert new_expiry > DateTime.to_unix(DateTime.utc_now()) + 10 * 60
+    end
+  end
+
+  describe "perform/1 with type purge_deleted" do
+    setup do
+      active_credential =
+        insert(:credential,
+          name: "Active Credential",
+          body: %{foo: :bar},
+          user: insert(:user)
+        )
+
+      scheduled_credential =
+        insert(:credential,
+          name: "Scheduled Credential",
+          body: %{foo: :bar},
+          user: insert(:user),
+          scheduled_deletion: DateTime.utc_now()
+        )
+
+      {
+        :ok,
+        active_credential: active_credential,
+        scheduled_credential: scheduled_credential
+      }
+    end
+
+    defp mock_activity(credential) do
+      insert(:run, credential: credential)
+    end
+
+    test "doesn't delete credentials that are not scheduled for deletion", %{
+      active_credential: credential
+    } do
+      Credentials.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      assert Repo.get(Credential, credential.id)
+    end
+
+    test "sets bodies of credentials scheduled for deletion to nil", %{
+      scheduled_credential: credential
+    } do
+      mock_activity(credential)
+      Credentials.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      updated_credential = Repo.get(Credential, credential.id)
+      assert updated_credential.body == %{}
+    end
+
+    test "doesn't set bodies of other credentials to nil", %{
+      active_credential: credential
+    } do
+      Credentials.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      updated_credential = Repo.get(Credential, credential.id)
+      assert updated_credential.body != nil
+    end
+
+    test "doesn't delete credentials with activity in projects", %{
+      scheduled_credential: credential
+    } do
+      mock_activity(credential)
+      Credentials.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+      assert Repo.get(Credential, credential.id)
+    end
+
+    test "deletes other credentials scheduled for deletion", %{
+      scheduled_credential: credential
+    } do
+      # This mock might be unnecessary if you want to show the credential does NOT have activity, just remove it if that's the case.
+      mock_activity(credential)
+
+      # A second scheduled credential without activity
+      scheduled_credential_2 =
+        insert(:credential,
+          name: "Another Scheduled Credential",
+          body: %{baz: :qux},
+          user: insert(:user),
+          scheduled_deletion: DateTime.utc_now()
+        )
+
+      Credentials.perform(%Oban.Job{args: %{"type" => "purge_deleted"}})
+
+      assert is_nil(Repo.get(Credential, scheduled_credential_2.id))
+      assert Repo.get(Credential, credential.id)
     end
   end
 end

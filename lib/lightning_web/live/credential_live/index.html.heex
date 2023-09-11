@@ -13,6 +13,14 @@
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>
+    <%= if @live_action == :delete do %>
+      <.live_component
+        module={LightningWeb.Components.CredentialDeletionModal}
+        id={@credential.id}
+        credential={@credential}
+        return_to={~p"/credentials"}
+      />
+    <% end %>
     <.table id="credentials">
       <.tr>
         <.th>Name</.th>
@@ -24,9 +32,15 @@
 
       <%= for credential <- @credentials do %>
         <.tr id={"credential-#{credential.id}"}>
-          <.td><%= credential.name %></.td>
-          <.td><%= credential.project_names %></.td>
-          <.td><%= credential.schema %></.td>
+          <.td class={if credential.scheduled_deletion, do: "line-through"}>
+            <%= credential.name %>
+          </.td>
+          <.td>
+            <%= credential.project_names %>
+          </.td>
+          <.td class={if credential.scheduled_deletion, do: "line-through"}>
+            <%= credential.schema %>
+          </.td>
           <.td>
             <%= if credential.production do %>
               <div class="flex">
@@ -36,25 +50,17 @@
             <% end %>
           </.td>
           <.td>
-            <span>
-              <.link navigate={
-                Routes.credential_edit_path(@socket, :edit, credential)
-              }>
-                Edit
-              </.link>
-            </span>
-            |
-            <span>
-              <%= link("Delete",
-                to: "#",
-                phx_click: "delete",
-                phx_value_id: credential.id,
-                data: [
-                  confirm:
-                    "Deleting this credential will remove it from all projects and jobs, even if it is currently in use. Are you sure you'd like to delete the credential?"
-                ]
-              ) %>
-            </span>
+            <%= if !credential.scheduled_deletion do %>
+              <span>
+                <.link navigate={
+                  Routes.credential_edit_path(@socket, :edit, credential)
+                }>
+                  Edit
+                </.link>
+              </span>
+              |
+            <% end %>
+            <.delete_action socket={@socket} credential={credential} />
           </.td>
         </.tr>
       <% end %>

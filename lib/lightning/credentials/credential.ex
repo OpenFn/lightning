@@ -17,11 +17,13 @@ defmodule Lightning.Credentials.Credential do
   @foreign_key_type :binary_id
   schema "credentials" do
     field :name, :string
-
     field :body, Lightning.Encrypted.Map
     field :production, :boolean, default: false
     field :schema, :string
+    field :scheduled_deletion, :utc_datetime
+
     belongs_to :user, User
+
     has_many :project_credentials, ProjectCredential
     has_many :projects, through: [:project_credentials, :project]
 
@@ -31,7 +33,14 @@ defmodule Lightning.Credentials.Credential do
   @doc false
   def changeset(credential, attrs) do
     credential
-    |> cast(attrs, [:name, :body, :production, :user_id, :schema])
+    |> cast(attrs, [
+      :name,
+      :body,
+      :production,
+      :user_id,
+      :schema,
+      :scheduled_deletion
+    ])
     |> cast_assoc(:project_credentials)
     |> validate_required([:name, :body, :user_id])
     |> assoc_constraint(:user)

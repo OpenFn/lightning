@@ -102,14 +102,32 @@ defmodule Lightning.Accounts.UserNotifier do
 
     Hi #{user.first_name},
 
-    Your Lightning account has been scheduled for deletion. From now on your account is disabled and you are no longer able to access it.
+    Your Lightning account has been scheduled for deletion. It has been disabled and you will no longer be able to login.
 
-    It will be permanently deleted in #{permanent_deletion_grace()}. This will delete all of your credentials and remove you from all projects you are participating.
+    It will be permanently deleted in #{permanent_deletion_grace()}. This will delete all of your credentials and remove you from all projects.
 
-    Note that if you have some ongoing activities in some projects, your account won't be deleted until that activity expires.
+    Note that if you have auditable events associated with projects, your account won't be permanently deleted until that audit activity expires.
 
-    If you don't want this to happen, please contact #{admin()} as soon as possible.
+    If you have any questions or don't want your account deleted, please contact #{admin()} as soon as possible.
+    """)
+  end
 
+  def send_credential_deletion_notification_email(user, credential) do
+    deliver(user.email, "Credential Deletion", """
+
+    Hi #{user.first_name},
+
+    Your "#{credential.name}" has been scheduled for deletion.
+
+    Here's what this means for you:
+
+    - The credential has been disconnected from all projects. Nobody can use it.
+    - Any jobs that were using this credential are now set to run without any credential. (If they require authentication, they may no longer function properly.)
+    - After #{permanent_deletion_grace()} your credentials secrets will be scrubbed. The record itself may be kept until all related audit trail activity has expired.
+
+    You can cancel this deletion anytime before the scheduled date.
+
+    If you have any questions or don't want your credential deleted, please contact #{admin()} as soon as possible.
     """)
   end
 
@@ -142,7 +160,6 @@ defmodule Lightning.Accounts.UserNotifier do
     #{url}
 
     If you didn't request this change, please ignore this.
-
     """)
   end
 
@@ -159,7 +176,6 @@ defmodule Lightning.Accounts.UserNotifier do
     Please visit your inbox (#{new_email}) to activate your account
 
     If you didn't request this change, please ignore this.
-
     """)
   end
 
