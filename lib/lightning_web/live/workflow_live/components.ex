@@ -430,7 +430,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def collapsible_panel(assigns) do
     ~H"""
-    <div id={@id} class={["flex-1 px-4 pt-4 collapsible-panel", @class]}>
+    <div id={@id} class={["grow flex-1 px-4 pt-4 collapsible-panel", @class]}>
       <div
         id={"#{@id}-panel-header"}
         class="flex justify-between items-center panel-header"
@@ -451,7 +451,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
           </a>
           <a
-            id={"#{@id}-panel-expand-icon"}
+            id={"#{@id}-panel-ezxpand-icon"}
             href="#"
             class="hidden panel-expand-icon"
             phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
