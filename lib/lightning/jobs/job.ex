@@ -74,6 +74,7 @@ defmodule Lightning.Jobs.Job do
 
     change
     |> validate()
+    |> unique_constraint(:name, name: "jobs_name_workflow_id_index")
   end
 
   def validate(changeset) do

@@ -13,6 +13,8 @@ and this project adheres to
 - Add favicons [#1079](https://github.com/OpenFn/Lightning/issues/1079)
 - Validate job name in placeholder job node
   [#1021](https://github.com/OpenFn/Lightning/issues/1021)
+- Make job names unique per workflow
+  [#1053](https://github.com/OpenFn/Lightning/issues/1053)
 
 ### Changed
 
