@@ -199,63 +199,38 @@ defmodule Lightning.Pipeline.Runner do
         ) ::
           {:ok, Invocation.Dataclip.t()} | {:error, any}
   def create_dataclip_from_result(%Lightning.Runtime.Result{} = result, run) do
-    result.final_state_path
-    |> read_file_content()
-    |> decode_file_content()
-    |> process_decoded_content(run)
-  end
+    with {:ok, data} <- File.read(result.final_state_path),
+         {:ok, body} <- Jason.decode(data) do
+      job = Lightning.Repo.preload(run.job, :workflow)
 
-  defp read_file_content(file_path) do
-    case File.read(file_path) do
-      {:ok, data} -> {:ok, data}
-      error -> error
+      Invocation.update_run(run, %{
+        output_dataclip: %{
+          project_id: job.workflow.project_id,
+          type: :run_result,
+          body: scrub_result(body)
+        }
+      })
+    else
+      error = {:error, %Jason.DecodeError{position: pos}} ->
+        Logger.info(
+          "Got JSON decoding error when trying to parse: #{result.final_state_path}:#{pos}"
+        )
+
+        run
+        |> Repo.preload(:output_dataclip)
+        |> Invocation.update_run(%{
+          output_dataclip: nil
+        })
+
+        error
+
+      error = {:error, err} ->
+        Logger.info(
+          "Got unexpected result while saving the resulting state from a Run:\n#{inspect(err)}"
+        )
+
+        error
     end
-  end
-
-  defp decode_file_content({:ok, data}) do
-    case Jason.decode(data) do
-      {:ok, body} -> {:ok, body}
-      error -> error
-    end
-  end
-
-  defp decode_file_content(error), do: error
-
-  defp process_decoded_content({:ok, body}, run) do
-    job = Lightning.Repo.preload(run.job, :workflow)
-
-    Invocation.update_run(run, %{
-      output_dataclip: %{
-        project_id: job.workflow.project_id,
-        type: :run_result,
-        body: scrub_result(body)
-      }
-    })
-  end
-
-  defp process_decoded_content(
-         {:error, %Jason.DecodeError{position: pos} = error},
-         run
-       ) do
-    Logger.info(
-      "Got JSON decoding error when trying to parse: #{run.final_state_path}:#{pos}"
-    )
-
-    run
-    |> Repo.preload(:output_dataclip)
-    |> Invocation.update_run(%{
-      output_dataclip: nil
-    })
-
-    {:error, error}
-  end
-
-  defp process_decoded_content({:error, err}, _run) do
-    Logger.info(
-      "Got unexpected result while saving the resulting state from a Run:\n#{inspect(err)}"
-    )
-
-    {:error, err}
   end
 
   @doc """
