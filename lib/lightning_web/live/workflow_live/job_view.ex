@@ -19,7 +19,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
-        <div class="grow flex h-5/6 gap-3 mx-4">
+        <div class="grow flex h-5/6 gap-3 mx-4" phx-hook="collapsiblePanel" id="collapsibles">
           <%= render_slot(@inner_block) %>
         </div>
         <div class="flex p-2 justify-end">
