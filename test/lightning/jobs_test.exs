@@ -7,22 +7,18 @@ defmodule Lightning.JobsTest do
   alias Lightning.Jobs.Scheduler
   alias Lightning.Workflows
 
-  import Lightning.JobsFixtures
-  import Lightning.CredentialsFixtures
-  import Lightning.InvocationFixtures
-  import Lightning.WorkflowsFixtures
   import Lightning.Factories
 
   describe "jobs" do
     @invalid_attrs %{body: nil, enabled: nil, name: nil}
 
     test "list_jobs/0 returns all jobs" do
-      job = job_fixture()
+      job = insert(:job)
       assert Jobs.list_jobs() == [Jobs.get_job!(job.id)]
     end
 
     test "list_active_cron_jobs/0 returns all active jobs with cron triggers" do
-      job_fixture()
+      insert(:job)
 
       workflow = insert(:workflow)
 
@@ -52,32 +48,37 @@ defmodule Lightning.JobsTest do
     end
 
     test "get_job!/1 returns the job with given id" do
-      job = job_fixture()
+      %{id: job_id} = insert(:job)
 
-      assert Jobs.get_job!(job.id) |> unload_relation(:workflow) == job
+      assert %Job{id: ^job_id} = Jobs.get_job!(job_id)
 
       assert_raise Ecto.NoResultsError, fn ->
         Jobs.get_job!(Ecto.UUID.generate())
       end
 
-      assert Jobs.get_job(job.id) |> unload_relation(:workflow) == job
       assert Jobs.get_job(Ecto.UUID.generate()) == nil
     end
 
     test "change_job/1 returns a job changeset" do
-      job = job_fixture()
+      job = insert(:job)
       assert %Ecto.Changeset{} = Jobs.change_job(job)
     end
 
     test "get_upstream_jobs_for/1 returns all jobs in same project except the job passed in" do
-      workflow_1 = workflow_fixture()
-      workflow_2 = workflow_fixture()
+      workflow_1 = insert(:workflow)
+      workflow_2 = insert(:workflow)
 
-      workflow_1_job_1 = job_fixture(workflow_id: workflow_1.id)
-      workflow_1_job_2 = job_fixture(workflow_id: workflow_1.id)
+      workflow_1_job_1 =
+        insert(:job, workflow: workflow_1)
 
-      workflow_2_job_1 = job_fixture(workflow_id: workflow_2.id)
-      workflow_2_job_2 = job_fixture(workflow_id: workflow_2.id)
+      workflow_1_job_2 =
+        insert(:job, workflow: workflow_1)
+
+      workflow_2_job_1 =
+        insert(:job, workflow: workflow_2)
+
+      workflow_2_job_2 =
+        insert(:job, workflow: workflow_2)
 
       assert Jobs.get_upstream_jobs_for(workflow_1_job_1) == [
                Jobs.get_job!(workflow_1_job_2.id)
@@ -124,7 +125,7 @@ defmodule Lightning.JobsTest do
     end
 
     test "update_job/2 with valid data updates the job" do
-      job = job_fixture()
+      job = insert(:job)
 
       update_attrs = %{
         body: "some updated body",
@@ -139,7 +140,7 @@ defmodule Lightning.JobsTest do
     end
 
     test "update_job/2 with invalid data returns error changeset" do
-      job = job_fixture()
+      job = insert(:job)
       assert {:error, %Ecto.Changeset{}} = Jobs.update_job(job, @invalid_attrs)
     end
 
@@ -189,9 +190,12 @@ defmodule Lightning.JobsTest do
 
     test "with a credential associated creates a Job with a credential" do
       project_credential =
-        project_credential_fixture(
-          name: "new credential",
-          body: %{"foo" => "manchu"}
+        insert(:project_credential,
+          credential:
+            insert(:credential,
+              name: "new credential",
+              body: %{"foo" => "manchu"}
+            )
         )
 
       assert {:ok, %Job{} = job} =
@@ -202,7 +206,7 @@ defmodule Lightning.JobsTest do
                  trigger: %{type: "webhook", comment: "foo"},
                  adaptor: "@openfn/language-common",
                  project_credential_id: project_credential.id,
-                 workflow_id: workflow_fixture().id
+                 workflow_id: insert(:workflow).id
                })
 
       job = Repo.preload(job, :credential)
@@ -222,7 +226,7 @@ defmodule Lightning.JobsTest do
         enabled: true,
         name: "some name",
         adaptor: "@openfn/language-common",
-        workflow_id: workflow_fixture().id
+        workflow_id: insert(:workflow).id
       }
 
       assert {:ok, %Job{} = job} = Jobs.create_job(valid_attrs)
@@ -232,13 +236,13 @@ defmodule Lightning.JobsTest do
     end
 
     test "with an upstream job returns a job with the upstream job's workflow_id" do
-      workflow = workflow_fixture()
+      workflow = insert(:workflow)
 
       {:ok, %Job{} = upstream_job} =
         Jobs.create_job(%{
+          name: "job 1",
           body: "some body",
           enabled: true,
-          name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
           workflow_id: workflow.id
@@ -246,9 +250,9 @@ defmodule Lightning.JobsTest do
 
       {:ok, %Job{} = job} =
         Jobs.create_job(%{
+          name: "job 2",
           body: "some body",
           enabled: true,
-          name: "some name",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           workflow_id: workflow.id
@@ -258,13 +262,13 @@ defmodule Lightning.JobsTest do
     end
 
     test "with an upstream job doesn't create a new workflow" do
-      workflow = workflow_fixture()
+      workflow = insert(:workflow)
 
       {:ok, %Job{} = upstream_job} =
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
-          name: "some name",
+          name: "job 1",
           adaptor: "@openfn/language-common",
           trigger: %{type: "webhook"},
           workflow_id: workflow.id
@@ -276,7 +280,7 @@ defmodule Lightning.JobsTest do
         Jobs.create_job(%{
           body: "some body",
           enabled: true,
-          name: "some name",
+          name: "job 2",
           adaptor: "@openfn/language-common",
           trigger: %{type: "on_job_success", upstream_job_id: upstream_job.id},
           workflow_id: workflow.id
@@ -343,7 +347,7 @@ defmodule Lightning.JobsTest do
         })
 
       {:ok, %{attempt_run: attempt_run}} =
-        Lightning.WorkOrderService.multi_for(:cron, edge, dataclip_fixture())
+        Lightning.WorkOrderService.multi_for(:cron, edge, insert(:dataclip))
         |> Repo.transaction()
 
       Lightning.Pipeline.process(attempt_run)

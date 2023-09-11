@@ -15,6 +15,8 @@ and this project adheres to
   [#1021](https://github.com/OpenFn/Lightning/issues/1021)
 - Bring credential delete in line with new GDPR interpretation
   [#802](https://github.com/OpenFn/Lightning/issues/802)
+- Make job names unique per workflow
+  [#1053](https://github.com/OpenFn/Lightning/issues/1053)
 
 ### Changed
 
