@@ -172,7 +172,7 @@ div[id^='tippy-'] {
 
 }
 
-#output-logs.collapsed #close-button {
+#output-logs.collapsed .close-button {
   display: block !important;
   margin-bottom: 32px;
 
