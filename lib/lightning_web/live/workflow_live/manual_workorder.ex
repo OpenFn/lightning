@@ -72,14 +72,14 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             </div>
           </div>
         </div>
-        <div :if={@selected_dataclip} class="h-32 overflow-y-auto">
-          <.log_view dataclip={@selected_dataclip} />
+        <div :if={@selected_dataclip} class="min-h-[40vh] overflow-y-auto">
+          <.log_view dataclip={@selected_dataclip} class="min-h-[40vh]" />
         </div>
         <div :if={is_nil(@selected_dataclip)} class="h-full">
           <.input
             type="textarea"
             field={@form[:body]}
-            rows="10"
+            class="min-h-[40vh] md:min-h-[40vh]"
             disabled={@disabled}
             phx-debounce="300"
           />
@@ -90,12 +90,13 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   end
 
   attr :dataclip, :map, required: true
+  attr :class, :string, default: nil
 
   defp log_view(assigns) do
     assigns = assigns |> assign(log: format_dataclip_body(assigns.dataclip))
 
     ~H"""
-    <LightningWeb.RunLive.Components.log_view log={@log} />
+    <LightningWeb.RunLive.Components.log_view log={@log} class={@class} />
     """
   end
 

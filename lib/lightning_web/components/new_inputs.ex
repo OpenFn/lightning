@@ -96,6 +96,8 @@ defmodule LightningWeb.Components.NewInputs do
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
+  attr :class, :string, default: nil
+
   slot :inner_block
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -172,7 +174,8 @@ defmodule LightningWeb.Components.NewInputs do
           "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
           "min-h-[6rem] phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
           @errors == [] && "border-slate-300 focus:border-slate-400",
-          @errors != [] && "border-danger-400 focus:border-danger-400"
+          @errors != [] && "border-danger-400 focus:border-danger-400",
+          @class
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
