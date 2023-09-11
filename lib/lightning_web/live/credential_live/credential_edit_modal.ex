@@ -6,7 +6,7 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
 
   @impl true
   def update(%{project: _project} = assigns, socket) do
-    {:ok, socket |> assign(assigns)}
+    {:ok, socket |> assign(assigns) |> assign_new(:modal, fn -> false end)}
   end
 
   @impl true
@@ -29,6 +29,7 @@ defmodule LightningWeb.CredentialLive.CredentialEditModal do
         project={@project}
         on_save={@on_save}
         show_project_credentials={false}
+        modal={@modal}
       >
         <:button>
           <%= render_slot(@cancel) %>

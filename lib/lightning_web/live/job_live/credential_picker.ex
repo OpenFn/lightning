@@ -119,7 +119,8 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         project: project,
         projects: [],
         show_project_credentials: false,
-        title: "Create Credential"
+        title: "Create Credential",
+        modal: true
       }
     )
 

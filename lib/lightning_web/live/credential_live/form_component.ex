@@ -30,6 +30,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         id={"#{@id}-type-picker"}
         on_confirm="type_selected"
         phx_target={@myself}
+        modal={@modal}
       />
       <div :if={@type} class="mt-10 sm:mt-0">
         <div class="lg:grid md:grid-cols-3 md:gap-6">
@@ -296,7 +297,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      end)}
   end
 
-  def update(%{projects: projects} = assigns, socket) do
+  def update(%{projects: projects, modal: modal} = assigns, socket) do
     pid = self()
 
     {:ok,
@@ -307,6 +308,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
      )
      |> assign_new(:show_project_credentials, fn -> true end)
      |> assign(
+       modal: modal,
        changeset: Credentials.change_credential(assigns.credential),
        all_projects: projects |> Enum.map(&{&1.name, &1.id}),
        selected_project: "",
