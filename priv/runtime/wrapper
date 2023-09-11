@@ -3,6 +3,7 @@
 # Start the program in the background
 exec "$@" &
 pid1=$!
+echo "PID of the program: $pid1"  # Print the PID of the program to the console
 
 # Silence warnings from here on
 exec >/dev/null 2>&1
@@ -14,6 +15,7 @@ exec 0<&0 $(
   kill -KILL $pid1
 ) &
 pid2=$!
+echo "PID of the background monitor: $pid2"  # Print the PID of the background monitor to the console
 
 # Clean up
 wait $pid1

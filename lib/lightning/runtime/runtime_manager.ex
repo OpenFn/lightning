@@ -6,12 +6,15 @@ defmodule Lightning.Runtime.RuntimeManager do
   use GenServer, restart: :transient, shutdown: 5_000
   require Logger
 
+  alias Lightning.Runtime.LogStream
+
   alias __MODULE__
 
   defstruct [
     :lightning_url,
     :runtime_pid,
-    runtime_path: Application.app_dir(:lightning, "priv/runtime/test"),
+    arg0: Application.app_dir(:lightning, "priv/runtime/logger.js"),
+    runtime_path: "/Users/frank/.asdf/shims/node",
     max_restarts: 5,
     restarts: 0
   ]
@@ -54,8 +57,10 @@ defmodule Lightning.Runtime.RuntimeManager do
 
     {:ok, pid} =
       Task.start_link(fn ->
-        System.cmd(wrapper, [config.runtime_path, config.lightning_url],
-          into: IO.stream()
+        System.cmd(
+          wrapper,
+          [config.runtime_path, config.arg0, config.lightning_url],
+          into: LogStream.new()
         )
       end)
 
