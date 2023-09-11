@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
 
   import LightningWeb.Components.NewInputs
 
+
   attr :id, :string, required: true
   attr :dataclips, :list, default: []
   attr :form, :map, required: true
@@ -75,11 +76,10 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         <div :if={@selected_dataclip} class="min-h-[40vh] overflow-y-auto">
           <.log_view dataclip={@selected_dataclip} class="min-h-[40vh]" />
         </div>
-        <div :if={is_nil(@selected_dataclip)} class="h-full">
+        <div :if={is_nil(@selected_dataclip)} class="">
           <.input
             type="textarea"
             field={@form[:body]}
-            class="min-h-[40vh] md:min-h-[40vh]"
             disabled={@disabled}
             phx-debounce="300"
           />
