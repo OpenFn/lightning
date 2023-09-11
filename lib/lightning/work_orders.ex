@@ -37,7 +37,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.Attempt
-  alias Lightning.Attempts
+  alias Lightning.{Attempts, Graph}
 
   import Ecto.Changeset
   import Lightning.Validators
@@ -104,6 +104,21 @@ defmodule Lightning.WorkOrders do
     |> assoc_constraint(:workflow)
   end
 
+  @doc """
+  Retry an Attempt from a given run.
+
+  This will create a new Attempt on the Workorder, and enqueue it for
+  processing.
+
+  When creating a new Attempt, a graph of the workflow is created, and
+  using that graph the runs would not be replaced with the new runs are linked.
+
+  For example, by retrying a run from the middle of the workflow, the new
+  attempt will only contain the runs that are upstream of the run being
+  retried.
+  """
+  @spec retry(Attempt.t(), Run.t(), [work_order_option()]) ::
+          {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
   def retry(attempt, run, opts \\ []) do
     attrs = Map.new(opts)
 
@@ -114,16 +129,34 @@ defmodule Lightning.WorkOrders do
         where: a.id == ^attempt.id,
         join: r in assoc(a, :runs),
         where: r.id == ^run.id,
-        preload: [:work_order]
+        preload: [:runs, work_order: [workflow: :edges]]
       )
       |> Repo.one()
+
+    runs =
+      attempt.work_order.workflow.edges
+      |> Enum.reduce(Graph.new(), fn edge, graph ->
+        graph
+        |> Graph.add_edge(
+          edge.source_trigger_id || edge.source_job_id,
+          edge.target_job_id
+        )
+      end)
+      |> Graph.prune(run.job_id)
+      |> Graph.nodes()
+      |> then(fn nodes ->
+        Enum.filter(attempt.runs, fn run ->
+          run.job_id in nodes
+        end)
+      end)
 
     Attempt.new()
     |> put_assoc(:created_by, attrs[:created_by])
     |> put_assoc(:work_order, attempt.work_order)
-    |> put_change(:dataclip_id, attempt.dataclip_id)
+    |> put_change(:dataclip_id, run.input_dataclip_id)
     |> put_assoc(:work_order, attempt.work_order)
     |> put_assoc(:starting_job, run.job)
+    |> put_assoc(:runs, runs)
     |> validate_required(:dataclip_id)
     |> validate_required_assoc(:work_order)
     |> validate_required_assoc(:created_by)
