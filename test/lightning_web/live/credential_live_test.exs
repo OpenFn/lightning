@@ -5,6 +5,7 @@ defmodule LightningWeb.CredentialLiveTest do
   import LightningWeb.CredentialLiveHelpers
 
   import Lightning.CredentialsFixtures
+  import Lightning.Factories
 
   alias Lightning.CredentialsFixtures
   alias Lightning.Credentials
@@ -82,17 +83,148 @@ defmodule LightningWeb.CredentialLiveTest do
 
     # https://github.com/OpenFn/Lightning/issues/273 - allow users to delete
 
-    test "deletes credential not used by a job", %{
+    test "can schedule for deletion a credential that is not associated to any activity",
+         %{
+           conn: conn,
+           credential: credential
+         } do
+      {:ok, index_live, html} =
+        live(conn, ~p"/credentials/#{credential.id}/delete")
+
+      assert html =~ "Delete credential"
+
+      assert html =~
+               "Deleting this credential will immediately remove it from all jobs"
+
+      refute html =~ "credential has been used in workflow attempts"
+
+      assert index_live
+             |> element("button", "Delete credential")
+             |> has_element?()
+
+      {:ok, view, html} =
+        index_live
+        |> element("button", "Delete credential")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      assert html =~ "Credential scheduled for deletion"
+      assert html =~ "Cancel deletion"
+      assert html =~ "Delete now"
+
+      assert has_element?(view, "#credential-#{credential.id}")
+    end
+
+    test "can schedule for deletion a credential that is associated to activities",
+         %{
+           conn: conn,
+           credential: credential
+         } do
+      insert(:run, credential: credential)
+
+      {:ok, index_live, html} =
+        live(conn, ~p"/credentials/#{credential.id}/delete")
+
+      assert html =~ "Delete credential"
+
+      assert html =~ "Deleting this credential will immediately"
+      assert html =~ "*This credential has been used in workflow attempts"
+
+      assert index_live
+             |> element("button", "Delete credential")
+             |> has_element?()
+
+      {:ok, view, html} =
+        index_live
+        |> element("button", "Delete credential")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/credentials")
+
+      assert html =~ "Credential scheduled for deletion"
+      assert html =~ "Cancel deletion"
+      assert html =~ "Delete now"
+
+      assert has_element?(view, "#credential-#{credential.id}")
+    end
+
+    test "cancel a scheduled for deletion credential", %{
       conn: conn,
       credential: credential
     } do
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+      insert(:run, credential: credential)
+      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, index_live, _html} =
+        live(conn, ~p"/credentials")
 
       assert index_live
-             |> element("#credential-#{credential.id} a", "Delete")
-             |> render_click() =~ "Credential deleted"
+             |> element("#credential-#{credential.id} a", "Cancel deletion")
+             |> has_element?()
+
+      index_live
+      |> element("#credential-#{credential.id} a", "Cancel deletion")
+      |> render_click()
+
+      {:ok, index_live, html} = live(conn, ~p"/credentials")
+
+      refute html =~ "Cancel deletion"
+      refute html =~ "Delete now"
+
+      assert html =~ "Delete"
+
+      assert has_element?(index_live, "#credential-#{credential.id}")
+    end
+
+    test "can delete credential that has no activity in projects", %{
+      conn: conn,
+      credential: credential
+    } do
+      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, index_live, html} =
+        live(conn, ~p"/credentials/#{credential.id}/delete")
+
+      assert html =~
+               "Deleting this credential will immediately remove it from all jobs"
+
+      refute html =~ "credential has been used in workflow attempts"
+
+      assert index_live
+             |> element("button", "Delete credential")
+             |> has_element?()
+
+      index_live |> element("button", "Delete credential") |> render_click()
+
+      assert_redirected(index_live, ~p"/credentials")
+
+      {:ok, index_live, _html} = live(conn, ~p"/credentials")
 
       refute has_element?(index_live, "#credential-#{credential.id}")
+    end
+
+    test "cannot delete credential that has activity in projects", %{
+      conn: conn,
+      credential: credential
+    } do
+      insert(:run, credential: credential)
+      {:ok, credential} = Credentials.schedule_credential_deletion(credential)
+
+      {:ok, index_live, html} =
+        live(conn, ~p"/credentials/#{credential.id}/delete")
+
+      assert html =~ "This credential has been used in workflow attempts"
+      assert html =~ "will be made unavailable for future use immediately"
+
+      assert index_live |> element("button", "Ok, understood") |> has_element?()
+
+      index_live |> element("button", "Ok, understood") |> render_click()
+
+      assert_redirected(index_live, ~p"/credentials")
+
+      {:ok, index_live, _html} =
+        live(conn, ~p"/credentials")
+
+      assert has_element?(index_live, "#credential-#{credential.id}")
     end
 
     test "user can only delete their own credential", %{
@@ -100,11 +232,11 @@ defmodule LightningWeb.CredentialLiveTest do
     } do
       credential = credential_fixture()
 
-      {:ok, index_live, _html} = live(conn, ~p"/credentials")
+      {:ok, _index_live, html} =
+        live(conn, ~p"/credentials/#{credential.id}/delete")
+        |> follow_redirect(conn, ~p"/credentials")
 
-      assert index_live
-             |> render_click("delete", %{"id" => credential.id}) =~
-               "You can&#39;t perform this action"
+      assert html =~ "You can&#39;t perform this action"
     end
   end
 

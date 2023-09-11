@@ -27,6 +27,7 @@ defmodule Lightning.Factories do
   def job_factory do
     %Lightning.Jobs.Job{
       id: fn -> Ecto.UUID.generate() end,
+      name: sequence(:job_name, &"job-#{&1}"),
       workflow: build(:workflow),
       body: "console.log('hello!');"
     }

@@ -33,8 +33,8 @@ defmodule Lightning.ProjectsTest do
     end
 
     test "get_project!/1 returns the project with given id" do
-      project = project_fixture() |> unload_relation(:project_users)
-      assert Projects.get_project!(project.id) == project
+      project = project_fixture()
+      assert Projects.get_project!(project.id) |> to_map() == project |> to_map()
 
       assert_raise Ecto.NoResultsError, fn ->
         Projects.get_project!(Ecto.UUID.generate())
