@@ -137,9 +137,7 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><p>Creates a dataclip linked to the run that just finished.
-If either the file doesn't exist or there is a JSON decoding error, it logs
-and returns an error tuple.</p></div>
+        <div class="summary-synopsis"><p>Creates a dataclip linked to the run that just finished.</p></div>
 
     </div>
 
@@ -197,7 +195,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">create_dataclip_from_result(result, run)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L181" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L201" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -216,9 +214,7 @@ Functions
 
       </div>
 
-<p>Creates a dataclip linked to the run that just finished.
-If either the file doesn't exist or there is a JSON decoding error, it logs
-and returns an error tuple.</p>
+<p>Creates a dataclip linked to the run that just finished.</p><p><strong>IMPORTANT</strong>: The function was refactored to address the issue described in <a href="https://github.com/OpenFn/Lightning/issues/1084">GitHub Issue #1084</a>.</p><p>The following scenarios are handled:</p><ol><li>Reads the file content of the result's final state.</li><li>Attempts to decode the file content as JSON.</li><li>Processes the decoded content, linking it to the provided run.</li></ol><p>If the file doesn't exist or there's a JSON decoding error:</p><ul><li>The error is logged.</li><li>A nil value is set for the output dataclip linked to the run.</li><li>An error tuple is returned.</li></ul><p>Success scenario:</p><ul><li>The dataclip is updated with the decoded content and linked to the run.</li></ul><p>Returns:</p><ul><li>The updated run with the linked dataclip in the case of success.</li><li>An error tuple in the case of failure.</li></ul>
   </section>
 </section>
 <section class="detail" id="find_or_install_adaptor/1">
@@ -230,7 +226,7 @@ and returns an error tuple.</p>
     </a>
     <h1 class="signature" translate="no">find_or_install_adaptor(adaptor)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L221" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L244" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -260,7 +256,7 @@ install it.</p>
     </a>
     <h1 class="signature" translate="no">scrub_result(body)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L167" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L169" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -291,7 +287,7 @@ to scrubber.ex, which is currently only used for logs.</p>
     </a>
     <h1 class="signature" translate="no">start(run, opts \\ [])</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L98" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/pipeline/runner.ex#L100" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
