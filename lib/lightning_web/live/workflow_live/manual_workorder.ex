@@ -56,10 +56,10 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             </div>
           </div>
           <div class="flex flex-row mt-4">
-            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base ">
               State Assembly
             </div>
-            <div class="text-right text-xs overflow-y-auto xl:text-sm">
+            <div class="text-right text-xs xl:text-sm">
               <%= if(not is_nil(@selected_dataclip) and @selected_dataclip.type == :http_request) do %>
                 The JSON shown here is the <em>body</em>
                 of an HTTP request. The state assembler will place this payload into
