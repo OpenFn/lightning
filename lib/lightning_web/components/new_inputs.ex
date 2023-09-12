@@ -163,7 +163,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div phx-feedback-for={@name} class="h-full">
+    <div phx-feedback-for={@name} class={@class}>
       <.label for={@id}><%= @label %></.label>
       <textarea
         id={@id}
