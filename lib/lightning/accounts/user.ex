@@ -43,6 +43,26 @@ defmodule Lightning.Accounts.User do
     timestamps()
   end
 
+  def changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [
+      :first_name,
+      :last_name,
+      :email,
+      :password
+    ])
+    |> maybe_validate_required(opts)
+    |> validate_email()
+    |> validate_password([])
+  end
+
+  defp maybe_validate_required(changeset, opts) do
+    fields_to_validate =
+      opts[:fields] || [:first_name, :last_name, :email, :password]
+
+    validate_required(changeset, fields_to_validate)
+  end
+
   @common_registration_attrs %{
     first_name: :string,
     last_name: :string,
@@ -127,7 +147,6 @@ defmodule Lightning.Accounts.User do
 
   defp validate_email(changeset) do
     changeset
-    |> validate_required([:email, :first_name])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
       message: "must have the @ sign and no spaces"
     )
@@ -143,7 +162,6 @@ defmodule Lightning.Accounts.User do
 
   defp validate_password(changeset, opts) do
     changeset
-    |> validate_required([:password])
     |> validate_length(:password, min: 8, max: 72)
     |> maybe_hash_password(opts)
   end

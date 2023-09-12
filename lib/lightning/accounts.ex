@@ -87,6 +87,12 @@ defmodule Lightning.Accounts do
     {:ok, %{users_deleted: users_to_delete}}
   end
 
+  def create_user(attrs, opts \\ []) do
+    %User{}
+    |> User.changeset(attrs, opts)
+    |> Repo.insert()
+  end
+
   @doc """
   Returns the list of users.
 
@@ -563,6 +569,10 @@ defmodule Lightning.Accounts do
   """
   def change_user_password(user, attrs \\ %{}) do
     User.password_changeset(user, attrs, hash_password: false)
+  end
+
+  def change_user(user, attrs, opts \\ []) do
+    User.changeset(user, attrs, opts)
   end
 
   @doc """

@@ -7,28 +7,40 @@ defmodule LightningWeb.UserLive.FormComponent do
   alias Lightning.Accounts
 
   @impl true
-  def update(%{user: user, current_user: current_user} = assigns, socket) do
-    changeset = Accounts.change_user_details(user)
+  def update(%{user: user} = assigns, socket) do
+    changeset = Accounts.change_user(user, %{})
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:changeset, changeset)
-     |> assign(:current_user, current_user)}
+     |> assign(:changeset, changeset)}
   end
 
   @impl true
-  def handle_event("validate", %{"user" => user_params}, socket) do
-    changeset =
-      socket.assigns.user
-      |> Accounts.change_user_details(user_params)
-      |> Map.put(:action, :validate)
+  # def handle_event("validate", %{"user" => user_params}, socket) do
+  #   changeset =
+  #     socket.assigns.user
+  #     |> Accounts.change_user(user_params)
+  #     |> Map.put(:action, :validate)
 
-    {:noreply, assign(socket, :changeset, changeset)}
-  end
+  #   {:noreply, assign(socket, :changeset, changeset)}
+  # end
 
   def handle_event("save", %{"user" => user_params}, socket) do
     save_user(socket, socket.assigns.action, user_params)
+  end
+
+  def handle_event("validate", %{"field" => field, "value" => value}, socket) do
+    current_changeset = socket.assigns.changeset
+
+    updated_changeset =
+      Ecto.Changeset.change(current_changeset, %{String.to_atom(field) => value})
+
+    validated_changeset =
+      Accounts.change_user(updated_changeset, %{field => value}, fields: [String.to_atom(field)])
+      |> IO.inspect()
+
+    {:noreply, assign(socket, :changeset, validated_changeset)}
   end
 
   defp save_user(socket, :edit, user_params) do
@@ -45,7 +57,7 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   defp save_user(socket, :new, user_params) do
-    case Accounts.register_user(user_params) do
+    case Accounts.create_user(user_params) do
       {:ok, user} ->
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(
