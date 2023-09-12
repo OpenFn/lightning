@@ -117,19 +117,29 @@ defmodule Lightning.WorkOrders do
   attempt will only contain the runs that are upstream of the run being
   retried.
   """
-  @spec retry(Attempt.t(), Run.t(), [work_order_option()]) ::
+  @spec retry(Attempt.t() | Ecto.UUID.t(), Run.t() | Ecto.UUID.t(), [
+          work_order_option()
+        ]) ::
           {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
-  def retry(attempt, run, opts \\ []) do
-    attrs = Map.new(opts)
+  def retry(attempt, run, opts \\ [])
 
-    run = run |> Repo.preload(:job)
+  def retry(attempt_id, run_id, opts)
+      when is_binary(attempt_id) and is_binary(run_id) do
+    attrs = Map.new(opts)
 
     attempt =
       from(a in Attempt,
-        where: a.id == ^attempt.id,
+        where: a.id == ^attempt_id,
         join: r in assoc(a, :runs),
-        where: r.id == ^run.id,
+        where: r.id == ^run_id,
         preload: [:runs, work_order: [workflow: :edges]]
+      )
+      |> Repo.one()
+
+    run =
+      from(r in Ecto.assoc(attempt, :runs),
+        where: r.id == ^run_id,
+        preload: [:job]
       )
       |> Repo.one()
 
@@ -161,6 +171,10 @@ defmodule Lightning.WorkOrders do
     |> validate_required_assoc(:work_order)
     |> validate_required_assoc(:created_by)
     |> Attempts.enqueue()
+  end
+
+  def retry(attempt, run, opts) do
+    retry(attempt.id, run.id, opts)
   end
 
   @doc """

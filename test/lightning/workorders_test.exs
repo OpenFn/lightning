@@ -181,19 +181,22 @@ defmodule Lightning.WorkOrdersTest do
               dataclip: dataclip,
               starting_trigger: trigger,
               runs: [
-                first_run = insert(:run,
-                  job: job_a,
-                  input_dataclip: dataclip,
-                  output_dataclip: output_dataclip
-                ),
-                second_run = insert(:run, job: job_b, input_dataclip: output_dataclip),
+                first_run =
+                  insert(:run,
+                    job: job_a,
+                    input_dataclip: dataclip,
+                    output_dataclip: output_dataclip
+                  ),
+                second_run =
+                  insert(:run, job: job_b, input_dataclip: output_dataclip),
                 insert(:run, job: job_c)
               ]
             }
           ]
         )
 
-      {:ok, retry_attempt} = WorkOrders.retry(attempt, second_run, created_by: user)
+      {:ok, retry_attempt} =
+        WorkOrders.retry(attempt, second_run, created_by: user)
 
       refute retry_attempt.id == attempt.id
       assert retry_attempt.dataclip_id == output_dataclip.id
@@ -203,7 +206,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.state == "available"
 
       runs = Ecto.assoc(retry_attempt, :runs) |> Repo.all()
-      assert runs |> Enum.map(&(&1.id)) == [first_run.id]
+      assert runs |> Enum.map(& &1.id) == [first_run.id]
     end
   end
 end
