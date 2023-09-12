@@ -106,7 +106,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
       </.collapsible_panel>
       <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border pb-16">
         <%= if @follow_run_id do %>
-          <div class="">
+          <div class="h-full">
             <%= live_render(
               @socket,
               LightningWeb.RunLive.RunViewerLive,

@@ -195,6 +195,8 @@ defmodule LightningWeb.RunLive.Components do
     assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
 
     ~H"""
+    <div class="flex-col flex h-[80vh] overflow-y-auto">
+    <div class="flex-0">
     <.run_details run={@run} />
     <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
       <%= if @show_input_dataclip do %>
@@ -213,7 +215,8 @@ defmodule LightningWeb.RunLive.Components do
         Log
       </.toggle_item>
     </.toggle_bar>
-    <div class="mt-4">
+      </div>
+    <div class="mt-4 flex-1 overflow-y-auto">
       <%= if @show_input_dataclip do %>
         <div id="input_section" style="display: none;" class="@container">
           <.dataclip_view dataclip={@run.input_dataclip} />
@@ -262,6 +265,7 @@ defmodule LightningWeb.RunLive.Components do
             <.dataclip_view dataclip={@run.output_dataclip} />
         <% end %>
       </div>
+    </div>
     </div>
     """
   end
@@ -355,7 +359,7 @@ defmodule LightningWeb.RunLive.Components do
       div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content; }
     </style>
     <div class={["rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
-                    font-mono proportional-nums w-full text-sm h-96 overflow-y-auto",
+                    font-mono proportional-nums min-h-[80vh]  w-full h-full text-sm overflow-y-auto",
     @class
     ]}>
       <%= for { line, i } <- @log do %>
