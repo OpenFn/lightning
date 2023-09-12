@@ -7,7 +7,7 @@ defmodule LightningWeb.RunLive.RunViewerLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <LightningWeb.RunLive.Components.run_viewer run={@run} />
+    <LightningWeb.RunLive.Components.run_viewer run={@run}/>
     """
   end
 

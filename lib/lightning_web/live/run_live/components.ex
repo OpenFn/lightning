@@ -170,7 +170,7 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <%= if length(@log) > 0 do %>
-      <.log_view log={@log} />
+      <.log_view log={@log}/>
     <% else %>
       <.no_log_message />
     <% end %>
@@ -180,13 +180,15 @@ defmodule LightningWeb.RunLive.Components do
   # --------------- Run Details ---------------
   attr :run, :any, required: true
   attr :show_input_dataclip, :boolean
+  attr :class, :string, default: nil
 
   @spec run_viewer(map) :: Phoenix.LiveView.Rendered.t()
   def run_viewer(assigns) do
     assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
 
     ~H"""
-    <div class="flex-col flex h-[80vh] overflow-y-auto">
+    <%!-- <div class="flex-col flex h-[80vh] overflow-y-auto"> --%>
+    <div class="flex flex-col h-full ">
     <div class="flex-0">
     <.run_details run={@run} />
     <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
@@ -206,18 +208,20 @@ defmodule LightningWeb.RunLive.Components do
         Log
       </.toggle_item>
     </.toggle_bar>
-      </div>
+      <%!-- </div> --%>
+    </div>
+
     <div class="mt-4 flex-1 overflow-y-auto">
       <%= if @show_input_dataclip do %>
-        <div id="input_section" style="display: none;" class="@container">
+        <div id="input_section" style="display: none;" class="@container h-full">
           <.dataclip_view dataclip={@run.input_dataclip} />
         </div>
       <% end %>
 
-      <div id="log_section" style="display: none;" class="@container">
+      <div id="log_section" style="display: none;" class="@container h-full">
         <.run_log_viewer run={@run} />
       </div>
-      <div id="output_section" style="display: none;" class="@container">
+      <div id="output_section" style="display: none;" class="@container h-full">
         <%= cond  do %>
           <% is_nil(@run.exit_code) -> %>
             <.dataclip_view
@@ -347,10 +351,12 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <style>
-      div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content; }
+      div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content;}
     </style>
     <div class={["rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
-                    font-mono proportional-nums min-h-[80vh]  w-full h-full text-sm overflow-y-auto",
+                    font-mono proportional-nums w-full text-sm overflow-y-auto h-full",
+
+
     @class
     ]}>
       <%= for { line, i } <- @log do %>
