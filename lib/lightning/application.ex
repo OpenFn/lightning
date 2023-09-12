@@ -83,7 +83,7 @@ defmodule Lightning.Application do
       adaptor_registry_childspec,
       adaptor_service_childspec,
       {Lightning.TaskWorker, name: :cli_task_worker},
-      Lightning.Runtime.RuntimeManager
+      {Lightning.Runtime.RuntimeManager, max_restarts: 5}
       # Start a worker by calling: Lightning.Worker.start_link(arg)
       # {Lightning.Worker, arg}
     ]
