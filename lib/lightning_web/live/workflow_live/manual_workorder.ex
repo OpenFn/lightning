@@ -43,8 +43,8 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
           />
         </div>
       </div>
-      <div class="flex-1 flex flex-col gap-4">
-        <div>
+
+        <div class="flex-0">
           <div class="flex flex-row">
             <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
               Dataclip Type
@@ -73,19 +73,18 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             </div>
           </div>
         </div>
-        <div :if={@selected_dataclip} class="min-h-[40vh]">
-          <.log_view dataclip={@selected_dataclip} class="min-h-[50vh] overflow-y-auto" />
+        <div :if={@selected_dataclip} class="">
+          <.log_view dataclip={@selected_dataclip} class=""/>
         </div>
-        <div :if={is_nil(@selected_dataclip)} class="h-full">
+        <div :if={is_nil(@selected_dataclip)} class="h-full flex-1">
           <.input
             type="textarea"
             field={@form[:body]}
             disabled={@disabled}
-            class=""
+            class="h-full"
             phx-debounce="300"
           />
         </div>
-      </div>
     </.form>
     """
   end
