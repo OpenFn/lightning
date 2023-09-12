@@ -311,23 +311,23 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div class="flex flex-col gap-2">
-      <div class="flex gap-4 flex-row text-sm" id={"job-#{@run.id}"}>
+      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"job-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Job</div>
         <div class="basis-1/2 text-right"><%= @run_job %></div>
       </div>
-      <div class="flex gap-4 flex-row text-sm" id={"job-credential-#{@run.id}"}>
+      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"job-credential-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Credential</div>
         <div class="basis-1/2 text-right"><%= @run_credential || "n/a" %></div>
       </div>
-      <div class="flex gap-4 flex-row text-sm" id={"finished-at-#{@run.id}"}>
+      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"finished-at-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Finished</div>
         <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
       </div>
-      <div class="flex flex-row text-sm" id={"ran-for-#{@run.id}"}>
-        <div class="basis-1/2 font-semibold text-secondary-700">Ran for</div>
+      <div class="flex flex-row text-xs lg:text-sm" id={"ran-for-#{@run.id}"}>
+        <div class="lg:basis-1/2 font-semibold text-secondary-700">Ran for</div>
         <div class="basis-1/2 text-right"><%= @ran_for %></div>
       </div>
-      <div class="flex flex-row text-sm" id={"exit-code-#{@run.id}"}>
+      <div class="flex flex-row text-xs lg:text-sm" id={"exit-code-#{@run.id}"}>
         <div class="basis-1/2 font-semibold text-secondary-700">Exit Code</div>
         <div class="basis-1/2 text-right">
           <%= case @run.exit_code do %>
@@ -355,7 +355,7 @@ defmodule LightningWeb.RunLive.Components do
       div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content; }
     </style>
     <div class={["rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
-                    font-mono proportional-nums w-full text-sm",
+                    font-mono proportional-nums w-full text-sm h-96 overflow-y-auto",
     @class
     ]}>
       <%= for { line, i } <- @log do %>
