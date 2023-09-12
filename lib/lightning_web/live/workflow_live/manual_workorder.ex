@@ -46,7 +46,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       <div class="flex-1 flex flex-col gap-4">
         <div>
           <div class="flex flex-row">
-            <div class="basis-1/2 font-semibold text-secondary-700">
+            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
               Dataclip Type
             </div>
             <div class="basis-1/2 text-right">
@@ -56,10 +56,10 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             </div>
           </div>
           <div class="flex flex-row mt-4">
-            <div class="basis-1/2 font-semibold text-secondary-700">
+            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
               State Assembly
             </div>
-            <div class="text-right text-sm overflow-y-auto">
+            <div class="text-right text-xs overflow-y-auto xl:text-sm">
               <%= if(not is_nil(@selected_dataclip) and @selected_dataclip.type == :http_request) do %>
                 The JSON shown here is the <em>body</em>
                 of an HTTP request. The state assembler will place this payload into
@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         <div :if={@selected_dataclip} class="min-h-[40vh]">
           <.log_view dataclip={@selected_dataclip} class="min-h-[50vh] overflow-y-auto" />
         </div>
-        <div :if={is_nil(@selected_dataclip)} class="overflow-y-auto">
+        <div :if={is_nil(@selected_dataclip)} class="h-full">
           <.input
             type="textarea"
             field={@form[:body]}
