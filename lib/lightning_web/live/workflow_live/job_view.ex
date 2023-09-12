@@ -104,7 +104,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </.collapsible_panel>
-      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border pb-16">
+      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border pb-16 h-full">
         <%= if @follow_run_id do %>
           <div class="h-full">
             <%= live_render(
@@ -112,7 +112,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
               LightningWeb.RunLive.RunViewerLive,
               id: "run-viewer-#{@follow_run_id}",
               session: %{"run_id" => @follow_run_id},
-              sticky: true
+              sticky: true,
+              container: {:div, class: "h-full"}
             ) %>
           </div>
         <% else %>
@@ -120,7 +121,8 @@ defmodule LightningWeb.WorkflowLive.JobView do
             <div class="text-gray-500 pb-2">
               After you click run, the logs and output will be visible here.
             </div>
-          </div>
+        </div>
+
         <% end %>
       </.collapsible_panel>
       <:bottom>

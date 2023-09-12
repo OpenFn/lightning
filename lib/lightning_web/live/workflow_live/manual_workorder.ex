@@ -73,8 +73,8 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             </div>
           </div>
         </div>
-        <div :if={@selected_dataclip} class="">
-          <.log_view dataclip={@selected_dataclip} class=""/>
+        <div :if={@selected_dataclip}>
+          <.log_view dataclip={@selected_dataclip}/>
         </div>
         <div :if={is_nil(@selected_dataclip)} class="h-full flex-1">
           <.input
