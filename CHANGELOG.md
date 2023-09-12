@@ -22,6 +22,8 @@ and this project adheres to
 
 ### Fixed
 
+- Finished run never appears in inspector when it fails
+  [#1084](https://github.com/OpenFn/Lightning/issues/1084)
 - Cannot delete some credentials via web UI
   [#1072](https://github.com/OpenFn/Lightning/issues/1072)
 

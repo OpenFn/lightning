@@ -3,6 +3,7 @@ defmodule Lightning.Pipeline.Runner do
   Job running entrypoint
   """
   require Logger
+  alias Lightning.Repo
   alias Lightning.Invocation
   alias Lightning.Jobs.Job
   alias Lightning.Credentials.Credential
@@ -63,7 +64,8 @@ defmodule Lightning.Pipeline.Runner do
           run
         end)
 
-      dataclip_result = Runner.create_dataclip_from_result(result, run)
+      dataclip_result =
+        Runner.create_dataclip_from_result(result, run)
 
       Lightning.FailureAlerter.alert_on_failure(run)
 
@@ -170,18 +172,33 @@ defmodule Lightning.Pipeline.Runner do
 
   @doc """
   Creates a dataclip linked to the run that just finished.
-  If either the file doesn't exist or there is a JSON decoding error, it logs
-  and returns an error tuple.
+
+  **IMPORTANT**: The function was refactored to address the issue described in [GitHub Issue #1084](https://github.com/OpenFn/Lightning/issues/1084).
+
+  The following scenarios are handled:
+  1. Reads the file content of the result's final state.
+  2. Attempts to decode the file content as JSON.
+  3. Processes the decoded content, linking it to the provided run.
+
+  If the file doesn't exist or there's a JSON decoding error:
+  - The error is logged.
+  - A nil value is set for the output dataclip linked to the run.
+  - An error tuple is returned.
+
+  Success scenario:
+  - The dataclip is updated with the decoded content and linked to the run.
+
+  Returns:
+  - The updated run with the linked dataclip in the case of success.
+  - An error tuple in the case of failure.
+
   """
   @spec create_dataclip_from_result(
           result :: Lightning.Runtime.Result.t(),
           run :: Invocation.Run.t()
         ) ::
           {:ok, Invocation.Dataclip.t()} | {:error, any}
-  def create_dataclip_from_result(
-        %Lightning.Runtime.Result{} = result,
-        run
-      ) do
+  def create_dataclip_from_result(%Lightning.Runtime.Result{} = result, run) do
     with {:ok, data} <- File.read(result.final_state_path),
          {:ok, body} <- Jason.decode(data) do
       job = Lightning.Repo.preload(run.job, :workflow)
@@ -194,19 +211,25 @@ defmodule Lightning.Pipeline.Runner do
         }
       })
     else
-      res = {:error, %Jason.DecodeError{position: pos}} ->
+      error = {:error, %Jason.DecodeError{position: pos}} ->
         Logger.info(
           "Got JSON decoding error when trying to parse: #{result.final_state_path}:#{pos}"
         )
 
-        res
+        run
+        |> Repo.preload(:output_dataclip)
+        |> Invocation.update_run(%{
+          output_dataclip: nil
+        })
 
-      res = {:error, err} ->
+        error
+
+      error = {:error, err} ->
         Logger.info(
           "Got unexpected result while saving the resulting state from a Run:\n#{inspect(err)}"
         )
 
-        res
+        error
     end
   end
 
