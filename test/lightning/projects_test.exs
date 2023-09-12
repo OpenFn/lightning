@@ -223,6 +223,7 @@ defmodule Lightning.ProjectsTest do
         )
         |> Repo.transaction()
 
+      # TODO: #rtm don't create runs using Oban
       Oban.Testing.with_testing_mode(:inline, fn ->
         Lightning.WorkOrderService.retry_attempt_run(
           p1_work_order.attempt_run,
