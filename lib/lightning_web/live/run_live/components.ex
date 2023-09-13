@@ -187,7 +187,6 @@ defmodule LightningWeb.RunLive.Components do
     assigns = assigns |> assign_new(:show_input_dataclip, fn -> false end)
 
     ~H"""
-    <%!-- <div class="flex-col flex h-[80vh] overflow-y-auto"> --%>
     <div class="flex flex-col h-full ">
     <div class="flex-0">
     <.run_details run={@run} />
@@ -208,7 +207,6 @@ defmodule LightningWeb.RunLive.Components do
         Log
       </.toggle_item>
     </.toggle_bar>
-      <%!-- </div> --%>
     </div>
 
     <div class="mt-4 flex-1 overflow-y-auto">

@@ -81,7 +81,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
             type="textarea"
             field={@form[:body]}
             disabled={@disabled}
-            class="h-full"
+            class="h-full pb-2"
             phx-debounce="300"
           />
         </div>
