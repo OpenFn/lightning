@@ -172,7 +172,7 @@ defmodule LightningWeb.Components.NewInputs do
           "rounded-md shadow-sm font-mono proportional-nums text-sm",
           "mt-2 block w-full focus:ring-0",
           "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
+          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
           @errors == [] && "border-slate-300 focus:border-slate-400",
           @errors != [] && "border-danger-400 focus:border-danger-400",
           @class
