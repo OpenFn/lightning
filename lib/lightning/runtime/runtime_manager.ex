@@ -1,37 +1,167 @@
 defmodule Lightning.Runtime.RuntimeManager do
+  # https://registry.npmjs.org/lightning-runtime/latest
+  @latest_version "0.1.0"
+
   @moduledoc """
   Locates and runs the Runtime server. Added in order to ease development and default installations of Lightning
+
+  ## Runtime configuration
+
+  Sample:
+
+    config :lightining, #{__MODULE__},
+      version: "#{@latest_version}",
+      start: true,
+      args: ~w(js/app.js --bundle --target=es2016 --outdir=../priv/static/assets),
+      cd: Path.expand("../assets", __DIR__),
+      env: %{}
+
+  Options:
+
+    * `:version` - the expected runtime version
+
+    * `:start` - flag to start the runtime manager. If `false` the genserver won't be started
+
+    * `:cacerts_path` - the directory to find certificates for
+      https connections
+
+    * `:path` - the path to find the runtime executable at. By
+      default, it is automatically downloaded and placed inside
+      the `_build` directory of your current app
+
+  Overriding the `:path` is not recommended, as we will automatically
+  download and manage the `runtime` for you.
+
+
   """
 
-  use GenServer, restart: :permanent, shutdown: 10_000
+  use GenServer, restart: :transient, shutdown: 10_000
   require Logger
 
-  alias __MODULE__
-
   defstruct [
-    :lightning_url,
     :runtime_port,
     :runtime_os_pid,
-    :env,
-    args: [Application.app_dir(:lightning, "priv/runtime/logger.js")],
-    runtime_path: "/Users/frank/.asdf/shims/node",
     buffer: []
   ]
 
   def start_link(args) do
+    if config()[:start] && is_nil(config()[:version]) do
+      Logger.warning("""
+      runtime version is not configured. Please set it in your config files:
+
+          config :lightning, #{__MODULE__}, version: "#{latest_version()}"
+      """)
+    end
+
+    configured_version = configured_version()
+
+    case bin_version() do
+      {:ok, ^configured_version} ->
+        :ok
+
+      {:ok, version} ->
+        Logger.warning("""
+        Outdated runtime version. Expected #{configured_version}, got #{version}. \
+        Please run `mix lightning.runtime.install` or update the version in your config files.\
+        """)
+
+      :error ->
+        :ok
+    end
+
     {name, args} = Keyword.pop(args, :name, __MODULE__)
     GenServer.start_link(__MODULE__, args, name: name)
   end
 
+  @doc """
+  Returns the path to the executable.
+
+  The executable may not be available if it was not yet installed.
+  """
+  def bin_path do
+    name = "lightning-runtime-#{target()}"
+
+    config()[:path] ||
+      if Code.ensure_loaded?(Mix.Project) do
+        Path.join(Path.dirname(Mix.Project.build_path()), name)
+      else
+        Path.expand("_build/#{name}")
+      end
+  end
+
+  @doc """
+  Returns the version of the runtime executable.
+
+  Returns `{:ok, version_string}` on success or `:error` when the executable
+  is not available.
+  """
+  def bin_version do
+    path = bin_path()
+
+    with true <- File.exists?(path),
+         {result, 0} <- System.cmd(path, ["--version"]) do
+      {:ok, String.trim(result)}
+    else
+      _ -> :error
+    end
+
+    # TODO: Remove this once we have the binary available
+    {:ok, latest_version()}
+  end
+
+  @doc false
+  # Latest known version at the time of publishing.
+  def latest_version, do: @latest_version
+
+  @doc """
+  Returns the configured runtime version.
+  """
+  def configured_version do
+    Keyword.get(config(), :version, latest_version())
+  end
+
+  defp config do
+    Application.get_env(:lightning, __MODULE__, [])
+  end
+
+  defp target do
+    case :os.type() do
+      # Assuming it's an x86 CPU
+      {:win32, _} ->
+        wordsize = :erlang.system_info(:wordsize)
+
+        if wordsize == 8 do
+          "win32-x64"
+        else
+          "win32-ia32"
+        end
+
+      {:unix, osname} ->
+        arch_str = :erlang.system_info(:system_architecture)
+        [arch | _] = arch_str |> List.to_string() |> String.split("-")
+
+        case arch do
+          "amd64" -> "#{osname}-x64"
+          "x86_64" -> "#{osname}-x64"
+          "i686" -> "#{osname}-ia32"
+          "i386" -> "#{osname}-ia32"
+          "aarch64" -> "#{osname}-arm64"
+          "arm" when osname == :darwin -> "darwin-arm64"
+          "arm" -> "#{osname}-arm"
+          "armv7" <> _ -> "#{osname}-arm"
+          _ -> raise "esbuild is not available for architecture: #{arch_str}"
+        end
+    end
+  end
+
   @impl true
-  def init(args) do
-    Process.flag(:trap_exit, true)
-    config = Application.get_env(:lighting, RuntimeManager, [])
-    config = Keyword.merge(config, args)
-
-    config = Keyword.put_new(config, :lightning_url, LightningWeb.Endpoint.url())
-
-    {:ok, struct(RuntimeManager, config), {:continue, :start_runtime}}
+  def init(_args) do
+    if config()[:start] do
+      Process.flag(:trap_exit, true)
+      {:ok, %__MODULE__{}, {:continue, :start_runtime}}
+    else
+      :ignore
+    end
   end
 
   @impl true
@@ -58,7 +188,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         {port, {:data, {:eol, data}}},
         %{runtime_port: port, buffer: buffer} = state
       ) do
-    [data | buffer] |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
+    log_buffer([data | buffer])
     {:noreply, %{state | buffer: []}}
   end
 
@@ -66,7 +196,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         {port, {:data, {_, data}}},
         %{runtime_port: port, buffer: buffer} = state
       ) do
-    [data | buffer] |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
+    log_buffer([data | buffer])
     {:stop, %{state | buffer: []}, :premature_termination}
   end
 
@@ -126,22 +256,25 @@ defmodule Lightning.Runtime.RuntimeManager do
     buffer |> Enum.reverse() |> IO.iodata_to_binary() |> Logger.info()
   end
 
-  defp start_runtime(config) do
-    wrapper = Application.app_dir(:lightning, "priv/runtime/wrapper")
+  defp start_runtime(state) do
+    config = config()
+    {args, start_opts} = Keyword.pop(config, :args, [])
+    start_opts = Keyword.take(start_opts, [:cd, :env, :stderr_to_stdout, :lines])
+
+    wrapper = Application.app_dir(:lightning, "priv/runtime/port_wrapper")
     init_cmd = port_init(wrapper)
 
     opts =
       cmd_opts(
-        [lines: 1024],
+        [lines: 1024] ++ start_opts,
         [:use_stdio, :exit_status, :binary, :hide] ++
-          [args: [config.runtime_path | config.args]]
+          [args: [bin_path() | args]]
       )
 
     port = Port.open(init_cmd, opts)
     Port.monitor(port)
     {:os_pid, os_pid} = Port.info(port, :os_pid)
-    IO.inspect(os_pid, label: "================> OS PID For Runtime")
-    %{config | runtime_port: port, runtime_os_pid: os_pid}
+    %{state | runtime_port: port, runtime_os_pid: os_pid}
   end
 
   defp port_init(command) when is_binary(command) do

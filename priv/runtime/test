@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-while true
-do
-    echo "Hi Frank!"
-    sleep 2
-done
