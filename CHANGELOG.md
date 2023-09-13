@@ -20,6 +20,9 @@ and this project adheres to
 
 ### Changed
 
+- Enhanced the job editor/inspector interface
+  [#1025](https://github.com/OpenFn/Lightning/issues/1025)
+
 ### Fixed
 
 - Finished run never appears in inspector when it fails
