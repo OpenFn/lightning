@@ -135,7 +135,16 @@ defmodule LightningWeb.RunLive.Components do
   def timestamp(assigns) do
     ~H"""
     <%= if is_nil(@timestamp) do %>
-      <span>--</span>
+      <%= case @style do %>
+        <% :wrapped -> %>
+          <span>--</span>
+          <br />
+          <span class="font-medium text-gray-700">--</span>
+        <% :default -> %>
+          <span>--</span>
+        <% :time_only -> %>
+          <span>--</span>
+      <% end %>
     <% else %>
       <%= case @style do %>
         <% :default -> %>
