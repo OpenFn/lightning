@@ -179,7 +179,7 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <%= if length(@log) > 0 do %>
-      <.log_view log={@log}/>
+      <.log_view log={@log} />
     <% else %>
       <.no_log_message />
     <% end %>
@@ -197,77 +197,77 @@ defmodule LightningWeb.RunLive.Components do
 
     ~H"""
     <div class="flex flex-col h-full ">
-    <div class="flex-0">
-    <.run_details run={@run} />
-    <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
-      <%= if @show_input_dataclip do %>
-        <.toggle_item data-section="input" phx-click={switch_section("input")}>
-          Input
-        </.toggle_item>
-      <% end %>
-      <.toggle_item data-section="output" phx-click={switch_section("output")}>
-        Output
-      </.toggle_item>
-      <.toggle_item
-        data-section="log"
-        phx-click={switch_section("log")}
-        active="true"
-      >
-        Log
-      </.toggle_item>
-    </.toggle_bar>
-    </div>
-
-    <div class="mt-4 flex-1 overflow-y-auto">
-      <%= if @show_input_dataclip do %>
-        <div id="input_section" style="display: none;" class="@container h-full">
-          <.dataclip_view dataclip={@run.input_dataclip} />
-        </div>
-      <% end %>
-
-      <div id="log_section" style="display: none;" class="@container h-full">
-        <.run_log_viewer run={@run} />
+      <div class="flex-0">
+        <.run_details run={@run} />
+        <.toggle_bar class="mt-4 items-end" phx-mounted={show_section("log")}>
+          <%= if @show_input_dataclip do %>
+            <.toggle_item data-section="input" phx-click={switch_section("input")}>
+              Input
+            </.toggle_item>
+          <% end %>
+          <.toggle_item data-section="output" phx-click={switch_section("output")}>
+            Output
+          </.toggle_item>
+          <.toggle_item
+            data-section="log"
+            phx-click={switch_section("log")}
+            active="true"
+          >
+            Log
+          </.toggle_item>
+        </.toggle_bar>
       </div>
-      <div id="output_section" style="display: none;" class="@container h-full">
-        <%= cond  do %>
-          <% is_nil(@run.exit_code) -> %>
-            <.dataclip_view
-              dataclip={nil}
-              no_dataclip_message={
-                %{
-                  label: "This run has not yet finished.",
-                  description:
-                    "There is no output. See the logs for more information"
-                }
-              }
-            />
-          <% @run.exit_code > 0 -> %>
-            <.dataclip_view
-              dataclip={nil}
-              no_dataclip_message={
-                %{
-                  label: "This run failed",
-                  description:
-                    "There is no output. See the logs for more information"
-                }
-              }
-            />
-          <% is_nil(@run.output_dataclip_id) -> %>
-            <.dataclip_view
-              dataclip={nil}
-              no_dataclip_message={
-                %{
-                  label: "There is no output for this run",
-                  description:
-                    "Check your job expression to ensure that the final operation returns something."
-                }
-              }
-            />
-          <% true -> %>
-            <.dataclip_view dataclip={@run.output_dataclip} />
+
+      <div class="mt-4 flex-1 overflow-y-auto">
+        <%= if @show_input_dataclip do %>
+          <div id="input_section" style="display: none;" class="@container h-full">
+            <.dataclip_view dataclip={@run.input_dataclip} />
+          </div>
         <% end %>
+
+        <div id="log_section" style="display: none;" class="@container h-full">
+          <.run_log_viewer run={@run} />
+        </div>
+        <div id="output_section" style="display: none;" class="@container h-full">
+          <%= cond  do %>
+            <% is_nil(@run.exit_code) -> %>
+              <.dataclip_view
+                dataclip={nil}
+                no_dataclip_message={
+                  %{
+                    label: "This run has not yet finished.",
+                    description:
+                      "There is no output. See the logs for more information"
+                  }
+                }
+              />
+            <% @run.exit_code > 0 -> %>
+              <.dataclip_view
+                dataclip={nil}
+                no_dataclip_message={
+                  %{
+                    label: "This run failed",
+                    description:
+                      "There is no output. See the logs for more information"
+                  }
+                }
+              />
+            <% is_nil(@run.output_dataclip_id) -> %>
+              <.dataclip_view
+                dataclip={nil}
+                no_dataclip_message={
+                  %{
+                    label: "There is no output for this run",
+                    description:
+                      "Check your job expression to ensure that the final operation returns something."
+                  }
+                }
+              />
+            <% true -> %>
+              <.dataclip_view dataclip={@run.output_dataclip} />
+          <% end %>
+        </div>
       </div>
-    </div>
     </div>
     """
   end
@@ -321,11 +321,17 @@ defmodule LightningWeb.RunLive.Components do
         <div class="basis-1/2 font-semibold text-secondary-700">Job</div>
         <div class="basis-1/2 text-right"><%= @run_job %></div>
       </div>
-      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"job-credential-#{@run.id}"}>
+      <div
+        class="flex gap-4 flex-row text-xs lg:text-sm"
+        id={"job-credential-#{@run.id}"}
+      >
         <div class="basis-1/2 font-semibold text-secondary-700">Credential</div>
         <div class="basis-1/2 text-right"><%= @run_credential || "n/a" %></div>
       </div>
-      <div class="flex gap-4 flex-row text-xs lg:text-sm" id={"finished-at-#{@run.id}"}>
+      <div
+        class="flex gap-4 flex-row text-xs lg:text-sm"
+        id={"finished-at-#{@run.id}"}
+      >
         <div class="basis-1/2 font-semibold text-secondary-700">Finished</div>
         <div class="basis-1/2 text-right"><%= @run_finished_at %></div>
       </div>
@@ -360,11 +366,10 @@ defmodule LightningWeb.RunLive.Components do
     <style>
       div.line-num::before { content: attr(data-line-number); padding-left: 0.1em; max-width: min-content;}
     </style>
-    <div class={["rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
+    <div class={[
+      "rounded-md text-slate-200 bg-slate-700 border-slate-300 shadow-sm
                     font-mono proportional-nums w-full text-sm overflow-y-auto h-full",
-
-
-    @class
+      @class
     ]}>
       <%= for { line, i } <- @log do %>
         <.log_line num={i} line={line} />
