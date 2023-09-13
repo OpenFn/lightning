@@ -4,7 +4,6 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
 
   import LightningWeb.Components.NewInputs
 
-
   attr :id, :string, required: true
   attr :dataclips, :list, default: []
   attr :form, :map, required: true
@@ -44,47 +43,47 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
         </div>
       </div>
 
-        <div class="flex-0">
-          <div class="flex flex-row">
-            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
-              Dataclip Type
-            </div>
-            <div class="basis-1/2 text-right">
-              <Common.dataclip_type_pill type={
-                (@selected_dataclip && @selected_dataclip.type) || :saved_input
-              } />
-            </div>
+      <div class="flex-0">
+        <div class="flex flex-row">
+          <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base">
+            Dataclip Type
           </div>
-          <div class="flex flex-row mt-4">
-            <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base ">
-              State Assembly
-            </div>
-            <div class="text-right text-xs xl:text-sm">
-              <%= if(not is_nil(@selected_dataclip) and @selected_dataclip.type == :http_request) do %>
-                The JSON shown here is the <em>body</em>
-                of an HTTP request. The state assembler will place this payload into
-                <code>state.data</code>
-                when the job is run, before adding <code>state.configuration</code>
-                from your selected credential.
-              <% else %>
-                The state assembler will overwrite the <code>configuration</code>
-                attribute below with the body of the currently selected credential.
-              <% end %>
-            </div>
+          <div class="basis-1/2 text-right">
+            <Common.dataclip_type_pill type={
+              (@selected_dataclip && @selected_dataclip.type) || :saved_input
+            } />
           </div>
         </div>
-        <div :if={@selected_dataclip} class="overflow-y-auto">
-          <.log_view dataclip={@selected_dataclip} class=""/>
+        <div class="flex flex-row mt-4">
+          <div class="basis-1/2 font-semibold text-secondary-700 text-xs xl:text-base ">
+            State Assembly
+          </div>
+          <div class="text-right text-xs xl:text-sm">
+            <%= if(not is_nil(@selected_dataclip) and @selected_dataclip.type == :http_request) do %>
+              The JSON shown here is the <em>body</em>
+              of an HTTP request. The state assembler will place this payload into
+              <code>state.data</code>
+              when the job is run, before adding <code>state.configuration</code>
+              from your selected credential.
+            <% else %>
+              The state assembler will overwrite the <code>configuration</code>
+              attribute below with the body of the currently selected credential.
+            <% end %>
+          </div>
         </div>
-        <div :if={is_nil(@selected_dataclip)} class="h-full flex-1">
-          <.input
-            type="textarea"
-            field={@form[:body]}
-            disabled={@disabled}
-            class="h-full pb-2"
-            phx-debounce="300"
-          />
-        </div>
+      </div>
+      <div :if={@selected_dataclip} class="overflow-y-auto">
+        <.log_view dataclip={@selected_dataclip} class="" />
+      </div>
+      <div :if={is_nil(@selected_dataclip)} class="h-full flex-1">
+        <.input
+          type="textarea"
+          field={@form[:body]}
+          disabled={@disabled}
+          class="h-full pb-2"
+          phx-debounce="300"
+        />
+      </div>
     </.form>
     """
   end

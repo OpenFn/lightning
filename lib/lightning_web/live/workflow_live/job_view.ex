@@ -10,6 +10,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
   slot :inner_block, required: false
 
   slot :bottom
+
   slot :column do
     attr :class, :string, doc: "Extra CSS classes for the column"
   end
@@ -22,7 +23,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
           <%= render_slot(@top) %>
         </div>
         <!-- 3 column wrapper -->
-        <div class="grow flex h-5/6 gap-3 mx-4" phx-hook="collapsiblePanel" id="collapsibles">
+        <div
+          class="grow flex h-5/6 gap-3 mx-4"
+          phx-hook="collapsiblePanel"
+          id="collapsibles"
+        >
           <%= render_slot(@inner_block) %>
         </div>
         <div class="flex p-2 justify-end">
@@ -104,7 +109,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </.collapsible_panel>
-      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border pb-16 h-full">
+      <.collapsible_panel
+        id="output-logs"
+        panel_title="Output & Logs"
+        class="border pb-16 h-full"
+      >
         <%= if @follow_run_id do %>
           <div class="h-full">
             <%= live_render(
@@ -121,8 +130,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
             <div class="text-gray-500 pb-2">
               After you click run, the logs and output will be visible here.
             </div>
-        </div>
-
+          </div>
         <% end %>
       </.collapsible_panel>
       <:bottom>
