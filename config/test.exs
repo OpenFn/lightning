@@ -3,7 +3,7 @@ import Config
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
-# mock adapter for tesla 
+# mock adapter for tesla
 config :tesla, Lightning.VersionControl.GithubClient, adapter: Tesla.Mock
 
 # Configure your database
@@ -51,6 +51,8 @@ config :lightning, Lightning.FailureAlerter,
 
 config :lightning,
   schemas_path: "test/fixtures/schemas"
+
+config :lightning, Lightning.Runtime.RuntimeManager, start: false
 
 # Print only warnings and errors during test
 config :logger, level: :warning

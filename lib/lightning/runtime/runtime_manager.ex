@@ -216,18 +216,19 @@ defmodule Lightning.Runtime.RuntimeManager do
   @impl true
   def terminate(reason, state) do
     Logger.info("Shutting down Runtime Manager with reason: #{inspect(reason)}")
+    IO.inspect(state)
 
     Task.async(fn ->
       port = state.runtime_port
       os_pid = state.runtime_os_pid
 
-      if reason not in [:timeout, :premature_termination] do
+      if reason not in [:timeout, :premature_termination] and state.runtime_port do
         Port.connect(port, self())
         System.cmd("kill", ["-TERM", "#{os_pid}"], into: "")
         handle_pending_msg(port, state.buffer)
       end
     end)
-    |> Task.await(10_000)
+    |> Task.await(:infinity)
 
     state
   end

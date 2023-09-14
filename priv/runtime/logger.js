@@ -1,5 +1,3 @@
-const { execSync } = require('child_process');
-
 function generateRandomString(length) {
   let result = '';
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -16,7 +14,6 @@ function generateRandomString(length) {
 const numberOfBytes = 1023;
 
 
-
 const logInterval = 3000; // Logging interval in milliseconds
 
 // Function to log a message
@@ -24,10 +21,16 @@ function logMessage() {
   // Generate a random string of the specified length
   const randomString = generateRandomString(numberOfBytes);
 
-  // Append an emoji to the string
-  const stringWithEmoji = randomString + '😀';
 
-  console.log(stringWithEmoji);
+  for (let i = 0; i < randomString.length; i++) {
+    process.stdout.write(randomString.charAt(i));
+  }
+
+  // Append an emoji to the string
+  process.stdout.write('😀');
+
+  process.stdout.write('\n');
+
 }
 
 // Start logging
@@ -36,9 +39,6 @@ const intervalId = setInterval(logMessage, logInterval);
 // Handle SIGTERM signal
 process.on('SIGTERM', () => {
   console.log('Received SIGTERM signal. Gracefully shutting down...');
-  execSync('sleep 5');
-
-  console.log('Slept for 5 seconds');
 
   // Stop logging and perform any necessary cleanup
   clearInterval(intervalId);
