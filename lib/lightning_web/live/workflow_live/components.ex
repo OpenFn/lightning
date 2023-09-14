@@ -430,7 +430,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def collapsible_panel(assigns) do
     ~H"""
-    <div id={@id} class={["w-full flex flex-col px-4 py-6 collapsible-panel", @class]}>
+    <div id={@id} lv-keep-class class={["w-full flex flex-col px-4 py-6 collapsible-panel", @class]}>
     <div class="flex-0">
       <div
         id={"#{@id}-panel-header"}
@@ -467,14 +467,5 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
     </div>
     """
-  end
-
-
-  def hide_panel(js \\ %JS{}, id) when is_binary(id) do
-    JS.add_class(js, "collapsed", to: "##{id}")
-  end
-
-  def show_panel(js \\ %JS{}, id) when is_binary(id) do
-    JS.remove_class(js, "collapsed", to: "##{id}")
   end
 end
