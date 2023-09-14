@@ -16,31 +16,24 @@ defmodule LightningWeb.UserLive.FormComponent do
      |> assign(:changeset, changeset)}
   end
 
-  @impl true
-  # def handle_event("validate", %{"user" => user_params}, socket) do
-  #   changeset =
-  #     socket.assigns.user
-  #     |> Accounts.change_user(user_params)
-  #     |> Map.put(:action, :validate)
+  def error_class(form, field) do
+    if Keyword.get(form.errors, field, nil) != nil,
+      do: "border-red-500",
+      else: ""
+  end
 
-  #   {:noreply, assign(socket, :changeset, changeset)}
-  # end
+  @impl true
+  def handle_event("validate", %{"user" => user_params}, socket) do
+    changeset =
+      socket.assigns.user
+      |> Accounts.change_user(user_params)
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :changeset, changeset)}
+  end
 
   def handle_event("save", %{"user" => user_params}, socket) do
     save_user(socket, socket.assigns.action, user_params)
-  end
-
-  def handle_event("validate", %{"field" => field, "value" => value}, socket) do
-    current_changeset = socket.assigns.changeset
-
-    updated_changeset =
-      Ecto.Changeset.change(current_changeset, %{String.to_atom(field) => value})
-
-    validated_changeset =
-      Accounts.change_user(updated_changeset, %{field => value}, fields: [String.to_atom(field)])
-      |> IO.inspect()
-
-    {:noreply, assign(socket, :changeset, validated_changeset)}
   end
 
   defp save_user(socket, :edit, user_params) do
