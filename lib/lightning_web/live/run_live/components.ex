@@ -287,7 +287,7 @@ defmodule LightningWeb.RunLive.Components do
           "#{DateTime.diff(run.finished_at, run.started_at, :millisecond)} ms"
 
         run.started_at ->
-          "#{DateTime.diff(DateTime.utc_now(), run.started_at, :millisecond)} ms"
+          "..."
 
         true ->
           "Not started."

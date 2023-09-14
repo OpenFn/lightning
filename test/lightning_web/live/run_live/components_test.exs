@@ -248,8 +248,10 @@ defmodule LightningWeb.RunLive.ComponentsTest do
 
       assert html
              |> Floki.find("div#ran-for-#{run.id} > div:nth-child(2)")
-             |> Floki.text() =~
-               ~r/25\d\d\d ms/
+             |> Floki.text() =~ "..."
+
+      # TODO: add a timer that counts up from run.started_at
+      #  ~r/25\d\d\d ms/
 
       assert html
              |> Floki.find("div#exit-code-#{run.id} > div:nth-child(2)")
