@@ -228,7 +228,7 @@ defmodule LightningWeb.Components.NewInputs do
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden">
+    <p class="inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden">
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
     </p>
