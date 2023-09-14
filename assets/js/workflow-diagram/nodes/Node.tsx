@@ -169,7 +169,11 @@ const Node = ({
       </div>
       {toolbar && (
         <div
-          style={{ width: `${width}px`, marginTop: '-14px' }}
+          style={{
+            width: `${width}px`,
+            marginLeft: '2px',
+            marginTop: '-14px',
+          }}
           className="flex flex-col items-center
                     opacity-0  group-hover:opacity-100
                     transition duration-150 ease-in-out"

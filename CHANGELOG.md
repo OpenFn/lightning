@@ -26,6 +26,10 @@ and this project adheres to
   [#1084](https://github.com/OpenFn/Lightning/issues/1084)
 - Cannot delete some credentials via web UI
   [#1072](https://github.com/OpenFn/Lightning/issues/1072)
+- Stopped the History table from jumping when re-running a job
+  [#1100](https://github.com/OpenFn/Lightning/issues/1100)
+- Fixed the "+" button when adding a job to a workflow
+  [#1093](https://github.com/OpenFn/Lightning/issues/1093)
 
 ## [v0.8.3] - 2023-09-05
 
