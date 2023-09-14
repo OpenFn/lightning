@@ -430,7 +430,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def collapsible_panel(assigns) do
     ~H"""
-    <div id={@id} class={["w-full flex flex-col px-4 py-4 collapsible-panel", @class]}>
+    <div id={@id} class={["w-full flex flex-col px-4 py-6 collapsible-panel", @class]}>
     <div class="flex-0">
       <div
         id={"#{@id}-panel-header"}
