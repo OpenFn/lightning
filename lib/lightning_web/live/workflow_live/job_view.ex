@@ -110,15 +110,7 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </.collapsible_panel>
-<<<<<<< HEAD
-      <.collapsible_panel
-        id="output-logs"
-        panel_title="Output & Logs"
-        class="border pb-16 h-full"
-      >
-=======
       <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border h-full">
->>>>>>> 0bcb5c130 (WIP: spacing on the panel collapse and removing p-16)
         <%= if @follow_run_id do %>
           <div class="h-full">
             <%= live_render(
