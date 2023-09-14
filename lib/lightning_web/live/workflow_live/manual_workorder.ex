@@ -76,7 +76,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       <div :if={@selected_dataclip} class="overflow-y-auto">
         <.log_view dataclip={@selected_dataclip} class="" />
       </div>
-      <div :if={is_nil(@selected_dataclip)} class="h-full flex-1">
+      <div :if={is_nil(@selected_dataclip)} class="grow">
         <.input
           type="textarea"
           field={@form[:body]}
