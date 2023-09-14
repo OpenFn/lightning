@@ -282,4 +282,11 @@ defmodule LightningWeb.Components.NewInputs do
       Gettext.dgettext(LightningWeb.Gettext, "errors", msg, opts)
     end
   end
+
+  @doc """
+  Translates the errors for a field from a keyword list of errors.
+  """
+  def translate_errors(errors, field) when is_list(errors) do
+    for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
 end

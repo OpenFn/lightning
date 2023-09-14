@@ -9,15 +9,15 @@
   >
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :name,
+        <%= Phoenix.HTML.Form.label(f, :name,
           class: "block text-sm font-medium text-secondary-700 mb-2"
         ) %>
-        <%= error_tag(f, :name, class: "block w-full rounded-md") %>
-        <%= hidden_input(f, :name) %>
-        <%= text_input(f, :raw_name,
+        <.old_error field={f[:name]} />
+        <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
+        <%= Phoenix.HTML.Form.text_input(f, :raw_name,
           class:
             "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md",
-          value: input_value(f, :name)
+          value: Phoenix.HTML.Form.input_value(f, :name)
         ) %>
         <br />
         <div class="inline-block pl-2">
@@ -28,7 +28,7 @@
         </div>
       </div>
       <div class="col-span-3">
-        <%= label(f, :project_users, "Members",
+        <%= Phoenix.HTML.Form.label(f, :project_users, "Members",
           class: "block text-sm font-medium text-secondary-700 mb-2"
         ) %>
 
@@ -40,29 +40,34 @@
               id="member_list"
             >
               <option>Select a user</option>
-              <%= options_for_select(@available_users, @selected_member) %>
+              <%= Phoenix.HTML.Form.options_for_select(
+                @available_users,
+                @selected_member
+              ) %>
             </.select>
           </div>
           <div class="grow-0 items-right">
             <.button
-              text="Add"
               disabled={@selected_member == ""}
               phx-target={@myself}
               phx-value-userid={@selected_member}
               phx-click="add_new_member"
-            />
+            >
+              Add
+            </.button>
           </div>
         </div>
 
-        <%= for member_form <- inputs_for(f, :project_users) do %>
-          <%= if input_value(member_form, :delete) != true do %>
+        <%= for member_form <-Phoenix.HTML.Form.inputs_for(f, :project_users) do %>
+          <%= if Phoenix.HTML.Form.input_value(member_form, :delete) != true do %>
             <div class="flex w-full gap-2 items-center pb-2">
               <div class="grow">
                 <%= @all_users
                 |> Enum.find_value(fn {name, id} ->
-                  if id == input_value(member_form, :user_id), do: name
+                  if id == Phoenix.HTML.Form.input_value(member_form, :user_id),
+                    do: name
                 end) %>
-                <%= error_tag(member_form, :project_id, class: "block text-xs") %>
+                <.old_error field={member_form[:project_id]} />
               </div>
               <div class="grow-0 items-right">
                 <.select_field
@@ -74,17 +79,18 @@
               </div>
               <div class="grow-0 items-right">
                 <.button
-                  text="Remove"
                   phx-target={@myself}
                   phx-value-index={member_form.index}
                   phx-click="delete_member"
-                />
+                >
+                  Remove
+                </.button>
               </div>
             </div>
           <% end %>
-          <%= hidden_inputs_for(member_form) %>
-          <%= hidden_input(member_form, :user_id) %>
-          <%= hidden_input(member_form, :delete) %>
+          <% Phoenix.HTML.Form.hidden_inputs_for(member_form) %>
+          <%= Phoenix.HTML.Form.hidden_input(member_form, :user_id) %>
+          <%= Phoenix.HTML.Form.hidden_input(member_form, :delete) %>
         <% end %>
       </div>
       <div class="col-span-6">

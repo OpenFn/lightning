@@ -26,20 +26,18 @@
             <% end %>
             <div class="grid grid-flow-row gap-4 auto-rows-max">
               <div>
-                <LightningWeb.Components.Form.password_field
-                  form={f}
-                  id={:password}
-                  label="New password"
-                  required={true}
-                />
+                <.label for={f[:password]}>New password</.label>
+                <.input type="password" field={f[:password]} required />
               </div>
 
               <div>
-                <LightningWeb.Components.Form.password_field
-                  form={f}
-                  id={:password_confirmation}
-                  label="Confirm new password"
-                  required={true}
+                <.label for={f[:password_confirmation]}>
+                  Confirm new password
+                </.label>
+                <.input
+                  type="password"
+                  field={f[:password_confirmation]}
+                  required
                 />
               </div>
 
@@ -50,15 +48,17 @@
               <LightningWeb.Components.Form.divider />
               <div class="text-xs text-secondary-700">
                 <div class="flex">
-                  <dix class="flex-none">
-                    <%= link("Log in", to: Routes.user_session_path(@conn, :new)) %>
-                  </dix>
+                  <div class="flex-none">
+                    <.link to={Routes.user_session_path(@conn, :new)}>
+                      Log in
+                    </.link>
+                  </div>
                   <div class="grow"></div>
 
                   <div class="flex-none">
-                    <%= link("Register",
-                      to: Routes.user_registration_path(@conn, :new)
-                    ) %>
+                    <.link to={Routes.user_registration_path(@conn, :new)}>
+                      Register
+                    </.link>
                   </div>
                 </div>
               </div>

@@ -135,10 +135,10 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
       ]) %>
       <span
         :for={error <- @errors}
-        phx-feedback_for={input_id(@form, @field)}
+        phx-feedback_for={Phoenix.HTML.Form.input_id(@form, @field)}
         class="block w-full text-sm text-secondary-700"
       >
-        <%= translate_error(error) %>
+        <%= LightningWeb.Components.NewInputs.translate_error(error) %>
       </span>
     </div>
     """

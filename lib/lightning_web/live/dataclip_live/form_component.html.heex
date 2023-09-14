@@ -10,7 +10,7 @@
   >
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :type,
+        <%= Phoenix.HTML.Form.label(f, :type,
           class: "block text-sm font-medium text-secondary-700"
         ) %>
         <div class="flex w-full items-center gap-2 pb-3">
@@ -28,19 +28,16 @@
     </div>
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
-        <%= label(f, :body,
+        <%= Phoenix.HTML.Form.label(f, :body,
           class: "block text-sm font-medium text-secondary-700"
         ) %>
-        <%= textarea(f, :body,
+        <%= LightningWeb.HTML.Form.textarea(f, :body,
           disabled: true,
           class:
             "rounded-md w-full font-mono bg-secondary-800 text-secondary-50 h-96",
           phx_debounce: "blur"
         ) %>
-        <%= error_tag(f, :body,
-          class:
-            "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-        ) %>
+        <.old_error field={@form[:body]} />
       </div>
     </div>
     <div class="hidden sm:block" aria-hidden="true">
@@ -55,13 +52,6 @@
           Back
         </.link>
       </span>
-      <!-- <span>
-        <%= submit("Save",
-          phx_disable_with: "Saving...",
-          class:
-            "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-        ) %>
-      </span> -->
     </div>
   </.form>
 </div>

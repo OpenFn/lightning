@@ -85,12 +85,14 @@ defmodule LightningWeb.ProjectLive.Index do
     if assigns.project.scheduled_deletion do
       ~H"""
       <span>
-        <%= link("Cancel deletion",
-          to: "#",
-          phx_click: "cancel_deletion",
-          phx_value_id: @project.id,
-          id: "cancel-deletion-#{@project.id}"
-        ) %>
+        <.link
+          id={"cancel-deletion-#{@project.id}"}
+          href="#"
+          phx-click="cancel_deletion"
+          phx-value-id={@project.id}
+        >
+          Cancel deletion
+        </.link>
       </span>
       |
       <span>

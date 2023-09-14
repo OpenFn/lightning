@@ -127,7 +127,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               phx-target={@myself}
               id={"#{@work_order.id}-selection-form"}
             >
-              <%= checkbox(f, :selected,
+              <%= Phoenix.HTML.Form.checkbox(f, :selected,
                 id: "select_#{@work_order.id}",
                 class:
                   "left-4 top-1/2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"

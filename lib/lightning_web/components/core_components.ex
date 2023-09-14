@@ -5,49 +5,58 @@ defmodule LightningWeb.CoreComponents do
 
   # TODO: Remove `Phoenix.HTML` and `error_tag` once we are in
   # a better position to conform the more recent Phoenix conventions.
-  use Phoenix.HTML
+  # use Phoenix.HTML
 
   alias Phoenix.LiveView.JS
+
+  import LightningWeb.Components.NewInputs
 
   @doc """
   Generates tag for inlined form input errors.
   """
-  def error_tag(form, field), do: error_tag(form, field, [])
 
-  def error_tag(form, field, attrs) when is_list(attrs) do
-    Enum.map(Keyword.get_values(form.errors, field), fn error ->
-      content_tag(
-        :span,
-        translate_error(error),
-        Keyword.merge(
-          [phx_feedback_for: Phoenix.HTML.Form.input_name(form, field)],
-          attrs
-        )
-      )
-    end)
+  attr :field, Phoenix.HTML.FormField,
+    doc:
+      "a form field struct retrieved from the form, for example: @form[:email]"
+
+  def old_error(%{field: field} = assigns) do
+    assigns =
+      assigns |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
+
+    ~H"""
+    <.error :for={msg <- @errors}><%= msg %></.error>
+    """
   end
 
-  def translate_error({msg, opts}) do
-    # You can make use of gettext to translate error messages by
-    # uncommenting and adjusting the following code:
+  # def error_tag(form, field), do: error_tag(form, field, [])
 
-    # if count = opts[:count] do
-    #   Gettext.dngettext(LightningWeb.Gettext, "errors", msg, msg, count, opts)
-    # else
-    #   Gettext.dgettext(LightningWeb.Gettext, "errors", msg, opts)
-    # end
+  # def error_tag(form, field, attrs) when is_list(attrs) do
+  #   Enum.map(Keyword.get_values(form.errors, field), fn error ->
+  #     content_tag(
+  #       :span,
+  #       translate_error(error),
+  #       Keyword.merge(
+  #         [phx_feedback_for: Phoenix.HTML.Form.input_name(form, field)],
+  #         attrs
+  #       )
+  #     )
+  #   end)
+  # end
 
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
-    end)
-  end
+  # def translate_error({msg, opts}) do
+  #   # You can make use of gettext to translate error messages by
+  #   # uncommenting and adjusting the following code:
 
-  @doc """
-  Translates the errors for a field from a keyword list of errors.
-  """
-  def translate_errors(errors, field) when is_list(errors) do
-    for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
-  end
+  #   # if count = opts[:count] do
+  #   #   Gettext.dngettext(LightningWeb.Gettext, "errors", msg, msg, count, opts)
+  #   # else
+  #   #   Gettext.dgettext(LightningWeb.Gettext, "errors", msg, opts)
+  #   # end
+
+  #   Enum.reduce(opts, msg, fn {key, value}, acc ->
+  #     String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
+  #   end)
+  # end
 
   def show_modal(js \\ %JS{}, id) when is_binary(id) do
     js

@@ -143,21 +143,18 @@ defmodule LightningWeb.Components.UserDeletionModal do
           </div>
           <div class="grid grid-cols-12 gap-12">
             <div class="col-span-8">
-              <%= label(f, :scheduled_deletion_email, "User email",
+              <%= Phoenix.HTML.Form.label(f, :scheduled_deletion_email, "User email",
                 class: "block text-sm font-medium text-secondary-700"
               ) %>
-              <%= text_input(f, :scheduled_deletion_email,
+              <%= Phoenix.HTML.Form.text_input(f, :scheduled_deletion_email,
                 class: "block w-full rounded-md",
                 phx_debounce: "blur"
               ) %>
-              <%= error_tag(f, :scheduled_deletion_email,
-                class:
-                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-              ) %>
+              <.old_error field={@form[:scheduled_deletion_email]} />
             </div>
           </div>
 
-          <%= hidden_input(f, :id) %>
+          <%= Phoenix.HTML.Form.hidden_input(f, :id) %>
 
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-5"></div>

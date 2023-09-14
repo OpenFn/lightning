@@ -440,7 +440,9 @@ defmodule LightningWeb.ProjectLive.Settings do
         phx-change="set_failure_alert"
         id={"failure-alert-#{@project_user.id}"}
       >
-        <%= hidden_input(form, :project_user_id, value: @project_user.id) %>
+        <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
+          value: @project_user.id
+        ) %>
         <LightningWeb.Components.Form.select_field
           form={form}
           name="failure_alert"
@@ -471,7 +473,9 @@ defmodule LightningWeb.ProjectLive.Settings do
         phx-change="set_digest"
         id={"digest-#{@project_user.id}"}
       >
-        <%= hidden_input(form, :project_user_id, value: @project_user.id) %>
+        <%= Phoenix.HTML.Form.hidden_input(form, :project_user_id,
+          value: @project_user.id
+        ) %>
         <LightningWeb.Components.Form.select_field
           form={form}
           name="digest"

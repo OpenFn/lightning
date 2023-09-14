@@ -32,15 +32,17 @@
 
               <div class="text-xs text-secondary-700">
                 <div class="flex">
-                  <dix class="flex-none">
-                    <%= link("Log in", to: Routes.user_session_path(@conn, :new)) %>
-                  </dix>
+                  <div class="flex-none">
+                    <.link to={Routes.user_session_path(@conn, :new)}>
+                      Log in
+                    </.link>
+                  </div>
                   <div class="grow"></div>
 
                   <div class="flex-none">
-                    <%= link("Register",
-                      to: Routes.user_registration_path(@conn, :new)
-                    ) %>
+                    <.link to={Routes.user_registration_path(@conn, :new)}>
+                      Register
+                    </.link>
                   </div>
                 </div>
               </div>

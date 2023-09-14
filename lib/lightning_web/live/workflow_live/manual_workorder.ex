@@ -2,8 +2,6 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
   @moduledoc false
   use LightningWeb, :component
 
-  import LightningWeb.Components.NewInputs
-
   attr :id, :string, required: true
   attr :dataclips, :list, default: []
   attr :form, :map, required: true
@@ -15,7 +13,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
       |> assign(
         selected_dataclip:
           with dataclip_id when not is_nil(dataclip_id) <-
-                 input_value(assigns.form, :dataclip_id),
+                 Phoenix.HTML.Form.input_value(assigns.form, :dataclip_id),
                dataclip when not is_nil(dataclip) <-
                  Enum.find(assigns.dataclips, &match?(%{id: ^dataclip_id}, &1)) do
             dataclip
