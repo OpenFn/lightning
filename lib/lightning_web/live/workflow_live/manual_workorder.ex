@@ -73,7 +73,7 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
 
         </div>
       </div>
-      <div :if={@selected_dataclip} class="overflow-y-auto">
+      <div :if={@selected_dataclip} class="grow overflow-y-auto">
         <.log_view dataclip={@selected_dataclip} class="" />
       </div>
       <div :if={is_nil(@selected_dataclip)} class="grow">
