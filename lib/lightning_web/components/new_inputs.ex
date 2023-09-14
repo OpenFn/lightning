@@ -145,7 +145,7 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-md border border-secondary-300 bg-white",
+          "block w-full rounded-md border border-secondary-300 bg-white",
           "text-sm shadow-sm",
           "focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50",
           "disabled:cursor-not-allowed"
