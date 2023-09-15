@@ -131,14 +131,22 @@ defmodule Lightning.Runtime.RuntimeManager do
         windows_target()
 
       {:unix, osname} ->
-        unix_target(osname)
+        arch_str = :erlang.system_info(:system_architecture)
+        [arch | _] = arch_str |> List.to_string() |> String.split("-")
+
+        try do
+          unix_target(arch, osname)
+        rescue
+          CaseClauseError ->
+            reraise(
+              "lightning-runtime is not available for architecture: #{arch_str}",
+              __STACKTRACE__
+            )
+        end
     end
   end
 
-  defp unix_target(osname) do
-    arch_str = :erlang.system_info(:system_architecture)
-    [arch | _] = arch_str |> List.to_string() |> String.split("-")
-
+  defp unix_target(arch, osname) do
     case arch do
       "amd64" ->
         "#{osname}-x64"
@@ -163,9 +171,6 @@ defmodule Lightning.Runtime.RuntimeManager do
 
       "armv7" <> _ ->
         "#{osname}-arm"
-
-      _ ->
-        raise "lightning-runtime is not available for architecture: #{arch_str}"
     end
   end
 
