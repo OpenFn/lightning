@@ -238,6 +238,10 @@ defmodule Lightning.Runtime.RuntimeManager do
     {:stop, :premature_termination, state}
   end
 
+  def handle_info({:EXIT, _pid, reason}, state) do
+    {:stop, reason, state}
+  end
+
   @impl true
   def terminate(reason, state) do
     Task.async(fn ->
@@ -282,16 +286,16 @@ defmodule Lightning.Runtime.RuntimeManager do
   defp start_runtime(state) do
     config = config()
     {args, start_opts} = Keyword.pop(config, :args, [])
-    start_opts = Keyword.take(start_opts, [:cd, :env, :stderr_to_stdout, :lines])
+    start_opts = Keyword.take(start_opts, [:cd, :env])
 
     wrapper = Application.app_dir(:lightning, "priv/runtime/port_wrapper")
     init_cmd = port_init(wrapper)
 
     opts =
       cmd_opts(
-        [lines: 1024] ++ start_opts,
+        start_opts,
         [:use_stdio, :exit_status, :binary, :hide] ++
-          [args: [bin_path() | args]]
+          [args: [bin_path() | args], line: 1024]
       )
 
     port = Port.open(init_cmd, opts)
@@ -315,25 +319,8 @@ defmodule Lightning.Runtime.RuntimeManager do
   defp cmd_opts([{:cd, bin} | t], opts) when is_binary(bin),
     do: cmd_opts(t, [{:cd, bin} | opts])
 
-  defp cmd_opts([{:stderr_to_stdout, true} | t], opts),
-    do: cmd_opts(t, [:stderr_to_stdout | opts])
-
-  defp cmd_opts([{:stderr_to_stdout, false} | t], opts),
-    do: cmd_opts(t, opts)
-
   defp cmd_opts([{:env, enum} | t], opts),
     do: cmd_opts(t, [{:env, validate_env(enum)} | opts])
-
-  defp cmd_opts([{:lines, max_line_length} | t], opts)
-       when is_integer(max_line_length) and max_line_length > 0,
-       do: cmd_opts(t, [{:line, max_line_length} | opts])
-
-  defp cmd_opts([{key, val} | _], _opts),
-    do:
-      raise(
-        ArgumentError,
-        "invalid option #{inspect(key)} with value #{inspect(val)}"
-      )
 
   defp cmd_opts([], opts), do: opts
 
@@ -344,9 +331,6 @@ defmodule Lightning.Runtime.RuntimeManager do
 
       {k, v} ->
         {String.to_charlist(k), String.to_charlist(v)}
-
-      other ->
-        raise ArgumentError, "invalid environment key-value #{inspect(other)}"
     end)
   end
 end

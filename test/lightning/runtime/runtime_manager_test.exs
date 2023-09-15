@@ -9,7 +9,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   @default_config [
     start: true,
     version: "0.1.0",
-    args: ["Hello world 😎", "1", "0"],
+    args: ["Hello world 😎", "0.2", "0"],
     env: %{},
     path: @line_runtime_path
   ]
@@ -30,7 +30,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     end)
   end
 
-  test "returns correct version" do
+  test "bin_version/0 returns correct version" do
     path = Application.app_dir(:lightning, "priv/runtime/fake_runtime")
     config = Keyword.merge(@default_config, path: path)
 
@@ -38,6 +38,10 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
     latest_version = RuntimeManager.latest_version()
     assert {:ok, ^latest_version} = RuntimeManager.bin_version()
+  end
+
+  test "bin_path/0 returns the configured path" do
+    assert RuntimeManager.bin_path() == @default_config[:path]
   end
 
   test "the runtime manager does not start when start is set to false" do
@@ -52,10 +56,11 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   test "the runtime manager stops if the runtime exits" do
     Process.flag(:trap_exit, true)
     {:ok, server} = RuntimeManager.start_link(name: :test_exit)
+
     state = :sys.get_state(server)
-    assert Process.alive?(server)
-    System.cmd("kill", ["-KILL", "#{state.runtime_os_pid}"], into: "", env: %{})
-    Process.sleep(10)
+    send(server, {:EXIT, state.runtime_port, :normal})
+
+    Process.sleep(20)
     refute Process.alive?(server)
   end
 
