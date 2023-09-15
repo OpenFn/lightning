@@ -517,7 +517,7 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:email, :current_password])
     |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "must have the @ sign and no spaces"
+      message: "Email must have the @ sign and no spaces"
     )
     |> Ecto.Changeset.validate_length(:email, max: 160)
     |> Ecto.Changeset.validate_change(:email, fn :email, email ->

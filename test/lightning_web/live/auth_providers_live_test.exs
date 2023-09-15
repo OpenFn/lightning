@@ -75,7 +75,8 @@ defmodule LightningWeb.AuthProvidersLiveTest do
              |> form("#auth-provider-form", auth_provider: %{name: ""})
              |> render_change()
 
-      assert view |> get_error_tag("name") =~ "can&#39;t be blank"
+      assert view |> get_error_tag("name") =~
+               "can&#39;t be blank"
 
       assert view
              |> form("#auth-provider-form",
@@ -211,5 +212,6 @@ defmodule LightningWeb.AuthProvidersLiveTest do
       ~s{#auth-provider-form span[phx-feedback-for="auth_provider[#{field}]"]}
     )
     |> render()
+    |> IO.inspect(label: "get_error_tag")
   end
 end

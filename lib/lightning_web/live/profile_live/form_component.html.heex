@@ -81,7 +81,7 @@
             class: "block text-sm font-medium text-secondary-700"
           ) %>
           <%= Phoenix.HTML.Form.password_input(f, :password,
-            value: Phoenix.HTML.Form.Phoenix.HTML.Form.input_value(f, :password),
+            value: Phoenix.HTML.Form.input_value(f, :password),
             class: "block w-full rounded-md",
             phx_debounce: "blur"
           ) %>

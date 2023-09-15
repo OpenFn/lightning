@@ -89,7 +89,7 @@ defmodule LightningWeb.CredentialLive.Index do
           id={"cancel-deletion-#{@credential.id}"}
           href="#"
           phx-click="cancel_deletion"
-          phx-value_id={@credential.id}
+          phx-value-id={@credential.id}
         >
           Cancel deletion
         </.link>

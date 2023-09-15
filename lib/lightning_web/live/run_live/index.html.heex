@@ -138,7 +138,7 @@
                       <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
                       <%= for status <- @statuses do %>
                         <div class="px-4 py-1 text-gray-700 text-sm">
-                          <%= LightningWeb.Components.Form.check_box(
+                          <%= Phoenix.HTML.Form.checkbox(
                             f,
                             status.id,
                             checked: checked(@filters_changeset, status.id),

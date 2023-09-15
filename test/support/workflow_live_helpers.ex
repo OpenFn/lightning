@@ -235,6 +235,10 @@ defmodule Lightning.WorkflowLive.Helpers do
     |> has_element?()
   end
 
+  @spec has_pending_changes(%Phoenix.LiveViewTest.View{
+          :proxy => any,
+          optional(any) => any
+        }) :: any
   def has_pending_changes(view) do
     view |> element("[data-is-dirty]") |> has_element?()
   end

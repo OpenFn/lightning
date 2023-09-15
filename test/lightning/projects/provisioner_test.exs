@@ -378,7 +378,7 @@ defmodule Lightning.Projects.ProvisionerTest do
   defp flatten_errors(changeset) do
     Ecto.Changeset.traverse_errors(
       changeset,
-      &LightningWeb.CoreComponents.translate_error/1
+      &LightningWeb.Components.NewInputs.translate_error/1
     )
   end
 

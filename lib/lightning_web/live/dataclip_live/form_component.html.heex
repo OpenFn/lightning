@@ -31,13 +31,13 @@
         <%= Phoenix.HTML.Form.label(f, :body,
           class: "block text-sm font-medium text-secondary-700"
         ) %>
-        <%= LightningWeb.HTML.Form.textarea(f, :body,
+        <%= Phoenix.HTML.Form.textarea(f, :body,
           disabled: true,
           class:
             "rounded-md w-full font-mono bg-secondary-800 text-secondary-50 h-96",
           phx_debounce: "blur"
         ) %>
-        <.old_error field={@form[:body]} />
+        <.old_error field={f[:body]} />
       </div>
     </div>
     <div class="hidden sm:block" aria-hidden="true">

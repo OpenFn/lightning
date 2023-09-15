@@ -68,7 +68,7 @@ defmodule LightningWeb.UserLive.Index do
           id={"cancel-deletion-#{@user.id}"}
           href="#"
           phx-click="cancel_deletion"
-          phx-value_id={@user.id}
+          phx-value-id={@user.id}
         >
           Cancel deletion
         </.link>

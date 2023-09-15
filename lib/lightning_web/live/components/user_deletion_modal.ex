@@ -150,7 +150,7 @@ defmodule LightningWeb.Components.UserDeletionModal do
                 class: "block w-full rounded-md",
                 phx_debounce: "blur"
               ) %>
-              <.old_error field={@form[:scheduled_deletion_email]} />
+              <.old_error field={f[:scheduled_deletion_email]} />
             </div>
           </div>
 
