@@ -85,14 +85,14 @@
             <div class="text-xs text-secondary-700">
               <div class="flex">
                 <div class="flex-none">
-                  <.link to={Routes.user_session_path(@conn, :new)}>
+                  <.link href={Routes.user_session_path(@conn, :new)}>
                     Log in
                   </.link>
                 </div>
                 <div class="grow"></div>
 
                 <div class="flex-none">
-                  <.link to={Routes.user_reset_password_path(@conn, :new)}>
+                  <.link href={Routes.user_reset_password_path(@conn, :new)}>
                     Forgot your password?
                   </.link>
                 </div>

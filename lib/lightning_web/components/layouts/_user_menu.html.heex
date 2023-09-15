@@ -2,18 +2,18 @@
   <%= if @current_user do %>
     <li><%= @current_user.email %></li>
     <li>
-      <.link to={Routes.profile_edit_path(@conn, :edit)}>
+      <.link href={Routes.profile_edit_path(@conn, :edit)}>
         Settings
       </.link>
     </li>
   <% else %>
     <li>
-      <.link to={Routes.user_registration_path(@conn, :new)}>
+      <.link href={Routes.user_registration_path(@conn, :new)}>
         Register
       </.link>
     </li>
     <li>
-      <.link to={Routes.user_session_path(@conn, :new)}>
+      <.link href={Routes.user_session_path(@conn, :new)}>
         Log in
       </.link>
     </li>

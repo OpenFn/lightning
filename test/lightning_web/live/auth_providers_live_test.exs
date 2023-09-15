@@ -208,10 +208,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
 
   defp get_error_tag(live, field) do
     live
-    |> element(
-      ~s{#auth-provider-form span[phx-feedback-for="auth_provider[#{field}]"]}
-    )
+    |> element(~s{#auth-provider-form_#{field} + #error-message})
     |> render()
-    |> IO.inspect(label: "get_error_tag")
   end
 end

@@ -208,7 +208,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
                 if id == Phoenix.HTML.Form.input_value(project_form, :project_id),
                   do: name
               end) %>
-              <.old_error field={@form[:project_id]} />
+              <.old_error field={project_form[:project_id]} />
             </div>
             <div class="grow-0 items-right">
               <.button
@@ -221,7 +221,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             </div>
           </div>
         <% end %>
-        <% Phoenix.HTML.Form.hidden_inputs_for(project_form) %>
+        <%= Phoenix.HTML.Form.hidden_inputs_for(project_form) %>
         <%= Phoenix.HTML.Form.hidden_input(project_form, :project_id) %>
         <%= Phoenix.HTML.Form.hidden_input(project_form, :delete) %>
       <% end %>
@@ -248,12 +248,12 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         <%= Phoenix.HTML.Form.label(@form, :owner,
           class: "block text-sm font-medium text-secondary-700"
         ) %>
-        <.old_error field={@form[:user_id]} />
         <LightningWeb.Components.Form.select_field
           form={@form}
           name={:user_id}
           values={@users}
         />
+        <.old_error field={@form[:user_id]} />
       </div>
     </fieldset>
     """

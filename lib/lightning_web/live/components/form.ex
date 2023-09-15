@@ -281,12 +281,12 @@ defmodule LightningWeb.Components.Form do
       <%= Phoenix.HTML.Form.label(@form, @field, class: @label_classes) %>
     <% end %>
     <%= if assigns[:inner_block], do: render_slot(@inner_block) %>
-    <.old_error field={@form[@field]} />
     <%= Phoenix.HTML.Form.text_input(
       @form,
       @field,
       @opts ++ [class: @input_classes, required: @required, disabled: @disabled]
     ) %>
+    <.old_error field={@form[@field]} />
     """
   end
 
