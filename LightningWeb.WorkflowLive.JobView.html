@@ -5,9 +5,9 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="ExDoc v0.29.1">
-    <meta name="project" content="Lightning v0.8.3">
+    <meta name="project" content="Lightning v0.9.0">
 
-    <title>LightningWeb.WorkflowLive.JobView — Lightning v0.8.3</title>
+    <title>LightningWeb.WorkflowLive.JobView — Lightning v0.9.0</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -72,7 +72,7 @@
 Lightning
       </a>
       <strong class="sidebar-projectVersion" translate="no">
-        v0.8.3
+        v0.9.0
       </strong>
     </div>
     <ul class="sidebar-listNav">
@@ -108,7 +108,7 @@ Lightning
     </a>
 
   <span translate="no">LightningWeb.WorkflowLive.JobView</span> 
-  <small class="app-vsn" translate="no">(Lightning v0.8.3)</small>
+  <small class="app-vsn" translate="no">(Lightning v0.9.0)</small>
 
 </h1>
 
@@ -133,7 +133,7 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">top</code></li><li><code class="inline">inner_block</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li><li><code class="inline">bottom</code></li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li></ul><h2>Slots</h2><ul><li><code class="inline">top</code></li><li><code class="inline">inner_block</code></li><li><code class="inline">bottom</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul></div>
 
     </div>
 
@@ -143,7 +143,7 @@ Lightning
 
       </div>
 
-        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required) - A form built from a job.</li><li><code class="inline">current_user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">close_url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">follow_run_id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">footer</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul></div>
+        <div class="summary-synopsis"><h2>Attributes</h2><ul><li><code class="inline">job</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">form</code> (<code class="inline">:map</code>) (required) - A form built from a job.</li><li><code class="inline">current_user</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">project</code> (<code class="inline">:map</code>) (required)</li><li><code class="inline">close_url</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">socket</code> (<code class="inline">:any</code>) (required)</li><li><code class="inline">follow_run_id</code> (<code class="inline">:any</code>) - Defaults to <code class="inline">nil</code>.</li></ul><h2>Slots</h2><ul><li><code class="inline">footer</code></li><li><code class="inline">collapsible_panel</code> - Accepts attributes:<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">panel_title</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul></div>
 
     </div>
 
@@ -170,7 +170,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">container(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L16" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L18" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -192,7 +192,7 @@ Functions
   </a>
   Slots
 </h2>
-<ul><li><code class="inline">top</code></li><li><code class="inline">inner_block</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li><li><code class="inline">bottom</code></li></ul>
+<ul><li><code class="inline">top</code></li><li><code class="inline">inner_block</code></li><li><code class="inline">bottom</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul>
   </section>
 </section>
 <section class="detail" id="job_edit_view/1">
@@ -204,7 +204,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">job_edit_view(assigns)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L65" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning_web/live/workflow_live/job_view.ex#L69" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -226,7 +226,7 @@ Functions
   </a>
   Slots
 </h2>
-<ul><li><code class="inline">footer</code></li><li><code class="inline">column</code> - Accepts attributes:<ul><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul>
+<ul><li><code class="inline">footer</code></li><li><code class="inline">collapsible_panel</code> - Accepts attributes:<ul><li><code class="inline">id</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">panel_title</code> (<code class="inline">:string</code>) (required)</li><li><code class="inline">class</code> (<code class="inline">:string</code>) - Extra CSS classes for the column.</li></ul></li></ul>
   </section>
 </section>
 
