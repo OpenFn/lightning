@@ -430,39 +430,46 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def collapsible_panel(assigns) do
     ~H"""
-    <div id={@id} lv-keep-class class={["w-full flex flex-col px-4 py-6 collapsible-panel", @class]}>
-    <div class="flex-0">
-      <div
-        id={"#{@id}-panel-header"}
-        class="flex justify-between items-center panel-header"
-      >
+    <div
+      id={@id}
+      lv-keep-class
+      class={["w-full flex flex-col px-4 py-6 collapsible-panel", @class]}
+    >
+      <div class="flex-0">
         <div
-          id={"#{@id}-panel-header-title"}
-          class="text-center font-semibold text-secondary-700 mb-2 panel-header-title"
+          id={"#{@id}-panel-header"}
+          class="flex justify-between items-center panel-header"
         >
-          <%= @panel_title %>
-        </div>
-        <div class="close-button">
-          <a
-            id={"#{@id}-panel-collapse-icon"}
-            class="panel-collapse-icon"
-            href="#"
-            phx-click={JS.dispatch("collapse", to: "##{@id}")}
+          <div
+            id={"#{@id}-panel-header-title"}
+            class="text-center font-semibold text-secondary-700 mb-2 panel-header-title"
           >
-            <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
-          </a>
-          <a
-            id={"#{@id}-panel-ezxpand-icon"}
-            href="#"
-            class="hidden panel-expand-icon"
-            phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
-          >
-            <Heroicons.plus class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
-          </a>
+            <%= @panel_title %>
+          </div>
+          <div class="close-button">
+            <a
+              id={"#{@id}-panel-collapse-icon"}
+              class="panel-collapse-icon"
+              href="#"
+              phx-click={JS.dispatch("collapse", to: "##{@id}")}
+            >
+              <Heroicons.minus_small class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+            </a>
+            <a
+              id={"#{@id}-panel-ezxpand-icon"}
+              href="#"
+              class="hidden panel-expand-icon"
+              phx-click={JS.dispatch("expand-panel", to: "##{@id}")}
+            >
+              <Heroicons.plus class="w-10 h-10 p-2 hover:bg-gray-200 text-gray-600 rounded-lg" />
+            </a>
+          </div>
         </div>
       </div>
-      </div>
-      <div id={"#{@id}-panel-content"} class="panel-content min-h-0 min-w-0 flex-1 pt-2">
+      <div
+        id={"#{@id}-panel-content"}
+        class="panel-content min-h-0 min-w-0 flex-1 pt-2"
+      >
         <%= render_slot(@inner_block) %>
       </div>
     </div>

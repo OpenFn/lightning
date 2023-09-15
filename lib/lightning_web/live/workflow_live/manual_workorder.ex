@@ -70,10 +70,9 @@ defmodule LightningWeb.WorkflowLive.ManualWorkorder do
               attribute below with the body of the currently selected credential.
             <% end %>
           </div>
-
         </div>
       </div>
-      <div :if={@selected_dataclip} class="grow overflow-y-auto">
+      <div :if={@selected_dataclip} class="grow overflow-y-auto rounded-md">
         <.log_view dataclip={@selected_dataclip} class="" />
       </div>
       <div :if={is_nil(@selected_dataclip)} class="grow">
