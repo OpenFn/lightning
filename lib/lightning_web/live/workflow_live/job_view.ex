@@ -93,7 +93,6 @@ defmodule LightningWeb.WorkflowLive.JobView do
           panel_title={slot[:panel_title]}
           class={"#{slot[:class]} h-full border"}
         >
-
           <%= render_slot(slot) %>
         </.collapsible_panel>
       <% end %>
@@ -110,7 +109,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
           class="h-full"
         />
       </.collapsible_panel>
-      <.collapsible_panel id="output-logs" panel_title="Output & Logs" class="border h-full">
+      <.collapsible_panel
+        id="output-logs"
+        panel_title="Output & Logs"
+        class="border h-full"
+      >
         <%= if @follow_run_id do %>
           <div class="h-full">
             <%= live_render(

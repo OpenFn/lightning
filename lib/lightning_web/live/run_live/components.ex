@@ -220,15 +220,27 @@ defmodule LightningWeb.RunLive.Components do
 
       <div class="mt-4 flex-1 overflow-y-auto">
         <%= if @show_input_dataclip do %>
-          <div id="input_section" style="display: none;" class="@container overflow-y-auto h-full">
+          <div
+            id="input_section"
+            style="display: none;"
+            class="@container overflow-y-auto h-full"
+          >
             <.dataclip_view dataclip={@run.input_dataclip} />
           </div>
         <% end %>
 
-        <div id="log_section" style="display: none;" class="@container overflow-y-auto h-full">
+        <div
+          id="log_section"
+          style="display: none;"
+          class="@container overflow-y-auto h-full rounded-md"
+        >
           <.run_log_viewer run={@run} />
         </div>
-        <div id="output_section" style="display: none;" class="@container h-full overflow-y-auto">
+        <div
+          id="output_section"
+          style="display: none;"
+          class="@container h-full overflow-y-auto"
+        >
           <%= cond  do %>
             <% is_nil(@run.exit_code) -> %>
               <.dataclip_view
