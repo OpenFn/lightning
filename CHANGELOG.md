@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Creating a new user without a password fails and there is no user feedback
+  [#731](https://github.com/OpenFn/Lightning/issues/731)
+
 ## [v0.9.0] - 2023-09-15
 
 ### Added
