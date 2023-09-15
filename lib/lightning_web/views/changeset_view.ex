@@ -10,7 +10,7 @@ defmodule LightningWeb.ChangesetView do
   def translate_errors(changeset) do
     Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
+        String.replace(acc, "%{#{key}}", to_string(value))
       end)
     end)
   end
