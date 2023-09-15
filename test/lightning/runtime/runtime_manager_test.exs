@@ -4,7 +4,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   alias Lightning.Runtime.RuntimeManager
 
   @line_runtime_path Path.expand("../../support/runtime_per_line", __DIR__)
-  @char_runtime_path Path.expand("../../support/runtime_per_char", __DIR__)
+  # @char_runtime_path Path.expand("../../support/runtime_per_char", __DIR__)
 
   @default_config [
     start: true,

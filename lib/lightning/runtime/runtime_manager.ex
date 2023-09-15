@@ -99,7 +99,7 @@ defmodule Lightning.Runtime.RuntimeManager do
     path = bin_path()
 
     with true <- File.exists?(path),
-         {result, 0} <- System.cmd(path, ["--version"]) do
+         {result, 0} <- System.cmd(path, ["--version"], env: %{}) do
       {:ok, String.trim(result)}
     else
       _ -> :error
@@ -128,29 +128,54 @@ defmodule Lightning.Runtime.RuntimeManager do
     case :os.type() do
       # Assuming it's an x86 CPU
       {:win32, _} ->
-        wordsize = :erlang.system_info(:wordsize)
-
-        if wordsize == 8 do
-          "win32-x64"
-        else
-          "win32-ia32"
-        end
+        windows_target()
 
       {:unix, osname} ->
-        arch_str = :erlang.system_info(:system_architecture)
-        [arch | _] = arch_str |> List.to_string() |> String.split("-")
+        unix_target(osname)
+    end
+  end
 
-        case arch do
-          "amd64" -> "#{osname}-x64"
-          "x86_64" -> "#{osname}-x64"
-          "i686" -> "#{osname}-ia32"
-          "i386" -> "#{osname}-ia32"
-          "aarch64" -> "#{osname}-arm64"
-          "arm" when osname == :darwin -> "darwin-arm64"
-          "arm" -> "#{osname}-arm"
-          "armv7" <> _ -> "#{osname}-arm"
-          _ -> raise "esbuild is not available for architecture: #{arch_str}"
-        end
+  defp unix_target(osname) do
+    arch_str = :erlang.system_info(:system_architecture)
+    [arch | _] = arch_str |> List.to_string() |> String.split("-")
+
+    case arch do
+      "amd64" ->
+        "#{osname}-x64"
+
+      "x86_64" ->
+        "#{osname}-x64"
+
+      "i686" ->
+        "#{osname}-ia32"
+
+      "i386" ->
+        "#{osname}-ia32"
+
+      "aarch64" ->
+        "#{osname}-arm64"
+
+      "arm" when osname == :darwin ->
+        "darwin-arm64"
+
+      "arm" ->
+        "#{osname}-arm"
+
+      "armv7" <> _ ->
+        "#{osname}-arm"
+
+      _ ->
+        raise "lightning-runtime is not available for architecture: #{arch_str}"
+    end
+  end
+
+  defp windows_target do
+    wordsize = :erlang.system_info(:wordsize)
+
+    if wordsize == 8 do
+      "win32-x64"
+    else
+      "win32-ia32"
     end
   end
 
@@ -196,17 +221,8 @@ defmodule Lightning.Runtime.RuntimeManager do
         {port, {:data, {_, data}}},
         %{runtime_port: port, buffer: buffer} = state
       ) do
-    IO.inspect(data, label: "==================>")
     log_buffer([data | buffer])
     {:stop, %{state | buffer: []}, :premature_termination}
-  end
-
-  def handle_info(
-        {:DOWN, _ref, :port, port, reason},
-        %{runtime_port: port} = state
-      ) do
-    Logger.debug("Runtime port was stopped with reason: #{reason}")
-    {:stop, :premature_termination, state}
   end
 
   def handle_info({:EXIT, port, reason}, %{runtime_port: port} = state) do
@@ -216,15 +232,13 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   @impl true
   def terminate(reason, state) do
-    Logger.info("Shutting down Runtime Manager with reason: #{inspect(reason)}")
-
     Task.async(fn ->
       port = state.runtime_port
       os_pid = state.runtime_os_pid
 
       if reason not in [:timeout, :premature_termination] and state.runtime_port do
         Port.connect(port, self())
-        System.cmd("kill", ["-TERM", "#{os_pid}"], into: "")
+        System.cmd("kill", ["-TERM", "#{os_pid}"], into: "", env: %{})
         handle_pending_msg(port, state.buffer)
       end
     end)
