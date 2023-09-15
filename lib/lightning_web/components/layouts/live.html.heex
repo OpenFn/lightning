@@ -36,13 +36,13 @@
         <LightningWeb.Components.Common.version_chip />
       </div>
     </nav>
-    <main class="flex-auto">
+    <div class="flex-auto">
       <Common.flash flash={@flash} kind={:info} />
       <Common.flash flash={@flash} kind={:error} />
       <.live_nav_block flash={@flash}>
         <%= @inner_content %>
       </.live_nav_block>
       <.live_component module={LightningWeb.ModalPortal} id="modal-portal" />
-    </main>
+    </div>
   </div>
 </main>

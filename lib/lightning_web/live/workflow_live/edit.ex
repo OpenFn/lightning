@@ -69,9 +69,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
           <div
             :if={@selected_job && @selection_mode == "expand"}
             class={[
-              "fixed left-0 top-0 right-0 bottom-0 m-8",
+              "fixed left-0 top-0 right-0 bottom-0 m-8 flex-wrap",
               "hidden opacity-0",
-              "bg-white inset-0 z-30 overflow-y-auto rounded-lg drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
+              "bg-white inset-0 z-30 overflow-hidden rounded-lg drop-shadow-[0_35px_35px_rgba(0,0,0,0.25)]"
             ]}
             phx-mounted={fade_in()}
             phx-remove={fade_out()}
@@ -87,14 +87,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
               }
               form={single_inputs_for(@workflow_form, :jobs, @selected_job.id)}
             >
-              <:column>
+              <:collapsible_panel
+                id={"manual-job-#{@selected_job.id}"}
+                panel_title="Input"
+              >
                 <LightningWeb.WorkflowLive.ManualWorkorder.component
                   id={"manual-job-#{@selected_job.id}"}
                   form={@manual_run_form}
                   dataclips={@selectable_dataclips}
                   disabled={!@can_run_job}
                 />
-              </:column>
+              </:collapsible_panel>
               <:footer>
                 <div class="flex flex-row gap-x-2">
                   <.save_is_blocked_error :if={

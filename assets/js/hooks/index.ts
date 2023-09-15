@@ -42,6 +42,26 @@ export const AssocListChange = {
   },
 } as PhoenixHook<{}, {}, HTMLSelectElement>;
 
+
+export const collapsiblePanel = {
+  mounted() {
+    this.el.addEventListener('collapse', event => {
+      const target = event.target;
+      const collection = document.getElementsByClassName("collapsed");
+      if(collection.length < 2){
+        target.classList.toggle("collapsed");
+      }
+      document.dispatchEvent(new Event('update-layout'));
+    });
+
+    this.el.addEventListener('expand-panel', event => {
+      const target = event.target;
+      target.classList.toggle("collapsed");
+      document.dispatchEvent(new Event('update-layout'));
+    });
+  },
+} as PhoenixHook;
+
 function createKeyCombinationHook(
   keyCheck: (e: KeyboardEvent) => boolean
 ): PhoenixHook {
