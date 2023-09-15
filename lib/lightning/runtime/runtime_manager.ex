@@ -196,6 +196,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         {port, {:data, {_, data}}},
         %{runtime_port: port, buffer: buffer} = state
       ) do
+    IO.inspect(data, label: "==================>")
     log_buffer([data | buffer])
     {:stop, %{state | buffer: []}, :premature_termination}
   end
@@ -216,7 +217,6 @@ defmodule Lightning.Runtime.RuntimeManager do
   @impl true
   def terminate(reason, state) do
     Logger.info("Shutting down Runtime Manager with reason: #{inspect(reason)}")
-    IO.inspect(state)
 
     Task.async(fn ->
       port = state.runtime_port

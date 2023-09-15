@@ -3,12 +3,15 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
   alias Lightning.Runtime.RuntimeManager
 
+  @line_runtime_path Path.expand("../../support/runtime_per_line", __DIR__)
+  @char_runtime_path Path.expand("../../support/runtime_per_char", __DIR__)
+
   @default_config [
     start: true,
     version: "0.1.0",
     args: ["Hello world 😎", "1", "3"],
     env: %{},
-    path: Path.expand("../../support/runtime_dummy", __DIR__)
+    path: @line_runtime_path
   ]
 
   setup do
@@ -51,11 +54,34 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     assert_receive {:EXIT, ^server, :normal}, (cleanup_time + 2) * 1000
   end
 
-  defp start_server(test, line_to_print, interval, cleanup_time \\ 3) do
+  test "the runtime manager receives end of line (EOL) messages",
+       %{test: test} do
+    string_to_print = "Hello World 😎"
+    {:ok, server} = start_server(test, string_to_print, 1, 1)
+    state = :sys.get_state(server)
+    port = state.runtime_port
+    Port.connect(port, self())
+
+    assert_receive {^port, {:data, {:eol, ^string_to_print}}}, 1000
+
+    # unlink the port
+    Port.connect(port, server)
+    Process.unlink(port)
+  end
+
+  defp start_server(
+         test,
+         line_to_print,
+         interval,
+         cleanup_time,
+         override_opts \\ []
+       ) do
     config =
-      Keyword.merge(@default_config,
+      @default_config
+      |> Keyword.merge(
         args: ["#{line_to_print}", "#{interval}", "#{cleanup_time}"]
       )
+      |> Keyword.merge(override_opts)
 
     Application.put_env(
       :lightning,
