@@ -79,7 +79,8 @@ defmodule Lightning.Runtime.RuntimeManager do
   The executable may not be available if it was not yet installed.
   """
   def bin_path do
-    name = "lightning-runtime-#{target()}"
+    # name = "lightning-runtime-#{target()}"
+    name = "lightning-runtime"
 
     config()[:path] ||
       if Code.ensure_loaded?(Mix.Project) do
@@ -121,65 +122,67 @@ defmodule Lightning.Runtime.RuntimeManager do
     Application.get_env(:lightning, __MODULE__, [])
   end
 
-  defp target do
-    case :os.type() do
-      # Assuming it's an x86 CPU
-      {:win32, _} ->
-        windows_target()
+  # NOTE: it hasnt yet been decided on the naming convention for the binary
+  # commented to wait for the binary
+  # defp target do
+  #   case :os.type() do
+  #     # Assuming it's an x86 CPU
+  #     {:win32, _} ->
+  #       windows_target()
 
-      {:unix, osname} ->
-        arch_str = :erlang.system_info(:system_architecture)
-        [arch | _] = arch_str |> List.to_string() |> String.split("-")
+  #     {:unix, osname} ->
+  #       arch_str = :erlang.system_info(:system_architecture)
+  #       [arch | _] = arch_str |> List.to_string() |> String.split("-")
 
-        try do
-          unix_target(arch, osname)
-        rescue
-          CaseClauseError ->
-            reraise(
-              "lightning-runtime is not available for architecture: #{arch_str}",
-              __STACKTRACE__
-            )
-        end
-    end
-  end
+  #       try do
+  #         unix_target(arch, osname)
+  #       rescue
+  #         CaseClauseError ->
+  #           reraise(
+  #             "lightning-runtime is not available for architecture: #{arch_str}",
+  #             __STACKTRACE__
+  #           )
+  #       end
+  #   end
+  # end
 
-  defp unix_target(arch, osname) do
-    case arch do
-      "amd64" ->
-        "#{osname}-x64"
+  # defp unix_target(arch, osname) do
+  #   case arch do
+  #     "amd64" ->
+  #       "#{osname}-x64"
 
-      "x86_64" ->
-        "#{osname}-x64"
+  #     "x86_64" ->
+  #       "#{osname}-x64"
 
-      "i686" ->
-        "#{osname}-ia32"
+  #     "i686" ->
+  #       "#{osname}-ia32"
 
-      "i386" ->
-        "#{osname}-ia32"
+  #     "i386" ->
+  #       "#{osname}-ia32"
 
-      "aarch64" ->
-        "#{osname}-arm64"
+  #     "aarch64" ->
+  #       "#{osname}-arm64"
 
-      "arm" when osname == :darwin ->
-        "darwin-arm64"
+  #     "arm" when osname == :darwin ->
+  #       "darwin-arm64"
 
-      "arm" ->
-        "#{osname}-arm"
+  #     "arm" ->
+  #       "#{osname}-arm"
 
-      "armv7" <> _ ->
-        "#{osname}-arm"
-    end
-  end
+  #     "armv7" <> _ ->
+  #       "#{osname}-arm"
+  #   end
+  # end
 
-  defp windows_target do
-    wordsize = :erlang.system_info(:wordsize)
+  # defp windows_target do
+  #   wordsize = :erlang.system_info(:wordsize)
 
-    if wordsize == 8 do
-      "win32-x64"
-    else
-      "win32-ia32"
-    end
-  end
+  #   if wordsize == 8 do
+  #     "win32-x64"
+  #   else
+  #     "win32-ia32"
+  #   end
+  # end
 
   @impl true
   def init(_args) do
@@ -200,7 +203,11 @@ defmodule Lightning.Runtime.RuntimeManager do
   def handle_info({port, {:exit_status, status}}, %{runtime_port: port} = state) do
     Logger.debug("Runtime exited with status: #{status}")
     # Data may arrive after exit status on line mode
-    {:noreply, state, 1}
+    {:noreply, state, 0}
+  end
+
+  def handle_info(:timeout, state) do
+    {:stop, :premature_termination, state}
   end
 
   def handle_info(
@@ -223,7 +230,7 @@ defmodule Lightning.Runtime.RuntimeManager do
         %{runtime_port: port, buffer: buffer} = state
       ) do
     log_buffer([data | buffer])
-    {:stop, %{state | buffer: []}, :premature_termination}
+    {:stop, :premature_termination, %{state | buffer: []}}
   end
 
   def handle_info({:EXIT, port, reason}, %{runtime_port: port} = state) do
@@ -288,7 +295,6 @@ defmodule Lightning.Runtime.RuntimeManager do
       )
 
     port = Port.open(init_cmd, opts)
-    Port.monitor(port)
     {:os_pid, os_pid} = Port.info(port, :os_pid)
     %{state | runtime_port: port, runtime_os_pid: os_pid}
   end

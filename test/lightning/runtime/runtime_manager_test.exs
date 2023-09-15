@@ -9,7 +9,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   @default_config [
     start: true,
     version: "0.1.0",
-    args: ["Hello world 😎", "1", "3"],
+    args: ["Hello world 😎", "1", "0"],
     env: %{},
     path: @line_runtime_path
   ]
@@ -49,19 +49,29 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
              RuntimeManager.start_link(name: :test_start_false)
   end
 
+  test "the runtime manager stops if the runtime exits" do
+    Process.flag(:trap_exit, true)
+    {:ok, server} = RuntimeManager.start_link(name: :test_exit)
+    state = :sys.get_state(server)
+    assert Process.alive?(server)
+    System.cmd("kill", ["-KILL", "#{state.runtime_os_pid}"], into: "", env: %{})
+    Process.sleep(10)
+    refute Process.alive?(server)
+  end
+
   test "the runtime manager waits for the runtime to complete processing before shutting down",
        %{test: test} do
-    cleanup_time = 3
-    {:ok, server} = start_server(test, "Hello World 😎", 1, cleanup_time)
+    cleanup_time = 0.5
+    {:ok, server} = start_server(test, "Hello World 😎", 0.2, cleanup_time)
     Process.flag(:trap_exit, true)
     Process.link(server)
 
     spawn_link(fn -> :ok = GenServer.stop(server) end)
 
     assert Process.alive?(server)
-    refute_received {:EXIT, ^server, :normal}, 1000
+    refute_received {:EXIT, ^server, :normal}
 
-    assert_receive {:EXIT, ^server, :normal}, (cleanup_time + 2) * 1000
+    assert_receive {:EXIT, ^server, :normal}, round((cleanup_time + 0.2) * 1000)
   end
 
   test "the runtime manager receives end of line (EOL) messages",
