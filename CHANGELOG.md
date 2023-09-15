@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.9.0] - 2023-09-15
+
+### Added
+
 - Add favicons [#1079](https://github.com/OpenFn/Lightning/issues/1079)
 - Validate job name in placeholder job node
   [#1021](https://github.com/OpenFn/Lightning/issues/1021)
