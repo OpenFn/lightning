@@ -104,9 +104,6 @@ defmodule Lightning.Runtime.RuntimeManager do
     else
       _ -> :error
     end
-
-    # TODO: Remove this once we have the binary available
-    {:ok, latest_version()}
   end
 
   @doc false
@@ -200,7 +197,6 @@ defmodule Lightning.Runtime.RuntimeManager do
   end
 
   @impl true
-
   def handle_info({port, {:exit_status, status}}, %{runtime_port: port} = state) do
     Logger.debug("Runtime exited with status: #{status}")
     # Data may arrive after exit status on line mode

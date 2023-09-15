@@ -17,17 +17,27 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   setup do
     Application.put_env(
       :lightning,
-      Lightning.Runtime.RuntimeManager,
+      RuntimeManager,
       @default_config
     )
 
     on_exit(fn ->
       Application.put_env(
         :lightning,
-        Lightning.Runtime.RuntimeManager,
+        RuntimeManager,
         @default_config
       )
     end)
+  end
+
+  test "returns correct version" do
+    path = Application.app_dir(:lightning, "priv/runtime/fake_runtime")
+    config = Keyword.merge(@default_config, path: path)
+
+    Application.put_env(:lightning, RuntimeManager, config)
+
+    latest_version = RuntimeManager.latest_version()
+    assert {:ok, ^latest_version} = RuntimeManager.bin_version()
   end
 
   test "the runtime manager does not start when start is set to false" do
