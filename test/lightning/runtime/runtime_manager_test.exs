@@ -10,7 +10,8 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     start: true,
     version: "0.1.0",
     args: ["Hello world 😎", "0.2", "0"],
-    env: %{},
+    cd: Path.expand("..", __DIR__),
+    env: %{"TEST" => "hello", "STOP" => nil},
     path: @line_runtime_path
   ]
 
@@ -53,6 +54,23 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
              RuntimeManager.start_link(name: :test_start_false)
   end
 
+  test "the runtime manager waits for a certain timeout when the runtime exits",
+       %{test: test} do
+    timeout = 0
+    {:ok, server} = RuntimeManager.start_link(name: test)
+
+    state = :sys.get_state(server)
+    exit_status = 2
+
+    assert ExUnit.CaptureLog.capture_log(fn ->
+             assert {:noreply, ^state, ^timeout} =
+                      RuntimeManager.handle_info(
+                        {state.runtime_port, {:exit_status, exit_status}},
+                        state
+                      )
+           end) =~ "Runtime exited with status: #{exit_status}"
+  end
+
   test "the runtime manager stops if the runtime exits" do
     Process.flag(:trap_exit, true)
     {:ok, server} = RuntimeManager.start_link(name: :test_exit)
@@ -92,6 +110,24 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
     # unlink the port
     Port.connect(port, server)
     Process.unlink(port)
+  end
+
+  test "the runtime manager updates the buffer for NOEL messages",
+       %{test: test} do
+    {:ok, server} = RuntimeManager.start_link(name: test)
+
+    state = :sys.get_state(server)
+
+    state = %{state | buffer: ~c"H"}
+
+    assert {:noreply, updated_state} =
+             RuntimeManager.handle_info(
+               {state.runtime_port, {:data, {:noeol, ~c"e"}}},
+               state
+             )
+
+    refute updated_state.buffer == state.buffer
+    assert IO.iodata_to_binary(updated_state.buffer) == "eH"
   end
 
   defp start_server(

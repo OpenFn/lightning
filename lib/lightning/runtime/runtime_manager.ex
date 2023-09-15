@@ -201,7 +201,7 @@ defmodule Lightning.Runtime.RuntimeManager do
 
   @impl true
   def handle_info({port, {:exit_status, status}}, %{runtime_port: port} = state) do
-    Logger.debug("Runtime exited with status: #{status}")
+    Logger.error("Runtime exited with status: #{status}")
     # Data may arrive after exit status on line mode
     {:noreply, state, 0}
   end
