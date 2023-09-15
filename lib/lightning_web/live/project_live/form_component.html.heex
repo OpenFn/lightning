@@ -12,13 +12,13 @@
         <%= Phoenix.HTML.Form.label(f, :name,
           class: "block text-sm font-medium text-secondary-700 mb-2"
         ) %>
-        <.old_error field={f[:name]} />
         <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
         <%= Phoenix.HTML.Form.text_input(f, :raw_name,
           class:
             "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md",
           value: Phoenix.HTML.Form.input_value(f, :name)
         ) %>
+        <.old_error field={f[:name]} />
         <br />
         <div class="inline-block pl-2">
           <%= if (@changeset.valid?) do %>

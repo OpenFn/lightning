@@ -82,9 +82,15 @@
     <% end %>
 
     <div>
-      <.button type="submit" disabled={!@changeset.valid?}>
-        Save
-      </.button>
+      <span
+        id="save-user"
+        aria-label="All fields are required"
+        phx-hook="Tooltip"
+      >
+        <.button type="submit" disabled={!@changeset.valid?}>
+          Save
+        </.button>
+      </span>
       <span>
         <.link
           navigate={Routes.user_index_path(@socket, :index)}
