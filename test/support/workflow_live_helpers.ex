@@ -228,7 +228,10 @@ defmodule Lightning.WorkflowLive.Helpers do
     idx = get_index_of_job(view, job)
 
     view
-    |> element("#workflow_jobs_#{idx}_#{field} + #error-message", error)
+    |> element(
+      ~s{#workflow_jobs_#{idx}_#{field} + [data-tag="error_message"]},
+      error
+    )
     |> has_element?()
   end
 

@@ -208,7 +208,7 @@ defmodule LightningWeb.AuthProvidersLiveTest do
 
   defp get_error_tag(live, field) do
     live
-    |> element(~s{#auth-provider-form_#{field} + #error-message})
+    |> element(~s{#auth-provider-form_#{field} + [data-tag="error_message"]})
     |> render()
   end
 end

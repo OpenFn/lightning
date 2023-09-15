@@ -16,12 +16,6 @@ defmodule LightningWeb.UserLive.FormComponent do
      |> assign(:changeset, changeset)}
   end
 
-  def error_class(form, field) do
-    if Keyword.get(form.errors, field, nil) != nil,
-      do: "border-red-500",
-      else: ""
-  end
-
   @impl true
   def handle_event("validate", %{"user" => user_params}, socket) do
     changeset =
