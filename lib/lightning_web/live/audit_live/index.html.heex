@@ -21,23 +21,23 @@
           <.td class="text-center">
             <.badge color="success" label={audit.event} />
           </.td>
-          <.td><%= audit.actor.email %></.td>
+          <.td><%= audit.actor_id %></.td>
           <.td>
             <div class="flex flex-col overflow-hidden">
               <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
                 Credential
               </div>
               <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
-                <%= display_short_uuid(audit.row_id) %>
+                <%= display_short_uuid(audit.item_id) %>
               </div>
             </div>
           </.td>
         </.tr>
 
         <.tr>
-          <%= if audit.metadata.after do %>
+          <%= if audit.changes.after do %>
             <.td colspan="4" class="font-mono text-xs break-all">
-              <.diff metadata={audit.metadata} />
+              <.diff metadata={audit.changes} />
             </.td>
           <% else %>
             <.td colspan="4" class="font-mono text-xs">

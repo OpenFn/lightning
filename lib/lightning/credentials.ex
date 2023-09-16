@@ -122,7 +122,7 @@ defmodule Lightning.Credentials do
       Credential.changeset(%Credential{}, attrs |> coerce_json_field("body"))
     )
     |> Multi.insert(:audit, fn %{credential: credential} ->
-      Audit.event("created", credential.id, credential.user_id)
+      Audit.event("credential", "created", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
     |> case do
@@ -181,7 +181,7 @@ defmodule Lightning.Credentials do
         |> Multi.insert(
           :audit,
           fn %{credential: credential} ->
-            Audit.event("updated", credential.id, credential.user_id, changeset)
+            Audit.event("credential", "updated", credential.id, credential.user_id, changeset)
           end
         )
         |> Multi.append(project_credentials_multi)
@@ -255,7 +255,7 @@ defmodule Lightning.Credentials do
     Multi.new()
     |> Multi.delete(:credential, credential)
     |> Multi.insert(:audit, fn _ ->
-      Audit.event("deleted", credential.id, credential.user_id)
+      Audit.event("credential", "deleted", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
   end

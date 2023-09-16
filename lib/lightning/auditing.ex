@@ -8,7 +8,7 @@ defmodule Lightning.Auditing do
 
   def list_all(params \\ %{}) do
     from(a in Lightning.Credentials.Audit,
-      preload: [:actor],
+      # preload: [:actor_id],
       order_by: [desc: a.inserted_at]
     )
     |> Repo.paginate(params)
