@@ -15,6 +15,7 @@ defmodule Lightning.Credentials.AuditTest do
         Audit.event("Credential", "created", credential.id, user.id)
         |> Audit.save()
 
+      assert audit.item_type == "Credential"
       assert audit.item_id == credential.id
       assert %{before: nil, after: nil} = audit.changes
       assert audit.event == "created"
@@ -33,6 +34,7 @@ defmodule Lightning.Credentials.AuditTest do
         Audit.event("Credential", "updated", credential.id, user.id, changeset)
         |> Audit.save()
 
+      assert audit.item_type == "Credential"
       assert audit.item_id == credential.id
 
       # Check that the body attribute is encrypted in audit records too.
@@ -57,6 +59,7 @@ defmodule Lightning.Credentials.AuditTest do
         Audit.event("Credential", "deleted", credential.id, user.id)
         |> Audit.save()
 
+      assert audit.item_type == "Credential"
       assert audit.item_id == credential.id
       assert %{before: nil, after: nil} = audit.changes
       assert audit.event == "deleted"

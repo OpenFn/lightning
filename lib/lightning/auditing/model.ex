@@ -128,7 +128,8 @@ defmodule Lightning.Auditing.Model do
     audit_changeset(schema, item_type, event, item_id, actor_id, changes)
   end
 
-  def event(schema, item_type, event, item_id, actor_id, changes) when is_map(changes) do
+  def event(schema, item_type, event, item_id, actor_id, changes)
+      when is_map(changes) do
     audit_changeset(schema, item_type, event, item_id, actor_id, changes)
   end
 
