@@ -12,7 +12,6 @@
         <.th>Actor</.th>
         <.th>Subject</.th>
       </.tr>
-
       <%= for audit <- @page.entries do %>
         <.tr id={"audit-#{audit.id}"} class="border-dotted border-gray-100">
           <.td>
@@ -25,7 +24,7 @@
           <.td>
             <div class="flex flex-col overflow-hidden">
               <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
-                Credential
+                <%= audit.item_type %>
               </div>
               <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
                 <%= display_short_uuid(audit.item_id) %>
@@ -33,7 +32,6 @@
             </div>
           </.td>
         </.tr>
-
         <.tr>
           <%= if audit.changes.after do %>
             <.td colspan="4" class="font-mono text-xs break-all">
