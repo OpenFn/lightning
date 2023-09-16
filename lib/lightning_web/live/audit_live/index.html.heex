@@ -8,7 +8,7 @@
     <.table>
       <.tr>
         <.th>Occurred</.th>
-        <.th class="text-center">Event</.th>
+        <.th>Event</.th>
         <.th>Actor</.th>
         <.th>Subject</.th>
       </.tr>
@@ -17,10 +17,23 @@
           <.td>
             <%= audit.inserted_at |> Calendar.strftime("%c %Z") %>
           </.td>
-          <.td class="text-center">
+          <.td>
             <.badge color="success" label={audit.event} />
           </.td>
-          <.td><%= audit.actor_id %></.td>
+          <.td>
+            <div class="flex flex-col overflow-hidden">
+              <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
+                <%= if audit.actor,
+                  do: audit.actor.first_name <> " " <> audit.actor.last_name,
+                  else: "(User deleted)" %>
+              </div>
+              <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
+                <%= if audit.actor,
+                  do: audit.actor.email,
+                  else: display_short_uuid(audit.actor_id) %>
+              </div>
+            </div>
+          </.td>
           <.td>
             <div class="flex flex-col overflow-hidden">
               <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
