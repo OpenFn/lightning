@@ -37,7 +37,7 @@
           <.td>
             <div class="flex flex-col overflow-hidden">
               <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
-                <%= audit.item_type %>
+                <%= audit.item_type |> String.split(".") |> Enum.at(-1) %>
               </div>
               <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
                 <%= display_short_uuid(audit.item_id) %>
