@@ -130,12 +130,6 @@ defmodule Lightning.WorkOrdersTest do
 
       {:ok, retry_attempt} = WorkOrders.retry(attempt, run, created_by: user)
 
-      # expect the attempt to be a new one, but with the same workorder
-      # how do we distinguish between a new attempt and a retry?
-      # starting_trigger and created_by works for webhooks/cron
-      # but not for manual attempts
-      # do we care about being able to tell _where_ a retry came from?
-
       refute retry_attempt.id == attempt.id
       assert retry_attempt.dataclip_id == dataclip.id
       assert retry_attempt.starting_job.id == job.id
@@ -145,14 +139,6 @@ defmodule Lightning.WorkOrdersTest do
 
       assert retry_attempt |> Repo.preload(:runs) |> Map.get(:runs) == [],
              "retrying an attempt from the start should not copy over runs"
-
-      # IO.inspect(work_order, label: "work_order")
-
-      # test retrying from the beginning
-      # test retrying from a specific run
-
-      # test retrying a manual attempt
-      # do manual attempts continue executing?
     end
 
     test "retrying an attempt from a run that isn't the first", %{
@@ -163,11 +149,6 @@ defmodule Lightning.WorkOrdersTest do
       user = insert(:user)
       dataclip = insert(:dataclip)
       output_dataclip = insert(:dataclip)
-
-      # past_sequence =
-      #   ExMachina.sequence(:past_timestamp, fn i ->
-      #     DateTime.utc_now() |> DateTime.add(-i)
-      #   end)
 
       # create existing complete attempt
       %{attempts: [attempt]} =
