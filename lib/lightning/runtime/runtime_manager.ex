@@ -20,10 +20,8 @@ defmodule Lightning.Runtime.RuntimeManager do
 
     * `:version` - the expected runtime version
 
-    * `:start` - flag to start the runtime manager. If `false` the genserver won't be started
-
-    * `:cacerts_path` - the directory to find certificates for
-      https connections
+    * `:start` - flag to start the runtime manager. If `false` the GenServer
+       won't be started
 
     * `:path` - the path to find the runtime executable at. By
       default, it is automatically downloaded and placed inside
@@ -43,6 +41,16 @@ defmodule Lightning.Runtime.RuntimeManager do
     :runtime_os_pid,
     buffer: []
   ]
+
+  @impl true
+  def init(_args) do
+    if config()[:start] do
+      Process.flag(:trap_exit, true)
+      {:ok, %__MODULE__{}, {:continue, :start_runtime}}
+    else
+      :ignore
+    end
+  end
 
   def start_link(args) do
     if config()[:start] && is_nil(config()[:version]) do
@@ -183,16 +191,6 @@ defmodule Lightning.Runtime.RuntimeManager do
   #     "win32-ia32"
   #   end
   # end
-
-  @impl true
-  def init(_args) do
-    if config()[:start] do
-      Process.flag(:trap_exit, true)
-      {:ok, %__MODULE__{}, {:continue, :start_runtime}}
-    else
-      :ignore
-    end
-  end
 
   @impl true
   def handle_continue(:start_runtime, state) do

@@ -16,18 +16,10 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
   ]
 
   setup do
-    Application.put_env(
-      :lightning,
-      RuntimeManager,
-      @default_config
-    )
+    Application.put_env(:lightning, RuntimeManager, @default_config)
 
     on_exit(fn ->
-      Application.put_env(
-        :lightning,
-        RuntimeManager,
-        @default_config
-      )
+      Application.put_env(:lightning, RuntimeManager, @default_config)
     end)
   end
 
@@ -92,17 +84,23 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
              RuntimeManager.handle_info(:timeout, state)
   end
 
+  @tag :capture_log
   test "the runtime manager stops if the runtime exits" do
-    Process.flag(:trap_exit, true)
-    {:ok, server} = RuntimeManager.start_link(name: :test_exit)
+    server =
+      start_supervised!(
+        {RuntimeManager, [[name: :test_exit]]},
+        restart: :temporary
+      )
+
+    Process.monitor(server)
 
     state = :sys.get_state(server)
     send(server, {:EXIT, state.runtime_port, :normal})
 
-    Process.sleep(20)
-    refute Process.alive?(server)
+    assert_receive {:DOWN, _ref, :process, ^server, :premature_termination}
   end
 
+  @tag :capture_log
   test "the runtime manager waits for the runtime to complete processing before shutting down",
        %{test: test} do
     cleanup_time = 0.2
@@ -175,7 +173,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
     child_spec = %{
       id: RuntimeManager,
-      restart: :transient,
+      restart: :temporary,
       shutdown: 10_000,
       start: {RuntimeManager, :start_link, [[name: name]]}
     }
