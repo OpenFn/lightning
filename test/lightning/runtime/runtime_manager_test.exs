@@ -105,7 +105,7 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
 
   test "the runtime manager waits for the runtime to complete processing before shutting down",
        %{test: test} do
-    cleanup_time = 0.5
+    cleanup_time = 0.2
     {:ok, server} = start_server(test, "Hello World 😎", 0.2, cleanup_time)
     Process.flag(:trap_exit, true)
     Process.link(server)
