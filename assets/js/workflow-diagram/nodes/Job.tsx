@@ -36,12 +36,5 @@ JobNode.displayName = 'JobNode';
 export default memo(JobNode);
 
 function getAdaptorIcon(adaptor: string) {
-  // TODO how will we do this?
-  if (adaptor === 'dhis2') {
-    return icons.dhis2;
-  }
-  if (adaptor === 'common') {
-    return <img src="/images/openfn.png" />;
-  }
-  return adaptor;
+  return <img src={`/assets/images/adaptors/${adaptor}-square.png`} />;
 }
