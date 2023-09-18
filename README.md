@@ -59,14 +59,19 @@ to get familiar with the app.
 ## Features
 
 ### Build
+
 Plan and build workflows using Lightning's visual interface to quickly define
 when, where and what you want your automation to do.
 
 ![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
 
-Use our [CLI](https://github.com/OpenFn/kit/blob/main/packages/cli/README.md#openfncli) to quickly build, edit and deploy projects from the comfort of your own code editor.
+Use our
+[CLI](https://github.com/OpenFn/kit/blob/main/packages/cli/README.md#openfncli)
+to quickly build, edit and deploy projects from the comfort of your own code
+editor.
 
 ### Monitor
+
 Monitor all workflow activity in one place.
 ![Screenshot 2023-03-21 at 10 07 37](https://user-images.githubusercontent.com/36554605/226538515-f8b97950-80b9-4e5e-a5f4-7406c20ed37a.png)
 
@@ -77,18 +82,22 @@ Monitor all workflow activity in one place.
   activity
 
 ### Manage
+
 Manage users and access by project
 ![Screenshot 2023-03-21 at 10 09 03](https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png)
 
 ### Roles and permissions
 
-Authorization is a central part of Lightning. As such, users are given different roles which determine what level of access they have for resources in the application. For more details
-about roles and permissions in Lightning, please refer to our
+Authorization is a central part of Lightning. As such, users are given different
+roles which determine what level of access they have for resources in the
+application. For more details about roles and permissions in Lightning, please
+refer to our
 [documentation](https://docs.openfn.org/documentation/about-lightning#roles-and-permissions).
 
 ### Roadmap
 
-View our public roadmap [here](https://docs.openfn.org/documentation/openfn-roadmap#lightning-roadmap).
+View our public roadmap
+[here](https://docs.openfn.org/documentation/openfn-roadmap#lightning-roadmap).
 
 ## Getting Started
 
@@ -97,7 +106,8 @@ View our public roadmap [here](https://docs.openfn.org/documentation/openfn-road
 - If you want to [_**DEPLOY**_](#deploy-on-external-infrastructure) Lightning,
   we recommend Docker builds and Kubernetes.
 - If you want to [_**CONTRIBUTE**_](#contribute-to-this-project) to the project,
-  we recommend [running Lightning on your local machine](#run-lightning-locally).
+  we recommend
+  [running Lightning on your local machine](#run-lightning-locally).
 
 ## **Run** via Docker
 
@@ -119,7 +129,11 @@ from Dockerhub.
 
 ## **Deploy** on external infrastructure
 
-See [Deployment](DEPLOYMENT.md) for more detailed information.
+Head to the [Deploy](https://docs.openfn.org/documentation/deploy/options)
+section of our docs site to get started.
+
+For technical guidelines, see [deployment considerations](DEPLOYMENT.md) for
+more detailed information.
 
 ## Run Lightning locally
 
@@ -165,7 +179,8 @@ asdf in order to dynamically make the specified versions of Elixir and Erlang
 available. You'll need asdf plugins for
 [Erlang](https://github.com/asdf-vm/asdf-erlang),
 [NodeJs](https://github.com/asdf-vm/asdf-nodejs)
-[Elixir](https://github.com/asdf-vm/asdf-elixir) and [k6](https://github.com/grimoh/asdf-k6).
+[Elixir](https://github.com/asdf-vm/asdf-elixir) and
+[k6](https://github.com/grimoh/asdf-k6).
 
 ```sh
 asdf install  # Install language versions
@@ -341,24 +356,41 @@ FYI, Lightning is built in [Elixir](https://elixir-lang.org/), harnessing the
 [Phoenix Framework](https://www.phoenixframework.org/). Currently, the only
 unbundled dependency is a [PostgreSQL](https://www.postgresql.org/) database.
 
-If you'd like to contribute to this projects, follow the steps below: 
+If you'd like to contribute to this projects, follow the steps below:
 
 ### Assign yourself to an issue
-Read through the existing [issues](https://github.com/OpenFn/Lightning/issues), assign yourself to the issue you have chosen. Leave a comment on the issue to let us know you'll be working on it, and if you have any questions of clarifications that would help you get started ask them there - we will get back to you as soon as possible. 
 
-If there isn't already an issue for the feature you would like to contribute, please start a discussion in our [community forum](https://community.openfn.org/c/feature-requests/12).
+Read through the existing [issues](https://github.com/OpenFn/Lightning/issues),
+assign yourself to the issue you have chosen. Leave a comment on the issue to
+let us know you'll be working on it, and if you have any questions of
+clarifications that would help you get started ask them there - we will get back
+to you as soon as possible.
+
+If there isn't already an issue for the feature you would like to contribute,
+please start a discussion in our
+[community forum](https://community.openfn.org/c/feature-requests/12).
 
 ### Open a pull request
 
-1. Clone the Lightning repository, then [fork it](https://docs.github.com/en/get-started/quickstart/fork-a-repo). 
+1. Clone the Lightning repository, then
+   [fork it](https://docs.github.com/en/get-started/quickstart/fork-a-repo).
 
-2. Run through [setting up your environment](#set-up-your-environment) and make your changes. 
+2. Run through [setting up your environment](#set-up-your-environment) and make
+   your changes.
 
-3. Make sure you have written your tests and updated /CHANGELOG.md (in the 'Unreleased' section, add a short description of the changes you are making, along with a link to your issue).
+3. Make sure you have written your tests and updated /CHANGELOG.md (in the
+   'Unreleased' section, add a short description of the changes you are making,
+   along with a link to your issue).
 
-3. Open a draft pull request by clicking "Contribute > Open Pull Request" from your forked repository. Fill out the pull request template (this will be added automatically for you), then make sure to self-review your code and go through the 'Review checklist'. Don't worry about the QA checkbox, our product manager Amber will tick that once she has reviewed your PR. You can leave any notes for the reviewer in a comment. 
+4. Open a draft pull request by clicking "Contribute > Open Pull Request" from
+   your forked repository. Fill out the pull request template (this will be
+   added automatically for you), then make sure to self-review your code and go
+   through the 'Review checklist'. Don't worry about the QA checkbox, our
+   product manager Amber will tick that once she has reviewed your PR. You can
+   leave any notes for the reviewer in a comment.
 
-4. Once you're ready to submit a pull request, you can mark your draft PR as 'Ready for review' and assign @stuartc or @taylordowns2000.
+5. Once you're ready to submit a pull request, you can mark your draft PR as
+   'Ready for review' and assign @stuartc or @taylordowns2000.
 
 ## Generating Documentation
 
