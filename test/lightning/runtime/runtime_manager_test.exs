@@ -54,6 +54,17 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
              RuntimeManager.start_link(name: :test_start_false)
   end
 
+  test "the runtime manager logs a warning when version is not configured",
+       %{test: test} do
+    config = Keyword.merge(@default_config, version: nil)
+    Application.put_env(:lightning, RuntimeManager, config)
+
+    assert ExUnit.CaptureLog.capture_log(fn ->
+             RuntimeManager.start_link(name: test)
+           end) =~
+             "runtime version is not configured. Please set it in your config files"
+  end
+
   test "the runtime manager waits for a certain timeout when the runtime exits",
        %{test: test} do
     timeout = 0
@@ -69,6 +80,16 @@ defmodule Lightning.Runtime.RuntimeManagerTest do
                         state
                       )
            end) =~ "Runtime exited with status: #{exit_status}"
+  end
+
+  test "on timeout, the runtime manager exits with premature termination",
+       %{test: test} do
+    {:ok, server} = RuntimeManager.start_link(name: test)
+
+    state = :sys.get_state(server)
+
+    assert {:stop, :premature_termination, ^state} =
+             RuntimeManager.handle_info(:timeout, state)
   end
 
   test "the runtime manager stops if the runtime exits" do
