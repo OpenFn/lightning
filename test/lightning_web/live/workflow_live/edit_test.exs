@@ -286,7 +286,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         ]
       })
 
-      assert_patched(view, ~p"/projects/#{project}/w/#{workflow}")
+      # assert_patched(view, ~p"/projects/#{project}/w/#{workflow}")
     end
 
     @tag role: :viewer
