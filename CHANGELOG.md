@@ -12,6 +12,14 @@ and this project adheres to
 
 ### Changed
 
+### Fixed
+
+## [v0.9.1] - 2023-09-19
+
+### Added
+
+### Changed
+
 - Modified audit trail to handle lots of different kind of audit events
   [#271](https://github.com/OpenFn/Lightning/issues/271)/[#44](https://github.com/OpenFn/Lightning/issues/44)
 
