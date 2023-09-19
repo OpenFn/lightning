@@ -12,7 +12,7 @@ defmodule Lightning.Credentials.AuditTest do
         credential_fixture(user_id: user.id, body: %{"my-secret" => "value"})
 
       {:ok, audit} =
-        Audit.event("Credential", "created", credential.id, user.id)
+        Audit.event("created", credential.id, user.id)
         |> Audit.save()
 
       assert audit.item_type == "credential"
@@ -31,7 +31,7 @@ defmodule Lightning.Credentials.AuditTest do
         Credential.changeset(credential, %{body: %{"my-secret" => "value"}})
 
       {:ok, audit} =
-        Audit.event("Credential", "updated", credential.id, user.id, changeset)
+        Audit.event("updated", credential.id, user.id, changeset)
         |> Audit.save()
 
       assert audit.item_type == "credential"
@@ -56,12 +56,17 @@ defmodule Lightning.Credentials.AuditTest do
         credential_fixture(user_id: user.id, body: %{"my-secret" => "value"})
 
       {:ok, audit} =
-        Audit.event("Credential", "deleted", credential.id, user.id)
+        Audit.event("deleted", credential.id, user.id)
         |> Audit.save()
 
       assert audit.item_type == "credential"
       assert audit.item_id == credential.id
-      assert %{before: nil, after: nil} = audit.changes
+
+      assert audit.changes == %Lightning.Credentials.Audit.Changes{
+               before: nil,
+               after: nil
+             }
+
       assert audit.event == "deleted"
       assert audit.actor_id == user.id
     end

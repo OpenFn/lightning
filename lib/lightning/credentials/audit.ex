@@ -60,6 +60,7 @@ defmodule Lightning.Credentials.Audit do
     field :item_id, Ecto.UUID
     embeds_one :changes, Changes
     field :actor_id, Ecto.UUID
+    field :actor, :map, virtual: true
 
     timestamps(updated_at: false)
   end

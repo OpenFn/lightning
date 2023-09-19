@@ -122,7 +122,7 @@ defmodule Lightning.Credentials do
       Credential.changeset(%Credential{}, attrs |> coerce_json_field("body"))
     )
     |> Multi.insert(:audit, fn %{credential: credential} ->
-      Audit.event("Credential", "created", credential.id, credential.user_id)
+      Audit.event("created", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
     |> case do
@@ -182,7 +182,6 @@ defmodule Lightning.Credentials do
           :audit,
           fn %{credential: credential} ->
             Audit.event(
-              "Credential",
               "updated",
               credential.id,
               credential.user_id,
@@ -205,8 +204,7 @@ defmodule Lightning.Credentials do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        "Credential"
-        |> Audit.event(
+        Audit.event(
           "removed_from_project",
           credential.id,
           credential.user_id,
@@ -232,8 +230,7 @@ defmodule Lightning.Credentials do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        "Credential"
-        |> Audit.event("added_to_project", credential.id, credential.user_id, %{
+        Audit.event("added_to_project", credential.id, credential.user_id, %{
           before: %{project_id: nil},
           after: %{
             project_id: Ecto.Changeset.get_field(changeset, :project_id)
@@ -266,7 +263,7 @@ defmodule Lightning.Credentials do
     Multi.new()
     |> Multi.delete(:credential, credential)
     |> Multi.insert(:audit, fn _ ->
-      Audit.event("Credential", "deleted", credential.id, credential.user_id)
+      Audit.event("deleted", credential.id, credential.user_id)
     end)
     |> Repo.transaction()
   end

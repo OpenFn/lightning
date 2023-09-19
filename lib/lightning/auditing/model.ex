@@ -28,7 +28,7 @@ defmodule Lightning.Auditing.Model do
 
     event_signature =
       quote do
-        def event(item_type, event, item_id, actor_id, changes \\ %{})
+        def event(event, item_id, actor_id, changes \\ %{})
       end
 
     event_log_functions =
@@ -39,7 +39,7 @@ defmodule Lightning.Auditing.Model do
           # def event(item_type, "foo_event", item_id, actor_id, changes) do
           #   Lightning.Audit.event(item_type, schema, "foo_event", item_id, actor_id, changes)
           # end
-          def event(item_type, unquote(event_name), item_id, actor_id, changes) do
+          def event(unquote(event_name), item_id, actor_id, changes) do
             unquote(__MODULE__).event(
               unquote(schema),
               unquote(item),

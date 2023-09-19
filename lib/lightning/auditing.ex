@@ -8,20 +8,11 @@ defmodule Lightning.Auditing do
 
   def list_all(params \\ %{}) do
     from(a in Lightning.Credentials.Audit,
+      left_join: u in Lightning.Accounts.User,
+      on: [id: a.actor_id],
+      select_merge: %{actor: u},
       order_by: [desc: a.inserted_at]
     )
     |> Repo.paginate(params)
-    |> try_to_get_actors()
-  end
-
-  defp try_to_get_actors(page) do
-    page
-    |> Map.put(
-      :entries,
-      Enum.map(page.entries, fn entry ->
-        entry
-        |> Map.put(:actor, Repo.get(Lightning.Accounts.User, entry.actor_id))
-      end)
-    )
   end
 end
