@@ -53,7 +53,7 @@ defmodule Lightning.Projects.ProjectUser do
     |> cast(attrs, [:user_id, :project_id, :role, :digest, :failure_alert])
     |> validate_required([:user_id])
     |> unique_constraint([:project_id, :user_id],
-      message: "User already a member of this project."
+      message: "user already a member of this project."
     )
   end
 end

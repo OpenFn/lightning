@@ -34,7 +34,7 @@ defmodule Lightning.Projects.ProjectCredential do
     |> cast(attrs, [:credential_id, :project_id])
     |> validate_required([:project_id])
     |> unique_constraint([:project_id, :credential_id],
-      message: "Credential already added to this project."
+      message: "credential already added to this project."
     )
   end
 end

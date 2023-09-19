@@ -335,7 +335,7 @@ defmodule Lightning.AccountsTest do
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
 
-      assert "can't be longer than 72 characters" in errors_on(changeset).password
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
     test "validates email uniqueness" do
@@ -388,7 +388,7 @@ defmodule Lightning.AccountsTest do
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
 
-      assert "can't be longer than 72 characters" in errors_on(changeset).password
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
     test "registers users with a hashed password and sets role to :superuser" do
@@ -842,7 +842,7 @@ defmodule Lightning.AccountsTest do
           password: too_long
         })
 
-      assert "can't be longer than 72 characters" in errors_on(changeset).password
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
     test "validates current password", %{user: user} do
@@ -1221,7 +1221,7 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} =
         Accounts.reset_user_password(user, %{password: too_long})
 
-      assert "can't be longer than 72 characters" in errors_on(changeset).password
+      assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
     test "updates the password", %{user: user} do

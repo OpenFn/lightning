@@ -10,8 +10,8 @@ defmodule Lightning.Projects.ProvisionerTest do
       changeset = Provisioner.parse_document(%Lightning.Projects.Project{}, %{})
 
       assert flatten_errors(changeset) == %{
-               id: ["can't be blank"],
-               name: ["can't be blank"]
+               id: ["This field can't be blank."],
+               name: ["This field can't be blank."]
              }
 
       %{body: body} = valid_document()
@@ -39,8 +39,8 @@ defmodule Lightning.Projects.ProvisionerTest do
                workflows: [
                  %{
                    jobs: [
-                     %{id: ["can't be blank"]},
-                     %{id: ["can't be blank"]}
+                     %{id: ["This field can't be blank."]},
+                     %{id: ["This field can't be blank."]}
                    ]
                  }
                ]
@@ -55,8 +55,8 @@ defmodule Lightning.Projects.ProvisionerTest do
         })
 
       assert flatten_errors(changeset) == %{
-               id: ["can't be blank"],
-               name: ["can't be blank"],
+               id: ["This field can't be blank."],
+               name: ["This field can't be blank."],
                base: ["extraneous parameters: baz, foo"]
              }
     end
@@ -190,7 +190,9 @@ defmodule Lightning.Projects.ProvisionerTest do
         )
 
       assert flatten_errors(changeset) == %{
-               workflows: [%{jobs: [%{id: ["has already been taken"]}]}]
+               workflows: [
+                 %{jobs: [%{id: ["This email address already exists."]}]}
+               ]
              }
 
       %{id: other_trigger_id} = Lightning.Factories.insert(:trigger)
@@ -206,7 +208,9 @@ defmodule Lightning.Projects.ProvisionerTest do
         )
 
       assert flatten_errors(changeset) == %{
-               workflows: [%{triggers: [%{id: ["has already been taken"]}]}]
+               workflows: [
+                 %{triggers: [%{id: ["This email address already exists."]}]}
+               ]
              }
 
       %{id: other_edge_id} = Lightning.Factories.insert(:edge)
@@ -223,7 +227,9 @@ defmodule Lightning.Projects.ProvisionerTest do
         )
 
       assert flatten_errors(changeset) == %{
-               workflows: [%{edges: [%{id: ["has already been taken"]}]}]
+               workflows: [
+                 %{edges: [%{id: ["This email address already exists."]}]}
+               ]
              }
     end
 

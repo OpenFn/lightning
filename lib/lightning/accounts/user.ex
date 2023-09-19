@@ -157,14 +157,7 @@ defmodule Lightning.Accounts.User do
   defp validate_password(changeset, opts) do
     changeset
     |> validate_required(:password, message: "can't be blank")
-    |> validate_length(:password,
-      min: 8,
-      message: "must be at least 8 characters"
-    )
-    |> validate_length(:password,
-      max: 72,
-      message: "can't be longer than 72 characters"
-    )
+    |> validate_length(:password, min: 8, max: 72)
     |> maybe_hash_password(opts)
   end
 

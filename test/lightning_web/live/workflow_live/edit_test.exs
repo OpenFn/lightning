@@ -199,7 +199,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
         })
         |> render_submit()
 
-      assert html =~ "A workflow with this name already exists in this project."
+      assert html =~ "a workflow with this name already exists in this project."
       assert html =~ "Workflow could not be saved"
 
       assert view

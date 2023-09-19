@@ -24,7 +24,7 @@ defmodule LightningWeb.FirstSetupLiveTest do
                  password_confirmation: "123"
                }
              )
-             |> render_change() =~ "should be at least 8 character(s)"
+             |> render_change() =~ "Password minimum length is 8 characters"
 
       {:ok, conn} =
         show_live
