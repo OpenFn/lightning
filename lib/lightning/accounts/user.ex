@@ -142,12 +142,12 @@ defmodule Lightning.Accounts.User do
     changeset
     |> validate_required(:email, message: "Email can't be blank")
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "Email must have the @ sign and no spaces"
+      message: "must have the @ sign and no spaces"
     )
     |> validate_length(:email, max: 160)
     |> validate_change(:email, fn :email, email ->
       if Lightning.Repo.exists?(User |> where(email: ^email)) do
-        [email: "This email has already been taken"]
+        [email: "has already been taken"]
       else
         []
       end
@@ -156,22 +156,21 @@ defmodule Lightning.Accounts.User do
 
   defp validate_password(changeset, opts) do
     changeset
-    |> validate_required(:password, message: "Password can't be blank")
+    |> validate_required(:password, message: "can't be blank")
     |> validate_length(:password,
       min: 8,
-      message: "Password must be minimum 8 characters long"
+      message: "must be at least 8 characters"
     )
     |> validate_length(:password,
       max: 72,
-      message: "Oh no! The maximum length for passwords is 72 characters"
+      message: "can't be longer than 72 characters"
     )
     |> maybe_hash_password(opts)
   end
 
   defp validate_name(changeset) do
     changeset
-    |> validate_required(:first_name, message: "First name can't be blank")
-    |> validate_required(:last_name, message: "Last name can't be blank")
+    |> validate_required([:first_name, :last_name], message: "can't be blank")
   end
 
   defp validate_role(changeset) do

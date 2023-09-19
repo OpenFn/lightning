@@ -290,22 +290,6 @@ defmodule LightningWeb.Components.Form do
     """
   end
 
-  # attr :form, :any, required: true
-  # attr :field, :any, required: true
-
-  # attr :opts, :global,
-  #   default: %{class: "block w-full text-sm text-secondary-700"}
-
-  # def error(assigns) do
-  #   assigns =
-  #     assigns
-  #     |> update(:opts, &assigns_to_attributes/1)
-
-  #   ~H"""
-  #   <%= Phoenix.HTML.Form.error_tag(@form, @field, @opts) %>
-  #   """
-  # end
-
   def check_box(assigns) do
     checkbox_classes = ~w[
       focus:ring-primary-500
