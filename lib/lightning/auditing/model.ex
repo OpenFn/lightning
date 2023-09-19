@@ -8,6 +8,7 @@ defmodule Lightning.Auditing.Model do
   defmacro __using__(opts) do
     repo = Keyword.fetch!(opts, :repo)
     schema = Keyword.fetch!(opts, :schema)
+    item = Keyword.fetch!(opts, :item)
     events = Keyword.fetch!(opts, :events)
 
     if Enum.empty?(events),
@@ -27,7 +28,7 @@ defmodule Lightning.Auditing.Model do
 
     event_signature =
       quote do
-        def event(event, row_id, actor_id, metadata \\ %{})
+        def event(event, item_id, actor_id, changes \\ %{})
       end
 
     event_log_functions =
@@ -35,16 +36,17 @@ defmodule Lightning.Auditing.Model do
         quote do
           # Output:
           #
-          # def event("foo_event", row_id, actor_id, metadata) do
-          #   Lightning.Audit.event(schema, "foo_event", row_id, actor_id, metadata)
+          # def event(item_type, "foo_event", item_id, actor_id, changes) do
+          #   Lightning.Audit.event(item_type, schema, "foo_event", item_id, actor_id, changes)
           # end
-          def event(unquote(event_name), row_id, actor_id, metadata) do
+          def event(unquote(event_name), item_id, actor_id, changes) do
             unquote(__MODULE__).event(
               unquote(schema),
+              unquote(item),
               unquote(event_name),
-              row_id,
+              item_id,
               actor_id,
-              metadata
+              changes
             )
           end
         end
@@ -78,16 +80,17 @@ defmodule Lightning.Auditing.Model do
   end
 
   @doc """
-  Creates a `schema` changeset for the `event` identified by `row_id` and caused
+  Creates a `schema` changeset for the `event` identified by `item_id` and caused
   by `actor_id`.
 
-  The given `metadata` can be either `nil`, `Ecto.Changeset`, struct or map.
+  The given `changes` can be either `nil`, `Ecto.Changeset`, struct or map.
 
-  It returns `:no_changes` in case of an `Ecto.Changeset` metadata that changed nothing
+  It returns `:no_changes` in case of an `Ecto.Changeset` changes that changed nothing
   or an `Ecto.Changeset` with the event ready to be inserted.
   """
   @spec event(
           module(),
+          String.t(),
           String.t(),
           Ecto.UUID.t(),
           Ecto.UUID.t(),
@@ -95,17 +98,18 @@ defmodule Lightning.Auditing.Model do
         ) ::
           :no_changes | Ecto.Changeset.t()
 
-  def event(schema, event, row_id, actor_id, metadata \\ %{})
+  def event(schema, item_type, event, item_id, actor_id, changes \\ %{})
 
-  def event(_, _, _, _, %Ecto.Changeset{changes: changes} = _changeset)
+  def event(_, _, _, _, _, %Ecto.Changeset{changes: changes} = _changeset)
       when map_size(changes) == 0 do
     :no_changes
   end
 
   def event(
         schema,
+        item_type,
         event,
-        row_id,
+        item_id,
         actor_id,
         %Ecto.Changeset{data: %subject_schema{} = data, changes: changes}
       ) do
@@ -117,26 +121,28 @@ defmodule Lightning.Auditing.Model do
       |> MapSet.intersection(change_keys)
       |> MapSet.to_list()
 
-    metadata = %{
+    changes = %{
       before: Map.take(data, field_keys),
       after: Map.take(changes, field_keys)
     }
 
-    audit_changeset(schema, event, row_id, actor_id, metadata)
+    audit_changeset(schema, item_type, event, item_id, actor_id, changes)
   end
 
-  def event(schema, event, row_id, actor_id, metadata) when is_map(metadata) do
-    audit_changeset(schema, event, row_id, actor_id, metadata)
+  def event(schema, item_type, event, item_id, actor_id, changes)
+      when is_map(changes) do
+    audit_changeset(schema, item_type, event, item_id, actor_id, changes)
   end
 
-  defp audit_changeset(schema, event, row_id, actor_id, metadata) do
+  defp audit_changeset(schema, item_type, event, item_id, actor_id, changes) do
     schema
     |> struct()
     |> schema.changeset(%{
+      item_type: item_type,
       event: event,
-      row_id: row_id,
+      item_id: item_id,
       actor_id: actor_id,
-      metadata: metadata
+      changes: changes
     })
   end
 end

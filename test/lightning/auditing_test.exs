@@ -10,7 +10,7 @@ defmodule Lightning.AuditingTest do
 
       %{entries: [entry]} = Auditing.list_all()
 
-      assert entry.row_id == credential_id
+      assert entry.item_id == credential_id
     end
   end
 end

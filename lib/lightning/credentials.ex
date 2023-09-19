@@ -181,7 +181,12 @@ defmodule Lightning.Credentials do
         |> Multi.insert(
           :audit,
           fn %{credential: credential} ->
-            Audit.event("updated", credential.id, credential.user_id, changeset)
+            Audit.event(
+              "updated",
+              credential.id,
+              credential.user_id,
+              changeset
+            )
           end
         )
         |> Multi.append(project_credentials_multi)
@@ -199,13 +204,17 @@ defmodule Lightning.Credentials do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        "removed_from_project"
-        |> Audit.event(credential.id, credential.user_id, %{
-          before: %{
-            project_id: Ecto.Changeset.get_field(changeset, :project_id)
-          },
-          after: %{project_id: nil}
-        })
+        Audit.event(
+          "removed_from_project",
+          credential.id,
+          credential.user_id,
+          %{
+            before: %{
+              project_id: Ecto.Changeset.get_field(changeset, :project_id)
+            },
+            after: %{project_id: nil}
+          }
+        )
       end
     )
   end
@@ -221,8 +230,7 @@ defmodule Lightning.Credentials do
       multi,
       {:audit, Ecto.Changeset.get_field(changeset, :project_id)},
       fn %{credential: credential} ->
-        "added_to_project"
-        |> Audit.event(credential.id, credential.user_id, %{
+        Audit.event("added_to_project", credential.id, credential.user_id, %{
           before: %{project_id: nil},
           after: %{
             project_id: Ecto.Changeset.get_field(changeset, :project_id)

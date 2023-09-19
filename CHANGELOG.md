@@ -12,6 +12,9 @@ and this project adheres to
 
 ### Changed
 
+- Modified audit trail to handle lots of different kind of audit events
+  [#271](https://github.com/OpenFn/Lightning/issues/271)/[#44](https://github.com/OpenFn/Lightning/issues/44)
+
 ### Fixed
 
 - Fix randomly unresponsive job panel after job deletion
