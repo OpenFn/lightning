@@ -87,7 +87,7 @@ defmodule Lightning.CredentialsTest do
       assert credential.name == "some name"
 
       assert from(a in Audit,
-               where: a.row_id == ^credential.id and a.event == "created"
+               where: a.item_id == ^credential.id and a.event == "created"
              )
              |> Repo.one!(),
              "Has exactly one 'created' event"
@@ -138,8 +138,8 @@ defmodule Lightning.CredentialsTest do
 
       audit_events =
         from(a in Audit,
-          where: a.row_id == ^credential.id,
-          select: {a.event, type(a.metadata, :map)}
+          where: a.item_id == ^credential.id,
+          select: {a.event, type(a.changes, :map)}
         )
         |> Repo.all()
 
@@ -204,16 +204,16 @@ defmodule Lightning.CredentialsTest do
                })
 
       assert audit.event == "deleted"
-      assert audit.row_id == credential_id
+      assert audit.item_id == credential_id
 
       # previous  audit records are not deleted
       # a new audit (event: deleted) is added
       assert from(a in Lightning.Credentials.Audit,
-               where: a.row_id == ^credential.id
+               where: a.item_id == ^credential.id
              )
              |> Repo.all()
              |> Enum.all?(fn a ->
-               a.row_id == credential.id &&
+               a.item_id == credential.id &&
                  a.event in ["created", "updated", "deleted", "added_to_project"]
              end)
 

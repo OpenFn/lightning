@@ -472,11 +472,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       {:noreply,
        socket
-       |> push_patch(
-         to:
-           ~p"/projects/#{socket.assigns.project}/w/#{socket.assigns.workflow}",
-         replace: true
-       )
        |> apply_params(next_params)
        |> push_patches_applied(initial_params)}
     else

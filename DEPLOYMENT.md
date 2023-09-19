@@ -1,5 +1,10 @@
 # Deployment
 
+Head to the [Deploy](https://docs.openfn.org/documentation/deploy/options)
+section of our docs site to get started.
+
+See below for technical considerations and instructions.
+
 ## Encryption
 
 Lightning enforces encryption at rest for Credentials, for which an encryption

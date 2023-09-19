@@ -5,6 +5,7 @@ defmodule Lightning.Credentials.Audit do
   use Lightning.Auditing.Model,
     repo: Lightning.Repo,
     schema: __MODULE__,
+    item: "credential",
     events: [
       "created",
       "updated",
@@ -13,7 +14,7 @@ defmodule Lightning.Credentials.Audit do
       "deleted"
     ]
 
-  defmodule Metadata do
+  defmodule Changes do
     @moduledoc false
 
     use Ecto.Schema
@@ -26,8 +27,8 @@ defmodule Lightning.Credentials.Audit do
     end
 
     @doc false
-    def changeset(metadata, attrs \\ %{}) do
-      metadata
+    def changeset(changes, attrs \\ %{}) do
+      changes
       |> cast(attrs, [:before, :after])
       |> update_change(:before, &encrypt_body/1)
       |> update_change(:after, &encrypt_body/1)
@@ -49,15 +50,15 @@ defmodule Lightning.Credentials.Audit do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Accounts.User
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
-  schema "credentials_audit" do
+  schema "audit_events" do
     field :event, :string
-    field :row_id, Ecto.UUID
-    embeds_one :metadata, Metadata
-    belongs_to :actor, User
+    field :item_type, :string
+    field :item_id, Ecto.UUID
+    embeds_one :changes, Changes
+    field :actor_id, Ecto.UUID
+    field :actor, :map, virtual: true
 
     timestamps(updated_at: false)
   end
@@ -65,8 +66,8 @@ defmodule Lightning.Credentials.Audit do
   @doc false
   def changeset(%__MODULE__{} = audit, attrs) do
     audit
-    |> cast(attrs, [:event, :row_id, :actor_id])
-    |> cast_embed(:metadata)
+    |> cast(attrs, [:event, :item_id, :actor_id, :item_type])
+    |> cast_embed(:changes)
     |> validate_required([:event, :actor_id])
   end
 end

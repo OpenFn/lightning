@@ -16,6 +16,18 @@ and this project adheres to
 
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
+  
+## [v0.9.1] - 2023-09-19
+
+### Added
+
+### Changed
+
+- Modified audit trail to handle lots of different kind of audit events
+  [#271](https://github.com/OpenFn/Lightning/issues/271)/[#44](https://github.com/OpenFn/Lightning/issues/44)
+
+- Fix randomly unresponsive job panel after job deletion
+  [#1113](https://github.com/OpenFn/Lightning/issues/1113)
 
 ## [v0.9.0] - 2023-09-15
 

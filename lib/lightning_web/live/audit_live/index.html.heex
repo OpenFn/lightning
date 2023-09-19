@@ -8,36 +8,47 @@
     <.table>
       <.tr>
         <.th>Occurred</.th>
-        <.th class="text-center">Event</.th>
+        <.th>Event</.th>
         <.th>Actor</.th>
         <.th>Subject</.th>
       </.tr>
-
       <%= for audit <- @page.entries do %>
         <.tr id={"audit-#{audit.id}"} class="border-dotted border-gray-100">
           <.td>
             <%= audit.inserted_at |> Calendar.strftime("%c %Z") %>
           </.td>
-          <.td class="text-center">
+          <.td>
             <.badge color="success" label={audit.event} />
           </.td>
-          <.td><%= audit.actor.email %></.td>
           <.td>
             <div class="flex flex-col overflow-hidden">
               <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
-                Credential
+                <%= if audit.actor,
+                  do: "#{audit.actor.first_name} #{audit.actor.last_name}",
+                  else: "(User deleted)" %>
               </div>
               <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
-                <%= display_short_uuid(audit.row_id) %>
+                <%= if audit.actor,
+                  do: audit.actor.email,
+                  else: display_short_uuid(audit.actor_id) %>
+              </div>
+            </div>
+          </.td>
+          <.td>
+            <div class="flex flex-col overflow-hidden">
+              <div class="overflow-hidden font-normal text-gray-900 whitespace-nowrap text-ellipsis dark:text-gray-300">
+                <%= audit.item_type |> String.split(".") |> Enum.at(-1) %>
+              </div>
+              <div class="overflow-hidden font-normal text-gray-500 text-xs whitespace-nowrap text-ellipsis">
+                <%= display_short_uuid(audit.item_id) %>
               </div>
             </div>
           </.td>
         </.tr>
-
         <.tr>
-          <%= if audit.metadata.after do %>
+          <%= if audit.changes.after do %>
             <.td colspan="4" class="font-mono text-xs break-all">
-              <.diff metadata={audit.metadata} />
+              <.diff metadata={audit.changes} />
             </.td>
           <% else %>
             <.td colspan="4" class="font-mono text-xs">
