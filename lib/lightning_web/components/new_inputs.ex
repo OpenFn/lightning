@@ -194,6 +194,7 @@ defmodule LightningWeb.Components.NewInputs do
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        phx-debounce="blur"
         class={[
           "mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
@@ -202,7 +203,9 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       />
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <div class="error-space h-6">
+        <.error :for={msg <- @errors}><%= msg %></.error>
+      </div>
     </div>
     """
   end
