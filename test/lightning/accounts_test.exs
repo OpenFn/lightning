@@ -299,8 +299,8 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} = Accounts.register_user(%{})
 
       assert %{
-               password: ["Password can't be blank"],
-               email: ["Email can't be blank"]
+               password: ["can't be blank"],
+               email: ["can't be blank"]
              } = errors_on(changeset)
     end
 
@@ -323,7 +323,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_user(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["Email must have the @ sign and no spaces"]
+               email: ["must have the @ sign and no spaces"]
              } = errors_on(changeset)
     end
 
@@ -335,21 +335,19 @@ defmodule Lightning.AccountsTest do
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
 
-      assert "Oh no! The maximum length for passwords is 72 characters" in errors_on(
-               changeset
-             ).password
+      assert "can't be longer than 72 characters" in errors_on(changeset).password
     end
 
     test "validates email uniqueness" do
       %{email: email} = user_fixture()
       {:error, changeset} = Accounts.register_user(%{email: email})
-      assert "This email has already been taken" in errors_on(changeset).email
+      assert "has already been taken" in errors_on(changeset).email
 
       # Now try with the upper cased email too, to check that email case is ignored.
       {:error, changeset} =
         Accounts.register_user(%{email: String.upcase(email)})
 
-      assert "This email has already been taken" in errors_on(changeset).email
+      assert "has already been taken" in errors_on(changeset).email
     end
 
     test "registers users with a hashed password" do
@@ -368,8 +366,8 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} = Accounts.register_superuser(%{})
 
       assert %{
-               password: ["Password can't be blank"],
-               email: ["Email can't be blank"]
+               password: ["can't be blank"],
+               email: ["can't be blank"]
              } = errors_on(changeset)
     end
 
@@ -378,7 +376,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{email: "not valid", password: "not valid"})
 
       assert %{
-               email: ["Email must have the @ sign and no spaces"]
+               email: ["must have the @ sign and no spaces"]
              } = errors_on(changeset)
     end
 
@@ -390,9 +388,7 @@ defmodule Lightning.AccountsTest do
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
 
-      assert "Oh no! The maximum length for passwords is 72 characters" in errors_on(
-               changeset
-             ).password
+      assert "can't be longer than 72 characters" in errors_on(changeset).password
     end
 
     test "registers users with a hashed password and sets role to :superuser" do
@@ -679,7 +675,7 @@ defmodule Lightning.AccountsTest do
           email: "not valid"
         })
 
-      assert %{email: ["Email must have the @ sign and no spaces"]} =
+      assert %{email: ["must have the @ sign and no spaces"]} =
                errors_on(changeset)
     end
 
@@ -698,7 +694,7 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} =
         Accounts.apply_user_email(user, valid_user_password(), %{email: email})
 
-      assert "This email has already been taken" in errors_on(changeset).email
+      assert "has already been taken" in errors_on(changeset).email
     end
 
     test "validates current password", %{user: user} do
@@ -846,9 +842,7 @@ defmodule Lightning.AccountsTest do
           password: too_long
         })
 
-      assert "Oh no! The maximum length for passwords is 72 characters" in errors_on(
-               changeset
-             ).password
+      assert "can't be longer than 72 characters" in errors_on(changeset).password
     end
 
     test "validates current password", %{user: user} do
@@ -1227,9 +1221,7 @@ defmodule Lightning.AccountsTest do
       {:error, changeset} =
         Accounts.reset_user_password(user, %{password: too_long})
 
-      assert "Oh no! The maximum length for passwords is 72 characters" in errors_on(
-               changeset
-             ).password
+      assert "can't be longer than 72 characters" in errors_on(changeset).password
     end
 
     test "updates the password", %{user: user} do

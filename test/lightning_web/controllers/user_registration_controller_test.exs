@@ -91,7 +91,7 @@ defmodule LightningWeb.UserRegistrationControllerTest do
 
       response = html_response(conn, 200)
       assert response =~ "Register"
-      assert response =~ "Email must have the @ sign and no spaces"
+      assert response =~ "must have the @ sign and no spaces"
     end
 
     test "render errors for terms and conditions not accepted", %{conn: conn} do
