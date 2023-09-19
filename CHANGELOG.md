@@ -14,6 +14,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix randomly unresponsive job panel after job deletion
+  [#1113](https://github.com/OpenFn/Lightning/issues/1113)
+
 ## [v0.9.0] - 2023-09-15
 
 ### Added
