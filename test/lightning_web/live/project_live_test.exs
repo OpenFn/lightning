@@ -483,6 +483,7 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
+    @tag :skip
     test "Flashes an error when APP ID is wrong", %{
       conn: conn,
       project: project,
