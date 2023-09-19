@@ -285,8 +285,6 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           %{op: "remove", path: "/edges/1"}
         ]
       })
-
-      # assert_patched(view, ~p"/projects/#{project}/w/#{workflow}")
     end
 
     @tag role: :viewer
