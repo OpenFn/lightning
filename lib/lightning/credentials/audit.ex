@@ -3,20 +3,9 @@ defmodule Lightning.Credentials.Audit do
   Model for storing changes to Credentials
   """
   use Lightning.Auditing.Model,
-    # TODO: Decide if we want to provide a way to later Repo.get automatically
-    model: Lightning.Credentials.Credential,
-    # So... by defining an actual Elixir model here we can later fetch the item
-    # in question, despite the polymorphic `item_id` column:
-    #
-    #   audit.item_type
-    #   |> String.to_existing_atom()
-    #   |> Repo.get(audit.item_id)
-    #
-    # Do we want this? Or should we simply pass in a human readable? I imagine
-    # the the auditor will eventually want to "get" (Repo.get?) the record that
-    # has been modified and for this they'll need to know the precise model.
     repo: Lightning.Repo,
     schema: __MODULE__,
+    item: "credential",
     events: [
       "created",
       "updated",

@@ -6,9 +6,9 @@ defmodule Lightning.Auditing.Model do
 
   # coveralls-ignore-start
   defmacro __using__(opts) do
-    model = Keyword.fetch!(opts, :model)
     repo = Keyword.fetch!(opts, :repo)
     schema = Keyword.fetch!(opts, :schema)
+    item = Keyword.fetch!(opts, :item)
     events = Keyword.fetch!(opts, :events)
 
     if Enum.empty?(events),
@@ -42,7 +42,7 @@ defmodule Lightning.Auditing.Model do
           def event(item_type, unquote(event_name), item_id, actor_id, changes) do
             unquote(__MODULE__).event(
               unquote(schema),
-              unquote(model) |> to_string(),
+              unquote(item),
               unquote(event_name),
               item_id,
               actor_id,
