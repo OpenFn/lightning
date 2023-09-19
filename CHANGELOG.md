@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- New worker Websocket endpoint allowing workers to request work and communicate
+  with the Lightning server.
+
 ### Changed
 
 ### Fixed
