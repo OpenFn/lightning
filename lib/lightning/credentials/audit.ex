@@ -50,8 +50,6 @@ defmodule Lightning.Credentials.Audit do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Accounts.User
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "audit_events" do
