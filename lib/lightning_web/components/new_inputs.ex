@@ -23,22 +23,10 @@ defmodule LightningWeb.Components.NewInputs do
   slot :inner_block, required: true
 
   def button(assigns) do
-    assigns =
-      assigns
-      |> assign_new(:span_attrs, fn ->
-        if assigns.rest.disabled && assigns.tooltip do
-          %{
-            "id" => assigns.id,
-            "phx-hook" => "Tooltip",
-            "aria-label" => assigns.tooltip
-          }
-        else
-          %{}
-        end
-      end)
+    assigns = tooltip_when_disabled(assigns)
 
     ~H"""
-    <span {tooltip_attr}>
+    <span {@span_attrs}>
       <button
         type={@type}
         class={[
@@ -56,6 +44,19 @@ defmodule LightningWeb.Components.NewInputs do
       </button>
     </span>
     """
+  end
+
+  defp tooltip_when_disabled(assigns) do
+    with true <- Map.get(assigns.rest, :disabled, false),
+         tooltip when not is_nil(tooltip) <- Map.get(assigns, :tooltip) do
+      assign(assigns, :span_attrs, %{
+        "id" => assigns.id,
+        "phx-hook" => "Tooltip",
+        "aria-label" => tooltip
+      })
+    else
+      _ -> assign(assigns, :span_attrs, %{})
+    end
   end
 
   @doc """
