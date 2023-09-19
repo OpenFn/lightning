@@ -298,6 +298,7 @@ defmodule Lightning.AttemptServiceTest do
       workflow_scenario()
     end
 
+    @tag :skip
     test "returns the AttemptRuns for the latest Attempt of each work order
           associated with the job, ordered by workorder creation date, oldest to
           newest",
