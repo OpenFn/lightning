@@ -43,7 +43,7 @@
     <div class="grid grid-cols-6 gap-6">
       <div class="col-span-3">
         <.label for={:password}>Password</.label>
-        <.input type="text" field={f[:password]} />
+        <.input type="password" field={f[:password]} />
       </div>
     </div>
 
@@ -82,15 +82,14 @@
     <% end %>
 
     <div>
-      <span
+      <.button
         id="save-user"
-        aria-label="All fields are required"
-        phx-hook="Tooltip"
+        type="submit"
+        disabled={!@changeset.valid?}
+        tooltip="All fields are required"
       >
-        <.button type="submit" disabled={!@changeset.valid?}>
-          Save
-        </.button>
-      </span>
+        Save
+      </.button>
       <span>
         <.link
           navigate={Routes.user_index_path(@socket, :index)}

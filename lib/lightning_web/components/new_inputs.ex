@@ -14,29 +14,47 @@ defmodule LightningWeb.Components.NewInputs do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
+  attr :id, :string, default: "no-id"
   attr :type, :string, default: nil
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
+  attr :tooltip, :any, default: nil
 
   slot :inner_block, required: true
 
   def button(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:span_attrs, fn ->
+        if assigns.rest.disabled && assigns.tooltip do
+          %{
+            "id" => assigns.id,
+            "phx-hook" => "Tooltip",
+            "aria-label" => assigns.tooltip
+          }
+        else
+          %{}
+        end
+      end)
+
     ~H"""
-    <button
-      type={@type}
-      class={[
-        "inline-flex justify-center py-2 px-4 border border-transparent
+    <span {tooltip_attr}>
+      <button
+        type={@type}
+        class={[
+          "inline-flex justify-center py-2 px-4 border border-transparent
       shadow-sm text-sm font-medium rounded-md text-white focus:outline-none
       focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-        "bg-primary-600 hover:bg-primary-700",
-        "disabled:bg-primary-300",
-        "phx-submit-loading:opacity-75 ",
-        @class
-      ]}
-      {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </button>
+          "bg-primary-600 hover:bg-primary-700",
+          "disabled:bg-primary-300",
+          "phx-submit-loading:opacity-75 ",
+          @class
+        ]}
+        {@rest}
+      >
+        <%= render_slot(@inner_block) %>
+      </button>
+    </span>
     """
   end
 
