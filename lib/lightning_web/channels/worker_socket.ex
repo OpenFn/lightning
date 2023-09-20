@@ -10,7 +10,7 @@ defmodule LightningWeb.WorkerSocket do
   # See the [`Channels guide`](https://hexdocs.pm/phoenix/channels.html)
   # for further details.
 
-  channel "worker:lobby", LightningWeb.WorkerChannel
+  channel "worker:queue", LightningWeb.WorkerChannel
   channel "attempt:*", LightningWeb.AttemptChannel
 
   # Socket params are passed from the client and can
