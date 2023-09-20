@@ -1,4 +1,7 @@
 defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
+  @moduledoc """
+  Installs the adaptor icons
+  """
   use Mix.Task
   use Tesla, except: [:post, :put, :delete]
 
@@ -11,6 +14,7 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
 
   @target_dir Application.compile_env(:lightning, :adaptor_icons_path)
 
+  @impl true
   def run(_) do
     File.mkdir_p(@target_dir)
     |> case do
