@@ -30,7 +30,8 @@ config :lightning, LightningWeb.Endpoint,
   ]
 
 config :lightning,
-  schemas_path: "priv/schemas"
+  schemas_path: "priv/schemas",
+  adaptor_icons_path: "priv/static/images/adaptors"
 
 config :lightning, Lightning.Vault,
   primary_encryption_key: "M1zzWU6Ego6jV/FUS7e/sj7yF9kRIutgR8uLQ9czrVc="

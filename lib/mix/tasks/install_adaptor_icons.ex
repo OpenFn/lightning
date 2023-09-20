@@ -1,10 +1,15 @@
 defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
   use Mix.Task
+  use Tesla, except: [:post, :put, :delete]
+
+  plug Tesla.Middleware.FollowRedirects
+
+  alias LightningWeb.Router.Helpers, as: Routes
   @requirements ["app.start"]
 
   @adaptors_tar_url "https://github.com/OpenFn/adaptors/archive/refs/heads/main.tar.gz"
 
-  @target_dir Path.expand("../../../priv/static/assets/images/adaptors", __DIR__)
+  @target_dir Application.compile_env(:lightning, :adaptor_icons_path)
 
   def run(_) do
     File.mkdir_p(@target_dir)
@@ -27,21 +32,13 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
       other -> raise "couldn't unpack archive: #{inspect(other)}"
     end
 
-    for icon_path <- list_icons(working_dir) do
-      [icon_name, "assets", adapter_name | _rest] =
-        Path.split(icon_path) |> Enum.reverse()
-
-      destination_name = adapter_name <> "-" <> icon_name
-      destination_path = Path.join(@target_dir, destination_name)
-      File.cp!(icon_path, destination_path)
-    end
-
-    :ok
+    adaptor_icons = save_icons(working_dir)
+    manifest_path = Path.join(@target_dir, "adaptor_icons.json")
+    :ok = File.write(manifest_path, Jason.encode!(adaptor_icons))
   end
 
   defp fetch_body!(url) do
-    client = Tesla.client([Tesla.Middleware.FollowRedirects])
-    response = Tesla.get!(client, url)
+    response = get!(url)
     response.body
   end
 
@@ -63,5 +60,33 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
     [working_dir, "**", "packages", "*", "assets", "{rectangle,square}.png"]
     |> Path.join()
     |> Path.wildcard()
+  end
+
+  defp save_icons(working_dir) do
+    working_dir
+    |> list_icons()
+    |> Enum.map(fn icon_path ->
+      [icon_name, "assets", adapter_name | _rest] =
+        Path.split(icon_path) |> Enum.reverse()
+
+      destination_name = adapter_name <> "-" <> icon_name
+      destination_path = Path.join(@target_dir, destination_name)
+      File.cp!(icon_path, destination_path)
+
+      %{
+        adaptor: adapter_name,
+        shape: Path.rootname(icon_name),
+        src:
+          Routes.static_path(
+            LightningWeb.Endpoint,
+            "/images/adaptors" <> "/#{destination_name}"
+          )
+      }
+    end)
+    |> Enum.group_by(fn entry -> entry.adaptor end)
+    |> Enum.into(%{}, fn {adaptor, sources} ->
+      sources = Map.new(sources, fn entry -> {entry.shape, entry.src} end)
+      {adaptor, sources}
+    end)
   end
 end
