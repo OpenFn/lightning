@@ -7,15 +7,14 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
 
   plug Tesla.Middleware.FollowRedirects
 
-  alias LightningWeb.Router.Helpers, as: Routes
-  @requirements ["app.start"]
-
   @adaptors_tar_url "https://github.com/OpenFn/adaptors/archive/refs/heads/main.tar.gz"
 
   @target_dir Application.compile_env(:lightning, :adaptor_icons_path)
 
   @impl true
   def run(_) do
+    Application.ensure_all_started(:hackney)
+
     File.mkdir_p(@target_dir)
     |> case do
       {:error, reason} ->
@@ -39,6 +38,10 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
     adaptor_icons = save_icons(working_dir)
     manifest_path = Path.join(@target_dir, "adaptor_icons.json")
     :ok = File.write(manifest_path, Jason.encode!(adaptor_icons))
+
+    Mix.shell().info(
+      "Adaptor icons installed successfully. Manifest saved at: #{manifest_path}"
+    )
   end
 
   defp fetch_body!(url) do
@@ -80,11 +83,7 @@ defmodule Mix.Tasks.Lightning.InstallAdaptorIcons do
       %{
         adaptor: adapter_name,
         shape: Path.rootname(icon_name),
-        src:
-          Routes.static_path(
-            LightningWeb.Endpoint,
-            "/images/adaptors" <> "/#{destination_name}"
-          )
+        src: "/images/adaptors" <> "/#{destination_name}"
       }
     end)
     |> Enum.group_by(fn entry -> entry.adaptor end)
