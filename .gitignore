@@ -23,6 +23,7 @@ erl_crash.dump
 lightning-*.tar
 
 # Ignore assets that are produced by build tools.
+/priv/static/images/adaptors/
 /priv/static/assets/
 /priv/static/**/*.gz
 

@@ -15,6 +15,9 @@ and this project adheres to
 
 ### Changed
 
+- Save icons from the `adaptors` repo locally and load them in the job editor
+  [#943](https://github.com/OpenFn/Lightning/issues/943)
+
 ### Fixed
 
 ## [v0.9.1] - 2023-09-19

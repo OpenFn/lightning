@@ -1,9 +1,30 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { Position, NodeProps } from 'reactflow';
 import Node from './Node';
 import PlusButton from '../components/PlusButton';
 import getAdaptorName from '../util/get-adaptor-name';
-import * as icons from '../components/adaptor-icons';
+
+type AdaptorIconData = {
+  [adaptor: string]: {
+    rectangle: string;
+    square: string;
+  };
+};
+
+const fetchAdaptorIconsData = async (): Promise<AdaptorIconData> => {
+  try {
+    const response = await fetch('/images/adaptors/adaptor_icons.json');
+    if (!response.ok) {
+      throw new Error('Network error');
+    }
+
+    const data: AdaptorIconData = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching Adaptor Icons manifest:', error);
+    return {};
+  }
+};
 
 type NodeData = any;
 
@@ -14,8 +35,19 @@ const JobNode = ({
 }: NodeProps<NodeData>) => {
   const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
 
+  const [adaptorIconsData, setAdaptorIconsData] = useState<AdaptorIconData | null>(null);
+
+  useEffect(() => {
+    // Fetch and set the adaptorIconsData when the component mounts
+    fetchAdaptorIconsData()
+      .then((data) => {
+        setAdaptorIconsData(data);
+      });
+  }, []);
+
   const adaptor = getAdaptorName(props.data?.adaptor);
-  const icon = getAdaptorIcon(adaptor);
+  const icon = getAdaptorIcon(adaptor, adaptorIconsData);
+
   return (
     <Node
       {...props}
@@ -33,15 +65,17 @@ const JobNode = ({
 
 JobNode.displayName = 'JobNode';
 
-export default memo(JobNode);
-
-function getAdaptorIcon(adaptor: string) {
-  // TODO how will we do this?
-  if (adaptor === 'dhis2') {
-    return icons.dhis2;
+function getAdaptorIcon(adaptor: string, adaptorIconsData: AdaptorIconData | null) {
+  try {
+    if (adaptorIconsData && adaptor in adaptorIconsData && adaptorIconsData[adaptor]?.square) {
+      const srcPath = adaptorIconsData[adaptor].square;
+      return <img src={srcPath} alt={adaptor} />;
+    } else {
+      return adaptor;
+    }
+  } catch (e) {
+    return adaptor;
   }
-  if (adaptor === 'common') {
-    return <img src="/images/openfn.png" />;
-  }
-  return adaptor;
 }
+
+export default memo(JobNode);
