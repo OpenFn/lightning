@@ -167,7 +167,11 @@ defmodule LightningWeb.WorkflowLive.Components do
             <%= @title %>
           </div>
           <div class="flex-none">
-            <.link patch={@cancel_url} class="justify-center hover:text-gray-500">
+            <.link
+              phx-hook="ClosePanelViaEscape"
+              patch={@cancel_url}
+              class="justify-center hover:text-gray-500"
+            >
               <Heroicons.x_mark solid class="h-4 w-4 inline-block" />
             </.link>
           </div>
