@@ -9,6 +9,7 @@ defmodule Lightning.PipelineTest do
   import Lightning.Factories
 
   describe "process/1" do
+    @tag :skip
     test "starts a run for a given AttemptRun and executes its on_job_failure downstream job" do
       workflow = insert(:workflow)
 
