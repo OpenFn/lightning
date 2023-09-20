@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.9.2] - 2023-09-20
+
+### Added
+
 - Add "esc" key binding to close job inspector modal
   [#1069](https://github.com/OpenFn/Lightning/issues/1069)
 
