@@ -2,7 +2,6 @@ defmodule Lightning.Config do
   @moduledoc """
   Centralised runtime configuration for Lightning.
   """
-
   defmodule API do
     @moduledoc false
 
@@ -13,7 +12,7 @@ defmodule Lightning.Config do
     def attempt_token_signer() do
       pem =
         Application.get_env(:lightning, :workers, [])
-        |> Keyword.get(:attempts_pem)
+        |> Keyword.get(:private_key)
 
       Joken.Signer.create("RS256", %{"pem" => pem})
     end

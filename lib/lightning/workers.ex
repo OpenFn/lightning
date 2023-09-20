@@ -5,7 +5,6 @@ defmodule Lightning.Workers do
     @impl true
     def token_config do
       %{}
-      |> add_claim("iss", fn -> "Lightning" end, &(&1 == "Lightning"))
       |> add_claim(
         "nbf",
         fn -> Lightning.current_time() |> DateTime.to_unix() end,
