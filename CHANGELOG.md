@@ -318,7 +318,7 @@ the Nodes and Edges [epic](https://github.com/OpenFn/Lightning/issues/793).
 - In `v0.7.0` we change the underlying workflow building and execution
   infrastructure to align with a standard "nodes and edges" design for directed
   acyclic graphs (DAGs). Make sure to run the migrations!
-  [793](<(https://github.com/OpenFn/Lightning/issues/793)>)
+  [793](https://github.com/OpenFn/Lightning/issues/793)
 
 ### Fixed
 

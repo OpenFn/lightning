@@ -11,7 +11,7 @@ defmodule Lightning.Repo do
   end
 
   @doc """
-  A small wrapper around `Repo.transaction/2'.
+  A small wrapper around `Repo.transaction/2`.
 
   Commits the transaction if the lambda returns `:ok` or `{:ok, result}`,
   rolling it back if the lambda returns `:error` or `{:error, reason}`. In both

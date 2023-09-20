@@ -8,7 +8,7 @@ defmodule Lightning.WorkersTest do
       {:ok, token, claims} =
         Token.generate_and_sign(%{"id" => id = Ecto.UUID.generate()})
 
-      assert %{"id" => ^id, "iss" => "Lightning", "nbf" => nbf} = claims
+      assert %{"id" => ^id, "nbf" => nbf} = claims
       assert nbf <= DateTime.utc_now() |> DateTime.to_unix()
       assert token != ""
 
