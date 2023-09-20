@@ -105,6 +105,7 @@ defmodule Lightning.MixProject do
       {:phoenix_swoosh, "~> 1.0"},
       {:hammer_backend_mnesia, "~> 0.6"},
       {:hammer, "~> 6.0"},
+      {:vapor, "~> 0.10.0"},
       # MFA
       {:nimble_totp, "~> 1.0"},
       {:eqrcode, "~> 0.1"}
@@ -154,6 +155,7 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "DEPLOYMENT.md": [title: "Deployment"],
+        "WORKERS.md": [title: "Workers"],
         "benchmarking/BENCHMARKING.md": [title: "Benchmarking"],
         "PROVISIONING.md": [title: "Provisioning"],
         "CHANGELOG.md": [title: "Changelog"]
