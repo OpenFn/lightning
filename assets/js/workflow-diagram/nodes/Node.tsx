@@ -129,10 +129,10 @@ const Node = ({
               style={{
                 position: 'absolute',
                 // Position is half of the difference of the actual width, offset for stroke
-                left: 0.1 * width + strokeWidth,
-                top: 0.1 * height + strokeWidth,
-                height: `${0.8 * height}px`,
-                width: `${0.8 * width}px`,
+                left: 0.175 * width + strokeWidth,
+                top: 0.175 * height + strokeWidth,
+                height: `${0.65 * height}px`,
+                width: `${0.65 * width}px`,
                 ...nodeLabelStyles(selected),
               }}
             >
