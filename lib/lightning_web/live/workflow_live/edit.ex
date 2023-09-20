@@ -153,7 +153,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           id="workflow-form"
           for={@workflow_form}
           phx-submit="save"
-          phx-hook="SubmitViaCtrlS"
+          phx-hook="SaveViaCtrlS"
           phx-change="validate"
         >
           <.single_inputs_for
