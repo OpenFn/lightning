@@ -14,7 +14,7 @@ defmodule Lightning.Workflows.Edge do
 
   alias Lightning.Workflows.Workflow
   alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
 
   @type edge_condition() :: :always | :on_job_success | :on_job_failure
   @type t() :: %__MODULE__{

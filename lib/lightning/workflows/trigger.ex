@@ -1,4 +1,4 @@
-defmodule Lightning.Jobs.Trigger do
+defmodule Lightning.Workflows.Trigger do
   @moduledoc """
   Ecto model for Triggers.
 

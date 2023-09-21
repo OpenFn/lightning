@@ -10,9 +10,9 @@ defmodule Lightning.Workflows.Workflow do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Jobs.{Job}
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.Edge
+  alias Lightning.Workflows.{Edge, Trigger}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

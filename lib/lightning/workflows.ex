@@ -5,9 +5,9 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
   alias Lightning.Repo
-  alias Lightning.Workflows.{Edge, Workflow}
+  alias Lightning.Workflows.{Edge, Workflow, Trigger}
   alias Lightning.Projects.Project
-  alias Lightning.{Jobs, Jobs.Trigger}
+  alias Lightning.{Jobs}
 
   @doc """
   Returns the list of workflows.

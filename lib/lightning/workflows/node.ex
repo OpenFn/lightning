@@ -3,7 +3,7 @@ defmodule Lightning.Workflows.Node do
 
   alias Lightning.Workflows.Workflow
   alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id

@@ -34,7 +34,7 @@ defmodule Lightning.Factories do
   end
 
   def trigger_factory do
-    %Lightning.Jobs.Trigger{
+    %Lightning.Workflows.Trigger{
       id: fn -> Ecto.UUID.generate() end,
       workflow: build(:workflow)
     }
@@ -184,7 +184,7 @@ defmodule Lightning.Factories do
     }
   end
 
-  def with_edge(workflow, {%Lightning.Jobs.Trigger{} = trigger, job}, extra) do
+  def with_edge(workflow, {%Lightning.Workflows.Trigger{} = trigger, job}, extra) do
     %{
       workflow
       | edges:

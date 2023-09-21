@@ -14,7 +14,7 @@ defmodule Lightning.Attempt do
   alias Lightning.Invocation.Run
   alias Lightning.AttemptRun
   alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
   # alias Lightning.Workflows.Node
 
   @type t :: %__MODULE__{
@@ -34,6 +34,8 @@ defmodule Lightning.Attempt do
     belongs_to :starting_trigger, Trigger
     belongs_to :created_by, User
     belongs_to :dataclip, Lightning.Invocation.Dataclip
+
+    has_one :workflow, through: [:work_order, :workflow]
 
     many_to_many :runs, Run, join_through: AttemptRun
 

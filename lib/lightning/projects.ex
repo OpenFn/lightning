@@ -10,7 +10,7 @@ defmodule Lightning.Projects do
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Attempt
   alias Lightning.AttemptRun
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
   alias Lightning.Jobs.Job
   alias Lightning.Projects.ProjectUser
   alias Lightning.Repo

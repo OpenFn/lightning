@@ -6,7 +6,7 @@ defmodule Lightning.InvocationReason do
   use Ecto.Schema
   import Ecto.Changeset
   alias Lightning.Invocation.{Run, Dataclip}
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
   alias Lightning.Accounts.User
 
   @source_types [:manual, :webhook, :cron, :retry]

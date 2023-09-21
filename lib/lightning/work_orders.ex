@@ -33,7 +33,7 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Workflows.Workflow
   alias Lightning.Accounts.User
   alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
   alias Lightning.Repo
   alias Lightning.WorkOrder
   alias Lightning.Attempt

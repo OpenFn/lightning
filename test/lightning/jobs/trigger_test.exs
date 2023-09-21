@@ -1,7 +1,7 @@
-defmodule Lightning.Jobs.TriggerTest do
+defmodule Lightning.Workflows.TriggerTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Jobs.Trigger
+  alias Lightning.Workflows.Trigger
 
   describe "changeset/2" do
     test "type must be valid" do

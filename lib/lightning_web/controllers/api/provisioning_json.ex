@@ -2,8 +2,8 @@ defmodule LightningWeb.API.ProvisioningJSON do
   @moduledoc false
 
   alias Lightning.Projects.Project
-  alias Lightning.Workflows.{Workflow, Edge}
-  alias Lightning.Jobs.{Job, Trigger}
+  alias Lightning.Workflows.{Workflow, Edge, Trigger}
+  alias Lightning.Jobs.Job
 
   def render("create.json", %{project: project, conn: _conn}) do
     %{"data" => as_json(project)}
