@@ -29,7 +29,7 @@ defmodule Lightning.WorkOrders do
   Workorder.
   """
 
-  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Workflows.Workflow
   alias Lightning.Accounts.User
   alias Lightning.Jobs.Job

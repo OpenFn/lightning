@@ -21,6 +21,9 @@ defmodule Lightning.Attempts do
                 {:ok, Lightning.Attempt.t()}
   end
 
+  alias Lightning.{Repo, Attempt}
+  import Ecto.Query
+
   @behaviour Adaptor
 
   @doc """
@@ -56,6 +59,25 @@ defmodule Lightning.Attempts do
   @impl true
   def dequeue(attempt) do
     adaptor().dequeue(attempt)
+  end
+
+  @doc """
+  Get an Attempt by id.
+
+  Optionally preload associations by passing a list of atoms to `:include`.
+
+      Lightning.Attempts.get(id, include: [:workflow])
+  """
+  @spec get(Ecto.UUID.t(), [{:include, [atom() | {atom(), [atom()]}]}]) ::
+          %Attempt{} | nil
+  def get(id, opts \\ []) do
+    preloads = opts |> Keyword.get(:include, [])
+
+    from(a in Attempt,
+      where: a.id == ^id,
+      preload: ^preloads
+    )
+    |> Repo.one()
   end
 
   defp adaptor do

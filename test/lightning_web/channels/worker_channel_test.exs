@@ -14,7 +14,7 @@ defmodule LightningWeb.WorkerChannelTest do
     end
   end
 
-  describe "claiming" do
+  describe "worker:queue channel" do
     setup do
       Lightning.Stub.reset_time()
 
@@ -68,7 +68,9 @@ defmodule LightningWeb.WorkerChannelTest do
 
       Lightning.Stub.freeze_time(DateTime.utc_now() |> DateTime.add(5, :second))
 
-      assert {:ok, claims} = Workers.verify_attempt_token(token)
+      assert {:ok, claims} =
+               Workers.verify_attempt_token(token, %{id: attempt_id})
+
       assert claims["id"] == attempt_id
 
       ref = push(socket, "claim", %{"demand" => 4})

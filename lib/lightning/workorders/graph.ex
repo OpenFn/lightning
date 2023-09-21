@@ -13,7 +13,7 @@ defmodule Lightning.Graph do
     }
   end
 
-  @spec remove_edges(t(), List.t()) :: t()
+  @spec remove_edges(t(), [{any(), any()}]) :: t()
   def remove_edges(graph, edges) do
     edges = MapSet.difference(graph.edges, edges |> MapSet.new())
 
