@@ -15,7 +15,7 @@ defmodule LightningWeb.Components.NewInputs do
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
   attr :id, :string, default: "no-id"
-  attr :type, :string, default: nil
+  attr :type, :string, default: "button", values: ["button", "submit"]
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
   attr :tooltip, :any, default: nil

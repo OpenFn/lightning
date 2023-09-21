@@ -193,22 +193,15 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   <div class="grow flex justify-end">
                     <label>
                       <.button
+                        id="delete-job-button"
                         phx-click="delete_node"
                         phx-value-id={@selected_job.id}
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
-                        tooltip="All fields are required"
+                        tooltip="You can't delete the first job of a workflow"
                       >
                         Delete
                       </.button>
-                      <%!-- <Common.button
-                        color="red"
-                        phx-click="delete_node"
-                        phx-value-id={@selected_job.id}
-                        disabled={!@can_edit_job or has_child_edges or is_first_job}
-                      >
-                        Delete
-                      </Common.button> --%>
                     </label>
                   </div>
                 </div>
