@@ -80,7 +80,11 @@ defmodule LightningWeb.WorkflowLive.JobView do
           </div>
           <div class="basis-1/3 flex justify-end">
             <div class="flex w-14 items-center justify-center">
-              <.link patch={@close_url} phx-hook="ClosePanelViaEscape">
+              <.link
+                id={"close-job-edit-view-#{@job.id}"}
+                patch={@close_url}
+                phx-hook="ClosePanelViaEscape"
+              >
                 <Heroicons.x_mark class="w-6 h-6 text-gray-500 hover:text-gray-700 hover:cursor-pointer" />
               </.link>
             </div>
