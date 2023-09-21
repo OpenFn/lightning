@@ -17,17 +17,6 @@ defmodule Lightning.Repo.Migrations.ChangeCredentialsAuditToAuditEvents do
     end
   end
 
-  defp rename_constraint(table, from: from, to: to) do
-    execute(
-      """
-      ALTER TABLE #{table} RENAME CONSTRAINT "#{from}" TO "#{to}";
-      """,
-      """
-      ALTER TABLE #{table} RENAME CONSTRAINT "#{to}" TO "#{from}";
-      """
-    )
-  end
-
   defp rename_index(from: from, to: to) do
     execute(
       """
