@@ -4,7 +4,7 @@ defmodule Lightning.MixProject do
   def project do
     [
       app: :lightning,
-      version: "0.9.1",
+      version: "0.9.2",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       compilers: Mix.compilers(),
@@ -123,6 +123,7 @@ defmodule Lightning.MixProject do
         "tailwind.install --if-missing",
         "esbuild.install --if-missing",
         "lightning.install_runtime",
+        "lightning.install_adaptor_icons",
         "lightning.install_schemas",
         "ecto.setup"
       ],

@@ -16,7 +16,8 @@ config :lightning, LightningWeb.Endpoint,
 config :logger, level: :info
 
 config :lightning,
-  schemas_path: "priv/schemas"
+  schemas_path: "priv/schemas",
+  adaptor_icons_path: "priv/static/images/adaptors"
 
 # ## SSL Support
 #

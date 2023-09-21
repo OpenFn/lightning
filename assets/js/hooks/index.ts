@@ -42,57 +42,102 @@ export const AssocListChange = {
   },
 } as PhoenixHook<{}, {}, HTMLSelectElement>;
 
-
 export const collapsiblePanel = {
   mounted() {
     this.el.addEventListener('collapse', event => {
       const target = event.target;
-      const collection = document.getElementsByClassName("collapsed");
-      if(collection.length < 2){
-        target.classList.toggle("collapsed");
+      const collection = document.getElementsByClassName('collapsed');
+      if (collection.length < 2) {
+        target.classList.toggle('collapsed');
       }
       document.dispatchEvent(new Event('update-layout'));
     });
 
     this.el.addEventListener('expand-panel', event => {
       const target = event.target;
-      target.classList.toggle("collapsed");
+      target.classList.toggle('collapsed');
       document.dispatchEvent(new Event('update-layout'));
     });
   },
 } as PhoenixHook;
 
+/**
+ * Factory function to create a hook for listening to specific key combinations.
+ *
+ * @param keyCheck - Function to check if a keyboard event matches the desired key combination.
+ * @param action - Action function to be executed when the keyCheck condition is satisfied.
+ * @returns - A PhoenixHook with mounted and destroyed lifecycles.
+ */
 function createKeyCombinationHook(
-  keyCheck: (e: KeyboardEvent) => boolean
+  keyCheck: (e: KeyboardEvent) => boolean,
+  action: (e: KeyboardEvent, el: HTMLElement) => void
 ): PhoenixHook {
   return {
     mounted() {
-      this.callback = this.handleEvent.bind(this);
+      this.callback = (e: KeyboardEvent) => {
+        if (keyCheck(e)) {
+          e.preventDefault();
+          action(e, this.el);
+        }
+      };
       window.addEventListener('keydown', this.callback);
-    },
-    handleEvent(e: KeyboardEvent) {
-      if (keyCheck(e)) {
-        e.preventDefault();
-        this.el.dispatchEvent(
-          new Event('submit', { bubbles: true, cancelable: true })
-        );
-      }
     },
     destroyed() {
       window.removeEventListener('keydown', this.callback);
     },
   } as PhoenixHook<{
     callback: (e: KeyboardEvent) => void;
-    handleEvent: (e: KeyboardEvent) => void;
   }>;
 }
 
-export const SubmitViaCtrlS = createKeyCombinationHook(
-  e => (e.ctrlKey || e.metaKey) && e.key === 's'
+/**
+ * Function to dispatch a submit event on the provided element.
+ *
+ * @param e - The keyboard event triggering the action.
+ * @param el - The HTML element to which the action will be applied.
+ */
+function submitAction(e: KeyboardEvent, el: HTMLElement) {
+  el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+}
+
+/**
+ * Function to simulate a click event on the provided element.
+ *
+ * @param e - The keyboard event triggering the action.
+ * @param el - The HTML element to which the action will be applied.
+ */
+function closeAction(e: KeyboardEvent, el: HTMLElement) {
+  el.click();
+}
+
+const isCtrlOrMetaS = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && e.key === 's';
+const isCtrlOrMetaEnter = (e: KeyboardEvent) =>
+  (e.ctrlKey || e.metaKey) && e.key === 'Enter';
+const isEscape = (e: KeyboardEvent) => e.key === 'Escape';
+
+/**
+ * Hook to trigger a save action on the job panel when the Ctrl (or Cmd on Mac) + 's' key combination is pressed.
+ */
+export const SaveViaCtrlS = createKeyCombinationHook(
+  isCtrlOrMetaS,
+  submitAction
 );
 
-export const SubmitViaCtrlEnter = createKeyCombinationHook(
-  e => (e.ctrlKey || e.metaKey) && (e.key === 'Enter')
+/**
+ * Hook to trigger a save and run action on the job panel when the Ctrl (or Cmd on Mac) + Enter key combination is pressed.
+ */
+export const SaveAndRunViaCtrlEnter = createKeyCombinationHook(
+  isCtrlOrMetaEnter,
+  submitAction
+);
+
+/**
+ * Hook to trigger a close action on the job panel when the Escape key is pressed.
+ */
+export const ClosePanelViaEscape = createKeyCombinationHook(
+  isEscape,
+  closeAction
 );
 
 export const Copy = {

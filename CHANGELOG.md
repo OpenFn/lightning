@@ -17,6 +17,20 @@ and this project adheres to
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
   
+## [v0.9.2] - 2023-09-20
+
+### Added
+
+- Add "esc" key binding to close job inspector modal
+  [#1069](https://github.com/OpenFn/Lightning/issues/1069)
+
+### Changed
+
+- Save icons from the `adaptors` repo locally and load them in the job editor
+  [#943](https://github.com/OpenFn/Lightning/issues/943)
+
+### Fixed
+
 ## [v0.9.1] - 2023-09-19
 
 ### Added
