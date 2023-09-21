@@ -7,21 +7,20 @@ defmodule LightningWeb.UserLive.FormComponent do
   alias Lightning.Accounts
 
   @impl true
-  def update(%{user: user, current_user: current_user} = assigns, socket) do
-    changeset = Accounts.change_user_details(user)
+  def update(%{user: user} = assigns, socket) do
+    changeset = Accounts.change_user(user, %{})
 
     {:ok,
      socket
      |> assign(assigns)
-     |> assign(:changeset, changeset)
-     |> assign(:current_user, current_user)}
+     |> assign(:changeset, changeset)}
   end
 
   @impl true
   def handle_event("validate", %{"user" => user_params}, socket) do
     changeset =
       socket.assigns.user
-      |> Accounts.change_user_details(user_params)
+      |> Accounts.change_user(user_params)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :changeset, changeset)}
@@ -45,7 +44,7 @@ defmodule LightningWeb.UserLive.FormComponent do
   end
 
   defp save_user(socket, :new, user_params) do
-    case Accounts.register_user(user_params) do
+    case Accounts.create_user(user_params) do
       {:ok, user} ->
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(

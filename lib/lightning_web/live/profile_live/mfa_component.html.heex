@@ -175,18 +175,18 @@
         >
           <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
             <div class="sm:col-span-4">
-              <%= label(f, :code, "Verify the code from the app",
+              <%= Phoenix.HTML.Form.label(
+                f,
+                :code,
+                "Verify the code from the app",
                 class: "block font-medium text-secondary-700"
               ) %>
-              <%= text_input(f, :code,
+              <%= Phoenix.HTML.Form.text_input(f, :code,
                 class: "block rounded-md",
                 autocomplete: "off",
                 placeholder: "XXXXXX"
               ) %>
-              <%= error_tag(f, :code,
-                class:
-                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-              ) %>
+              <.old_error field={f[:code]} />
             </div>
 
             <div class="col-span-6">
@@ -200,11 +200,9 @@
                 </.link>
               </span>
               <span>
-                <%= submit("Save",
-                  phx_disable_with: "Saving...",
-                  class:
-                    "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                ) %>
+                <LightningWeb.Components.NewInputs.button type="submit">
+                  Save
+                </LightningWeb.Components.NewInputs.button>
               </span>
             </div>
           </div>

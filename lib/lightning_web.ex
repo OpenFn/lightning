@@ -40,6 +40,7 @@ defmodule LightningWeb do
       import Plug.Conn
       import LightningWeb.Gettext
       import LightningWeb.UserAuth, only: [fetch_current_user: 2]
+      import LightningWeb.Components.NewInputs
       alias LightningWeb.Router.Helpers, as: Routes
 
       unquote(verified_routes())
@@ -77,6 +78,7 @@ defmodule LightningWeb do
   def live_component do
     quote do
       use Phoenix.LiveComponent
+      import LightningWeb.Components.NewInputs
 
       unquote(html_helpers())
     end
@@ -85,6 +87,7 @@ defmodule LightningWeb do
   def component do
     quote do
       use Phoenix.Component
+      import LightningWeb.Components.NewInputs
 
       unquote(html_helpers())
     end
@@ -100,10 +103,9 @@ defmodule LightningWeb do
   defp html_helpers do
     quote do
       # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
+      import Phoenix.HTML
 
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
-      use Phoenix.Component
       import LightningWeb.LiveHelpers
       import LightningWeb.CoreComponents
       alias LightningWeb.LayoutComponents
@@ -140,6 +142,8 @@ defmodule LightningWeb do
       # Import convenience functions from controllers
       import Phoenix.Controller,
         only: [get_csrf_token: 0, view_module: 1, view_template: 1]
+
+      import LightningWeb.Components.NewInputs
 
       # Include general helpers for rendering HTML
       unquote(html_helpers())

@@ -264,7 +264,7 @@ defmodule LightningWeb.JobLive.CronSetupComponent do
 
     cron_expression =
       build_cron_expression(
-        socket.assigns.form |> input_value(:cron_expression),
+        socket.assigns.form |> Phoenix.HTML.Form.input_value(:cron_expression),
         cron_data
       )
 

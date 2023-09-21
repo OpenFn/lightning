@@ -116,7 +116,7 @@ defmodule LightningWeb.UserResetPasswordControllerTest do
       response = html_response(conn, 200)
       assert response =~ "Reset password"
       # assert response =~ "should be at least 12 character(s)"
-      assert response =~ "does not match password"
+      assert response =~ "Your passwords do not match."
     end
 
     test "does not reset password with invalid token", %{conn: conn} do

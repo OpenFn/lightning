@@ -334,6 +334,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_user(%{email: too_long, password: too_long})
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
+
       assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
@@ -386,6 +387,7 @@ defmodule Lightning.AccountsTest do
         Accounts.register_superuser(%{email: too_long, password: too_long})
 
       assert "should be at most 160 character(s)" in errors_on(changeset).email
+
       assert "should be at most 72 character(s)" in errors_on(changeset).password
     end
 
@@ -411,7 +413,7 @@ defmodule Lightning.AccountsTest do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration()
 
-      assert changeset.required == [:password, :email, :first_name]
+      assert changeset.required == [:password, :email]
     end
 
     test "allows fields to be set" do
@@ -435,7 +437,7 @@ defmodule Lightning.AccountsTest do
       assert %Ecto.Changeset{} =
                changeset = Accounts.change_superuser_registration()
 
-      assert changeset.required == [:password, :email, :first_name]
+      assert changeset.required == [:password, :email]
     end
 
     test "allows fields to be set" do
@@ -457,7 +459,7 @@ defmodule Lightning.AccountsTest do
   describe "change_user_email/2" do
     test "returns a user changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_email(%User{})
-      assert changeset.required == [:email, :first_name]
+      assert changeset.required == [:email]
     end
   end
 

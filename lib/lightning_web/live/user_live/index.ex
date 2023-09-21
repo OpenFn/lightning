@@ -64,12 +64,14 @@ defmodule LightningWeb.UserLive.Index do
     if assigns.user.scheduled_deletion do
       ~H"""
       <span>
-        <%= link("Cancel deletion",
-          to: "#",
-          phx_click: "cancel_deletion",
-          phx_value_id: @user.id,
-          id: "cancel-deletion-#{@user.id}"
-        ) %>
+        <.link
+          id={"cancel-deletion-#{@user.id}"}
+          href="#"
+          phx-click="cancel_deletion"
+          phx-value-id={@user.id}
+        >
+          Cancel deletion
+        </.link>
       </span>
       |
       <span>

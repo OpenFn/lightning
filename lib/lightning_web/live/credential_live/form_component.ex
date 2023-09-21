@@ -170,7 +170,7 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   def project_credentials(assigns) do
     ~H"""
     <div class="col-span-3">
-      <%= label(@form, :project_credentials, "Project Access",
+      <%= Phoenix.HTML.Form.label(@form, :project_credentials, "Project Access",
         class: "block text-sm font-medium text-secondary-700"
       ) %>
 
@@ -188,39 +188,42 @@ defmodule LightningWeb.CredentialLive.FormComponent do
           />
         </div>
         <div class="grow-0 items-right">
-          <LightningWeb.Components.Common.button
-            text="Add"
+          <.button
             disabled={@selected == ""}
             phx-target={@phx_target}
             phx-value-projectid={@selected}
             phx-click="add_new_project"
-          />
+          >
+            Add
+          </.button>
         </div>
       </div>
 
-      <%= for project_form <- inputs_for(@form, :project_credentials) do %>
-        <%= if input_value(project_form, :delete) != true do %>
+      <%= for project_form <- Phoenix.HTML.Form.inputs_for(@form, :project_credentials) do %>
+        <%= if Phoenix.HTML.Form.input_value(project_form, :delete) != true do %>
           <div class="flex w-full gap-2 items-center pb-2">
             <div class="grow">
               <%= @projects
               |> Enum.find_value(fn {name, id} ->
-                if id == input_value(project_form, :project_id), do: name
+                if id == Phoenix.HTML.Form.input_value(project_form, :project_id),
+                  do: name
               end) %>
-              <%= error_tag(project_form, :project_id, class: "block text-xs") %>
+              <.old_error field={project_form[:project_id]} />
             </div>
             <div class="grow-0 items-right">
-              <LightningWeb.Components.Common.button
-                text="Remove"
+              <.button
                 phx-target={@phx_target}
                 phx-value-index={project_form.index}
                 phx-click="delete_project"
-              />
+              >
+                Remove
+              </.button>
             </div>
           </div>
         <% end %>
-        <%= hidden_inputs_for(project_form) %>
-        <%= hidden_input(project_form, :project_id) %>
-        <%= hidden_input(project_form, :delete) %>
+        <%= Phoenix.HTML.Form.hidden_inputs_for(project_form) %>
+        <%= Phoenix.HTML.Form.hidden_input(project_form, :project_id) %>
+        <%= Phoenix.HTML.Form.hidden_input(project_form, :delete) %>
       <% end %>
     </div>
     """
@@ -242,15 +245,15 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         Assign ownership of this credential to someone else.
       </p>
       <div class="mt-4">
-        <%= label(@form, :owner,
+        <%= Phoenix.HTML.Form.label(@form, :owner,
           class: "block text-sm font-medium text-secondary-700"
         ) %>
-        <%= error_tag(@form, :user_id) %>
         <LightningWeb.Components.Form.select_field
           form={@form}
           name={:user_id}
           values={@users}
         />
+        <.old_error field={@form[:user_id]} />
       </div>
     </fieldset>
     """

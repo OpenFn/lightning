@@ -41,9 +41,7 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
           title="Version"
           for="adaptor-version"
         />
-        <%= error_tag(@form, :adaptor_version,
-          class: "block w-full rounded-md text-sm text-secondary-700 "
-        ) %>
+        <.old_error field={@form[:adaptor_version]} />
         <Form.select_field
           form={@form}
           name={:adaptor}
@@ -59,12 +57,12 @@ defmodule LightningWeb.JobLive.AdaptorPicker do
   @impl true
   def update(%{form: form} = params, socket) do
     {adaptor_name, _version, adaptors, versions} =
-      get_adaptor_version_options(input_value(form, :adaptor))
+      get_adaptor_version_options(Phoenix.HTML.Form.input_value(form, :adaptor))
 
     {:ok,
      socket
      |> assign(:adaptor_name, adaptor_name)
-     |> assign(:adaptor_version, input_value(form, :adaptor))
+     |> assign(:adaptor_version, Phoenix.HTML.Form.input_value(form, :adaptor))
      |> assign(:adaptors, adaptors)
      |> assign(:versions, versions)
      |> assign(:on_change, Map.get(params, :on_change))

@@ -1,5 +1,8 @@
 defmodule LightningWeb.ErrorView do
+  # This module needs to be changed to use Layouts
   use LightningWeb, :view
+
+  use Phoenix.Component
 
   def render("404.html", assigns) do
     ~H"""

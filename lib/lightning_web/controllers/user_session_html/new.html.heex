@@ -58,21 +58,24 @@
                 </Common.button_white>
               <% end %>
             </div>
-            <.divider />
+            <div class="hidden sm:block" aria-hidden="true">
+              <div class="py-5">
+                <div class="border-t border-secondary-200"></div>
+              </div>
+            </div>
             <div class="text-xs text-secondary-700">
               <div class="flex">
-                <dix class="flex-none">
-                  <%= link("Register",
-                    to: Routes.user_registration_path(@conn, :new)
-                  ) %>
-                </dix>
+                <div class="flex-none">
+                  <.link href={Routes.user_registration_path(@conn, :new)}>
+                    Register
+                  </.link>
+                </div>
                 <div class="grow"></div>
 
                 <div class="flex-none">
-                  <%= link(
-                    "Forgot your password?",
-                    to: Routes.user_reset_password_path(@conn, :new)
-                  ) %>
+                  <.link href={Routes.user_reset_password_path(@conn, :new)}>
+                    Forgot your password?
+                  </.link>
                 </div>
               </div>
             </div>

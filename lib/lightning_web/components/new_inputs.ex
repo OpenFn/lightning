@@ -14,30 +14,49 @@ defmodule LightningWeb.Components.NewInputs do
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
+  attr :id, :string, default: "no-id"
   attr :type, :string, default: nil
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
+  attr :tooltip, :any, default: nil
 
   slot :inner_block, required: true
 
   def button(assigns) do
+    assigns = tooltip_when_disabled(assigns)
+
     ~H"""
-    <button
-      type={@type}
-      class={[
-        "inline-flex justify-center py-2 px-4 border border-transparent
+    <span {@span_attrs}>
+      <button
+        type={@type}
+        class={[
+          "inline-flex justify-center py-2 px-4 border border-transparent
       shadow-sm text-sm font-medium rounded-md text-white focus:outline-none
       focus:ring-2 focus:ring-offset-2 focus:ring-primary-500",
-        "bg-primary-600 hover:bg-primary-700",
-        "disabled:bg-primary-300",
-        "phx-submit-loading:opacity-75 ",
-        @class
-      ]}
-      {@rest}
-    >
-      <%= render_slot(@inner_block) %>
-    </button>
+          "bg-primary-600 hover:bg-primary-700",
+          "disabled:bg-primary-300",
+          "phx-submit-loading:opacity-75 ",
+          @class
+        ]}
+        {@rest}
+      >
+        <%= render_slot(@inner_block) %>
+      </button>
+    </span>
     """
+  end
+
+  defp tooltip_when_disabled(assigns) do
+    with true <- Map.get(assigns.rest, :disabled, false),
+         tooltip when not is_nil(tooltip) <- Map.get(assigns, :tooltip) do
+      assign(assigns, :span_attrs, %{
+        "id" => assigns.id,
+        "phx-hook" => "Tooltip",
+        "aria-label" => tooltip
+      })
+    else
+      _ -> assign(assigns, :span_attrs, %{})
+    end
   end
 
   @doc """
@@ -194,6 +213,7 @@ defmodule LightningWeb.Components.NewInputs do
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+        phx-debounce="blur"
         class={[
           "mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
@@ -202,7 +222,9 @@ defmodule LightningWeb.Components.NewInputs do
         ]}
         {@rest}
       />
-      <.error :for={msg <- @errors}><%= msg %></.error>
+      <div class="error-space h-6">
+        <.error :for={msg <- @errors}><%= msg %></.error>
+      </div>
     </div>
     """
   end
@@ -210,7 +232,7 @@ defmodule LightningWeb.Components.NewInputs do
   @doc """
   Renders a label.
   """
-  attr :for, :string, default: nil
+  attr :for, :any, default: nil
   slot :inner_block, required: true
 
   def label(assigns) do
@@ -228,7 +250,10 @@ defmodule LightningWeb.Components.NewInputs do
 
   def error(assigns) do
     ~H"""
-    <p class="inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden">
+    <p
+      data-tag="error_message"
+      class="mt-3 inline-flex items-center gap-x-1.5 text-xs text-danger-600 phx-no-feedback:hidden"
+    >
       <.icon name="hero-exclamation-circle" class="h-4 w-4" />
       <%= render_slot(@inner_block) %>
     </p>
@@ -281,5 +306,12 @@ defmodule LightningWeb.Components.NewInputs do
     else
       Gettext.dgettext(LightningWeb.Gettext, "errors", msg, opts)
     end
+  end
+
+  @doc """
+  Translates the errors for a field from a keyword list of errors.
+  """
+  def translate_errors(errors, field) when is_list(errors) do
+    for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
 end

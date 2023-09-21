@@ -16,7 +16,6 @@ defmodule LightningWeb.ProjectLive.FormComponent do
   alias Lightning.Accounts.UserNotifier
   alias Lightning.Projects
   import LightningWeb.Components.Form
-  import LightningWeb.Components.Common
 
   import Ecto.Changeset, only: [fetch_field!: 2, put_assoc: 3]
 

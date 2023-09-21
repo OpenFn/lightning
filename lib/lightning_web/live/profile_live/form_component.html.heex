@@ -22,27 +22,26 @@
       <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
         <div class="col-span-6 text-xl">Change email</div>
         <div class="sm:col-span-4">
-          <%= label(f, :email, "New email address",
+          <%= Phoenix.HTML.Form.label(f, :email, "New email address",
             class: "block text-sm font-medium text-secondary-700"
           ) %>
-          <%= text_input(f, :email, class: "block w-full rounded-md") %>
-          <%= error_tag(f, :email,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
-        </div>
-        <div class="sm:col-span-4">
-          <%= label(f, :current_password, "Enter password to confirm",
-            class: "block text-sm font-medium text-secondary-700"
-          ) %>
-          <%= password_input(f, :current_password,
-            value: input_value(f, :current_password),
+          <%= Phoenix.HTML.Form.text_input(f, :email,
             class: "block w-full rounded-md"
           ) %>
-          <%= error_tag(f, :current_password,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
+          <.old_error field={f[:email]} />
+        </div>
+        <div class="sm:col-span-4">
+          <%= Phoenix.HTML.Form.label(
+            f,
+            :current_password,
+            "Enter password to confirm",
+            class: "block text-sm font-medium text-secondary-700"
           ) %>
+          <%= Phoenix.HTML.Form.password_input(f, :current_password,
+            value: Phoenix.HTML.Form.input_value(f, :current_password),
+            class: "block w-full rounded-md"
+          ) %>
+          <.old_error field={f[:current_password]} />
         </div>
         <div class="col-span-6">
           <span>
@@ -60,7 +59,7 @@
             Update email
           </LightningWeb.Components.Form.submit_button>
         </div>
-        <%= hidden_input(f, :id) %>
+        <%= Phoenix.HTML.Form.hidden_input(f, :id) %>
       </div>
     </div>
   </.form>
@@ -78,47 +77,41 @@
       <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
         <div class="col-span-6 text-xl">Change password</div>
         <div class="sm:col-span-4">
-          <%= label(f, :password, "New password",
+          <%= Phoenix.HTML.Form.label(f, :password, "New password",
             class: "block text-sm font-medium text-secondary-700"
           ) %>
-          <%= password_input(f, :password,
-            value: input_value(f, :password),
+          <%= Phoenix.HTML.Form.password_input(f, :password,
+            value: Phoenix.HTML.Form.input_value(f, :password),
             class: "block w-full rounded-md",
             phx_debounce: "blur"
           ) %>
-          <%= error_tag(f, :password,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
+          <.old_error field={f[:password]} />
         </div>
 
         <div class="sm:col-span-4">
-          <%= label(f, :password_confirmation, "Confirm new password",
+          <%= Phoenix.HTML.Form.label(
+            f,
+            :password_confirmation,
+            "Confirm new password",
             class: "block text-sm font-medium text-secondary-700"
           ) %>
-          <%= password_input(f, :password_confirmation,
-            value: input_value(f, :password_confirmation),
+          <%= Phoenix.HTML.Form.password_input(f, :password_confirmation,
+            value: Phoenix.HTML.Form.input_value(f, :password_confirmation),
             class: "block w-full rounded-md",
             phx_debounce: "blur"
           ) %>
-          <%= error_tag(f, :password_confirmation,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
+          <.old_error field={f[:password_confirmation]} />
         </div>
         <div class="sm:col-span-4">
-          <%= label(f, :current_password,
+          <%= Phoenix.HTML.Form.label(f, :current_password,
             class: "block text-sm font-medium text-secondary-700"
           ) %>
-          <%= password_input(f, :current_password,
-            value: input_value(f, :current_password),
+          <%= Phoenix.HTML.Form.password_input(f, :current_password,
+            value: Phoenix.HTML.Form.input_value(f, :current_password),
             class: "block w-full rounded-md",
             phx_debounce: "blur"
           ) %>
-          <%= error_tag(f, :current_password,
-            class:
-              "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-          ) %>
+          <.old_error field={f[:current_password]} />
         </div>
         <div class="col-span-6">
           <span>
@@ -130,7 +123,7 @@
             </.link>
           </span>
           <span>
-            <%= submit("Update password",
+            <%= Phoenix.HTML.Form.submit("Update password",
               phx_disable_with: "Saving...",
               class:
                 "inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"

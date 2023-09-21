@@ -40,8 +40,8 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
 
     ~H"""
     <div class="grid grid-cols-4 gap-4">
-      <%= hidden_inputs_for(@form) %>
-      <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
+      <%= Phoenix.HTML.Form.hidden_inputs_for(@form) %>
+      <%= Phoenix.HTML.Form.label @form, :type, class: "col-span-4 @md:col-span-2" do %>
         <div class="flex flex-row">
           <span class="text-sm font-medium text-secondary-700">
             Trigger
@@ -52,7 +52,7 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
             class="inline-block"
           />
         </div>
-        <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
+        <.old_error field={@form[:type]} />
         <Form.select_field
           form={@form}
           name={:type}
@@ -76,11 +76,11 @@ defmodule LightningWeb.JobLive.JobBuilderComponents do
         <% end %>
       <% end %>
       <%= if @requires_upstream_job do %>
-        <%= label @form, :upstream_job_id, class: "block col-span-4 @md:col-span-2" do %>
+        <%= Phoenix.HTML.Form.label @form, :upstream_job_id, class: "block col-span-4 @md:col-span-2" do %>
           <span class="block text-sm font-medium text-secondary-700">
             Upstream Job
           </span>
-          <%= error_tag(@form, :upstream_job_id, class: "block w-full rounded-md") %>
+          <.old_error field={@form[:upstream_job_id]} />
           <Form.select_field
             form={@form}
             name={:upstream_job_id}

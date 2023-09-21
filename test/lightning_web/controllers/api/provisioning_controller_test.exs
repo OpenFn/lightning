@@ -151,8 +151,8 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
 
       assert response == %{
                "errors" => %{
-                 "name" => ["can't be blank"],
-                 "workflows" => [%{"id" => ["can't be blank"]}]
+                 "name" => ["This field can't be blank."],
+                 "workflows" => [%{"id" => ["This field can't be blank."]}]
                }
              }
 
@@ -185,15 +185,15 @@ defmodule LightningWeb.API.ProvisioningControllerTest do
                    %{
                      "jobs" => [
                        %{
-                         "id" => ["can't be blank"],
-                         "body" => ["can't be blank"]
+                         "id" => ["This field can't be blank."],
+                         "body" => ["This field can't be blank."]
                        },
                        %{
-                         "name" => ["can't be blank"],
-                         "id" => ["can't be blank"]
+                         "name" => ["This field can't be blank."],
+                         "id" => ["This field can't be blank."]
                        }
                      ],
-                     "id" => ["can't be blank"]
+                     "id" => ["This field can't be blank."]
                    }
                  ]
                }

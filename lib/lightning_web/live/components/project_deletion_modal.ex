@@ -124,22 +124,19 @@ defmodule LightningWeb.Components.ProjectDeletionModal do
         >
           <div class="grid grid-cols-12 gap-12">
             <div class="col-span-8">
-              <%= label(f, :name_confirmation, "Project name",
+              <%= Phoenix.HTML.Form.label(f, :name_confirmation, "Project name",
                 class: "block text-sm font-medium text-secondary-700"
               ) %>
-              <%= text_input(f, :name_confirmation,
+              <%= Phoenix.HTML.Form.text_input(f, :name_confirmation,
                 class: "block w-full rounded-md",
                 phx_debounce: "blur"
               ) %>
-              <%= error_tag(f, :name_confirmation,
-                class:
-                  "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm sm:text-sm border-secondary-300 rounded-md"
-              ) %>
+              <.old_error field={f[:name_confirmation]} />
             </div>
           </div>
 
-          <%= hidden_input(f, :id) %>
-          <%= hidden_input(f, :name) %>
+          <%= Phoenix.HTML.Form.hidden_input(f, :id) %>
+          <%= Phoenix.HTML.Form.hidden_input(f, :name) %>
 
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-5"></div>

@@ -39,7 +39,7 @@ defmodule LightningWeb.CredentialLive.TypePicker do
                       :for={{name, key} <- @type_options}
                       class="flex items-center pt-4"
                     >
-                      <%= radio_button(f, :selected, key,
+                      <%= Phoenix.HTML.Form.radio_button(f, :selected, key,
                         class:
                           "h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       ) %>

@@ -85,12 +85,14 @@ defmodule LightningWeb.CredentialLive.Index do
     if assigns.credential.scheduled_deletion do
       ~H"""
       <span>
-        <%= link("Cancel deletion",
-          to: "#",
-          phx_click: "cancel_deletion",
-          phx_value_id: @credential.id,
-          id: "cancel-deletion-#{@credential.id}"
-        ) %>
+        <.link
+          id={"cancel-deletion-#{@credential.id}"}
+          href="#"
+          phx-click="cancel_deletion"
+          phx-value-id={@credential.id}
+        >
+          Cancel deletion
+        </.link>
       </span>
       |
       <span>

@@ -165,7 +165,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <.panel
               title={
-                input_value(jf, :name)
+                Phoenix.HTML.Form.input_value(jf, :name)
                 |> then(fn
                   "" -> "Untitled Job"
                   name -> name
@@ -217,7 +217,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               id={"trigger-pane-#{@selected_trigger.id}"}
               cancel_url={@base_url}
               title={
-                input_value(tf, :type)
+                Phoenix.HTML.Form.input_value(tf, :type)
                 |> to_string()
                 |> then(fn
                   "" -> "New Trigger"
@@ -303,7 +303,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp single_inputs_for(form, field, id) do
     form
-    |> inputs_for(field)
+    |> Phoenix.HTML.Form.inputs_for(field)
     |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == id))
   end
 
@@ -314,7 +314,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     forms =
       form
-      |> inputs_for(assigns[:field])
+      |> Phoenix.HTML.Form.inputs_for(assigns[:field])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
     assigns = assigns |> assign(forms: forms, has_child_edges: has_child_edges)
@@ -331,7 +331,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     forms =
       form
-      |> inputs_for(assigns[:field])
+      |> Phoenix.HTML.Form.inputs_for(assigns[:field])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
     assigns = assigns |> assign(forms: forms)

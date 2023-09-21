@@ -229,7 +229,7 @@ defmodule Lightning.WorkflowLive.Helpers do
 
     view
     |> element(
-      "#job-pane-#{job.id} [phx-feedback-for='workflow[jobs][#{idx}][#{field}]']",
+      ~s{#workflow_jobs_#{idx}_#{field} + [data-tag="error_message"]},
       error
     )
     |> has_element?()

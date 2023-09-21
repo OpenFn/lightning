@@ -2,6 +2,8 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
   use LightningWeb, :live_component
   alias LightningWeb.JobLive.JobBuilderComponents
 
+  # import Phoenix.HTML.Form, only: [input_value: 2]
+
   attr :id, :string, required: true
   attr :disabled, :boolean, default: false
   attr :class, :string, default: ""
@@ -36,11 +38,11 @@ defmodule LightningWeb.WorkflowLive.EditorPane do
       |> assign(
         adaptor:
           form
-          |> input_value(:adaptor)
+          |> Phoenix.HTML.Form.input_value(:adaptor)
           |> Lightning.AdaptorRegistry.resolve_adaptor(),
-        source: form |> input_value(:body),
-        credential: form |> input_value(:credential),
-        job_id: form |> input_value(:id)
+        source: form |> Phoenix.HTML.Form.input_value(:body),
+        credential: form |> Phoenix.HTML.Form.input_value(:credential),
+        job_id: form |> Phoenix.HTML.Form.input_value(:id)
       )
 
     {:ok, socket |> assign(assigns)}

@@ -107,10 +107,10 @@ defmodule LightningWeb.CredentialLive.GoogleSheetsComponent do
       <div :for={
         body_form <- Phoenix.HTML.FormData.to_form(:credential, @form, :body, [])
       }>
-        <%= hidden_input(body_form, :access_token) %>
-        <%= hidden_input(body_form, :refresh_token) %>
-        <%= hidden_input(body_form, :expires_at) %>
-        <%= hidden_input(body_form, :scope) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :access_token) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :refresh_token) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :expires_at) %>
+        <%= Phoenix.HTML.Form.hidden_input(body_form, :scope) %>
       </div>
       <div class="lg:grid lg:grid-cols-2 grid-cols-1 grid-flow-col">
         <.authorize_button

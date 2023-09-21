@@ -37,8 +37,8 @@ defmodule LightningWeb.CredentialLive.RawBodyComponent do
         </span>
       </div>
       <div>
-        <%= error_tag(@form, :body, class: "block w-full rounded-md") %>
-        <%= textarea(@form, :body,
+        <.old_error field={@form[:body]} />
+        <%= Phoenix.HTML.Form.textarea(@form, :body,
           class: "rounded-md w-full font-mono bg-slate-800 text-slate-100"
         ) %>
       </div>

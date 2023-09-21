@@ -205,7 +205,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   def job_form(assigns) do
     ~H"""
     <div class="md:grid md:grid-cols-6 md:gap-4 p-2 @container">
-      <%= hidden_inputs_for(@form) %>
+      <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
       <div class="col-span-6">
         <Form.check_box form={@form} field={:enabled} disabled={!@editable} />
       </div>
@@ -219,7 +219,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
       <div class="col-span-6">
         <.live_component
-          id={"adaptor-picker-#{input_value(@form, :id)}"}
+          id={"adaptor-picker-#{Phoenix.HTML.Form.input_value(@form, :id)}"}
           module={LightningWeb.JobLive.AdaptorPicker}
           disabled={!@editable}
           on_change={@on_change}
@@ -228,7 +228,7 @@ defmodule LightningWeb.WorkflowLive.Components do
       </div>
       <div class="col-span-6">
         <.live_component
-          id={"credential-picker-#{input_value(@form, :id)}"}
+          id={"credential-picker-#{Phoenix.HTML.Form.input_value(@form, :id)}"}
           module={LightningWeb.JobLive.CredentialPicker}
           disabled={!@editable}
           project_user={@project_user}
@@ -253,9 +253,9 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <%= hidden_inputs_for(@form) %>
+    <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
     <div class="col-span-6 @md:col-span-4">
-      <%= label @form, :type, class: "col-span-4 @md:col-span-2" do %>
+      <%= Phoenix.HTML.Form.label @form, :type, class: "col-span-4 @md:col-span-2" do %>
         <div class="flex flex-row">
           <span class="text-sm font-medium text-secondary-700">
             Type
@@ -266,7 +266,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             class="inline-block"
           />
         </div>
-        <%= error_tag(@form, :type, class: "block w-full rounded-md") %>
+        <.old_error field={@form[:type]} />
         <Form.select_field
           form={@form}
           name={:type}
@@ -334,18 +334,16 @@ defmodule LightningWeb.WorkflowLive.Components do
     assigns = assigns |> assign(:edge_options, edge_options)
 
     ~H"""
-    <%= hidden_inputs_for(@form) %>
+    <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
 
     <Form.label_field
       form={@form}
       field={:condition}
       title="Condition"
-      for={input_id(@form, :condition)}
+      for={Phoenix.HTML.Form.input_id(@form, :condition)}
     />
-    <%= error_tag(@form, :condition,
-      class: "block w-full rounded-md text-sm text-secondary-700 "
-    ) %>
-    <%= if input_value(@form, :condition) == :always do %>
+    <.old_error field={@form[:condition]} />
+    <%= if Phoenix.HTML.Form.input_value(@form, :condition) == :always do %>
       <Form.select_field
         form={@form}
         name={:condition}
@@ -409,7 +407,7 @@ defmodule LightningWeb.WorkflowLive.Components do
 
     ~H"""
     <div class="relative w-full max-w-sm rounded-md shadow-sm">
-      <%= text_input(
+      <%= Phoenix.HTML.Form.text_input(
         @form,
         :name,
         class: @classes,

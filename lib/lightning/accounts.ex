@@ -87,6 +87,12 @@ defmodule Lightning.Accounts do
     {:ok, %{users_deleted: users_to_delete}}
   end
 
+  def create_user(attrs) do
+    %User{}
+    |> User.changeset(attrs)
+    |> Repo.insert()
+  end
+
   @doc """
   Returns the list of users.
 
@@ -373,10 +379,6 @@ defmodule Lightning.Accounts do
     User.user_registration_changeset(attrs, hash_password: false)
   end
 
-  def change_user_details(%User{} = user, attrs \\ %{}) do
-    User.details_changeset(user, attrs)
-  end
-
   def update_user_details(%User{} = user, attrs \\ %{}) do
     User.details_changeset(user, attrs)
     |> Repo.update()
@@ -517,10 +519,10 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.validate_change(:email, fn :email, email ->
       cond do
         user.email == email ->
-          [email: "Please change your email"]
+          [email: "has not changed"]
 
         Lightning.Repo.exists?(User |> where(email: ^email)) ->
-          [email: "Email already exists"]
+          [email: "has already been taken"]
 
         true ->
           []
@@ -531,7 +533,7 @@ defmodule Lightning.Accounts do
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
-        [current_password: "Password does not match"]
+        [current_password: "does not match password"]
       end
     end)
   end
@@ -563,6 +565,10 @@ defmodule Lightning.Accounts do
   """
   def change_user_password(user, attrs \\ %{}) do
     User.password_changeset(user, attrs, hash_password: false)
+  end
+
+  def change_user(user, attrs) do
+    User.changeset(user, attrs)
   end
 
   @doc """
