@@ -103,7 +103,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert profile_live
              |> form("#email_form", user: %{current_password: "invalid"})
-             |> render_change() =~ "Password does not match"
+             |> render_change() =~ "Your passwords do not match."
     end
 
     test "validate email", %{conn: conn, user: user} do
@@ -125,7 +125,7 @@ defmodule LightningWeb.ProfileLiveTest do
 
       assert profile_live
              |> form("#email_form", user: %{email: "oops email"})
-             |> render_change() =~ "Email must have the @ sign and no spaces"
+             |> render_change() =~ "Email address not valid."
 
       assert profile_live
              |> form("#email_form", user: @update_email_attrs)
