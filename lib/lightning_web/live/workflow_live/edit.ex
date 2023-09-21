@@ -157,7 +157,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           phx-change="validate"
         >
           <.single_inputs_for
-            :let={{jf, has_child_edges}}
+            :let={{jf, has_child_edges, is_first_job}}
             :if={@selected_job}
             form={@workflow_form}
             field={:jobs}
@@ -192,14 +192,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   </div>
                   <div class="grow flex justify-end">
                     <label>
-                      <Common.button
+                      <.button
+                        phx-click="delete_node"
+                        phx-value-id={@selected_job.id}
+                        class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+                        disabled={!@can_edit_job or has_child_edges or is_first_job}
+                        tooltip="All fields are required"
+                      >
+                        Delete
+                      </.button>
+                      <%!-- <Common.button
                         color="red"
                         phx-click="delete_node"
                         phx-value-id={@selected_job.id}
-                        disabled={!@can_edit_job or has_child_edges}
+                        disabled={!@can_edit_job or has_child_edges or is_first_job}
                       >
                         Delete
-                      </Common.button>
+                      </Common.button> --%>
                     </label>
                   </div>
                 </div>
@@ -311,17 +320,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
     form = assigns[:form]
 
     has_child_edges = form.source |> has_child_edges?(assigns[:id])
+    is_first_job = form.source |> is_first_job?(assigns[:id])
 
     forms =
       form
       |> Phoenix.HTML.Form.inputs_for(assigns[:field])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
-    assigns = assigns |> assign(forms: forms, has_child_edges: has_child_edges)
+    assigns =
+      assigns
+      |> assign(
+        forms: forms,
+        has_child_edges: has_child_edges,
+        is_first_job: is_first_job
+      )
 
     ~H"""
     <%= for f <- @forms do %>
-      <%= render_slot(@inner_block, {f, @has_child_edges}) %>
+      <%= render_slot(@inner_block, {f, @has_child_edges, @is_first_job}) %>
     <% end %>
     """
   end
@@ -699,9 +715,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   defp has_child_edges?(workflow_changeset, job_id) do
     workflow_changeset
-    |> Ecto.Changeset.get_assoc(:edges, :struct)
-    |> Enum.filter(&(&1.source_job_id == job_id))
+    |> get_filtered_edges(&(&1.source_job_id == job_id))
     |> Enum.any?()
+  end
+
+  defp is_first_job?(workflow_changeset, job_id) do
+    workflow_changeset
+    |> get_filtered_edges(&(&1.source_trigger_id && &1.target_job_id == job_id))
+    |> Enum.any?()
+  end
+
+  defp get_filtered_edges(workflow_changeset, filter_func) do
+    workflow_changeset
+    |> Ecto.Changeset.get_assoc(:edges, :struct)
+    |> Enum.filter(filter_func)
   end
 
   defp handle_new_params(socket, params) do
