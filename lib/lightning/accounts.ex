@@ -379,10 +379,6 @@ defmodule Lightning.Accounts do
     User.user_registration_changeset(attrs, hash_password: false)
   end
 
-  def change_user_details(%User{} = user, attrs \\ %{}) do
-    User.details_changeset(user, attrs)
-  end
-
   def update_user_details(%User{} = user, attrs \\ %{}) do
     User.details_changeset(user, attrs)
     |> Repo.update()
