@@ -465,7 +465,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
     } = socket.assigns
 
     with true <- can_edit_job || :not_authorized,
-         true <- !has_child_edges?(changeset, id) || :has_child_edges do
+         true <- !has_child_edges?(changeset, id) || :has_child_edges,
+         true <- !is_first_job?(changeset, id) || :is_first_job do
       edges_to_delete =
         Ecto.Changeset.get_assoc(changeset, :edges, :struct)
         |> Enum.filter(&(&1.target_job_id == id))
@@ -493,6 +494,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
         {:noreply,
          socket
          |> put_flash(:error, "Delete all descendant jobs first.")}
+
+      :is_first_job ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "You can't delete the first job of a workflow.")}
     end
   end
 
