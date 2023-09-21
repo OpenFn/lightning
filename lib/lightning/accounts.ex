@@ -517,16 +517,16 @@ defmodule Lightning.Accounts do
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required([:email, :current_password])
     |> Ecto.Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/,
-      message: "Email must have the @ sign and no spaces"
+      message: "must have the @ sign and no spaces"
     )
     |> Ecto.Changeset.validate_length(:email, max: 160)
     |> Ecto.Changeset.validate_change(:email, fn :email, email ->
       cond do
         user.email == email ->
-          [email: "Please change your email"]
+          [email: "has not changed"]
 
         Lightning.Repo.exists?(User |> where(email: ^email)) ->
-          [email: "Email already exists"]
+          [email: "has already been taken"]
 
         true ->
           []
@@ -537,7 +537,7 @@ defmodule Lightning.Accounts do
       if Bcrypt.verify_pass(password, user.hashed_password) do
         []
       else
-        [current_password: "Password does not match"]
+        [current_password: "does not match password"]
       end
     end)
   end
