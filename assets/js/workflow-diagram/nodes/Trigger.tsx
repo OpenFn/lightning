@@ -18,7 +18,8 @@ const TriggerNode = ({
   sourcePosition = Position.Bottom,
   ...props
 }): JSX.Element => {
-  const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
+  // Do not remove yet, we might need this snippet of code when implementing issue #1121
+  // const toolbar = () => props.data?.allowPlaceholder && <PlusButton />;
   const { label, sublabel, tooltip, icon } = getTriggerMeta(
     props.data as Lightning.TriggerNode
   );
@@ -32,7 +33,8 @@ const TriggerNode = ({
       icon={icon}
       sourcePosition={sourcePosition}
       interactive={props.data.trigger.type === 'webhook'}
-      toolbar={toolbar}
+      // TODO: put back the toolbar when implementing issue #1121
+      toolbar={false}
     />
   );
 };
