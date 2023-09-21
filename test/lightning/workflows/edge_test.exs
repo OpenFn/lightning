@@ -141,7 +141,7 @@ defmodule Lightning.Workflows.EdgeTest do
              } in changeset.errors
 
       trigger =
-        Lightning.Jobs.Trigger.changeset(%Lightning.Jobs.Trigger{}, %{
+        Lightning.Workflows.Trigger.changeset(%Lightning.Workflows.Trigger{}, %{
           name: "test",
           workflow_id: job.workflow_id
         })

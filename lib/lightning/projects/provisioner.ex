@@ -12,8 +12,8 @@ defmodule Lightning.Projects.Provisioner do
   import Ecto.Query
 
   alias Lightning.Projects.{Project, ProjectUser}
-  alias Lightning.Jobs.{Job, Trigger}
-  alias Lightning.Workflows.{Workflow, Edge}
+  alias Lightning.Jobs.{Job}
+  alias Lightning.Workflows.{Workflow, Edge, Trigger}
   alias Lightning.Accounts.{User}
   alias Lightning.Repo
 
