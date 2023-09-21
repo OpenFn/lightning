@@ -4,6 +4,7 @@ defmodule LightningWeb.WorkflowLive.EditTest do
   import Lightning.WorkflowLive.Helpers
   import Lightning.WorkflowsFixtures
   import Lightning.JobsFixtures
+  import Lightning.Factories
 
   alias LightningWeb.CredentialLiveHelpers
 
@@ -285,6 +286,33 @@ defmodule LightningWeb.WorkflowLive.EditTest do
           %{op: "remove", path: "/edges/1"}
         ]
       })
+    end
+
+    @tag role: :editor
+    test "can't the first job of a workflow", %{conn: conn, project: project} do
+      trigger = build(:trigger, type: :webhook)
+
+      job =
+        build(:job,
+          body: ~s[fn(state => { return {...state, extra: "data"} })],
+          name: "First Job"
+        )
+
+      workflow =
+        build(:workflow, project: project)
+        |> with_job(job)
+        |> with_trigger(trigger)
+        |> with_edge({trigger, job})
+        |> insert()
+
+      {:ok, view, _html} = live(conn, ~p"/projects/#{project}/w/#{workflow}")
+
+      view |> select_node(job)
+
+      assert view |> delete_job_button_is_disabled?(job)
+
+      assert view |> force_event(:delete_node, job) =~
+               "You can&#39;t delete the first job of a workflow."
     end
 
     @tag role: :viewer
