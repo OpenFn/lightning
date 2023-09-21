@@ -5,7 +5,8 @@ defmodule Lightning.WorkOrder do
 
   use Ecto.Schema
   import Ecto.Changeset
-  alias Lightning.Workflows.{Workflow, Trigger}
+  alias Lightning.Workflows.Workflow
+  alias Lightning.Workflows.Trigger
   alias Lightning.Invocation.Dataclip
   alias Lightning.{InvocationReason, Attempt}
 
