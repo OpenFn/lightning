@@ -48,5 +48,4 @@ msgid "A workflow with this name already exists in this project."
 msgstr "A workflow with this name already exists."
 
 msgid "has not changed"
-msgid "Please change your email"
-
+msgstr "Please change your email"
