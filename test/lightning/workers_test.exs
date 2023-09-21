@@ -19,7 +19,10 @@ defmodule Lightning.WorkersTest do
                 {:message, "Invalid token"},
                 {:claim, "nbf"},
                 {:claim_val, _time}
-              ]} = Token.validate(claims)
+              ]} =
+               Token.validate(claims, %{
+                 current_time: DateTime.utc_now() |> DateTime.add(-5, :second)
+               })
     end
   end
 end

@@ -1,36 +1,37 @@
 defmodule LightningWeb.AttemptChannel do
-  alias Lightning.Attempts
+  alias Lightning.{Workers, Attempts}
+  alias LightningWeb.AttemptJson
   use LightningWeb, :channel
 
   @impl true
-  def join("worker:queue", _payload, socket) do
-    if authorized?(socket) do
-      {:ok, socket}
+  def join(
+        "attempt:" <> id,
+        %{"token" => token},
+        %{assigns: %{token: worker_token}} = socket
+      ) do
+    with {:ok, _} <- Workers.verify_worker_token(worker_token),
+         {:ok, claims} <- Workers.verify_attempt_token(token, %{id: id}),
+         attempt when is_map(attempt) <- get_attempt(id) || {:error, :not_found} do
+      {:ok, socket |> assign(%{claims: claims, id: id, attempt: attempt})}
     else
-      {:error, %{reason: "unauthorized"}}
+      {:error, :not_found} ->
+        {:error, %{reason: "not_found"}}
+
+      _ ->
+        {:error, %{reason: "unauthorized"}}
     end
   end
 
-  @impl true
-  def handle_in("claim", %{"demand" => demand}, socket) do
-    attempts =
-      Attempts.claim(demand)
-      |> then(fn {:ok, attempts} ->
-        attempts
-        |> Enum.map(fn attempt ->
-          token = Lightning.Workers.generate_attempt_token(attempt)
-
-          %{
-            "id" => attempt.id,
-            "token" => token
-          }
-        end)
-      end)
-
-    {:reply, {:ok, %{attempts: attempts}}, socket}
+  def join("attempt:" <> _, _payload, _socket) do
+    {:error, %{reason: "unauthorized"}}
   end
 
-  defp authorized?(socket) do
-    not is_nil(socket.assigns[:claims])
+  @impl true
+  def handle_in("fetch:attempt", _, socket) do
+    {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
+  end
+
+  defp get_attempt(id) do
+    Attempts.get(id, include: [workflow: [:triggers, :jobs, :edges]])
   end
 end
