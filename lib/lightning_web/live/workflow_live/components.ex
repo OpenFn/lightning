@@ -168,6 +168,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
           <div class="flex-none">
             <.link
+              id="close-panel"
               phx-hook="ClosePanelViaEscape"
               patch={@cancel_url}
               class="justify-center hover:text-gray-500"

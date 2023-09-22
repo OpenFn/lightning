@@ -12,11 +12,14 @@ and this project adheres to
 
 ### Changed
 
+- Prevent deletion of first job of a workflow
+  [#1097](https://github.com/OpenFn/Lightning/issues/1097)
+
 ### Fixed
 
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
-  
+
 ## [v0.9.2] - 2023-09-20
 
 ### Added
