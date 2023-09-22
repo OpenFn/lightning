@@ -100,7 +100,7 @@ const Node = ({
 
   return (
     <div className="group">
-      <div className="flex flex-row">
+      <div className="flex flex-row cursor-pointer">
         <div>
           {targetPosition && (
             <Handle

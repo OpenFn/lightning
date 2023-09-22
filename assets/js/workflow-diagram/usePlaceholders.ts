@@ -63,9 +63,6 @@ export default (
     const updated = create(parentNode);
     setPlaceholders(updated);
 
-    // clear the selection
-    // // TODO need to put the chart in placeholder mode
-    // chartCache.current.lastSelection = undefined;
     requestSelectionChange(updated.nodes[0].id);
   }, []);
 

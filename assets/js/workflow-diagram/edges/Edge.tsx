@@ -23,7 +23,7 @@ const CustomEdge: FC<EdgeProps> = props => {
               pointerEvents: 'all',
               ...labelStyles(selected),
             }}
-            className="nodrag nopan"
+            className="nodrag nopan cursor-pointer"
           >
             {label}
           </div>
