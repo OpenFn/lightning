@@ -98,7 +98,7 @@ defmodule LightningWeb.AttemptChannelTest do
 
   describe "fetching attempt data" do
     setup do
-      dataclip = insert(:dataclip)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"})
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       work_order =
@@ -135,7 +135,7 @@ defmodule LightningWeb.AttemptChannelTest do
       %{socket: socket, attempt: attempt, workflow: workflow}
     end
 
-    test "returns the attempt data", %{
+    test "fetch:attempt", %{
       socket: socket,
       attempt: attempt,
       workflow: workflow
@@ -169,6 +169,63 @@ defmodule LightningWeb.AttemptChannelTest do
                "starting_node_id" => attempt.starting_trigger_id,
                "dataclip_id" => attempt.dataclip_id
              }
+    end
+  end
+
+  describe "marking runs as started and finished" do
+    setup do
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"})
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      Lightning.Stub.reset_time()
+
+      {:ok, bearer, _} =
+        Workers.Token.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      {:ok, %{}, socket} =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer})
+        |> subscribe_and_join(
+          LightningWeb.AttemptChannel,
+          "attempt:#{attempt.id}",
+          %{"token" => Workers.generate_attempt_token(attempt)}
+        )
+
+      %{socket: socket, attempt: attempt, workflow: workflow}
+    end
+
+    test "run:start", %{socket: socket, attempt: attempt, workflow: workflow} do
+      # { id, job_id, input_dataclip_id }
+      run_id = Ecto.UUID.generate()
+      [job] = workflow.jobs
+
+      ref =
+        push(socket, "run:start", %{
+          "id" => run_id,
+          job_id: job.id,
+          input_dataclip_id: attempt.dataclip_id
+        })
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{run_id: ["This field can't be blank."]}
     end
   end
 

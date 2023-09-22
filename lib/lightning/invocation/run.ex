@@ -81,7 +81,7 @@ defmodule Lightning.Invocation.Run do
     |> validate()
   end
 
-  defp validate(changeset) do
+  def validate(changeset) do
     changeset
     |> assoc_constraint(:input_dataclip)
     |> assoc_constraint(:output_dataclip)
