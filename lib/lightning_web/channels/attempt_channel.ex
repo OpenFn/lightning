@@ -31,6 +31,29 @@ defmodule LightningWeb.AttemptChannel do
     {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
   end
 
+  def handle_in("fetch:dataclip", _, socket) do
+    body =
+      Attempts.get_dataclip(socket.assigns.attempt)
+      |> Jason.Fragment.new()
+      |> Phoenix.json_library().encode_to_iodata!()
+
+    {:reply, {:ok, {:binary, body}}, socket}
+  end
+
+  def handle_in("run:start", payload, socket) do
+    Attempts.start_run(
+      %{"attempt_id" => socket.assigns.attempt.id}
+      |> Enum.into(payload)
+    )
+    |> case do
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+
+      {:ok, run} ->
+        {:reply, {:ok, %{run: run}}, socket}
+    end
+  end
+
   defp get_attempt(id) do
     Attempts.get(id, include: [workflow: [:triggers, :jobs, :edges]])
   end
