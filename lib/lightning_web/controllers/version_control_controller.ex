@@ -2,7 +2,6 @@ defmodule LightningWeb.VersionControlController do
   use LightningWeb, :controller
 
   alias Lightning.VersionControl
-  alias Lightning.VersionControl.GithubClient
 
   def index(conn, params) do
     # add installation id to project repo
@@ -14,7 +13,12 @@ defmodule LightningWeb.VersionControlController do
         params["installation_id"]
       )
 
-    GithubClient.send_sentry_error("Github App Configured successfully")
+    Sentry.capture_message("Github configuration successful",
+      level: "info",
+      extra: params,
+      message: "User configured version control successfully",
+      tags: %{type: "github"}
+    )
 
     # get project repo connection and forward to project settings
     redirect(conn,

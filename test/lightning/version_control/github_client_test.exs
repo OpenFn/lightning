@@ -21,16 +21,16 @@ defmodule Lightning.VersionControl.GithubClientTest do
       Tesla.Mock.mock(fn env ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 400}
+            %Tesla.Env{status: 400, body: %{}}
 
           "https://api.github.com/app/installations/fail-id/access_tokens" ->
-            %Tesla.Env{status: 404}
+            %Tesla.Env{status: 404, body: %{}}
 
           "https://api.github.com/installation/repositories" ->
-            %Tesla.Env{status: 404}
+            %Tesla.Env{status: 404, body: %{}}
 
           "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 400}
+            %Tesla.Env{status: 400, body: %{}}
         end
       end)
     end
@@ -40,8 +40,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                message:
-                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                code: :invalid_pem,
+                message: "Github Cert is misconfigured"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -52,8 +52,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                message:
-                  "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                code: :installation_not_found,
+                message: "Github Installation APP ID is misconfigured"
               }} =
                VersionControl.run_sync(p_repo.project_id, "some-user-name")
     end
@@ -63,8 +63,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                message:
-                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                code: :invalid_pem,
+                message: "Github Cert is misconfigured"
               }} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
@@ -74,8 +74,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                message:
-                  "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+                code: :invalid_pem,
+                message: "Github Cert is misconfigured"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -104,7 +104,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
             %Tesla.Env{status: 200, body: [%{"name" => "master"}]}
 
           "https://api.github.com/repos/some/repo/dispatches" ->
-            %Tesla.Env{status: 204}
+            %Tesla.Env{status: 204, body: %{}}
         end
       end)
     end

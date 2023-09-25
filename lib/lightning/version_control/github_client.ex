@@ -5,98 +5,39 @@ defmodule Lightning.VersionControl.GithubClient do
   """
   use Tesla
   require Logger
+  alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.GithubToken
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
   plug(Tesla.Middleware.JSON)
 
   def installation_repos(installation_id) do
-    with {:ok, installation_client} <- build_client(installation_id),
-         {:ok, %{status: 200} = repos_resp} <-
-           installation_client
-           |> get("/installation/repositories") do
-      {:ok,
-       repos_resp.body["repositories"]
-       |> Enum.map(fn g_repo -> g_repo["full_name"] end)}
-    else
-      {:error, :installation_not_found, meta} ->
-        installation_id_error(meta)
-
-      {:error, :invalid_pem} ->
-        invalid_pem_error()
+    with {:ok, client} <- build_client(installation_id),
+         {:ok, %Tesla.Env{status: 200, body: body}} <-
+           get(client, "/installation/repositories") do
+      {:ok, Enum.map(body["repositories"], fn g_repo -> g_repo["full_name"] end)}
     end
   end
 
   def get_repo_branches(installation_id, repo_name) do
-    with {:ok, installation_client} <- build_client(installation_id),
-         {:ok, %{status: 200} = branches} <-
-           installation_client
-           |> get("/repos/#{repo_name}/branches") do
-      branch_names =
-        branches.body
-        |> Enum.map(fn b -> b["name"] end)
-
-      {:ok, branch_names}
-    else
-      {:error, :installation_not_found, meta} ->
-        installation_id_error(meta)
-
-      {:error, :invalid_pem} ->
-        invalid_pem_error()
+    with {:ok, client} <- build_client(installation_id),
+         {:ok, %Tesla.Env{status: 200, body: body}} <-
+           get(client, "/repos/#{repo_name}/branches") do
+      {:ok, Enum.map(body, fn b -> b["name"] end)}
     end
   end
 
   def fire_repository_dispatch(installation_id, repo_name, user_email) do
-    with {:ok, installation_client} <- build_client(installation_id),
-         {:ok, %{status: 204}} <-
-           installation_client
-           |> post("/repos/#{repo_name}/dispatches", %{
+    with {:ok, client} <- build_client(installation_id),
+         {:ok, %Tesla.Env{status: 204}} <-
+           post(client, "/repos/#{repo_name}/dispatches", %{
              event_type: "sync_project",
              client_payload: %{
                message: "#{user_email} initiated a sync from Lightning"
              }
            }) do
       {:ok, :fired}
-    else
-      {:error, :installation_not_found, meta} ->
-        installation_id_error(meta)
-
-      {:error, :invalid_pem} ->
-        invalid_pem_error()
-
-      err ->
-        Logger.error(inspect(err))
-        {:error, "Error Initiating sync"}
     end
-  end
-
-  def send_sentry_error(msg, meta \\ %{}) do
-    Sentry.capture_message("Github configuration error",
-      level: "warning",
-      extra: meta,
-      message: msg,
-      tags: %{type: "github"}
-    )
-  end
-
-  defp installation_id_error(meta) do
-    send_sentry_error("Github Installation APP ID is misconfigured", meta)
-
-    {:error,
-     %{
-       message:
-         "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-     }}
-  end
-
-  defp invalid_pem_error do
-    send_sentry_error("Github Cert is misconfigured")
-
-    {:error,
-     %{
-       message:
-         "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-     }}
   end
 
   defp build_client(installation_id) do
@@ -126,11 +67,20 @@ defmodule Lightning.VersionControl.GithubClient do
           ]}
        ])}
     else
-      %{status: 404} = err ->
-        {:error, :installation_not_found, err}
+      %{status: 404, body: body} ->
+        error =
+          GithubError.installation_not_found(
+            "Github Installation APP ID is misconfigured",
+            body
+          )
+
+        Sentry.capture_exception(error)
+        {:error, error}
 
       _unused_status ->
-        {:error, :invalid_pem}
+        error = GithubError.invalid_pem("Github Cert is misconfigured")
+        Sentry.capture_exception(error)
+        {:error, error}
     end
   end
 end
