@@ -38,7 +38,7 @@ defmodule Lightning.VersionControl do
 
   def add_github_installation_id(user_id, installation_id) do
     pending_installation =
-      Repo.one(
+      Repo.one!(
         from(prc in ProjectRepoConnection,
           where: prc.user_id == ^user_id and is_nil(prc.github_installation_id)
         )

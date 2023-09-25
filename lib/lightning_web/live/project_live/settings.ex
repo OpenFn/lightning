@@ -277,7 +277,9 @@ defmodule LightningWeb.ProjectLive.Settings do
           })
 
         {:noreply,
-         redirect(socket, external: "https://github.com/apps/#{app_name}")}
+         redirect(socket,
+           external: "https://github.com/apps/#{app_name}"
+         )}
     end
   end
 
