@@ -2,8 +2,9 @@ defmodule LightningWeb.ProjectLive.Settings do
   @moduledoc """
   Index Liveview for Runs
   """
-  alias Lightning.VersionControl.GithubClient
+
   use LightningWeb, :live_view
+  require Logger
 
   alias Lightning.VersionControl
   alias Lightning.Policies.ProjectUsers
@@ -14,6 +15,7 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   alias LightningWeb.Components.Form
   alias LightningWeb.ProjectLive.DeleteConnectionModal
+  alias Lightning.VersionControl.GithubError
 
   on_mount {LightningWeb.Hooks, :project_scope}
 
@@ -251,9 +253,14 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     case Application.get_env(:lightning, :github_app) |> Map.new() do
       %{app_name: nil} ->
+        Logger.error("Github App Name not configured")
         # Send to sentry and show cozy error
+        error =
+          GithubError.misconfigured("Github App Name Misconfigured", %{
+            app_name: nil
+          })
 
-        GithubClient.send_sentry_error("Github App Name Misconfigured")
+        Sentry.capture_exception(error)
 
         {:noreply,
          socket
@@ -280,7 +287,12 @@ defmodule LightningWeb.ProjectLive.Settings do
 
     case Application.get_env(:lightning, :github_app) |> Map.new() do
       %{app_name: nil} ->
-        GithubClient.send_sentry_error("Github App Name Misconfigured")
+        error =
+          GithubError.misconfigured("Github App Name Misconfigured", %{
+            app_name: nil
+          })
+
+        Sentry.capture_exception(error)
 
         {:noreply,
          socket
@@ -383,8 +395,8 @@ defmodule LightningWeb.ProjectLive.Settings do
   @impl true
   def handle_info({:branches_fetched, branches_result}, socket) do
     case branches_result do
-      {:error, %{message: message}} ->
-        {:noreply, socket |> put_flash(:error, message)}
+      {:error, error} ->
+        {:noreply, socket |> put_flash(:error, error_message(error))}
 
       branches ->
         {:noreply, socket |> assign(loading_branches: false, branches: branches)}
@@ -393,8 +405,8 @@ defmodule LightningWeb.ProjectLive.Settings do
 
   def handle_info({:repos_fetched, result}, socket) do
     case result do
-      {:error, %{message: message}} ->
-        {:noreply, socket |> put_flash(:error, message)}
+      {:error, error} ->
+        {:noreply, socket |> put_flash(:error, error_message(error))}
 
       {:ok, [_ | _] = repos} ->
         {:noreply, socket |> assign(repos: repos)}
@@ -403,6 +415,16 @@ defmodule LightningWeb.ProjectLive.Settings do
       # Github makes it pretty impossible to arrive here
       _ ->
         {:noreply, socket}
+    end
+  end
+
+  defp error_message(error) do
+    case error do
+      %{code: :installation_not_found} ->
+        "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
+
+      %{code: :invalid_pem} ->
+        "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
     end
   end
 
