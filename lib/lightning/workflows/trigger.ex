@@ -39,6 +39,9 @@ defmodule Lightning.Workflows.Trigger do
 
     field :delete, :boolean, virtual: true
 
+    many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
+      join_through: "trigger_webhook_auth_methods"
+
     timestamps()
   end
 
