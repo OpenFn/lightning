@@ -1,6 +1,14 @@
 defmodule Lightning.Factories do
   use ExMachina.Ecto, repo: Lightning.Repo
 
+  def webhook_auth_method_factory do
+    %Lightning.Workflows.WebhookAuthMethod{
+      project: build(:project),
+      creator: build(:user),
+      name: sequence(:name, &"workflow-#{&1}")
+    }
+  end
+
   def project_repo_connection_factory do
     %Lightning.VersionControl.ProjectRepoConnection{
       project: build(:project),
