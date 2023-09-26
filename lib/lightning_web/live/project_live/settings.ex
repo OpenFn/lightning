@@ -54,7 +54,7 @@ defmodule LightningWeb.ProjectLive.Settings do
      project_repo_connection} =
       repo_settings(socket)
 
-    if show_repo_setup do
+    if show_repo_setup and connected?(socket) do
       collect_project_repo_connections(socket.assigns.project.id)
     end
 
@@ -425,7 +425,7 @@ defmodule LightningWeb.ProjectLive.Settings do
       %{code: :installation_not_found} ->
         "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
 
-      %{code: :invalid_pem} ->
+      %{code: :invalid_certificate} ->
         "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
     end
   end
