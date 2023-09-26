@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix long name on workflow cards
+  [#1102](https://github.com/OpenFn/Lightning/issues/1102)
+
 - Fix highlighted Edge can get out of sync with selected Edge
   [#1099](https://github.com/OpenFn/Lightning/issues/1099)
 
