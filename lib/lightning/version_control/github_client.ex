@@ -45,45 +45,49 @@ defmodule Lightning.VersionControl.GithubClient do
       Application.get_env(:lightning, :github_app)
       |> Map.new()
 
-    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id),
-         client <-
+    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id) do
+      client =
+        Tesla.client([
+          {Tesla.Middleware.Headers,
+           [
+             {"Authorization", "Bearer #{auth_token}"}
+           ]}
+        ])
+
+      case post(
+             client,
+             "/app/installations/#{installation_id}/access_tokens",
+             ""
+           ) do
+        {:ok, %{status: 201} = installation_token_resp} ->
+          installation_token = installation_token_resp.body["token"]
+
+          {:ok,
            Tesla.client([
              {Tesla.Middleware.Headers,
               [
-                {"Authorization", "Bearer #{auth_token}"}
+                {"Authorization", "Bearer " <> installation_token}
               ]}
-           ]),
-         {:ok, installation_token_resp} <-
-           client
-           |> post("/app/installations/#{installation_id}/access_tokens", ""),
-         %{status: 201} <- installation_token_resp do
-      installation_token = installation_token_resp.body["token"]
+           ])}
 
-      {:ok,
-       Tesla.client([
-         {Tesla.Middleware.Headers,
-          [
-            {"Authorization", "Bearer " <> installation_token}
-          ]}
-       ])}
-    else
-      %{status: 404, body: body} ->
-        error =
-          GithubError.installation_not_found(
-            "Github Installation APP ID is misconfigured",
-            body
-          )
+        {:ok, %{status: 404, body: body}} ->
+          error =
+            GithubError.installation_not_found(
+              "Github Installation APP ID is misconfigured",
+              body
+            )
 
-        Sentry.capture_exception(error)
-        Logger.error(inspect(body, label: "Unexpected Github Response: "))
-        {:error, error}
+          Sentry.capture_exception(error)
+          Logger.error(inspect(body, label: "Unexpected Github Response: "))
+          {:error, error}
 
-      %{status: 401, body: body} ->
-        Logger.error(inspect(body, label: "Unexpected Github Response: "))
-        error = GithubError.invalid_pem("Github Cert is misconfigured")
-        Sentry.capture_exception(error)
+        {:ok, %{status: 401, body: body}} ->
+          Logger.error(inspect(body, label: "Unexpected Github Response: "))
+          error = GithubError.invalid_pem("Github Cert is misconfigured")
+          Sentry.capture_exception(error)
 
-        {:error, error}
+          {:error, error}
+      end
     end
   end
 end
