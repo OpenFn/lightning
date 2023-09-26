@@ -49,10 +49,15 @@ defmodule LightningWeb.WorkflowLive.Components do
           class="flex-1 rounded-md shadow-sm"
           role="button"
         >
-          <div class="truncate px-4 py-2 text-sm">
-            <span class="font-medium text-gray-900 hover:text-gray-600">
-              <%= @workflow.name %>
-            </span>
+          <div class="px-4 py-2 text-sm">
+            <div class="flex items-center">
+              <span
+                class="flex-shrink truncate text-gray-900 hover:text-gray-600 font-medium"
+                style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+              >
+                <%= @workflow.name %>
+              </span>
+            </div>
             <p class="text-gray-500 text-xs">
               Updated <%= @relative_updated_at %>
             </p>
