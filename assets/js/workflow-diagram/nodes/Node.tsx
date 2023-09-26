@@ -137,7 +137,16 @@ const Node = ({
               }}
             >
               {typeof icon === 'string' ? (
-                <div className="font-bold">{icon}</div>
+                <div
+                  className="font-bold"
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {icon}
+                </div>
               ) : (
                 icon
               )}
