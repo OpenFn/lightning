@@ -46,7 +46,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         <.link
           id={"workflow-card-#{@workflow.id}"}
           navigate={~p"/projects/#{@project.id}/w/#{@workflow.id}"}
-          class="flex-1 rounded-md shadow-sm"
+          class="flex-1 rounded-md"
           role="button"
         >
           <div class="px-4 py-2 text-sm">
@@ -89,7 +89,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div>
       <.link
         navigate={~p"/projects/#{@project.id}/w/new"}
-        class="col-span-1 rounded-md shadow-sm"
+        class="col-span-1 rounded-md"
         role={@can_create_workflow && "button"}
       >
         <div class={"flex flex-1 items-center justify-between truncate rounded-md border border-gray-200 text-white " <> (if @can_create_workflow, do: "bg-primary-600 hover:bg-primary-700", else: "bg-gray-400")}>
