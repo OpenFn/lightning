@@ -67,32 +67,50 @@ defmodule Lightning.VersionControlTest do
       assert updated_connection.repo == "some_repo"
     end
 
-    test "given a user_id and a installation_id it should update the correct record" do
-      project = insert(:project)
-      [u1, u2] = insert_pair(:user)
+    test "add_github_installation_id/2 updates the installation_id for the correct project for the given user" do
+      project1 = insert(:project)
+      project2 = insert(:project)
+      user = insert(:user)
 
-      attrs1 = %{project_id: project.id, user_id: u1.id}
+      {:ok, _connection1} =
+        VersionControl.create_github_connection(%{
+          project_id: project1.id,
+          user_id: user.id,
+          github_installation_id: "some-id"
+        })
 
-      attrs2 = %{project_id: project.id, user_id: u2.id}
+      {:ok, connection2} =
+        VersionControl.create_github_connection(%{
+          project_id: project2.id,
+          user_id: user.id
+        })
 
-      assert Repo.aggregate(ProjectRepoConnection, :count) == 0
+      {:ok, updated_connection} =
+        VersionControl.add_github_installation_id(
+          user.id,
+          "some_installation"
+        )
 
-      Enum.each([attrs1, attrs2], &VersionControl.create_github_connection/1)
+      assert updated_connection.id == connection2.id
+    end
 
-      assert Repo.aggregate(ProjectRepoConnection, :count) == 2
+    test "add_github_installation_id/2 raises when you there's no pending installation" do
+      project1 = insert(:project)
+      user = insert(:user)
 
-      assert {:ok, updated_connection} =
-               VersionControl.add_github_installation_id(
-                 u1.id,
-                 "some_installation"
-               )
+      {:ok, _connection1} =
+        VersionControl.create_github_connection(%{
+          project_id: project1.id,
+          user_id: user.id,
+          github_installation_id: "some-id"
+        })
 
-      assert updated_connection.user_id == u1.id
-
-      not_updated = Repo.get_by(ProjectRepoConnection, user_id: u2.id)
-
-      refute not_updated.id == updated_connection.id
-      refute not_updated.github_installation_id
+      assert_raise Ecto.NoResultsError, fn ->
+        VersionControl.add_github_installation_id(
+          user.id,
+          "some_installation"
+        )
+      end
     end
   end
 end

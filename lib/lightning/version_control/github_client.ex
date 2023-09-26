@@ -83,7 +83,13 @@ defmodule Lightning.VersionControl.GithubClient do
 
         {:ok, %{status: 401, body: body}} ->
           Logger.error(inspect(body, label: "Unexpected Github Response: "))
-          error = GithubError.invalid_pem("Github Cert is misconfigured")
+
+          error =
+            GithubError.invalid_certificate(
+              "Github Certificate is misconfigured",
+              body
+            )
+
           Sentry.capture_exception(error)
 
           {:error, error}

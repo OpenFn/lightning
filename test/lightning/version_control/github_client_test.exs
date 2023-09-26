@@ -21,7 +21,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
       Tesla.Mock.mock(fn env ->
         case env.url do
           "https://api.github.com/app/installations/some-id/access_tokens" ->
-            %Tesla.Env{status: 400, body: %{}}
+            %Tesla.Env{status: 401, body: %{}}
 
           "https://api.github.com/app/installations/fail-id/access_tokens" ->
             %Tesla.Env{status: 404, body: %{}}
@@ -30,7 +30,7 @@ defmodule Lightning.VersionControl.GithubClientTest do
             %Tesla.Env{status: 404, body: %{}}
 
           "https://api.github.com/repos/some/repo/branches" ->
-            %Tesla.Env{status: 400, body: %{}}
+            %Tesla.Env{status: 401, body: %{}}
         end
       end)
     end
@@ -40,8 +40,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                code: :invalid_pem,
-                message: "Github Cert is misconfigured"
+                code: :invalid_certificate,
+                message: "Github Certificate is misconfigured"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end
@@ -63,8 +63,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                code: :invalid_pem,
-                message: "Github Cert is misconfigured"
+                code: :invalid_certificate,
+                message: "Github Certificate is misconfigured"
               }} =
                VersionControl.fetch_repo_branches(p_repo.project_id, p_repo.repo)
     end
@@ -74,8 +74,8 @@ defmodule Lightning.VersionControl.GithubClientTest do
 
       assert {:error,
               %{
-                code: :invalid_pem,
-                message: "Github Cert is misconfigured"
+                code: :invalid_certificate,
+                message: "Github Certificate is misconfigured"
               }} =
                VersionControl.fetch_installation_repos(p_repo.project_id)
     end

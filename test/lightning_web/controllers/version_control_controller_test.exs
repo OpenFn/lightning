@@ -32,6 +32,32 @@ defmodule LightningWeb.VersionControlControllerTest do
       assert redirected_to(response) ==
                ~p"/projects/#{p_repo.project_id}/settings#vcs"
     end
+
+    test "responds with a text when the setup_action is set to update and there's no pending installation",
+         %{
+           conn: conn,
+           project: project,
+           user: user
+         } do
+      installation_id = "my_id"
+
+      insert(:project_repo_connection, %{
+        github_installation_id: installation_id,
+        branch: nil,
+        repo: nil,
+        user: user,
+        project: project
+      })
+
+      conn =
+        get(
+          conn,
+          ~p"/setup_vcs?installation_id=#{installation_id}&setup_action=update"
+        )
+
+      assert text_response(conn, 200) ==
+               "Github installation updated successfully; you may close this page or navigate to any OpenFn project which uses this installation: #{installation_id}"
+    end
   end
 
   describe "when not logged in" do

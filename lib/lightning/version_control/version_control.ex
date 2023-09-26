@@ -36,6 +36,17 @@ defmodule Lightning.VersionControl do
     )
   end
 
+  @spec get_pending_user_installation(Ecto.UUID.t()) ::
+          ProjectRepoConnection.t() | nil
+  def get_pending_user_installation(user_id) do
+    query =
+      from(prc in ProjectRepoConnection,
+        where: prc.user_id == ^user_id and is_nil(prc.github_installation_id)
+      )
+
+    Repo.one(query)
+  end
+
   def add_github_installation_id(user_id, installation_id) do
     pending_installation =
       Repo.one!(
