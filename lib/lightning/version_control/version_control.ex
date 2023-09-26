@@ -51,7 +51,7 @@ defmodule Lightning.VersionControl do
 
   def add_github_repo_and_branch(project_id, repo, branch) do
     pending_installation =
-      Repo.one(
+      Repo.one!(
         from(prc in ProjectRepoConnection,
           where: prc.project_id == ^project_id
         )
