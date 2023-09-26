@@ -17,6 +17,9 @@ and this project adheres to
 
 ### Fixed
 
+- Fix highlighted Edge can get out of sync with selected Edge
+  [#1099](https://github.com/OpenFn/Lightning/issues/1099)
+
 - Creating a new user without a password fails and there is no user feedback
   [#731](https://github.com/OpenFn/Lightning/issues/731)
 

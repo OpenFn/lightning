@@ -42,17 +42,21 @@ export default React.forwardRef<HTMLElement, WorkflowDiagramProps>(
     const updateSelection = useCallback(
       (id?: string) => {
         if (id !== selection) {
-          chartCache.current.lastSelection = id;
           onSelectionChange(id);
         }
       },
       [onSelectionChange, selection]
     );
 
+    const requestSelectionChange = useCallback((id?: string) => {
+      chartCache.current.lastSelection = id;
+      updateSelection(id);
+    }, []);
+
     const { placeholders, add: addPlaceholder } = usePlaceholders(
       ref,
       store,
-      updateSelection
+      requestSelectionChange
     );
 
     const workflow = useStore(
