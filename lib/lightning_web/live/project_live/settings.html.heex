@@ -347,7 +347,7 @@
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="vcs">
           <%= if  @github_enabled do %>
-            <div :if={@can_edit_project_name}>
+            <div :if={@can_install_github}>
               <div :if={@show_github_setup} class="bg-white p-4 rounded-md">
                 <h6 class="font-medium text-black">
                   Install Github App to get started

@@ -67,7 +67,7 @@ defmodule Lightning.VersionControl.GithubClient do
           ]}
        ])}
     else
-      %{status: 404, body: body} = resp ->
+      %{status: 404, body: body} ->
         error =
           GithubError.installation_not_found(
             "Github Installation APP ID is misconfigured",
@@ -75,13 +75,14 @@ defmodule Lightning.VersionControl.GithubClient do
           )
 
         Sentry.capture_exception(error)
-        Logger.error(inspect(resp, label: "Unexpected Github Response: "))
+        Logger.error(inspect(body, label: "Unexpected Github Response: "))
         {:error, error}
 
-      resp ->
-        Logger.error(inspect(resp, label: "Unexpected Github Response: "))
+      %{status: 401, body: body} ->
+        Logger.error(inspect(body, label: "Unexpected Github Response: "))
         error = GithubError.invalid_pem("Github Cert is misconfigured")
         Sentry.capture_exception(error)
+
         {:error, error}
     end
   end
