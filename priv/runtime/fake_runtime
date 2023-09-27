@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Function to perform cleanup on SIGTERM
+cleanup() {
+  echo "Received SIGTERM signal. Performing cleanup..."
+  # Add your cleanup code here, if necessary
+  exit 0
+}
+
+# Trap the SIGTERM signal and call the cleanup function
+trap 'cleanup' SIGTERM
+
+# Default values
+lightning_url=""
+print_version=false
+
+# Parse command-line options
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -v | --version)
+      print_version=true
+      shift
+      ;;
+    -l | --lightning-url)
+      if [[ "$2" == "" || "$2" == -* ]]; then
+        echo "Error: Missing or invalid argument for $1"
+        exit 1
+      fi
+      lightning_url="$2"
+      shift 2
+      ;;
+    --lightning-url=*)
+      lightning_url="${1#*=}"
+      shift
+      ;;
+    *)
+      echo "Invalid option: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Check if both --version and --lightning-url are provided
+if [ "$print_version" = true ] && [ -n "$lightning_url" ]; then
+  echo "Error: Both --version and --lightning-url are provided. Use one or the other."
+  exit 1
+fi
+
+# Check for the --version flag
+if [ "$print_version" = true ]; then
+  echo "0.1.0"
+  exit 0
+fi
+
+# Check if the lightning_url is provided
+if [ -z "$lightning_url" ]; then
+  echo "Usage: $0 [--version] [--lightning-url <url>]"
+  exit 1
+fi
+
+string_to_print="Hello from this side 😎. I am fetching jobs from: $lightning_url"
+
+# Interval in seconds to print the message
+interval=2
+
+while true; do
+  echo "$string_to_print"
+  sleep "$interval"
+done

@@ -55,6 +55,8 @@ config :lightning,
   schemas_path: "test/fixtures/schemas",
   adaptor_icons_path: "test/fixtures/adaptors/icons"
 
+config :lightning, Lightning.Runtime.RuntimeManager, start: false
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
