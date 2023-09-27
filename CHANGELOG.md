@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Add ellipsis when adaptor name is longer than the container allows
+  [#1095](https://github.com/OpenFn/Lightning/issues/1095)
+
 ### Changed
 
 - Prevent deletion of first job of a workflow
