@@ -5,7 +5,9 @@ defmodule Lightning.Factories do
     %Lightning.Workflows.WebhookAuthMethod{
       project: build(:project),
       creator: build(:user),
-      name: sequence(:name, &"workflow-#{&1}")
+      name: sequence(:name, &"webhok-auth-method-#{&1}"),
+      username: sequence(:username, &"username-#{&1}"),
+      password: "password"
     }
   end
 

@@ -81,7 +81,6 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
       insert(:webhook_auth_method,
         name: "unique_name",
         username: "unique_username",
-        api_key: "unique_api_key",
         project: project,
         creator: user
       )
@@ -92,59 +91,48 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
       }
     end
 
+    defp assert_unique_constraint_error(changeset, field, error_message) do
+      assert {:error, changeset} = changeset |> Repo.insert()
+      assert %{field => [error_message]} == errors_on(changeset)
+    end
+
     test "validates unique name", %{
       user: user,
       project: project
     } do
-      attrs = %{
-        name: "unique_name",
-        auth_type: :basic,
-        username: "unique_username",
-        password: "somepassword",
-        creator_id: user.id,
-        project_id: project.id,
-        api_key: "unique_api_key"
-      }
+      changeset =
+        WebhookAuthMethod.changeset(%WebhookAuthMethod{}, %{
+          name: "unique_name",
+          auth_type: :api,
+          project_id: project.id,
+          creator_id: user.id
+        })
 
-      assert {:error, changeset} = WebhookAuthMethod.changeset(%WebhookAuthMethod{}, attrs) |> Repo.insert()
-
-      assert %{name: ["must be unique within the project"]} == errors_on(changeset)
+      assert_unique_constraint_error(
+        changeset,
+        :name,
+        "must be unique within the project"
+      )
     end
 
     test "validates unique username", %{
       user: user,
       project: project
     } do
-      attrs = %{
-        name: "another_name",
-        auth_type: :api,
-        creator_id: user.id,
-        project_id: project.id,
-        api_key: "unique_api_key"
-      }
+      changeset =
+        WebhookAuthMethod.changeset(%WebhookAuthMethod{}, %{
+          name: "a name",
+          username: "unique_username",
+          password: "password",
+          creator_id: user.id,
+          project_id: project.id
+        })
 
-      assert {:error, changeset} = WebhookAuthMethod.changeset(%WebhookAuthMethod{}, attrs) |> Repo.insert()
-
-      assert %{name: ["must be unique within the project"]} == errors_on(changeset)
-    end
-
-    test "validates unique api_key", %{
-      user: user,
-      project: project
-    } do
-      attrs = %{
-        name: "another name",
-        auth_type: :basic,
-        username: "another_user_name",
-        password: "somepassword",
-        creator_id: user.id,
-        project_id: project.id,
-        api_key: "unique_api_key"
-      }
-
-      assert {:error, changeset} = WebhookAuthMethod.changeset(%WebhookAuthMethod{}, attrs) |> Repo.insert()
-
-      assert %{name: ["must be unique within the project"]} == errors_on(changeset)
+      assert_unique_constraint_error(
+        changeset,
+        :username,
+        "must be unique within the project"
+      )
     end
   end
 

@@ -1,6 +1,5 @@
 defmodule Lightning.Workflows.WebhookAuthMethod do
   use Ecto.Schema
-  use Joken.Config
   import Ecto.Changeset
 
   @auth_types [:basic, :api]
@@ -34,7 +33,9 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
       :project_id
     ])
     |> validate_required([:name, :auth_type, :creator_id, :project_id])
-    |> validate_inclusion(:auth_type, @auth_types, message: "must be basic or api")
+    |> validate_inclusion(:auth_type, @auth_types,
+      message: "must be basic or api"
+    )
     |> validate_auth_fields()
     |> apply_unique_constraints()
   end
@@ -68,6 +69,8 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
 
       :api ->
         changeset
+        |> delete_change(:username)
+        |> delete_change(:password)
         |> generate_api_key(32)
 
       _ ->
