@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Webhook Authentication Methods database and CRUD operations
+  [#1152](https://github.com/OpenFn/Lightning/issues/1152)
+
 ### Changed
 
 - Prevent deletion of first job of a workflow
