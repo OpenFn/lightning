@@ -597,6 +597,27 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
+    test "Flashes an error when APP Name is missing during installation", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: nil,
+        app_name: nil
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("install_app", %{}) =~
+               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
+    end
+
+    @tag role: :admin
     test "can reinstall github app", %{
       conn: conn,
       project: project
@@ -616,6 +637,29 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view |> render_click("reinstall_app", %{})
+    end
+
+    @tag role: :admin
+    test "Flashes an error when APP Name is missing during reinstallation", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: nil,
+        app_name: nil
+      )
+
+      insert(:project_repo_connection, %{project_id: project.id, project: nil})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("reinstall_app", %{}) =~
+               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
     end
 
     @tag role: :admin
