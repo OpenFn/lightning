@@ -1,4 +1,29 @@
 defmodule Lightning.Workflows.WebhookAuthMethod do
+  @moduledoc """
+  The `Lightning.Workflows.WebhookAuthMethod` module defines the schema for webhook authentication methods and provides functionalities to handle them.
+
+  ## Schema
+  The schema represents a webhook authentication method that can be of two types - `:basic` and `:api`. The basic type requires a username and password, while the api type requires an api_key.
+
+  The schema fields include:
+    - `name`: the name of the authentication method
+    - `auth_type`: the type of authentication, can be `:basic` or `:api`
+    - `username`: the username required for basic authentication
+    - `password`: the password required for basic authentication (virtual field)
+    - `hashed_password`: the hashed version of the password
+    - `api_key`: the API key required for API authentication
+
+  ## Associations
+  Each `WebhookAuthMethod` belongs to a `creator` (a user) and a `project`.
+  It is also associated with multiple `triggers` through a many_to_many relationship.
+
+  ## Validations and Constraints
+  This module provides changeset functions for casting and validating the schema fields and applying unique constraints on `name`, `username`, and `api_key` within the project scope.
+
+  ## Password Verification
+  The `valid_password?/2` function is provided to verify passwords and it avoids timing attacks by using `Bcrypt.no_user_verify/0` when there is no webhook_auth_method or the webhook_auth_method doesn't have a password.
+
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
