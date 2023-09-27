@@ -25,8 +25,8 @@ and this project adheres to
   [#1189](https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
   [1199](https://github.com/OpenFn/Lightning/issues/1199)
-- Add warning text to PromEx config
-  [1222] (https://github.com/OpenFn/Lightning/issues/1222)
+- Add warning text to PromEx config [1222]
+  (https://github.com/OpenFn/Lightning/issues/1222)
 - Track and filter on webhook controller state in :telemetry metrics
   [#1192](https://github.com/OpenFn/Lightning/issues/1192)
 
@@ -45,6 +45,8 @@ and this project adheres to
 
 - Add ellipsis when adaptor name is longer than the container allows
   [#1095](https://github.com/OpenFn/Lightning/issues/1095)
+- Webhook Authentication Methods database and CRUD operations
+  [#1152](https://github.com/OpenFn/Lightning/issues/1152)
 
 ### Changed
 
