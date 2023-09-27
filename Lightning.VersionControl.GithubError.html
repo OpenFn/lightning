@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.9.2">
 
-    <title>Lightning.AuthProviders.AuthConfig — Lightning v0.9.2</title>
+    <title>Lightning.VersionControl.GithubError — Lightning v0.9.2</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -21,7 +21,7 @@
 
 
   </head>
-  <body data-type="modules" class="page-module">
+  <body data-type="modules" class="page-exception">
     <script>
 
       try {
@@ -102,19 +102,19 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/auth_config.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_error.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.AuthProviders.AuthConfig</span> 
+  <span translate="no">Lightning.VersionControl.GithubError</span> <small>exception</small>
   <small class="app-vsn" translate="no">(Lightning v0.9.2)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>AuthProvider model</p>
+<p>Github Error exception</p>
   </section>
 
 
@@ -126,14 +126,38 @@ Lightning
       </a>
       Summary
     </h1>
-<div class="summary-types summary">
+<div class="summary-functions summary">
   <h2>
-    <a href="#types">Types</a>
+    <a href="#functions">Functions</a>
   </h2>
 
     <div class="summary-row">
       <div class="summary-signature">
-        <a href="#t:t/0" translate="no">t()</a>
+        <a href="#installation_not_found/2" translate="no">installation_not_found(msg, meta \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#invalid_certificate/2" translate="no">invalid_certificate(msg, meta \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#misconfigured/2" translate="no">misconfigured(msg, meta \\ %{})</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
+        <a href="#new/3" translate="no">new(code, msg, meta)</a>
 
       </div>
 
@@ -144,25 +168,27 @@ Lightning
   </section>
 
 
-  <section id="types" class="details-list">
+  <section id="functions" class="details-list">
     <h1 class="section-heading">
-      <a class="hover-link" href="#types">
+      <a class="hover-link" href="#functions">
         <i class="ri-link-m" aria-hidden="true"></i>
         <span class="sr-only">Link to this section</span>
       </a>
-Types
+Functions
     </h1>
-    <div class="types-list">
-<section class="detail" id="t:t/0">
+    <div class="functions-list">
+<section class="detail" id="installation_not_found/2">
+
+    <span id="installation_not_found/1"></span>
 
   <div class="detail-header">
-    <a href="#t:t/0" class="detail-link" title="Link to this type">
+    <a href="#installation_not_found/2" class="detail-link" title="Link to this function">
       <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this type</span>
+      <span class="sr-only">Link to this function</span>
     </a>
-    <h1 class="signature" translate="no">t()</h1>
+    <h1 class="signature" translate="no">installation_not_found(msg, meta \\ %{})</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/auth_providers/auth_config.ex#L8" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_error.ex#L11" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -172,21 +198,75 @@ Types
 
   <section class="docstring">
 
-      <div class="specs">
 
-          <pre translate="no"><span class="attribute">@type</span> t() :: %Lightning.AuthProviders.AuthConfig{
-  __meta__: <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.Schema.Metadata.html#t:t/0">Ecto.Schema.Metadata.t</a>(),
-  client_id: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  client_secret: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  discovery_url: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  id: <a href="https://hexdocs.pm/ecto/3.10.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>() | nil,
-  inserted_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  name: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>(),
-  redirect_uri: <a href="https://hexdocs.pm/elixir/String.html#t:t/0">String.t</a>() | nil,
-  updated_at: <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()
-}</pre>
+  </section>
+</section>
+<section class="detail" id="invalid_certificate/2">
 
-      </div>
+    <span id="invalid_certificate/1"></span>
+
+  <div class="detail-header">
+    <a href="#invalid_certificate/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">invalid_certificate(msg, meta \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_error.ex#L19" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="misconfigured/2">
+
+    <span id="misconfigured/1"></span>
+
+  <div class="detail-header">
+    <a href="#misconfigured/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">misconfigured(msg, meta \\ %{})</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_error.ex#L15" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="new/3">
+
+  <div class="detail-header">
+    <a href="#new/3" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">new(code, msg, meta)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/github_error.ex#L7" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
 
 
   </section>

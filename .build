@@ -80,6 +80,7 @@ Lightning.TaskWorker.html
 Lightning.Validators.html
 Lightning.Vault.html
 Lightning.VersionControl.GithubClient.html
+Lightning.VersionControl.GithubError.html
 Lightning.VersionControl.GithubToken.html
 Lightning.VersionControl.ProjectRepoConnection.html
 Lightning.VersionControl.html
@@ -206,8 +207,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-66EBA0E1.js
-dist/sidebar_items-A607ECF3.js
+dist/search_items-10B4D6F8.js
+dist/sidebar_items-7CCAE03A.js
 index.html
 provisioning.html
 readme.html

@@ -13,7 +13,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-A607ECF3.js"></script>
+    <script src="dist/sidebar_items-7CCAE03A.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -178,6 +178,14 @@ as running any associated sync jobs</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#get_pending_user_installation/1" translate="no">get_pending_user_installation(user_id)</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#get_repo_connection/1" translate="no">get_repo_connection(project_id)</a>
 
       </div>
@@ -233,7 +241,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">add_github_installation_id(user_id, installation_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L39" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L50" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -255,7 +263,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">add_github_repo_and_branch(project_id, repo, branch)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L52" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L63" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -299,7 +307,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">fetch_installation_repos(project_id)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L65" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L76" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -321,7 +329,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">fetch_repo_branches(project_id, repo_name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L72" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L83" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -330,6 +338,35 @@ Functions
   </div>
 
   <section class="docstring">
+
+
+  </section>
+</section>
+<section class="detail" id="get_pending_user_installation/1">
+
+  <div class="detail-header">
+    <a href="#get_pending_user_installation/1" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">get_pending_user_installation(user_id)</h1>
+
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L41" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <div class="specs">
+
+          <pre translate="no"><span class="attribute">@spec</span> get_pending_user_installation(<a href="https://hexdocs.pm/ecto/3.10.2/Ecto.UUID.html#t:t/0">Ecto.UUID.t</a>()) ::
+  <a href="Lightning.VersionControl.ProjectRepoConnection.html#t:t/0">Lightning.VersionControl.ProjectRepoConnection.t</a>() | nil</pre>
+
+      </div>
 
 
   </section>
@@ -365,7 +402,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">github_enabled?()</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L93" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L104" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -409,7 +446,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">run_sync(project_id, user_name)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L82" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/version_control/version_control.ex#L93" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
