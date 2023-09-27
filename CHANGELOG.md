@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [v0.9.3] - 2023-09-27
+
+### Added
+
 - Add ellipsis when adaptor name is longer than the container allows
   [#1095](https://github.com/OpenFn/Lightning/issues/1095)
 
