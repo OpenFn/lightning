@@ -1,6 +1,27 @@
 defmodule Lightning.WebhookAuthMethods do
   @moduledoc """
-  The WebhookAuthMethods context.
+  The `Lightning.WebhookAuthMethods` context provides a suite of functionalities to handle and interact with Webhook Authentication Methods within the application.
+
+  ## Overview
+  This context is designed to encapsulate all the logic related to Webhook Authentication Methods, including their creation, updates, retrievals, and deletions. It serves as an API for other parts of the system to interact with Webhook Authentication Methods, ensuring that the internal implementation details are hidden, and only the necessary functionalities are exposed.
+
+  ## Functionalities
+  - `create_webhook_auth_method/1`: Allows for the creation of a new Webhook Authentication Method with given attributes.
+  - `update_webhook_auth_method/2`: Facilitates the updating of an existing Webhook Authentication Method.
+  - `list_auth_methods/1`: Provides a list of all Webhook Authentication Methods for a given project.
+  - `get_auth_method_by_api_key/2`: Retrieves a Webhook Authentication Method by API key and project_id.
+  - `get_auth_method_by_username/2`: Finds a Webhook Authentication Method by username and project_id.
+  - `get_auth_method_by_username_and_password/3`: Obtains a Webhook Authentication Method by username, password, and project_id if the password is valid.
+  - `get_auth_method!/2`: Fetches a Webhook Authentication Method by id and project_id, raises if it does not exist.
+  - `delete_auth_method/1`: Allows for the deletion of a given Webhook Auth Method.
+
+  ## Examples
+
+  The examples in each function provide detailed use cases and expected outcomes, aiding developers in understanding how to utilize the functionalities provided by this context.
+
+  ## Usage
+
+  This module is intended to be used by other modules, contexts, or controllers that need to perform operations related to Webhook Authentication Methods, serving as a clear and consistent interface for these operations.
   """
 
   import Ecto.Query, warn: false
