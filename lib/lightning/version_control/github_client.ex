@@ -5,98 +5,39 @@ defmodule Lightning.VersionControl.GithubClient do
   """
   use Tesla
   require Logger
+  alias Lightning.VersionControl.GithubError
   alias Lightning.VersionControl.GithubToken
 
   plug(Tesla.Middleware.BaseUrl, "https://api.github.com")
   plug(Tesla.Middleware.JSON)
 
   def installation_repos(installation_id) do
-    with {:ok, installation_client} <- build_client(installation_id),
-         {:ok, %{status: 200} = repos_resp} <-
-           installation_client
-           |> get("/installation/repositories") do
-      {:ok,
-       repos_resp.body["repositories"]
-       |> Enum.map(fn g_repo -> g_repo["full_name"] end)}
-    else
-      {:error, :installation_not_found, meta} ->
-        installation_id_error(meta)
-
-      {:error, :invalid_pem} ->
-        invalid_pem_error()
+    with {:ok, client} <- build_client(installation_id),
+         {:ok, %Tesla.Env{status: 200, body: body}} <-
+           get(client, "/installation/repositories") do
+      {:ok, Enum.map(body["repositories"], fn g_repo -> g_repo["full_name"] end)}
     end
   end
 
   def get_repo_branches(installation_id, repo_name) do
-    with {:ok, installation_client} <- build_client(installation_id),
-         {:ok, %{status: 200} = branches} <-
-           installation_client
-           |> get("/repos/#{repo_name}/branches") do
-      branch_names =
-        branches.body
-        |> Enum.map(fn b -> b["name"] end)
-
-      {:ok, branch_names}
-    else
-      {:error, :installation_not_found, meta} ->
-        installation_id_error(meta)
-
-      {:error, :invalid_pem} ->
-        invalid_pem_error()
+    with {:ok, client} <- build_client(installation_id),
+         {:ok, %Tesla.Env{status: 200, body: body}} <-
+           get(client, "/repos/#{repo_name}/branches") do
+      {:ok, Enum.map(body, fn b -> b["name"] end)}
     end
   end
 
   def fire_repository_dispatch(installation_id, repo_name, user_email) do
-    with {:ok, installation_client} <- build_client(installation_id),
-         {:ok, %{status: 204}} <-
-           installation_client
-           |> post("/repos/#{repo_name}/dispatches", %{
+    with {:ok, client} <- build_client(installation_id),
+         {:ok, %Tesla.Env{status: 204}} <-
+           post(client, "/repos/#{repo_name}/dispatches", %{
              event_type: "sync_project",
              client_payload: %{
                message: "#{user_email} initiated a sync from Lightning"
              }
            }) do
       {:ok, :fired}
-    else
-      {:error, :installation_not_found, meta} ->
-        installation_id_error(meta)
-
-      {:error, :invalid_pem} ->
-        invalid_pem_error()
-
-      err ->
-        Logger.error(inspect(err))
-        {:error, "Error Initiating sync"}
     end
-  end
-
-  def send_sentry_error(msg, meta \\ %{}) do
-    Sentry.capture_message("Github configuration error",
-      level: "warning",
-      extra: meta,
-      message: msg,
-      tags: %{type: "github"}
-    )
-  end
-
-  defp installation_id_error(meta) do
-    send_sentry_error("Github Installation APP ID is misconfigured", meta)
-
-    {:error,
-     %{
-       message:
-         "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-     }}
-  end
-
-  defp invalid_pem_error do
-    send_sentry_error("Github Cert is misconfigured")
-
-    {:error,
-     %{
-       message:
-         "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
-     }}
   end
 
   defp build_client(installation_id) do
@@ -104,33 +45,57 @@ defmodule Lightning.VersionControl.GithubClient do
       Application.get_env(:lightning, :github_app)
       |> Map.new()
 
-    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id),
-         client <-
+    with {:ok, auth_token, _} <- GithubToken.build(cert, app_id) do
+      client =
+        Tesla.client([
+          {Tesla.Middleware.Headers,
+           [
+             {"Authorization", "Bearer #{auth_token}"}
+           ]}
+        ])
+
+      case post(
+             client,
+             "/app/installations/#{installation_id}/access_tokens",
+             ""
+           ) do
+        {:ok, %{status: 201} = installation_token_resp} ->
+          installation_token = installation_token_resp.body["token"]
+
+          {:ok,
            Tesla.client([
              {Tesla.Middleware.Headers,
               [
-                {"Authorization", "Bearer #{auth_token}"}
+                {"Authorization", "Bearer " <> installation_token}
               ]}
-           ]),
-         {:ok, installation_token_resp} <-
-           client
-           |> post("/app/installations/#{installation_id}/access_tokens", ""),
-         %{status: 201} <- installation_token_resp do
-      installation_token = installation_token_resp.body["token"]
+           ])}
 
-      {:ok,
-       Tesla.client([
-         {Tesla.Middleware.Headers,
-          [
-            {"Authorization", "Bearer " <> installation_token}
-          ]}
-       ])}
-    else
-      %{status: 404} = err ->
-        {:error, :installation_not_found, err}
+        {:ok, %{status: 404, body: body}} ->
+          Logger.error("Unexpected Github Response: #{inspect(body)}")
 
-      _unused_status ->
-        {:error, :invalid_pem}
+          error =
+            GithubError.installation_not_found(
+              "Github Installation APP ID is misconfigured",
+              body
+            )
+
+          Sentry.capture_exception(error)
+
+          {:error, error}
+
+        {:ok, %{status: 401, body: body}} ->
+          Logger.error("Unexpected Github Response: #{inspect(body)}")
+
+          error =
+            GithubError.invalid_certificate(
+              "Github Certificate is misconfigured",
+              body
+            )
+
+          Sentry.capture_exception(error)
+
+          {:error, error}
+      end
     end
   end
 end

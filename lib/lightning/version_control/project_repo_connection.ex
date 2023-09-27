@@ -37,5 +37,8 @@ defmodule Lightning.VersionControl.ProjectRepoConnection do
     project_repo_connection
     |> cast(attrs, @fields ++ @required_fields)
     |> validate_required(@required_fields)
+    |> unique_constraint(:project_id,
+      message: "project already has a repo connection"
+    )
   end
 end

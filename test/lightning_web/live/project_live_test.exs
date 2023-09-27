@@ -399,10 +399,10 @@ defmodule LightningWeb.ProjectLiveTest do
       Tesla.Mock.mock_global(fn env ->
         case env.url do
           "https://api.github.com/app/installations/bad-id/access_tokens" ->
-            %Tesla.Env{status: 404}
+            %Tesla.Env{status: 404, body: %{}}
 
           "https://api.github.com/app/installations/wrong-cert/access_tokens" ->
-            %Tesla.Env{status: 200}
+            %Tesla.Env{status: 401, body: %{}}
 
           "https://api.github.com/app/installations/some-id/access_tokens" ->
             %Tesla.Env{status: 201, body: %{"token" => "some-token"}}
@@ -483,7 +483,6 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
-    @tag :skip
     test "Flashes an error when APP ID is wrong", %{
       conn: conn,
       project: project,
@@ -509,12 +508,13 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
+      Process.sleep(15)
+
       assert render(view) =~
                "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
     end
 
     @tag role: :admin
-    @tag :skip
     test "Flashes an error when PEM CERT is corrupt", %{
       conn: conn,
       project: project,
@@ -539,6 +539,8 @@ defmodule LightningWeb.ProjectLiveTest do
           conn,
           ~p"/projects/#{project.id}/settings#vcs"
         )
+
+      Process.sleep(10)
 
       assert render(view) =~
                "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
@@ -595,6 +597,27 @@ defmodule LightningWeb.ProjectLiveTest do
     end
 
     @tag role: :admin
+    test "Flashes an error when APP Name is missing during installation", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: nil,
+        app_name: nil
+      )
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("install_app", %{}) =~
+               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
+    end
+
+    @tag role: :admin
     test "can reinstall github app", %{
       conn: conn,
       project: project
@@ -614,6 +637,29 @@ defmodule LightningWeb.ProjectLiveTest do
         )
 
       assert view |> render_click("reinstall_app", %{})
+    end
+
+    @tag role: :admin
+    test "Flashes an error when APP Name is missing during reinstallation", %{
+      conn: conn,
+      project: project
+    } do
+      put_temporary_env(:lightning, :github_app,
+        cert: @cert,
+        app_id: nil,
+        app_name: nil
+      )
+
+      insert(:project_repo_connection, %{project_id: project.id, project: nil})
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          ~p"/projects/#{project.id}/settings#vcs"
+        )
+
+      assert view |> render_click("reinstall_app", %{}) =~
+               "Sorry, it seems that the GitHub App Name has not been properly configured for this instance of Lighting. Please contact the instance administrator"
     end
 
     @tag role: :admin
