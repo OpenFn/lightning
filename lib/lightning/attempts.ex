@@ -96,7 +96,6 @@ defmodule Lightning.Attempts do
           {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
   def start_run(params) do
     import Ecto.Changeset
-    import Ecto.Query
 
     cast(
       {%{},
@@ -110,7 +109,8 @@ defmodule Lightning.Attempts do
       [:attempt_id, :job_id, :input_dataclip_id, :run_id]
     )
     |> validate_required([:attempt_id, :job_id, :input_dataclip_id, :run_id])
-    |> then(&validate_run_association_exists/1)
+    |> then(&validate_job_reachable/1)
+    |> apply_action(:validate)
     |> then(&insert_run/1)
   end
 
@@ -139,11 +139,11 @@ defmodule Lightning.Attempts do
     end
   end
 
-  defp validate_run_association_exists(%{valid?: false} = changeset) do
-    {:error, changeset}
+  defp validate_job_reachable(%{valid?: false} = changeset) do
+    changeset
   end
 
-  defp validate_run_association_exists(changeset) do
+  defp validate_job_reachable(changeset) do
     import Ecto.Changeset
     import Ecto.Query
 
@@ -170,7 +170,54 @@ defmodule Lightning.Attempts do
         changeset
       end
     end)
+  end
+
+  def complete_run(params) do
+    import Ecto.Changeset
+
+    cast(
+      {%{},
+       %{
+         project_id: Ecto.UUID,
+         attempt_id: Ecto.UUID,
+         output_dataclip: :string,
+         run_id: Ecto.UUID,
+         reason: :string
+       }},
+      params,
+      [:project_id, :attempt_id, :output_dataclip, :run_id, :reason]
+    )
+    |> validate_required([:project_id, :attempt_id, :output_dataclip, :run_id])
     |> apply_action(:validate)
+    |> then(&update_run/1)
+  end
+
+  defp update_run({:ok, params}) do
+    import Ecto.Changeset
+    import Ecto.Query
+
+    Repo.transaction(fn ->
+      %Lightning.Invocation.Dataclip{
+        # id: params.dataclip_id,
+        project_id: params.project_id,
+        body: params.output_dataclip |> Jason.decode!(),
+        type: :run_result
+      }
+      |> Repo.insert!()
+
+      from(r in Lightning.Invocation.Run, where: r.id == ^params.run_id)
+      |> Repo.one!()
+      |> change(%{finished_at: DateTime.utc_now()})
+      |> Repo.update!()
+    end)
+  end
+
+  defp update_run(e), do: e
+
+  def get_project_id_for_attempt(attempt) do
+    Ecto.assoc(attempt, [:work_order, :workflow, :project])
+    |> Ecto.Query.select([p], p.id)
+    |> Repo.one()
   end
 
   defp adaptor do

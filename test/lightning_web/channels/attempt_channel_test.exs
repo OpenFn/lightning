@@ -98,8 +98,11 @@ defmodule LightningWeb.AttemptChannelTest do
 
   describe "fetching attempt data" do
     setup do
-      dataclip = insert(:dataclip, body: %{"foo" => "bar"})
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      project = insert(:project)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
 
       work_order =
         insert(:workorder,
@@ -174,8 +177,11 @@ defmodule LightningWeb.AttemptChannelTest do
 
   describe "marking runs as started and finished" do
     setup do
-      dataclip = insert(:dataclip, body: %{"foo" => "bar"})
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+      project = insert(:project)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
 
       work_order =
         insert(:workorder,
@@ -218,14 +224,35 @@ defmodule LightningWeb.AttemptChannelTest do
 
       ref =
         push(socket, "run:start", %{
-          "id" => run_id,
-          job_id: job.id,
-          input_dataclip_id: attempt.dataclip_id
+          "job_id" => job.id,
+          "input_dataclip_id" => attempt.dataclip_id
         })
 
       assert_reply ref, :error, errors
 
       assert errors == %{run_id: ["This field can't be blank."]}
+
+      ref =
+        push(socket, "run:start", %{
+          "run_id" => run_id,
+          "job_id" => job.id,
+          "input_dataclip_id" => attempt.dataclip_id
+        })
+
+      assert_reply ref, :ok, %{run_id: ^run_id}
+    end
+
+    test "run:complete", %{socket: socket, attempt: attempt, workflow: workflow} do
+      [job] = workflow.jobs
+      %{id: run_id} = run = insert(:run, attempts: [attempt], job: job)
+
+      ref =
+        push(socket, "run:complete", %{
+          "run_id" => run.id,
+          "output_dataclip" => ~s({"foo": "bar"})
+        })
+
+      assert_reply ref, :ok, %{run_id: ^run_id}
     end
   end
 

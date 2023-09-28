@@ -67,6 +67,7 @@ defmodule Lightning.Invocation.Run do
   def changeset(run, attrs) do
     run
     |> cast(attrs, [
+      :id,
       :exit_code,
       :started_at,
       :finished_at,
