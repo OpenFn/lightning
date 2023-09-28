@@ -62,7 +62,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
       validate_auth(conn, trigger)
     else
       false -> conn
-      nil -> not_found_response(conn)
+      _ -> not_found_response(conn)
     end
   end
 
