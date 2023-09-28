@@ -159,6 +159,15 @@ defmodule Lightning.WebhookAuthMethods do
     Repo.get_by!(WebhookAuthMethod, id: id, project_id: project_id)
   end
 
+  def get_auth_methods_for_trigger(trigger) do
+    query = Ecto.assoc(trigger, :webhook_auth_methods)
+    Repo.all(query)
+  end
+
+  def get_auth_methods_for_trigger(nil) do
+    nil
+  end
+
   @doc """
   Deletes a Webhook Auth Method.
 
