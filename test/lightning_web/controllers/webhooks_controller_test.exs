@@ -29,11 +29,6 @@ defmodule LightningWeb.WebhooksControllerTest do
         assert body == message
       end)
     end
-
-    test "with an invalid trigger id returns a 404", %{conn: conn} do
-      conn = post(conn, "/i/bar")
-      assert json_response(conn, 404) == %{}
-    end
   end
 
   test "return 403 on a disabled message", %{conn: conn} do

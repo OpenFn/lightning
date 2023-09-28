@@ -5,15 +5,10 @@ defmodule LightningWeb.WebhooksController do
 
   # this gets hit when someone asks to run a workflow by API
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
-  def create(conn, %{"path" => path}) do
-    path
-    |> Enum.join("/")
-    |> Workflows.get_edge_by_webhook()
+  def create(conn, %{"path" => _path}) do
+    conn.assigns[:trigger]
+    |> Workflows.get_edge_by_trigger()
     |> case do
-      nil ->
-        put_status(conn, :not_found)
-        |> json(%{})
-
       %Workflows.Edge{target_job: %Jobs.Job{enabled: false}} ->
         put_status(conn, :forbidden)
         |> json(%{
