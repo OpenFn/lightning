@@ -4,7 +4,7 @@ defmodule Lightning.WorkOrders.Manual do
   """
   @type t :: %__MODULE__{
           project: Lightning.Projects.Project.t(),
-          job: Lightning.Jobs.Job.t(),
+          job: Lightning.Workflows.Job.t(),
           user: Lightning.Accounts.User.t(),
           dataclip_id: String.t(),
           body: String.t(),
@@ -19,7 +19,7 @@ defmodule Lightning.WorkOrders.Manual do
   embedded_schema do
     embeds_one :project, Lightning.Projects.Project
     embeds_one :user, Lightning.Accounts.User
-    embeds_one :job, Lightning.Jobs.Job
+    embeds_one :job, Lightning.Workflows.Job
     field :is_persisted, :boolean
     field :dataclip_id, Ecto.UUID
     field :body, :string

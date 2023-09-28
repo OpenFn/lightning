@@ -13,7 +13,7 @@ defmodule Lightning.Attempt do
   alias Lightning.WorkOrder
   alias Lightning.Invocation.Run
   alias Lightning.AttemptRun
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   # alias Lightning.Workflows.Node
 

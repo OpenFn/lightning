@@ -1,4 +1,4 @@
-defmodule Lightning.Jobs.Job do
+defmodule Lightning.Workflows.Job do
   @moduledoc """
   Ecto model for Jobs.
 

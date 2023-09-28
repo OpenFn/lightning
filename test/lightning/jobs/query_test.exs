@@ -1,7 +1,7 @@
-defmodule Lightning.Jobs.QueryTest do
+defmodule Lightning.Workflows.QueryTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Jobs.Query
+  alias Lightning.Workflows.Query
   import Lightning.JobsFixtures
   import Lightning.AccountsFixtures
   import Lightning.ProjectsFixtures

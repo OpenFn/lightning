@@ -1,7 +1,6 @@
 defmodule LightningWeb.AttemptJson do
   alias Lightning.Attempt
-  alias Lightning.Workflows.{Trigger, Edge}
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.{Trigger, Edge, Job}
 
   def render(attempt = %Attempt{}) do
     %{

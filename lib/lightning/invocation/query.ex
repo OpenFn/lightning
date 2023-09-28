@@ -6,7 +6,7 @@ defmodule Lightning.Invocation.Query do
 
   alias Lightning.Accounts.User
   alias Lightning.Invocation.Run
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
 
   @doc """
   Runs for a specific user

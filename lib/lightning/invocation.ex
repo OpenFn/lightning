@@ -39,7 +39,7 @@ defmodule Lightning.Invocation do
     list_dataclips_query(%Project{id: project_id}) |> Repo.all()
   end
 
-  def list_dataclips_for_job(%Lightning.Jobs.Job{id: job_id}) do
+  def list_dataclips_for_job(%Lightning.Workflows.Job{id: job_id}) do
     from(r in Run,
       join: d in assoc(r, :input_dataclip),
       where: r.job_id == ^job_id,
@@ -503,7 +503,7 @@ defmodule Lightning.Invocation do
         order_by: [asc: r.finished_at],
         preload: [
           job:
-            ^from(job in Lightning.Jobs.Job,
+            ^from(job in Lightning.Workflows.Job,
               select: %{id: job.id, name: job.name}
             )
         ]

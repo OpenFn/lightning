@@ -14,6 +14,13 @@ defmodule LightningWeb.WebhooksController do
         put_status(conn, :not_found)
         |> json(%{})
 
+      %Workflows.Edge{target_job: %Workflows.Job{enabled: false}} ->
+        put_status(conn, :forbidden)
+        |> json(%{
+          message:
+            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
+        })
+
       trigger ->
         {:ok, work_order} =
           WorkOrders.create_for(trigger,

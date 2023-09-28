@@ -3,7 +3,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
 
   alias Lightning.Pipeline.StateAssembler
   alias Lightning.Invocation.{Run, Dataclip}
-  alias Lightning.Jobs.{Job}
+  alias Lightning.Workflows.{Job}
 
   import Lightning.WorkflowsFixtures
   import Lightning.InvocationFixtures

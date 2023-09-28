@@ -25,7 +25,7 @@ defmodule Lightning.Factories do
   end
 
   def job_factory do
-    %Lightning.Jobs.Job{
+    %Lightning.Workflows.Job{
       id: fn -> Ecto.UUID.generate() end,
       name: sequence(:job_name, &"job-#{&1}"),
       workflow: build(:workflow),
@@ -167,7 +167,7 @@ defmodule Lightning.Factories do
 
   def with_edge(
         workflow,
-        {%Lightning.Jobs.Job{} = source_job, target_job},
+        {%Lightning.Workflows.Job{} = source_job, target_job},
         extra
       ) do
     %{
@@ -184,7 +184,11 @@ defmodule Lightning.Factories do
     }
   end
 
-  def with_edge(workflow, {%Lightning.Workflows.Trigger{} = trigger, job}, extra) do
+  def with_edge(
+        workflow,
+        {%Lightning.Workflows.Trigger{} = trigger, job},
+        extra
+      ) do
     %{
       workflow
       | edges:
@@ -222,7 +226,7 @@ defmodule Lightning.Factories do
     %{project | project_users: [%{user: user, role: role}]}
   end
 
-  def for_project(%Lightning.Jobs.Job{} = job, project) do
+  def for_project(%Lightning.Workflows.Job{} = job, project) do
     %{job | workflow: build(:workflow, %{project: project})}
   end
 

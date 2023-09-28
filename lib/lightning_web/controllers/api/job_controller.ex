@@ -4,6 +4,7 @@ defmodule LightningWeb.API.JobController do
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.Jobs
+  alias Lightning.Workflows
 
   action_fallback LightningWeb.FallbackController
 
@@ -30,7 +31,7 @@ defmodule LightningWeb.API.JobController do
     pagination_attrs = Map.take(params, ["page_size", "page"])
 
     page =
-      Jobs.Query.jobs_for(conn.assigns.current_user)
+      Workflows.Query.jobs_for(conn.assigns.current_user)
       |> Lightning.Repo.paginate(pagination_attrs)
 
     render(conn, "index.json", page: page, conn: conn)

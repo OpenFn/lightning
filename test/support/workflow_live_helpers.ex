@@ -4,7 +4,7 @@ defmodule Lightning.WorkflowLive.Helpers do
   import Lightning.Factories
   import ExUnit.Assertions
 
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
 
   # Interaction Helpers
 

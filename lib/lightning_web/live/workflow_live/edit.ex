@@ -6,7 +6,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   alias Lightning.Policies.Permissions
   alias Lightning.Workflows
   alias Lightning.Workflows.Workflow
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias LightningWeb.Components.Form
   alias LightningWeb.WorkflowNewLive.WorkflowParams
   alias LightningWeb.WorkflowLive.Helpers
@@ -670,7 +670,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           )
 
         selectable_dataclips =
-          Lightning.Invocation.list_dataclips_for_job(%Lightning.Jobs.Job{
+          Lightning.Invocation.list_dataclips_for_job(%Lightning.Workflows.Job{
             id: job.id
           })
 

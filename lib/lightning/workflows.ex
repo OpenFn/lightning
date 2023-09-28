@@ -5,9 +5,8 @@ defmodule Lightning.Workflows do
 
   import Ecto.Query
   alias Lightning.Repo
-  alias Lightning.Workflows.{Edge, Workflow, Trigger}
   alias Lightning.Projects.Project
-  alias Lightning.{Jobs}
+  alias Lightning.Workflows.{Edge, Workflow, Trigger, Trigger, Query}
 
   @doc """
   Returns the list of workflows.
@@ -165,7 +164,7 @@ defmodule Lightning.Workflows do
   """
   def mark_for_deletion(workflow, _attrs \\ %{}) do
     workflow_jobs_query =
-      from(j in Lightning.Jobs.Job,
+      from(j in Lightning.Workflows.Job,
         where: j.workflow_id == ^workflow.id
       )
 
@@ -213,7 +212,7 @@ defmodule Lightning.Workflows do
   @spec get_edges_for_cron_execution(DateTime.t()) :: [Edge.t()]
   def get_edges_for_cron_execution(datetime) do
     cron_edges =
-      Jobs.Query.enabled_cron_jobs_by_edge()
+      Query.enabled_cron_jobs_by_edge()
       |> Repo.all()
 
     for e <- cron_edges,
