@@ -7,7 +7,6 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
 
   describe "changeset/2" do
     setup do
-      user = insert(:user)
       project = insert(:project)
 
       %{
@@ -16,10 +15,8 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
           auth_type: :basic,
           username: "some username",
           password: "somepassword",
-          creator_id: user.id,
           project_id: project.id
         },
-        user: user,
         project: project
       }
     end
@@ -75,18 +72,14 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
 
   describe "unique_constraints/1" do
     setup do
-      user = insert(:user)
       project = insert(:project)
 
       insert(:webhook_auth_method,
         name: "unique_name",
-        username: "unique_username",
-        project: project,
-        creator: user
+        project: project
       )
 
       %{
-        user: user,
         project: project
       }
     end
@@ -97,15 +90,13 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
     end
 
     test "validates unique name", %{
-      user: user,
       project: project
     } do
       changeset =
         WebhookAuthMethod.changeset(%WebhookAuthMethod{}, %{
           name: "unique_name",
           auth_type: :api,
-          project_id: project.id,
-          creator_id: user.id
+          project_id: project.id
         })
 
       assert_unique_constraint_error(
@@ -114,54 +105,94 @@ defmodule Lightning.Workflows.WebhookAuthMethodTest do
         "must be unique within the project"
       )
     end
+  end
 
-    test "validates unique username", %{
-      user: user,
-      project: project
-    } do
-      changeset =
-        WebhookAuthMethod.changeset(%WebhookAuthMethod{}, %{
-          name: "a name",
-          username: "unique_username",
-          password: "password",
-          creator_id: user.id,
-          project_id: project.id
-        })
+  defp setup_auth_method(value, key) do
+    hashed_value = Bcrypt.hash_pwd_salt(value)
+    Map.put(%WebhookAuthMethod{}, key, hashed_value)
+  end
 
-      assert_unique_constraint_error(
-        changeset,
-        :username,
-        "must be unique within the project"
-      )
-    end
+  defp test_validity(assert_or_refute, function, webhook_auth_method, value) do
+    assert_or_refute.(function.(webhook_auth_method, value))
   end
 
   describe "valid_password?/2" do
-    test "returns true for valid password" do
-      password = "somepassword"
-      hashed_password = Bcrypt.hash_pwd_salt(password)
-      webhook_auth_method = %WebhookAuthMethod{hashed_password: hashed_password}
-      assert WebhookAuthMethod.valid_password?(webhook_auth_method, password)
+    setup do
+      webhook_auth_method = setup_auth_method("somepassword", :hashed_password)
+      {:ok, webhook_auth_method: webhook_auth_method}
     end
 
-    test "returns false for invalid password" do
-      password = "somepassword"
-      hashed_password = Bcrypt.hash_pwd_salt(password)
-      webhook_auth_method = %WebhookAuthMethod{hashed_password: hashed_password}
+    test "returns true for valid password", %{
+      webhook_auth_method: webhook_auth_method
+    } do
+      test_validity(
+        &assert/1,
+        &WebhookAuthMethod.valid_password?/2,
+        webhook_auth_method,
+        "somepassword"
+      )
+    end
 
-      refute WebhookAuthMethod.valid_password?(
-               webhook_auth_method,
-               "wrongpassword"
-             )
+    test "returns false for invalid password", %{
+      webhook_auth_method: webhook_auth_method
+    } do
+      test_validity(
+        &refute/1,
+        &WebhookAuthMethod.valid_password?/2,
+        webhook_auth_method,
+        "wrongpassword"
+      )
     end
 
     test "returns false for no password" do
       webhook_auth_method = %WebhookAuthMethod{}
 
-      refute WebhookAuthMethod.valid_password?(
-               webhook_auth_method,
-               "anypassword"
-             )
+      test_validity(
+        &refute/1,
+        &WebhookAuthMethod.valid_password?/2,
+        webhook_auth_method,
+        "somepassword"
+      )
+    end
+  end
+
+  describe "valid_api_key?/2" do
+    setup do
+      webhook_auth_method = setup_auth_method("somerandomapikey", :api_key)
+      {:ok, webhook_auth_method: webhook_auth_method}
+    end
+
+    test "returns true for valid api_key", %{
+      webhook_auth_method: webhook_auth_method
+    } do
+      test_validity(
+        &assert/1,
+        &WebhookAuthMethod.valid_api_key?/2,
+        webhook_auth_method,
+        "somerandomapikey"
+      )
+    end
+
+    test "returns false for invalid api_key", %{
+      webhook_auth_method: webhook_auth_method
+    } do
+      test_validity(
+        &refute/1,
+        &WebhookAuthMethod.valid_api_key?/2,
+        webhook_auth_method,
+        "wrongapikey"
+      )
+    end
+
+    test "returns false for no api_key" do
+      webhook_auth_method = %WebhookAuthMethod{}
+
+      test_validity(
+        &refute/1,
+        &WebhookAuthMethod.valid_api_key?/2,
+        webhook_auth_method,
+        "somerandomapikey"
+      )
     end
   end
 end

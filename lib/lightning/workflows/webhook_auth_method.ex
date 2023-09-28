@@ -14,7 +14,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     - `api_key`: the API key required for API authentication
 
   ## Associations
-  Each `WebhookAuthMethod` belongs to a `creator` (a user) and a `project`.
+  Each `WebhookAuthMethod` belongs to a `project`.
   It is also associated with multiple `triggers` through a many_to_many relationship.
 
   ## Validations and Constraints
@@ -24,6 +24,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   The `valid_password?/2` function is provided to verify passwords and it avoids timing attacks by using `Bcrypt.no_user_verify/0` when there is no webhook_auth_method or the webhook_auth_method doesn't have a password.
 
   """
+  alias Lightning.Workflows.WebhookAuthMethod
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -38,7 +39,6 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     field :hashed_password, :string, redact: true
     field :api_key, :string
 
-    belongs_to :creator, Lightning.Accounts.User
     belongs_to :project, Lightning.Projects.Project
 
     many_to_many :triggers, Lightning.Jobs.Trigger,
@@ -54,32 +54,13 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
       :auth_type,
       :username,
       :password,
-      :creator_id,
       :project_id
     ])
-    |> validate_required([:name, :auth_type, :creator_id, :project_id])
-    |> validate_inclusion(:auth_type, @auth_types,
-      message: "must be basic or api"
-    )
+    |> validate_required([:name, :auth_type, :project_id])
     |> validate_auth_fields()
-    |> apply_unique_constraints()
-  end
-
-  defp apply_unique_constraints(changeset) do
-    changeset
     |> unique_constraint(
       :name,
       name: "webhook_auth_methods_name_project_id_index",
-      message: "must be unique within the project"
-    )
-    |> unique_constraint(
-      :username,
-      name: "webhook_auth_methods_username_project_id_index",
-      message: "must be unique within the project"
-    )
-    |> unique_constraint(
-      :api_key,
-      name: "webhook_auth_methods_api_key_project_id_index",
       message: "must be unique within the project"
     )
   end
@@ -107,7 +88,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     api_key =
       :crypto.strong_rand_bytes(api_key_length) |> Base.encode16(case: :lower)
 
-    put_change(changeset, :api_key, api_key)
+    put_change(changeset, :api_key, Bcrypt.hash_pwd_salt(api_key))
   end
 
   defp maybe_hash_password(changeset) do
@@ -129,14 +110,28 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   `Bcrypt.no_user_verify/0` to avoid timing attacks.
   """
   def valid_password?(
-        %Lightning.Workflows.WebhookAuthMethod{hashed_password: hashed_password},
+        %WebhookAuthMethod{hashed_password: hashed_password},
         password
-      )
-      when is_binary(hashed_password) and byte_size(password) > 0 do
-    Bcrypt.verify_pass(password, hashed_password)
+      ) do
+    verify_pass?(hashed_password, password)
   end
 
-  def valid_password?(_, _) do
+  @doc """
+  Verifies the password.
+
+  If there is no webhook_auth_method or the webhook_auth_method doesn't have an api key, we call
+  `Bcrypt.no_user_verify/0` to avoid timing attacks.
+  """
+  def valid_api_key?(%WebhookAuthMethod{api_key: hashed_api_key}, api_key) do
+    verify_pass?(hashed_api_key, api_key)
+  end
+
+  defp verify_pass?(hashed, clear)
+       when is_binary(hashed) and byte_size(clear) > 0 do
+    Bcrypt.verify_pass(clear, hashed)
+  end
+
+  defp verify_pass?(_, _) do
     Bcrypt.no_user_verify()
     false
   end
