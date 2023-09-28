@@ -57,11 +57,12 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   def call(conn, _opts) do
     with true <- String.starts_with?(conn.request_path, "/i/"),
          [_, _, webhook] <- String.split(conn.request_path, "/"),
-         {:ok, trigger} <- fetch_trigger(webhook) do
+         trigger when not is_nil(trigger) <-
+           Workflows.get_trigger_by_webhook(webhook) do
       validate_auth(conn, trigger)
     else
       false -> conn
-      :error -> not_found_response(conn)
+      nil -> not_found_response(conn)
     end
   end
 
@@ -71,13 +72,6 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     case auth_methods do
       [] -> successful_response(conn, trigger)
       _methods -> check_auth(conn, auth_methods, trigger)
-    end
-  end
-
-  defp fetch_trigger(webhook) do
-    case Workflows.get_trigger_by_webhook(webhook) do
-      nil -> :error
-      trigger -> {:ok, trigger}
     end
   end
 
