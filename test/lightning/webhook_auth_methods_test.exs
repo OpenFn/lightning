@@ -1,5 +1,4 @@
 defmodule Lightning.WebhookAuthMethodsTest do
-  alias Lightning.Workflows.WebhookAuthMethod
   use Lightning.DataCase, async: true
   alias Lightning.WebhookAuthMethods
   import Lightning.Factories
@@ -58,18 +57,15 @@ defmodule Lightning.WebhookAuthMethodsTest do
       assert auth_method.username == username
 
       if password do
-        assert auth_method |> WebhookAuthMethod.valid_password?(password)
-
-        refute auth_method
-               |> WebhookAuthMethod.valid_password?("another_password")
+        assert auth_method.password == password
       else
-        refute auth_method |> WebhookAuthMethod.valid_password?("password")
+        refute auth_method.password
       end
 
       if auth_type == :api do
-        refute auth_method.api_key == nil
+        assert auth_method.api_key
       else
-        assert auth_method.api_key == nil
+        refute auth_method.api_key
       end
     end
   end
@@ -122,7 +118,6 @@ defmodule Lightning.WebhookAuthMethodsTest do
                auth_method.project
              ) ==
                auth_method
-               |> Map.update!(:password, fn _ -> nil end)
                |> unload_relation(:project)
     end
 
@@ -147,7 +142,6 @@ defmodule Lightning.WebhookAuthMethodsTest do
                auth_method.project
              ) ==
                auth_method
-               |> Map.update!(:password, fn _ -> nil end)
                |> unload_relation(:project)
     end
 
@@ -211,7 +205,6 @@ defmodule Lightning.WebhookAuthMethodsTest do
                auth_method.project
              ) ==
                auth_method
-               |> Map.update!(:password, fn _ -> nil end)
                |> unload_relation(:project)
     end
 

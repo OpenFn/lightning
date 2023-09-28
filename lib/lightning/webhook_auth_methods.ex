@@ -135,12 +135,11 @@ defmodule Lightning.WebhookAuthMethods do
         id: project_id
       })
       when is_binary(username) and is_binary(password) do
-    auth_method =
-      Repo.get_by(WebhookAuthMethod, username: username, project_id: project_id)
-
-    if auth_method && WebhookAuthMethod.valid_password?(auth_method, password),
-      do: auth_method,
-      else: nil
+    Repo.get_by(WebhookAuthMethod,
+      username: username,
+      password: password,
+      project_id: project_id
+    )
   end
 
   @doc """
@@ -159,13 +158,11 @@ defmodule Lightning.WebhookAuthMethods do
     Repo.get_by!(WebhookAuthMethod, id: id, project_id: project_id)
   end
 
+  def get_auth_methods_for_trigger(nil), do: nil
+
   def get_auth_methods_for_trigger(trigger) do
     query = Ecto.assoc(trigger, :webhook_auth_methods)
     Repo.all(query)
-  end
-
-  def get_auth_methods_for_trigger(nil) do
-    nil
   end
 
   @doc """
