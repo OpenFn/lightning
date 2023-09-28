@@ -63,7 +63,7 @@ to get familiar with the app.
 Plan and build workflows using Lightning's visual interface to quickly define
 when, where and what you want your automation to do.
 
-![demo_screenshot](https://user-images.githubusercontent.com/36554605/223549338-3e7016b3-658f-4c7f-ab10-5784f9bbea95.png)
+<img width="1679" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/15afafe7-561b-4d79-9cd8-5d31506a9031">
 
 Use our
 [CLI](https://github.com/OpenFn/kit/blob/main/packages/cli/README.md#openfncli)
@@ -73,7 +73,8 @@ editor.
 ### Monitor
 
 Monitor all workflow activity in one place.
-![Screenshot 2023-03-21 at 10 07 37](https://user-images.githubusercontent.com/36554605/226538515-f8b97950-80b9-4e5e-a5f4-7406c20ed37a.png)
+
+<img width="1680" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/909dba85-e0d1-4bce-8a17-5949386c6375">
 
 - Filter and search runs to identify issues that need addressing and follow how
   a specific request has been processed
