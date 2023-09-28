@@ -337,7 +337,6 @@ defmodule Lightning.AttemptsTest do
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
 
-      # { attempt_id, run_id, job_id, input_dataclip_id }
       {:ok, run} =
         Attempts.start_run(%{
           "attempt_id" => attempt.id,
