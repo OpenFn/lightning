@@ -6,7 +6,6 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
   describe "create_webhook_auth_method/1" do
     setup do
-      user = insert(:user)
       project = insert(:project)
 
       valid_attrs = %{
@@ -14,7 +13,6 @@ defmodule Lightning.WebhookAuthMethodsTest do
         auth_type: "basic",
         username: "username",
         password: "password",
-        creator_id: user.id,
         project_id: project.id
       }
 
@@ -23,10 +21,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
       }
 
       {:ok,
-       valid_attrs: valid_attrs,
-       invalid_attrs: invalid_attrs,
-       user: user,
-       project: project}
+       valid_attrs: valid_attrs, invalid_attrs: invalid_attrs, project: project}
     end
 
     test "creates a webhook auth method with valid attributes", %{
@@ -128,7 +123,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
              ) ==
                auth_method
                |> Map.update!(:password, fn _ -> nil end)
-               |> unload_relations([:creator, :project])
+               |> unload_relation(:project)
     end
 
     test "returns nil if there is no matching auth method" do
@@ -153,7 +148,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
              ) ==
                auth_method
                |> Map.update!(:password, fn _ -> nil end)
-               |> unload_relations([:creator, :project])
+               |> unload_relation(:project)
     end
 
     test "returns nil if there is no matching auth method" do
@@ -171,14 +166,12 @@ defmodule Lightning.WebhookAuthMethodsTest do
   describe "get_auth_method_by_username_and_password/3" do
     setup do
       project = insert(:project)
-      creator = insert(:user)
 
       {:ok, auth_method} =
         WebhookAuthMethods.create_webhook_auth_method(%{
           name: "my_webhook_auth_method",
           username: "some_username",
           password: "hello password",
-          creator_id: creator.id,
           project_id: project.id
         })
 
@@ -219,7 +212,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
              ) ==
                auth_method
                |> Map.update!(:password, fn _ -> nil end)
-               |> unload_relations([:creator, :project])
+               |> unload_relation(:project)
     end
 
     test "raises an error if there is no matching auth method" do
