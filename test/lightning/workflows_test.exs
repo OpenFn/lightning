@@ -244,6 +244,51 @@ defmodule Lightning.WorkflowsTest do
     end
   end
 
+  describe "get_trigger_by_webhook/1" do
+    test "returns a trigger when a matching custom_path is provided" do
+      trigger = insert(:trigger, custom_path: "some_path")
+
+      assert trigger |> unload_relation(:workflow) ==
+               Workflows.get_trigger_by_webhook("some_path")
+    end
+
+    test "returns a trigger when a matching id is provided" do
+      trigger = insert(:trigger)
+
+      assert trigger |> unload_relation(:workflow) ==
+               Workflows.get_trigger_by_webhook(trigger.id)
+    end
+
+    test "returns nil when no matching trigger is found" do
+      insert(:trigger, custom_path: "some_path")
+      assert Workflows.get_trigger_by_webhook("non_existent_path") == nil
+    end
+  end
+
+  describe "get_edge_by_trigger/1" do
+    test "returns an edge when associated trigger is provided" do
+      workflow = insert(:workflow)
+      trigger = insert(:trigger, workflow: workflow)
+      job = insert(:job, workflow: workflow)
+
+      edge =
+        insert(:edge,
+          workflow: workflow,
+          source_trigger_id: trigger.id,
+          target_job_id: job.id
+        )
+
+      assert edge |> unload_relation(:workflow) ==
+               Workflows.get_edge_by_trigger(trigger)
+               |> unload_relations([:target_job, :source_trigger])
+    end
+
+    test "returns nil when no associated edge is found" do
+      trigger = insert(:trigger)
+      assert Workflows.get_edge_by_trigger(trigger) == nil
+    end
+  end
+
   describe "workflows and project spaces" do
     setup do
       project = insert(:project)
