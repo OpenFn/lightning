@@ -1,4 +1,4 @@
-defmodule Lightning.Jobs.Scheduler do
+defmodule Lightning.Workflows.Scheduler do
   @moduledoc """
   The Scheduler is responsible for finding jobs that are ready to run based on
   their cron schedule, and then running them.
@@ -14,7 +14,6 @@ defmodule Lightning.Jobs.Scheduler do
 
   alias Lightning.{
     Invocation,
-    Jobs,
     Pipeline,
     Repo,
     WorkOrderService,
@@ -86,7 +85,7 @@ defmodule Lightning.Jobs.Scheduler do
 
   defp last_state_for_job(id) do
     run =
-      %Jobs.Job{id: id}
+      %Workflows.Job{id: id}
       |> Invocation.Query.last_successful_run_for_job()
       |> Repo.one()
 

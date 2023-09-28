@@ -891,7 +891,7 @@ defmodule Lightning.SetupUtils do
       Lightning.InvocationReason,
       Lightning.Invocation.Run,
       Lightning.Credentials.Credential,
-      Lightning.Jobs.Job,
+      Lightning.Workflows.Job,
       Lightning.Workflows.Trigger,
       Lightning.Workflows.Workflow,
       Lightning.Projects.ProjectUser,

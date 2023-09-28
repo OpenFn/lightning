@@ -1,8 +1,8 @@
-defmodule Lightning.Jobs.Query do
+defmodule Lightning.Workflows.Query do
   @moduledoc """
   Query module for finding Jobs.
   """
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias Lightning.Projects.Project
   alias Lightning.Accounts.User
   alias Lightning.Workflows.Edge

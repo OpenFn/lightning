@@ -3,8 +3,8 @@ defmodule Lightning.JobsTest do
 
   alias Lightning.Jobs
   alias Lightning.Repo
-  alias Lightning.Jobs.Job
-  alias Lightning.Jobs.Scheduler
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Scheduler
   alias Lightning.Workflows
 
   import Lightning.Factories
@@ -314,7 +314,7 @@ defmodule Lightning.JobsTest do
       assert run.job_id == job.id
 
       run =
-        %Jobs.Job{id: job.id}
+        %Workflows.Job{id: job.id}
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:input_dataclip)
@@ -353,7 +353,7 @@ defmodule Lightning.JobsTest do
       Lightning.Pipeline.process(attempt_run)
 
       old =
-        %Jobs.Job{id: job.id}
+        %Workflows.Job{id: job.id}
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:input_dataclip)
@@ -362,7 +362,7 @@ defmodule Lightning.JobsTest do
       _result = Scheduler.enqueue_cronjobs()
 
       new =
-        %Jobs.Job{id: job.id}
+        %Workflows.Job{id: job.id}
         |> Lightning.Invocation.Query.last_successful_run_for_job()
         |> Repo.one()
         |> Repo.preload(:input_dataclip)

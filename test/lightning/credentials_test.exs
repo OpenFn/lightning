@@ -230,7 +230,7 @@ defmodule Lightning.CredentialsTest do
                )
              ) == 0
 
-      job = Repo.get!(Lightning.Jobs.Job, job.id)
+      job = Repo.get!(Lightning.Workflows.Job, job.id)
 
       assert job.project_credential_id == nil
     end

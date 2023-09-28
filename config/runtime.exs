@@ -86,7 +86,7 @@ config :lightning,
       Application.get_env(:lightning, :schemas_path) || "./priv"
 
 base_oban_cron = [
-  {"* * * * *", Lightning.Jobs.Scheduler},
+  {"* * * * *", Lightning.Workflows.Scheduler},
   {"* * * * *", ObanPruner},
   {"0 10 * * *", Lightning.DigestEmailWorker,
    args: %{"type" => "daily_project_digest"}},

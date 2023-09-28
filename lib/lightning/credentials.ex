@@ -338,7 +338,7 @@ defmodule Lightning.Credentials do
 
     project_credential_ids = Repo.all(project_credential_ids_query)
 
-    from(j in Lightning.Jobs.Job,
+    from(j in Lightning.Workflows.Job,
       where: j.project_credential_id in ^project_credential_ids
     )
     |> Repo.update_all(set: [project_credential_id: nil])

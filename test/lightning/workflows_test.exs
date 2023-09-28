@@ -211,7 +211,7 @@ defmodule Lightning.WorkflowsTest do
       assert {:ok, workflow} =
                Lightning.Workflows.update_workflow(workflow, valid_attrs)
 
-      assert Repo.get_by(Lightning.Jobs.Job,
+      assert Repo.get_by(Lightning.Workflows.Job,
                id: job_id,
                name: "some-job-renamed"
              )

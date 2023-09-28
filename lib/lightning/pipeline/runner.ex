@@ -5,7 +5,7 @@ defmodule Lightning.Pipeline.Runner do
   require Logger
   alias Lightning.Repo
   alias Lightning.Invocation
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias Lightning.Credentials.Credential
 
   import Lightning.AdaptorService,

@@ -21,7 +21,7 @@ defmodule Lightning.WorkOrderService do
 
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Accounts.User
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
 
   alias Ecto.Multi
 

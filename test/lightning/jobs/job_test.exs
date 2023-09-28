@@ -1,7 +1,7 @@
-defmodule Lightning.Jobs.JobTest do
+defmodule Lightning.Workflows.JobTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
 
   import Lightning.Factories
 

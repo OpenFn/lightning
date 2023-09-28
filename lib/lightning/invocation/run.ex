@@ -10,7 +10,7 @@ defmodule Lightning.Invocation.Run do
   import Ecto.Changeset
 
   alias Lightning.Invocation.Dataclip
-  alias Lightning.Jobs.Job
+  alias Lightning.Workflows.Job
   alias Lightning.Credentials.Credential
   alias Lightning.{AttemptRun, Attempt}
   alias Lightning.Invocation.LogLine
