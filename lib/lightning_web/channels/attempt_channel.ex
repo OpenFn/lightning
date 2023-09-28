@@ -11,8 +11,17 @@ defmodule LightningWeb.AttemptChannel do
       ) do
     with {:ok, _} <- Workers.verify_worker_token(worker_token),
          {:ok, claims} <- Workers.verify_attempt_token(token, %{id: id}),
-         attempt when is_map(attempt) <- get_attempt(id) || {:error, :not_found} do
-      {:ok, socket |> assign(%{claims: claims, id: id, attempt: attempt})}
+         attempt when is_map(attempt) <- get_attempt(id) || {:error, :not_found},
+         project_id when is_binary(project_id) <-
+           Attempts.get_project_id_for_attempt(attempt) do
+      {:ok,
+       socket
+       |> assign(%{
+         claims: claims,
+         id: id,
+         attempt: attempt,
+         project_id: project_id
+       })}
     else
       {:error, :not_found} ->
         {:error, %{reason: "not_found"}}
@@ -41,16 +50,31 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   def handle_in("run:start", payload, socket) do
-    Attempts.start_run(
-      %{"attempt_id" => socket.assigns.attempt.id}
-      |> Enum.into(payload)
-    )
+    %{"attempt_id" => socket.assigns.attempt.id}
+    |> Enum.into(payload)
+    |> Attempts.start_run()
     |> case do
       {:error, changeset} ->
         {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
 
       {:ok, run} ->
-        {:reply, {:ok, %{run: run}}, socket}
+        {:reply, {:ok, %{run_id: run.id}}, socket}
+    end
+  end
+
+  def handle_in("run:complete", payload, socket) do
+    %{
+      "attempt_id" => socket.assigns.attempt.id,
+      "project_id" => socket.assigns.project_id
+    }
+    |> Enum.into(payload)
+    |> Attempts.complete_run()
+    |> case do
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+
+      {:ok, run} ->
+        {:reply, {:ok, %{run_id: run.id}}, socket}
     end
   end
 

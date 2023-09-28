@@ -122,22 +122,24 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:error, changeset} = Attempts.start_run(%{
-        "attempt_id" => attempt.id,
-        "job_id" => Ecto.UUID.generate(),
-        "input_dataclip_id" => dataclip.id,
-        "run_id" => _run_id = Ecto.UUID.generate()
-      })
+      {:error, changeset} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt.id,
+          "job_id" => Ecto.UUID.generate(),
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => _run_id = Ecto.UUID.generate()
+        })
 
       assert {:job_id, {"does not exist", []}} in changeset.errors
 
       # { attempt_id, run_id, job_id, input_dataclip_id }
-      {:ok, run} = Attempts.start_run(%{
-        "attempt_id" => attempt.id,
-        "job_id" => job.id,
-        "input_dataclip_id" => dataclip.id,
-        "run_id" => _run_id = Ecto.UUID.generate()
-      })
+      {:ok, run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => _run_id = Ecto.UUID.generate()
+        })
 
       assert run.started_at, "The run has been marked as started"
 
