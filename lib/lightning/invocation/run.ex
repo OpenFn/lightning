@@ -25,6 +25,7 @@ defmodule Lightning.Invocation.Run do
   @foreign_key_type :binary_id
   schema "runs" do
     field :exit_code, :integer
+    field :exit_reason, :string
     field :finished_at, :utc_datetime_usec
     field :started_at, :utc_datetime_usec
     belongs_to :job, Job
@@ -69,6 +70,7 @@ defmodule Lightning.Invocation.Run do
     |> cast(attrs, [
       :id,
       :exit_code,
+      :exit_reason,
       :started_at,
       :finished_at,
       :job_id,
