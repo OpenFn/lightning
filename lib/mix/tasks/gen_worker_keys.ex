@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Lightning.GenWorkerKeys do
             IO.puts("openssl not found in PATH")
 
           e ->
-            IO.inspect(e)
+            IO.puts("Error: #{inspect(e)}")
         end
 
         exit({:shutdown, 1})

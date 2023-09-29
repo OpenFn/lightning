@@ -44,7 +44,7 @@ defmodule Lightning.Invocation.Run do
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    change(%__MODULE__{id: Ecto.UUID.generate()}, %{})
     |> change(attrs)
     |> validate()
   end

@@ -95,124 +95,14 @@ defmodule Lightning.Attempts do
   @spec start_run(%{required(binary()) => Ecto.UUID.t()}) ::
           {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
   def start_run(params) do
-    import Ecto.Changeset
-
-    cast(
-      {%{},
-       %{
-         attempt_id: Ecto.UUID,
-         job_id: Ecto.UUID,
-         input_dataclip_id: Ecto.UUID,
-         run_id: Ecto.UUID
-       }},
-      params,
-      [:attempt_id, :job_id, :input_dataclip_id, :run_id]
-    )
-    |> validate_required([:attempt_id, :job_id, :input_dataclip_id, :run_id])
-    |> then(&validate_job_reachable/1)
-    |> apply_action(:validate)
-    |> then(&insert_run/1)
+    Lightning.Attempts.Handlers.StartRun.call(params)
   end
 
-  defp insert_run({:ok, params}) do
-    Lightning.AttemptRun.changeset(
-      %Lightning.AttemptRun{},
-      %{
-        attempt_id: params[:attempt_id],
-        run: %{
-          id: params[:run_id],
-          input_dataclip_id: params[:input_dataclip_id],
-          started_at: DateTime.utc_now(),
-          job_id: params[:job_id]
-        }
-      }
-    )
-    |> Repo.insert()
-    |> case do
-      {:ok, %{run: run}} ->
-        {:ok, run}
-
-      e ->
-        e
-    end
-  end
-
-  defp insert_run({:error, _} = e), do: e
-
-  defp validate_job_reachable(%{valid?: false} = changeset) do
-    changeset
-  end
-
-  defp validate_job_reachable(changeset) do
-    import Ecto.Changeset
-    import Ecto.Query
-
-    # TODO: verify that the dataclip is reachable? (in the same project?)
-
-    params = changeset |> apply_changes()
-    %{attempt_id: attempt_id, job_id: job_id} = params
-
-    # Verify that all of the required entities exist with a single query,
-    # then reduce the results into a single changeset by adding errors for
-    # any columns/ids that are null.
-    from(a in Attempt,
-      where: a.id == ^attempt_id,
-      join: w in assoc(a, :workflow),
-      left_join: j in assoc(w, :jobs),
-      on: j.id == ^job_id,
-      select: %{attempt_id: a.id, job_id: j.id}
-    )
-    |> Repo.one()
-    |> Enum.reduce(changeset, fn {k, v}, changeset ->
-      if is_nil(v) do
-        add_error(changeset, k, "does not exist")
-      else
-        changeset
-      end
-    end)
-  end
-
+  @spec complete_run(%{required(binary()) => binary()}) ::
+          {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
   def complete_run(params) do
-    import Ecto.Changeset
-
-    cast(
-      {%{},
-       %{
-         project_id: Ecto.UUID,
-         attempt_id: Ecto.UUID,
-         output_dataclip: :string,
-         run_id: Ecto.UUID,
-         reason: :string
-       }},
-      params,
-      [:project_id, :attempt_id, :output_dataclip, :run_id, :reason]
-    )
-    |> validate_required([:project_id, :attempt_id, :output_dataclip, :run_id])
-    |> apply_action(:validate)
-    |> then(&update_run/1)
+    Lightning.Attempts.Handlers.CompleteRun.call(params)
   end
-
-  defp update_run({:ok, params}) do
-    import Ecto.Changeset
-    import Ecto.Query
-
-    Repo.transaction(fn ->
-      %Lightning.Invocation.Dataclip{
-        # id: params.dataclip_id,
-        project_id: params.project_id,
-        body: params.output_dataclip |> Jason.decode!(),
-        type: :run_result
-      }
-      |> Repo.insert!()
-
-      from(r in Lightning.Invocation.Run, where: r.id == ^params.run_id)
-      |> Repo.one!()
-      |> change(%{finished_at: DateTime.utc_now()})
-      |> Repo.update!()
-    end)
-  end
-
-  defp update_run({:error, _} = e), do: e
 
   def get_project_id_for_attempt(attempt) do
     Ecto.assoc(attempt, [:work_order, :workflow, :project])

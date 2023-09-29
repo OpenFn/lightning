@@ -49,7 +49,7 @@ defmodule Lightning.Invocation.Dataclip do
   end
 
   def new(attrs \\ %{}) do
-    change(%__MODULE__{}, %{id: Ecto.UUID.generate()})
+    change(%__MODULE__{id: Ecto.UUID.generate()}, attrs)
     |> change(attrs)
     |> validate()
   end
