@@ -6,9 +6,9 @@ defmodule Lightning.Repo.Migrations.CreateWebhookAuthMethodsTable do
       add :id, :binary_id, primary_key: true
       add :name, :string
       add :auth_type, :string
-      add :username, :string, null: true
-      add :hashed_password, :string, null: true
-      add :api_key, :string, null: true
+      add :username, :binary, null: true
+      add :password, :binary, null: true
+      add :api_key, :binary, null: true
       add :project_id, references(:projects, on_delete: :delete_all, type: :binary_id)
 
       timestamps()

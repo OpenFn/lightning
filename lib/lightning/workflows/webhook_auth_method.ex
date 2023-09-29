@@ -33,9 +33,9 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   schema "webhook_auth_methods" do
     field :name, :string
     field :auth_type, Ecto.Enum, values: @auth_types, default: :basic
-    field :username, :string
-    field :password, :string, redact: true
-    field :api_key, :string
+    field :username, Lightning.Encrypted.Binary
+    field :password, Lightning.Encrypted.Binary
+    field :api_key, Lightning.Encrypted.Binary
 
     belongs_to :project, Lightning.Projects.Project
 

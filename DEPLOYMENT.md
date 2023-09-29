@@ -7,8 +7,9 @@ See below for technical considerations and instructions.
 
 ## Encryption
 
-Lightning enforces encryption at rest for Credentials, for which an encryption
-key must be provided when running in production.
+Lightning enforces encryption at rest for credentials, TOTP backup codes, and
+webhook trigger authentication methods, for which an encryption key must be
+provided when running in production.
 
 The key is expected to be a randomized set of bytes, 32 long; and Base64 encoded
 when setting the environment variable.

@@ -261,8 +261,9 @@ defmodule Lightning.Workflows do
     from(e in Edge,
       join: j in Job,
       on: j.id == e.target_job_id,
-      join: t in Trigger,
-      on: e.source_trigger_id == ^trigger_id,
+      left_join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where: t.id == ^trigger_id,
       preload: [:source_trigger, :target_job]
     )
     |> Repo.one()

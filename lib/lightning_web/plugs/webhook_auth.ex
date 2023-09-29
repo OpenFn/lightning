@@ -55,30 +55,26 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   %Plug.Conn{status: 404, ...}
   """
   def call(conn, _opts) do
-    with true <- String.starts_with?(conn.request_path, "/i/"),
-         [_, _, webhook] <- String.split(conn.request_path, "/"),
-         trigger when not is_nil(trigger) <-
-           Workflows.get_trigger_by_webhook(webhook) do
-      validate_auth(conn, trigger)
-    else
-      false -> conn
-      _ -> not_found_response(conn)
+    case conn.path_info do
+      ["i", webhook] ->
+        Workflows.get_trigger_by_webhook(webhook) |> validate_auth(conn)
+
+      _ ->
+        conn
     end
   end
 
-  defp validate_auth(conn, trigger) do
-    auth_methods = WebhookAuthMethods.get_auth_methods_for_trigger(trigger)
-
-    case auth_methods do
+  defp validate_auth(trigger, conn) do
+    case WebhookAuthMethods.list_for_trigger(trigger) do
+      nil -> not_found_response(conn)
+      # no authentication method configured for this trigger
       [] -> successful_response(conn, trigger)
-      _methods -> check_auth(conn, auth_methods, trigger)
+      methods -> check_auth(conn, methods, trigger)
     end
   end
 
   defp successful_response(conn, trigger) do
-    conn
-    |> assign(:trigger, trigger)
-    |> put_status(:ok)
+    assign(conn, :trigger, trigger)
   end
 
   defp check_auth(conn, auth_methods, trigger) do
@@ -117,8 +113,14 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     Enum.any?(methods, &key_matches?(conn, &1))
   end
 
-  defp key_matches?(conn, %WebhookAuthMethod{auth_type: :api} = method) do
-    conn |> get_req_header("x-api-key") |> Enum.member?(Map.values(method))
+  defp key_matches?(
+         conn,
+         %WebhookAuthMethod{auth_type: :api, api_key: key}
+       ) do
+    get_req_header(conn, "x-api-key")
+    |> Enum.any?(fn header_value ->
+      Plug.Crypto.secure_compare(header_value, key)
+    end)
   end
 
   defp key_matches?(_, _), do: false
@@ -127,8 +129,12 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     Enum.any?(methods, &user_matches?(conn, &1))
   end
 
-  defp user_matches?(conn, %WebhookAuthMethod{auth_type: :basic} = method) do
-    encoded = "Basic " <> Base.encode64("#{method.username}:#{method.password}")
+  defp user_matches?(conn, %WebhookAuthMethod{
+         auth_type: :basic,
+         username: username,
+         password: password
+       }) do
+    encoded = "Basic " <> Base.encode64("#{username}:#{password}")
     conn |> get_req_header("authorization") |> Enum.member?(encoded)
   end
 

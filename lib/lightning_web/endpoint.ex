@@ -1,7 +1,8 @@
 defmodule LightningWeb.Endpoint do
   use Sentry.PlugCapture
-
   use Phoenix.Endpoint, otp_app: :lightning
+
+  alias LightningWeb.Plugs
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
@@ -40,6 +41,8 @@ defmodule LightningWeb.Endpoint do
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+
+  plug Plugs.WebhookAuth
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

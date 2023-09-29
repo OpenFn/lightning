@@ -20,7 +20,6 @@ defmodule LightningWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
-    plug LightningWeb.Plugs.WebhookAuth
   end
 
   scope "/", LightningWeb do

@@ -18,10 +18,10 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
   end
 
-  test "responds with 200 when no auth method is configured", %{trigger: trigger} do
+  test "assigns the trigger when no auth method is configured", %{
+    trigger: trigger
+  } do
     conn = conn(:post, "/i/#{trigger.id}") |> WebhookAuth.call([])
-
-    assert conn.status == 200
     assert conn.assigns[:trigger] == trigger |> unload_relation(:workflow)
   end
 
@@ -48,7 +48,7 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
     assert Jason.decode!(conn.resp_body) == %{"error" => "Webhook not found"}
   end
 
-  test "responds with 200 for authenticated request with matching auth_method",
+  test "assigns the trigger for authenticated request with matching auth_method",
        %{trigger: trigger, auth_method: auth_method} do
     associate_auth_method(trigger, auth_method)
 
@@ -61,7 +61,6 @@ defmodule LightningWeb.Plugs.WebhookAuthTest do
       |> put_req_header("authorization", correct_credentials)
       |> WebhookAuth.call([])
 
-    assert conn.status == 200
     assert conn.assigns[:trigger] == trigger |> unload_relation(:workflow)
   end
 
