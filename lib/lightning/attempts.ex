@@ -87,6 +87,14 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
+  def attempt_started(%Attempt{} = attempt) do
+    attempt
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_change(:state, :started)
+    |> Ecto.Changeset.put_change(:started_at, DateTime.utc_now())
+    |> Repo.update()
+  end
+
   @doc """
   Creates a Run for a given attempt and job.
 

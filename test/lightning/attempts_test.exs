@@ -27,7 +27,7 @@ defmodule Lightning.AttemptsTest do
       assert {:ok, queued_attempt} = Attempts.enqueue(attempt)
 
       assert queued_attempt.id == attempt.id
-      assert queued_attempt.state == "available"
+      assert queued_attempt.state == :available
     end
   end
 
@@ -44,7 +44,7 @@ defmodule Lightning.AttemptsTest do
       assert {:ok, [claimed]} = Attempts.claim()
 
       assert claimed.id == attempt.id
-      assert claimed.state == "claimed"
+      assert claimed.state == :claimed
 
       assert {:ok, []} = Attempts.claim()
     end
@@ -67,14 +67,14 @@ defmodule Lightning.AttemptsTest do
       assert {:ok, [claimed_1, claimed_2]} = Attempts.claim(2)
 
       assert claimed_1.id == attempt_1.id
-      assert claimed_1.state == "claimed"
+      assert claimed_1.state == :claimed
       assert claimed_2.id == attempt_2.id
-      assert claimed_2.state == "claimed"
+      assert claimed_2.state == :claimed
 
       assert {:ok, [claimed_3]} = Attempts.claim(2)
 
       assert claimed_3.id == attempt_3.id
-      assert claimed_3.state == "claimed"
+      assert claimed_3.state == :claimed
     end
   end
 
@@ -93,7 +93,7 @@ defmodule Lightning.AttemptsTest do
       assert {:ok, completed} = Attempts.resolve(claimed)
 
       assert completed.id == attempt.id
-      assert completed.state == "resolved"
+      assert completed.state == :resolved
     end
   end
 
@@ -113,7 +113,7 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "start_run/" do
+  describe "start_run/1" do
     test "creates a new run for an attempt" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
@@ -144,6 +144,25 @@ defmodule Lightning.AttemptsTest do
 
       assert Repo.get_by(Lightning.AttemptRun, run_id: run.id),
              "There is a corresponding AttemptRun linking it to the attempt"
+    end
+  end
+
+  describe "complete_run/1" do
+    test "marks a run as finished"
+  end
+
+  describe "attempt_started/1" do
+    test "marks a run as started" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} = Attempts.attempt_started(attempt)
+
+      assert DateTime.utc_now() >= attempt.started_at
     end
   end
 end
