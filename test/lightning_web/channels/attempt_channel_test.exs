@@ -161,7 +161,15 @@ defmodule LightningWeb.AttemptChannelTest do
 
       edges =
         workflow.edges
-        |> Enum.map(&Map.take(&1, [:id]))
+        |> Enum.map(
+          &Map.take(&1, [
+            :id,
+            :source_trigger_id,
+            :source_job_id,
+            :condition,
+            :target_job_id
+          ])
+        )
         |> Enum.map(&stringify_keys/1)
 
       assert payload == %{

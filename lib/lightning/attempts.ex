@@ -114,8 +114,6 @@ defmodule Lightning.Attempts do
     |> then(&insert_run/1)
   end
 
-  defp insert_run({:error, _} = e), do: e
-
   defp insert_run({:ok, params}) do
     Lightning.AttemptRun.changeset(
       %Lightning.AttemptRun{},
@@ -138,6 +136,8 @@ defmodule Lightning.Attempts do
         e
     end
   end
+
+  defp insert_run({:error, _} = e), do: e
 
   defp validate_job_reachable(%{valid?: false} = changeset) do
     changeset
@@ -212,7 +212,7 @@ defmodule Lightning.Attempts do
     end)
   end
 
-  defp update_run(e), do: e
+  defp update_run({:error, _} = e), do: e
 
   def get_project_id_for_attempt(attempt) do
     Ecto.assoc(attempt, [:work_order, :workflow, :project])
