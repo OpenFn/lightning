@@ -78,25 +78,6 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "resolve/1" do
-    test "marks an attempt as completed" do
-      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
-
-      {:ok, %{attempts: [attempt]}} =
-        WorkOrders.create_for(trigger,
-          workflow: workflow,
-          dataclip: params_with_assocs(:dataclip)
-        )
-
-      assert {:ok, [claimed]} = Attempts.claim()
-
-      assert {:ok, completed} = Attempts.resolve(claimed)
-
-      assert completed.id == attempt.id
-      assert completed.state == :resolved
-    end
-  end
-
   describe "dequeue/1" do
     test "removes an attempt from the queue" do
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
@@ -148,10 +129,32 @@ defmodule Lightning.AttemptsTest do
   end
 
   describe "complete_run/1" do
-    test "marks a run as finished"
+    test "marks a run as finished" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      run = insert(:run, attempts: [attempt], job: job, input_dataclip: dataclip)
+
+      {:ok, run} =
+        Attempts.complete_run(%{
+          run_id: run.id,
+          reason: "normal",
+          output_dataclip: ~s({"foo": "bar"}),
+          dataclip_id: Ecto.UUID.generate(),
+          attempt_id: attempt.id,
+          project_id: workflow.project_id
+        })
+
+      assert %{body: %{"foo" => "bar"}} =
+               Lightning.Invocation.get_dataclip!(run.output_dataclip_id)
+    end
   end
 
-  describe "attempt_started/1" do
+  describe "start_attempt/1" do
     test "marks a run as started" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
@@ -160,9 +163,37 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:ok, attempt} = Attempts.attempt_started(attempt)
+      {:ok, attempt} =
+        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+
+      {:ok, attempt} = Attempts.start_attempt(attempt)
 
       assert DateTime.utc_now() >= attempt.started_at
+    end
+  end
+
+  describe "complete_attempt/1" do
+    test "marks an attempt as complete" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:error, changeset} = Attempts.complete_attempt(attempt)
+
+      assert {:state, {"cannot complete attempt that is not started", []}} in changeset.errors
+
+      {:ok, attempt} =
+        Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
+
+      {:ok, attempt} = Attempts.start_attempt(attempt)
+
+      {:ok, attempt} = Attempts.complete_attempt(attempt)
+
+      assert attempt.state == :finished
+      assert DateTime.utc_now() >= attempt.finished_at
     end
   end
 end

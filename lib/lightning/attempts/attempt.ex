@@ -86,6 +86,45 @@ defmodule Lightning.Attempt do
     |> validate()
   end
 
+  def start(attempt) do
+    attempt
+    |> change(
+      state: :started,
+      started_at: DateTime.utc_now()
+    )
+    |> then(fn changeset ->
+      previous_state = changeset.data |> Map.get(:state)
+
+      if previous_state == :claimed do
+        changeset
+      else
+        changeset
+        |> add_error(
+          :state,
+          "cannot complete attempt that is not in a claimed state"
+        )
+      end
+    end)
+  end
+
+  def complete(attempt) do
+    attempt
+    |> change(
+      state: :finished,
+      finished_at: DateTime.utc_now()
+    )
+    |> then(fn changeset ->
+      previous_state = changeset.data |> Map.get(:state)
+
+      if previous_state == :started do
+        changeset
+      else
+        changeset
+        |> add_error(:state, "cannot complete attempt that is not started")
+      end
+    end)
+  end
+
   defp validate(changeset) do
     changeset
     |> assoc_constraint(:work_order)

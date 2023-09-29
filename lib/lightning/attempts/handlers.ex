@@ -131,6 +131,7 @@ defmodule Lightning.Attempts.Handlers do
         :dataclip_id,
         :output_dataclip,
         :project_id,
+        :reason,
         :run_id
       ])
       |> put_change(:finished_at, DateTime.utc_now())
@@ -140,6 +141,7 @@ defmodule Lightning.Attempts.Handlers do
         :finished_at,
         :output_dataclip,
         :project_id,
+        :reason,
         :run_id
       ])
     end
@@ -181,22 +183,8 @@ defmodule Lightning.Attempts.Handlers do
     end
 
     defp update_run(run, complete_run) do
-      attrs =
-        Map.from_struct(complete_run)
-        |> Enum.reduce(%{}, fn {k, v}, acc ->
-          cond do
-            k in [:output_dataclip_id, :finished_at] ->
-              Map.put(acc, k, v)
-
-            k == :reason ->
-              Map.put(acc, :exit_reason, v)
-
-            true ->
-              acc
-          end
-        end)
-
-      Run.changeset(run, attrs)
+      run
+      |> Run.finished(complete_run.dataclip_id, complete_run.reason)
       |> Repo.update()
     end
   end

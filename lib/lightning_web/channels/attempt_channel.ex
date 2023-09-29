@@ -42,7 +42,7 @@ defmodule LightningWeb.AttemptChannel do
 
   def handle_in("fetch:dataclip", _, socket) do
     body =
-      Attempts.get_dataclip(socket.assigns.attempt)
+      Attempts.get_dataclip_body(socket.assigns.attempt)
       |> Jason.Fragment.new()
       |> Phoenix.json_library().encode_to_iodata!()
 
