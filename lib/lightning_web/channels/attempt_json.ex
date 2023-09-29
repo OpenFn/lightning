@@ -30,7 +30,11 @@ defmodule LightningWeb.AttemptJson do
 
   def render(edge = %Edge{}) do
     %{
-      "id" => edge.id
+      "id" => edge.id,
+      "source_trigger_id" => edge.source_trigger_id,
+      "source_job_id" => edge.source_job_id,
+      "condition" => edge.condition,
+      "target_job_id" => edge.target_job_id
     }
   end
 end
