@@ -37,7 +37,7 @@ defmodule Lightning.Attempts.Queue do
       |> select([a, _], a)
 
     updates = [
-      set: [state: "claimed", claimed_at: DateTime.utc_now()]
+      set: [state: :claimed, claimed_at: DateTime.utc_now()]
     ]
 
     Repo.transaction(fn ->
@@ -45,15 +45,6 @@ defmodule Lightning.Attempts.Queue do
 
       jobs
     end)
-  end
-
-  @impl true
-  def resolve(attempt) do
-    attempt
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_change(:state, :resolved)
-    |> Ecto.Changeset.put_change(:resolved_at, DateTime.utc_now())
-    |> Repo.update()
   end
 
   @impl true

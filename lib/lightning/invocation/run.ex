@@ -49,6 +49,15 @@ defmodule Lightning.Invocation.Run do
     |> validate()
   end
 
+  def finished(run, output_dataclip_id, exit_reason) do
+    change(run, %{
+      finished_at: DateTime.utc_now(),
+      output_dataclip_id: output_dataclip_id,
+      exit_reason: exit_reason
+    })
+    |> validate_required([:finished_at, :output_dataclip_id, :exit_reason])
+  end
+
   @doc """
   Creates a new Run changeset, but copies over certain fields.
   This is used to create new runs for retrys.

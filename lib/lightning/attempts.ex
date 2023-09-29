@@ -16,12 +16,10 @@ defmodule Lightning.Attempts do
 
     @callback dequeue(attempt :: Lightning.Attempt.t()) ::
                 {:ok, Lightning.Attempt.t()}
-
-    @callback resolve(attempt :: Lightning.Attempt.t()) ::
-                {:ok, Lightning.Attempt.t()}
   end
 
   alias Lightning.{Repo, Attempt}
+  alias Lightning.Attempts.Handlers
   import Ecto.Query
 
   @behaviour Adaptor
@@ -43,14 +41,6 @@ defmodule Lightning.Attempts do
   @impl true
   def claim(demand \\ 1) do
     adaptor().claim(demand)
-  end
-
-  # @doc """
-  # Marks an attempt as resolved.
-  # """
-  @impl true
-  def resolve(attempt) do
-    adaptor().resolve(attempt)
   end
 
   # @doc """
@@ -80,18 +70,22 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
-  def get_dataclip(attempt = %Attempt{}) do
+  def get_dataclip_body(attempt = %Attempt{}) do
     from(d in Ecto.assoc(attempt, :dataclip),
       select: type(d.body, :string)
     )
     |> Repo.one()
   end
 
-  def attempt_started(%Attempt{} = attempt) do
+  def start_attempt(%Attempt{} = attempt) do
     attempt
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_change(:state, :started)
-    |> Ecto.Changeset.put_change(:started_at, DateTime.utc_now())
+    |> Attempt.start()
+    |> Repo.update()
+  end
+
+  def complete_attempt(%Attempt{} = attempt) do
+    attempt
+    |> Attempt.complete()
     |> Repo.update()
   end
 
@@ -103,13 +97,13 @@ defmodule Lightning.Attempts do
   @spec start_run(%{required(binary()) => Ecto.UUID.t()}) ::
           {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
   def start_run(params) do
-    Lightning.Attempts.Handlers.StartRun.call(params)
+    Handlers.StartRun.call(params)
   end
 
   @spec complete_run(%{required(binary()) => binary()}) ::
           {:ok, %Lightning.Invocation.Run{}} | {:error, Ecto.Changeset.t()}
   def complete_run(params) do
-    Lightning.Attempts.Handlers.CompleteRun.call(params)
+    Handlers.CompleteRun.call(params)
   end
 
   def get_project_id_for_attempt(attempt) do
