@@ -501,7 +501,8 @@ defmodule LightningWeb.AttemptChannelTest do
         push(socket, "run:complete", %{
           "run_id" => run.id,
           "dataclip_id" => Ecto.UUID.generate(),
-          "output_dataclip" => ~s({"foo": "bar"})
+          "output_dataclip" => ~s({"foo": "bar"}),
+          "reason" => "normal"
         })
 
       assert_reply ref, :ok, %{run_id: ^run_id}
