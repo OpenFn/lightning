@@ -28,11 +28,8 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
       add :state, :"public.attempt_state", default: "available", null: false
 
       add :claimed_at, :utc_datetime_usec
-      add :resolved_at, :utc_datetime_usec
-
-      remove :updated_at, :naive_datetime_usec,
-        null: false,
-        default: fragment("now() at time zone 'utc'")
+      add :started_at, :utc_datetime_usec
+      add :finished_at, :utc_datetime_usec
     end
 
     alter table(:attempt_runs) do

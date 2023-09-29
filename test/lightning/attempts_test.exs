@@ -298,7 +298,7 @@ defmodule Lightning.AttemptsTest do
       assert {:ok, completed} = Attempts.resolve(claimed)
 
       assert completed.id == attempt.id
-      assert completed.state == "resolved"
+      assert completed.state == :resolved
     end
   end
 
@@ -318,7 +318,7 @@ defmodule Lightning.AttemptsTest do
     end
   end
 
-  describe "start_run/" do
+  describe "start_run/1" do
     test "creates a new run for an attempt" do
       dataclip = insert(:dataclip)
       %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
@@ -349,6 +349,25 @@ defmodule Lightning.AttemptsTest do
 
       assert Repo.get_by(Lightning.AttemptRun, run_id: run.id),
              "There is a corresponding AttemptRun linking it to the attempt"
+    end
+  end
+
+  describe "complete_run/1" do
+    test "marks a run as finished"
+  end
+
+  describe "attempt_started/1" do
+    test "marks a run as started" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, attempt} = Attempts.attempt_started(attempt)
+
+      assert DateTime.utc_now() >= attempt.started_at
     end
   end
 end
