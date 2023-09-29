@@ -15,7 +15,7 @@ defmodule Lightning.Attempts.Queue do
     subset_query =
       Lightning.Attempt
       |> select([:id])
-      |> where([j], j.state == "available")
+      |> where([j], j.state == :available)
       |> limit(^demand)
       |> order_by(asc: :inserted_at)
       |> lock("FOR UPDATE SKIP LOCKED")
@@ -51,7 +51,7 @@ defmodule Lightning.Attempts.Queue do
   def resolve(attempt) do
     attempt
     |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_change(:state, "resolved")
+    |> Ecto.Changeset.put_change(:state, :resolved)
     |> Ecto.Changeset.put_change(:resolved_at, DateTime.utc_now())
     |> Repo.update()
   end

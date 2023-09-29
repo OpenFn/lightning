@@ -11,7 +11,8 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
                 CREATE TYPE public.attempt_state AS ENUM (
                   'available',
                   'claimed',
-                  'resolved'
+                  'started',
+                  'finished'
                 );
               END IF;
             END$$;
@@ -31,17 +32,29 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
       add :state, :"public.attempt_state", default: "available", null: false
 
       add :claimed_at, :utc_datetime_usec
-      add :resolved_at, :utc_datetime_usec
-
-      remove :updated_at, :naive_datetime_usec,
-        null: false,
-        default: fragment("now() at time zone 'utc'")
+      add :started_at, :utc_datetime_usec
+      add :finished_at, :utc_datetime_usec
     end
 
     create index(:attempts, [:state])
 
+    import Ecto.Query
     # set all existing attempts to "resolved" so that they aren't processed again
-    execute(fn -> repo().update_all("attempts", set: [state: "resolved"]) end, "")
+    execute(
+      fn ->
+        repo().update_all(
+          from(a in "attempts", update: [set: [state: "finished", finished_at: a.updated_at]]),
+          []
+        )
+      end,
+      ""
+    )
+
+    alter table(:attempts) do
+      remove :updated_at, :naive_datetime_usec,
+        null: false,
+        default: fragment("now() at time zone 'utc'")
+    end
 
     alter table(:attempt_runs) do
       remove :updated_at, :naive_datetime_usec,

@@ -39,10 +39,13 @@ defmodule Lightning.Attempt do
 
     many_to_many :runs, Run, join_through: AttemptRun
 
-    field :state, :string, default: "available"
+    field :state, Ecto.Enum,
+      values: [:available, :claimed, :started, :finished],
+      default: :available
 
     field :claimed_at, :utc_datetime_usec
-    field :resolved_at, :utc_datetime_usec
+    field :started_at, :utc_datetime_usec
+    field :finished_at, :utc_datetime_usec
 
     timestamps type: :utc_datetime_usec, updated_at: false
   end
