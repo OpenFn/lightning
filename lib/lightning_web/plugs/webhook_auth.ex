@@ -47,7 +47,7 @@ defmodule LightningWeb.Plugs.WebhookAuth do
   Assuming a request with the path `/i/some_webhook`:
 
   ### Webhook Found and Authenticated
-  ```elixir
+  ```
   iex> LightningWeb.Plugs.WebhookAuth.call(conn, [])
   %Plug.Conn{status: 200, ...}
 
@@ -64,10 +64,10 @@ defmodule LightningWeb.Plugs.WebhookAuth do
     end
   end
 
+  defp validate_auth(nil, conn), do: not_found_response(conn)
+
   defp validate_auth(trigger, conn) do
     case WebhookAuthMethods.list_for_trigger(trigger) do
-      nil -> not_found_response(conn)
-      # no authentication method configured for this trigger
       [] -> successful_response(conn, trigger)
       methods -> check_auth(conn, methods, trigger)
     end

@@ -25,6 +25,7 @@ defmodule Lightning.WebhookAuthMethods do
   """
 
   import Ecto.Query, warn: false
+  alias Lightning.Jobs.Trigger
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WebhookAuthMethod
   alias Lightning.Repo
@@ -112,20 +113,14 @@ defmodule Lightning.WebhookAuthMethods do
   ## Returns
 
   - Returns a list of %WebhookAuthMethod{} associated with the given trigger.
-  - Returns `nil` if the given trigger is `nil`.
 
   ## Examples
 
       iex> Lightning.Workflows.list_for_trigger(trigger)
       [%WebhookAuthMethod{}, ...]
 
-      iex> Lightning.Workflows.list_for_trigger(nil)
-      nil
-
   """
-  def list_for_trigger(nil), do: nil
-
-  def list_for_trigger(trigger) do
+  def list_for_trigger(%Trigger{} = trigger) do
     Ecto.assoc(trigger, :webhook_auth_methods) |> Repo.all()
   end
 

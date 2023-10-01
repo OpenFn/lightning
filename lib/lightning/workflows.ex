@@ -220,7 +220,7 @@ defmodule Lightning.Workflows do
 
   ## Examples
 
-  ```elixir
+  ```
   Lightning.Workflows.get_trigger_by_webhook("some_path_or_id")
   # => %Trigger{id: 1, custom_path: "some_path_or_id", ...}
 
@@ -247,7 +247,7 @@ defmodule Lightning.Workflows do
   - Returns `nil` if no `Edge` is associated with the given `Trigger`.
 
   ## Examples
-  ```elixir
+  ```
   trigger = %Trigger{id: 1, ...}
   Lightning.Workflows.get_edge_by_trigger(trigger)
   # => %Edge{source_trigger: %Trigger{}, target_job: %Job{}, ...}
