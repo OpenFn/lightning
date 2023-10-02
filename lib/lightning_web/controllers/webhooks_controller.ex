@@ -17,7 +17,6 @@ defmodule LightningWeb.WebhooksController do
           attributes: start_opts
         } do
           conn = handle_create(conn, path)
-
           {conn, %{status: Plug.Conn.Status.reason_atom(conn.status)}}
         end
 

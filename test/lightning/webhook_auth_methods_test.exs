@@ -1,10 +1,9 @@
 defmodule Lightning.WebhookAuthMethodsTest do
-  alias Lightning.Workflows.WebhookAuthMethod
   use Lightning.DataCase, async: true
   alias Lightning.WebhookAuthMethods
   import Lightning.Factories
 
-  describe "create_webhook_auth_method/1" do
+  describe "create_auth_method/1" do
     setup do
       project = insert(:project)
 
@@ -46,35 +45,32 @@ defmodule Lightning.WebhookAuthMethodsTest do
       invalid_attrs: invalid_attrs
     } do
       assert {:error, _} =
-               WebhookAuthMethods.create_webhook_auth_method(invalid_attrs)
+               WebhookAuthMethods.create_auth_method(invalid_attrs)
     end
 
     defp assert_creation_with(attrs, auth_type, name, username, password) do
       assert {:ok, auth_method} =
-               WebhookAuthMethods.create_webhook_auth_method(attrs)
+               WebhookAuthMethods.create_auth_method(attrs)
 
       assert auth_method.name == name
       assert auth_method.auth_type == auth_type
       assert auth_method.username == username
 
       if password do
-        assert auth_method |> WebhookAuthMethod.valid_password?(password)
-
-        refute auth_method
-               |> WebhookAuthMethod.valid_password?("another_password")
+        assert auth_method.password == password
       else
-        refute auth_method |> WebhookAuthMethod.valid_password?("password")
+        refute auth_method.password
       end
 
       if auth_type == :api do
-        refute auth_method.api_key == nil
+        assert auth_method.api_key
       else
-        assert auth_method.api_key == nil
+        refute auth_method.api_key
       end
     end
   end
 
-  describe "update_webhook_auth_method/2" do
+  describe "update_auth_method/2" do
     setup do
       auth_method = insert(:webhook_auth_method)
       {:ok, auth_method: auth_method}
@@ -84,7 +80,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
       auth_method: auth_method
     } do
       assert {:ok, new_auth_method} =
-               WebhookAuthMethods.update_webhook_auth_method(auth_method, %{
+               WebhookAuthMethods.update_auth_method(auth_method, %{
                  name: "new_name"
                })
 
@@ -93,36 +89,35 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
     test "returns error when attributes are invalid", %{auth_method: auth_method} do
       assert {:error, _} =
-               WebhookAuthMethods.update_webhook_auth_method(auth_method, %{
+               WebhookAuthMethods.update_auth_method(auth_method, %{
                  name: nil
                })
     end
   end
 
-  describe "list_auth_methods/1" do
+  describe "list_for_project/1" do
     test "lists all webhook auth methods for a given project" do
       project = insert(:project)
       insert_list(3, :webhook_auth_method, project: project)
 
-      assert 3 = length(WebhookAuthMethods.list_auth_methods(project))
+      assert 3 = length(WebhookAuthMethods.list_for_project(project))
     end
 
     test "returns an empty list if there are no auth methods for a given project" do
       project = insert(:project)
-      assert [] = WebhookAuthMethods.list_auth_methods(project)
+      assert [] = WebhookAuthMethods.list_for_project(project)
     end
   end
 
-  describe "get_auth_method_by_api_key/2" do
+  describe "find_by_api_key/2" do
     test "retrieves the auth method by api_key and project_id" do
       auth_method = insert(:webhook_auth_method, api_key: "some_api_key")
 
-      assert WebhookAuthMethods.get_auth_method_by_api_key(
+      assert WebhookAuthMethods.find_by_api_key(
                "some_api_key",
                auth_method.project
              ) ==
                auth_method
-               |> Map.update!(:password, fn _ -> nil end)
                |> unload_relation(:project)
     end
 
@@ -130,7 +125,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
       project = insert(:project)
 
       assert is_nil(
-               WebhookAuthMethods.get_auth_method_by_api_key(
+               WebhookAuthMethods.find_by_api_key(
                  "non_existing_api_key",
                  project
                )
@@ -138,37 +133,12 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "get_auth_method_by_username/2" do
-    test "retrieves the auth method by username and project_id" do
-      auth_method = insert(:webhook_auth_method, username: "some_username")
-
-      assert WebhookAuthMethods.get_auth_method_by_username(
-               "some_username",
-               auth_method.project
-             ) ==
-               auth_method
-               |> Map.update!(:password, fn _ -> nil end)
-               |> unload_relation(:project)
-    end
-
-    test "returns nil if there is no matching auth method" do
-      project = insert(:project)
-
-      assert is_nil(
-               WebhookAuthMethods.get_auth_method_by_username(
-                 "non_existing_username",
-                 project
-               )
-             )
-    end
-  end
-
-  describe "get_auth_method_by_username_and_password/3" do
+  describe "find_by_username_and_password/3" do
     setup do
       project = insert(:project)
 
       {:ok, auth_method} =
-        WebhookAuthMethods.create_webhook_auth_method(%{
+        WebhookAuthMethods.create_auth_method(%{
           name: "my_webhook_auth_method",
           username: "some_username",
           password: "hello password",
@@ -182,7 +152,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
       auth_method: auth_method,
       project: project
     } do
-      assert WebhookAuthMethods.get_auth_method_by_username_and_password(
+      assert WebhookAuthMethods.find_by_username_and_password(
                "some_username",
                "hello password",
                project
@@ -193,7 +163,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
       project: project
     } do
       assert is_nil(
-               WebhookAuthMethods.get_auth_method_by_username_and_password(
+               WebhookAuthMethods.find_by_username_and_password(
                  "some_username",
                  "invalid_password",
                  project
@@ -202,24 +172,18 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "get_auth_method!/2" do
-    test "retrieves the auth method by id and project_id" do
+  describe "find_by_id!/2" do
+    test "retrieves the auth method by id" do
       auth_method = insert(:webhook_auth_method)
 
-      assert WebhookAuthMethods.get_auth_method!(
-               auth_method.id,
-               auth_method.project
-             ) ==
+      assert WebhookAuthMethods.find_by_id!(auth_method.id) ==
                auth_method
-               |> Map.update!(:password, fn _ -> nil end)
                |> unload_relation(:project)
     end
 
     test "raises an error if there is no matching auth method" do
-      project = insert(:project)
-
       assert_raise Ecto.NoResultsError, fn ->
-        WebhookAuthMethods.get_auth_method!(Ecto.UUID.generate(), project)
+        WebhookAuthMethods.find_by_id!(Ecto.UUID.generate())
       end
     end
   end
