@@ -198,6 +198,8 @@ defmodule Lightning.Pipeline.Runner do
           run :: Invocation.Run.t()
         ) ::
           {:ok, Invocation.Dataclip.t()} | {:error, any}
+  # false positive, it's the output.json temp file
+  # sobelow_skip ["Traversal.FileModule"]
   def create_dataclip_from_result(%Lightning.Runtime.Result{} = result, run) do
     with {:ok, data} <- File.read(result.final_state_path),
          {:ok, body} <- Jason.decode(data) do

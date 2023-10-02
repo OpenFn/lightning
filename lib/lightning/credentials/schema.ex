@@ -23,6 +23,8 @@ defmodule Lightning.Credentials.Schema do
           __MODULE__.t()
   def new(body, name \\ nil)
 
+  # can be ignored since not near to atom limit
+  # sobelow_skip ["DOS.StringToAtom"]
   def new(json_schema, name) when is_map(json_schema) do
     fields =
       json_schema["properties"]
@@ -93,12 +95,15 @@ defmodule Lightning.Credentials.Schema do
     end
   end
 
+  # can be ignored since not near to atom limit
+  # sobelow_skip ["DOS.StringToAtom"]
   defp get_types(root) do
     root.schema
     |> Map.get("properties", [])
-    |> Enum.map(fn {k, properties} ->
-      {k |> String.to_atom(),
-       Map.get(properties, "type", "string") |> String.to_atom()}
+    |> Enum.map(fn {field, properties} ->
+      type = properties |> Map.get("type", "string") |> String.to_atom()
+
+      {String.to_existing_atom(field), type}
     end)
     |> Map.new()
   end
