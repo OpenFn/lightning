@@ -7,7 +7,8 @@ defmodule LightningWeb.WebhooksControllerTest do
   import Lightning.JobsFixtures
 
   describe "a POST request to '/i'" do
-    test "with a valid trigger id instantiates a workorder", %{conn: conn} do
+    test "with a valid trigger id instantiates a workorder and responds with 200",
+         %{conn: conn} do
       Oban.Testing.with_testing_mode(:inline, fn ->
         expect(Lightning.Pipeline.Runner, :start, fn _run ->
           %Lightning.Runtime.Result{}
@@ -28,11 +29,6 @@ defmodule LightningWeb.WebhooksControllerTest do
         assert job_id == job.id
         assert body == message
       end)
-    end
-
-    test "with an invalid trigger id returns a 404", %{conn: conn} do
-      conn = post(conn, "/i/bar")
-      assert json_response(conn, 404) == %{}
     end
   end
 

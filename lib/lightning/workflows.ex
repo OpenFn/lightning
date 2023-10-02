@@ -209,6 +209,67 @@ defmodule Lightning.Workflows do
   end
 
   @doc """
+  Gets a single `Trigger` by its `custom_path` or `id`.
+
+  ## Parameters
+  - `path`: A binary string representing the `custom_path` or `id` of the trigger.
+
+  ## Returns
+  - Returns a `Trigger` struct if a trigger is found.
+  - Returns `nil` if no trigger is found for the given `path`.
+
+  ## Examples
+
+  ```
+  Lightning.Workflows.get_trigger_by_webhook("some_path_or_id")
+  # => %Trigger{id: 1, custom_path: "some_path_or_id", ...}
+
+  Lightning.Workflows.get_trigger_by_webhook("non_existent_path_or_id")
+  # => nil
+  ```
+  """
+  def get_trigger_by_webhook(path) when is_binary(path) do
+    from(t in Trigger,
+      where:
+        fragment("coalesce(?, ?)", t.custom_path, type(t.id, :string)) == ^path
+    )
+    |> Repo.one()
+  end
+
+  @doc """
+  Gets an `Edge` by its associated `Trigger`.
+
+  ## Parameters
+  - `%Trigger{id: trigger_id}`: A `Trigger` struct from which the associated `Edge` is to be found.
+
+  ## Returns
+  - Returns an `Edge` struct preloaded with its `source_trigger` and `target_job` if found.
+  - Returns `nil` if no `Edge` is associated with the given `Trigger`.
+
+  ## Examples
+  ```
+  trigger = %Trigger{id: 1, ...}
+  Lightning.Workflows.get_edge_by_trigger(trigger)
+  # => %Edge{source_trigger: %Trigger{}, target_job: %Job{}, ...}
+
+  non_existent_trigger = %Trigger{id: 999, ...}
+  Lightning.Workflows.get_edge_by_trigger(non_existent_trigger)
+  # => nil
+  ```
+  """
+  def get_edge_by_trigger(%Trigger{id: trigger_id}) do
+    from(e in Edge,
+      join: j in Job,
+      on: j.id == e.target_job_id,
+      left_join: t in Trigger,
+      on: e.source_trigger_id == t.id,
+      where: t.id == ^trigger_id,
+      preload: [:source_trigger, :target_job]
+    )
+    |> Repo.one()
+  end
+
+  @doc """
   Returns a list of edges with jobs to execute, given a current timestamp in Unix. This is
   used by the scheduler, which calls this function once every minute.
   """
