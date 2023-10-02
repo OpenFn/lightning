@@ -49,6 +49,8 @@ defmodule Lightning.MetadataService do
     end
   end
 
+  # false positive, adaptor is resolved by a regex and given by a install function
+  # sobelow_skip ["Traversal.FileModule"]
   defp do_fetch(adaptor, credential) do
     with {:ok, {adaptor, state}} <- assemble_args(adaptor, credential),
          {:ok, adaptor_path} <- get_adaptor_path(adaptor),

@@ -97,6 +97,8 @@ defmodule LightningWeb.ProfileLive.MfaComponent do
     end
   end
 
+  # NimbleTOTP.otpauth_uri is a safe function
+  # sobelow_skip ["XSS.Raw"]
   defp generate_qrcode(uri) do
     uri
     |> EQRCode.encode()

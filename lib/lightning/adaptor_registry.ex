@@ -116,6 +116,8 @@ defmodule Lightning.AdaptorRegistry do
     end
   end
 
+  # false positive, it's a file from init
+  # sobelow_skip ["Traversal.FileModule"]
   defp write_to_cache(path, adaptors) when is_binary(path) do
     File.mkdir("tmp")
     cache_file = File.open!(path, [:write])
@@ -125,11 +127,12 @@ defmodule Lightning.AdaptorRegistry do
     adaptors
   end
 
+  # false positive, it's a file from init
+  # sobelow_skip ["Traversal.FileModule"]
   defp read_from_cache(path) when is_binary(path) do
     File.read(path)
     |> case do
-      # credo:disable-for-next-line
-      {:ok, file} -> Jason.decode!(file, keys: :atoms)
+      {:ok, file} -> Jason.decode!(file, keys: :atoms!)
       {:error, _} -> nil
     end
   end
