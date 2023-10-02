@@ -6,10 +6,20 @@ defmodule Lightning.WorkOrder do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import EctoEnum
+  alias Lightning.WorkOrder.StatesEnum
   alias Lightning.Workflows.Workflow
   alias Lightning.Workflows.Trigger
   alias Lightning.Invocation.Dataclip
   alias Lightning.{InvocationReason, Attempt}
+
+  defenum(StatesEnum, :state, [
+    :success,
+    :failure,
+    :timeout,
+    :killed,
+    :crash
+  ])
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -23,6 +33,8 @@ defmodule Lightning.WorkOrder do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "work_orders" do
+    field :state, StatesEnum, default: :success
+
     belongs_to :workflow, Workflow
 
     belongs_to :trigger, Trigger
@@ -43,8 +55,8 @@ defmodule Lightning.WorkOrder do
   @doc false
   def changeset(attempt, attrs) do
     attempt
-    |> cast(attrs, [:reason_id, :workflow_id])
-    |> validate_required([:reason_id, :workflow_id])
+    |> cast(attrs, [:state, :reason_id, :workflow_id])
+    |> validate_required([:state, :reason_id, :workflow_id])
     |> validate()
   end
 
