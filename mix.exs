@@ -36,7 +36,7 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -59,6 +59,7 @@ defmodule Lightning.MixProject do
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.3", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
+      {:ecto_psql_extras, "~> 0.7.14"},
       {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
