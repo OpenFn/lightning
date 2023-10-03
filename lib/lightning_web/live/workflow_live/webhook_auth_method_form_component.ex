@@ -160,7 +160,13 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         </:subtitle>
 
         <%= if @webhook_auth_method.auth_type do %>
-          <.form :let={f} for={@changeset} phx-submit="save" phx-target={@myself}>
+          <.form
+            :let={f}
+            id={"form_#{@id}"}
+            for={@changeset}
+            phx-submit="save"
+            phx-target={@myself}
+          >
             <%= case @webhook_auth_method.auth_type do %>
               <% :basic -> %>
                 <.input
@@ -196,7 +202,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                   <div class="mt-2 flex rounded-md shadow-sm">
                     <input
                       type="text"
-                      id="api_key"
+                      id={"api_key_#{@id}"}
                       class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
                       value={@webhook_auth_method.api_key}
                       disabled="disabled"
@@ -235,6 +241,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         <% else %>
           <.form
             :let={f}
+            id={"form_#{@id}"}
             for={@changeset}
             phx-change="validate"
             phx-submit="choose_auth_type"

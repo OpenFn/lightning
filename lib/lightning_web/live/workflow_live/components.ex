@@ -574,7 +574,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div class="px-1.5 sm:px-6 lg:px-8">
       <div class="flow-root">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+          <div class="inline-block min-w-full py-2 align-middle sm:px-2">
             <table class="min-w-full table-fixed divide-y divide-gray-300">
               <thead>
                 <tr>
@@ -646,13 +646,11 @@ defmodule LightningWeb.WorkflowLive.Components do
                   <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     <%= Enum.count(auth_method.triggers) %>
                   </td>
-                  <td class="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
+                  <td class="py-4 pl-3 pr-4 text-sm font-medium sm:pr-3">
                     <a
                       href="#"
-                      class="text-indigo-600 hover:text-indigo-900"
-                      phx-click={
-                        show_modal("#{auth_method.id}_edit_webhook_auth_modal")
-                      }
+                      class="text-indigo-600 hover:text-indigo-900 text-right"
+                      phx-click={show_modal("webhook_edit_modal_#{auth_method.id}")}
                     >
                       Edit<span class="sr-only">, <%= auth_method.name %></span>
                     </a>
@@ -660,7 +658,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                       module={
                         LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent
                       }
-                      id={"#{auth_method.id}_edit_webhook_auth_modal"}
+                      id={"webhook_edit_modal_#{auth_method.id}"}
                       action={:edit}
                       return_to={@edit_return_path}
                       webhook_auth_method={auth_method}
