@@ -83,9 +83,9 @@ defmodule Lightning.Attempts do
     |> Repo.update()
   end
 
-  def complete_attempt(%Attempt{} = attempt) do
+  def complete_attempt(%Attempt{} = attempt, status) do
     attempt
-    |> Attempt.complete()
+    |> Attempt.complete(status)
     |> Repo.update()
   end
 
