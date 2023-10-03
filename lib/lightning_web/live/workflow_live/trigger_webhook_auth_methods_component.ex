@@ -3,21 +3,24 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
 
   use LightningWeb, :live_component
 
+  alias Lightning.Repo
   alias Lightning.WebhookAuthMethods
 
   @impl true
   def update(%{project: project, trigger: trigger} = assigns, socket) do
-    trigger = Lightning.Repo.preload(trigger, :webhook_auth_methods)
-    project_auth_methods = WebhookAuthMethods.list_for_project(project)
+    trigger = Repo.preload(trigger, :webhook_auth_methods)
+
+    project_auth_methods =
+      project |> WebhookAuthMethods.list_for_project() |> Repo.preload(:triggers)
 
     project_selections =
       Enum.into(project_auth_methods, %{}, fn auth_method ->
-        {auth_method.id, false}
+        {auth_method.id, "false"}
       end)
 
     trigger_selections =
       Enum.into(trigger.webhook_auth_methods, %{}, fn auth_method ->
-        {auth_method.id, true}
+        {auth_method.id, "true"}
       end)
 
     selections = Map.merge(project_selections, trigger_selections)
@@ -33,9 +36,45 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
   end
 
   @impl true
+  def handle_event(
+        "update_selection",
+        %{"webhook_auth_methods" => selections},
+        socket
+      ) do
+    {:noreply, assign(socket, selections: selections)}
+  end
+
+  def handle_event(
+        "save",
+        %{"webhook_auth_methods" => selections},
+        %{assigns: assigns} = socket
+      ) do
+    selected_auth_method_ids =
+      selections
+      |> Enum.filter(fn {_key, value} -> value == "true" end)
+      |> Enum.map(fn {key, _value} -> key end)
+
+    auth_methods =
+      Enum.filter(assigns.project_auth_methods, fn auth_method ->
+        auth_method.id in selected_auth_method_ids
+      end)
+
+    {:ok, _trigger} =
+      WebhookAuthMethods.update_trigger_auth_methods(
+        assigns.trigger,
+        auth_methods
+      )
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Webhook credentials updated successfully")
+     |> push_navigate(to: socket.assigns.return_to)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
-    <div>
+    <div class="text-xs">
       <.modal id={@id}>
         <:title>
           <div class="flex justify-between">
@@ -55,8 +94,10 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
         </:title>
         <.form
           :let={f}
+          id="update_trigger_webhook_auth_methods"
           for={to_form(@selections, as: :webhook_auth_methods)}
           phx-submit="save"
+          phx-change="update_selection"
           phx-target={@myself}
         >
           <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
@@ -64,11 +105,11 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
             edit_return_path={@return_to}
             select_form={f}
           />
-          <div class="mt-2 px-4 flex justify-between align-center sm:px-6">
-            <div>
+          <div class="mt-2 px-4 flex justify-between content-center sm:px-6">
+            <div class="flex flex-wrap">
               <.link
                 href="#"
-                class="text-indigo-400 underline"
+                class="inline-flex content-center text-indigo-400 underline"
                 phx-click={show_modal("new_trigger_webhook_auth_method_modal")}
               >
                 Create a new webhook credential
