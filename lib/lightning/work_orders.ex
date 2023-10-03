@@ -29,6 +29,7 @@ defmodule Lightning.WorkOrders do
   Workorder.
   """
 
+  alias Lightning.WorkOrders.Query
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Workflows.Workflow
   alias Lightning.Accounts.User
@@ -175,6 +176,13 @@ defmodule Lightning.WorkOrders do
 
   def retry(attempt, run, opts) do
     retry(attempt.id, run.id, opts)
+  end
+
+  @spec update_state(WorkOrder.t(), Attempt.t()) ::
+          {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
+  def update_state(%WorkOrder{} = _work_order, %Attempt{} = attempt) do
+    Query.state_for(attempt)
+    |> Repo.one()
   end
 
   @doc """

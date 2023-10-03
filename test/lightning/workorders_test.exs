@@ -190,4 +190,18 @@ defmodule Lightning.WorkOrdersTest do
       assert runs |> Enum.map(& &1.id) == [first_run.id]
     end
   end
+
+  describe "update_state/1" do
+    test "sets the workorders state to running if there are any started attempts" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [_attempt]} =
+        work_order =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      WorkOrders.update_state(work_order)
+    end
+  end
 end

@@ -51,7 +51,8 @@ defmodule Lightning.WorkOrders.Query do
       |> where(
         [a],
         a.work_order_id == ^attempt.work_order_id and
-          a.state in ^@unfinished_state_order
+          a.state in ^@unfinished_state_order and
+          a.id != ^attempt.id
       )
       |> select([a, o], %{state: a.state, ord: o.ord})
 

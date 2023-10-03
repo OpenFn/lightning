@@ -115,12 +115,11 @@ defmodule Lightning.Attempt do
     end)
   end
 
-  def complete(attempt) do
+  def complete(attempt, state) do
     attempt
-    |> change(
-      state: :finished,
-      finished_at: DateTime.utc_now()
-    )
+    |> cast(%{state: state}, [:state])
+    |> change(finished_at: DateTime.utc_now())
+    |> validate_inclusion(:state, [:success, :failed, :killed, :crashed])
     |> then(fn changeset ->
       previous_state = changeset.data |> Map.get(:state)
 
