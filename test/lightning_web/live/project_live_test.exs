@@ -508,7 +508,14 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      Process.sleep(15)
+      Enum.take_while(0..30, fn _index ->
+        if render(view) =~ "has not been properly configured" do
+          false
+        else
+          Process.sleep(1)
+          true
+        end
+      end)
 
       assert render(view) =~
                "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
