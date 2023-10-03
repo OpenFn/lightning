@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.Components do
   @moduledoc false
+  alias Lightning.Jobs.Trigger
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
@@ -196,10 +197,8 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
         </div>
         <div class="px-4 py-5 sm:p-6">
-          <div class="md:grid md:grid-cols-6 md:gap-4 @container">
-            <div class="col-span-6">
-              <%= render_slot(@inner_block) %>
-            </div>
+          <div class="md:gap-4">
+            <%= render_slot(@inner_block) %>
           </div>
         </div>
         <div :if={Enum.any?(@footer)} class="p-3">
@@ -264,6 +263,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :disabled, :boolean, required: true
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
+  attr :selected_trigger, Trigger, required: true
+  attr :project, :map, required: true
 
   def trigger_form(%{form: form} = assigns) do
     assigns =
@@ -274,8 +275,21 @@ defmodule LightningWeb.WorkflowLive.Components do
 
     ~H"""
     <% Phoenix.HTML.Form.hidden_inputs_for(@form) %>
-    <div class="col-span-6 @md:col-span-4">
-      <%= Phoenix.HTML.Form.label @form, :type, class: "col-span-4 @md:col-span-2" do %>
+    <div class="">
+      <.input
+        type="select"
+        id="triggerType"
+        field={@form[:type]}
+        label="Trigger type"
+        class=""
+        options={[
+          "Cron Schedule (UTC)": "cron",
+          "Webhook Event": "webhook"
+        ]}
+        disabled={@disabled}
+      />
+
+      <%!-- <%= Phoenix.HTML.Form.label @form, :type, class: "col-span-4 @md:col-span-2" do %>
         <div class="flex flex-row">
           <span class="text-sm font-medium text-secondary-700">
             Type
@@ -297,7 +311,7 @@ defmodule LightningWeb.WorkflowLive.Components do
           ]}
           disabled={@disabled}
         />
-      <% end %>
+      <% end %> --%>
       <%= case @type do %>
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
@@ -311,7 +325,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :webhook -> %>
-          <div class="col-span-4 @md:col-span-2 text-right text-">
+          <div class="">
             <a
               id="copyWebhookUrl"
               href={@webhook_url}
@@ -322,6 +336,68 @@ defmodule LightningWeb.WorkflowLive.Components do
             >
               Copy webhook url
             </a>
+          </div>
+          <div>
+            <div class="flex flex-row">
+              <span class="text-sm font-medium text-secondary-700">
+                Webhook Authentication
+              </span>
+              <Common.tooltip
+                id="webhook-authentication-tooltip"
+                title="Add an extra layer of security with Webhook authentication."
+                class="inline-block"
+              />
+            </div>
+            <div class="text-xs">
+              <%= if length(@selected_trigger.webhook_auth_methods) == 0 do %>
+                <p>
+                  Add an extra layer of security with Webhook authentication.
+                  <.link
+                    href="#"
+                    class="text-indigo-400 underline"
+                    phx-click={show_modal("new_webhook_auth_method_modal")}
+                  >
+                    Add authentication
+                  </.link>
+                </p>
+              <% else %>
+                <ul class="list-disc p-2">
+                  <li :for={auth_method <- @selected_trigger.webhook_auth_methods}>
+                    <%= auth_method.name %> (<%= auth_method.auth_type %>)
+                  </li>
+                </ul>
+
+                <div>
+                  <.link
+                    href="#"
+                    class="text-indigo-400 underline"
+                    phx-click={
+                      show_modal(
+                        "#{@selected_trigger.id}_webhook_auth_methods_modal"
+                      )
+                    }
+                  >
+                    Manage authentication
+                  </.link>
+
+                  <.live_component
+                    module={
+                      LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent
+                    }
+                    id={"#{@selected_trigger.id}_webhook_auth_methods_modal"}
+                    action={:new}
+                    trigger={@selected_trigger}
+                    project={@project}
+                    return_to={
+                      ~p"/projects/#{@project.id}/w/#{@selected_trigger.workflow_id}?#{%{s: @selected_trigger.id}}"
+                    }
+                    webhook_auth_method={
+                      %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
+                    }
+                  />
+                </div>
+              <% end %>
+            </div>
           </div>
       <% end %>
     </div>
@@ -508,6 +584,122 @@ defmodule LightningWeb.WorkflowLive.Components do
         class="panel-content min-h-0 min-w-0 flex-1 pt-2"
       >
         <%= render_slot(@inner_block) %>
+      </div>
+    </div>
+    """
+  end
+
+  attr :auth_methods, :list, required: true
+  attr :edit_return_path, :string, required: true
+  attr :select_form, :map
+
+  def webhook_auth_methods_table(assigns) do
+    assigns =
+      assign(assigns,
+        auth_methods: Lightning.Repo.preload(assigns.auth_methods, :triggers)
+      )
+
+    ~H"""
+    <div class="px-1.5 sm:px-6 lg:px-8">
+      <div class="flow-root">
+        <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+            <table class="min-w-full table-fixed divide-y divide-gray-300">
+              <thead>
+                <tr>
+                  <th
+                    :if={@select_form}
+                    scope="col"
+                    class="relative px-7 sm:w-12 sm:px-6"
+                  >
+                    <span class="sr-only">Select</span>
+                  </th>
+                  <th
+                    scope="col"
+                    class="min-w-[12rem] py-3.5 pr-3 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Name
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Auth Type
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                  >
+                    Triggers Linked
+                  </th>
+                  <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-3">
+                    <span class="sr-only">Edit</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white">
+                <tr
+                  :for={auth_method <- @auth_methods}
+                  class={
+                    if(Phoenix.HTML.Form.input_value(@select_form, auth_method.id),
+                      do: "bg-gray-50",
+                      else: ""
+                    )
+                  }
+                >
+                  <td :if={@select_form} class="relative px-7 sm:w-12 sm:px-6">
+                    <div
+                      :if={
+                        Phoenix.HTML.Form.input_value(@select_form, auth_method.id)
+                      }
+                      class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"
+                    >
+                    </div>
+                    <%= Phoenix.HTML.Form.checkbox(@select_form, auth_method.id,
+                      class:
+                        "absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                    ) %>
+                  </td>
+                  <td class={[
+                    "whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900",
+                    if(Phoenix.HTML.Form.input_value(@select_form, auth_method.id),
+                      do: "text-indigo-600",
+                      else: "text-gray-900"
+                    )
+                  ]}>
+                    <%= auth_method.name %>
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    <%= auth_method.auth_type %>
+                  </td>
+                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    <%= Enum.count(auth_method.triggers) %>
+                  </td>
+                  <td class="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-3">
+                    <a
+                      href="#"
+                      class="text-indigo-600 hover:text-indigo-900"
+                      phx-click={
+                        show_modal("#{auth_method.id}_edit_webhook_auth_modal")
+                      }
+                    >
+                      Edit<span class="sr-only">, <%= auth_method.name %></span>
+                    </a>
+                    <.live_component
+                      module={
+                        LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent
+                      }
+                      id={"#{auth_method.id}_edit_webhook_auth_modal"}
+                      action={:edit}
+                      return_to={@edit_return_path}
+                      webhook_auth_method={auth_method}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
     """

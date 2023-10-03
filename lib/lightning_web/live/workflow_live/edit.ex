@@ -1,5 +1,6 @@
 defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
+  alias Lightning.Jobs.Trigger
   use LightningWeb, :live_view
 
   alias Lightning.Policies.Permissions
@@ -238,6 +239,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   on_change={&send_form_changed/1}
                   disabled={!@can_edit_job}
                   webhook_url={webhook_url(@selected_trigger)}
+                  selected_trigger={@selected_trigger}
+                  project={@project}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -266,6 +269,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
             </.panel>
           </.single_inputs_for>
         </.form>
+
+        <.live_component
+          :if={@selected_trigger}
+          module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+          id="new_webhook_auth_method_modal"
+          action={:new}
+          trigger={@selected_trigger}
+          return_to={
+            ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
+          }
+          webhook_auth_method={
+            %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
+          }
+        />
       </div>
     </LayoutComponents.page_content>
     """
@@ -922,6 +939,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         %Job{} = job ->
           {:halt, [field, job |> Lightning.Repo.preload(:credential)]}
+
+        %Trigger{} = trigger ->
+          {:halt,
+           [field, Lightning.Repo.preload(trigger, :webhook_auth_methods)]}
 
         item ->
           {:halt, [field, item]}

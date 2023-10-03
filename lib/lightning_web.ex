@@ -108,6 +108,7 @@ defmodule LightningWeb do
       # Import LiveView and .heex helpers (live_render, live_patch, <.form>, etc)
       import LightningWeb.LiveHelpers
       import LightningWeb.CoreComponents
+      import LightningWeb.Components.Modal
       alias LightningWeb.LayoutComponents
 
       # Import basic rendering functionality (render, render_layout, etc)

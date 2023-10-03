@@ -48,6 +48,15 @@ defmodule Lightning.WebhookAuthMethods do
     |> Repo.insert()
   end
 
+  @spec create_auth_method(Trigger.t(), map()) ::
+          {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
+  def create_auth_method(%Trigger{} = trigger, params) do
+    %WebhookAuthMethod{}
+    |> WebhookAuthMethod.changeset(params)
+    |> Ecto.Changeset.put_assoc(:triggers, [trigger])
+    |> Repo.insert()
+  end
+
   @doc """
   Updates a `WebhookAuthMethod`.
 
@@ -65,7 +74,7 @@ defmodule Lightning.WebhookAuthMethods do
         attrs
       ) do
     webhook_auth_method
-    |> WebhookAuthMethod.changeset(attrs)
+    |> WebhookAuthMethod.update_changeset(attrs)
     |> Repo.update()
   end
 
