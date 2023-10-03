@@ -6,39 +6,66 @@ defmodule Lightning.WorkOrders.QueryTest do
   import Lightning.Factories
 
   describe "state_for/1" do
-    test "when the attempt is the only one" do
+    setup do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
       work_order = insert(:workorder, workflow: workflow, dataclip: dataclip)
 
+      %{work_order: work_order, trigger: trigger, dataclip: dataclip}
+    end
+
+    test "when the attempt is the only one", context do
       first_attempt =
         insert(:attempt,
-          work_order: work_order,
-          dataclip: dataclip,
-          starting_trigger: trigger
+          work_order: context.work_order,
+          dataclip: context.dataclip,
+          starting_trigger: context.trigger
         )
 
       assert Query.state_for(first_attempt) |> Repo.one() == :pending
 
       Repo.update(change(first_attempt, state: :claimed))
 
-      second_attempt =
+      assert Query.state_for(first_attempt) |> Repo.one() == :pending
+
+      Repo.update(change(first_attempt, state: :started))
+
+      assert Query.state_for(first_attempt) |> Repo.one() == :running
+
+      for state <- [:success, :failed, :killed, :crashed] do
+        Repo.update(change(first_attempt, state: state))
+
+        assert Query.state_for(first_attempt) |> Repo.one() == state
+      end
+    end
+
+    test "when there are more than one attempt", context do
+      _first_attempt =
         insert(:attempt,
-          work_order: work_order,
-          dataclip: dataclip,
-          starting_trigger: trigger
+          work_order: context.work_order,
+          dataclip: context.dataclip,
+          starting_trigger: context.trigger,
+          state: :success
         )
 
-      assert Query.state_for(second_attempt) |> Repo.one() == :pending
+      _second_attempt =
+        insert(:attempt,
+          work_order: context.work_order,
+          dataclip: context.dataclip,
+          starting_trigger: context.trigger,
+          state: :started
+        )
 
-      Repo.update(change(first_attempt, state: :success))
+      third_attempt =
+        insert(:attempt,
+          work_order: context.work_order,
+          dataclip: context.dataclip,
+          starting_trigger: context.trigger,
+          state: :available
+        )
 
-      assert Query.state_for(second_attempt) |> Repo.one() == :pending
-
-      Repo.update(change(second_attempt, state: :failed))
-
-      assert Query.state_for(second_attempt) |> Repo.one() == :failed
+      assert Query.state_for(third_attempt) |> Repo.one() == :running
     end
   end
 end
