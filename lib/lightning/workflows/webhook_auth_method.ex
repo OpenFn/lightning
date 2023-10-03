@@ -27,15 +27,19 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @type t :: %__MODULE__{}
+
   @auth_types [:basic, :api]
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+
   schema "webhook_auth_methods" do
     field :name, :string
-    field :auth_type, Ecto.Enum, values: @auth_types, default: :basic
+    field :auth_type, Ecto.Enum, values: @auth_types
     field :username, Lightning.Encrypted.Binary
     field :password, Lightning.Encrypted.Binary
     field :api_key, Lightning.Encrypted.Binary
+    field :is_selected, :boolean, virtual: true
 
     belongs_to :project, Lightning.Projects.Project
 
@@ -52,7 +56,9 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
       :auth_type,
       :username,
       :password,
-      :project_id
+      :project_id,
+      :api_key,
+      :is_selected
     ])
     |> validate_required([:name, :auth_type, :project_id])
     |> validate_auth_fields()
@@ -61,6 +67,12 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
       name: "webhook_auth_methods_name_project_id_index",
       message: "must be unique within the project"
     )
+  end
+
+  def update_changeset(struct, params) do
+    struct
+    |> cast(params, [:name])
+    |> validate_required([:name])
   end
 
   defp validate_auth_fields(changeset) do
@@ -74,17 +86,22 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
         changeset
         |> delete_change(:username)
         |> delete_change(:password)
-        |> generate_api_key(32)
+        |> maybe_add_api_key()
 
       _ ->
         changeset
     end
   end
 
-  defp generate_api_key(changeset, api_key_length) do
-    api_key =
-      :crypto.strong_rand_bytes(api_key_length) |> Base.encode16(case: :lower)
+  defp maybe_add_api_key(changeset) do
+    if changeset.valid? and !get_field(changeset, :api_key) do
+      put_change(changeset, :api_key, generate_api_key())
+    else
+      changeset
+    end
+  end
 
-    put_change(changeset, :api_key, api_key)
+  def generate_api_key(length \\ 32) do
+    length |> :crypto.strong_rand_bytes() |> Base.encode16(case: :lower)
   end
 end
