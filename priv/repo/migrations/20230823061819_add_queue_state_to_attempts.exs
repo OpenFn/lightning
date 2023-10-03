@@ -12,7 +12,10 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
                   'available',
                   'claimed',
                   'started',
-                  'finished'
+                  'success',
+                  'failed',
+                  'killed',
+                  'crashed'
                 );
               END IF;
             END$$;
@@ -43,7 +46,7 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
     execute(
       fn ->
         repo().update_all(
-          from(a in "attempts", update: [set: [state: "finished", finished_at: a.updated_at]]),
+          from(a in "attempts", update: [set: [state: "success", finished_at: a.updated_at]]),
           []
         )
       end,

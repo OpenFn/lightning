@@ -108,7 +108,7 @@ defmodule Lightning.Attempts do
 
   def get_project_id_for_attempt(attempt) do
     Ecto.assoc(attempt, [:work_order, :workflow, :project])
-    |> Ecto.Query.select([p], p.id)
+    |> select([p], p.id)
     |> Repo.one()
   end
 
