@@ -187,7 +187,7 @@ defmodule LightningWeb.Router do
     import Phoenix.LiveDashboard.Router
 
     scope "/" do
-      pipe_through :browser
+      pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
       live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
     end
