@@ -37,7 +37,8 @@ defmodule Lightning.Jobs.Trigger do
     field :delete, :boolean, virtual: true
 
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
-      join_through: "trigger_webhook_auth_methods"
+      join_through: "trigger_webhook_auth_methods",
+      on_replace: :delete
 
     timestamps()
   end

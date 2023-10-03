@@ -251,7 +251,6 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
   attr :selected_trigger, Trigger, required: true
-  attr :project, :map, required: true
 
   def trigger_form(assigns) do
     assigns =
@@ -365,22 +364,6 @@ defmodule LightningWeb.WorkflowLive.Components do
                   >
                     Manage authentication
                   </.link>
-
-                  <.live_component
-                    module={
-                      LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent
-                    }
-                    id={"#{@selected_trigger.id}_webhook_auth_methods_modal"}
-                    action={:new}
-                    trigger={@selected_trigger}
-                    project={@project}
-                    return_to={
-                      ~p"/projects/#{@project.id}/w/#{@selected_trigger.workflow_id}?#{%{s: @selected_trigger.id}}"
-                    }
-                    webhook_auth_method={
-                      %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
-                    }
-                  />
                 </div>
               <% end %>
             </div>
@@ -612,7 +595,9 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <tr
                   :for={auth_method <- @auth_methods}
                   class={
-                    if(Phoenix.HTML.Form.input_value(@select_form, auth_method.id),
+                    if(
+                      Phoenix.HTML.Form.input_value(@select_form, auth_method.id) ==
+                        "true",
                       do: "bg-gray-50",
                       else: ""
                     )
@@ -621,7 +606,8 @@ defmodule LightningWeb.WorkflowLive.Components do
                   <td :if={@select_form} class="relative px-7 sm:w-12 sm:px-6">
                     <div
                       :if={
-                        Phoenix.HTML.Form.input_value(@select_form, auth_method.id)
+                        Phoenix.HTML.Form.input_value(@select_form, auth_method.id) ==
+                          "true"
                       }
                       class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"
                     >
@@ -633,7 +619,9 @@ defmodule LightningWeb.WorkflowLive.Components do
                   </td>
                   <td class={[
                     "whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900",
-                    if(Phoenix.HTML.Form.input_value(@select_form, auth_method.id),
+                    if(
+                      Phoenix.HTML.Form.input_value(@select_form, auth_method.id) ==
+                        "true",
                       do: "text-indigo-600",
                       else: "text-gray-900"
                     )

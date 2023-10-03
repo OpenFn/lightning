@@ -39,7 +39,6 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     field :username, Lightning.Encrypted.Binary
     field :password, Lightning.Encrypted.Binary
     field :api_key, Lightning.Encrypted.Binary
-    field :is_selected, :boolean, virtual: true
 
     belongs_to :project, Lightning.Projects.Project
 
@@ -57,8 +56,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
       :username,
       :password,
       :project_id,
-      :api_key,
-      :is_selected
+      :api_key
     ])
     |> validate_required([:name, :auth_type, :project_id])
     |> validate_auth_fields()

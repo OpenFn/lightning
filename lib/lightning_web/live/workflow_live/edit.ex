@@ -237,7 +237,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   disabled={!@can_edit_job}
                   webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
-                  project={@project}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -275,6 +274,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
           trigger={@selected_trigger}
           return_to={
             ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
+          }
+          webhook_auth_method={
+            %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
+          }
+        />
+
+        <.live_component
+          :if={
+            @selected_trigger && length(@selected_trigger.webhook_auth_methods) > 0
+          }
+          module={LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent}
+          id={"#{@selected_trigger.id}_webhook_auth_methods_modal"}
+          action={:new}
+          trigger={@selected_trigger}
+          project={@project}
+          return_to={
+            ~p"/projects/#{@project.id}/w/#{@selected_trigger.workflow_id}?#{%{s: @selected_trigger.id}}"
           }
           webhook_auth_method={
             %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
