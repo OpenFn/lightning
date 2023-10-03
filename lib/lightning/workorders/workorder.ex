@@ -5,20 +5,9 @@ defmodule Lightning.WorkOrder do
 
   use Ecto.Schema
   import Ecto.Changeset
-  import EctoEnum
-  alias Lightning.WorkOrder.StatesEnum
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.{Workflow, Trigger}
   alias Lightning.Invocation.Dataclip
   alias Lightning.{InvocationReason, Attempt}
-
-  defenum(StatesEnum, :state, [
-    :success,
-    :failure,
-    :timeout,
-    :killed,
-    :crash
-  ])
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),

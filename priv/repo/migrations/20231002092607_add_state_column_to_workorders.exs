@@ -2,6 +2,34 @@ defmodule Lightning.Repo.Migrations.AddStateColumnToWorkorders do
   use Ecto.Migration
 
   def change do
+    execute """
+            DO $$
+            BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type
+                           WHERE typname = 'workorder_state'
+                             AND typnamespace = 'public'::regnamespace::oid) THEN
+                CREATE TYPE public.workorder_state AS ENUM (
+                  'pending',
+                  'running',
+                  'success',
+                  'failed',
+                  'killed',
+                  'crashed'
+                );
+              END IF;
+            END$$;
+            """,
+            """
+            DO $$
+            BEGIN
+            IF EXISTS (SELECT 1 FROM pg_type
+                       WHERE typname = 'workorder_state'
+                         AND typnamespace = 'public'::regnamespace::oid) THEN
+                DROP TYPE public.workorder_state;
+              END IF;
+            END$$;
+            """
+
     alter table(:work_orders) do
       add :state, :string, length: 10, default: "pending", null: false
 
