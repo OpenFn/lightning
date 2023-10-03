@@ -1,25 +1,13 @@
 defmodule Lightning.WorkOrder do
   @moduledoc """
   Ecto model for Workorders.
-
-
   """
+
   use Ecto.Schema
   import Ecto.Changeset
-  import EctoEnum
-  alias Lightning.WorkOrder.StatesEnum
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.Trigger
+  alias Lightning.Workflows.{Workflow, Trigger}
   alias Lightning.Invocation.Dataclip
   alias Lightning.{InvocationReason, Attempt}
-
-  defenum(StatesEnum, :state, [
-    :success,
-    :failure,
-    :timeout,
-    :killed,
-    :crash
-  ])
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -33,7 +21,9 @@ defmodule Lightning.WorkOrder do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   schema "work_orders" do
-    field :state, StatesEnum, default: :success
+    field :state, Ecto.Enum,
+      values: [:pending, :running, :success, :failed, :killed, :crashed],
+      default: :pending
 
     belongs_to :workflow, Workflow
 
