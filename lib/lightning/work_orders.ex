@@ -245,6 +245,13 @@ defmodule Lightning.WorkOrders do
     |> then(fn {_, [wo]} -> {:ok, wo} end)
   end
 
+  @spec update_state(WorkOrder.t(), Attempt.t()) ::
+          {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
+  def update_state(%WorkOrder{} = _work_order, %Attempt{} = attempt) do
+    Query.state_for(attempt)
+    |> Repo.one()
+  end
+
   @doc """
   Get a Workorder by id.
 

@@ -1,5 +1,4 @@
 defmodule Lightning.AttemptsTest do
-  alias Lightning.WorkOrders
   use Lightning.DataCase, async: true
   import Lightning.Factories
 
@@ -405,18 +404,22 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:error, changeset} = Attempts.complete_attempt(attempt)
+      {:error, changeset} = Attempts.complete_attempt(attempt, "success")
 
       assert {:state, {"cannot complete attempt that is not started", []}} in changeset.errors
 
       {:ok, attempt} =
         Repo.update(attempt |> Ecto.Changeset.change(state: :claimed))
 
+      # TODO: test that the workorder has it's state updated
+
       {:ok, attempt} = Attempts.start_attempt(attempt)
 
-      {:ok, attempt} = Attempts.complete_attempt(attempt)
+      assert WorkOrders.get(attempt.work_order_id).state == :running
 
-      assert attempt.state == :finished
+      {:ok, attempt} = Attempts.complete_attempt(attempt, "success")
+
+      assert attempt.state == :success
       assert DateTime.utc_now() >= attempt.finished_at
     end
   end
