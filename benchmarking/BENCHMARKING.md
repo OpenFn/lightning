@@ -19,7 +19,7 @@ Execute the following steps to run a benchmark on Lightning:
 k6 run benchmarking/script.js
 ```
 
-If the script exits succesfully, this means the app met the defined performance
+If the script exits successfully, this means the app met the defined performance
 thresholds.
 
 To collect the benchmarking data in a CSV file, run the previous command with

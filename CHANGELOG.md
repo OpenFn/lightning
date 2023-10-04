@@ -10,8 +10,8 @@ and this project adheres to
 
 ### Added
 
-- New worker Websocket endpoint allowing workers to request work and communicate
-  with the Lightning server.
+- Restrict live dashboard access to only superusers, enable DB information and
+  OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
 
 ### Changed
 
