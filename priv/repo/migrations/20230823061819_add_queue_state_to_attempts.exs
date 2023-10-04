@@ -2,37 +2,8 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
   use Ecto.Migration
 
   def change do
-    execute """
-            DO $$
-            BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_type
-                           WHERE typname = 'attempt_state'
-                             AND typnamespace = 'public'::regnamespace::oid) THEN
-                CREATE TYPE public.attempt_state AS ENUM (
-                  'available',
-                  'claimed',
-                  'started',
-                  'success',
-                  'failed',
-                  'killed',
-                  'crashed'
-                );
-              END IF;
-            END$$;
-            """,
-            """
-            DO $$
-            BEGIN
-            IF EXISTS (SELECT 1 FROM pg_type
-                       WHERE typname = 'attempt_state'
-                         AND typnamespace = 'public'::regnamespace::oid) THEN
-                DROP TYPE public.attempt_state;
-              END IF;
-            END$$;
-            """
-
     alter table(:attempts) do
-      add :state, :"public.attempt_state", default: "available", null: false
+      add :state, :string, length: 10, default: "available", null: false
 
       add :claimed_at, :utc_datetime_usec
       add :started_at, :utc_datetime_usec

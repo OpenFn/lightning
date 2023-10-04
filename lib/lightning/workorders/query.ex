@@ -8,9 +8,9 @@ defmodule Lightning.WorkOrders.Query do
 
   # Create a copy of the WorkOrder state enum to use in the query, or else
   # we would need to unnecessarly join the workorders table just for casting.
-  @workorder_state Ecto.ParameterizedType.init(Ecto.Enum,
-                     values: Ecto.Enum.values(Lightning.WorkOrder, :state)
-                   )
+  # @workorder_state Ecto.ParameterizedType.init(Ecto.Enum,
+  #                    values: Ecto.Enum.values(Lightning.WorkOrder, :state)
+  #                  )
 
   @unfinished_state_order ~w[
     started
@@ -43,7 +43,7 @@ defmodule Lightning.WorkOrders.Query do
       |> with_cte("attempt_ordering",
         as:
           fragment(
-            "SELECT * FROM UNNEST(?::attempt_state[]) WITH ORDINALITY o(state, ord)",
+            "SELECT * FROM UNNEST(?::varchar[]) WITH ORDINALITY o(state, ord)",
             @unfinished_state_order
           )
       )
@@ -65,22 +65,21 @@ defmodule Lightning.WorkOrders.Query do
 
     from(u in subquery(union_query),
       order_by: [asc_nulls_last: u.ord],
-      select:
-        type(
+      select: %{
+        state:
           fragment(
             """
             CASE ?
             WHEN 'available' THEN 'pending'
             WHEN 'claimed' THEN 'pending'
             WHEN 'started' THEN 'running'
-            ELSE ?::varchar
+            ELSE ?
             END
             """,
             u.state,
             u.state
-          ),
-          ^@workorder_state
-        )
+          )
+      }
     )
     |> first()
   end

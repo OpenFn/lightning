@@ -41,30 +41,18 @@ defmodule Lightning.WorkOrders.QueryTest do
     end
 
     test "when there are more than one attempt", context do
-      _first_attempt =
-        insert(:attempt,
-          work_order: context.work_order,
-          dataclip: context.dataclip,
-          starting_trigger: context.trigger,
-          state: :success
-        )
+      [_, _, third_attempt] =
+        [:success, :started, :available]
+        |> Enum.map(fn state ->
+          insert(:attempt,
+            work_order: context.work_order,
+            dataclip: context.dataclip,
+            starting_trigger: context.trigger,
+            state: state
+          )
+        end)
 
-      _second_attempt =
-        insert(:attempt,
-          work_order: context.work_order,
-          dataclip: context.dataclip,
-          starting_trigger: context.trigger,
-          state: :started
-        )
-
-      third_attempt =
-        insert(:attempt,
-          work_order: context.work_order,
-          dataclip: context.dataclip,
-          starting_trigger: context.trigger,
-          state: :available
-        )
-
+      # Running wins over pending.
       assert Query.state_for(third_attempt) |> Repo.one() == :running
     end
   end
