@@ -161,6 +161,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </div>
         </:title>
 
+        <div class="w-full bg-gray-100 h-0.5"></div>
         <:subtitle>
           <%= if @webhook_auth_method.auth_type && @action == :new do %>
             <span class="italic text-xs">

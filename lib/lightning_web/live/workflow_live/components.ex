@@ -568,13 +568,13 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <div class="px-1.5 sm:px-6 lg:px-8">
+    <div class="mt-4">
       <div class="flow-root">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div class="inline-block min-w-full py-2 align-middle sm:px-2">
-            <table class="min-w-full table-fixed divide-y divide-gray-300">
-              <thead>
-                <tr>
+          <div class="inline-block min-w-2xl py-2 align-middle sm:px-2">
+            <table class="min-w-2xl table-fixed border-y border-gray-200">
+              <thead class="bg-[#F4F4F5]">
+                <tr class="sm:px-6 lg:px-8">
                   <th
                     :if={@on_row_select}
                     scope="col"
@@ -584,23 +584,23 @@ defmodule LightningWeb.WorkflowLive.Components do
                   </th>
                   <th
                     scope="col"
-                    class="min-w-[12rem] py-3.5 pr-3 text-left text-sm font-semibold text-gray-900"
+                    class="min-w-[12rem] py-3 pr-3 text-left text-sm font-semibold text-gray-900"
                   >
                     Name
                   </th>
                   <th
                     scope="col"
-                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
                   >
-                    Auth Type
+                    Auth.Type
                   </th>
                   <th
                     scope="col"
-                    class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
                   >
                     Triggers Linked
                   </th>
-                  <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-3">
+                  <th scope="col" class="relative py-3 pl-3 pr-4 sm:pr-3">
                     <span class="sr-only"><%= gettext("Actions") %></span>
                   </th>
                 </tr>
@@ -611,7 +611,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   class={
                     if(
                       @on_row_select && @row_selected?.(auth_method),
-                      do: "bg-gray-50",
+                      do: "bg-[#F2EEFD]",
                       else: ""
                     )
                   }
@@ -626,29 +626,29 @@ defmodule LightningWeb.WorkflowLive.Components do
                       id={"select_#{auth_method.id}"}
                       phx-value-selection={to_string(!@row_selected?.(auth_method))}
                       type="checkbox"
-                      class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                      class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
                       phx-click={@on_row_select.(auth_method)}
                       checked={@row_selected?.(auth_method)}
                     />
                   </td>
                   <td class={[
-                    "whitespace-nowrap py-4 pr-3 text-sm font-medium text-gray-900",
+                    "whitespace-nowrap py-3 pr-3 text-sm font-medium text-gray-900",
                     if(
                       @on_row_select && @row_selected?.(auth_method),
-                      do: "text-indigo-600",
-                      else: "text-gray-900"
+                      do: "",
+                      else: ""
                     )
                   ]}>
                     <%= auth_method.name %>
                   </td>
-                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <td class="whitespace-nowrap px-6 text-sm text-gray-500">
                     <%= auth_method.auth_type %>
                   </td>
-                  <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <td class="whitespace-nowrap px-6 text-sm text-gray-500">
                     <%= Enum.count(auth_method.triggers) %>
                   </td>
-                  <td :if={@action != []} class="py-4 pl-3 pr-4 sm:pr-3">
-                    <div class="relative whitespace-nowrap text-right text-sm font-medium">
+                  <td :if={@action != []} class="py-3 pr-8 sm:pr-3">
+                    <div class="relative whitespace-nowrap text-right text-sm font-medium px-4">
                       <span
                         :for={action <- @action}
                         class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"

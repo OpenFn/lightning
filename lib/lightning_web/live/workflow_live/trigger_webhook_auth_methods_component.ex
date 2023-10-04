@@ -80,7 +80,7 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
       <.modal id={@id}>
         <:title>
           <div class="flex justify-between">
-            <span>
+            <span class="font-bold">
               Webhook Authentication Credentials
             </span>
             <button
@@ -126,11 +126,11 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
             </div>
           </:action>
         </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
-        <div class="mt-2 px-4 flex justify-between content-center sm:px-6">
-          <div class="flex flex-wrap">
+        <div class="mt-2 flex justify-between content-center">
+          <div class="flex flex-wrap items-end">
             <.link
               href="#"
-              class="inline-flex content-center text-indigo-400 underline"
+              class="inline-flex content-center text-primary-700 underline text-md font-semibold"
               phx-click={show_modal("new_trigger_webhook_auth_method_modal")}
             >
               Create a new webhook credential
