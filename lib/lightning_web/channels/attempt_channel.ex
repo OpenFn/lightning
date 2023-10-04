@@ -36,6 +36,32 @@ defmodule LightningWeb.AttemptChannel do
   end
 
   @impl true
+  def handle_in("attempt:start", _, socket) do
+    socket.assigns.attempt
+    |> Attempts.start_attempt()
+    |> case do
+      {:ok, attempt} ->
+        {:reply, {:ok, nil}, socket |> assign(attempt: attempt)}
+
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+    end
+  end
+
+  def handle_in("attempt:complete", payload, socket) do
+    Attempts.complete_attempt(
+      socket.assigns.attempt,
+      payload |> Map.get("status")
+    )
+    |> case do
+      {:ok, attempt} ->
+        {:reply, {:ok, nil}, socket |> assign(attempt: attempt)}
+
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+    end
+  end
+
   def handle_in("fetch:attempt", _, socket) do
     {:reply, {:ok, AttemptJson.render(socket.assigns.attempt)}, socket}
   end
