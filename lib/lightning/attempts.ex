@@ -18,7 +18,6 @@ defmodule Lightning.Attempts do
                 {:ok, Lightning.Attempt.t()}
   end
 
-  alias Lightning.WorkOrder
   alias Lightning.{Repo, Attempt}
   alias Lightning.Attempts.Handlers
   import Ecto.Query
@@ -80,27 +79,26 @@ defmodule Lightning.Attempts do
 
   def start_attempt(%Attempt{} = attempt) do
     Repo.transaction(fn ->
-      attempt =
-        from(a in Attempt, where: a.id == ^attempt.id, lock: "FOR UPDATE")
-        |> Repo.one()
+      now = DateTime.utc_now()
 
-      workorder =
-        from(wo in WorkOrder, lock: "FOR UPDATE")
-        |> Repo.one()
+      attempt_query =
+        from(a in Attempt,
+          where: a.id == ^attempt.id,
+          lock: "FOR UPDATE"
+        )
 
-      attempt
-      |> Attempt.start()
-      |> Repo.update!()
-
-      state_query = Lightning.WorkOrders.Query.state_for(attempt)
-
-      from(w in WorkOrder,
-        where: w.id == ^workorder.id,
-        join: s in subquery(state_query),
-        on: true,
-        update: [set: [state: s.state]]
+      Attempt
+      |> with_cte("subset", as: ^attempt_query)
+      |> join(:inner, [a], s in fragment(~s("subset")), on: true)
+      |> select([a, _], a)
+      |> Repo.update_all(
+        set: [
+          state: :started,
+          started_at: now
+        ]
       )
-      |> Repo.update_all([])
+
+      {:ok, _} = Lightning.WorkOrders.update_state(attempt)
 
       attempt |> Repo.reload!()
     end)
