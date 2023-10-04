@@ -312,7 +312,7 @@ defmodule LightningWeb.RunLive.Index do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Invocation.search_workorders_query(filter)
     |> Lightning.Repo.all()
     |> Enum.map(& &1.id)
     |> AttemptService.list_for_rerun_from_job(job_id)
@@ -330,7 +330,7 @@ defmodule LightningWeb.RunLive.Index do
     filter = SearchParams.new(socket.assigns.filters)
 
     socket.assigns.project
-    |> Invocation.list_work_orders_for_project_query(filter)
+    |> Invocation.search_workorders_query(filter)
     |> Lightning.Repo.all()
     |> Enum.map(& &1.id)
     |> AttemptService.list_for_rerun_from_start()

@@ -26,7 +26,6 @@ defmodule Lightning.PipelineTest do
       attempt = insert(:attempt, reason: reason, work_order: work_order)
 
       Pipeline.process(attempt)
-      # IO.inspect(workflow)
     end
   end
 

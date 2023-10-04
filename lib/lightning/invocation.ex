@@ -5,6 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.WorkOrder
   alias Lightning.Invocation.LogLine
   alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
@@ -287,9 +288,9 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def create_log_line(run, body) do
+  def create_log_line(attrs) do
     %LogLine{}
-    |> Ecto.Changeset.change(%{run: run, body: body |> to_string})
+    |> Ecto.Changeset.change(attrs)
     |> LogLine.validate()
     |> Repo.insert!()
   end
@@ -323,170 +324,154 @@ defmodule Lightning.Invocation do
     Run.changeset(run, attrs)
   end
 
-  def filter_workflow_where(workflow_id) do
-    case workflow_id do
-      d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([workflow: w], w.id == ^workflow_id)
-    end
+  @doc """
+  Searches for work orders based on project and search parameters.
+
+  ## Parameters:
+  - `project`: The project to filter the work orders by.
+  - `search_params`: The parameters to guide the search.
+
+  ## Returns:
+  A paginated list of work orders that match the criteria.
+
+  ## Example:
+      search_workorders(%Project{id: 1}, %SearchParams{status: ["completed"]})
+  """
+  def search_workorders(%Project{} = project) do
+    search_params = SearchParams.new(%{})
+    search_workorders(project, search_params, %{})
   end
 
-  def filter_workorder_insert_after_where(date_after) do
-    case date_after do
-      d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([wo], wo.inserted_at >= ^date_after)
-    end
-  end
+  def search_workorders(
+        %Project{} = project,
+        %SearchParams{} = search_params,
+        params \\ %{}
+      ),
+      do:
+        search_workorders_query(project, search_params) |> Repo.paginate(params)
 
-  def filter_workorder_insert_before_where(date_before) do
-    case date_before do
-      d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([wo], wo.inserted_at < ^date_before)
-    end
-  end
-
-  def filter_run_finished_after_where(date_after) do
-    case date_after do
-      d when d in ["", nil] ->
-        dynamic(true)
-
-      _ ->
-        dynamic([runs: r], r.finished_at >= ^date_after or is_nil(r.finished_at))
-    end
-  end
-
-  def filter_run_finished_before_where(date_before) do
-    case date_before do
-      d when d in ["", nil] -> dynamic(true)
-      _ -> dynamic([runs: r], r.finished_at < ^date_before)
-    end
-  end
-
-  def filter_run_status_where(statuses) do
-    Enum.reduce(statuses, dynamic(false), fn
-      :pending, query ->
-        dynamic([runs: r], ^query or is_nil(r.exit_code))
-
-      :success, query ->
-        dynamic([runs: r], ^query or r.exit_code == 0)
-
-      :failure, query ->
-        dynamic([runs: r], ^query or r.exit_code == 1)
-
-      :timeout, query ->
-        dynamic([runs: r], ^query or r.exit_code == 2)
-
-      :crash, query ->
-        dynamic([runs: r], ^query or r.exit_code > 2)
-
-      _, query ->
-        # Not a where parameter
-        query
-    end)
-  end
-
-  def filter_run_body_and_logs_where(search_term, search_fields) do
-    if is_nil(search_term) do
-      dynamic(true)
-    else
-      Enum.reduce(search_fields || [], dynamic(false), fn
-        :log, query ->
-          dynamic(
-            [log_lines: l],
-            ^query or
-              fragment(
-                "cast(?  as VARCHAR) ilike ?",
-                l.body,
-                ^"%#{search_term}%"
-              )
-          )
-
-        :body, query ->
-          dynamic(
-            [input: i],
-            ^query or
-              fragment(
-                "cast(?  as VARCHAR) ilike ?",
-                i.body,
-                ^"%#{search_term}%"
-              )
-          )
-
-        _, query ->
-          query
-      end)
-    end
-  end
-
-  def list_work_orders_for_project_query(
+  def search_workorders_query(
         %Project{id: project_id},
         %SearchParams{} = search_params
       ) do
-    last_attempts =
-      from(att in Lightning.Attempt,
-        group_by: att.work_order_id,
-        select: %{
-          work_order_id: att.work_order_id,
-          last_inserted_at: max(att.inserted_at)
-        }
-      )
-
-    last_runs =
-      from(r in Lightning.Invocation.Run,
-        join: att in assoc(r, :attempts),
-        distinct: att.id,
-        order_by: [desc_nulls_first: r.finished_at],
-        select: %{
-          attempt_id: att.id,
-          last_finished_at: r.finished_at
-        }
-      )
-
-    # TODO: Refactor to remove the fragment used here; it causes timezone issues
-    from(wo in Lightning.WorkOrder,
-      join: wo_re in assoc(wo, :reason),
-      join: w in assoc(wo, :workflow),
-      as: :workflow,
-      join: att in assoc(wo, :attempts),
-      join: last in subquery(last_attempts),
-      on:
-        last.last_inserted_at == att.inserted_at and wo.id == last.work_order_id,
-      join: r in assoc(att, :runs),
-      as: :runs,
-      join: last_run in subquery(last_runs),
-      on:
-        (att.id == last_run.attempt_id and
-           last_run.last_finished_at == r.finished_at) or is_nil(r.finished_at),
-      join: att_re in assoc(att, :reason),
-      join: d in assoc(r, :input_dataclip),
-      as: :input,
-      left_join: l in LogLine,
-      on: l.run_id == r.id,
-      as: :log_lines,
-      where: w.project_id == ^project_id,
-      where: ^filter_run_status_where(search_params.status),
-      where: ^filter_workflow_where(search_params.workflow_id),
-      where: ^filter_workorder_insert_after_where(search_params.wo_date_after),
-      where: ^filter_workorder_insert_before_where(search_params.wo_date_before),
-      where: ^filter_run_finished_after_where(search_params.date_after),
-      where: ^filter_run_finished_before_where(search_params.date_before),
-      where:
-        ^filter_run_body_and_logs_where(
-          search_params.search_term,
-          search_params.search_fields
-        ),
-      select: %{
-        id: wo.id,
-        workflow_id: wo.workflow_id,
-        last_finished_at:
-          fragment(
-            "nullif(max(coalesce(?, 'infinity')), 'infinity')",
-            r.finished_at
-          )
-          |> selected_as(:last_finished_at)
-      },
-      group_by: wo.id,
-      order_by: [desc_nulls_first: selected_as(:last_finished_at)]
+    base_query(project_id)
+    |> filter_by_workflow_id(search_params.workflow_id)
+    |> filter_by_statuses(search_params.status)
+    |> filter_by_wo_date_after(search_params.wo_date_after)
+    |> filter_by_wo_date_before(search_params.wo_date_before)
+    |> filter_by_date_after(search_params.date_after)
+    |> filter_by_date_before(search_params.date_before)
+    |> filter_by_body_or_log(
+      search_params.search_fields,
+      search_params.search_term
     )
+  end
+
+  defp base_query(project_id) do
+    from(
+      workorder in WorkOrder,
+      as: :workorder,
+      join: workflow in assoc(workorder, :workflow),
+      as: :workflow,
+      where: workflow.project_id == ^project_id,
+      left_join: attempt in assoc(workorder, :attempts),
+      as: :attempt,
+      left_join: run in assoc(attempt, :runs),
+      as: :run,
+      left_join: dataclip in assoc(run, :input_dataclip),
+      as: :dataclip,
+      left_join: logline in assoc(run, :log_lines),
+      as: :logline,
+      select: workorder,
+      preload: [:workflow, attempts: [:runs]],
+      order_by: [desc_nulls_first: workorder.inserted_at]
+    )
+  end
+
+  defp filter_by_workflow_id(query, nil), do: query
+
+  defp filter_by_workflow_id(query, workflow_id) when is_binary(workflow_id) do
+    from([workflow: workflow] in query, where: workflow.id == ^workflow_id)
+  end
+
+  defp filter_by_statuses(query, []), do: query
+
+  defp filter_by_statuses(query, statuses) when is_list(statuses) do
+    from([workorder: workorder] in query, where: workorder.state in ^statuses)
+  end
+
+  defp filter_by_wo_date_after(query, nil), do: query
+
+  defp filter_by_wo_date_after(query, wo_date_after) do
+    from([workorder: workorder] in query,
+      where: workorder.inserted_at >= ^wo_date_after
+    )
+  end
+
+  defp filter_by_wo_date_before(query, nil), do: query
+
+  defp filter_by_wo_date_before(query, wo_date_before) do
+    from([workorder: workorder] in query,
+      where: workorder.inserted_at <= ^wo_date_before
+    )
+  end
+
+  defp filter_by_date_after(query, nil), do: query
+
+  defp filter_by_date_after(query, date_after) do
+    from([attempt: attempt] in query, where: attempt.finished_at >= ^date_after)
+  end
+
+  defp filter_by_date_before(query, nil), do: query
+
+  defp filter_by_date_before(query, date_before) do
+    from([attempt: attempt] in query, where: attempt.finished_at <= ^date_before)
+  end
+
+  defp filter_by_body_or_log(query, search_fields, search_term) do
+    has_body_search = :body in search_fields
+    has_log_search = :log in search_fields
+
+    cond do
+      has_body_search and has_log_search ->
+        from(
+          [dataclip: dataclip, logline: logline] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              dataclip.body,
+              ^"%#{search_term}%"
+            ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                logline.message,
+                ^"%#{search_term}%"
+              )
+        )
+
+      has_body_search ->
+        from([dataclip: dataclip] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              dataclip.body,
+              ^"%#{search_term}%"
+            )
+        )
+
+      has_log_search ->
+        from([logline: logline] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              logline.message,
+              ^"%#{search_term}%"
+            )
+        )
+
+      true ->
+        query
+    end
   end
 
   def get_workorders_by_ids(ids) do
@@ -536,36 +521,5 @@ defmodule Lightning.Invocation do
         attempts: ^attempts_query
       ]
     )
-  end
-
-  def search_workorders(%Project{} = project) do
-    search_params = SearchParams.new(%{})
-    search_workorders(project, search_params, %{})
-  end
-
-  def search_workorders(%Project{} = project, filter, params \\ %{}) do
-    # TODO: The "get_and_update" below is only necessary because of the fragment
-    # on line 461 of this file. See other "TODO".
-    list_work_orders_for_project_query(project, filter)
-    |> Repo.paginate(params)
-    |> Map.get_and_update!(
-      :entries,
-      fn current_value ->
-        {current_value,
-         Enum.map(current_value, fn e ->
-           %{
-             id: e.id,
-             workflow_id: e.workflow_id,
-             last_finished_at:
-               if is_nil(e.last_finished_at) do
-                 nil
-               else
-                 DateTime.from_naive!(e.last_finished_at, "Etc/UTC")
-               end
-           }
-         end)}
-      end
-    )
-    |> elem(1)
   end
 end

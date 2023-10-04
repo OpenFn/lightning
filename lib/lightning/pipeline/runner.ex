@@ -74,7 +74,11 @@ defmodule Lightning.Pipeline.Runner do
 
     defp save_logs_for_run(logs, run) do
       Enum.each(logs, fn log ->
-        Invocation.create_log_line(run, log)
+        Invocation.create_log_line(%{
+          run: run,
+          message: log,
+          timestamp: Timex.now()
+        })
       end)
     end
   end

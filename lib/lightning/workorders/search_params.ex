@@ -11,7 +11,7 @@ defmodule Lightning.Workorders.SearchParams do
 
   alias Lightning.Workorders.SearchParams
 
-  @statuses ~w(success failure pending timeout crash)
+  @statuses ~w(success failed pending killed crashed running)
   @search_fields ~w(body log)
 
   @type t :: %SearchParams{
