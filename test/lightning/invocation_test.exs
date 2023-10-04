@@ -1232,4 +1232,48 @@ defmodule Lightning.InvocationTest do
       page
     ).entries()
   end
+
+  describe "search_workorders/1" do
+    test "returns paginated work orders for a given project using default parameters" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      insert_list(3, :workorder, workflow: workflow)
+
+      results = WorkOrders.search_workorders(project)
+      assert length(results.entries) == 3
+    end
+  end
+
+  describe "search_workorders/3" do
+    test "returns paginated work orders filtered by search parameters and pagination" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      insert_list(2, :workorder, workflow: workflow, state: "active")
+      insert_list(2, :workorder, workflow: workflow, state: "inactive")
+
+      search_params = SearchParams.new(%{status: ["active"]})
+
+      results =
+        WorkOrders.search_workorders(project, search_params, %{
+          page: 1,
+          page_size: 2
+        })
+
+      assert length(results.entries) == 2
+
+      assert Enum.all?(results.entries, fn workorder ->
+               workorder.state == "active"
+             end)
+
+      results =
+        WorkOrders.search_workorders(project, search_params, %{
+          page: 2,
+          page_size: 2
+        })
+
+      assert length(results.entries) == 0,
+             "No more active work orders on second page"
+    end
+  end
 end
