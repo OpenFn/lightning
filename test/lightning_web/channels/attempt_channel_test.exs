@@ -509,6 +509,93 @@ defmodule LightningWeb.AttemptChannelTest do
     end
   end
 
+  describe "marking attempts as started and finished" do
+    setup context do
+      attempt_state = Map.get(context, :attempt_state, :available)
+
+      project = insert(:project)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          state: attempt_state
+        )
+
+      Lightning.Stub.reset_time()
+
+      {:ok, bearer, _} =
+        Workers.Token.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      {:ok, %{}, socket} =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer})
+        |> subscribe_and_join(
+          LightningWeb.AttemptChannel,
+          "attempt:#{attempt.id}",
+          %{"token" => Workers.generate_attempt_token(attempt)}
+        )
+
+      %{
+        socket: socket,
+        attempt: attempt,
+        workflow: workflow,
+        work_order: work_order
+      }
+    end
+
+    @tag attempt_state: :claimed
+    test "attempt:start", %{
+      socket: socket,
+      attempt: attempt,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:start", %{})
+
+      assert_reply ref, :ok, nil
+
+      assert %{state: :started} = Lightning.Repo.reload!(attempt)
+      assert %{state: :running} = Lightning.Repo.reload!(work_order)
+    end
+
+    @tag attempt_state: :claimed
+    test "attempt:complete when claimed", %{socket: socket} do
+      ref = push(socket, "attempt:complete", %{"status" => "success"})
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{state: ["cannot complete attempt that is not started"]}
+    end
+
+    @tag attempt_state: :started
+    test "attempt:complete when started", %{
+      socket: socket,
+      attempt: attempt,
+      work_order: work_order
+    } do
+      ref = push(socket, "attempt:complete", %{"status" => "success"})
+      assert_reply ref, :ok, nil
+
+      assert %{state: :success} = Lightning.Repo.reload!(attempt)
+      assert %{state: :success} = Lightning.Repo.reload!(work_order)
+    end
+  end
+
   defp stringify_keys(map) do
     Enum.map(map, fn {k, v} -> {Atom.to_string(k), v} end)
     |> Enum.into(%{})
