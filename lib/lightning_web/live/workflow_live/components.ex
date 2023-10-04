@@ -324,17 +324,30 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :webhook -> %>
-          <div class="">
-            <a
-              id="copyWebhookUrl"
-              href={@webhook_url}
-              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
-              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-              target="_blank"
-              phx-click="copied_to_clipboard"
-            >
-              Copy webhook url
-            </a>
+          <div class="mb-2">
+            <label class="block text-sm font-semibold leading-6 text-slate-800">
+              Webhook URL
+            </label>
+            <div class="mt-2 flex rounded-md shadow-sm">
+              <input
+                type="text"
+                id="webhookUrlInput"
+                class="block w-full rounded-l-lg text-slate-900 focus:ring-0  disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
+                value={@webhook_url}
+                disabled="disabled"
+              />
+
+              <button
+                id="copyWebhookUrl"
+                type="button"
+                phx-hook="Copy"
+                phx-then={%JS{}}
+                data-to="#webhookUrlInput"
+                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              >
+                Copy URL
+              </button>
+            </div>
           </div>
           <div>
             <div class="flex flex-row">
