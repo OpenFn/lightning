@@ -63,7 +63,47 @@ defmodule LightningWeb.Telemetry do
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      summary("vm.total_run_queue_lengths.io"),
+
+      # Business metrics
+      summary("lightning.api.webhook",
+        event_name: [:lightning, :workorder, :webhook, :stop],
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        description: "Time taken to process webhook request"
+      ),
+      distribution("lightning.api.webhook",
+        event_name: [:lightning, :workorder, :webhook, :stop],
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        description: "Time taken to process webhook request"
+      ),
+      summary("lightning.runs.queue.latency",
+        event_name: [:oban, :job, :stop],
+        measurement: :queue_time,
+        unit: {:native, :millisecond},
+        description: "The time a job spends on the run queue before processed",
+        keep: &match?(%{queue: "runs"}, &1)
+      ),
+      distribution("lightning.runs.queue.latency",
+        event_name: [:oban, :job, :stop],
+        measurement: :queue_time,
+        unit: {:native, :millisecond},
+        description: "The time a job spends on the run queue before processed",
+        keep: &match?(%{queue: "runs"}, &1)
+      ),
+      summary("lightning.ui.history",
+        event_name: [:lightning, :ui, :projects, :history, :stop],
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        description: "Time required for history page load"
+      ),
+      distribution("lightning.ui.history",
+        event_name: [:lightning, :ui, :projects, :history, :stop],
+        measurement: :duration,
+        unit: {:native, :millisecond},
+        description: "Time required for history page load"
+      )
     ]
   end
 

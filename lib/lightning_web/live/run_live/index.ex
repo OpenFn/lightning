@@ -116,21 +116,42 @@ defmodule LightningWeb.RunLive.Index do
   end
 
   defp apply_action(socket, :index, params) do
-    filters = Map.get(params, "filters", init_filters()) |> SearchParams.new()
+    provided_filters = Map.get(params, "filters", %{})
 
-    socket
-    |> assign(
-      selected_work_orders: [],
-      page:
-        Invocation.search_workorders(
-          socket.assigns.project,
-          filters,
-          params
-        ),
-      filters_changeset:
-        params
-        |> Map.get("filters", init_filters())
-        |> filters_changeset()
+    :telemetry.span(
+      [:lightning, :ui, :projects, :history],
+      %{
+        project_id: socket.assigns.project.id,
+        provided_filters: provided_filters
+      },
+      fn ->
+        filters =
+          Map.get(params, "filters", init_filters()) |> SearchParams.new()
+
+        result =
+          socket
+          |> assign(
+            selected_work_orders: [],
+            page:
+              Invocation.search_workorders(
+                socket.assigns.project,
+                filters,
+                params
+              ),
+            filters_changeset:
+              params
+              |> Map.get("filters", init_filters())
+              |> filters_changeset()
+          )
+
+        {
+          result,
+          %{
+            project_id: socket.assigns.project.id,
+            provided_filters: provided_filters
+          }
+        }
+      end
     )
   end
 

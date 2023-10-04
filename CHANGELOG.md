@@ -12,6 +12,8 @@ and this project adheres to
 
 - Restrict live dashboard access to only superusers, enable DB information and
   OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
+- Expose additional metrics to LiveDashboard
+  [#1171](https://github.com/OpenFn/Lightning/issues/1171)
 
 ### Changed
 
