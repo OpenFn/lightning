@@ -5,6 +5,8 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
+  alias Lightning.Attempt
+  alias Lightning.WorkOrder
   alias Lightning.Workflows.Workflow
   alias Lightning.Invocation.LogLine
   alias Lightning.Workorders.SearchParams
@@ -420,6 +422,7 @@ defmodule Lightning.Invocation do
         acc
 
       {value, func}, acc ->
+        IO.inspect(acc, label: "ACC")
         dynamic([w, wo, a, r, dc, ll], ^acc and ^func.(value))
     end)
   end

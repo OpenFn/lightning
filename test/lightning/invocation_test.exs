@@ -1239,7 +1239,7 @@ defmodule Lightning.InvocationTest do
       workflow = insert(:workflow, project: project)
       insert_list(3, :workorder, workflow: workflow)
 
-      results = WorkOrders.search_workorders(project)
+      results = Lightning.Invocation.search_workorders(project)
       assert length(results.entries) == 3
     end
   end
@@ -1255,7 +1255,7 @@ defmodule Lightning.InvocationTest do
       search_params = SearchParams.new(%{status: ["active"]})
 
       results =
-        WorkOrders.search_workorders(project, search_params, %{
+        Lightning.Invocation.search_workorders(project, search_params, %{
           page: 1,
           page_size: 2
         })
@@ -1267,7 +1267,7 @@ defmodule Lightning.InvocationTest do
              end)
 
       results =
-        WorkOrders.search_workorders(project, search_params, %{
+        Lightning.Invocation.search_workorders(project, search_params, %{
           page: 2,
           page_size: 2
         })
