@@ -78,36 +78,46 @@ defmodule Lightning.Attempts do
   end
 
   def start_attempt(%Attempt{} = attempt) do
-    Repo.transaction(fn ->
-      now = DateTime.utc_now()
+    Handlers.StartAttempt.call(attempt)
+  end
+
+  def complete_attempt(attempt, status) do
+    Attempt.complete(attempt, status)
+    |> case do
+      %{valid?: false} = changeset ->
+        {:error, changeset}
+
+      changeset ->
+        changeset |> update_attempt()
+    end
+  end
+
+  def update_attempt(%Ecto.Changeset{data: %Attempt{}} = changeset) do
+    attempt_id = Ecto.Changeset.get_field(changeset, :id)
+
+    Repo.transact(fn ->
+      # now = DateTime.utc_now()
 
       attempt_query =
         from(a in Attempt,
-          where: a.id == ^attempt.id,
+          where: a.id == ^attempt_id,
           lock: "FOR UPDATE"
         )
 
-      Attempt
-      |> with_cte("subset", as: ^attempt_query)
-      |> join(:inner, [a], s in fragment(~s("subset")), on: true)
-      |> select([a, _], a)
-      |> Repo.update_all(
-        set: [
-          state: :started,
-          started_at: now
-        ]
-      )
+      update_query =
+        Attempt
+        |> with_cte("subset", as: ^attempt_query)
+        |> join(:inner, [a], s in fragment(~s("subset")), on: true)
+        |> select([a, _], a)
 
-      {:ok, _} = Lightning.WorkOrders.update_state(attempt)
-
-      attempt |> Repo.reload!()
+      with {1, [attempt]} <-
+             Repo.update_all(update_query,
+               set: changeset.changes |> Enum.into([])
+             ),
+           {:ok, _} <- Lightning.WorkOrders.update_state(attempt) do
+        {:ok, attempt}
+      end
     end)
-  end
-
-  def complete_attempt(%Attempt{} = attempt, status) do
-    attempt
-    |> Attempt.complete(status)
-    |> Repo.update()
   end
 
   @doc """

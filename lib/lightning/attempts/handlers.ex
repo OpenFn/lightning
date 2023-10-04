@@ -188,4 +188,37 @@ defmodule Lightning.Attempts.Handlers do
       |> Repo.update()
     end
   end
+
+  defmodule StartAttempt do
+    import Ecto.Changeset
+    import Ecto.Query
+
+    def call(attempt) do
+      Repo.transact(fn ->
+        # now = DateTime.utc_now()
+
+        attempt_query =
+          from(a in Attempt,
+            where: a.id == ^attempt.id,
+            lock: "FOR UPDATE"
+          )
+
+        update_query =
+          Attempt
+          |> with_cte("subset", as: ^attempt_query)
+          |> join(:inner, [a], s in fragment(~s("subset")), on: true)
+          |> select([a, _], a)
+
+        with changeset <- Attempt.start(attempt),
+             {:ok, _} <- apply_action(changeset, :validate),
+             {1, [attempt]} <-
+               Repo.update_all(update_query,
+                 set: changeset.changes |> Enum.into([])
+               ),
+             {:ok, _} <- Lightning.WorkOrders.update_state(attempt) do
+          {:ok, attempt}
+        end
+      end)
+    end
+  end
 end
