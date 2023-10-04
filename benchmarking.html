@@ -117,7 +117,7 @@ project root.</p></li><li><p>Spin up your Lightning local instance</p></li><li><
 <code class="inline">webhookURL</code> is already set to default to the webhook created in the demo
 data</p></li><li><p>In another terminal (do not stop the Lightning server) run the
 <code class="inline">benchmarking/script.js</code> file using the following command</p></li></ol><pre><code class="makeup bash" translate="no"><span class="">k6 run benchmarking/script.js
-</span></code></pre><p>If the script exits succesfully, this means the app met the defined performance
+</span></code></pre><p>If the script exits successfully, this means the app met the defined performance
 thresholds.</p><p>To collect the benchmarking data in a CSV file, run the previous command with
 the <code class="inline">--out filename</code> option.</p><pre><code class="makeup bash" translate="no"><span class="">k6 run --out csv=test_results.csv benchmarking/script.js
 </span></code></pre><p>See <a href="https://k6.io/docs/get-started/results-output/">results output</a> for other
