@@ -181,6 +181,12 @@ defmodule LightningWeb.AttemptChannelTest do
                "dataclip_id" => attempt.dataclip_id
              }
     end
+
+    test "fetch:dataclip", %{socket: socket} do
+      ref = push(socket, "fetch:dataclip", %{})
+
+      assert_reply ref, :ok, {:binary, "{\"foo\": \"bar\"}"}
+    end
   end
 
   describe "marking runs as started and finished" do
