@@ -18,6 +18,7 @@ defmodule Lightning.Attempts do
                 {:ok, Lightning.Attempt.t()}
   end
 
+  alias Lightning.WorkOrder
   alias Lightning.{Repo, Attempt}
   alias Lightning.Attempts.Handlers
   import Ecto.Query
@@ -78,14 +79,36 @@ defmodule Lightning.Attempts do
   end
 
   def start_attempt(%Attempt{} = attempt) do
-    attempt
-    |> Attempt.start()
-    |> Repo.update()
+    Repo.transaction(fn ->
+      attempt =
+        from(a in Attempt, where: a.id == ^attempt.id, lock: "FOR UPDATE")
+        |> Repo.one()
+
+      workorder =
+        from(wo in WorkOrder, lock: "FOR UPDATE")
+        |> Repo.one()
+
+      attempt
+      |> Attempt.start()
+      |> Repo.update!()
+
+      state_query = Lightning.WorkOrders.Query.state_for(attempt)
+
+      from(w in WorkOrder,
+        where: w.id == ^workorder.id,
+        join: s in subquery(state_query),
+        on: true,
+        update: [set: [state: s.state]]
+      )
+      |> Repo.update_all([])
+
+      attempt |> Repo.reload!()
+    end)
   end
 
-  def complete_attempt(%Attempt{} = attempt) do
+  def complete_attempt(%Attempt{} = attempt, status) do
     attempt
-    |> Attempt.complete()
+    |> Attempt.complete(status)
     |> Repo.update()
   end
 
@@ -108,7 +131,7 @@ defmodule Lightning.Attempts do
 
   def get_project_id_for_attempt(attempt) do
     Ecto.assoc(attempt, [:work_order, :workflow, :project])
-    |> Ecto.Query.select([p], p.id)
+    |> select([p], p.id)
     |> Repo.one()
   end
 

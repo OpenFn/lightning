@@ -40,7 +40,15 @@ defmodule Lightning.Attempt do
     many_to_many :runs, Run, join_through: AttemptRun
 
     field :state, Ecto.Enum,
-      values: [:available, :claimed, :started, :finished],
+      values: [
+        :available,
+        :claimed,
+        :started,
+        :success,
+        :failed,
+        :killed,
+        :crashed
+      ],
       default: :available
 
     field :claimed_at, :utc_datetime_usec
@@ -107,12 +115,11 @@ defmodule Lightning.Attempt do
     end)
   end
 
-  def complete(attempt) do
+  def complete(attempt, state) do
     attempt
-    |> change(
-      state: :finished,
-      finished_at: DateTime.utc_now()
-    )
+    |> cast(%{state: state}, [:state])
+    |> change(finished_at: DateTime.utc_now())
+    |> validate_inclusion(:state, [:success, :failed, :killed, :crashed])
     |> then(fn changeset ->
       previous_state = changeset.data |> Map.get(:state)
 
