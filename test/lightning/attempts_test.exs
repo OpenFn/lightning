@@ -181,6 +181,12 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
+      # Make another attempt to ensure the updating doesn't include other
+      # attempts.
+      %{attempts: [_attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
       {:error, changeset} = Attempts.complete_attempt(attempt, "success")
 
       assert {:state, {"cannot complete attempt that is not started", []}} in changeset.errors

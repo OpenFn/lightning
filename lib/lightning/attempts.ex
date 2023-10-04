@@ -107,7 +107,7 @@ defmodule Lightning.Attempts do
       update_query =
         Attempt
         |> with_cte("subset", as: ^attempt_query)
-        |> join(:inner, [a], s in fragment(~s("subset")), on: true)
+        |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
         |> select([a, _], a)
 
       with {1, [attempt]} <-
