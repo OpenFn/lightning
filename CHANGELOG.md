@@ -10,6 +10,9 @@ and this project adheres to
 
 ### Added
 
+- Restrict live dashboard access to only superusers, enable DB information and
+  OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
+
 ### Changed
 
 ### Fixed
