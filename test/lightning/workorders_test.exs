@@ -118,7 +118,7 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: dataclip,
           attempts: [
             %{
-              state: "resolved",
+              state: :failed,
               dataclip: dataclip,
               starting_trigger: trigger,
               runs: [
@@ -135,7 +135,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.starting_job.id == job.id
       assert retry_attempt.created_by.id == user.id
       assert retry_attempt.work_order_id == attempt.work_order_id
-      assert retry_attempt.state == "available"
+      assert retry_attempt.state == :available
 
       assert retry_attempt |> Repo.preload(:runs) |> Map.get(:runs) == [],
              "retrying an attempt from the start should not copy over runs"
@@ -158,7 +158,7 @@ defmodule Lightning.WorkOrdersTest do
           dataclip: dataclip,
           attempts: [
             %{
-              state: "resolved",
+              state: :failed,
               dataclip: dataclip,
               starting_trigger: trigger,
               runs: [
@@ -184,7 +184,7 @@ defmodule Lightning.WorkOrdersTest do
       assert retry_attempt.starting_job.id == job_b.id
       assert retry_attempt.created_by.id == user.id
       assert retry_attempt.work_order_id == attempt.work_order_id
-      assert retry_attempt.state == "available"
+      assert retry_attempt.state == :available
 
       runs = Ecto.assoc(retry_attempt, :runs) |> Repo.all()
       assert runs |> Enum.map(& &1.id) == [first_run.id]
@@ -196,12 +196,20 @@ defmodule Lightning.WorkOrdersTest do
       dataclip = insert(:dataclip)
       %{triggers: [trigger]} = workflow = insert(:simple_workflow)
 
-      %{attempts: [_attempt]} =
-        work_order =
+      %{attempts: [attempt]} =
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      WorkOrders.update_state(work_order)
+      {:ok, work_order} = WorkOrders.update_state(attempt)
+
+      assert work_order.state == :pending
+
+      {:ok, attempt} =
+        Repo.update(attempt |> Ecto.Changeset.change(state: :started))
+
+      {:ok, work_order} = WorkOrders.update_state(attempt)
+
+      assert work_order.state == :running
     end
   end
 end

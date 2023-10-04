@@ -23,20 +23,22 @@ defmodule Lightning.WorkOrders.QueryTest do
           starting_trigger: context.trigger
         )
 
-      assert Query.state_for(first_attempt) |> Repo.one() == :pending
+      assert Query.state_for(first_attempt) |> Repo.one() == %{state: "pending"}
 
       Repo.update(change(first_attempt, state: :claimed))
 
-      assert Query.state_for(first_attempt) |> Repo.one() == :pending
+      assert Query.state_for(first_attempt) |> Repo.one() == %{state: "pending"}
 
       Repo.update(change(first_attempt, state: :started))
 
-      assert Query.state_for(first_attempt) |> Repo.one() == :running
+      assert Query.state_for(first_attempt) |> Repo.one() == %{state: "running"}
 
       for state <- [:success, :failed, :killed, :crashed] do
         Repo.update(change(first_attempt, state: state))
 
-        assert Query.state_for(first_attempt) |> Repo.one() == state
+        assert Query.state_for(first_attempt) |> Repo.one() == %{
+                 state: state |> to_string()
+               }
       end
     end
 
@@ -53,7 +55,7 @@ defmodule Lightning.WorkOrders.QueryTest do
         end)
 
       # Running wins over pending.
-      assert Query.state_for(third_attempt) |> Repo.one() == :running
+      assert %{state: "running"} = Query.state_for(third_attempt) |> Repo.one()
     end
   end
 end
