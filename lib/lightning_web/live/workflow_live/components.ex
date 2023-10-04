@@ -324,7 +324,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :webhook -> %>
-          <div class="mb-2">
+          <div class="my-6">
             <label class="block text-sm font-semibold leading-6 text-slate-800">
               Webhook URL
             </label>
@@ -332,7 +332,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               <input
                 type="text"
                 id="webhookUrlInput"
-                class="block w-full rounded-l-lg text-slate-900 focus:ring-0  disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
+                class="block w-full flex-1 rounded-l-lg text-slate-900 focus:ring-0  disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
                 value={@webhook_url}
                 disabled="disabled"
               />
@@ -343,14 +343,14 @@ defmodule LightningWeb.WorkflowLive.Components do
                 phx-hook="Copy"
                 phx-then={%JS{}}
                 data-to="#webhookUrlInput"
-                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
               >
                 Copy URL
               </button>
             </div>
           </div>
           <div>
-            <div class="flex flex-row">
+            <div class="flex flex-row items-center mb-4">
               <span class="text-sm font-medium text-secondary-700">
                 Webhook Authentication
               </span>
@@ -360,13 +360,13 @@ defmodule LightningWeb.WorkflowLive.Components do
                 class="inline-block"
               />
             </div>
-            <div class="text-xs">
+            <div class="text-xs w-2/3">
               <%= if length(@selected_trigger.webhook_auth_methods) == 0 do %>
-                <p>
+                <p class="italic">
                   Add an extra layer of security with Webhook authentication.
                   <.link
                     href="#"
-                    class="text-indigo-400 underline"
+                    class="text-indigo-400 underline not-italic"
                     phx-click={show_modal("new_webhook_auth_method_modal")}
                   >
                     Add authentication
