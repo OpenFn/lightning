@@ -165,7 +165,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         <:subtitle>
           <%= if @webhook_auth_method.auth_type && @action == :new do %>
             <span class="italic text-xs">
-              Webhook authentication credentials are accessible to everyone within your project and can be managed via your settings here.
+              Webhook authentication credentials are accessible to everyone within your project and can be managed via <span class="text-primary-700 underline">your settings here.</span>
             </span>
           <% end %>
         </:subtitle>

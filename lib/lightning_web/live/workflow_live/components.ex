@@ -312,6 +312,7 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
       <% end %> --%>
       <%= case @type do %>
+
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
@@ -362,7 +363,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
             <div class="text-xs w-2/3">
               <%= if length(@selected_trigger.webhook_auth_methods) == 0 do %>
-                <p class="italic">
+                <p class="italic mt-3">
                   Add an extra layer of security with Webhook authentication.
                   <.link
                     href="#"
@@ -600,8 +601,8 @@ defmodule LightningWeb.WorkflowLive.Components do
     <div class="mt-4">
       <div class="flow-root">
         <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div class="inline-block min-w-2xl py-2 align-middle sm:px-2">
-            <table class="min-w-2xl table-fixed border-y border-gray-200">
+          <div class="inline-block min-w-xl py-2 align-middle sm:px-2">
+            <table class="min-w-xl table-fixed border-y border-gray-200">
               <thead class="bg-[#F4F4F5]">
                 <tr class="sm:px-6 lg:px-8">
                   <th
@@ -613,19 +614,19 @@ defmodule LightningWeb.WorkflowLive.Components do
                   </th>
                   <th
                     scope="col"
-                    class="min-w-[12rem] py-3 pr-3 text-left text-sm font-semibold text-gray-900"
+                    class="min-w-[12rem] py-2.5 pr-3 text-left text-sm font-semibold text-gray-900"
                   >
                     Name
                   </th>
                   <th
                     scope="col"
-                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+                    class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
                   >
                     Auth.Type
                   </th>
                   <th
                     scope="col"
-                    class="px-6 py-3 text-left text-sm font-semibold text-gray-900"
+                    class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
                   >
                     Triggers Linked
                   </th>
@@ -661,7 +662,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     />
                   </td>
                   <td class={[
-                    "whitespace-nowrap py-3 pr-3 text-sm font-medium text-gray-900",
+                    "whitespace-nowrap py-2.5 pr-3 text-sm text-gray-900",
                     if(
                       @on_row_select && @row_selected?.(auth_method),
                       do: "",
@@ -670,13 +671,13 @@ defmodule LightningWeb.WorkflowLive.Components do
                   ]}>
                     <%= auth_method.name %>
                   </td>
-                  <td class="whitespace-nowrap px-6 text-sm text-gray-500">
+                  <td class="whitespace-nowrap px-6 text-sm text-gray-900">
                     <%= auth_method.auth_type %>
                   </td>
-                  <td class="whitespace-nowrap px-6 text-sm text-gray-500">
+                  <td class="whitespace-nowrap px-6 text-sm text-gray-900">
                     <%= Enum.count(auth_method.triggers) %>
                   </td>
-                  <td :if={@action != []} class="py-3 pr-8 sm:pr-3">
+                  <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
                     <div class="relative whitespace-nowrap text-right text-sm font-medium px-4">
                       <span
                         :for={action <- @action}
