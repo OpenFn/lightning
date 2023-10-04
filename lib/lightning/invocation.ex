@@ -343,9 +343,16 @@ defmodule Lightning.Invocation do
   end
 
   def search_workorders(
-        %Project{id: project_id},
+        %Project{} = project,
         %SearchParams{} = search_params,
         params \\ %{}
+      ),
+      do:
+        search_workorders_query(project, search_params) |> Repo.paginate(params)
+
+  def search_workorders_query(
+        %Project{id: project_id},
+        %SearchParams{} = search_params
       ) do
     base_query =
       from(w in Workflow, where: w.project_id == ^project_id, select: w.id)
@@ -365,7 +372,6 @@ defmodule Lightning.Invocation do
       on: ll.run_id == r.id,
       where: ^conditions
     )
-    |> Repo.paginate(params)
   end
 
   defp build_conditions(%SearchParams{
