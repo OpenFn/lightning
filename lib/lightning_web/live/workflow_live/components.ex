@@ -350,7 +350,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
           </div>
           <div>
-            <div class="flex flex-row items-center mb-4">
+            <div class="flex flex-row items-center ">
               <span class="text-sm font-medium text-secondary-700">
                 Webhook Authentication
               </span>
@@ -373,7 +373,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   </.link>
                 </p>
               <% else %>
-                <ul class="list-disc p-2">
+                <ul class="list-disc p-2 mb-2">
                   <li :for={auth_method <- @selected_trigger.webhook_auth_methods}>
                     <%= auth_method.name %> (<%= auth_method.auth_type %>)
                   </li>
@@ -382,7 +382,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <div>
                   <.link
                     href="#"
-                    class="text-indigo-400 underline"
+                    class="text-primary-700 underline"
                     phx-click={
                       show_modal(
                         "#{@selected_trigger.id}_webhook_auth_methods_modal"
