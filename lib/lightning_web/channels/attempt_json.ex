@@ -24,6 +24,7 @@ defmodule LightningWeb.AttemptJson do
   def render(job = %Job{}) do
     %{
       "id" => job.id,
+      "body" => job.body,
       "name" => job.name
     }
   end
