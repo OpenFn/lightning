@@ -259,6 +259,34 @@ defmodule LightningWeb.UserAuth do
   end
 
   @doc """
+  Require that the user has the `superuser` role
+  """
+  def require_superuser(conn, _opts) do
+    case conn.assigns[:current_user].role do
+      :superuser ->
+        conn
+
+      _ ->
+        conn
+        |> get_format()
+        |> case do
+          "json" ->
+            conn
+            |> put_status(:forbidden)
+            |> put_view(LightningWeb.ErrorView)
+            |> render(:"403")
+            |> halt()
+
+          _ ->
+            conn
+            |> put_flash(:nav, :no_access_no_back)
+            |> redirect(to: signed_in_path(conn))
+            |> halt()
+        end
+    end
+  end
+
+  @doc """
   Used for LiveView routes that require the user to be re-authenticated.
   """
   def on_mount(:ensure_sudo, _params, session, socket) do

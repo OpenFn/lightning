@@ -438,4 +438,50 @@ defmodule LightningWeb.UserAuthTest do
                updated_socket.redirected
     end
   end
+
+  describe "require_superuser/2" do
+    test "redirects and halts if user is not a superuser", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> fetch_flash()
+        |> UserAuth.require_superuser([])
+
+      assert conn.halted
+      assert Phoenix.Flash.get(conn.assigns.flash, :nav) == :no_access_no_back
+      assert conn |> redirected_to() == "/"
+    end
+
+    test "returns 403 if user is not superuser and json request ", %{
+      conn: conn,
+      user: user
+    } do
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> Phoenix.Controller.put_format("json")
+        |> UserAuth.require_superuser([])
+
+      assert conn.halted
+      assert conn.status == 403
+      assert conn.resp_body |> Jason.decode!() == %{"error" => "Forbidden"}
+    end
+
+    test "allows the request to proceed if user is a superuser", %{conn: conn} do
+      user = superuser_fixture()
+
+      conn =
+        conn
+        |> assign(:current_user, user)
+        |> fetch_flash()
+        |> UserAuth.require_superuser([])
+
+      refute conn.halted
+      refute conn.status
+      assert Phoenix.Flash.get(conn.assigns.flash, :nav) == nil
+    end
+  end
 end

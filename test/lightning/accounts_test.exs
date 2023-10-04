@@ -135,7 +135,12 @@ defmodule Lightning.AccountsTest do
       valid_code = NimbleTOTP.verification_code(user_totp.secret)
 
       invalid_code =
-        valid_code |> String.graphemes() |> Enum.shuffle() |> Enum.join()
+        valid_code
+        |> String.to_integer()
+        |> Kernel.+(1)
+        |> Integer.mod(999_999)
+        |> Integer.to_string()
+        |> String.pad_leading(6, "0")
 
       {:error, changeset} =
         Accounts.upsert_user_totp(user_totp, %{code: invalid_code})
