@@ -245,11 +245,28 @@ defmodule Lightning.WorkOrders do
     |> then(fn {_, [wo]} -> {:ok, wo} end)
   end
 
-  @spec update_state(WorkOrder.t(), Attempt.t()) ::
-          {:ok, WorkOrder.t()} | {:error, Ecto.Changeset.t(WorkOrder.t())}
-  def update_state(%WorkOrder{} = _work_order, %Attempt{} = attempt) do
-    Query.state_for(attempt)
-    |> Repo.one()
+  @doc """
+  Updates the state of a WorkOrder based on the state of an attempt.
+
+  This considers the state of all attempts on the WorkOrder, with the
+  Attempt passed in as the latest attempt.
+
+  See `Lightning.WorkOrders.Query.state_for/1` for more details.
+  """
+  @spec update_state(Attempt.t()) ::
+          {:ok, WorkOrder.t()}
+  def update_state(%Attempt{} = attempt) do
+    state_query = Query.state_for(attempt)
+
+    from(wo in WorkOrder,
+      where: wo.id == ^attempt.work_order_id,
+      join: s in subquery(state_query),
+      on: true,
+      select: wo,
+      update: [set: [state: s.state]]
+    )
+    |> Repo.update_all([])
+    |> then(fn {_, [wo]} -> {:ok, wo} end)
   end
 
   @doc """
