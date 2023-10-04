@@ -270,7 +270,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </.form>
 
         <.live_component
-          :if={@selected_trigger}
+          :if={@selected_trigger && @selected_trigger.webhook_auth_methods == []}
           module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
           id="new_webhook_auth_method_modal"
           action={:new}

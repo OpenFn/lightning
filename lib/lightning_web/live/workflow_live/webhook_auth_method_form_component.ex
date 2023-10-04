@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
+  alias Phoenix.LiveView.JS
 
   @impl true
   def update(%{webhook_auth_method: webhook_auth_method} = assigns, socket) do
@@ -28,6 +29,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :changeset, changeset)}
+  end
+
+  def handle_event("validate", _params, socket) do
+    {:noreply, socket}
   end
 
   def handle_event(
@@ -128,10 +133,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <.modal id={@id}>
+      <.modal id={@id} {assigns}>
         <:title>
           <div class="flex justify-between">
-            <span>
+            <span :if={@action == :new}>
               <%= case @webhook_auth_method.auth_type do %>
                 <% nil -> %>
                   Add an authentication method
@@ -140,6 +145,9 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                 <% :api -> %>
                   Create an API Credential
               <% end %>
+            </span>
+            <span :if={@action == :edit}>
+              Edit webhook credential
             </span>
             <button
               phx-click={hide_modal(@id)}
@@ -154,8 +162,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         </:title>
 
         <:subtitle>
-          <%= if @webhook_auth_method.auth_type do %>
-            Webhook authentication credentials are accessible to everyone within your project and can be managed via your settings here.
+          <%= if @webhook_auth_method.auth_type && @action == :new do %>
+            <span class="italic text-xs">
+              Webhook authentication credentials are accessible to everyone within your project and can be managed via your settings here.
+            </span>
           <% end %>
         </:subtitle>
 
@@ -166,6 +176,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
             for={@changeset}
             phx-submit="save"
             phx-target={@myself}
+            class="mt-2"
           >
             <%= case @webhook_auth_method.auth_type do %>
               <% :basic -> %>
@@ -180,13 +191,45 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                   field={f[:username]}
                   label="Username"
                   required="true"
+                  disabled={@action == :edit}
                 />
-                <.input
-                  type="password"
-                  field={f[:password]}
-                  label="Password"
-                  required="true"
-                />
+                <%= if @action == :edit do %>
+                  <div class="mb-3">
+                    <label class="block text-sm font-semibold leading-6 text-slate-800">
+                      Password
+                    </label>
+                    <div class="mt-2 flex rounded-md shadow-sm">
+                      <input
+                        type="password"
+                        id={f[:password].id}
+                        value={f[:password].value}
+                        class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
+                        disabled="disabled"
+                      />
+
+                      <button
+                        id={"#{f[:password].id}_copy_button"}
+                        type="button"
+                        phx-hook="Copy"
+                        phx-then={
+                          JS.show(%JS{}, to: "##{f[:password].id}_copied_alert")
+                        }
+                        data-to={"##{f[:password].id}"}
+                        class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                      >
+                        Copy
+                      </button>
+                      <.copied_alert id={"#{f[:password].id}_copied_alert"} />
+                    </div>
+                  </div>
+                <% else %>
+                  <.input
+                    type="password"
+                    field={f[:password]}
+                    label="Password"
+                    required="true"
+                  />
+                <% end %>
               <% :api -> %>
                 <.input
                   type="text"
@@ -209,16 +252,21 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                     />
 
                     <button
+                      id={"api_key_#{@id}_copy_button"}
                       type="button"
+                      phx-hook="Copy"
+                      phx-then={JS.show(%JS{}, to: "#api_key_#{@id}_copied_alert")}
+                      data-to={"#api_key_#{@id}"}
                       class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                     >
                       Copy
                     </button>
+                    <.copied_alert id={"#{f[:password].id}_copied_alert"} />
                   </div>
                 </div>
             <% end %>
 
-            <div class="px-4 sm:flex sm:flex-row-reverse sm:px-6">
+            <div class="sm:flex sm:flex-row-reverse">
               <button
                 type="submit"
                 class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
@@ -314,6 +362,32 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </.form>
         <% end %>
       </.modal>
+    </div>
+    """
+  end
+
+  defp copied_alert(assigns) do
+    ~H"""
+    <div id={@id} class="hidden rounded-md bg-green-50 p-2" phx-hook="Flash">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg
+            class="h-5 w-5 text-green-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <span class="ml-1 p-1 text-xs font-semibold text-green-800">
+          Copied!
+        </span>
+      </div>
     </div>
     """
   end

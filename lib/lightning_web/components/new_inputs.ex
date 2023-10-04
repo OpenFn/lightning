@@ -115,7 +115,7 @@ defmodule LightningWeb.Components.NewInputs do
       ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
-  attr :class, :string, default: nil
+  attr :class, :string, default: ""
 
   slot :inner_block
 
@@ -216,7 +216,8 @@ defmodule LightningWeb.Components.NewInputs do
         phx-debounce="blur"
         class={[
           "mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
-          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400",
+          "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
+          @class,
           @errors == [] && "border-slate-300 focus:border-slate-400",
           @errors != [] && "border-danger-400 focus:border-danger-400"
         ]}

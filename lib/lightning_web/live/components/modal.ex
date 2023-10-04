@@ -6,7 +6,6 @@ defmodule LightningWeb.Components.Modal do
   replace the existing modal implementations.
   """
   use Phoenix.Component
-  import LightningWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -14,6 +13,7 @@ defmodule LightningWeb.Components.Modal do
   attr :show, :boolean, default: false
   attr :type, :string, default: "default"
   attr :position, :string, default: "relative"
+  attr :width, :string, default: "max-w-3xl"
 
   attr :on_close, JS, default: JS.push(%JS{}, "modal_closed")
   attr :on_open, JS, default: %JS{}
@@ -31,7 +31,7 @@ defmodule LightningWeb.Components.Modal do
     >
       <div
         id={"#{@id}-bg"}
-        class="fixed inset-0 bg-zinc-50/90 transition-opacity"
+        class="fixed inset-0 bg-black bg-opacity-60 transition-opacity"
         aria-hidden="true"
       />
       <div
@@ -43,7 +43,7 @@ defmodule LightningWeb.Components.Modal do
         tabindex="0"
       >
         <div class="flex min-h-full items-center justify-center">
-          <div class="max-w-3xl p-4 sm:p-6 lg:py-8">
+          <div class={"#{@width} p-4 sm:p-6 lg:py-8"}>
             <.focus_wrap
               id={"#{@id}-container"}
               phx-mounted={@show && show_modal(@on_open, @id)}

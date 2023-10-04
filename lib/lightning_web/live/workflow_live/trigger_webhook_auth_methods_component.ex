@@ -5,6 +5,7 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
 
   alias Lightning.Repo
   alias Lightning.WebhookAuthMethods
+  alias Phoenix.LiveView.JS
 
   @impl true
   def update(%{project: project, trigger: trigger} = assigns, socket) do
@@ -15,12 +16,12 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
 
     project_selections =
       Enum.into(project_auth_methods, %{}, fn auth_method ->
-        {auth_method.id, "false"}
+        {auth_method.id, false}
       end)
 
     trigger_selections =
       Enum.into(trigger.webhook_auth_methods, %{}, fn auth_method ->
-        {auth_method.id, "true"}
+        {auth_method.id, true}
       end)
 
     selections = Map.merge(project_selections, trigger_selections)
@@ -37,21 +38,22 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
 
   @impl true
   def handle_event(
-        "update_selection",
-        %{"webhook_auth_methods" => selections},
-        socket
+        "toggle_selection",
+        %{"auth_method_id" => id},
+        %{assigns: assigns} = socket
       ) do
+    selections = Map.update(assigns.selections, id, false, fn val -> !val end)
     {:noreply, assign(socket, selections: selections)}
   end
 
   def handle_event(
         "save",
-        %{"webhook_auth_methods" => selections},
+        _params,
         %{assigns: assigns} = socket
       ) do
     selected_auth_method_ids =
-      selections
-      |> Enum.filter(fn {_key, value} -> value == "true" end)
+      assigns.selections
+      |> Enum.filter(fn {_key, value} -> value end)
       |> Enum.map(fn {key, _value} -> key end)
 
     auth_methods =
@@ -92,59 +94,79 @@ defmodule LightningWeb.WorkflowLive.TriggerWebhookAuthMethodsComponent do
             </button>
           </div>
         </:title>
-        <.form
-          :let={f}
-          id="update_trigger_webhook_auth_methods"
-          for={to_form(@selections, as: :webhook_auth_methods)}
-          phx-submit="save"
-          phx-change="update_selection"
-          phx-target={@myself}
-        >
-          <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
-            auth_methods={@project_auth_methods}
-            edit_return_path={@return_to}
-            select_form={f}
-          />
-          <div class="mt-2 px-4 flex justify-between content-center sm:px-6">
-            <div class="flex flex-wrap">
-              <.link
-                href="#"
-                class="inline-flex content-center text-indigo-400 underline"
-                phx-click={show_modal("new_trigger_webhook_auth_method_modal")}
-              >
-                Create a new webhook credential
-              </.link>
 
+        <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
+          auth_methods={@project_auth_methods}
+          on_row_select={
+            fn auth_method ->
+              JS.push("toggle_selection",
+                value: %{auth_method_id: auth_method.id},
+                target: @myself
+              )
+            end
+          }
+          row_selected?={fn auth_method -> @selections[auth_method.id] end}
+        >
+          <:action :let={auth_method}>
+            <a
+              href="#"
+              class="text-indigo-600 hover:text-indigo-900"
+              phx-click={show_modal("webhook_edit_modal_#{auth_method.id}")}
+            >
+              Edit<span class="sr-only">, <%= auth_method.name %></span>
+            </a>
+            <div class="whitespace-normal text-left">
               <.live_component
                 module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-                id="new_trigger_webhook_auth_method_modal"
-                action={:new}
-                trigger={@trigger}
-                return_to={
-                  ~p"/projects/#{@project.id}/w/#{@trigger.workflow_id}?#{%{s: @trigger.id}}"
-                }
-                webhook_auth_method={
-                  %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
-                }
+                id={"webhook_edit_modal_#{auth_method.id}"}
+                action={:edit}
+                return_to={@return_to}
+                webhook_auth_method={auth_method}
               />
             </div>
-            <div class="sm:flex sm:flex-row-reverse">
-              <button
-                type="submit"
-                class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                phx-click={hide_modal(@id)}
-                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-              >
-                Cancel
-              </button>
-            </div>
+          </:action>
+        </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+        <div class="mt-2 px-4 flex justify-between content-center sm:px-6">
+          <div class="flex flex-wrap">
+            <.link
+              href="#"
+              class="inline-flex content-center text-indigo-400 underline"
+              phx-click={show_modal("new_trigger_webhook_auth_method_modal")}
+            >
+              Create a new webhook credential
+            </.link>
+
+            <.live_component
+              module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
+              id="new_trigger_webhook_auth_method_modal"
+              action={:new}
+              trigger={@trigger}
+              return_to={
+                ~p"/projects/#{@project.id}/w/#{@trigger.workflow_id}?#{%{s: @trigger.id}}"
+              }
+              webhook_auth_method={
+                %Lightning.Workflows.WebhookAuthMethod{project_id: @project.id}
+              }
+            />
           </div>
-        </.form>
+          <div class="sm:flex sm:flex-row-reverse">
+            <button
+              type="button"
+              phx-click="save"
+              phx-target={@myself}
+              class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              phx-click={hide_modal(@id)}
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </.modal>
     </div>
     """
