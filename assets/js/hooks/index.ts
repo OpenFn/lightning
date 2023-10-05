@@ -30,6 +30,36 @@ export const FragmentMatch = {
   }
 } as PhoenixHook;
 
+export const TogglePassword = {
+  mounted() {
+    if (this.el.dataset.target === undefined) {
+      console.warn('Toggle element missing data-target attribute', this.el);
+      return;
+    }
+
+    this.el.addEventListener('click', () => {
+      let passwordInput = document.getElementById(this.el.dataset.target);
+
+      if (passwordInput === null) {
+        console.warn('Target password input element was not found', this.el);
+        return;
+      }
+
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+      } else {
+        passwordInput.type = "password";
+      }
+
+      let thenJS = this.el.getAttribute('phx-then');
+      if (thenJS) {
+        this.liveSocket.execJS(this.el, thenJS);
+      }
+    });
+
+  }
+} as PhoenixHook;
+
 export const Tooltip = {
   mounted() {
     if (!this.el.ariaLabel) {
