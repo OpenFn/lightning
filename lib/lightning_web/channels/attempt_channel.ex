@@ -104,6 +104,17 @@ defmodule LightningWeb.AttemptChannel do
     end
   end
 
+  def handle_in("attempt:log", payload, socket) do
+    Attempts.append_attempt_log(socket.assigns.attempt, payload)
+    |> case do
+      {:error, changeset} ->
+        {:reply, {:error, LightningWeb.ChangesetJSON.error(changeset)}, socket}
+
+      {:ok, log_line} ->
+        {:reply, {:ok, %{log_line_id: log_line.id}}, socket}
+    end
+  end
+
   defp get_attempt(id) do
     Attempts.get(id, include: [workflow: [:triggers, :jobs, :edges]])
   end
