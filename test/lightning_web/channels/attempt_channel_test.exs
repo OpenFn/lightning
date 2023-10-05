@@ -272,6 +272,73 @@ defmodule LightningWeb.AttemptChannelTest do
     end
   end
 
+  describe "logging" do
+    setup do
+      project = insert(:project)
+      dataclip = insert(:dataclip, body: %{"foo" => "bar"}, project: project)
+
+      %{triggers: [trigger]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip
+        )
+
+      Lightning.Stub.reset_time()
+
+      {:ok, bearer, _} =
+        Workers.Token.generate_and_sign(
+          %{},
+          Lightning.Config.worker_token_signer()
+        )
+
+      {:ok, %{}, socket} =
+        LightningWeb.WorkerSocket
+        |> socket("socket_id", %{token: bearer})
+        |> subscribe_and_join(
+          LightningWeb.AttemptChannel,
+          "attempt:#{attempt.id}",
+          %{"token" => Workers.generate_attempt_token(attempt)}
+        )
+
+      %{socket: socket, attempt: attempt, workflow: workflow}
+    end
+
+    test "attempt:log", %{socket: socket, attempt: attempt, workflow: workflow} do
+      # { id, job_id, input_dataclip_id }
+      run_id = Ecto.UUID.generate()
+      [job] = workflow.jobs
+
+      ref =
+        push(socket, "run:start", %{
+          "run_id" => run_id,
+          "job_id" => job.id,
+          "input_dataclip_id" => attempt.dataclip_id
+        })
+
+      assert_reply ref, :ok, _
+
+      ref =
+        push(socket, "attempt:log", %{
+          "timestamp" => DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      assert_reply ref, :error, errors
+
+      assert errors == %{message: ["This field can't be blank."]}
+    end
+  end
+
   describe "marking attempts as started and finished" do
     setup context do
       attempt_state = Map.get(context, :attempt_state, :available)
