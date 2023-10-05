@@ -237,6 +237,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
                   disabled={!@can_edit_job}
                   webhook_url={webhook_url(@selected_trigger)}
                   selected_trigger={@selected_trigger}
+                  action={@live_action}
                   cancel_url={
                     ~p"/projects/#{@project.id}/w/#{@workflow.id || "new"}"
                   }
@@ -267,7 +268,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
         </.form>
 
         <.live_component
-          :if={@selected_trigger}
+          :if={
+            @live_action == :edit && @can_create_webhook_auth_method &&
+              @selected_trigger
+          }
           module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
           id="webhooks_auth_method_modal"
           action={:new}
@@ -393,6 +397,20 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
     socket
     |> assign(
+      can_create_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :create_webhook_auth_method,
+          current_user,
+          project_user
+        ),
+      can_edit_webhook_auth_method:
+        Permissions.can?(
+          ProjectUsers,
+          :edit_webhook_auth_method,
+          current_user,
+          project_user
+        ),
       can_edit_job:
         Permissions.can?(ProjectUsers, :edit_job, current_user, project_user),
       can_run_job:

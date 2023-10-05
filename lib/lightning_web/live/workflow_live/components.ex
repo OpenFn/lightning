@@ -251,6 +251,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
   attr :selected_trigger, Trigger, required: true
+  attr :action, :any, required: true
 
   def trigger_form(assigns) do
     assigns =
@@ -273,30 +274,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         ]}
         disabled={@disabled}
       />
-
-      <%!-- <%= Phoenix.HTML.Form.label @form, :type, class: "col-span-4 @md:col-span-2" do %>
-        <div class="flex flex-row">
-          <span class="text-sm font-medium text-secondary-700">
-            Type
-          </span>
-          <Common.tooltip
-            id="trigger-tooltip"
-            title="Choose when this job should run. Select 'webhook' for realtime workflows triggered by notifications from external systems."
-            class="inline-block"
-          />
-        </div>
-        <.old_error field={@form[:type]} />
-        <Form.select_field
-          form={@form}
-          name={:type}
-          id="triggerType"
-          values={[
-            "Cron Schedule (UTC)": "cron",
-            "Webhook Event": "webhook"
-          ]}
-          disabled={@disabled}
-        />
-      <% end %> --%>
       <%= case @type do %>
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
@@ -345,22 +322,40 @@ defmodule LightningWeb.WorkflowLive.Components do
                 class="inline-block"
               />
             </div>
-            <div class="text-xs w-2/3">
+            <div class="text-xs">
               <%= if length(@selected_trigger.webhook_auth_methods) == 0 do %>
                 <p class="italic mt-3">
-                  Add an extra layer of security with Webhook authentication.
+                  <span>
+                    Add an extra layer of security with Webhook authentication.
+                  </span>
                   <.link
+                    id="addAuthenticationLink"
                     href="#"
-                    class="text-indigo-400 underline not-italic"
+                    class={[
+                      "text-indigo-400 underline not-italic inline-flex items-center",
+                      if(@action == :new or @disabled,
+                        do: "text-gray-500 cursor-not-allowed",
+                        else: ""
+                      )
+                    ]}
                     phx-click={show_modal("webhooks_auth_method_modal")}
                   >
                     Add authentication
+                    <%= if @action == :new do %>
+                      <Common.tooltip
+                        id="webhook-authentication-disabled-tooltip"
+                        title="You must save your changes before adding an authentication method"
+                        class="inline"
+                      />
+                    <% end %>
                   </.link>
                 </p>
               <% else %>
                 <ul class="list-disc p-2 mb-2">
                   <li :for={auth_method <- @selected_trigger.webhook_auth_methods}>
-                    <%= auth_method.name %> (<%= auth_method.auth_type %>)
+                    <%= auth_method.name %> (<.humanized_auth_method_type auth_method={
+                      auth_method
+                    } />)
                   </li>
                 </ul>
 
@@ -378,6 +373,21 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
       <% end %>
     </div>
+    """
+  end
+
+  attr :auth_method, :map, required: true
+
+  def humanized_auth_method_type(assigns) do
+    ~H"""
+    <span>
+      <%= case @auth_method.auth_type do %>
+        <% :api -> %>
+          API KEY
+        <% :basic -> %>
+          BASIC
+      <% end %>
+    </span>
     """
   end
 
@@ -637,7 +647,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                     <%= auth_method.name %>
                   </td>
                   <td class="whitespace-nowrap px-6 text-sm text-gray-900">
-                    <%= auth_method.auth_type %>
+                    <.humanized_auth_method_type auth_method={auth_method} />
                   </td>
                   <td class="whitespace-nowrap px-6 text-sm text-gray-900">
                     <%= Enum.count(auth_method.triggers) %>
