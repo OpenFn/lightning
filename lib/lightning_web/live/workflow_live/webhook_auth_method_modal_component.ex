@@ -227,135 +227,9 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
         <%= case assigns do %>
           <% %{action: :index} -> %>
-            <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
-              auth_methods={@project_auth_methods}
-              on_row_select={
-                fn auth_method ->
-                  JS.push("toggle_selection",
-                    value: %{auth_method_id: auth_method.id},
-                    target: @myself
-                  )
-                end
-              }
-              row_selected?={fn auth_method -> @selections[auth_method.id] end}
-            >
-              <:action :let={auth_method}>
-                <a
-                  id={"edit_auth_method_link_#{auth_method.id}"}
-                  href="#"
-                  class="text-indigo-600 hover:text-indigo-900"
-                  phx-click="edit_auth_method"
-                  phx-value-id={auth_method.id}
-                  phx-target={@myself}
-                >
-                  Edit<span class="sr-only">, <%= auth_method.name %></span>
-                </a>
-              </:action>
-            </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
-            <div class="mt-4 flex justify-between content-center ">
-              <div class="flex flex-wrap items-center">
-                <.link
-                  href="#"
-                  class="inline-flex content-center text-primary-700 underline text-md font-semibold"
-                  phx-click="new_auth_method"
-                  phx-target={@myself}
-                >
-                  Create a new webhook credential
-                </.link>
-              </div>
-              <div class="sm:flex sm:flex-row-reverse">
-                <button
-                  id="update_trigger_auth_methods_button"
-                  type="button"
-                  phx-click="save"
-                  phx-target={@myself}
-                  class="inline-flex w-full justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  phx-click={JS.navigate(@return_to)}
-                  class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+            <.auth_methods_table {assigns} />
           <% %{action: :new, webhook_auth_method: %{auth_type: nil}} -> %>
-            <.form
-              :let={f}
-              id={"choose_auth_type_form_#{@id}"}
-              for={@auth_type_changeset}
-              phx-change="validate_auth_type"
-              phx-submit="choose_auth_type"
-              phx-target={@myself}
-            >
-              <div class="space-y-4">
-                <label class={[
-                  "relative block cursor-pointer rounded-lg border bg-white px-6 py-4 shadow-sm focus:outline-none",
-                  if(
-                    Phoenix.HTML.Form.input_value(f, :auth_type) == :basic,
-                    do: "border-indigo-600 ring-2 ring-indigo-600",
-                    else: "border-gray-300"
-                  )
-                ]}>
-                  <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :basic,
-                    class: "sr-only"
-                  ) %>
-                  <span class="flex items-center gap-2">
-                    <Heroicons.globe_alt solid class="h-5 w-5" />
-                    Basic HTTP Authentication (username & password)
-                  </span>
-                  <span
-                    class={[
-                      "pointer-events-none absolute -inset-px rounded-lg",
-                      if(Phoenix.HTML.Form.input_value(f, :auth_type) == :basic,
-                        do: "border-indigo-600",
-                        else: "border-transparent"
-                      )
-                    ]}
-                    aria-hidden="true"
-                  >
-                  </span>
-                </label>
-
-                <label class={[
-                  "relative block cursor-pointer rounded-lg border bg-white px-6 py-4 shadow-sm focus:outline-none",
-                  if(Phoenix.HTML.Form.input_value(f, :auth_type) == :api,
-                    do: "border-indigo-600 ring-2 ring-indigo-600",
-                    else: "border-gray-300"
-                  )
-                ]}>
-                  <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :api,
-                    class: "sr-only"
-                  ) %>
-                  <span class="flex items-center gap-2">
-                    <Heroicons.code_bracket_square solid class="h-5 w-5" />
-                    API Key Authentication (‘x-api-key’ header)
-                  </span>
-                  <span
-                    class={[
-                      "pointer-events-none absolute -inset-px rounded-lg",
-                      if(Phoenix.HTML.Form.input_value(f, :auth_type) == :api,
-                        do: "border-indigo-600",
-                        else: "border-transparent"
-                      )
-                    ]}
-                    aria-hidden="true"
-                  >
-                  </span>
-                </label>
-              </div>
-              <div class="py-3">
-                <button
-                  type="submit"
-                  class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 "
-                >
-                  Next
-                </button>
-              </div>
-            </.form>
+            <.choose_auth_type_form {assigns} />
           <% _other -> %>
             <.live_component
               module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
@@ -368,6 +242,140 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <% end %>
       </.modal>
     </div>
+    """
+  end
+
+  defp auth_methods_table(assigns) do
+    ~H"""
+    <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
+      auth_methods={@project_auth_methods}
+      on_row_select={
+        fn auth_method ->
+          JS.push("toggle_selection",
+            value: %{auth_method_id: auth_method.id},
+            target: @myself
+          )
+        end
+      }
+      row_selected?={fn auth_method -> @selections[auth_method.id] end}
+    >
+      <:action :let={auth_method}>
+        <a
+          id={"edit_auth_method_link_#{auth_method.id}"}
+          href="#"
+          class="text-indigo-600 hover:text-indigo-900"
+          phx-click="edit_auth_method"
+          phx-value-id={auth_method.id}
+          phx-target={@myself}
+        >
+          Edit<span class="sr-only">, <%= auth_method.name %></span>
+        </a>
+      </:action>
+    </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+    <div class="mt-4 flex justify-between content-center ">
+      <div class="flex flex-wrap items-center">
+        <.link
+          href="#"
+          class="inline-flex content-center text-primary-700 underline text-md font-semibold"
+          phx-click="new_auth_method"
+          phx-target={@myself}
+        >
+          Create a new webhook credential
+        </.link>
+      </div>
+      <div class="sm:flex sm:flex-row-reverse">
+        <button
+          id="update_trigger_auth_methods_button"
+          type="button"
+          phx-click="save"
+          phx-target={@myself}
+          class="inline-flex w-full justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          phx-click={JS.navigate(@return_to)}
+          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  defp choose_auth_type_form(assigns) do
+    ~H"""
+    <.form
+      :let={f}
+      id={"choose_auth_type_form_#{@id}"}
+      for={@auth_type_changeset}
+      phx-change="validate_auth_type"
+      phx-submit="choose_auth_type"
+      phx-target={@myself}
+    >
+      <div class="space-y-4">
+        <label class={[
+          "relative block cursor-pointer rounded-lg border bg-white px-6 py-4 shadow-sm focus:outline-none",
+          if(
+            Phoenix.HTML.Form.input_value(f, :auth_type) == :basic,
+            do: "border-indigo-600 ring-2 ring-indigo-600",
+            else: "border-gray-300"
+          )
+        ]}>
+          <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :basic, class: "sr-only") %>
+          <span class="flex items-center gap-2">
+            <Heroicons.globe_alt solid class="h-5 w-5" />
+            Basic HTTP Authentication (username & password)
+          </span>
+          <span
+            class={[
+              "pointer-events-none absolute -inset-px rounded-lg",
+              if(Phoenix.HTML.Form.input_value(f, :auth_type) == :basic,
+                do: "border-indigo-600",
+                else: "border-transparent"
+              )
+            ]}
+            aria-hidden="true"
+          >
+          </span>
+        </label>
+
+        <label class={[
+          "relative block cursor-pointer rounded-lg border bg-white px-6 py-4 shadow-sm focus:outline-none",
+          if(Phoenix.HTML.Form.input_value(f, :auth_type) == :api,
+            do: "border-indigo-600 ring-2 ring-indigo-600",
+            else: "border-gray-300"
+          )
+        ]}>
+          <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :api, class: "sr-only") %>
+          <span class="flex items-center gap-2">
+            <Heroicons.code_bracket_square solid class="h-5 w-5" />
+            API Key Authentication (‘x-api-key’ header)
+          </span>
+          <span
+            class={[
+              "pointer-events-none absolute -inset-px rounded-lg",
+              if(Phoenix.HTML.Form.input_value(f, :auth_type) == :api,
+                do: "border-indigo-600",
+                else: "border-transparent"
+              )
+            ]}
+            aria-hidden="true"
+          >
+          </span>
+        </label>
+      </div>
+      <div class="py-3">
+        <button
+          type="submit"
+          class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 "
+        >
+          Next
+        </button>
+      </div>
+    </.form>
     """
   end
 end
