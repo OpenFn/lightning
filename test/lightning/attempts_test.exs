@@ -429,4 +429,49 @@ defmodule Lightning.AttemptsTest do
       assert DateTime.utc_now() >= attempt.finished_at
     end
   end
+
+  describe "append_attempt_log/1" do
+    test "adds a log line to an attempt" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [job]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:error, changeset} = Attempts.append_attempt_log(attempt, %{})
+
+      assert {:message, {"can't be blank", [validation: :required]}} in changeset.errors
+
+      assert {:timestamp, {"can't be blank", [validation: :required]}} in changeset.errors
+
+      {:error, changeset} =
+        Attempts.append_attempt_log(attempt, %{
+          run_id: Ecto.UUID.generate(),
+          message: "I'm a log line",
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      assert {:run_id, {"must be associated with the attempt", []}} in changeset.errors
+
+      {:ok, _log_line} =
+        Attempts.append_attempt_log(attempt, %{
+          message: "I'm a log line",
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      run = insert(:run, attempts: [attempt], job: job, input_dataclip: dataclip)
+
+      {:ok, log_line} =
+        Attempts.append_attempt_log(attempt, %{
+          message: "I'm another log line",
+          run_id: run.id,
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      log_line = log_line |> Repo.reload!() |> Repo.preload(:run)
+
+      assert log_line.run.id == run.id
+    end
+  end
 end

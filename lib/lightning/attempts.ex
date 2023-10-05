@@ -170,6 +170,28 @@ defmodule Lightning.Attempts do
     end
   end
 
+  def append_attempt_log(attempt, params) do
+    alias Lightning.Invocation.LogLine
+    import Ecto.Changeset
+
+    LogLine.new(attempt, params)
+    |> validate_change(:run_id, fn _, run_id ->
+      if is_nil(run_id) do
+        []
+      else
+        where(Lightning.AttemptRun, run_id: ^run_id, attempt_id: ^attempt.id)
+        |> Repo.exists?()
+        |> if do
+          []
+        else
+          [{:run_id, "must be associated with the attempt"}]
+        end
+      end
+    end)
+    |> LogLine.validate()
+    |> Repo.insert()
+  end
+
   @doc """
   Creates a Run for a given attempt and job.
 
