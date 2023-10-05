@@ -473,5 +473,30 @@ defmodule Lightning.AttemptsTest do
 
       assert log_line.run.id == run.id
     end
+
+    test "adding json objects as messages" do
+      dataclip = insert(:dataclip)
+      %{triggers: [trigger], jobs: [_job]} = workflow = insert(:simple_workflow)
+
+      %{attempts: [attempt]} =
+        work_order_for(trigger, workflow: workflow, dataclip: dataclip)
+        |> insert()
+
+      {:ok, log_line} =
+        Attempts.append_attempt_log(attempt, %{
+          message: [%{"foo" => "bar"}],
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      assert log_line.message == [%{"foo" => "bar"}] |> Jason.encode!()
+
+      {:ok, log_line} =
+        Attempts.append_attempt_log(attempt, %{
+          message: %{"foo" => "bar"},
+          timestamp: DateTime.utc_now() |> DateTime.to_unix(:millisecond)
+        })
+
+      assert log_line.message == %{"foo" => "bar"} |> Jason.encode!()
+    end
   end
 end
