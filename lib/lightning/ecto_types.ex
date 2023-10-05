@@ -35,3 +35,38 @@ defmodule Lightning.UnixDateTime do
     Ecto.Type.dump(:utc_datetime_usec, u)
   end
 end
+
+defmodule Lightning.LogMessage do
+  @moduledoc """
+  A custom type to handle JSON log messages.
+
+  Currently the underlying database type is a string, and workers may send
+  either a string, or a JSON object. This type will encode JSON objects to
+  string.
+
+  > #### Messages are always strings {: .info}
+  >
+  > While this type allows JSON objects to be sent, the model will always return
+  > strings. This type is a stand-in until we want to add a JSONB column to the
+  > underlying table.
+  """
+  use Ecto.Type
+  def type, do: :string
+
+  @doc """
+  Cast a millisecond Unix timestamp to a DateTime.
+  """
+  def cast(d) when is_binary(d), do: Ecto.Type.cast(:string, d)
+
+  def cast(d) when is_map(d) or is_list(d) do
+    Jason.encode(d)
+  end
+
+  def load(d) do
+    Ecto.Type.load(:string, d)
+  end
+
+  def dump(d) do
+    Ecto.Type.dump(:string, d)
+  end
+end

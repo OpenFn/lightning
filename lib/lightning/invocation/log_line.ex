@@ -7,7 +7,7 @@ defmodule Lightning.Invocation.LogLine do
 
   alias Lightning.Invocation.Run
   alias Lightning.Attempt
-  alias Lightning.UnixDateTime
+  alias Lightning.{UnixDateTime, LogMessage}
 
   @type t :: %__MODULE__{
           __meta__: Ecto.Schema.Metadata.t(),
@@ -27,7 +27,7 @@ defmodule Lightning.Invocation.LogLine do
       values: [:info, :warn, :error, :debug],
       default: :info
 
-    field :message, :string, default: ""
+    field :message, LogMessage, default: ""
 
     belongs_to :run, Run
     belongs_to :attempt, Attempt
