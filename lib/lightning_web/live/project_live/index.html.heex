@@ -2,14 +2,14 @@
   <:header>
     <LayoutComponents.header current_user={@current_user}>
       <:title><%= @page_title %></:title>
-      <%= live_patch to: Routes.project_index_path(@socket, :new) do %>
+      <.link patch={Routes.project_index_path(@socket, :new)}>
         <Common.button>
           <div class="h-full">
             <Icon.plus class="h-4 w-4 inline-block" />
             <span class="inline-block align-middle">New Project</span>
           </div>
         </Common.button>
-      <% end %>
+      </.link>
     </LayoutComponents.header>
   </:header>
   <LayoutComponents.centered>

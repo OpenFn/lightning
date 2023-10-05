@@ -127,28 +127,28 @@ defmodule LightningWeb.Pagination do
     case assigns.kind do
       :previous ->
         ~H"""
-        <%= live_patch(
-            to: assigns.url.(page: assigns.page_number),
-            class: "relative inline-flex items-center px-2 py-2 rounded-l-md
-                    border border-secondary-300 bg-white text-sm font-medium
-                    text-secondary-500 hover:bg-secondary-50"
-          ) do %>
+        <.link
+          patch={assigns.url.(page: assigns.page_number)}
+          class="relative inline-flex items-center px-2 py-2 rounded-l-md
+          border border-secondary-300 bg-white text-sm font-medium
+          text-secondary-500 hover:bg-secondary-50"
+        >
           <span class="sr-only">Previous</span>
           <Icon.chevron_left />
-        <% end %>
+        </.link>
         """
 
       :next ->
         ~H"""
-        <%= live_patch(
-            to: assigns.url.(page: assigns.page_number),
-            class: "relative inline-flex items-center px-2 py-2 rounded-r-md
-                    border border-secondary-300 bg-white text-sm font-medium
-                    text-secondary-500 hover:bg-secondary-50"
-          ) do %>
+        <.link
+          patch={assigns.url.(page: assigns.page_number)}
+          class="relative inline-flex items-center px-2 py-2 rounded-r-md
+          border border-secondary-300 bg-white text-sm font-medium
+          text-secondary-500 hover:bg-secondary-50"
+        >
           <span class="sr-only">Next</span>
           <Icon.chevron_right />
-        <% end %>
+        </.link>
         """
 
       :ellipsis ->
@@ -167,23 +167,20 @@ defmodule LightningWeb.Pagination do
   end
 
   defp page_link_box(assigns) do
-    if assigns.active do
-      ~H"""
-      <%= live_patch(@page_number,
-        to: assigns.url.(page: assigns.page_number),
-        class: "z-10 bg-primary-50 border-primary-500 text-primary-600
-           relative inline-flex items-center px-4 py-2 border text-sm font-medium"
-      ) %>
-      """
-    else
-      ~H"""
-      <%= live_patch(@page_number,
-        to: assigns.url.(page: assigns.page_number),
-        class: "bg-white border-secondary-300 text-secondary-500 hover:bg-secondary-50
-           relative inline-flex items-center px-4 py-2 border text-sm font-medium"
-      ) %>
-      """
-    end
+    patch_class =
+      if assigns.active do
+        "z-10 bg-primary-50 border-primary-500 text-primary-600 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+      else
+        "bg-white border-secondary-300 text-secondary-500 hover:bg-secondary-50 relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+      end
+
+    assigns = assign(assigns, :patch_class, patch_class)
+
+    ~H"""
+    <.link patch={assigns.url.(page: assigns.page_number)} class={@patch_class}>
+      <%= assigns.page_number %>
+    </.link>
+    """
   end
 
   # Computing page number ranges
