@@ -391,7 +391,7 @@ defmodule Lightning.AttemptsTest do
 
       {:ok, attempt} = Attempts.start_attempt(attempt)
 
-      assert DateTime.utc_now() >= attempt.started_at
+      assert attempt.started_at <= DateTime.utc_now()
     end
   end
 
