@@ -154,12 +154,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <span class="mt-2 text-gray-700">
                 <%= display_short_uuid(@work_order.id) %> .
                 <.link navigate={
-                  Routes.project_dataclip_edit_path(
-                    @socket,
-                    :edit,
-                    @work_order.workflow.project_id,
-                    @work_order.reason.dataclip_id
-                  )
+                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.reason.dataclip_id}/edit"
                 }>
                   <span
                     title={@work_order.reason.dataclip_id}
