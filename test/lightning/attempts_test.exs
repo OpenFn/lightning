@@ -439,7 +439,12 @@ defmodule Lightning.AttemptsTest do
         work_order_for(trigger, workflow: workflow, dataclip: dataclip)
         |> insert()
 
-      {:error, changeset} = Attempts.append_attempt_log(attempt, %{})
+      {:error, changeset} =
+        Attempts.append_attempt_log(attempt, %{source: "fooo"})
+
+      assert {:source,
+              {"should be %{count} character(s)",
+               [count: 3, validation: :length, kind: :is, type: :string]}} in changeset.errors
 
       assert {:message, {"can't be blank", [validation: :required]}} in changeset.errors
 
