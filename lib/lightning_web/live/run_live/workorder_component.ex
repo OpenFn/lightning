@@ -84,19 +84,6 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   @impl true
-  def update_many([
-        {%{event: :selection_toggled, entry_selected: _selection} = assigns,
-         socket}
-      ]) do
-    update(assigns, socket)
-    |> then(fn {:ok, socket} -> socket end)
-    |> List.wrap()
-  end
-
-  def update_many([{%{event: :selection_toggled} = assigns, socket}]) do
-    [assign(socket, assigns)]
-  end
-
   def update_many(assigns_sockets) do
     ids = Enum.map(assigns_sockets, fn {assigns, _socket} -> assigns.id end)
 
