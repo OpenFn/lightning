@@ -15,6 +15,9 @@ and this project adheres to
 
 ### Changed
 
+- Updated vulnerable JS libraries, `postcss` and `semver`
+  [#1176](https://github.com/OpenFn/Lightning/issues/1176)
+
 ### Fixed
 
 ## [v0.9.3] - 2023-09-27
