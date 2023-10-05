@@ -67,6 +67,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       trigger: trigger,
       selections: selections,
       webhook_auth_method: auth_method,
+      auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{}),
       project_auth_methods: project_auth_methods
     )
   end
@@ -170,7 +171,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
     {:noreply,
      socket
-     |> put_flash(:info, "Webhook credentials updated successfully")
+     |> put_flash(:info, "Trigger webhook credentials updated successfully")
      |> push_navigate(to: socket.assigns.return_to)}
   end
 
@@ -182,7 +183,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         id={@id}
         phx-fragment-match={show_modal(@id)}
         phx-hook="FragmentMatch"
-        width={if(@action in [:new, :edit], do: "min-w-1/3", else: "")}
+        width={if(@action in [:new, :edit], do: "min-w-1/3 max-w-xl", else: "")}
       >
         <:title>
           <div class="flex justify-between">
@@ -205,7 +206,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             </span>
 
             <button
-              phx-click={hide_modal(@id)}
+              phx-click={JS.navigate(@return_to)}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -240,6 +241,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             >
               <:action :let={auth_method}>
                 <a
+                  id={"edit_auth_method_link_#{auth_method.id}"}
                   href="#"
                   class="text-indigo-600 hover:text-indigo-900"
                   phx-click="edit_auth_method"
@@ -263,6 +265,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
               </div>
               <div class="sm:flex sm:flex-row-reverse">
                 <button
+                  id="update_trigger_auth_methods_button"
                   type="button"
                   phx-click="save"
                   phx-target={@myself}
@@ -282,7 +285,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <% %{action: :new, webhook_auth_method: %{auth_type: nil}} -> %>
             <.form
               :let={f}
-              id={"form_#{@id}"}
+              id={"choose_auth_type_form_#{@id}"}
               for={@auth_type_changeset}
               phx-change="validate_auth_type"
               phx-submit="choose_auth_type"

@@ -70,6 +70,35 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
+  describe "create_auth_method/2" do
+    test "creates and associates the authmethod with the trigger successfully" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+      trigger = insert(:trigger, workflow: workflow)
+
+      {:ok, auth_method} =
+        WebhookAuthMethods.create_auth_method(trigger, %{
+          name: "some_name",
+          auth_type: "basic",
+          username: "username",
+          password: "password",
+          project_id: project.id
+        })
+
+      assert %{
+               auth_type: :basic,
+               username: "username",
+               password: "password",
+               api_key: nil
+             } = auth_method
+
+      %{webhook_auth_methods: [associated_auth_method]} =
+        Lightning.Repo.preload(trigger, :webhook_auth_methods)
+
+      assert associated_auth_method.id == auth_method.id
+    end
+  end
+
   describe "update_auth_method/2" do
     setup do
       auth_method = insert(:webhook_auth_method)
@@ -92,6 +121,46 @@ defmodule Lightning.WebhookAuthMethodsTest do
                WebhookAuthMethods.update_auth_method(auth_method, %{
                  name: nil
                })
+    end
+  end
+
+  describe "update_trigger_auth_methods/2" do
+    test "updates a trigger with no auth methods correctly" do
+      trigger = insert(:trigger)
+      auth_method = insert(:webhook_auth_method)
+
+      assert {:ok, updated_trigger} =
+               WebhookAuthMethods.update_trigger_auth_methods(trigger, [
+                 auth_method
+               ])
+
+      assert updated_trigger.webhook_auth_methods == [auth_method]
+    end
+
+    test "replaces the attached auth methods" do
+      project = insert(:project)
+      workflow = insert(:workflow, project: project)
+
+      trigger =
+        insert(:trigger,
+          workflow: workflow,
+          webhook_auth_methods:
+            build_list(3, :webhook_auth_method, project: project)
+        )
+
+      assert length(trigger.webhook_auth_methods) == 3
+
+      auth_method = insert(:webhook_auth_method)
+
+      assert {:ok, updated_trigger} =
+               WebhookAuthMethods.update_trigger_auth_methods(trigger, [
+                 auth_method
+               ])
+
+      updated_trigger =
+        Lightning.Repo.preload(updated_trigger, :webhook_auth_methods)
+
+      assert updated_trigger.webhook_auth_methods == [auth_method]
     end
   end
 
@@ -139,6 +208,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
       {:ok, auth_method} =
         WebhookAuthMethods.create_auth_method(%{
+          auth_type: "basic",
           name: "my_webhook_auth_method",
           username: "some_username",
           password: "hello password",
