@@ -17,6 +17,19 @@ export const Flash = {
   },
 } as PhoenixHook<{ timer: ReturnType<typeof setTimeout> }>;
 
+export const FragmentMatch = {
+  mounted() {
+    if (this.el.id != '' && `#${this.el.id}` == window.location.hash) {
+      let js = this.el.getAttribute('phx-fragment-match');
+      if (js === null) {
+        console.warn('Fragment element missing phx-fragment-match attribute', this.el);
+        return;
+      }
+      this.liveSocket.execJS(this.el, js);
+    }
+  }
+} as PhoenixHook;
+
 export const Tooltip = {
   mounted() {
     if (!this.el.ariaLabel) {
@@ -147,9 +160,16 @@ export const Copy = {
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
       let text = document.querySelector(to).value;
+      let element = this.el;
       navigator.clipboard.writeText(text).then(() => {
         console.log('Copied!');
-        if (phxThenAttribute !== null) {
+        if (phxThenAttribute == null) {
+          let originalText = element.textContent;
+          element.textContent = "Copied!";
+          setTimeout(function() {
+            element.textContent = originalText;
+          }, 3000);
+        } else {
           this.liveSocket.execJS(this.el, phxThenAttribute);
         }
       });

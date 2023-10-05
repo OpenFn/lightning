@@ -14,8 +14,9 @@ defmodule LightningWeb.Components.Modal do
   attr :type, :string, default: "default"
   attr :position, :string, default: "relative"
   attr :width, :string, default: "max-w-3xl"
+  attr :rest, :global
 
-  attr :on_close, JS, default: JS.push(%JS{}, "modal_closed")
+  attr :on_close, JS, default: %JS{}
   attr :on_open, JS, default: %JS{}
 
   slot :inner_block, required: true
@@ -28,6 +29,7 @@ defmodule LightningWeb.Components.Modal do
       id={@id}
       phx-mounted={@show && show_modal(@id)}
       class={"#{@position} z-50 hidden"}
+      {@rest}
     >
       <div
         id={"#{@id}-bg"}
@@ -67,6 +69,7 @@ defmodule LightningWeb.Components.Modal do
                     <%= render_slot(@subtitle) %>
                   </p>
                 </header>
+                <div class="w-full bg-gray-100 h-0.5 my-2"></div>
                 <%= render_slot(@inner_block) %>
               </div>
             </.focus_wrap>
