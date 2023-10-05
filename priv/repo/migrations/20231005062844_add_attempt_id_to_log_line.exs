@@ -6,7 +6,7 @@ defmodule Lightning.Repo.Migrations.AddAttemptIdToLogLine do
       add :attempt_id, references(:attempts, type: :binary_id, on_delete: :delete_all), null: true
       remove :timestamp, :integer
       add :level, :string, null: true
-      add :name, :string, null: true
+      add :source, :string, length: 3, null: true
     end
 
     rename table(:log_lines), :body, to: :message
