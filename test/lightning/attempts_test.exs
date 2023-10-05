@@ -217,11 +217,11 @@ defmodule Lightning.AttemptsTest do
         |> insert()
 
       {:error, changeset} =
-        Attempts.append_attempt_log(attempt, %{source: "fooo"})
+        Attempts.append_attempt_log(attempt, %{source: "fooo-ooooo"})
 
       assert {:source,
-              {"should be %{count} character(s)",
-               [count: 3, validation: :length, kind: :is, type: :string]}} in changeset.errors
+              {"should be at most %{count} character(s)",
+               [count: 8, validation: :length, kind: :max, type: :string]}} in changeset.errors
 
       assert {:message, {"can't be blank", [validation: :required]}} in changeset.errors
 

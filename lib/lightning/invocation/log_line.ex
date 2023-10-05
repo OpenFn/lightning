@@ -52,7 +52,7 @@ defmodule Lightning.Invocation.LogLine do
   def validate(changeset) do
     changeset
     |> validate_required([:message, :timestamp])
-    |> validate_length(:source, is: 3)
+    |> validate_length(:source, max: 8)
     |> assoc_constraint(:run)
     |> assoc_constraint(:attempt)
     |> validate_change(:message, fn _, message ->
