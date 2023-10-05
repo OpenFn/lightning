@@ -92,7 +92,7 @@ defmodule Lightning.Attempts.Handlers do
           # any columns/ids that are null.
           from(a in Attempt,
             where: a.id == ^attempt_id,
-            join: w in assoc(a, :workflow),
+            left_join: w in assoc(a, :workflow),
             left_join: j in assoc(w, :jobs),
             on: j.id == ^job_id,
             select: %{attempt_id: a.id, job_id: j.id}
@@ -117,9 +117,9 @@ defmodule Lightning.Attempts.Handlers do
     @primary_key false
     embedded_schema do
       field :project_id, Ecto.UUID
-      field :dataclip_id, Ecto.UUID
       field :attempt_id, Ecto.UUID
       field :output_dataclip, :string
+      field :output_dataclip_id, Ecto.UUID
       field :reason, :string
       field :run_id, Ecto.UUID
       field :finished_at, :utc_datetime_usec
@@ -128,8 +128,8 @@ defmodule Lightning.Attempts.Handlers do
     def new(params) do
       cast(%__MODULE__{}, params, [
         :attempt_id,
-        :dataclip_id,
         :output_dataclip,
+        :output_dataclip_id,
         :project_id,
         :reason,
         :run_id
@@ -137,9 +137,9 @@ defmodule Lightning.Attempts.Handlers do
       |> put_change(:finished_at, DateTime.utc_now())
       |> validate_required([
         :attempt_id,
-        :dataclip_id,
         :finished_at,
         :output_dataclip,
+        :output_dataclip_id,
         :project_id,
         :reason,
         :run_id
@@ -172,7 +172,7 @@ defmodule Lightning.Attempts.Handlers do
     defp to_dataclip(%__MODULE__{
            output_dataclip: output_dataclip,
            project_id: project_id,
-           dataclip_id: dataclip_id
+           output_dataclip_id: dataclip_id
          }) do
       Dataclip.new(%{
         id: dataclip_id,
@@ -184,7 +184,7 @@ defmodule Lightning.Attempts.Handlers do
 
     defp update_run(run, complete_run) do
       run
-      |> Run.finished(complete_run.dataclip_id, complete_run.reason)
+      |> Run.finished(complete_run.output_dataclip_id, complete_run.reason)
       |> Repo.update()
     end
   end
