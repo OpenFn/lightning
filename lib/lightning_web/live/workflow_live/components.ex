@@ -298,7 +298,6 @@ defmodule LightningWeb.WorkflowLive.Components do
         />
       <% end %> --%>
       <%= case @type do %>
-
         <% :cron -> %>
           <div class="hidden sm:block" aria-hidden="true">
             <div class="py-2"></div>
@@ -328,7 +327,6 @@ defmodule LightningWeb.WorkflowLive.Components do
                 id="copyWebhookUrl"
                 type="button"
                 phx-hook="Copy"
-                phx-then={%JS{}}
                 data-to="#webhookUrlInput"
                 class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
               >
@@ -354,7 +352,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   <.link
                     href="#"
                     class="text-indigo-400 underline not-italic"
-                    phx-click={show_modal("new_webhook_auth_method_modal")}
+                    phx-click={show_modal("webhooks_auth_method_modal")}
                   >
                     Add authentication
                   </.link>
@@ -370,11 +368,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   <.link
                     href="#"
                     class="text-primary-700 underline"
-                    phx-click={
-                      show_modal(
-                        "#{@selected_trigger.id}_webhook_auth_methods_modal"
-                      )
-                    }
+                    phx-click={show_modal("webhooks_auth_method_modal")}
                   >
                     Manage authentication
                   </.link>
