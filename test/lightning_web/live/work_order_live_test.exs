@@ -77,10 +77,10 @@ defmodule LightningWeb.RunWorkOrderTest do
       })
       |> Lightning.Repo.insert!()
 
-      render_component(LightningWeb.RunLive.WorkOrderComponent,
-        id: work_order.id,
-        work_order: work_order
-      ) =~ "work_order"
+      assert render_component(LightningWeb.RunLive.WorkOrderComponent,
+               id: work_order.id,
+               work_order: work_order
+             ) =~ "work_order"
     end
 
     test "lists all workorders", %{
