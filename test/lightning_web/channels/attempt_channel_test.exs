@@ -263,7 +263,7 @@ defmodule LightningWeb.AttemptChannelTest do
       ref =
         push(socket, "run:complete", %{
           "run_id" => run.id,
-          "dataclip_id" => Ecto.UUID.generate(),
+          "output_dataclip_id" => Ecto.UUID.generate(),
           "output_dataclip" => ~s({"foo": "bar"}),
           "reason" => "normal"
         })

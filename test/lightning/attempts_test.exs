@@ -144,7 +144,7 @@ defmodule Lightning.AttemptsTest do
           run_id: run.id,
           reason: "normal",
           output_dataclip: ~s({"foo": "bar"}),
-          dataclip_id: Ecto.UUID.generate(),
+          output_dataclip_id: Ecto.UUID.generate(),
           attempt_id: attempt.id,
           project_id: workflow.project_id
         })
@@ -168,7 +168,7 @@ defmodule Lightning.AttemptsTest do
 
       {:ok, attempt} = Attempts.start_attempt(attempt)
 
-      assert DateTime.utc_now() >= attempt.started_at
+      assert attempt.started_at <= DateTime.utc_now()
     end
   end
 
