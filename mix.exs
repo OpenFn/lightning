@@ -166,6 +166,12 @@ defmodule Lightning.MixProject do
         Accounts: [
           ~r/Lightning.Accounts/
         ],
+        Attempts: [
+          ~r/Lightning.Attempts/
+        ],
+        WorkOrders: [
+          ~r/Lightning.WorkOrders/
+        ],
         Credentials: [
           ~r/Lightning.Credentials/
         ],
@@ -183,6 +189,14 @@ defmodule Lightning.MixProject do
         ],
         Runtime: [
           ~r/Lightning.Runtime/
+        ],
+        Workflows: [
+          ~r/Lightning.Workflow/
+        ],
+        Other: [
+          ~r/Lightning.Graph/,
+          ~r/Lightning.LogMessage/,
+          ~r/Lightning.UnixDateTime/
         ]
       ]
     ]
