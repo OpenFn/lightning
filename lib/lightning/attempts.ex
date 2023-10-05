@@ -138,7 +138,6 @@ defmodule Lightning.Attempts do
         end
       end
     end)
-    |> LogLine.validate()
     |> Repo.insert()
   end
 
