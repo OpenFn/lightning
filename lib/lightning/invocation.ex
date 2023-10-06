@@ -5,9 +5,7 @@ defmodule Lightning.Invocation do
 
   import Ecto.Query, warn: false
   import Lightning.Helpers, only: [coerce_json_field: 2]
-  alias Lightning.Attempt
   alias Lightning.WorkOrder
-  alias Lightning.Workflows.Workflow
   alias Lightning.Invocation.LogLine
   alias Lightning.Workorders.SearchParams
   alias Lightning.Repo
@@ -356,23 +354,19 @@ defmodule Lightning.Invocation do
         %Project{id: project_id},
         %SearchParams{} = search_params
       ) do
-    base_query =
-      from(w in Workflow, where: w.project_id == ^project_id, select: w.id)
-
     conditions = build_conditions(search_params)
 
-    from(w in base_query,
-      join: wo in WorkOrder,
-      on: wo.workflow_id == w.id,
-      join: a in Attempt,
-      on: a.work_order_id == wo.id,
-      join: r in Run,
-      on: r.id in a.runs,
-      left_join: dc in Dataclip,
-      on: dc.id == r.input_dataclip_id,
-      left_join: ll in LogLine,
-      on: ll.run_id == r.id,
-      where: ^conditions
+    from(
+      workorder in WorkOrder,
+      join: workflow in assoc(workorder, :workflow),
+      where: workflow.project_id == ^project_id,
+      join: attempt in assoc(workorder, :attempts),
+      join: run in assoc(attempt, :runs),
+      left_join: dataclip in assoc(run, :input_dataclip),
+      left_join: logline in assoc(run, :log_lines),
+      where: ^conditions,
+      select: workorder,
+      preload: [:workflow, attempts: [:runs]]
     )
   end
 
@@ -387,44 +381,77 @@ defmodule Lightning.Invocation do
          wo_date_before: wo_date_before
        }) do
     conditions = [
-      {workflow_id, fn _q -> dynamic([w], w.id == ^workflow_id) end},
-      {statuses, fn _q -> dynamic([wo], wo.state in ^statuses) end},
+      {workflow_id,
+       fn _q -> dynamic([workflow], workflow.id == ^workflow_id) end},
+      {statuses,
+       fn _q -> dynamic([workorder], workorder.state in ^statuses) end},
       {wo_date_after,
        fn _q ->
          dynamic(
-           [wo],
-           is_nil(wo.inserted_at) or wo.inserted_at >= ^wo_date_after
+           [workorder],
+           is_nil(workorder.inserted_at) or
+             workorder.inserted_at >= ^wo_date_after
          )
        end},
       {wo_date_before,
        fn _q ->
          dynamic(
-           [wo],
-           is_nil(wo.inserted_at) or wo.inserted_at <= ^wo_date_before
+           [workorder],
+           is_nil(workorder.inserted_at) or
+             workorder.inserted_at <= ^wo_date_before
          )
        end},
       {date_after,
        fn _q ->
-         dynamic([a], is_nil(a.finished_at) or a.finished_at >= ^date_after)
+         dynamic(
+           [attempt],
+           is_nil(attempt.finished_at) or attempt.finished_at >= ^date_after
+         )
        end},
       {date_before,
        fn _q ->
-         dynamic([a], is_nil(a.finished_at) or a.finished_at <= ^date_before)
+         dynamic(
+           [attempt],
+           is_nil(attempt.finished_at) or attempt.finished_at <= ^date_before
+         )
        end},
       {:body in search_fields and search_term,
-       fn _q -> dynamic([dc], like(dc.body, ^"%#{search_term}%")) end},
+       fn _q ->
+         dynamic(
+           [dataclip],
+           fragment("CAST(? AS TEXT) LIKE ?", dataclip.body, ^"%#{search_term}%")
+         )
+       end},
       {:log in search_fields and search_term,
-       fn _q -> dynamic([ll], like(ll.body, ^"%#{search_term}%")) end}
+       fn _q ->
+         dynamic(
+           [logline],
+           fragment("CAST(? AS TEXT) LIKE ?", logline.body, ^"%#{search_term}%")
+         )
+       end}
     ]
 
-    Enum.reduce(conditions, dynamic([w, wo, a, r, dc, ll], true), fn
-      {nil, _func}, acc ->
-        acc
-
-      {value, func}, acc ->
-        IO.inspect(acc, label: "ACC")
-        dynamic([w, wo, a, r, dc, ll], ^acc and ^func.(value))
+    Stream.filter(conditions, fn
+      {condition, _func} when is_nil(condition) or condition == false -> false
+      {[], _func} -> false
+      _ -> true
     end)
+    |> Enum.reduce(
+      dynamic(
+        [workflow, workorder, attempt, run, dataclip, logline],
+        true
+      ),
+      fn
+        {nil, _func}, acc ->
+          acc
+
+        {value, func}, acc ->
+          dynamic(
+            [workflow, workorder, attempt, run, dataclip, logline],
+            ^acc and ^func.(value)
+          )
+      end
+    )
   end
 
   def get_workorders_by_ids(ids) do

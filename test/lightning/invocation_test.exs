@@ -1,12 +1,14 @@
 defmodule Lightning.InvocationTest do
   use Lightning.DataCase, async: true
 
+  import Lightning.Factories
+
+  alias Lightning.Attempts
   alias Lightning.Pipeline
   alias Lightning.Workorders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Repo
-  import Lightning.Factories
 
   defp build_workflow(opts) do
     job = build(:job)
@@ -1236,10 +1238,42 @@ defmodule Lightning.InvocationTest do
   describe "search_workorders/1" do
     test "returns paginated work orders for a given project using default parameters" do
       project = insert(:project)
-      workflow = insert(:workflow, project: project)
-      insert_list(3, :workorder, workflow: workflow)
+      dataclip = insert(:dataclip)
 
-      results = Lightning.Invocation.search_workorders(project)
+      %{triggers: [trigger], jobs: [job]} =
+        workflow = insert(:simple_workflow, project: project)
+
+      [work_order_1, _work_order_2, _work_order_3] =
+        insert_list(3, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      attempt =
+        insert(:attempt,
+          work_order: work_order_1,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, _run} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      results =
+        Lightning.Invocation.search_workorders(
+          project,
+          SearchParams.new(%{
+            "workflow_id" => "ec8bd486-0f53-4aba-aa14-642d7e0ae0f2",
+            "status" => ["success"]
+          })
+        )
+
       assert length(results.entries) == 3
     end
   end
