@@ -5,9 +5,9 @@
     as={:user}
     action={Routes.user_confirmation_path(@conn, :update, @token)}
   >
-  <div class="grid grid-flow-row gap-4 auto-rows-max">
-  <.auth_submit button="Confirm my account" />
-  </div>
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <.auth_submit button="Confirm my account" />
+    </div>
   </.form>
   <.auth_footer_link>
     <:actions>

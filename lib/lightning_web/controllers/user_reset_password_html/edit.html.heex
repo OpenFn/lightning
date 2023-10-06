@@ -4,22 +4,18 @@
     for={@changeset}
     action={Routes.user_reset_password_path(@conn, :update, @token)}
   >
-  <div class="grid grid-flow-row gap-4 auto-rows-max">
-    <div>
-      <.label for={:password}>New password</.label>
-      <.input type="password" field={f[:password]} required />
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <div>
+        <.label for={:password}>New password</.label>
+        <.input type="password" field={f[:password]} required />
+      </div>
+      <div>
+        <.label for={:password_confirmation}>
+          Confirm new password
+        </.label>
+        <.input type="password" field={f[:password_confirmation]} required />
+      </div>
+      <.auth_submit button="Reset password" />
     </div>
-    <div>
-      <.label for={:password_confirmation}>
-        Confirm new password
-      </.label>
-      <.input
-        type="password"
-        field={f[:password_confirmation]}
-        required
-      />
-    </div>
-    <.auth_submit button="Reset password" />
-    </div>
-</.form>
+  </.form>
 </.auth_wrapper>
