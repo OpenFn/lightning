@@ -59,28 +59,27 @@ defmodule LightningWeb.RunWorkOrderTest do
           dataclip: dataclip
         )
 
-      work_order = insert(:workorder, workflow: workflow, reason: reason)
       now = Timex.now()
 
-      Attempt.new(%{
-        work_order_id: work_order.id,
-        reason_id: reason.id,
-        runs: [
-          %{
-            job_id: job.id,
-            started_at: now |> Timex.shift(seconds: -25),
-            finished_at: nil,
-            exit_code: nil,
-            input_dataclip_id: dataclip.id
-          }
-        ]
-      })
-      |> Lightning.Repo.insert!()
+      work_order =
+        build(:workorder, workflow: workflow, reason: reason)
+        |> with_attempt(
+          runs: [
+            %{
+              job_id: job.id,
+              started_at: now |> Timex.shift(seconds: -25),
+              finished_at: nil,
+              exit_code: nil,
+              input_dataclip_id: dataclip.id
+            }
+          ]
+        )
+        |> insert()
 
-      render_component(LightningWeb.RunLive.WorkOrderComponent,
-        id: work_order.id,
-        work_order: work_order
-      ) =~ "work_order"
+      assert render_component(LightningWeb.RunLive.WorkOrderComponent,
+               id: work_order.id,
+               work_order: work_order
+             ) =~ "work_order"
     end
 
     test "lists all workorders", %{
@@ -101,6 +100,7 @@ defmodule LightningWeb.RunWorkOrderTest do
         )
 
       work_order = insert(:workorder, workflow: workflow, reason: reason)
+
       now = Timex.now()
 
       %{id: attempt_id} =

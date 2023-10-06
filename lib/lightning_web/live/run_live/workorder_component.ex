@@ -84,21 +84,22 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
   end
 
   @impl true
-  def preload([%{event: :selection_toggled}] = assigns) do
-    assigns
-  end
-
-  def preload(list_of_assigns) do
-    ids = Enum.map(list_of_assigns, & &1.id)
+  def update_many(assigns_sockets) do
+    ids = Enum.map(assigns_sockets, fn {assigns, _socket} -> assigns.id end)
 
     work_orders =
       Invocation.get_workorders_by_ids(ids)
       |> Invocation.with_attempts()
       |> Lightning.Repo.all()
-      |> Enum.into(%{}, fn %{id: id} = wo -> {id, wo} end)
+      |> Map.new(fn %{id: id} = wo -> {id, wo} end)
 
-    Enum.map(list_of_assigns, fn assigns ->
-      Map.put(assigns, :work_order, work_orders[assigns.id])
+    Enum.map(assigns_sockets, fn {assigns, socket} ->
+      socket =
+        assign(socket, assigns)
+        |> assign(:work_order, work_orders[assigns.id])
+
+      update(socket.assigns, socket)
+      |> then(fn {:ok, socket} -> socket end)
     end)
   end
 
@@ -152,7 +153,9 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               </h1>
               <span class="mt-2 text-gray-700">
                 <%= display_short_uuid(@work_order.id) %> .
-                <%= live_redirect to: Routes.project_dataclip_edit_path(@socket, :edit, @work_order.workflow.project_id, @work_order.reason.dataclip_id) do %>
+                <.link navigate={
+                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.reason.dataclip_id}/edit"
+                }>
                   <span
                     title={@work_order.reason.dataclip_id}
                     class="font-normal text-xs whitespace-nowrap text-ellipsis
@@ -161,7 +164,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
                   >
                     <%= display_short_uuid(@work_order.reason.dataclip_id) %>
                   </span>
-                <% end %>
+                </.link>
               </span>
             </div>
           </div>

@@ -106,16 +106,41 @@ defmodule Lightning.Factories do
   # ----------------------------------------------------------------------------
   # Helpers
   # ----------------------------------------------------------------------------
-  # Useful for building up a workflow in a test:
-  #
-  # ```
-  # workflow =
-  #   build(:workflow, project: project)
-  #   |> with_job(job)
-  #   |> with_trigger(trigger)
-  #   |> with_edge({trigger, job})
-  # ```
 
+  @doc """
+  Inserts an attempt and associates it two-way with an work order.
+  ```
+  work_order =
+    build(:workorder, workflow: workflow, reason: reason)
+    |> with_attempt(attempt)
+    |> insert()
+  ```
+  """
+  def with_attempt(work_order, attempt_args) do
+    attempt_args =
+      Keyword.merge(
+        [work_order: work_order, reason: work_order.reason],
+        attempt_args
+      )
+
+    attempt = insert(:attempt, attempt_args)
+
+    %{
+      work_order
+      | attempts: merge_assoc(work_order.attempts, attempt)
+    }
+  end
+
+  @doc """
+  Associates a job with a workflow appending it to the jobs list.
+  ```
+  workflow =
+    build(:workflow, project: project)
+    |> with_job(job)
+    |> with_trigger(trigger)
+    |> with_edge({trigger, job})
+  ```
+  """
   def with_job(workflow, job) do
     %{
       workflow
