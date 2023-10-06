@@ -1,74 +1,25 @@
-<LayoutComponents.nav conn={@conn} />
-<LayoutComponents.page_content>
-  <:header>
-    <LayoutComponents.header>
-      <:title>Reset password</:title>
-    </LayoutComponents.header>
-  </:header>
-  <LayoutComponents.centered>
-    <div id="reset-password-edit">
-      <.form
-        :let={f}
-        for={@changeset}
-        action={Routes.user_reset_password_path(@conn, :update, @token)}
-      >
-        <div class="grid grid-cols-6 gap-6">
-          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
-            <%= if error = Phoenix.Flash.get(@flash, :error) do %>
-              <div class="alert alert-danger" role="alert">
-                <%= error %>
-              </div>
-            <% end %>
-            <%= if info = Phoenix.Flash.get(@flash, :info) do %>
-              <p class="alert alert-info" role="alert">
-                <%= info %>
-              </p>
-            <% end %>
-            <div class="grid grid-flow-row gap-4 auto-rows-max">
-              <div>
-                <.label for={:password}>New password</.label>
-                <.input type="password" field={f[:password]} required />
-              </div>
-
-              <div>
-                <.label for={:password_confirmation}>
-                  Confirm new password
-                </.label>
-                <.input
-                  type="password"
-                  field={f[:password_confirmation]}
-                  required
-                />
-              </div>
-
-              <LightningWeb.Components.Form.submit_button>
-                Reset password
-              </LightningWeb.Components.Form.submit_button>
-
-              <LightningWeb.Components.Form.divider />
-              <div class="text-xs text-secondary-700">
-                <div class="flex">
-                  <div class="flex-none">
-                    <.link href={Routes.user_session_path(@conn, :new)}>
-                      Log in
-                    </.link>
-                  </div>
-                  <div class="grow"></div>
-
-                  <div class="flex-none">
-                    <.link href={Routes.user_registration_path(@conn, :new)}>
-                      Register
-                    </.link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </.form>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3"></div>
-      </div>
+<.auth_wrapper heading="Reset password" conn={@conn} flash={@flash}>
+  <.form
+    :let={f}
+    for={@changeset}
+    action={Routes.user_reset_password_path(@conn, :update, @token)}
+  >
+  <div class="grid grid-flow-row gap-4 auto-rows-max">
+    <div>
+      <.label for={:password}>New password</.label>
+      <.input type="password" field={f[:password]} required />
     </div>
-  </LayoutComponents.centered>
-</LayoutComponents.page_content>
+    <div>
+      <.label for={:password_confirmation}>
+        Confirm new password
+      </.label>
+      <.input
+        type="password"
+        field={f[:password_confirmation]}
+        required
+      />
+    </div>
+    <.auth_submit button="Reset password" />
+    </div>
+</.form>
+</.auth_wrapper>

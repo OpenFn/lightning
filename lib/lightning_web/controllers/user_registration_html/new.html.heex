@@ -1,4 +1,100 @@
-<LayoutComponents.nav conn={@conn} />
+<.auth_wrapper heading="Register" conn={@conn} flash={@flash}>
+  <.form
+    :let={f}
+    for={@changeset}
+    as={:user}
+    action={Routes.user_registration_path(@conn, :create)}
+    class="space-y-6"
+  >
+    <div>
+      <div class="mt-1">
+        <LightningWeb.Components.Form.text_field
+          form={f}
+          field={:first_name}
+          required={true}
+        />
+      </div>
+    </div>
+
+    <div>
+      <div class="mt-1">
+        <LightningWeb.Components.Form.text_field
+          form={f}
+          field={:last_name}
+          required={true}
+        />
+      </div>
+    </div>
+    <div>
+      <div class="mt-1">
+        <LightningWeb.Components.Form.text_field
+          form={f}
+          field={:email}
+          required={true}
+        />
+      </div>
+    </div>
+    <div>
+      <div class="mt-1">
+        <LightningWeb.Components.Form.password_field
+          form={f}
+          id={:password}
+          required={true}
+        />
+      </div>
+    </div>
+
+    <div class="flex items-start">
+      <div class="flex items-center h-5">
+        <%= Phoenix.HTML.Form.checkbox(f, :terms_accepted,
+          class:
+            "focus:ring-primary-500 h-4 w-4 text-primary-600 text-sm border-secondary-300 rounded"
+        ) %>
+      </div>
+      <div class="ml-3 text-sm">
+        <%= Phoenix.HTML.Form.label(f, "Terms and conditions",
+          class: "font-medium text-secondary-700"
+        ) %>
+        <br />
+        <span class="text-xs text-secondary-500">
+          Lightning is still in Beta, therefore
+          <b>
+            we strongly advise against building out production workflows
+          </b>
+          until the official release of Lightning. <br />
+          By registering for an account, you’ll be given your own project, which you can use <em> free of charge until further notice</em>.
+          All credentials, jobs and workflows you create will only be visible to you.
+        </span>
+      </div>
+    </div>
+    <.old_error field={f[:terms_accepted]} />
+    <%!-- <%= error_tag(f, :terms_accepted, --%>
+    <%!-- class: --%>
+    <%!-- "mt-1 focus:ring-primary-500 focus:border-primary-500 block w-full shadow-sm text-sm text-red-600 border-secondary-300 rounded-md" --%>
+    <%!-- ) %> --%>
+    <%!--  --%>
+    <.auth_submit button="Register" />
+  </.form>
+
+  <.auth_footer_link>
+    <:actions>
+      <a
+        href={Routes.user_session_path(@conn, :new)}
+        class="font-medium text-gray-600 hover:text-gray-500"
+      >
+        Log in
+      </a>
+      <a
+        href={Routes.user_reset_password_path(@conn, :new)}
+        class="font-medium text-gray-600 hover:text-gray-500"
+      >
+        Forgot your password?
+      </a>
+    </:actions>
+  </.auth_footer_link>
+</.auth_wrapper>
+
+<%!-- <LayoutComponents.nav conn={@conn} />
 <LayoutComponents.page_content>
   <:header>
     <LayoutComponents.header>
@@ -106,4 +202,4 @@
       </div>
     </div>
   </LayoutComponents.centered>
-</LayoutComponents.page_content>
+</LayoutComponents.page_content> --%>

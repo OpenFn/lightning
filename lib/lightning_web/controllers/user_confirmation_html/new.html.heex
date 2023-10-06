@@ -1,65 +1,35 @@
-<LayoutComponents.nav conn={@conn} />
-<LayoutComponents.page_content>
-  <:header>
-    <LayoutComponents.header>
-      <:title>Resend confirmation instructions</:title>
-    </LayoutComponents.header>
-  </:header>
-  <LayoutComponents.centered>
-    <div id="reset-password">
-      <.form
-        :let={f}
-        for={%{}}
-        as={:user}
-        action={Routes.user_confirmation_path(@conn, :new)}
-      >
-        <div class="grid grid-cols-6 gap-6">
-          <div class="col-span-6 md:col-span-3 sm:col-span-4 border rounded-md shadow-sm bg-white p-6">
-            <%= if error = Phoenix.Flash.get(@flash, :error) do %>
-              <div class="alert alert-danger" role="alert">
-                <%= error %>
-              </div>
-            <% end %>
-            <%= if info = Phoenix.Flash.get(@flash, :info) do %>
-              <p class="alert alert-info" role="alert">
-                <%= info %>
-              </p>
-            <% end %>
-            <div class="grid grid-flow-row gap-4 auto-rows-max">
-              <div>
-                <LightningWeb.Components.Form.email_field
-                  form={f}
-                  id={:email}
-                  required={true}
-                />
-              </div>
-              <LightningWeb.Components.Form.submit_button>
-                Resend confirmation instructions
-              </LightningWeb.Components.Form.submit_button>
-
-              <div class="text-xs text-secondary-700">
-                <div class="flex">
-                  <div class="flex-none">
-                    <.link href={Routes.user_session_path(@conn, :new)}>
-                      Log in
-                    </.link>
-                  </div>
-                  <div class="grow"></div>
-
-                  <div class="flex-none">
-                    <.link href={Routes.user_registration_path(@conn, :new)}>
-                      Register
-                    </.link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </.form>
-      <div class="grid grid-cols-6 gap-6">
-        <div class="col-span-3"></div>
+<.auth_wrapper heading="Resend Confirmation instructions" conn={@conn} flash={@flash}>
+  <.form
+    :let={f}
+    for={%{}}
+    as={:user}
+    action={Routes.user_confirmation_path(@conn, :new)}
+  >
+    <div class="grid grid-flow-row gap-4 auto-rows-max">
+      <div>
+        <LightningWeb.Components.Form.email_field
+          form={f}
+          id={:email}
+          required={true}
+        />
       </div>
+      <.auth_submit button="Resend confirmation instructions" />
     </div>
-  </LayoutComponents.centered>
-</LayoutComponents.page_content>
+  </.form>
+  <.auth_footer_link>
+    <:actions>
+      <.link
+        href={Routes.user_session_path(@conn, :new)}
+        class="font-medium text-gray-600 hover:text-gray-500"
+      >
+        Log in
+      </.link>
+      <.link
+        href={Routes.user_registration_path(@conn, :new)}
+        class="font-medium text-gray-600 hover:text-gray-500"
+      >
+        Register
+      </.link>
+    </:actions>
+  </.auth_footer_link>
+</.auth_wrapper>
