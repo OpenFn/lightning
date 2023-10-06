@@ -1269,8 +1269,9 @@ defmodule Lightning.InvocationTest do
         Lightning.Invocation.search_workorders(
           project,
           SearchParams.new(%{
-            "workflow_id" => "ec8bd486-0f53-4aba-aa14-642d7e0ae0f2",
-            "status" => ["success"]
+            "status" => ["success"],
+            "search_fields" => ["body", "log"],
+            "search_term" => "Hello"
           })
         )
 

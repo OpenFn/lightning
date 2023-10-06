@@ -354,8 +354,19 @@ defmodule Lightning.Invocation do
         %Project{id: project_id},
         %SearchParams{} = search_params
       ) do
-    conditions = build_conditions(search_params)
+    base_query(project_id)
+    |> filter_for_workflow_id(search_params.workflow_id)
+    |> filter_for_statuses(search_params.status)
+    |> filter_for_wo_date_after(search_params.wo_date_after)
+    |> filter_for_wo_date_before(search_params.wo_date_before)
+    |> filter_for_date_after(search_params.date_after)
+    |> filter_for_date_before(search_params.date_before)
+    |> filter_for_body(search_params.search_fields, search_params.search_term)
+    |> filter_for_log(search_params.search_fields, search_params.search_term)
+    |> IO.inspect()
+  end
 
+  defp base_query(project_id) do
     from(
       workorder in WorkOrder,
       join: workflow in assoc(workorder, :workflow),
@@ -364,94 +375,69 @@ defmodule Lightning.Invocation do
       join: run in assoc(attempt, :runs),
       left_join: dataclip in assoc(run, :input_dataclip),
       left_join: logline in assoc(run, :log_lines),
-      where: ^conditions,
       select: workorder,
       preload: [:workflow, attempts: [:runs]]
     )
   end
 
-  defp build_conditions(%SearchParams{
-         status: statuses,
-         search_fields: search_fields,
-         search_term: search_term,
-         workflow_id: workflow_id,
-         date_after: date_after,
-         date_before: date_before,
-         wo_date_after: wo_date_after,
-         wo_date_before: wo_date_before
-       }) do
-    conditions = [
-      {workflow_id,
-       fn _q -> dynamic([workflow], workflow.id == ^workflow_id) end},
-      {statuses,
-       fn _q -> dynamic([workorder], workorder.state in ^statuses) end},
-      {wo_date_after,
-       fn _q ->
-         dynamic(
-           [workorder],
-           is_nil(workorder.inserted_at) or
-             workorder.inserted_at >= ^wo_date_after
-         )
-       end},
-      {wo_date_before,
-       fn _q ->
-         dynamic(
-           [workorder],
-           is_nil(workorder.inserted_at) or
-             workorder.inserted_at <= ^wo_date_before
-         )
-       end},
-      {date_after,
-       fn _q ->
-         dynamic(
-           [attempt],
-           is_nil(attempt.finished_at) or attempt.finished_at >= ^date_after
-         )
-       end},
-      {date_before,
-       fn _q ->
-         dynamic(
-           [attempt],
-           is_nil(attempt.finished_at) or attempt.finished_at <= ^date_before
-         )
-       end},
-      {:body in search_fields and search_term,
-       fn _q ->
-         dynamic(
-           [dataclip],
-           fragment("CAST(? AS TEXT) LIKE ?", dataclip.body, ^"%#{search_term}%")
-         )
-       end},
-      {:log in search_fields and search_term,
-       fn _q ->
-         dynamic(
-           [logline],
-           fragment("CAST(? AS TEXT) LIKE ?", logline.body, ^"%#{search_term}%")
-         )
-       end}
-    ]
+  defp filter_for_workflow_id(query, nil), do: query
 
-    Stream.filter(conditions, fn
-      {condition, _func} when is_nil(condition) or condition == false -> false
-      {[], _func} -> false
-      _ -> true
-    end)
-    |> Enum.reduce(
-      dynamic(
-        [workflow, workorder, attempt, run, dataclip, logline],
-        true
-      ),
-      fn
-        {nil, _func}, acc ->
-          acc
+  defp filter_for_workflow_id(query, workflow_id) when is_binary(workflow_id) do
+    from([workflow] in query, where: workflow.id == ^workflow_id)
+  end
 
-        {value, func}, acc ->
-          dynamic(
-            [workflow, workorder, attempt, run, dataclip, logline],
-            ^acc and ^func.(value)
-          )
-      end
-    )
+  defp filter_for_statuses(query, []), do: query
+
+  defp filter_for_statuses(query, statuses) when is_list(statuses) do
+    from([workorder] in query, where: workorder.state in ^statuses)
+  end
+
+  defp filter_for_wo_date_after(query, nil), do: query
+
+  defp filter_for_wo_date_after(query, wo_date_after)
+       when is_binary(wo_date_after) do
+    from([workorder] in query, where: workorder.inserted_at >= ^wo_date_after)
+  end
+
+  defp filter_for_wo_date_before(query, nil), do: query
+
+  defp filter_for_wo_date_before(query, wo_date_before)
+       when is_binary(wo_date_before) do
+    from([workorder] in query, where: workorder.inserted_at <= ^wo_date_before)
+  end
+
+  defp filter_for_date_after(query, nil), do: query
+
+  defp filter_for_date_after(query, date_after) when is_binary(date_after) do
+    from([attempt] in query, where: attempt.finished_at >= ^date_after)
+  end
+
+  defp filter_for_date_before(query, nil), do: query
+
+  defp filter_for_date_before(query, date_before) when is_binary(date_before) do
+    from([attempt] in query, where: attempt.finished_at <= ^date_before)
+  end
+
+  defp filter_for_body(query, search_fields, search_term) do
+    if :body in search_fields do
+      from([dataclip] in query,
+        where:
+          fragment("CAST(? AS TEXT) LIKE ?", dataclip.body, ^"%#{search_term}%")
+      )
+    else
+      query
+    end
+  end
+
+  defp filter_for_log(query, search_fields, search_term) do
+    if :log in search_fields do
+      from([logline] in query,
+        where:
+          fragment("CAST(? AS TEXT) LIKE ?", logline.body, ^"%#{search_term}%")
+      )
+    else
+      query
+    end
   end
 
   def get_workorders_by_ids(ids) do
