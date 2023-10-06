@@ -96,7 +96,7 @@ defmodule Lightning.MixProject do
       {:rambo, "~> 0.3.4"},
       {:scrivener_ecto, "~> 2.7"},
       {:sentry, "~> 8.0"},
-      {:sobelow, "~> 0.11.1", only: [:test, :dev]},
+      {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.9"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
