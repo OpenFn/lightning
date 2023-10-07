@@ -247,31 +247,33 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
   defp auth_methods_table(assigns) do
     ~H"""
-    <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
-      auth_methods={@project_auth_methods}
-      on_row_select={
-        fn auth_method ->
-          JS.push("toggle_selection",
-            value: %{auth_method_id: auth_method.id},
-            target: @myself
-          )
-        end
-      }
-      row_selected?={fn auth_method -> @selections[auth_method.id] end}
-    >
-      <:action :let={auth_method}>
-        <a
-          id={"edit_auth_method_link_#{auth_method.id}"}
-          href="#"
-          class="text-indigo-600 hover:text-indigo-900"
-          phx-click="edit_auth_method"
-          phx-value-id={auth_method.id}
-          phx-target={@myself}
-        >
-          Edit<span class="sr-only">, <%= auth_method.name %></span>
-        </a>
-      </:action>
-    </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+    <div class="mt-4">
+      <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
+        auth_methods={@project_auth_methods}
+        on_row_select={
+          fn auth_method ->
+            JS.push("toggle_selection",
+              value: %{auth_method_id: auth_method.id},
+              target: @myself
+            )
+          end
+        }
+        row_selected?={fn auth_method -> @selections[auth_method.id] end}
+      >
+        <:action :let={auth_method}>
+          <a
+            id={"edit_auth_method_link_#{auth_method.id}"}
+            href="#"
+            class="text-indigo-600 hover:text-indigo-900"
+            phx-click="edit_auth_method"
+            phx-value-id={auth_method.id}
+            phx-target={@myself}
+          >
+            Edit<span class="sr-only">, <%= auth_method.name %></span>
+          </a>
+        </:action>
+      </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
+    </div>
     <div class="mt-4 flex justify-between content-center ">
       <div class="flex flex-wrap items-center">
         <.link
