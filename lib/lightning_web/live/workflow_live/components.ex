@@ -593,6 +593,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :auth_methods, :list, required: true
   attr :on_row_select, :any, default: nil
   attr :row_selected?, :any
+  attr :class, :string, default: ""
   slot :action, doc: "the slot for showing user actions in the last table column"
 
   def webhook_auth_methods_table(assigns) do
@@ -602,99 +603,101 @@ defmodule LightningWeb.WorkflowLive.Components do
       )
 
     ~H"""
-    <div class="mt-4">
-      <div class="flow-root">
-        <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div class="inline-block min-w-xl py-2 align-middle sm:px-2">
-            <table class="min-w-xl table-fixed border-y border-gray-200">
-              <thead class="bg-[#F4F4F5]">
-                <tr class="sm:px-6 lg:px-8">
-                  <th
-                    :if={@on_row_select}
-                    scope="col"
-                    class="relative px-7 sm:w-12 sm:px-6"
-                  >
-                    <span class="sr-only">Select</span>
-                  </th>
-                  <th
-                    scope="col"
-                    class="min-w-[12rem] py-2.5 pr-3 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Name
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Auth.Type
-                  </th>
-                  <th
-                    scope="col"
-                    class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
-                  >
-                    Triggers Linked
-                  </th>
-                  <th scope="col" class="relative py-3 pl-3 pr-4 sm:pr-3">
-                    <span class="sr-only"><%= gettext("Actions") %></span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 bg-white">
-                <tr
-                  :for={auth_method <- @auth_methods}
-                  class={
-                    if(
-                      @on_row_select && @row_selected?.(auth_method),
-                      do: "bg-[#F2EEFD]",
-                      else: ""
-                    )
-                  }
+    <div class="flow-root">
+      <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+          <table class={["min-w-full border-y border-gray-200", @class]}>
+            <thead class="bg-[#F4F4F5]">
+              <tr class="sm:px-6 lg:px-8">
+                <th
+                  :if={@on_row_select}
+                  scope="col"
+                  class="relative px-7 sm:w-12 sm:px-6"
                 >
-                  <td :if={@on_row_select} class="relative px-7 sm:w-12 sm:px-6">
-                    <div
-                      :if={@on_row_select && @row_selected?.(auth_method)}
-                      class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"
+                  <span class="sr-only">Select</span>
+                </th>
+                <th
+                  scope="col"
+                  class={[
+                    "min-w-[12rem] py-2.5 pr-3 text-left text-sm font-semibold text-gray-900",
+                    if(!@on_row_select, do: "pl-4")
+                  ]}
+                >
+                  Name
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
+                >
+                  Auth.Type
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
+                >
+                  Triggers Linked
+                </th>
+                <th
+                  scope="col"
+                  class="relative py-3 pl-3 pr-4 sm:pr-3 text-sm font-semibold text-gray-900"
+                >
+                  <span class={if @on_row_select, do: "sr-only", else: ""}>
+                    <%= gettext("Actions") %>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+              <tr
+                :for={auth_method <- @auth_methods}
+                class={
+                  if(
+                    @on_row_select && @row_selected?.(auth_method),
+                    do: "bg-[#F2EEFD]",
+                    else: ""
+                  )
+                }
+              >
+                <td :if={@on_row_select} class="relative px-7 sm:w-12 sm:px-6">
+                  <div
+                    :if={@on_row_select && @row_selected?.(auth_method)}
+                    class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"
+                  >
+                  </div>
+                  <input
+                    id={"select_#{auth_method.id}"}
+                    phx-value-selection={to_string(!@row_selected?.(auth_method))}
+                    type="checkbox"
+                    class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
+                    phx-click={@on_row_select.(auth_method)}
+                    checked={@row_selected?.(auth_method)}
+                  />
+                </td>
+                <td class={[
+                  "whitespace-nowrap py-2.5 pr-3 text-sm text-gray-900",
+                  if(!@on_row_select, do: "pl-4")
+                ]}>
+                  <%= auth_method.name %>
+                </td>
+                <td class="whitespace-nowrap px-6 text-sm text-gray-900">
+                  <.humanized_auth_method_type auth_method={auth_method} />
+                </td>
+                <td class="whitespace-nowrap px-6 text-sm text-gray-900">
+                  <%= Enum.count(auth_method.triggers) %>
+                </td>
+                <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
+                  <div class="flex gap-4 whitespace-nowrap text-right text-sm font-medium">
+                    <span
+                      :for={action <- @action}
+                      class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
                     >
-                    </div>
-                    <input
-                      id={"select_#{auth_method.id}"}
-                      phx-value-selection={to_string(!@row_selected?.(auth_method))}
-                      type="checkbox"
-                      class="absolute left-4 top-1/2 -mt-2 h-4 w-4 rounded border-gray-300 text-[#1992CC] focus:ring-indigo-600"
-                      phx-click={@on_row_select.(auth_method)}
-                      checked={@row_selected?.(auth_method)}
-                    />
-                  </td>
-                  <td class={[
-                    "whitespace-nowrap py-2.5 pr-3 text-sm text-gray-900",
-                    if(
-                      @on_row_select && @row_selected?.(auth_method),
-                      do: "",
-                      else: ""
-                    )
-                  ]}>
-                    <%= auth_method.name %>
-                  </td>
-                  <td class="whitespace-nowrap px-6 text-sm text-gray-900">
-                    <.humanized_auth_method_type auth_method={auth_method} />
-                  </td>
-                  <td class="whitespace-nowrap px-6 text-sm text-gray-900">
-                    <%= Enum.count(auth_method.triggers) %>
-                  </td>
-                  <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
-                    <div class="relative whitespace-nowrap text-right text-sm font-medium px-4">
-                      <span
-                        :for={action <- @action}
-                        class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
-                      >
-                        <%= render_slot(action, auth_method) %>
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                      <%= render_slot(action, auth_method) %>
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

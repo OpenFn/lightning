@@ -119,15 +119,15 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
 
     refute render(view) =~ credential_name
 
-    assert view
-           |> form("#form_new_webhook_auth_method",
-             webhook_auth_method: %{
-               name: credential_name,
-               username: "testusername",
-               password: "testpassword123"
-             }
-           )
-           |> render_submit()
+    view
+    |> form("#form_new_webhook_auth_method",
+      webhook_auth_method: %{
+        name: credential_name,
+        username: "testusername",
+        password: "testpassword123"
+      }
+    )
+    |> render_submit()
 
     flash =
       assert_redirect(
