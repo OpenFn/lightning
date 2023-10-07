@@ -1081,7 +1081,7 @@ defmodule Lightning.InvocationTest do
   defp build_workflows(project, workflow_names) do
     workflow_names
     |> Enum.reduce(%{}, fn workflow_name, acc ->
-      workflow = insert(:workflow, name: workflow_name, project: project)
+      workflow = insert(:simple_workflow, name: workflow_name, project: project)
 
       jobs =
         Enum.map(1..4, fn job_index ->
@@ -1123,10 +1123,17 @@ defmodule Lightning.InvocationTest do
 
       [workflow, jobs] = workflow_map[Atom.to_string(workflow_name)]
 
-      reason = insert(:reason, type: :webhook, dataclip: dataclip)
-      wo = insert(:workorder, reason: reason, workflow: workflow)
+      %{triggers: [trigger]} = workflow |> Repo.preload(:triggers)
+
+      wo =
+        insert(:workorder,
+          workflow: workflow,
+          dataclip: dataclip,
+          trigger: trigger
+        )
 
       attempts
+      |> IO.inspect(label: "Attempts")
       |> Enum.reverse()
       |> Enum.with_index()
       |> Enum.each(fn {run_results, attempt_index} ->
@@ -1235,7 +1242,146 @@ defmodule Lightning.InvocationTest do
     ).entries()
   end
 
-  describe "search_workorders/1" do
+  describe "search_workorders" do
+    test "search_workorders/1 returns workorders ordered by last run finished at desc, with nulls first" do
+      project = insert(:project)
+      dataclip = insert(:dataclip)
+
+      {workflow, trigger, job} =
+        build_workflow(project: project, name: "chw-help")
+
+      [workorder_1, workorder_2, workorder_3, workorder_4] =
+        insert_list(4, :workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
+
+      now = Timex.now()
+
+      attempt_1 =
+        insert(:attempt,
+          work_order: workorder_1,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      attempt_2 =
+        insert(:attempt,
+          work_order: workorder_2,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      attempt_3 =
+        insert(:attempt,
+          work_order: workorder_3,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      attempt_4 =
+        insert(:attempt,
+          work_order: workorder_4,
+          dataclip: dataclip,
+          starting_trigger: trigger
+        )
+
+      {:ok, _run_1} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt_1.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "started_at" => now |> Timex.shift(seconds: -50),
+          "finished_at" => now |> Timex.shift(seconds: -40),
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      {:ok, _run_2} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt_2.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "started_at" => now |> Timex.shift(seconds: -40),
+          "finished_at" => now |> Timex.shift(seconds: -30),
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      {:ok, _run_3} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt_3.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "started_at" => now |> Timex.shift(seconds: -30),
+          "finished_at" => now |> Timex.shift(seconds: -20),
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      {:ok, _run_4} =
+        Attempts.start_run(%{
+          "attempt_id" => attempt_4.id,
+          "job_id" => job.id,
+          "input_dataclip_id" => dataclip.id,
+          "started_at" => now |> Timex.shift(seconds: -25),
+          "finished_at" => nil,
+          "run_id" => Ecto.UUID.generate()
+        })
+
+      found_workorders =
+        Invocation.search_workorders(
+          %Lightning.Projects.Project{
+            id: workflow.project_id
+          },
+          SearchParams.new(%{
+            "status" => [
+              "killed",
+              "failed",
+              "pending",
+              "crashed",
+              "success",
+              "running"
+            ]
+          })
+        ).entries()
+
+      expected_order = [
+        workorder_4.id,
+        workorder_3.id,
+        workorder_2.id,
+        workorder_1.id
+      ]
+
+      returned_order =
+        found_workorders |> Enum.map(fn workorder -> workorder.id end)
+
+      assert expected_order == returned_order
+
+      # expected_order = [
+      #   %{
+      #     id: workorder_4.id,
+      #     last_finished_at: run.finished_at,
+      #     workflow_id: workflow.id
+      #   },
+      #   %{
+      #     id: wo_three.id,
+      #     last_finished_at: run_three.finished_at,
+      #     workflow_id: workflow.id
+      #   },
+      #   %{
+      #     id: wo_two.id,
+      #     last_finished_at: run_two.finished_at,
+      #     workflow_id: workflow.id
+      #   },
+      #   %{
+      #     id: wo_one.id,
+      #     last_finished_at: run_one.finished_at,
+      #     workflow_id: workflow.id
+      #   }
+      # ]
+
+      # assert expected_order == simplified_result
+    end
+
     test "returns paginated work orders for a given project using default parameters" do
       project = insert(:project)
       dataclip = insert(:dataclip)
@@ -1243,7 +1389,7 @@ defmodule Lightning.InvocationTest do
       %{triggers: [trigger], jobs: [job]} =
         workflow = insert(:simple_workflow, project: project)
 
-      [work_order_1, _work_order_2, _work_order_3] =
+      [workorder_1, _workorder_2, _workorder_3] =
         insert_list(3, :workorder,
           workflow: workflow,
           trigger: trigger,
@@ -1252,7 +1398,7 @@ defmodule Lightning.InvocationTest do
 
       attempt =
         insert(:attempt,
-          work_order: work_order_1,
+          work_order: workorder_1,
           dataclip: dataclip,
           starting_trigger: trigger
         )
@@ -1266,16 +1412,13 @@ defmodule Lightning.InvocationTest do
         })
 
       results =
-        Lightning.Invocation.search_workorders(
-          project,
-          SearchParams.new(%{
-            "status" => ["success"],
-            "search_fields" => ["body", "log"],
-            "search_term" => "Hello"
-          })
-        )
+        Lightning.Invocation.search_workorders(project)
 
-      assert length(results.entries) == 3
+      assert length(results.entries) == 1
+
+      [found_workorder] = results.entries
+
+      assert found_workorder.id == workorder_1.id
     end
   end
 

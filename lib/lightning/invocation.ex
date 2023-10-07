@@ -355,15 +355,15 @@ defmodule Lightning.Invocation do
         %SearchParams{} = search_params
       ) do
     base_query(project_id)
-    |> filter_for_workflow_id(search_params.workflow_id)
-    |> filter_for_statuses(search_params.status)
-    |> filter_for_wo_date_after(search_params.wo_date_after)
-    |> filter_for_wo_date_before(search_params.wo_date_before)
-    |> filter_for_date_after(search_params.date_after)
-    |> filter_for_date_before(search_params.date_before)
-    |> filter_for_body(search_params.search_fields, search_params.search_term)
-    |> filter_for_log(search_params.search_fields, search_params.search_term)
-    |> IO.inspect()
+    |> filter_by_workflow_id(search_params.workflow_id)
+    |> filter_by_statuses(search_params.status)
+    |> filter_by_wo_date_after(search_params.wo_date_after)
+    |> filter_by_wo_date_before(search_params.wo_date_before)
+    |> filter_by_date_after(search_params.date_after)
+    |> filter_by_date_before(search_params.date_before)
+    |> filter_by_body(search_params.search_fields, search_params.search_term)
+    |> filter_by_log(search_params.search_fields, search_params.search_term)
+    |> IO.inspect(label: "Query")
   end
 
   defp base_query(project_id) do
@@ -374,53 +374,55 @@ defmodule Lightning.Invocation do
       join: attempt in assoc(workorder, :attempts),
       join: run in assoc(attempt, :runs),
       left_join: dataclip in assoc(run, :input_dataclip),
+      as: :dataclip,
       left_join: logline in assoc(run, :log_lines),
+      as: :logline,
       select: workorder,
       preload: [:workflow, attempts: [:runs]]
     )
   end
 
-  defp filter_for_workflow_id(query, nil), do: query
+  defp filter_by_workflow_id(query, nil), do: query
 
-  defp filter_for_workflow_id(query, workflow_id) when is_binary(workflow_id) do
+  defp filter_by_workflow_id(query, workflow_id) when is_binary(workflow_id) do
     from([workflow] in query, where: workflow.id == ^workflow_id)
   end
 
-  defp filter_for_statuses(query, []), do: query
+  defp filter_by_statuses(query, []), do: query
 
-  defp filter_for_statuses(query, statuses) when is_list(statuses) do
+  defp filter_by_statuses(query, statuses) when is_list(statuses) do
     from([workorder] in query, where: workorder.state in ^statuses)
   end
 
-  defp filter_for_wo_date_after(query, nil), do: query
+  defp filter_by_wo_date_after(query, nil), do: query
 
-  defp filter_for_wo_date_after(query, wo_date_after)
+  defp filter_by_wo_date_after(query, wo_date_after)
        when is_binary(wo_date_after) do
     from([workorder] in query, where: workorder.inserted_at >= ^wo_date_after)
   end
 
-  defp filter_for_wo_date_before(query, nil), do: query
+  defp filter_by_wo_date_before(query, nil), do: query
 
-  defp filter_for_wo_date_before(query, wo_date_before)
+  defp filter_by_wo_date_before(query, wo_date_before)
        when is_binary(wo_date_before) do
     from([workorder] in query, where: workorder.inserted_at <= ^wo_date_before)
   end
 
-  defp filter_for_date_after(query, nil), do: query
+  defp filter_by_date_after(query, nil), do: query
 
-  defp filter_for_date_after(query, date_after) when is_binary(date_after) do
+  defp filter_by_date_after(query, date_after) when is_binary(date_after) do
     from([attempt] in query, where: attempt.finished_at >= ^date_after)
   end
 
-  defp filter_for_date_before(query, nil), do: query
+  defp filter_by_date_before(query, nil), do: query
 
-  defp filter_for_date_before(query, date_before) when is_binary(date_before) do
+  defp filter_by_date_before(query, date_before) when is_binary(date_before) do
     from([attempt] in query, where: attempt.finished_at <= ^date_before)
   end
 
-  defp filter_for_body(query, search_fields, search_term) do
+  defp filter_by_body(query, search_fields, search_term) do
     if :body in search_fields do
-      from([dataclip] in query,
+      from([dataclip: dataclip] in query,
         where:
           fragment("CAST(? AS TEXT) LIKE ?", dataclip.body, ^"%#{search_term}%")
       )
@@ -429,9 +431,9 @@ defmodule Lightning.Invocation do
     end
   end
 
-  defp filter_for_log(query, search_fields, search_term) do
+  defp filter_by_log(query, search_fields, search_term) do
     if :log in search_fields do
-      from([logline] in query,
+      from([logline: logline] in query,
         where:
           fragment("CAST(? AS TEXT) LIKE ?", logline.body, ^"%#{search_term}%")
       )
