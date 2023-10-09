@@ -6,33 +6,44 @@ defmodule LightningWeb.WebhooksController do
   # this gets hit when someone asks to run a workflow by API
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
-    path
-    |> Enum.join("/")
-    |> Workflows.get_edge_by_webhook()
-    |> case do
-      nil ->
-        put_status(conn, :not_found)
-        |> json(%{})
+    source_trigger_id = path |> List.last()
 
-      %Workflows.Edge{target_job: %Jobs.Job{enabled: false}} ->
-        put_status(conn, :forbidden)
-        |> json(%{
-          message:
-            "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-        })
+    :telemetry.span(
+      [:lightning, :workorder, :webhook],
+      %{source_trigger_id: source_trigger_id},
+      fn ->
+        result =
+          path
+          |> Enum.join("/")
+          |> Workflows.get_edge_by_webhook()
+          |> case do
+            nil ->
+              put_status(conn, :not_found)
+              |> json(%{})
 
-      edge ->
-        {:ok, %{work_order: work_order, attempt_run: attempt_run}} =
-          WorkOrderService.create_webhook_workorder(edge, conn.body_params)
+            %Workflows.Edge{target_job: %Jobs.Job{enabled: false}} ->
+              put_status(conn, :forbidden)
+              |> json(%{
+                message:
+                  "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
+              })
 
-        resp = %{
-          work_order_id: work_order.id,
-          run_id: attempt_run.run_id,
-          attempt_id: attempt_run.attempt_id
-        }
+            edge ->
+              {:ok, %{work_order: work_order, attempt_run: attempt_run}} =
+                WorkOrderService.create_webhook_workorder(edge, conn.body_params)
 
-        conn
-        |> json(resp)
-    end
+              resp = %{
+                work_order_id: work_order.id,
+                run_id: attempt_run.run_id,
+                attempt_id: attempt_run.attempt_id
+              }
+
+              conn
+              |> json(resp)
+          end
+
+        {result, %{source_trigger_id: source_trigger_id}}
+      end
+    )
   end
 end
