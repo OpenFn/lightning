@@ -462,7 +462,10 @@ defmodule Lightning.SetupUtilsTest do
                jobs |> Enum.map(fn job -> job.id end) |> Enum.sort()
 
       assert length(openhie_workflow.edges) == length(jobs)
-      assert List.first(openhie_workflow.triggers).type == :webhook
+
+      [trigger | _] = openhie_workflow.triggers
+      assert trigger.type == :webhook
+      assert trigger.id == "cae544ab-03dc-4ccc-a09c-fb4edb255d7a"
 
       assert fhir_standard_data.name == "Transform data to FHIR standard"
 

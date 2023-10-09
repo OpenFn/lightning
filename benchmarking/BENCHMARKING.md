@@ -35,6 +35,14 @@ Execute the following steps to run a benchmark on Lightning:
     If the script exits successfully, this means the app met the defined performance
     thresholds.
 
+    By default, the test payload is minimal. Should you wish to test it with larger payloads,
+    you can pass in the `PAYLOAD_SIZE` ENV variable. This variable allows you to specify the payload
+    size in MB (for now, integer values only), (e.g. 8 MB):
+
+    ```bash
+    k6 run -e PAYLOAD_SIZE=8 benchmarking/script.js
+    ```
+
     To collect the benchmarking data in a CSV file, run the previous command with
     the `--out filename` option.
 

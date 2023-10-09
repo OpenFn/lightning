@@ -19,11 +19,24 @@ export const options = {
   },
 };
 
-export default function () {
-  const payload = JSON.stringify({
-    name: 'lorem',
-    surname: 'ipsum',
-  });
+export function setup() {
+  let payload_size = 10;
+
+  if (__ENV.PAYLOAD_SIZE != null) {
+    payload_size = parseInt(__ENV.PAYLOAD_SIZE, 10) * 1000 * 1000
+  }
+
+  return {
+    payload: {
+      name: 'lorem',
+      surname: 'ipsum',
+      data: '0123456789'.repeat(payload_size / 10) // Repeating string is 10 bytes in size
+    }
+  }
+}
+
+export default function (data) {
+  const payload = JSON.stringify(data.payload);
   const headers = { 'Content-Type': 'application/json' };
   const res = http.post(webhookURL, payload, { headers });
   check(res, { 'status was 200': r => r.status == 200 });
