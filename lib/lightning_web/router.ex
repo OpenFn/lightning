@@ -2,6 +2,8 @@ defmodule LightningWeb.Router do
   use LightningWeb, :router
 
   import LightningWeb.UserAuth
+  import Phoenix.LiveDashboard.Router
+
   alias ProjectLive
   alias JobLive
   alias CredentialLive
@@ -178,19 +180,13 @@ defmodule LightningWeb.Router do
   # Note that preview only shows emails that were sent by the same
   # node running the Phoenix server.
   #
-  # If you want to use the LiveDashboard in production, you should put
-  # it behind authentication and allow only admins to access it.
-  # If your application does not have an admins-only section yet,
-  # you can use Plug.BasicAuth to set up some basic authentication
-  # as long as you are also using SSL (which you should anyway).
-  if Mix.env() in [:dev, :test] do
-    import Phoenix.LiveDashboard.Router
 
-    scope "/" do
-      pipe_through [:browser, :require_authenticated_user, :require_superuser]
+  # LiveDashboard enables basic system monitoring but is only available to
+  # superusers—i.e., the people who installed/maintain the instance.
+  scope "/" do
+    pipe_through [:browser, :require_authenticated_user, :require_superuser]
 
-      live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
-    end
+    live_dashboard "/dashboard", metrics: LightningWeb.Telemetry
   end
 
   if Mix.env() == :dev do
