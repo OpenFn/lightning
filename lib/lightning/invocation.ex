@@ -288,9 +288,9 @@ defmodule Lightning.Invocation do
     end
   end
 
-  def create_log_line(run, body) do
+  def create_log_line(attrs) do
     %LogLine{}
-    |> Ecto.Changeset.change(%{run: run, body: body |> to_string})
+    |> Ecto.Changeset.change(attrs)
     |> LogLine.validate()
     |> Repo.insert!()
   end
@@ -361,84 +361,116 @@ defmodule Lightning.Invocation do
     |> filter_by_wo_date_before(search_params.wo_date_before)
     |> filter_by_date_after(search_params.date_after)
     |> filter_by_date_before(search_params.date_before)
-    |> filter_by_body(search_params.search_fields, search_params.search_term)
-    |> filter_by_log(search_params.search_fields, search_params.search_term)
-    |> IO.inspect(label: "Query")
+    |> filter_by_body_or_log(
+      search_params.search_fields,
+      search_params.search_term
+    )
   end
 
   defp base_query(project_id) do
     from(
       workorder in WorkOrder,
+      as: :workorder,
       join: workflow in assoc(workorder, :workflow),
+      as: :workflow,
       where: workflow.project_id == ^project_id,
-      join: attempt in assoc(workorder, :attempts),
-      join: run in assoc(attempt, :runs),
+      left_join: attempt in assoc(workorder, :attempts),
+      as: :attempt,
+      left_join: run in assoc(attempt, :runs),
+      as: :run,
       left_join: dataclip in assoc(run, :input_dataclip),
       as: :dataclip,
       left_join: logline in assoc(run, :log_lines),
       as: :logline,
       select: workorder,
-      preload: [:workflow, attempts: [:runs]]
+      preload: [:workflow, attempts: [:runs]],
+      order_by: [desc_nulls_first: workorder.inserted_at]
     )
   end
 
   defp filter_by_workflow_id(query, nil), do: query
 
   defp filter_by_workflow_id(query, workflow_id) when is_binary(workflow_id) do
-    from([workflow] in query, where: workflow.id == ^workflow_id)
+    from([workflow: workflow] in query, where: workflow.id == ^workflow_id)
   end
 
   defp filter_by_statuses(query, []), do: query
 
   defp filter_by_statuses(query, statuses) when is_list(statuses) do
-    from([workorder] in query, where: workorder.state in ^statuses)
+    from([workorder: workorder] in query, where: workorder.state in ^statuses)
   end
 
   defp filter_by_wo_date_after(query, nil), do: query
 
-  defp filter_by_wo_date_after(query, wo_date_after)
-       when is_binary(wo_date_after) do
-    from([workorder] in query, where: workorder.inserted_at >= ^wo_date_after)
+  defp filter_by_wo_date_after(query, wo_date_after) do
+    from([workorder: workorder] in query,
+      where: workorder.inserted_at >= ^wo_date_after
+    )
   end
 
   defp filter_by_wo_date_before(query, nil), do: query
 
-  defp filter_by_wo_date_before(query, wo_date_before)
-       when is_binary(wo_date_before) do
-    from([workorder] in query, where: workorder.inserted_at <= ^wo_date_before)
+  defp filter_by_wo_date_before(query, wo_date_before) do
+    from([workorder: workorder] in query,
+      where: workorder.inserted_at <= ^wo_date_before
+    )
   end
 
   defp filter_by_date_after(query, nil), do: query
 
-  defp filter_by_date_after(query, date_after) when is_binary(date_after) do
-    from([attempt] in query, where: attempt.finished_at >= ^date_after)
+  defp filter_by_date_after(query, date_after) do
+    from([attempt: attempt] in query, where: attempt.finished_at >= ^date_after)
   end
 
   defp filter_by_date_before(query, nil), do: query
 
-  defp filter_by_date_before(query, date_before) when is_binary(date_before) do
-    from([attempt] in query, where: attempt.finished_at <= ^date_before)
+  defp filter_by_date_before(query, date_before) do
+    from([attempt: attempt] in query, where: attempt.finished_at <= ^date_before)
   end
 
-  defp filter_by_body(query, search_fields, search_term) do
-    if :body in search_fields do
-      from([dataclip: dataclip] in query,
-        where:
-          fragment("CAST(? AS TEXT) LIKE ?", dataclip.body, ^"%#{search_term}%")
-      )
-    else
-      query
-    end
-  end
+  defp filter_by_body_or_log(query, search_fields, search_term) do
+    has_body_search = :body in search_fields
+    has_log_search = :log in search_fields
 
-  defp filter_by_log(query, search_fields, search_term) do
-    if :log in search_fields do
-      from([logline: logline] in query,
-        where:
-          fragment("CAST(? AS TEXT) LIKE ?", logline.body, ^"%#{search_term}%")
-      )
-    else
-      query
+    cond do
+      has_body_search and has_log_search ->
+        from(
+          [dataclip: dataclip, logline: logline] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              dataclip.body,
+              ^"%#{search_term}%"
+            ) or
+              fragment(
+                "CAST(? AS TEXT) iLIKE ?",
+                logline.message,
+                ^"%#{search_term}%"
+              )
+        )
+
+      has_body_search ->
+        from([dataclip: dataclip] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              dataclip.body,
+              ^"%#{search_term}%"
+            )
+        )
+
+      has_log_search ->
+        from([logline: logline] in query,
+          where:
+            fragment(
+              "CAST(? AS TEXT) iLIKE ?",
+              logline.message,
+              ^"%#{search_term}%"
+            )
+        )
+
+      true ->
+        query
     end
   end
 
