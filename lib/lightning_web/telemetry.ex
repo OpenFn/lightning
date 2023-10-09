@@ -70,26 +70,30 @@ defmodule LightningWeb.Telemetry do
         event_name: [:lightning, :workorder, :webhook, :stop],
         measurement: :duration,
         unit: {:native, :millisecond},
-        description: "Time taken to process webhook request"
+        description:
+          "Time taken to process an HTTP request to a webhook trigger URL"
       ),
       distribution("lightning.api.webhook",
         event_name: [:lightning, :workorder, :webhook, :stop],
         measurement: :duration,
         unit: {:native, :millisecond},
-        description: "Time taken to process webhook request"
+        description:
+          "Time taken to process an HTTP request to a webhook trigger URL"
       ),
       summary("lightning.runs.queue.latency",
         event_name: [:oban, :job, :stop],
         measurement: :queue_time,
         unit: {:native, :millisecond},
-        description: "The time a job spends on the run queue before processed",
+        description:
+          "The time an attempt spends on the run queue before being claimed by a worker",
         keep: &match?(%{queue: "runs"}, &1)
       ),
       distribution("lightning.runs.queue.latency",
         event_name: [:oban, :job, :stop],
         measurement: :queue_time,
         unit: {:native, :millisecond},
-        description: "The time a job spends on the run queue before processed",
+        description:
+          "The time an attempt spends on the run queue before being claimed by a worker",
         keep: &match?(%{queue: "runs"}, &1)
       ),
       summary("lightning.ui.history",
