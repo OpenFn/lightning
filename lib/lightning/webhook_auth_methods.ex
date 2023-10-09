@@ -78,6 +78,18 @@ defmodule Lightning.WebhookAuthMethods do
     |> Repo.update()
   end
 
+  @spec update_trigger_auth_methods(
+          Trigger.t(),
+          [WebhookAuthMethod.t(), ...] | []
+        ) :: {:ok, Trigger.t()} | {:error, Ecto.Changeset.t()}
+  def update_trigger_auth_methods(%Trigger{} = trigger, auth_methods) do
+    trigger
+    |> Repo.preload([:webhook_auth_methods])
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
+    |> Repo.update()
+  end
+
   @doc """
   Deletes a Webhook Auth Method.
 

@@ -17,6 +17,49 @@ export const Flash = {
   },
 } as PhoenixHook<{ timer: ReturnType<typeof setTimeout> }>;
 
+export const FragmentMatch = {
+  mounted() {
+    if (this.el.id != '' && `#${this.el.id}` == window.location.hash) {
+      let js = this.el.getAttribute('phx-fragment-match');
+      if (js === null) {
+        console.warn('Fragment element missing phx-fragment-match attribute', this.el);
+        return;
+      }
+      this.liveSocket.execJS(this.el, js);
+    }
+  }
+} as PhoenixHook;
+
+export const TogglePassword = {
+  mounted() {
+    if (this.el.dataset.target === undefined) {
+      console.warn('Toggle element missing data-target attribute', this.el);
+      return;
+    }
+
+    this.el.addEventListener('click', () => {
+      let passwordInput = document.getElementById(this.el.dataset.target);
+
+      if (passwordInput === null) {
+        console.warn('Target password input element was not found', this.el);
+        return;
+      }
+
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+      } else {
+        passwordInput.type = "password";
+      }
+
+      let thenJS = this.el.getAttribute('phx-then');
+      if (thenJS) {
+        this.liveSocket.execJS(this.el, thenJS);
+      }
+    });
+
+  }
+} as PhoenixHook;
+
 export const Tooltip = {
   mounted() {
     if (!this.el.ariaLabel) {
@@ -147,9 +190,16 @@ export const Copy = {
     this.el.addEventListener('click', ev => {
       ev.preventDefault();
       let text = document.querySelector(to).value;
+      let element = this.el;
       navigator.clipboard.writeText(text).then(() => {
         console.log('Copied!');
-        if (phxThenAttribute !== null) {
+        if (phxThenAttribute == null) {
+          let originalText = element.textContent;
+          element.textContent = "Copied!";
+          setTimeout(function() {
+            element.textContent = originalText;
+          }, 3000);
+        } else {
           this.liveSocket.execJS(this.el, phxThenAttribute);
         }
       });
