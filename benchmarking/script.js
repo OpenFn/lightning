@@ -23,7 +23,7 @@ export function setup() {
   let payload_size = 10;
 
   if (__ENV.PAYLOAD_SIZE != null) {
-    payload_size = parseInt(__ENV.PAYLOAD_SIZE, 10) * 1000 * 1000
+    payload_size = parseInt(__ENV.PAYLOAD_SIZE, 10) * 1000
   }
 
   return {
