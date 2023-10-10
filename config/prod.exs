@@ -19,6 +19,9 @@ config :lightning,
   schemas_path: "priv/schemas",
   adaptor_icons_path: "priv/static/images/adaptors"
 
+# For now, do not export any open-telephony messages
+config :opentelemetry, traces_exporter: :none
+
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key

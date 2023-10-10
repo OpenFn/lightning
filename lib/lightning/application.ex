@@ -8,6 +8,11 @@ defmodule Lightning.Application do
 
   @impl true
   def start(_type, _args) do
+    :opentelemetry_cowboy.setup()
+    OpentelemetryPhoenix.setup(adapter: :cowboy2)
+    OpentelemetryEcto.setup([:lightning, :repo])
+    OpentelemetryLiveView.setup()
+    OpentelemetryOban.setup(trace: [:jobs])
     # mnesia startup
     :mnesia.stop()
     :mnesia.create_schema([node()])
