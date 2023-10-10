@@ -80,41 +80,10 @@ defmodule LightningWeb.Components.Modal do
     """
   end
 
-  # def modal(assigns) do
-  #   ~H"""
-  #   <div
-  #     id={@id}
-  #     phx-update={@show && show_modal(@id)}
-  #     phx-mounted={@show && show_modal(@id)}
-  #     phx-remove={hide_modal(@id, @close_event, @close_target)}
-  #     class="relative z-50"
-  #     style="display: none;"
-  #   >
-  #     <div
-  #       class="fixed inset-0 z-50 transition-opacity bg-gray-50/90 dark:bg-gray-900/90"
-  #       aria-hidden="true"
-  #     >
-  #     </div>
-  #     <div
-  #       class="fixed inset-0 z-50 flex items-center justify-center px-4 my-4 overflow-hidden transform sm:px-6"
-  #       role="dialog"
-  #       aria-modal="true"
-  #     >
-  #       <div
-  #         class="w-full max-h-full overflow-auto bg-white opacity-1 shadow-lg rounded-xl dark:bg-gray-800"
-  #         role="document"
-  #         phx-remove={hide_modal(@id, @close_event, @close_target)}
-  #         phx-window-keydown={hide_modal(@id, @close_event, @close_target)}
-  #         phx-key="escape"
-  #       >
-  #         <%= render_slot(@inner_block, hide_modal(@id, @close_event, @close_target)) %>
-  #       </div>
-  #     </div>
-  #   </div>
-  #   """
-  # end
-
   def show_modal(js \\ %JS{}, id) when is_binary(id) do
+    IO.inspect(js, label: "JS")
+    IO.inspect(id, label: "ID")
+
     js
     |> JS.show(to: "##{id}")
     |> JS.show(

@@ -606,7 +606,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   scope="col"
                   class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
                 >
-                  Triggers Linked
+                  Linked Triggers
                 </th>
                 <th
                   scope="col"
@@ -654,7 +654,16 @@ defmodule LightningWeb.WorkflowLive.Components do
                   <.humanized_auth_method_type auth_method={auth_method} />
                 </td>
                 <td class="whitespace-nowrap px-6 text-sm text-gray-900">
-                  <%= Enum.count(auth_method.triggers) %>
+                  <a
+                    id={"display_linked_triggers_link_#{auth_method.id}"}
+                    href="#"
+                    class="text-indigo-600 hover:text-indigo-900"
+                    phx-click={
+                      show_modal("display_linked_triggers_#{auth_method.id}_modal")
+                    }
+                  >
+                    <%= Enum.count(auth_method.triggers) %>
+                  </a>
                 </td>
                 <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
                   <div class="flex gap-4 whitespace-nowrap text-right text-sm font-medium">
