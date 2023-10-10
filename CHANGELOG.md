@@ -14,6 +14,8 @@ and this project adheres to
   OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
 - Expose additional metrics to LiveDashboard
   [#1171](https://github.com/OpenFn/Lightning/issues/1171)
+- Add plumbing to dump Lightning metrics during load testing
+  [#1178](https://github.com/OpenFn/Lightning/issues/1178)
 
 ### Changed
 
