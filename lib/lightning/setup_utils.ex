@@ -453,6 +453,8 @@ defmodule Lightning.SetupUtils do
     {:ok, openhie_trigger} =
       Workflows.build_trigger(%{
         type: :webhook,
+        # Id is hard-coded to support external test scripts (e.g. benchmarking/script.js)
+        id: "cae544ab-03dc-4ccc-a09c-fb4edb255d7a",
         workflow_id: openhie_workflow.id
       })
 

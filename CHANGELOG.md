@@ -16,6 +16,8 @@ and this project adheres to
   [#1171](https://github.com/OpenFn/Lightning/issues/1171)
 - Add plumbing to dump Lightning metrics during load testing
   [#1178](https://github.com/OpenFn/Lightning/issues/1178)
+- Allow for heavier payloads during load testing
+  [#1179] (https://github.com/OpenFn/Lightning/issues/1179)
 
 ### Changed
 
