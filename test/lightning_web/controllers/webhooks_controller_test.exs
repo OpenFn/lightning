@@ -7,13 +7,21 @@ defmodule LightningWeb.WebhooksControllerTest do
   import Lightning.JobsFixtures
 
   describe "a POST request to '/i'" do
-    test "with a valid trigger id instantiates a workorder", %{conn: conn} do
+    setup %{conn: conn} do
+      %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
+
+      [conn: conn, job: job, trigger: trigger]
+    end
+
+    test "with a valid trigger id instantiates a workorder", %{
+      conn: conn,
+      job: job,
+      trigger: trigger
+    } do
       Oban.Testing.with_testing_mode(:inline, fn ->
         expect(Lightning.Pipeline.Runner, :start, fn _run ->
           %Lightning.Runtime.Result{}
         end)
-
-        %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
 
         message = %{"foo" => "bar"}
         conn = post(conn, "/i/#{trigger.id}", message)
@@ -28,6 +36,25 @@ defmodule LightningWeb.WebhooksControllerTest do
         assert job_id == job.id
         assert body == message
       end)
+    end
+
+    test "triggers a custom telemetry event", %{conn: conn, trigger: trigger} do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :workorder, :webhook, :stop]
+        ])
+
+      trigger_id = trigger.id
+
+      message = %{"foo" => "bar"}
+      post(conn, "/i/#{trigger.id}", message)
+
+      assert_received {
+        [:lightning, :workorder, :webhook, :stop],
+        ^ref,
+        %{},
+        %{source_trigger_id: ^trigger_id}
+      }
     end
 
     test "with an invalid trigger id returns a 404", %{conn: conn} do
@@ -45,5 +72,15 @@ defmodule LightningWeb.WebhooksControllerTest do
     assert %{"message" => message} = json_response(conn, 403)
 
     assert message =~ "Unable to process request, trigger is disabled."
+  end
+
+  def dummy_event_trigger() do
+    :telemetry.span(
+      [:lightning, :workorder, :webhook],
+      %{source_trigger_id: 99},
+      fn ->
+        {true, %{source_trigger_id: 99}}
+      end
+    )
   end
 end
