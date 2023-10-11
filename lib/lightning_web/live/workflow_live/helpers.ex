@@ -7,13 +7,16 @@ defmodule LightningWeb.WorkflowLive.Helpers do
 
   alias Lightning.Workflows
   alias Lightning.WorkOrders
-  alias Lightning.AttemptRun
 
   @spec save_and_run(
           Ecto.Changeset.t(Workflows.Workflow.t()),
           Ecto.Changeset.t(WorkOrders.Manual.t())
         ) ::
-          {:ok, %{attempt_run: AttemptRun.t(), workflow: Workflows.Workflow.t()}}
+          {:ok,
+           %{
+             workorder: WorkOrders.WorkOrder.t(),
+             workflow: Workflows.Workflow.t()
+           }}
           | {:error, Ecto.Changeset.t(Workflows.Workflow.t())}
           | {:error, Ecto.Changeset.t(WorkOrders.Manual.t())}
   def save_and_run(workflow_changeset, manual_workorder_changeset) do
@@ -63,33 +66,33 @@ defmodule LightningWeb.WorkflowLive.Helpers do
   #   end)
   # end
 
-  defp find_or_create_dataclip(%{dataclip_id: dataclip_id, body: nil}) do
-    Lightning.Invocation.get_dataclip(dataclip_id)
-    |> case do
-      nil ->
-        {:error, :not_found}
+  # defp find_or_create_dataclip(%{dataclip_id: dataclip_id, body: nil}) do
+  #   Lightning.Invocation.get_dataclip(dataclip_id)
+  #   |> case do
+  #     nil ->
+  #       {:error, :not_found}
 
-      d ->
-        {:ok, d}
-    end
-  end
+  #     d ->
+  #       {:ok, d}
+  #   end
+  # end
 
-  defp find_or_create_dataclip(%{dataclip_id: nil, body: body, project: project}) do
-    body =
-      body
-      |> Jason.decode()
-      |> case do
-        {:ok, body} ->
-          body
+  # defp find_or_create_dataclip(%{dataclip_id: nil, body: body, project: project}) do
+  #   body =
+  #     body
+  #     |> Jason.decode()
+  #     |> case do
+  #       {:ok, body} ->
+  #         body
 
-        {:error, _} ->
-          body
-      end
+  #       {:error, _} ->
+  #         body
+  #     end
 
-    Lightning.Invocation.create_dataclip(%{
-      project_id: project.id,
-      type: :run_result,
-      body: body
-    })
-  end
+  #   Lightning.Invocation.create_dataclip(%{
+  #     project_id: project.id,
+  #     type: :run_result,
+  #     body: body
+  #   })
+  # end
 end

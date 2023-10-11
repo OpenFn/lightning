@@ -11,11 +11,6 @@ defmodule Lightning.WorkOrders.Events do
     defstruct attempt: nil
   end
 
-  defmodule RunUpdated do
-    @moduledoc false
-    defstruct run: nil
-  end
-
   def attempt_created(project_id, attempt) do
     Lightning.broadcast(
       topic(project_id),

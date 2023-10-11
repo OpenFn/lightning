@@ -1,6 +1,7 @@
 defmodule LightningWeb.RunLive.RunViewerLive do
   use LightningWeb, {:live_view, container: {:div, []}}
 
+  alias LightningWeb.RunLive.Components
   alias Lightning.Attempts
 
   @impl true
@@ -13,6 +14,10 @@ defmodule LightningWeb.RunLive.RunViewerLive do
             :available -> "Pending"
             :claimed -> "Starting"
             :started -> "Running"
+            :success -> "Success"
+            :failed -> "Failed"
+            :killed -> "Killed"
+            :crashed -> "Crashed"
           end
       )
 
@@ -22,7 +27,9 @@ defmodule LightningWeb.RunLive.RunViewerLive do
     <table>
       <tbody id="log_lines" phx-update="stream">
         <tr :for={{dom_id, log_line} <- @streams.log_lines} id={dom_id}>
-          <td><%= log_line.timestamp %></td>
+          <td>
+            <Components.timestamp timestamp={log_line.timestamp} style={:time_only} />
+          </td>
           <td><%= log_line.level %></td>
           <td><%= log_line.source %></td>
           <td><%= log_line.message %></td>

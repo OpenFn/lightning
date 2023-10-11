@@ -107,7 +107,7 @@ defmodule LightningWeb.JobLive.CredentialPicker do
         id: :new,
         on_save: fn credential ->
           params =
-            build_params_for_field(
+            LightningWeb.Utils.build_params_for_field(
               form,
               :project_credential_id,
               credential.project_credentials |> Enum.at(0) |> Map.get(:id)
@@ -124,10 +124,5 @@ defmodule LightningWeb.JobLive.CredentialPicker do
     )
 
     {:noreply, socket}
-  end
-
-  defp build_params_for_field(form, field, value) do
-    name = Phoenix.HTML.Form.input_name(form, field)
-    Plug.Conn.Query.decode_pair({name, value}, %{})
   end
 end

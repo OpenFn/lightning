@@ -2,15 +2,17 @@ defmodule LightningWeb.WorkflowLive.Edit do
   @moduledoc false
   use LightningWeb, :live_view
 
-  alias Lightning.Policies.ProjectUsers
   alias Lightning.Policies.Permissions
-  alias Lightning.Workflows
-  alias Lightning.Workflows.Workflow
-  alias Lightning.Workflows.Job
-  alias LightningWeb.Components.Form
-  alias LightningWeb.WorkflowNewLive.WorkflowParams
-  alias LightningWeb.WorkflowLive.Helpers
+  alias Lightning.Policies.ProjectUsers
+
   alias Lightning.WorkOrders
+
+  alias Lightning.Workflows
+  alias Lightning.Workflows.Job
+  alias Lightning.Workflows.Workflow
+  alias LightningWeb.Components.Form
+  alias LightningWeb.WorkflowLive.Helpers
+  alias LightningWeb.WorkflowNewLive.WorkflowParams
 
   import LightningWeb.Components.NewInputs
   import LightningWeb.WorkflowLive.Components
@@ -81,7 +83,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user={@current_user}
               project={@project}
               socket={@socket}
-              follow_attempt={@follow_attempt}
+              follow_attempt_id={@follow_attempt_id}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
@@ -165,7 +167,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           >
             <.panel
               title={
-                Phoenix.HTML.Form.input_value(jf, :name)
+                jf[:name].value
                 |> then(fn
                   "" -> "Untitled Job"
                   name -> name
@@ -305,20 +307,22 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp single_inputs_for(form, field, id) do
-    form
-    |> Phoenix.HTML.Form.inputs_for(field)
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
+
+    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
     |> Enum.find(&(Ecto.Changeset.get_field(&1.source, :id) == id))
   end
 
   defp single_inputs_for(%{field: :jobs} = assigns) do
-    form = assigns[:form]
+    %{form: form, field: field} = assigns
 
     has_child_edges = form.source |> has_child_edges?(assigns[:id])
     is_first_job = form.source |> is_first_job?(assigns[:id])
 
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
+
     forms =
-      form
-      |> Phoenix.HTML.Form.inputs_for(assigns[:field])
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
     assigns =
@@ -337,11 +341,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp single_inputs_for(assigns) do
-    form = assigns[:form]
+    %{form: form, field: field} = assigns
+
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[field]
 
     forms =
-      form
-      |> Phoenix.HTML.Form.inputs_for(assigns[:field])
+      parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
       |> Enum.filter(&(Ecto.Changeset.get_field(&1.source, :id) == assigns[:id]))
 
     assigns = assigns |> assign(forms: forms)
@@ -395,14 +400,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(
        active_menu_item: :overview,
        expanded_job: nil,
-       follow_attempt: nil,
+       follow_attempt_id: nil,
        manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
        selected_job: nil,
        selected_trigger: nil,
        selection_mode: nil,
-       selection_params: %{"s" => nil, "m" => nil},
+       query_params: %{"s" => nil, "m" => nil, "a" => nil},
        workflow: nil,
        workflow_params: %{}
      )}
@@ -412,7 +417,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_params(params, _url, socket) do
     {:noreply,
      apply_action(socket, socket.assigns.live_action, params)
-     |> apply_selection_params(params)
+     |> apply_query_params(params)
      |> maybe_show_manual_run()}
   end
 
@@ -562,7 +567,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     # the changeset/validation.
     patches = WorkflowParams.to_patches(params, socket.assigns.workflow_params)
 
-    {:reply, %{patches: patches}, socket |> apply_selection_params()}
+    {:reply, %{patches: patches}, socket |> apply_query_params()}
   end
 
   def handle_event("copied_to_clipboard", _, socket) do
@@ -596,6 +601,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job: can_run_job
     } = socket.assigns
 
+    IO.inspect(socket)
+
     socket = socket |> apply_params(workflow_params)
 
     if can_run_job && can_edit_job do
@@ -618,8 +625,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
         {:noreply,
          socket
-         |> follow_attempt(attempt)
-         |> assign_workflow(workflow)}
+         |> assign_workflow(workflow)
+         |> follow_attempt(attempt)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
         {:noreply,
@@ -707,7 +714,10 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   defp editor_is_empty(form, job) do
-    single_inputs_for(form, :jobs, job.id)
+    %Phoenix.HTML.FormField{field: field_name, form: parent_form} = form[:jobs]
+
+    parent_form.impl.to_form(parent_form.source, parent_form, field_name, [])
+    |> Enum.find(fn f -> Ecto.Changeset.get_field(f.source, :id) == job.id end)
     |> Map.get(:source)
     |> Map.get(:errors)
     |> Keyword.has_key?(:body)
@@ -764,11 +774,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
     send(self(), {"form_changed", params})
   end
 
-  defp follow_attempt(socket, attempt) do
-    socket
-    |> assign(follow_attempt: attempt)
-  end
-
   defp assign_workflow(socket, workflow) do
     socket
     |> assign(workflow: workflow)
@@ -788,17 +793,19 @@ defmodule LightningWeb.WorkflowLive.Edit do
     socket |> assign_changeset(changeset)
   end
 
-  defp apply_selection_params(socket, params) do
+  defp apply_query_params(socket, params) do
     socket
     |> assign(
-      selection_params:
-        params |> Map.take(["s", "m"]) |> Enum.into(%{"s" => nil, "m" => nil})
+      query_params:
+        params
+        |> Map.take(["s", "m", "a"])
+        |> Enum.into(%{"s" => nil, "m" => nil, "a" => nil})
     )
-    |> apply_selection_params()
+    |> apply_query_params()
   end
 
-  defp apply_selection_params(socket) do
-    socket.assigns.selection_params
+  defp apply_query_params(socket) do
+    socket.assigns.query_params
     |> case do
       # Nothing is selected
       %{"s" => nil} ->
@@ -808,13 +815,14 @@ defmodule LightningWeb.WorkflowLive.Edit do
       %{"s" => selected_id, "m" => mode} ->
         case find_item_in_changeset(socket.assigns.changeset, selected_id) do
           [type, selected] ->
-            socket |> select_node({type, selected}, mode)
+            socket
+            |> set_selected_node(type, selected, mode)
 
           nil ->
             socket |> unselect_all()
         end
     end
-    |> maybe_unfollow_attempt()
+    |> maybe_follow_attempt(socket.assigns.query_params)
   end
 
   defp assign_changeset(socket, changeset) do
@@ -870,7 +878,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(selection_mode: nil)
   end
 
-  defp select_node(socket, {type, value}, selection_mode) do
+  defp set_selected_node(socket, type, value, selection_mode) do
     case type do
       :jobs ->
         socket
@@ -887,11 +895,23 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(selection_mode: selection_mode)
   end
 
-  defp maybe_unfollow_attempt(socket) do
-    if changed?(socket, :selected_job) do
-      socket |> assign(follow_attempt: nil)
-    else
-      socket
+  defp follow_attempt(socket, attempt) do
+    %{query_params: query_params, project: project, workflow: workflow} =
+      socket.assigns
+
+    params = query_params |> Map.put("a", attempt.id) |> Enum.into([])
+
+    socket
+    |> push_patch(to: ~p"/projects/#{project}/w/#{workflow}?#{params}")
+  end
+
+  defp maybe_follow_attempt(socket, query_params) do
+    case query_params do
+      %{"a" => attempt_id} when is_binary(attempt_id) ->
+        socket |> assign(follow_attempt_id: attempt_id)
+
+      _ ->
+        socket |> assign(follow_attempt_id: nil)
     end
   end
 

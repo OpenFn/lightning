@@ -46,7 +46,7 @@ defmodule LightningWeb.RunLive.RunViewerLiveTest do
           timestamp: DateTime.utc_now()
         })
 
-      view |> render() |> IO.inspect()
+      view |> render()
 
       assert view |> has_element?("tr#log_lines-#{log_line.id}", "hello")
     end

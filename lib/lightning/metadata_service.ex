@@ -23,8 +23,8 @@ defmodule Lightning.MetadataService do
   @cli_task_worker :cli_task_worker
 
   alias Lightning.AdaptorService
-  alias Lightning.Credentials.Credential
   alias Lightning.CLI
+  alias Lightning.Credentials.Credential
 
   @doc """
   Retrieve metadata for a given adaptor and credential.
