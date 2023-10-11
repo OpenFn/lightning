@@ -12,15 +12,15 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   describe "a POST request to '/i'" do
     setup %{conn: conn} do
-      %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
+      %{job: job, trigger: trigger} = workflow_job_fixture()
 
-      [conn: conn, job: job, trigger: trigger, message: %{"foo" => "bar"}]
+      [conn: conn, job: job, trigger_id: trigger.id, message: %{"foo" => "bar"}]
     end
 
     test "with a valid trigger id instantiates a workorder", %{
       conn: conn,
       job: job,
-      trigger: trigger,
+      trigger_id: trigger_id,
       message: message
     } do
       Oban.Testing.with_testing_mode(:inline, fn ->
@@ -28,7 +28,7 @@ defmodule LightningWeb.WebhooksControllerTest do
           %Lightning.Runtime.Result{}
         end)
 
-        conn = post(conn, "/i/#{trigger.id}", message)
+        conn = post(conn, "/i/#{trigger_id}", message)
 
         assert %{"work_order_id" => _, "run_id" => run_id} =
                  json_response(conn, 200)
@@ -44,7 +44,7 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "triggers a custom telemetry event", %{
       conn: conn,
-      trigger: trigger,
+      trigger_id: trigger_id,
       message: message
     } do
       ref =
@@ -52,9 +52,7 @@ defmodule LightningWeb.WebhooksControllerTest do
           [:lightning, :workorder, :webhook, :stop]
         ])
 
-      trigger_id = trigger.id
-
-      post(conn, "/i/#{trigger.id}", message)
+      post(conn, "/i/#{trigger_id}", message)
 
       assert_received {
         [:lightning, :workorder, :webhook, :stop],
@@ -66,15 +64,15 @@ defmodule LightningWeb.WebhooksControllerTest do
 
     test "executes a custom OpenTelemetry trace", %{
       conn: conn,
-      trigger: trigger,
+      trigger_id: trigger_id,
       message: message
     } do
       :otel_simple_processor.set_exporter(:otel_exporter_pid, self())
 
       attributes =
-        :otel_attributes.new([source_trigger_id: trigger.id], 128, :infinity)
+        :otel_attributes.new([source_trigger_id: trigger_id], 128, :infinity)
 
-      post(conn, "/i/#{trigger.id}", message)
+      post(conn, "/i/#{trigger_id}", message)
 
       assert_receive {:span,
                       span(
@@ -88,7 +86,9 @@ defmodule LightningWeb.WebhooksControllerTest do
       assert json_response(conn, 404) == %{}
     end
 
-    test "with an invalid trigger id - indicates this in the telemetry span" , %{conn: conn} do
+    test "with an invalid trigger id - indicates this in the telemetry span", %{
+      conn: conn
+    } do
       ref =
         :telemetry_test.attach_event_handlers(self(), [
           [:lightning, :workorder, :webhook, :stop]
@@ -107,35 +107,35 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   describe "a disabled message" do
     setup %{conn: conn} do
-      %{job: _job, trigger: trigger, edge: _edge} =
-        workflow_job_fixture(enabled: false)
+      %{trigger: trigger} = workflow_job_fixture(enabled: false)
 
-      [conn: conn, trigger: trigger, message: %{"foo" => "bar"}]
+      [conn: conn, trigger_id: trigger.id, message: %{"foo" => "bar"}]
     end
 
-    test "return 403 on a disabled message", %{conn: conn, trigger: trigger} do
-      # %{job: _job, trigger: trigger, edge: _edge} =
-      #   workflow_job_fixture(enabled: false)
-
-      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+    test "return 403 on a disabled message", %{
+      conn: conn,
+      trigger_id: trigger_id,
+      message: message
+    } do
+      conn = post(conn, "/i/#{trigger_id}", message)
 
       assert %{"message" => response_message} = json_response(conn, 403)
 
-      assert response_message =~ "Unable to process request, trigger is disabled."
+      assert response_message =~
+               "Unable to process request, trigger is disabled."
     end
 
-    test "adjusts the telemetry span status", %{conn: conn, trigger: trigger} do
-      # %{job: _job, trigger: trigger, edge: _edge} =
-      #   workflow_job_fixture(enabled: false)
-
+    test "adjusts the telemetry span status", %{
+      conn: conn,
+      trigger_id: trigger_id,
+      message: message
+    } do
       ref =
         :telemetry_test.attach_event_handlers(self(), [
           [:lightning, :workorder, :webhook, :stop]
         ])
 
-      trigger_id = trigger.id
-
-      post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+      post(conn, "/i/#{trigger_id}", message)
 
       assert_received {
         [:lightning, :workorder, :webhook, :stop],
