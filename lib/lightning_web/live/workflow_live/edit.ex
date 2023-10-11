@@ -477,8 +477,8 @@ defmodule LightningWeb.WorkflowLive.Edit do
         workflow =
           Workflows.get_workflow(workflow_id)
           |> Lightning.Repo.preload([
-            :triggers,
             :edges,
+            triggers: Trigger.with_auth_methods_query(),
             jobs: [:credential]
           ])
 
