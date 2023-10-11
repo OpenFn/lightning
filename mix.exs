@@ -157,7 +157,7 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "DEPLOYMENT.md": [title: "Deployment"],
-        "benchmarking/BENCHMARKING.md": [title: "Benchmarking"],
+        "benchmarking/README.md": [title: "Benchmarking"],
         "PROVISIONING.md": [title: "Provisioning"],
         "CHANGELOG.md": [title: "Changelog"]
       ],

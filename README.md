@@ -237,7 +237,7 @@ changes.
 We are using [k6](https://k6.io/) to benchmark Lightning. Under `benchmarking`
 folder you can find a script for benchmarking Webhook Workflows.
 
-See [Benchmarking](benchmarking/BENCHMARKING.md) for more detailed information.
+See [Benchmarking](benchmarking/README.md) for more detailed information.
 
 ## Troubleshooting
 
