@@ -81,9 +81,6 @@ defmodule LightningWeb.Components.Modal do
   end
 
   def show_modal(js \\ %JS{}, id) when is_binary(id) do
-    IO.inspect(js, label: "JS")
-    IO.inspect(id, label: "ID")
-
     js
     |> JS.show(to: "##{id}")
     |> JS.show(
