@@ -14,9 +14,21 @@ defmodule Lightning do
     This behaviour is used to mock specific functions in tests.
     """
     @callback current_time() :: DateTime.t()
+    @callback broadcast(binary(), {atom(), any()}) :: :ok | {:error, term()}
+    @callback subscribe(binary()) :: :ok | {:error, term()}
+
+    @pubsub Lightning.PubSub
 
     def current_time() do
       DateTime.utc_now()
+    end
+
+    def broadcast(topic, msg) do
+      Phoenix.PubSub.broadcast(@pubsub, topic, msg)
+    end
+
+    def subscribe(topic) do
+      Phoenix.PubSub.subscribe(@pubsub, topic)
     end
   end
 
@@ -27,6 +39,12 @@ defmodule Lightning do
   """
   @impl true
   def current_time, do: impl().current_time()
+
+  @impl true
+  def broadcast(topic, msg), do: impl().broadcast(topic, msg)
+
+  @impl true
+  def subscribe(topic), do: impl().subscribe(topic)
 
   defp impl() do
     Application.get_env(:lightning, __MODULE__, API)

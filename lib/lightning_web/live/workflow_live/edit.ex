@@ -81,7 +81,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
               current_user={@current_user}
               project={@project}
               socket={@socket}
-              follow_run_id={@follow_run_id}
+              follow_attempt={@follow_attempt}
               close_url={
                 "#{@base_url}?s=#{@selected_job.id}"
               }
@@ -395,7 +395,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
      |> assign(
        active_menu_item: :overview,
        expanded_job: nil,
-       follow_run_id: nil,
+       follow_attempt: nil,
        manual_run_form: nil,
        page_title: "",
        selected_edge: nil,
@@ -573,13 +573,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
   def handle_event("manual_run_change", %{"manual" => params}, socket) do
     changeset =
-      WorkOrders.Manual.changeset(
-        %{
-          project: socket.assigns.project,
-          job: socket.assigns.selected_job,
-          user: socket.assigns.current_user
-        },
-        params
+      WorkOrders.Manual.new(
+        params,
+        project: socket.assigns.project,
+        workflow: socket.assigns.workflow,
+        job: socket.assigns.selected_job,
+        created_by: socket.assigns.current_user
       )
       |> Map.put(:action, :validate)
 
@@ -589,6 +588,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_event("manual_run_submit", %{"manual" => params}, socket) do
     %{
       project: project,
+      workflow: workflow,
       selected_job: selected_job,
       current_user: current_user,
       workflow_params: workflow_params,
@@ -601,23 +601,24 @@ defmodule LightningWeb.WorkflowLive.Edit do
     if can_run_job && can_edit_job do
       Helpers.save_and_run(
         socket.assigns.changeset,
-        WorkOrders.Manual.changeset(
-          %{
-            project: project,
-            job: selected_job,
-            user: current_user
-          },
-          params
+        WorkOrders.Manual.new(
+          params,
+          workflow: workflow,
+          project: project,
+          job: selected_job,
+          created_by: current_user
         )
       )
     else
       {:error, :unauthorized}
     end
     |> case do
-      {:ok, %{attempt_run: attempt_run, workflow: workflow}} ->
+      {:ok, %{workorder: workorder, workflow: workflow}} ->
+        %{attempts: [attempt]} = workorder
+
         {:noreply,
          socket
-         |> assign(follow_run_id: attempt_run.run_id)
+         |> follow_attempt(attempt)
          |> assign_workflow(workflow)}
 
       {:error, %Ecto.Changeset{data: %WorkOrders.Manual{}} = changeset} ->
@@ -646,9 +647,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     {:noreply, handle_new_params(socket, params)}
   end
 
-  def handle_info({:follow_run, attempt_run}, socket) do
-    {:noreply, socket |> assign(follow_run_id: attempt_run.run_id)}
-  end
+  # def handle_info({:follow_attempt, attempt_run}, socket) do
+  #   {:noreply, socket |> assign(follow_attempt_id: attempt_run.run_id)}
+  # end
 
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
@@ -661,13 +662,12 @@ defmodule LightningWeb.WorkflowLive.Edit do
 
       %{selected_job: job, selection_mode: "expand"} when not is_nil(job) ->
         changeset =
-          WorkOrders.Manual.changeset(
-            %{
-              project: socket.assigns.project,
-              job: socket.assigns.selected_job,
-              user: socket.assigns.current_user
-            },
-            %{}
+          WorkOrders.Manual.new(
+            %{},
+            project: socket.assigns.project,
+            workflow: socket.assigns.workflow,
+            job: socket.assigns.selected_job,
+            user: socket.assigns.current_user
           )
 
         selectable_dataclips =
@@ -764,6 +764,11 @@ defmodule LightningWeb.WorkflowLive.Edit do
     send(self(), {"form_changed", params})
   end
 
+  defp follow_attempt(socket, attempt) do
+    socket
+    |> assign(follow_attempt: attempt)
+  end
+
   defp assign_workflow(socket, workflow) do
     socket
     |> assign(workflow: workflow)
@@ -809,7 +814,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
             socket |> unselect_all()
         end
     end
-    |> maybe_unfollow_run()
+    |> maybe_unfollow_attempt()
   end
 
   defp assign_changeset(socket, changeset) do
@@ -882,9 +887,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
     |> assign(selection_mode: selection_mode)
   end
 
-  defp maybe_unfollow_run(socket) do
+  defp maybe_unfollow_attempt(socket) do
     if changed?(socket, :selected_job) do
-      socket |> assign(follow_run_id: nil)
+      socket |> assign(follow_attempt: nil)
     else
       socket
     end

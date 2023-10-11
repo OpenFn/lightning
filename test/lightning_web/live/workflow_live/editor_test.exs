@@ -227,7 +227,6 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       |> element("#manual-job-#{job.id} form")
       |> render_submit()
 
-      assert_enqueued(worker: Lightning.Pipeline)
       assert [run_viewer] = live_children(view)
       assert run_viewer |> render() =~ "Not started."
     end

@@ -111,7 +111,7 @@ defmodule Lightning.WorkOrderServiceTest do
           WorkOrderService.retry_attempt_run(attempt_run, user)
 
         assert_receive {Lightning.WorkOrderService,
-                        %Lightning.Workorders.Events.AttemptCreated{}},
+                        %Lightning.WorkOrders.Events.AttemptCreated{}},
                        100
 
         assert_enqueued(

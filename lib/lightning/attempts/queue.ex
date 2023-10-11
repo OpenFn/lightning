@@ -2,6 +2,7 @@ defmodule Lightning.Attempts.Queue do
   @behaviour Lightning.Attempts.Adaptor
 
   alias Lightning.Repo
+  alias Lightning.Attempts
   import Ecto.Query
 
   @impl true
@@ -36,15 +37,17 @@ defmodule Lightning.Attempts.Queue do
       |> where([a, x], a.id == x.id)
       |> select([a, _], a)
 
-    updates = [
+    Attempts.update_attempts(query,
       set: [state: :claimed, claimed_at: DateTime.utc_now()]
-    ]
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{attempts: {_, attempts}}} ->
+        {:ok, attempts}
 
-    Repo.transaction(fn ->
-      {_count, jobs} = Repo.update_all(query, updates)
-
-      jobs
-    end)
+      {:error, _} = e ->
+        e
+    end
   end
 
   @impl true

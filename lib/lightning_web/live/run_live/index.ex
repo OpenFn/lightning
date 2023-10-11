@@ -172,7 +172,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {_, %Lightning.Workorders.Events.AttemptCreated{attempt: attempt}},
+        {_, %Lightning.WorkOrders.Events.AttemptCreated{attempt: attempt}},
         socket
       ) do
     send_update(LightningWeb.RunLive.WorkOrderComponent,
@@ -184,7 +184,7 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {_, %Lightning.Workorders.Events.AttemptUpdated{attempt: attempt}},
+        {_, %Lightning.WorkOrders.Events.AttemptUpdated{attempt: attempt}},
         socket
       ) do
     send_update(LightningWeb.RunLive.WorkOrderComponent,

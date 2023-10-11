@@ -3,8 +3,12 @@ defmodule Lightning.Attempts.Handlers do
   Handler modules for working with attempts.
   """
 
-  alias Lightning.{Attempt, AttemptRun, Repo}
-  alias Lightning.Invocation.{Run, Dataclip}
+  alias Lightning.Attempt
+  alias Lightning.AttemptRun
+  alias Lightning.Attempts.Events
+  alias Lightning.Invocation.Dataclip
+  alias Lightning.Invocation.Run
+  alias Lightning.Repo
 
   defmodule StartRun do
     use Ecto.Schema
@@ -41,6 +45,7 @@ defmodule Lightning.Attempts.Handlers do
     def call(params) do
       with {:ok, attrs} <- new(params) |> apply_action(:validate),
            {:ok, run} <- insert(attrs) do
+        Events.run_started(attrs.attempt_id, run)
         {:ok, run}
       end
     end
@@ -186,39 +191,6 @@ defmodule Lightning.Attempts.Handlers do
       run
       |> Run.finished(complete_run.output_dataclip_id, complete_run.reason)
       |> Repo.update()
-    end
-  end
-
-  defmodule StartAttempt do
-    import Ecto.Changeset
-    import Ecto.Query
-
-    def call(attempt) do
-      Repo.transact(fn ->
-        # now = DateTime.utc_now()
-
-        attempt_query =
-          from(a in Attempt,
-            where: a.id == ^attempt.id,
-            lock: "FOR UPDATE"
-          )
-
-        update_query =
-          Attempt
-          |> with_cte("subset", as: ^attempt_query)
-          |> join(:inner, [a], s in fragment(~s("subset")), on: a.id == s.id)
-          |> select([a, _], a)
-
-        with changeset <- Attempt.start(attempt),
-             {:ok, _} <- apply_action(changeset, :validate),
-             {1, [attempt]} <-
-               Repo.update_all(update_query,
-                 set: changeset.changes |> Enum.into([])
-               ),
-             {:ok, _} <- Lightning.WorkOrders.update_state(attempt) do
-          {:ok, attempt}
-        end
-      end)
     end
   end
 end

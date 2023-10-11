@@ -17,7 +17,7 @@ defmodule Lightning.WorkOrderService do
     Pipeline
   }
 
-  alias Lightning.Workorders.Events
+  alias Lightning.WorkOrders.Events
 
   alias Lightning.Invocation.{Dataclip, Run}
   alias Lightning.Accounts.User

@@ -80,6 +80,9 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
+  @doc """
+
+  """
   def start_attempt(%Attempt{} = attempt) do
     Attempt.start(attempt)
     |> update_attempt()
@@ -189,6 +192,14 @@ defmodule Lightning.Attempts do
       end
     end)
     |> Repo.insert()
+    |> case do
+      {:ok, log_line} ->
+        Events.log_appended(log_line)
+        {:ok, log_line}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """

@@ -37,12 +37,10 @@ defmodule Lightning.WorkOrders do
   alias Lightning.Invocation.Dataclip
   alias Lightning.Invocation.Run
   alias Lightning.Repo
-
   alias Lightning.WorkOrder
   alias Lightning.WorkOrders.Events
   alias Lightning.WorkOrders.Manual
   alias Lightning.WorkOrders.Query
-
   alias Lightning.Workflows.Job
   alias Lightning.Workflows.Trigger
   alias Lightning.Workflows.Workflow
