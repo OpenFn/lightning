@@ -14,4 +14,24 @@ defmodule Lightning.ApplicationHelpers do
       Application.put_env(app, key, previous_value)
     end)
   end
+
+  @doc """
+  In situations where you need to wait for something to complete, 
+  e.g a Task, you can use this to create a dynamic delay which
+  will return as soon as the success function returns a positive
+  result.
+  """
+  def dynamically_absorb_delay(success_function, opts \\ []) do
+    iterations = opts |> Keyword.get(:iterations, 30)
+    sleep = opts |> Keyword.get(:sleep, 1)
+
+    Enum.take_while(1..iterations, fn _index ->
+      if success_function.() do
+        false
+      else
+        Process.sleep(sleep)
+        true
+      end
+    end)
+  end
 end
