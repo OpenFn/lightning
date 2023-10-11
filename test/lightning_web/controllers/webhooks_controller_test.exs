@@ -60,7 +60,7 @@ defmodule LightningWeb.WebhooksControllerTest do
         [:lightning, :workorder, :webhook, :stop],
         ^ref,
         %{},
-        %{source_trigger_id: ^trigger_id}
+        %{source_trigger_id: ^trigger_id, status: :ok}
       }
     end
 
@@ -87,16 +87,62 @@ defmodule LightningWeb.WebhooksControllerTest do
       conn = post(conn, "/i/bar")
       assert json_response(conn, 404) == %{}
     end
+
+    test "with an invalid trigger id - indicates this in the telemetry span" , %{conn: conn} do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :workorder, :webhook, :stop]
+        ])
+
+      post(conn, "/i/bar")
+
+      assert_received {
+        [:lightning, :workorder, :webhook, :stop],
+        ^ref,
+        %{},
+        %{source_trigger_id: "bar", status: :not_found}
+      }
+    end
   end
 
-  test "return 403 on a disabled message", %{conn: conn} do
-    %{job: _job, trigger: trigger, edge: _edge} =
-      workflow_job_fixture(enabled: false)
+  describe "a disabled message" do
+    setup %{conn: conn} do
+      %{job: _job, trigger: trigger, edge: _edge} =
+        workflow_job_fixture(enabled: false)
 
-    conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+      [conn: conn, trigger: trigger, message: %{"foo" => "bar"}]
+    end
 
-    assert %{"message" => message} = json_response(conn, 403)
+    test "return 403 on a disabled message", %{conn: conn, trigger: trigger} do
+      # %{job: _job, trigger: trigger, edge: _edge} =
+      #   workflow_job_fixture(enabled: false)
 
-    assert message =~ "Unable to process request, trigger is disabled."
+      conn = post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert %{"message" => response_message} = json_response(conn, 403)
+
+      assert response_message =~ "Unable to process request, trigger is disabled."
+    end
+
+    test "adjusts the telemetry span status", %{conn: conn, trigger: trigger} do
+      # %{job: _job, trigger: trigger, edge: _edge} =
+      #   workflow_job_fixture(enabled: false)
+
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :workorder, :webhook, :stop]
+        ])
+
+      trigger_id = trigger.id
+
+      post(conn, "/i/#{trigger.id}", %{"foo" => "bar"})
+
+      assert_received {
+        [:lightning, :workorder, :webhook, :stop],
+        ^ref,
+        %{},
+        %{source_trigger_id: ^trigger_id, status: :forbidden}
+      }
+    end
   end
 end
