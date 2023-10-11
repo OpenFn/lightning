@@ -664,6 +664,19 @@ defmodule LightningWeb.WorkflowLive.Components do
                   >
                     <%= Enum.count(auth_method.triggers) %>
                   </a>
+                  <.live_component
+                    module={
+                      LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
+                    }
+                    id={"edit_auth_#{auth_method.id}_modal"}
+                    action={:edit}
+                    project={auth_method.project}
+                    webhook_auth_method={auth_method}
+                    return_to={
+                      ~p"/projects/#{auth_method.project_id}/settings#webhook_security"
+                    }
+                    trigger={nil}
+                  />
                 </td>
                 <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
                   <div class="flex gap-4 whitespace-nowrap text-right text-sm font-medium">
