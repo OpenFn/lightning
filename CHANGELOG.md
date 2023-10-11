@@ -18,6 +18,8 @@ and this project adheres to
   [#1178](https://github.com/OpenFn/Lightning/issues/1178)
 - Allow for heavier payloads during load testing
   [#1179] (https://github.com/OpenFn/Lightning/issues/1179)
+- Add dynamic delay to help mitigate flickering test
+  [#1195] (https://github.com/OpenFn/Lightning/issues/1195)
 
 ### Changed
 
