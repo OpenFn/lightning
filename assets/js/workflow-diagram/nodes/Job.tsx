@@ -52,7 +52,7 @@ const JobNode = ({
     <Node
       {...props}
       label={props.data?.name}
-      icon={icon}
+      primaryIcon={icon}
       sublabel={adaptor}
       targetPosition={targetPosition}
       sourcePosition={sourcePosition}

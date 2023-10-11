@@ -17,6 +17,7 @@ export namespace Lightning {
   }
 
   export interface WebhookTrigger extends Node {
+    has_auth_method: boolean;
     type: 'webhook';
     webhook_url: string;
   }
