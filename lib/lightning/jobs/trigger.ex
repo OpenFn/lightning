@@ -13,6 +13,7 @@ defmodule Lightning.Jobs.Trigger do
   """
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query
 
   alias Lightning.Workflows.Workflow
 
@@ -35,6 +36,7 @@ defmodule Lightning.Jobs.Trigger do
     field :type, Ecto.Enum, values: @trigger_types, default: :webhook
 
     field :delete, :boolean, virtual: true
+    field :has_auth_method, :boolean, virtual: true
 
     many_to_many :webhook_auth_methods, Lightning.Workflows.WebhookAuthMethod,
       join_through: "trigger_webhook_auth_methods",
@@ -58,7 +60,8 @@ defmodule Lightning.Jobs.Trigger do
         :custom_path,
         :type,
         :workflow_id,
-        :cron_expression
+        :cron_expression,
+        :has_auth_method
       ])
 
     changeset
@@ -112,5 +115,21 @@ defmodule Lightning.Jobs.Trigger do
       nil -> changeset |> put_change(field, value)
       _ -> changeset
     end
+  end
+
+  def with_auth_methods_query do
+    from t in __MODULE__,
+      left_join: wam in assoc(t, :webhook_auth_methods),
+      preload: [webhook_auth_methods: wam],
+      select: %{
+        t
+        | has_auth_method:
+            fragment(
+              "CASE WHEN ? IS NULL THEN ? ELSE ? END",
+              wam.id,
+              false,
+              true
+            )
+      }
   end
 end
