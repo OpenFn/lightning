@@ -61,10 +61,10 @@ defmodule LightningWeb.WebhooksController do
             end
           end
 
-          {
-            result,
-            %{source_trigger_id: source_trigger_id} |> Map.merge(metadata)
-          }
+        {
+          result,
+          %{source_trigger_id: source_trigger_id} |> Map.merge(metadata)
+        }
       end
     )
   end
