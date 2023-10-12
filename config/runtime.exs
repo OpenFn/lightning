@@ -308,3 +308,17 @@ config :sentry,
   release: release,
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
+
+config :lightning, Lightning.PromEx,
+  disabled: System.get_env("PROMEX_ENABLED") != "true",
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: [
+    host: System.get_env("PROMEX_GRAFANA_HOST") || "",
+    username: System.get_env("PROMEX_GRAFANA_USER") || "",
+    password: System.get_env("PROMEX_GRAFANA_PASSWORD") || "",
+    upload_dashboards_on_start:
+      System.get_env("PROMEX_UPLOAD_GRAFANA_DASHBOARDS_ON_START") == "true"
+  ],
+  metrics_server: :disabled,
+  datasource_id: System.get_env("PROMEX_DATASOURCE_ID") || ""
