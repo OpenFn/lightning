@@ -37,7 +37,7 @@ defmodule LightningWeb.WebhooksController do
               |> json(resp)
           end
 
-        {result, %{source_trigger_id: source_trigger_id}}
+        {result, %{source_trigger_id: trigger.id}}
       end
     )
   end
