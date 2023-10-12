@@ -38,6 +38,16 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
 
   defp apply_action(
          socket,
+         :display_triggers,
+         %{project: _, webhook_auth_method: _} = assigns
+       ) do
+    socket
+    |> assign(assigns)
+    |> assign(action: :display_triggers)
+  end
+
+  defp apply_action(
+         socket,
          _new_or_index,
          %{project: project, trigger: trigger} = assigns
        ) do
@@ -200,6 +210,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
                   <% end %>
                 <% :edit -> %>
                   Edit webhook credential
+                <% :display_triggers -> %>
+                  Associated Workflow Triggers
                 <% :index -> %>
                   Webhook Authentication Credentials
               <% end %>
@@ -230,6 +242,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             <.auth_methods_table {assigns} />
           <% %{action: :new, webhook_auth_method: %{auth_type: nil}} -> %>
             <.choose_auth_type_form {assigns} />
+          <% %{action: :display_triggers} -> %>
+            <.linked_triggers_list {assigns} />
           <% _other -> %>
             <.live_component
               module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
@@ -242,6 +256,31 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <% end %>
       </.modal>
     </div>
+    """
+  end
+
+  defp linked_triggers_list(assigns) do
+    assigns =
+      assign(assigns,
+        webhook_auth_method:
+          Lightning.Repo.preload(assigns.webhook_auth_method,
+            triggers: [:workflow]
+          )
+      )
+
+    ~H"""
+    <p class="mb-4">
+      You have <%= length(assigns.webhook_auth_method.triggers) %>
+      <span class="font-semibold">Workflows</span>
+      associated with the "<span class="font-semibold">My Auth</span>" authentication method:
+    </p>
+    <ul class="list-disc pl-5 mb-4">
+      <%= for trigger <- assigns.webhook_auth_method.triggers do %>
+        <li class="mb-2 text-purple-600 underline cursor-pointer">
+          <%= trigger.workflow.name %>
+        </li>
+      <% end %>
+    </ul>
     """
   end
 

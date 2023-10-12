@@ -570,7 +570,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   def webhook_auth_methods_table(assigns) do
     assigns =
       assign(assigns,
-        auth_methods: Lightning.Repo.preload(assigns.auth_methods, :triggers)
+        auth_methods:
+          Lightning.Repo.preload(assigns.auth_methods, [:triggers, :project])
       )
 
     ~H"""
@@ -654,29 +655,38 @@ defmodule LightningWeb.WorkflowLive.Components do
                   <.humanized_auth_method_type auth_method={auth_method} />
                 </td>
                 <td class="whitespace-nowrap px-6 text-sm text-gray-900">
-                  <a
-                    id={"display_linked_triggers_link_#{auth_method.id}"}
-                    href="#"
-                    class="text-indigo-600 hover:text-indigo-900"
-                    phx-click={
-                      show_modal("display_linked_triggers_#{auth_method.id}_modal")
-                    }
-                  >
-                    <%= Enum.count(auth_method.triggers) %>
-                  </a>
-                  <.live_component
-                    module={
-                      LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
-                    }
-                    id={"edit_auth_#{auth_method.id}_modal"}
-                    action={:edit}
-                    project={auth_method.project}
-                    webhook_auth_method={auth_method}
-                    return_to={
-                      ~p"/projects/#{auth_method.project_id}/settings#webhook_security"
-                    }
-                    trigger={nil}
-                  />
+                  <span class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700">
+                    <a
+                      :if={auth_method.triggers != []}
+                      id={"display_linked_triggers_link_#{auth_method.id}"}
+                      href="#"
+                      class="text-indigo-600 hover:text-indigo-900"
+                      phx-click={
+                        show_modal("display_linked_triggers_#{auth_method.id}_modal")
+                      }
+                    >
+                      <%= Enum.count(auth_method.triggers) %>
+                    </a>
+                    <span :if={auth_method.triggers == []}>
+                      <%= Enum.count(auth_method.triggers) %>
+                    </span>
+
+                    <div class="text-left">
+                      <.live_component
+                        module={
+                          LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
+                        }
+                        id={"display_linked_triggers_#{auth_method.id}_modal"}
+                        action={:display_triggers}
+                        project={auth_method.project}
+                        webhook_auth_method={auth_method}
+                        return_to={
+                          ~p"/projects/#{auth_method.project_id}/settings#webhook_security"
+                        }
+                        trigger={nil}
+                      />
+                    </div>
+                  </span>
                 </td>
                 <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
                   <div class="flex gap-4 whitespace-nowrap text-right text-sm font-medium">
