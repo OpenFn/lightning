@@ -65,6 +65,8 @@ defmodule LightningWeb.CredentialLive.JsonSchemaBodyComponent do
     """
   end
 
+  # false positive, it's a file from config
+  # sobelow_skip ["Traversal.FileModule"]
   defp get_schema(schema_name) do
     {:ok, schemas_path} = Application.fetch_env(:lightning, :schemas_path)
 

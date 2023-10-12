@@ -6,6 +6,10 @@ defmodule LightningWeb.WebhooksController do
   # this gets hit when someone asks to run a workflow by API
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => _path}) do
+  :telemetry.span(
+      [:lightning, :workorder, :webhook],
+      %{source_trigger_id: source_trigger_id},
+      fn ->
     conn.assigns[:trigger]
     |> Workflows.get_edge_by_trigger()
     |> case do
@@ -29,5 +33,6 @@ defmodule LightningWeb.WebhooksController do
         conn
         |> json(resp)
     end
+    end)
   end
 end

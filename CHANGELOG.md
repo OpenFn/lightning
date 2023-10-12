@@ -12,8 +12,21 @@ and this project adheres to
 
 - Webhook Authentication Methods database and CRUD operations
   [#1152](https://github.com/OpenFn/Lightning/issues/1152)
+- Restrict live dashboard access to only superusers, enable DB information and
+  OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
+- Expose additional metrics to LiveDashboard
+  [#1171](https://github.com/OpenFn/Lightning/issues/1171)
+- Add plumbing to dump Lightning metrics during load testing
+  [#1178](https://github.com/OpenFn/Lightning/issues/1178)
+- Allow for heavier payloads during load testing
+  [#1179] (https://github.com/OpenFn/Lightning/issues/1179)
+- Add dynamic delay to help mitigate flickering test
+  [#1195] (https://github.com/OpenFn/Lightning/issues/1195)
 
 ### Changed
+
+- Updated vulnerable JS libraries, `postcss` and `semver`
+  [#1176](https://github.com/OpenFn/Lightning/issues/1176)
 
 ### Fixed
 

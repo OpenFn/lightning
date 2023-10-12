@@ -66,14 +66,24 @@ defmodule LightningWeb.LiveHelpers do
           assign(assigns,
             heading: "Not Found",
             blurb: "Sorry, we can't find anything here for you.",
-            show_nav_error: true
+            show_nav_error: true,
+            show_back_button: true
           )
 
         :no_access ->
           assign(assigns,
             heading: "No Access",
             blurb: "Sorry, you don't have access to that.",
-            show_nav_error: true
+            show_nav_error: true,
+            show_back_button: true
+          )
+
+        :no_access_no_back ->
+          assign(assigns,
+            heading: "No Access",
+            blurb: "Sorry, you don't have access to that.",
+            show_nav_error: true,
+            show_back_button: false
           )
 
         _ ->
@@ -104,7 +114,10 @@ defmodule LightningWeb.LiveHelpers do
               </div>
             </div>
           </div>
-          <div class="bg-secondary-50 px-4 py-3 sm:px-6 sm:flex">
+          <div
+            :if={@show_back_button}
+            class="bg-secondary-50 px-4 py-3 sm:px-6 sm:flex"
+          >
             <a href="javascript:history.back()">
               <Common.button>
                 <div class="h-full">

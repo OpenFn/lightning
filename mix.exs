@@ -7,6 +7,9 @@ defmodule Lightning.MixProject do
       version: "0.9.3",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
+      elixirc_options: [
+        warnings_as_errors: false
+      ],
       compilers: Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -36,7 +39,7 @@ defmodule Lightning.MixProject do
   def application do
     [
       mod: {Lightning.Application, [:timex]},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -59,6 +62,7 @@ defmodule Lightning.MixProject do
       {:crontab, "~> 1.1"},
       {:dialyxir, "~> 1.3", only: [:test, :dev], runtime: false},
       {:ecto_enum, "~> 1.4"},
+      {:ecto_psql_extras, "~> 0.7.14"},
       {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.3", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
@@ -83,16 +87,16 @@ defmodule Lightning.MixProject do
       {:phoenix, "~> 1.7.0"},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 3.3"},
-      {:phoenix_live_dashboard, "~> 0.8.0"},
+      {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.19.5"},
+      {:phoenix_live_view, "~> 0.20.0"},
       {:phoenix_storybook, "~> 0.5.2"},
       {:plug_cowboy, "~> 2.5"},
       {:postgrex, ">= 0.0.0"},
       {:rambo, "~> 0.3.4"},
       {:scrivener_ecto, "~> 2.7"},
       {:sentry, "~> 8.0"},
-      {:sobelow, "~> 0.11.1", only: [:test, :dev]},
+      {:sobelow, "~> 0.13.0", only: [:test, :dev]},
       {:sweet_xml, "~> 0.7.1", only: [:test]},
       {:swoosh, "~> 1.9"},
       {:tailwind, "~> 0.1", runtime: Mix.env() == :dev},
@@ -153,7 +157,7 @@ defmodule Lightning.MixProject do
       extras: [
         "README.md": [title: "Lightning"],
         "DEPLOYMENT.md": [title: "Deployment"],
-        "benchmarking/BENCHMARKING.md": [title: "Benchmarking"],
+        "benchmarking/README.md": [title: "Benchmarking"],
         "PROVISIONING.md": [title: "Provisioning"],
         "CHANGELOG.md": [title: "Changelog"]
       ],

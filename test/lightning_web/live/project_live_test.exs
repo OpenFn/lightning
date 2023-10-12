@@ -5,7 +5,9 @@ defmodule LightningWeb.ProjectLiveTest do
   import Lightning.ProjectsFixtures
   import Lightning.AccountsFixtures
   import Lightning.Factories
-  import Lightning.ApplicationHelpers, only: [put_temporary_env: 3]
+
+  import Lightning.ApplicationHelpers,
+    only: [dynamically_absorb_delay: 1, put_temporary_env: 3]
 
   @cert """
   -----BEGIN RSA PRIVATE KEY-----
@@ -508,7 +510,9 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      Process.sleep(15)
+      dynamically_absorb_delay(fn ->
+        render(view) =~ "ID has not been properly"
+      end)
 
       assert render(view) =~
                "Sorry, it seems that the GitHub App ID has not been properly configured for this instance of Lightning. Please contact the instance administrator"
@@ -540,7 +544,9 @@ defmodule LightningWeb.ProjectLiveTest do
           ~p"/projects/#{project.id}/settings#vcs"
         )
 
-      Process.sleep(10)
+      dynamically_absorb_delay(fn ->
+        render(view) =~ "cert has not been properly"
+      end)
 
       assert render(view) =~
                "Sorry, it seems that the GitHub cert has not been properly configured for this instance of Lightning. Please contact the instance administrator"
