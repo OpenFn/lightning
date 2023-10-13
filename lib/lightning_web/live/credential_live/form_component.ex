@@ -133,10 +133,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
   Switcher components for different types of credentials.
   """
 
-  attr :type, :string, required: true
-  attr :form, :map, required: true
-  attr :update_body, :any, required: false
-  slot :inner_block
+  attr(:type, :string, required: true)
+  attr(:form, :map, required: true)
+  attr(:update_body, :any, required: false)
+  slot(:inner_block)
 
   def form_component(%{type: "googlesheets"} = assigns) do
     ~H"""
@@ -162,10 +162,10 @@ defmodule LightningWeb.CredentialLive.FormComponent do
     """
   end
 
-  attr :form, :map, required: true
-  attr :projects, :list, required: true
-  attr :selected, :map, required: true
-  attr :phx_target, :any, default: nil
+  attr(:form, :map, required: true)
+  attr(:projects, :list, required: true)
+  attr(:selected, :map, required: true)
+  attr(:phx_target, :any, default: nil)
 
   def project_credentials(assigns) do
     ~H"""
@@ -199,21 +199,17 @@ defmodule LightningWeb.CredentialLive.FormComponent do
         </div>
       </div>
 
-      <%= for project_form <- Phoenix.HTML.Form.inputs_for(@form, :project_credentials) do %>
-        <%= if Phoenix.HTML.Form.input_value(project_form, :delete) != true do %>
+      <.inputs_for :let={project_credential} field={@form[:project_credentials]}>
+        <%= if project_credential[:delete].value != true do %>
           <div class="flex w-full gap-2 items-center pb-2">
             <div class="grow">
-              <%= @projects
-              |> Enum.find_value(fn {name, id} ->
-                if id == Phoenix.HTML.Form.input_value(project_form, :project_id),
-                  do: name
-              end) %>
-              <.old_error field={project_form[:project_id]} />
+              <%= project_name(@projects, project_credential[:project_id].value) %>
+              <.old_error field={project_credential[:project_id]} />
             </div>
             <div class="grow-0 items-right">
               <.button
                 phx-target={@phx_target}
-                phx-value-index={project_form.index}
+                phx-value-index={project_credential.index}
                 phx-click="delete_project"
               >
                 Remove
@@ -221,16 +217,21 @@ defmodule LightningWeb.CredentialLive.FormComponent do
             </div>
           </div>
         <% end %>
-        <%= Phoenix.HTML.Form.hidden_inputs_for(project_form) %>
-        <%= Phoenix.HTML.Form.hidden_input(project_form, :project_id) %>
-        <%= Phoenix.HTML.Form.hidden_input(project_form, :delete) %>
-      <% end %>
+        <.input type="hidden" field={project_credential[:project_id]} />
+        <.input type="hidden" field={project_credential[:delete]} />
+      </.inputs_for>
     </div>
     """
   end
 
-  attr :users, :list, required: true
-  attr :form, :map, required: true
+  defp project_name(projects, id) do
+    Enum.find_value(projects, fn {name, project_id} ->
+      if project_id == id, do: name
+    end)
+  end
+
+  attr(:users, :list, required: true)
+  attr(:form, :map, required: true)
 
   def credential_transfer(assigns) do
     ~H"""
