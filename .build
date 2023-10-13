@@ -179,6 +179,7 @@ ObanPruner.html
 Storybook.Root.html
 api-reference.html
 assets/logo.png
+benchmarking.md.html
 changelog.html
 deployment.html
 dist/handlebars.runtime-NWIB6V2M.js
@@ -206,10 +207,9 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-29CA1A31.js
-dist/sidebar_items-5255D170.js
+dist/search_items-09BE7B7D.js
+dist/sidebar_items-A9529669.js
 index.html
 provisioning.html
-readme.html
 readme.html
 search.html

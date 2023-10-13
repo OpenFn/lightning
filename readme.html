@@ -7,13 +7,13 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.9.3">
 
-    <title>Benchmarking — Lightning v0.9.3</title>
+    <title>Lightning — Lightning v0.9.3</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-IV5W3OL2.js"></script>
-    <script src="dist/sidebar_items-5255D170.js"></script>
+    <script src="dist/sidebar_items-A9529669.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -102,55 +102,398 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/benchmarking/README.md#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/README.md#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
 
-  <span>Benchmarking</span>
+  <span>OpenFn/Lightning (beta) <a href="https://dl.circleci.com/status-badge/redirect/gh/OpenFn/Lightning/tree/main"><img src="https://dl.circleci.com/status-badge/img/gh/OpenFn/Lightning/tree/main.svg?style=svg" alt="CircleCI"/></a> <a href="https://codecov.io/gh/OpenFn/Lightning"><img src="https://codecov.io/gh/OpenFn/Lightning/branch/main/graph/badge.svg?token=FfDMxdGL3a" alt="codecov"/></a> <img src="https://img.shields.io/docker/pulls/openfn/lightning" alt="Docker Pulls"/></span>
 </h1>
 
-<p>Execute the following steps to run a benchmark on Lightning:</p><ol><li><p>Make sure you have <a href="https://k6.io/docs/get-started/installation/">k6</a>
-installed locally. If you're using <code class="inline">asdf</code> you can run <code class="inline">asdf install</code> in the
-project root.</p></li><li><p>Start up a local Lightning instance with an attached iex session:</p><p> <code class="inline">iex -S mix phx.server</code></p></li><li><p>In the attached iex session, run the following, to have Lightning log internal telemetry data:</p><pre><code class="makeup elixir" translate="no"><span class="w">   </span><span class="n">filepath</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">Path</span><span class="o">.</span><span class="n">join</span><span class="p" data-group-id="7755318946-1">(</span><span class="s">&quot;benchmarking&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;load_test_data.csv&quot;</span><span class="p" data-group-id="7755318946-1">)</span><span class="w">
-   </span><span class="n">output_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nc">File</span><span class="o">.</span><span class="n">open!</span><span class="p" data-group-id="7755318946-2">(</span><span class="n">filepath</span><span class="p">,</span><span class="w"> </span><span class="p" data-group-id="7755318946-3">[</span><span class="ss">:append</span><span class="p" data-group-id="7755318946-3">]</span><span class="p" data-group-id="7755318946-2">)</span><span class="w">
-     
-   </span><span class="n">c</span><span class="w"> </span><span class="s">&quot;benchmarking/load_test_production_spans.exs&quot;</span><span class="w">
+<p>OpenFn/Lightning is a fully open source, workflow automation platform that's
+used to automate critical business processes and integrate information systems.
+From last-mile services to national-level reporting, it boosts efficiency &amp;
+effectiveness while enabling secure, stable, scalable interoperability at all
+levels. <strong>Read more about Lightning
+<a href="https://docs.openfn.org/documentation/about-lightning">on OpenFn/Docs</a>.</strong></p><p>Lightning is the latest &quot;v2&quot; of OpenFn, the
+<a href="https://app.digitalpublicgoods.net/a/10176">Digital Public Good for workflow automation</a>.
+Use Lightning to visually build, execute and manage workflows.</p><ul><li>The latest version of the OpenFn technology - first launched in 2014, now
+tried and tested by NGOs in over 40 countries</li><li>Fully open source (no premium features or community edition, you get the same
+product whether using SaaS or self-hosted)</li><li>Recognised as a Digital Public Good by the
+<a href="https://digitalpublicgoods.net/">DPGA</a> and a Global Good for Health by
+<a href="https://digitalsquare.org/digital-health-global-goods">Digital Square</a></li></ul><h2 id="contents" class="section-heading">
+  <a href="#contents" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">contents</p>
+  </a>
+  Contents
+</h2>
+<ul><li><a href="#demo">Demo</a></li><li><a href="#register-for-a-beta-account">Sign up for the BETA</a></li><li><a href="#features">Features</a></li><li><a href="#getting-started">Getting started</a><ul><li><a href="#run-via-docker">Run Lightning via Docker</a></li><li><a href="#deploy-on-external-infrastructure">Deploy Lightning on Docker or Kubernetes</a></li><li><a href="#run-lightning-locally">Run Lightning on your local machine (contributors)</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#contribute-to-this-project">Contribute</a></li><li><a href="#project-configuration-quickstart">Project Configuration Quickstart</a></li></ul></li><li><a href="#generating-documentation">Generate the documentation</a></li><li><a href="#security-and-standards">Security and standards</a></li><li><a href="#server-specs-for-self-hosting">Server specs for self-hosting</a></li><li><a href="#support">Questions or feedback?</a></li></ul><p><img src="https://user-images.githubusercontent.com/36554605/225275565-99c94f3b-3057-4185-9086-58015c28e77f.png" alt="Screenshot 2023-03-15 at 13 01 13"/></p><h2 id="demo" class="section-heading">
+  <a href="#demo" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">demo</p>
+  </a>
+  Demo
+</h2>
+<p>Watch a quick demo here: <a href="https://www.youtube.com/watch?v=BNaxlHAWb5I">https://www.youtube.com/watch?v=BNaxlHAWb5I</a></p><p>Explore our <a href="https://demo.openfn.org/">demo app*</a> with username:
+<code class="inline">demo@openfn.org</code>, password: <code class="inline">welcome123</code>, or read through the
+<a href="#features">features</a> section to view screenshots of the app.</p><p><em>*Note that the demo app refreshes daily, so do not configure workflows you
+want to save.</em></p><h2 id="register-for-a-beta-account" class="section-heading">
+  <a href="#register-for-a-beta-account" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">register-for-a-beta-account</p>
+  </a>
+  Register for a Beta account
+</h2>
+<p>Register for a Beta account at <a href="https://app.openfn.org/">app.openfn.org</a> and go
+through the
+<a href="https://docs.openfn.org/documentation/build/lightning-quick-start">quick-start guide</a>
+to get familiar with the app.</p><h2 id="features" class="section-heading">
+  <a href="#features" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">features</p>
+  </a>
+  Features
+</h2>
+<h3 id="build" class="section-heading">
+  <a href="#build" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">build</p>
+  </a>
+  Build
+</h3>
+<p>Plan and build workflows using Lightning's visual interface to quickly define
+when, where and what you want your automation to do.</p><img width="1679" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/15afafe7-561b-4d79-9cd8-5d31506a9031"/><p>Use our
+<a href="https://github.com/OpenFn/kit/blob/main/packages/cli/README.md#openfncli">CLI</a>
+to quickly build, edit and deploy projects from the comfort of your own code
+editor.</p><h3 id="monitor" class="section-heading">
+  <a href="#monitor" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">monitor</p>
+  </a>
+  Monitor
+</h3>
+<p>Monitor all workflow activity in one place.</p><img width="1680" alt="image" src="https://github.com/OpenFn/Lightning/assets/8732845/909dba85-e0d1-4bce-8a17-5949386c6375"/><ul><li>Filter and search runs to identify issues that need addressing and follow how
+a specific request has been processed</li><li>Configure alerts to be notified on run failures</li><li>Receive a project digest for a daily/weekly/monthly summary of your project
+activity</li></ul><h3 id="manage" class="section-heading">
+  <a href="#manage" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">manage</p>
+  </a>
+  Manage
+</h3>
+<p>Manage users and access by project
+<img src="https://user-images.githubusercontent.com/36554605/226538682-e7f43407-2363-41eb-bee8-73307e7f3cf3.png" alt="Screenshot 2023-03-21 at 10 09 03"/></p><h3 id="roles-and-permissions" class="section-heading">
+  <a href="#roles-and-permissions" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">roles-and-permissions</p>
+  </a>
+  Roles and permissions
+</h3>
+<p>Authorization is a central part of Lightning. As such, users are given different
+roles which determine what level of access they have for resources in the
+application. For more details about roles and permissions in Lightning, please
+refer to our
+<a href="https://docs.openfn.org/documentation/about-lightning#roles-and-permissions">documentation</a>.</p><h3 id="roadmap" class="section-heading">
+  <a href="#roadmap" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">roadmap</p>
+  </a>
+  Roadmap
+</h3>
+<p>View our public roadmap
+<a href="https://docs.openfn.org/documentation/openfn-roadmap#lightning-roadmap">here</a>.</p><h2 id="getting-started" class="section-heading">
+  <a href="#getting-started" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">getting-started</p>
+  </a>
+  Getting Started
+</h2>
+<ul><li>If you only want to <a href="#run-via-docker"><em><strong>RUN</strong></em></a> Lightning on your own server,
+we recommend using Docker.</li><li>If you want to <a href="#deploy-on-external-infrastructure"><em><strong>DEPLOY</strong></em></a> Lightning,
+we recommend Docker builds and Kubernetes.</li><li>If you want to <a href="#contribute-to-this-project"><em><strong>CONTRIBUTE</strong></em></a> to the project,
+we recommend
+<a href="#run-lightning-locally">running Lightning on your local machine</a>.</li></ul><h2 id="run-via-docker" class="section-heading">
+  <a href="#run-via-docker" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">run-via-docker</p>
+  </a>
+  <strong>Run</strong> via Docker
+</h2>
+<ol><li>Install the latest version of
+<a href="https://docs.docker.com/engine/install/">Docker</a></li><li>Clone <a href="https://github.com/OpenFn/Lightning">this repo</a> using git</li><li>Copy the <code class="inline">.env.example</code> file to <code class="inline">.env</code></li><li>Run <code class="inline">docker compose run --rm web mix ecto.migrate</code></li></ol><p>By default the application will be running at
+<a href="http://localhost:4000/">localhost:4000</a>.</p><p>You can then rebuild and run with <code class="inline">docker compose build</code> and
+<code class="inline">docker compose up</code>. See <a href="#problems-with-docker">&quot;Problems with Docker&quot;</a> for
+additional troubleshooting help. Note that you can also create your own
+<code class="inline">docker-compose.yml</code> file, configuring a postgres database and using a
+<a href="https://hub.docker.com/repository/docker/openfn/lightning">pre-built image</a>
+from Dockerhub.</p><h2 id="deploy-on-external-infrastructure" class="section-heading">
+  <a href="#deploy-on-external-infrastructure" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">deploy-on-external-infrastructure</p>
+  </a>
+  <strong>Deploy</strong> on external infrastructure
+</h2>
+<p>Head to the <a href="https://docs.openfn.org/documentation/deploy/options">Deploy</a>
+section of our docs site to get started.</p><p>For technical guidelines, see <a href="deployment.html">deployment considerations</a> for
+more detailed information.</p><h2 id="run-lightning-locally" class="section-heading">
+  <a href="#run-lightning-locally" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">run-lightning-locally</p>
+  </a>
+  Run Lightning locally
+</h2>
+<h3 id="clone-the-repo-and-optionally-set-envs" class="section-heading">
+  <a href="#clone-the-repo-and-optionally-set-envs" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">clone-the-repo-and-optionally-set-envs</p>
+  </a>
+  Clone the repo and optionally set ENVs
+</h3>
+<pre><code class="makeup sh" translate="no"><span class="">git clone git@github.com:OpenFn/Lightning.git # or from YOUR fork!
+</span><span class="">cd Lightning
+</span><span class="">cp .env.example .env # and adjust as necessary!
+</span></code></pre><p>Take note of database names and ports in particular—they've got to match across
+your Postgres setup and your ENVs. You can run lightning without any ENVs
+assuming a vanilla postgres setup (see below), but you may want to make
+adjustments.</p><h3 id="database-setup" class="section-heading">
+  <a href="#database-setup" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">database-setup</p>
+  </a>
+  Database Setup
+</h3>
+<p>If you're already using Postgres locally, create a new database called
+<code class="inline">lightning_dev</code>, for example.</p><p>If you'd rather use Docker to set up a Postgres DB, create a new volume and
+image:</p><pre><code class="makeup sh" translate="no"><span class="">docker volume create lightning-postgres-data
+</span><span class="">
+</span><span class="">docker create \
+</span><span class="">  --name lightning-postgres \
+</span><span class="">  --mount source=lightning-postgres-data,target=/var/lib/postgresql/data \
+</span><span class="">  --publish 5432:5432 \
+</span><span class="">  -e POSTGRES_PASSWORD=postgres \
+</span><span class="">  postgres:15.3-alpine
+</span><span class="">
+</span><span class="">docker start lightning-postgres
+</span></code></pre><h3 id="elixir-ecto-setup" class="section-heading">
+  <a href="#elixir-ecto-setup" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">elixir-ecto-setup</p>
+  </a>
+  Elixir &amp; Ecto Setup
+</h3>
+<p>We use <a href="https://github.com/asdf-vm/asdf">asdf</a> to configure our local
+environments. Included in the repo is a <code class="inline">.tool-versions</code> file that is read by
+asdf in order to dynamically make the specified versions of Elixir and Erlang
+available. You'll need asdf plugins for
+<a href="https://github.com/asdf-vm/asdf-erlang">Erlang</a>,
+<a href="https://github.com/asdf-vm/asdf-nodejs">NodeJs</a>
+<a href="https://github.com/asdf-vm/asdf-elixir">Elixir</a> and
+<a href="https://github.com/grimoh/asdf-k6">k6</a>.</p><pre><code class="makeup sh" translate="no"><span class="">asdf install  # Install language versions
+</span><span class="">mix local.hex
+</span><span class="">mix deps.get
+</span><span class="">mix local.rebar --force
+</span><span class="">mix ecto.create # Create a development database in Postgres
+</span><span class="">mix ecto.migrate
+</span><span class="">[[ $(uname -m) == &#39;arm64&#39; ]] &amp;&amp; mix compile.rambo # Force compile rambo if on M1
+</span><span class="">mix lightning.install_runtime
+</span><span class="">mix lightning.install_schemas
+</span><span class="">mix lightning.install_adaptor_icons
+</span><span class="">npm install --prefix assets
+</span></code></pre><h3 id="run-the-app" class="section-heading">
+  <a href="#run-the-app" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">run-the-app</p>
+  </a>
+  Run the app
+</h3>
+<p>Lightning is a web app. To run it in interactive Elixir mode, start the
+development server by running with your environment variables by running:</p><pre><code class="makeup sh" translate="no"><span class="">iex -S mix phx.server
+</span></code></pre><p>or if you have set up custom environment variables, run:</p><pre><code class="makeup sh" translate="no"><span class="">env $(cat .env | grep -v &quot;#&quot; | xargs ) iex -S mix phx.server
+</span></code></pre><p>Once the server has started, head to <a href="http://localhost:4000"><code class="inline">localhost:4000</code></a>
+in your browser.</p><h3 id="run-the-tests" class="section-heading">
+  <a href="#run-the-tests" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">run-the-tests</p>
+  </a>
+  Run the tests
+</h3>
+<p>Before the first time running the tests, you need a test database setup.</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix ecto.create
+</span></code></pre><p>And then after that run the tests using:</p><pre><code class="makeup sh" translate="no"><span class="">MIX_ENV=test mix test
+</span></code></pre><p>We also have <code class="inline">test.watch</code> installed which can be used to rerun the tests on file
+changes.</p><h2 id="benchmarking" class="section-heading">
+  <a href="#benchmarking" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">benchmarking</p>
+  </a>
+  Benchmarking
+</h2>
+<p>We are using <a href="https://k6.io/">k6</a> to benchmark Lightning. Under <code class="inline">benchmarking</code>
+folder you can find a script for benchmarking Webhook Workflows.</p><p>See <a href="benchmarking.md.html">Benchmarking</a> for more detailed information.</p><h2 id="troubleshooting" class="section-heading">
+  <a href="#troubleshooting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">troubleshooting</p>
+  </a>
+  Troubleshooting
+</h2>
+<h3 id="trouble-with-environment-variables" class="section-heading">
+  <a href="#trouble-with-environment-variables" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">trouble-with-environment-variables</p>
+  </a>
+  Trouble with environment variables
+</h3>
+<p>For troubleshooting custom environment variable configuration it's important to
+know how an Elixir app loads and modifies configuration. The order is as
+follows:</p><ol><li>Stuff in <code class="inline">config.exs</code> is loaded.</li><li><em>That</em> is then modified (think: <em>overwritten</em>) by stuff your ENV-specific
+config: <code class="inline">dev.exs</code>, <code class="inline">prod.exs</code> or <code class="inline">test.exs</code>.</li><li><em>That</em> is then modified by <code class="inline">runtime.exs</code> which is where you are allowed to
+use <code class="inline">System.env()</code></li><li><em>Finally</em> <code class="inline">init/2</code> (if present in a child application) gets called (which
+takes the config which has been set in steps 1-3) when that child application
+is started during the parent app startup defined in <code class="inline">application.ex</code>.</li></ol><h3 id="problems-with-postgres" class="section-heading">
+  <a href="#problems-with-postgres" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">problems-with-postgres</p>
+  </a>
+  Problems with Postgres
+</h3>
+<p>If you're having connecting issues with Postgres, check the database section of
+your <code class="inline">.env</code> to ensure the DB url is correctly set for your environment — note
+that composing a DB url out of other, earlier declared variables, does not work
+while using <code class="inline">xargs</code>.</p><h3 id="problems-with-debian" class="section-heading">
+  <a href="#problems-with-debian" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">problems-with-debian</p>
+  </a>
+  Problems with Debian
+</h3>
+<p>If you're getting this error on debian</p><pre><code class="makeup elixir" translate="no"><span class="o">==</span><span class="o">&gt;</span><span class="w"> </span><span class="n">earmark_parser</span><span class="w">
+</span><span class="nc">Compiling</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="p" data-group-id="0237494592-1">(</span><span class="o">.</span><span class="n">yrl</span><span class="p" data-group-id="0237494592-1">)</span><span class="w">
+</span><span class="o">/</span><span class="n">usr</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">erlang</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">parsetools</span><span class="o">-</span><span class="mf">2.3</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">include</span><span class="o">/</span><span class="n">yeccpre</span><span class="o">.</span><span class="ss">hrl</span><span class="p">:</span><span class="w"> </span><span class="n">no</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
+</span><span class="n">could</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">compile</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="ss">:earmark_parser</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mix compile&quot;</span><span class="w"> </span><span class="n">failed</span><span class="o">.</span><span class="w"> </span><span class="nc">You</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">recompile</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.compile earmark_parser&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">update</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.update earmark_parser&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">clean</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="s">&quot;mix deps.clean earmark_parser&quot;</span></code></pre><p>You need to install erlang development environment <code class="inline">sudo apt install erlang-dev</code>
+<a href="https://github.com/elixir-lang/ex_doc/issues/1441">refer to this issue</a></p><h3 id="problems-with-docker" class="section-heading">
+  <a href="#problems-with-docker" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">problems-with-docker</p>
+  </a>
+  Problems with Docker
+</h3>
+<h4>Versions</h4><p>The build may not work on old versions of Docker and Docker compose. It has been
+tested against:</p><pre><code class="makeup elixir" translate="no"><span class="nc">Docker</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="mf">20.10</span><span class="o">.</span><span class="mi">17</span><span class="p">,</span><span class="w"> </span><span class="n">build</span><span class="w"> </span><span class="mi">100</span><span class="n">c701</span><span class="w">
+</span><span class="nc">Docker</span><span class="w"> </span><span class="nc">Compose</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="n">v2</span><span class="o">.</span><span class="mf">6.0</span></code></pre><h3 id="problems-with-rambo" class="section-heading">
+  <a href="#problems-with-rambo" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">problems-with-rambo</p>
+  </a>
+  Problems with <code class="inline">rambo</code>
+</h3>
+<p>When running <code class="inline">mix compile.rambo</code> on Apple Silicon (an Apple M1/M2, <code class="inline">macarm</code>,
+<code class="inline">aarch64-apple-darwin</code>) and encountering the following error:</p><pre><code class="makeup elixir" translate="no"><span class="gt">** (RuntimeError) Rambo does not ship with binaries for your environment.</span><span class="w">
 
-   </span><span class="nc">LoadTestingPrep</span><span class="o">.</span><span class="n">init</span><span class="p" data-group-id="7755318946-4">(</span><span class="n">output_file</span><span class="p" data-group-id="7755318946-4">)</span></code></pre></li><li><p>Run the demo setup script: <code class="inline">mix run --no-start priv/repo/demo.exs</code> The
-<code class="inline">webhookURL</code> is already set to default to the webhook created in the demo
-data</p></li><li><p>In another terminal (do not stop the Lightning server) run the
-<code class="inline">benchmarking/script.js</code> file using the following command</p><pre><code class="makeup bash" translate="no"><span class=""> k6 run benchmarking/script.js
-</span></code></pre><p> If the script exits successfully, this means the app met the defined performance
- thresholds.</p><p> By default, the test payload is minimal. Should you wish to test it with larger payloads,
- you can pass in the <code class="inline">PAYLOAD_SIZE</code> ENV variable. This variable allows you to specify the payload
- size in KB (for now, integer values only), (e.g. 2000 KB):</p><pre><code class="makeup bash" translate="no"><span class=""> k6 run -e PAYLOAD_SIZE=2000 benchmarking/script.js
-</span></code></pre><p> To collect the benchmarking data in a CSV file, run the previous command with
- the <code class="inline">--out filename</code> option.</p><pre><code class="makeup bash" translate="no"><span class=""> k6 run --out csv=test_results.csv benchmarking/script.js
-</span></code></pre></li><li><p>In the iex session, close the output file:</p><pre><code class="makeup elixir" translate="no"><span class="w"> </span><span class="nc">LoadTestingPrep</span><span class="o">.</span><span class="n">fin</span><span class="p" data-group-id="9753743618-1">(</span><span class="n">output_file</span><span class="p" data-group-id="9753743618-1">)</span></code></pre></li></ol><p>See <a href="https://k6.io/docs/get-started/results-output/">results output</a> for other
-available output formats.</p>
+    </span><span class="n">aarch64</span><span class="o">-</span><span class="n">apple</span><span class="o">-</span><span class="n">darwin22</span><span class="o">.</span><span class="mf">3.0</span><span class="w"> </span><span class="n">detected</span><span class="w">
+
+</span><span class="nc">Install</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="nc">Rust</span><span class="w"> </span><span class="n">compiler</span><span class="w"> </span><span class="n">so</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">binary</span><span class="w"> </span><span class="n">can</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">prepared</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">you</span><span class="o">.</span><span class="w">
+
+    </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">tasks</span><span class="o">/</span><span class="n">compile</span><span class="o">.</span><span class="n">rambo</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">89</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.Tasks.Compile.Rambo</span><span class="o">.</span><span class="n">compile!</span><span class="o">/</span><span class="mi">0</span><span class="w">
+    </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">tasks</span><span class="o">/</span><span class="n">compile</span><span class="o">.</span><span class="n">rambo</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">51</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.Tasks.Compile.Rambo</span><span class="o">.</span><span class="n">run</span><span class="o">/</span><span class="mi">1</span><span class="w">
+    </span><span class="p" data-group-id="3641437731-1">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="3641437731-1">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">task</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">421</span><span class="p">:</span><span class="w"> </span><span class="n">anonymous</span><span class="w"> </span><span class="k" data-group-id="3641437731-2">fn</span><span class="o">/</span><span class="mi">3</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nc">Mix.Task</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">4</span><span class="w">
+    </span><span class="p" data-group-id="3641437731-3">(</span><span class="n">mix</span><span class="w"> </span><span class="mf">1.14</span><span class="o">.</span><span class="mi">2</span><span class="p" data-group-id="3641437731-3">)</span><span class="w"> </span><span class="n">lib</span><span class="o">/</span><span class="n">mix</span><span class="o">/</span><span class="n">cli</span><span class="o">.</span><span class="n">ex</span><span class="p">:</span><span class="mi">84</span><span class="p">:</span><span class="w"> </span><span class="nc">Mix.CLI</span><span class="o">.</span><span class="n">run_task</span><span class="o">/</span><span class="mi">2</span></code></pre><p>You can resolve this error by installing the Rust compiler using Homebrew. Run
+the following command in your terminal: <code class="inline">brew install rust</code></p><p>If you have already compiled Rambo explicitly via <code class="inline">mix compile.rambo</code>, and you
+are still seeing the following error:</p><pre><code class="makeup elixir" translate="no"><span class="ss">sh</span><span class="p">:</span><span class="w"> </span><span class="o">/</span><span class="n">path_to_directory</span><span class="o">/</span><span class="nc">Lightning</span><span class="o">/</span><span class="c">_build</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">rambo</span><span class="o">/</span><span class="n">priv</span><span class="o">/</span><span class="ss">rambo</span><span class="p">:</span><span class="w"> </span><span class="nc">No</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span><span class="w">
+</span><span class="ss">sh</span><span class="p">:</span><span class="w"> </span><span class="n">line</span><span class="w"> </span><span class="mi">0</span><span class="p">:</span><span class="w"> </span><span class="ss">exec</span><span class="p">:</span><span class="w"> </span><span class="o">/</span><span class="n">path_to_directory</span><span class="o">/</span><span class="nc">Lightning</span><span class="o">/</span><span class="c">_build</span><span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">rambo</span><span class="o">/</span><span class="n">priv</span><span class="o">/</span><span class="ss">rambo</span><span class="p">:</span><span class="w"> </span><span class="n">cannot</span><span class="w"> </span><span class="ss">execute</span><span class="p">:</span><span class="w"> </span><span class="nc">No</span><span class="w"> </span><span class="n">such</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">directory</span></code></pre><p>You can try renaming <code class="inline">deps/rambo/priv/rambo-mac</code> to <code class="inline">deps/rambo/priv/rambo</code>.</p><p>If neither of the approaches above work, please raise an issue.</p><h4>Starting from scratch</h4><p>If you're actively working with docker, you start experiencing issues, and you
+would like to start from scratch you can clean up everything and start over like
+this:</p><pre><code class="makeup sh" translate="no"><span class=""># To remove any ignored files and reset your .env to it&#39;s example
+</span><span class="">git clean -fdx &amp;&amp; cp .env.example .env
+</span><span class=""># You can skip the line below if you want to keep your database
+</span><span class="">docker compose down --rmi all --volumes
+</span><span class="">
+</span><span class="">docker compose build --no-cache web &amp;&amp; \
+</span><span class="">  docker compose create --force-recreate
+</span><span class="">
+</span><span class="">docker compose run --rm web mix ecto.migrate
+</span><span class="">docker compose up
+</span></code></pre><h2 id="project-configuration-quickstart" class="section-heading">
+  <a href="#project-configuration-quickstart" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">project-configuration-quickstart</p>
+  </a>
+  Project Configuration Quickstart
+</h2>
+<p>For help getting started with your OpenFn/Lightning Project and Workflows
+configuration, check out the
+<a href="https://docs.openfn.org/documentation/build/lightning-quick-start">Lightning Quickstart Guidance</a>
+on OpenFn/Docs.</p><h2 id="contribute-to-this-project" class="section-heading">
+  <a href="#contribute-to-this-project" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">contribute-to-this-project</p>
+  </a>
+  <strong>Contribute</strong> to this project
+</h2>
+<p>First, thanks for being here! You're contributing to a digital public good that
+will always be free and open source and aimed at serving innovative NGOs,
+governments, and social impact organizations the world over! You rock. ❤️</p><p>FYI, Lightning is built in <a href="https://elixir-lang.org/">Elixir</a>, harnessing the
+<a href="https://www.phoenixframework.org/">Phoenix Framework</a>. Currently, the only
+unbundled dependency is a <a href="https://www.postgresql.org/">PostgreSQL</a> database.</p><p>If you'd like to contribute to this projects, follow the steps below:</p><h3 id="assign-yourself-to-an-issue" class="section-heading">
+  <a href="#assign-yourself-to-an-issue" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">assign-yourself-to-an-issue</p>
+  </a>
+  Assign yourself to an issue
+</h3>
+<p>Read through the existing <a href="https://github.com/OpenFn/Lightning/issues">issues</a>,
+assign yourself to the issue you have chosen. Leave a comment on the issue to
+let us know you'll be working on it, and if you have any questions of
+clarifications that would help you get started ask them there - we will get back
+to you as soon as possible.</p><p>If there isn't already an issue for the feature you would like to contribute,
+please start a discussion in our
+<a href="https://community.openfn.org/c/feature-requests/12">community forum</a>.</p><h3 id="open-a-pull-request" class="section-heading">
+  <a href="#open-a-pull-request" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">open-a-pull-request</p>
+  </a>
+  Open a pull request
+</h3>
+<ol><li><p>Clone the Lightning repository, then
+<a href="https://docs.github.com/en/get-started/quickstart/fork-a-repo">fork it</a>.</p></li><li><p>Run through <a href="#set-up-your-environment">setting up your environment</a> and make
+your changes.</p></li><li><p>Make sure you have written your tests and updated /CHANGELOG.md (in the
+'Unreleased' section, add a short description of the changes you are making,
+along with a link to your issue).</p></li><li><p>Open a draft pull request by clicking &quot;Contribute &gt; Open Pull Request&quot; from
+your forked repository. Fill out the pull request template (this will be
+added automatically for you), then make sure to self-review your code and go
+through the 'Review checklist'. Don't worry about the QA checkbox, our
+product manager Amber will tick that once she has reviewed your PR. You can
+leave any notes for the reviewer in a comment.</p></li><li><p>Once you're ready to submit a pull request, you can mark your draft PR as
+'Ready for review' and assign @stuartc or @taylordowns2000.</p></li></ol><h2 id="generating-documentation" class="section-heading">
+  <a href="#generating-documentation" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">generating-documentation</p>
+  </a>
+  Generating Documentation
+</h2>
+<p>You can generate the HTML and EPUB documentation locally using:</p><p><a href="https://hexdocs.pm/ex_doc/0.29.1/Mix.Tasks.Docs.html"><code class="inline">mix docs</code></a> and opening <code class="inline">doc/index.html</code> in your browser.</p><h2 id="security-and-standards" class="section-heading">
+  <a href="#security-and-standards" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">security-and-standards</p>
+  </a>
+  Security and Standards
+</h2>
+<p>We use a host of common Elixir static analysis tools to help us avoid common
+pitfalls and make sure we keep everything clean and consistent.</p><p>In addition to our test suite, you can run the following commands:</p><ul><li><code class="inline">mix format --check-formatted</code><br/>Code formatting checker, run again without the <code class="inline">--check-formatted</code> flag to
+have your code automatically changed.</li><li><a href="https://hexdocs.pm/dialyxir/1.3.0/Mix.Tasks.Dialyzer.html"><code class="inline">mix dialyzer</code></a><br/>Static analysis for type mismatches and other common warnings. See
+<a href="https://github.com/jeremyjh/dialyxir">dialyxir</a>.</li><li><a href="https://hexdocs.pm/credo/1.6.7/Mix.Tasks.Credo.html"><code class="inline">mix credo</code></a><br/>Static analysis for consistency, and coding standards. See
+<a href="https://github.com/rrrene/credo">Credo</a>.</li><li><a href="https://hexdocs.pm/sobelow/0.13.0/Mix.Tasks.Sobelow.html"><code class="inline">mix sobelow</code></a><br/>Check for commonly known security exploits. See
+<a href="https://sobelow.io/">Sobelow</a>.</li><li><code class="inline">MIX_ENV=test mix coveralls</code><br/>Test coverage reporter. This command also runs the test suite, and can be used
+in place of <a href="https://hexdocs.pm/mix/Mix.Tasks.Test.html"><code class="inline">mix test</code></a> when checking everything before pushing your code. See
+<a href="https://github.com/parroty/excoveralls">excoveralls</a>.</li></ul><blockquote><p>For convenience there is a <code class="inline">verify</code> mix task that runs all of the above and
+defaults the <code class="inline">MIX_ENV</code> to <code class="inline">test</code>.</p></blockquote><p>For more guidance on security best practices for workflow automation
+implementations, check out OpenFn Docs:
+<a href="https://docs.openfn.org/documentation/getting-started/security">docs.openfn.org/documentation/getting-started/security</a></p><h2 id="server-specs-for-self-hosting" class="section-heading">
+  <a href="#server-specs-for-self-hosting" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">server-specs-for-self-hosting</p>
+  </a>
+  Server Specs for Self-Hosting
+</h2>
+<p>For recommend server specifications for self-hosting of Lightning, check out
+this Community topic:
+<a href="https://community.openfn.org/t/specs-for-self-hosting-lightning/292">community.openfn.org/t/specs-for-self-hosting-lightning/292</a></p><h2 id="support" class="section-heading">
+  <a href="#support" class="hover-link"><i class="ri-link-m" aria-hidden="true"></i>
+  <p class="sr-only">support</p>
+  </a>
+  Support
+</h2>
+<p>If you have any questions, feedback, or issues, please:</p><ul><li>Post on the OpenFn Community at
+<a href="https://community.openfn.org">community.openfn.org</a></li><li>Open an issue directly on this Github Repo:
+<a href="https://github.com/OpenFn/Lightning/issues">github.com/OpenFn/Lightning/issues</a></li></ul>
 <div class="bottom-actions">
   <div class="bottom-actions-item">
 
-      <a href="deployment.html" class="bottom-actions-button" rel="prev">
+      <a href="api-reference.html" class="bottom-actions-button" rel="prev">
         <span class="subheader">
           ← Previous Page
         </span>
         <span class="title">
-Deployment
+API Reference
         </span>
       </a>
 
   </div>
   <div class="bottom-actions-item">
 
-      <a href="provisioning.html" class="bottom-actions-button" rel="next">
+      <a href="deployment.html" class="bottom-actions-button" rel="next">
         <span class="subheader">
           Next Page →
         </span>
         <span class="title">
-Provisioning
+Deployment
         </span>
       </a>
 
