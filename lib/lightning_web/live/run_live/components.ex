@@ -3,7 +3,7 @@ defmodule LightningWeb.RunLive.Components do
   use LightningWeb, :component
   import LightningWeb.RouteHelpers
   alias Lightning.Pipeline
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.WorkOrders.SearchParams
   alias Phoenix.LiveView.JS
 
   attr :project, :map, required: true

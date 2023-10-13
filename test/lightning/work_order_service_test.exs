@@ -38,7 +38,7 @@ defmodule Lightning.WorkOrderServiceTest do
       #     WorkOrderService.create_webhook_workorder(edge, dataclip_body)
 
       #   assert_receive {Lightning.WorkOrderService,
-      #                   %Lightning.Workorders.Events.AttemptCreated{}},
+      #                   %Lightning.WorkOrders.Events.AttemptCreated{}},
       #                  100
 
       #   attempt_run =

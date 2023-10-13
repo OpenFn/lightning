@@ -6,12 +6,13 @@ defmodule LightningWeb.RunLive.Index do
 
   import Ecto.Changeset, only: [get_change: 2]
 
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.AttemptService
+  alias Lightning.Invocation
+  alias Lightning.Invocation.Run
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
   alias Lightning.WorkOrderService
-  alias Lightning.{AttemptService, Invocation}
-  alias Lightning.Invocation.Run
+  alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
   alias Phoenix.LiveView.JS
 

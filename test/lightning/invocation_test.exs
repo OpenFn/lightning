@@ -5,7 +5,7 @@ defmodule Lightning.InvocationTest do
 
   alias Lightning.Attempts
   alias Lightning.Pipeline
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.WorkOrders.SearchParams
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Repo

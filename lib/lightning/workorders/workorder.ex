@@ -1,6 +1,6 @@
 defmodule Lightning.WorkOrder do
   @moduledoc """
-  Ecto model for Workorders.
+  Ecto model for WorkOrders.
   """
 
   use Ecto.Schema

@@ -7,7 +7,7 @@ defmodule Lightning.Invocation do
   import Lightning.Helpers, only: [coerce_json_field: 2]
   alias Lightning.WorkOrder
   alias Lightning.Invocation.LogLine
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.WorkOrders.SearchParams
   alias Lightning.Repo
 
   alias Lightning.Invocation.{Dataclip, Run}

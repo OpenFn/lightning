@@ -1,7 +1,7 @@
-defmodule Lightning.Workorders.SearchParamsTest do
+defmodule Lightning.WorkOrders.SearchParamsTest do
   use Lightning.DataCase, async: true
 
-  alias Lightning.Workorders.SearchParams
+  alias Lightning.WorkOrders.SearchParams
 
   describe "new/1" do
     test "returns a struct with the given params" do
