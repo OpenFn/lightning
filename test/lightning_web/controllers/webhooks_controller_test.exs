@@ -1,6 +1,7 @@
 defmodule LightningWeb.WebhooksControllerTest do
   use LightningWeb.ConnCase, async: false
 
+  alias Lightning.Attempts
   alias Lightning.WorkOrders
 
   import Lightning.Factories
@@ -21,10 +22,12 @@ defmodule LightningWeb.WebhooksControllerTest do
                json_response(conn, 200)
 
       work_order =
+        %{attempts: [attempt]} =
         WorkOrders.get(work_order_id, include: [:attempts, :dataclip, :trigger])
 
-      assert work_order.dataclip.body == message
       assert work_order.trigger.id == trigger.id
+
+      assert Attempts.get_dataclip_body(attempt) == ~s({"foo": "bar"})
 
       %{attempts: [attempt]} = work_order
       assert attempt.starting_trigger_id == trigger.id

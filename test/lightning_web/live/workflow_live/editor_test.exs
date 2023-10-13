@@ -152,6 +152,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       workflow: w
     } do
       import Ecto.Query
+
       job = w.jobs |> hd
 
       {:ok, view, _html} =
