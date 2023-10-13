@@ -115,6 +115,7 @@ defmodule Lightning.JobsFixtures do
     %{job: job, edge: e, trigger: t, workflow: workflow}
   end
 
+  @deprecated "Use the `:complex_workflow` factory instead"
   def workflow_scenario(context \\ %{}) do
     project = Map.get_lazy(context, :project, fn -> insert(:project) end)
     workflow = insert(:workflow, project: project)

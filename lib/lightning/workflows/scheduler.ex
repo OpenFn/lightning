@@ -91,7 +91,7 @@ defmodule Lightning.Workflows.Scheduler do
 
     case run do
       nil -> nil
-      run -> Invocation.get_result_dataclip_query(run) |> Repo.one()
+      run -> Invocation.get_output_dataclip_query(run) |> Repo.one()
     end
   end
 end

@@ -100,7 +100,7 @@ defmodule Lightning.Invocation do
   @doc """
   Query for retrieving the dataclip that was the result of a successful run.
   """
-  def get_result_dataclip_query(%Run{} = run) do
+  def get_output_dataclip_query(%Run{} = run) do
     Ecto.assoc(run, :output_dataclip)
   end
 

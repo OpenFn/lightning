@@ -182,12 +182,12 @@ defmodule Lightning.WorkOrderService do
   def multi_for(
         type,
         %Lightning.Workflows.Edge{target_job: job, source_trigger: trigger},
-        dataclip_body
+        dataclip
       )
       when type in [:webhook, :cron] do
     Multi.new()
     |> put_job(job)
-    |> put_dataclip(dataclip_body)
+    |> put_dataclip(dataclip)
     |> Multi.insert(:reason, fn %{dataclip: dataclip} ->
       InvocationReasons.build(trigger, dataclip)
     end)

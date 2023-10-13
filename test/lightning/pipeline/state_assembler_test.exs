@@ -11,6 +11,7 @@ defmodule Lightning.Pipeline.StateAssemblerTest do
   import Lightning.CredentialsFixtures
   import Ecto.Changeset
 
+  @tag :deprecated
   describe "assemble/2" do
     test "run with no previous run" do
       %{job: job} = webhook_workflow()

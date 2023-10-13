@@ -80,9 +80,6 @@ defmodule Lightning.Attempts do
     |> Repo.one()
   end
 
-  @doc """
-
-  """
   def start_attempt(%Attempt{} = attempt) do
     Attempt.start(attempt)
     |> update_attempt()

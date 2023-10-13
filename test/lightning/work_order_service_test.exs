@@ -61,6 +61,7 @@ defmodule Lightning.WorkOrderServiceTest do
     end
   end
 
+  @tag skip: "Replaced by WorkOrders.retry/3"
   describe "retry_attempt_run/2" do
     setup do
       workflow_scenario()
@@ -122,6 +123,7 @@ defmodule Lightning.WorkOrderServiceTest do
     end
   end
 
+  @tag skip: "Replaced by WorkOrders.retry/3"
   describe "retry_attempt_runs/2" do
     test "creates a new attempt starting from an existing run" do
       scenario_a = workflow_scenario()

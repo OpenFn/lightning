@@ -149,8 +149,10 @@ defmodule Lightning.AttemptsTest do
           project_id: workflow.project_id
         })
 
-      assert %{body: %{"foo" => "bar"}} =
-               Lightning.Invocation.get_dataclip!(run.output_dataclip_id)
+      assert %{"foo" => "bar"} =
+               Lightning.Invocation.get_output_dataclip_query(run)
+               |> select([d], d.body)
+               |> Repo.one()
     end
   end
 

@@ -65,6 +65,7 @@ defmodule Lightning.AttemptServiceTest do
     end
   end
 
+  @tag skip: "Replaced by WorkOrders.retry/3"
   describe "retry" do
     setup do
       workflow_scenario()

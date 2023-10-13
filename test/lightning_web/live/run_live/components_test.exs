@@ -52,24 +52,41 @@ defmodule LightningWeb.RunLive.ComponentsTest do
   end
 
   test "run_list_item component" do
-    reason = insert(:reason, type: :webhook)
+    %{triggers: [trigger], jobs: jobs} =
+      workflow = insert(:complex_workflow)
 
-    attempt =
-      insert(:attempt,
-        work_order: build(:workorder, reason: reason),
-        runs: [
-          build(:run),
-          build(:run, finished_at: DateTime.utc_now(), exit_code: 0),
-          build(:run, finished_at: DateTime.utc_now())
-        ],
-        reason: reason
+    [job_1, job_2, job_3 | _] = jobs
+
+    dataclip = insert(:dataclip)
+    output_dataclip = insert(:dataclip)
+
+    %{attempts: [attempt]} =
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        attempts: [
+          %{
+            state: :failed,
+            dataclip: dataclip,
+            starting_trigger: trigger,
+            runs: [
+              insert(:run,
+                job: job_1,
+                input_dataclip: dataclip,
+                output_dataclip: output_dataclip,
+                exit_reason: "success"
+              ),
+              insert(:run, job: job_2, input_dataclip: output_dataclip),
+              insert(:run, job: job_3)
+            ]
+          }
+        ]
       )
 
-    first_run = attempt.runs |> List.first()
-    second_run = attempt.runs |> Enum.at(1)
-    third_run = attempt.runs |> List.last()
+    [first_run, second_run, third_run] = attempt.runs
 
-    project_id = first_run.job.workflow.project_id
+    project_id = workflow.project_id
 
     html =
       render_component(&Components.run_list_item/1,
