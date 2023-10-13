@@ -58,15 +58,11 @@
           </div>
         </div>
 
-        <%= for member_form <-Phoenix.HTML.Form.inputs_for(f, :project_users) do %>
-          <%= if Phoenix.HTML.Form.input_value(member_form, :delete) != true do %>
+        <.inputs_for :let={member_form} field={f[:project_users]}>
+          <%= if member_form[:delete].value != true do %>
             <div class="flex w-full gap-2 items-center pb-2">
               <div class="grow">
-                <%= @all_users
-                |> Enum.find_value(fn {name, id} ->
-                  if id == Phoenix.HTML.Form.input_value(member_form, :user_id),
-                    do: name
-                end) %>
+                <%= user_name_for_id(@all_users, member_form[:user_id]) %>
                 <.old_error field={member_form[:project_id]} />
               </div>
               <div class="grow-0 items-right">
@@ -88,10 +84,9 @@
               </div>
             </div>
           <% end %>
-          <% Phoenix.HTML.Form.hidden_inputs_for(member_form) %>
-          <%= Phoenix.HTML.Form.hidden_input(member_form, :user_id) %>
-          <%= Phoenix.HTML.Form.hidden_input(member_form, :delete) %>
-        <% end %>
+          <.input type="hidden" field={member_form[:user_id]} />
+          <.input type="hidden" field={member_form[:delete]} />
+        </.inputs_for>
       </div>
       <div class="col-span-6">
         <div class="hidden sm:block" aria-hidden="true">
