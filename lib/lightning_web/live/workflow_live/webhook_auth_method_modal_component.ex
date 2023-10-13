@@ -9,8 +9,20 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   alias Phoenix.LiveView.JS
 
   @impl true
+  def mount(socket) do
+    {:ok,
+     assign(socket, delete_confirmation: delete_confirmation_changeset(%{}))}
+  end
+
+  @impl true
   def update(assigns, socket) do
     {:ok, apply_action(socket, assigns.action, assigns)}
+  end
+
+  defp delete_confirmation_changeset(data) do
+    %Ecto.Changeset{}
+    |> Ecto.Changeset.cast(data, [:confirmation_text])
+    |> Ecto.Changeset.validate_inclusion(:confirmation_text, ["DELETE"])
   end
 
   defp apply_action(
@@ -44,6 +56,16 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     socket
     |> assign(assigns)
     |> assign(action: :display_triggers)
+  end
+
+  defp apply_action(
+         socket,
+         :delete,
+         %{project: _, webhook_auth_method: _} = assigns
+       ) do
+    socket
+    |> assign(assigns)
+    |> assign(action: :delete)
   end
 
   defp apply_action(
@@ -185,6 +207,30 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
      |> push_navigate(to: socket.assigns.return_to)}
   end
 
+  def handle_event("delete", %{x: _x} = params, socket) do
+    IO.inspect(params, label: "delete_event")
+    # selected_auth_method_ids =
+    #   assigns.selections
+    #   |> Enum.filter(fn {_key, value} -> value end)
+    #   |> Enum.map(fn {key, _value} -> key end)
+
+    # auth_methods =
+    #   Enum.filter(assigns.project_auth_methods, fn auth_method ->
+    #     auth_method.id in selected_auth_method_ids
+    #   end)
+
+    # {:ok, _trigger} =
+    #   WebhookAuthMethods.update_trigger_auth_methods(
+    #     assigns.trigger,
+    #     auth_methods
+    #   )
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Webhook authentication method deleted successfully")
+     |> push_navigate(to: socket.assigns.return_to)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -212,6 +258,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
                   Edit webhook credential
                 <% :display_triggers -> %>
                   Associated Workflow Triggers
+                <% :delete -> %>
+                  Delete Authentication Method
                 <% :index -> %>
                   Webhook Authentication Credentials
               <% end %>
@@ -244,6 +292,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             <.choose_auth_type_form {assigns} />
           <% %{action: :display_triggers} -> %>
             <.linked_triggers_list {assigns} />
+          <% %{action: :delete} -> %>
+            <.auth_method_deletion_form {assigns} />
           <% _other -> %>
             <.live_component
               module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
@@ -343,6 +393,44 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </button>
       </div>
     </div>
+    """
+  end
+
+  defp auth_method_deletion_form(assigns) do
+    ~H"""
+    <form phx-change="validate_deletion" phx-submit="delete">
+      <div class="space-y-4">
+        <p>You are about to delete the webhook credential
+          "<span class="credential-name"><%= @webhook_auth_method.name %></span>"
+          which is used by no workflows.</p>
+
+        <.input
+          type="text"
+          name="confirmation_text"
+          value={@delete_confirmation.confirmation_text}
+          phx-feedback-for="delete_confirmation.confirmation_text"
+          label="Type in 'DELETE' to confirm the deletion"
+          required="true"
+        />
+      </div>
+      <div class="sm:flex sm:flex-row-reverse">
+        <button
+          id="delete_trigger_auth_methods_button"
+          type="submit"
+          phx-disable-with="Deleting..."
+          class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+        >
+          Delete credential
+        </button>
+        <button
+          type="button"
+          phx-click={JS.navigate(@return_to)}
+          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
     """
   end
 
