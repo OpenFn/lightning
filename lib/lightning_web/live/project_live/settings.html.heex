@@ -318,10 +318,30 @@
                 </a>
               <% end %>
             </:action>
-            <:action>
-              <a href="#" class="cursor-not-allowed text-red-300 ">
+            <:action :let={auth_method}>
+              <a
+                id={"delete_auth_method_link_#{auth_method.id}"}
+                href="#"
+                class="text-red-600 hover:text-red-800"
+                phx-click={show_modal("delete_auth_#{auth_method.id}_modal")}
+              >
                 Delete
               </a>
+              <div class="text-left">
+                <.live_component
+                  module={
+                    LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent
+                  }
+                  id={"delete_auth_#{auth_method.id}_modal"}
+                  action={:delete}
+                  project={@project}
+                  webhook_auth_method={auth_method}
+                  return_to={
+                    ~p"/projects/#{@project.id}/settings#webhook_security"
+                  }
+                  trigger={nil}
+                />
+              </div>
             </:action>
           </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
         </LightningWeb.Components.Common.panel_content>
