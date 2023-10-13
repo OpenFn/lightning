@@ -151,6 +151,7 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
       project: p,
       workflow: w
     } do
+      import Ecto.Query
       job = w.jobs |> hd
 
       {:ok, view, _html} =
@@ -158,15 +159,23 @@ defmodule LightningWeb.WorkflowLive.EditorTest do
 
       assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 0
 
+      body = %{"a" => 1}
+
       view
       |> form("#manual-job-#{job.id} form",
         manual: %{
-          body: Jason.encode!(%{"a" => 1})
+          body: Jason.encode!(body)
         }
       )
       |> render_submit()
 
-      assert Invocation.list_dataclips_for_job(job) |> Enum.count() == 1
+      assert where(
+               Lightning.Invocation.Dataclip,
+               [d],
+               d.body == ^body and d.type == :saved_input and
+                 d.project_id == ^p.id
+             )
+             |> Lightning.Repo.exists?()
     end
 
     @tag role: :editor

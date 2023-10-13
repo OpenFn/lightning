@@ -601,8 +601,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
       can_run_job: can_run_job
     } = socket.assigns
 
-    IO.inspect(socket)
-
     socket = socket |> apply_params(workflow_params)
 
     if can_run_job && can_edit_job do
@@ -653,10 +651,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   def handle_info({"form_changed", %{"workflow" => params}}, socket) do
     {:noreply, handle_new_params(socket, params)}
   end
-
-  # def handle_info({:follow_attempt, attempt_run}, socket) do
-  #   {:noreply, socket |> assign(follow_attempt_id: attempt_run.run_id)}
-  # end
 
   defp maybe_show_manual_run(socket) do
     case socket.assigns do
