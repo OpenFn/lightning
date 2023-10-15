@@ -39,6 +39,7 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
     field :username, Lightning.Encrypted.Binary
     field :password, Lightning.Encrypted.Binary
     field :api_key, Lightning.Encrypted.Binary
+    field :scheduled_deletion, :utc_datetime
 
     belongs_to :project, Lightning.Projects.Project
 
@@ -56,7 +57,8 @@ defmodule Lightning.Workflows.WebhookAuthMethod do
       :username,
       :password,
       :project_id,
-      :api_key
+      :api_key,
+      :scheduled_deletion
     ])
     |> validate_required([:name, :auth_type, :project_id])
     |> validate_auth_fields()
