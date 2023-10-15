@@ -9,17 +9,72 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   @impl true
   def update(%{webhook_auth_method: webhook_auth_method} = assigns, socket) do
-    changeset = WebhookAuthMethod.changeset(webhook_auth_method, %{})
-
     {:ok,
      socket
-     |> assign(changeset: changeset)
+     |> assign(:changeset, WebhookAuthMethod.changeset(webhook_auth_method, %{}))
+     |> assign(:delete_confirmation_changeset, delete_confirmation_changeset())
      |> assign(assigns)}
+  end
+
+  def delete_confirmation_changeset(params \\ %{}) do
+    {%{confirmation: ""}, %{confirmation: :string}}
+    |> Ecto.Changeset.cast(
+      params,
+      [:confirmation]
+    )
+    |> Ecto.Changeset.validate_required([:confirmation],
+      message: "Please type 'DELETE' to confirm"
+    )
+    |> Ecto.Changeset.validate_inclusion(:confirmation, ["DELETE"],
+      message: "Please type 'DELETE' to confirm"
+    )
   end
 
   @impl true
   def handle_event("save", %{"webhook_auth_method" => params}, socket) do
     save_webhook_auth_method(socket, socket.assigns.action, params)
+  end
+
+  def handle_event(
+        "validate_deletion",
+        %{"delete_confirmation_changeset" => delete_confirmation_changeset},
+        socket
+      ) do
+    changeset =
+      delete_confirmation_changeset(delete_confirmation_changeset)
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign(:delete_confirmation_changeset, changeset)}
+  end
+
+  def handle_event(
+        "perform_deletion",
+        %{"delete_confirmation_changeset" => delete_confirmation_changeset},
+        socket
+      ) do
+    changeset =
+      delete_confirmation_changeset(delete_confirmation_changeset)
+      |> Map.put(:action, :validate)
+
+    if changeset.valid? do
+      case WebhookAuthMethods.schedule_for_deletion(
+             socket.assigns.webhook_auth_method
+           ) do
+        {:ok, _} ->
+          {:noreply,
+           socket
+           |> put_flash(
+             :info,
+             "Webhook autehntication method scheduled for deletion successfully"
+           )
+           |> push_navigate(to: socket.assigns.return_to)}
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:noreply, assign(socket, :changeset, changeset)}
+      end
+    else
+      {:noreply, socket |> assign(:delete_confirmation_changeset, changeset)}
+    end
   end
 
   defp save_webhook_auth_method(socket, :edit, params) do
@@ -38,48 +93,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     end
   end
 
-  defp save_webhook_auth_method(
-         %{
-           assigns: %{
-             trigger: %{} = trigger,
-             webhook_auth_method: auth_method
-           }
-         } = socket,
-         :new,
-         params
-       ) do
-    params =
-      Map.merge(params, %{
-        "auth_type" => auth_method.auth_type,
-        "api_key" => auth_method.api_key,
-        "project_id" => auth_method.project_id
-      })
+  defp save_webhook_auth_method(socket, :new, params) do
+    enriched_params = enrich_params(params, socket.assigns.webhook_auth_method)
 
-    case WebhookAuthMethods.create_auth_method(trigger, params) do
-      {:ok, _auth_method} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Webhook auth method created successfully")
-         |> push_navigate(to: socket.assigns.return_to)}
+    trigger = socket.assigns.trigger || %{}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
-    end
-  end
-
-  defp save_webhook_auth_method(
-         %{assigns: assigns} = socket,
-         :new,
-         params
-       ) do
-    params =
-      Map.merge(params, %{
-        "auth_type" => assigns.webhook_auth_method.auth_type,
-        "api_key" => assigns.webhook_auth_method.api_key,
-        "project_id" => assigns.webhook_auth_method.project_id
-      })
-
-    case WebhookAuthMethods.create_auth_method(params) do
+    case WebhookAuthMethods.create_auth_method(trigger, enriched_params) do
       {:ok, _webhook_auth_method} ->
         {:noreply,
          socket
@@ -87,11 +106,64 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
          |> push_navigate(to: socket.assigns.return_to)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, changeset: changeset)}
+        {:noreply, assign(socket, :changeset, changeset)}
     end
   end
 
+  defp enrich_params(params, webhook_auth_method) do
+    Map.merge(params, %{
+      "auth_type" => webhook_auth_method.auth_type,
+      "api_key" => webhook_auth_method.api_key,
+      "project_id" => webhook_auth_method.project_id
+    })
+  end
+
   @impl true
+  def render(%{action: :delete} = assigns) do
+    ~H"""
+    <div>
+      <.form
+        :let={f}
+        id={"delete_auth_method_#{@id}"}
+        for={@delete_confirmation_changeset}
+        as={:delete_confirmation_changeset}
+        phx-change="validate_deletion"
+        phx-submit="perform_deletion"
+        phx-target={@myself}
+      >
+        <div class="space-y-4">
+          <p>You are about to delete the webhook credential
+            "<span class="credential-name"><%= @webhook_auth_method.name %></span>"
+            which is used by no workflows.</p>
+
+          <.label for={:confirmation}>
+            Type in 'DELETE' to confirm the deletion
+          </.label>
+          <.input type="text" field={f[:confirmation]} />
+        </div>
+        <div class="sm:flex sm:flex-row-reverse">
+          <button
+            id="delete_trigger_auth_methods_button"
+            type="submit"
+            phx-disable-with="Deleting..."
+            class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+            disabled={!@delete_confirmation_changeset.valid?}
+          >
+            Delete authentication method
+          </button>
+          <button
+            type="button"
+            phx-click={JS.navigate(@return_to)}
+            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+          >
+            Cancel
+          </button>
+        </div>
+      </.form>
+    </div>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <div>

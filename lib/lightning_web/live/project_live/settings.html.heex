@@ -278,11 +278,6 @@
             auth_methods={@webhook_auth_methods}
             class="px-2"
           >
-            <:action>
-              <a href="#" class="cursor-not-allowed text-indigo-300">
-                View
-              </a>
-            </:action>
             <:action :let={auth_method}>
               <%= if @can_edit_webhook_auth_method do %>
                 <a
