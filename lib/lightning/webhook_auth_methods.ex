@@ -31,6 +31,45 @@ defmodule Lightning.WebhookAuthMethods do
   alias Lightning.Repo
 
   @doc """
+  When called with %{"type" => "purge_deleted"},
+  finds webhook_auth_methods that are ready for permanent deletion,
+  disassociates them from the triggers, and then deletes the webhook_auth_methods.
+  """
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"type" => "purge_deleted"}}) do
+    webhook_auth_methods_to_delete =
+      from(wam in WebhookAuthMethod,
+        where: wam.scheduled_deletion <= ago(0, "second")
+      )
+      |> Repo.all()
+
+    disassociated_count =
+      Enum.reduce(webhook_auth_methods_to_delete, 0, fn wam, acc ->
+        case disassociate_from_triggers(wam) do
+          :ok -> acc + 1
+          _error -> acc
+        end
+      end)
+
+    deleted_count =
+      Enum.reduce(webhook_auth_methods_to_delete, 0, fn wam, acc ->
+        case delete_auth_method(wam) do
+          {:ok, _} -> acc + 1
+          _error -> acc
+        end
+      end)
+
+    {:ok,
+     %{disassociated_count: disassociated_count, deleted_count: deleted_count}}
+  end
+
+  defp disassociate_from_triggers(wam) do
+    # Disassociate webhook_auth_method from its triggers
+    Ecto.assoc(wam, :triggers) |> Repo.delete_all()
+    :ok
+  end
+
+  @doc """
   Creates a `WebhookAuthMethod`.
 
   ## Examples
@@ -121,6 +160,7 @@ defmodule Lightning.WebhookAuthMethods do
   def list_for_project(%Project{id: project_id}) do
     WebhookAuthMethod
     |> where(project_id: ^project_id)
+    |> where([wam], not is_nil(wam.scheduled_deletion))
     |> Repo.all()
   end
 
@@ -142,7 +182,9 @@ defmodule Lightning.WebhookAuthMethods do
 
   """
   def list_for_trigger(%Trigger{} = trigger) do
-    Ecto.assoc(trigger, :webhook_auth_methods) |> Repo.all()
+    Ecto.assoc(trigger, :webhook_auth_methods)
+    |> where([wam], not is_nil(wam.scheduled_deletion))
+    |> Repo.all()
   end
 
   @doc """
@@ -200,5 +242,49 @@ defmodule Lightning.WebhookAuthMethods do
   """
   def find_by_id!(id) do
     Repo.get_by!(WebhookAuthMethod, id: id)
+  end
+
+  @doc """
+  Schedules a given credential for deletion.
+
+  The deletion date is determined based on the `:purge_deleted_after_days` configuration
+  in the application environment. If this configuration is absent, the credential is scheduled
+  for immediate deletion.
+
+  The function will also perform necessary side effects such as:
+    - Removing associations of the credential.
+    - Notifying the owner of the credential about the scheduled deletion.
+
+  ## Parameters
+
+    - `credential`: A `Credential` struct that is to be scheduled for deletion.
+
+  ## Returns
+
+    - `{:ok, credential}`: Returns an `:ok` tuple with the updated credential struct if the
+      update was successful.
+    - `{:error, changeset}`: Returns an `:error` tuple with the changeset if the update failed.
+
+  ## Examples
+
+      iex> schedule_credential_deletion(%Credential{id: some_id})
+      {:ok, %Credential{}}
+
+      iex> schedule_credential_deletion(%Credential{})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def schedule_for_deletion(%WebhookAuthMethod{} = webhook_auth_method) do
+    deletion_date = scheduled_deletion_date()
+
+    WebhookAuthMethod.changeset(webhook_auth_method, %{
+      "scheduled_deletion" => deletion_date
+    })
+    |> Repo.update()
+  end
+
+  defp scheduled_deletion_date do
+    days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
+    DateTime.utc_now() |> Timex.shift(days: days)
   end
 end
