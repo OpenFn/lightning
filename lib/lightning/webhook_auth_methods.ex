@@ -47,7 +47,7 @@ defmodule Lightning.WebhookAuthMethods do
       Enum.reduce(webhook_auth_methods_to_delete, 0, fn wam, acc ->
         case disassociate_from_triggers(wam) do
           :ok -> acc + 1
-          _error -> acc
+          :no_associations -> acc
         end
       end)
 
@@ -64,9 +64,13 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   defp disassociate_from_triggers(wam) do
-    # Disassociate webhook_auth_method from its triggers
-    Ecto.assoc(wam, :triggers) |> Repo.delete_all()
-    :ok
+    case Ecto.assoc(wam, :triggers) |> Repo.delete_all() do
+      {count, _} when count > 0 ->
+        :ok
+
+      {0, _} ->
+        :no_associations
+    end
   end
 
   @doc """
