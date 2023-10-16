@@ -20,6 +20,8 @@ and this project adheres to
   [#1179] (https://github.com/OpenFn/Lightning/issues/1179)
 - Add dynamic delay to help mitigate flickering test
   [#1195] (https://github.com/OpenFn/Lightning/issues/1195)
+- Add a OpenTelemetry trace example
+  [#1189] (https://github.com/OpenFn/Lightning/issues/1189)
 
 ### Changed
 

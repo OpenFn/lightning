@@ -51,7 +51,8 @@ defmodule Lightning.VersionControl.GithubClient do
           {Tesla.Middleware.Headers,
            [
              {"Authorization", "Bearer #{auth_token}"}
-           ]}
+           ]},
+          Tesla.Middleware.OpenTelemetry
         ])
 
       case post(
@@ -67,7 +68,8 @@ defmodule Lightning.VersionControl.GithubClient do
              {Tesla.Middleware.Headers,
               [
                 {"Authorization", "Bearer " <> installation_token}
-              ]}
+              ]},
+             Tesla.Middleware.OpenTelemetry
            ])}
 
         {:ok, %{status: 404, body: body}} ->

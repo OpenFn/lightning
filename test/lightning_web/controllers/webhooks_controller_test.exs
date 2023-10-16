@@ -6,16 +6,28 @@ defmodule LightningWeb.WebhooksControllerTest do
 
   import Lightning.JobsFixtures
 
+  require Record
+  @fields Record.extract(:span, from: "deps/opentelemetry/include/otel_span.hrl")
+  Record.defrecordp(:span, @fields)
+
   describe "a POST request to '/i'" do
-    test "with a valid trigger id instantiates a workorder", %{conn: conn} do
+    setup %{conn: conn} do
+      %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
+
+      [conn: conn, job: job, trigger: trigger, message: %{"foo" => "bar"}]
+    end
+
+    test "with a valid trigger id instantiates a workorder", %{
+      conn: conn,
+      job: job,
+      trigger: trigger,
+      message: message
+    } do
       Oban.Testing.with_testing_mode(:inline, fn ->
         expect(Lightning.Pipeline.Runner, :start, fn _run ->
           %Lightning.Runtime.Result{}
         end)
 
-        %{job: job, trigger: trigger, edge: _edge} = workflow_job_fixture()
-
-        message = %{"foo" => "bar"}
         conn = post(conn, "/i/#{trigger.id}", message)
 
         assert %{"work_order_id" => _, "run_id" => run_id} =
@@ -28,6 +40,47 @@ defmodule LightningWeb.WebhooksControllerTest do
         assert job_id == job.id
         assert body == message
       end)
+    end
+
+    test "triggers a custom telemetry event", %{
+      conn: conn,
+      trigger: trigger,
+      message: message
+    } do
+      ref =
+        :telemetry_test.attach_event_handlers(self(), [
+          [:lightning, :workorder, :webhook, :stop]
+        ])
+
+      trigger_id = trigger.id
+
+      post(conn, "/i/#{trigger.id}", message)
+
+      assert_received {
+        [:lightning, :workorder, :webhook, :stop],
+        ^ref,
+        %{},
+        %{source_trigger_id: ^trigger_id}
+      }
+    end
+
+    test "executes a custom OpenTelemetry trace", %{
+      conn: conn,
+      trigger: trigger,
+      message: message
+    } do
+      :otel_simple_processor.set_exporter(:otel_exporter_pid, self())
+
+      attributes =
+        :otel_attributes.new([source_trigger_id: trigger.id], 128, :infinity)
+
+      post(conn, "/i/#{trigger.id}", message)
+
+      assert_receive {:span,
+                      span(
+                        name: "lightning.api.webhook",
+                        attributes: ^attributes
+                      )}
     end
 
     test "with an invalid trigger id returns a 404", %{conn: conn} do

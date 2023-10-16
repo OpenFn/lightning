@@ -77,3 +77,10 @@ config :lightning, LightningWeb,
   enable_google_credential: true
 
 config :lightning, CLI, child_process_mod: FakeRambo
+
+# https://opentelemetry.io/docs/instrumentation/erlang/testing/
+config :opentelemetry, traces_exporter: :none
+
+config :opentelemetry, :processors, [
+  {:otel_simple_processor, %{}}
+]
