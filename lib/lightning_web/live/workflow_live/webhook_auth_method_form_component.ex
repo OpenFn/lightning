@@ -8,7 +8,11 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   alias Phoenix.LiveView.JS
 
   @impl true
-  def update(%{webhook_auth_method: webhook_auth_method} = assigns, socket) do
+  def update(
+        %{webhook_auth_method: webhook_auth_method, current_user: _user} =
+          assigns,
+        socket
+      ) do
     {:ok,
      socket
      |> assign(:changeset, WebhookAuthMethod.changeset(webhook_auth_method, %{}))
@@ -80,7 +84,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   defp save_webhook_auth_method(socket, :edit, params) do
     case WebhookAuthMethods.update_auth_method(
            socket.assigns.webhook_auth_method,
-           params
+           params,
+           actor: socket.assigns.current_user
          ) do
       {:ok, _webhook_auth_method} ->
         {:noreply,
@@ -93,12 +98,33 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     end
   end
 
-  defp save_webhook_auth_method(socket, :new, params) do
+  defp save_webhook_auth_method(
+         %{assigns: %{trigger: %_{}} = assigns} = socket,
+         :new,
+         params
+       ) do
+    enriched_params = enrich_params(params, assigns.webhook_auth_method)
+
+    case WebhookAuthMethods.create_auth_method(assigns.trigger, enriched_params,
+           actor: assigns.current_user
+         ) do
+      {:ok, _auth_method} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Webhook auth method created successfully")
+         |> push_navigate(to: socket.assigns.return_to)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, changeset: changeset)}
+    end
+  end
+
+  defp save_webhook_auth_method(%{assigns: assigns} = socket, :new, params) do
     enriched_params = enrich_params(params, socket.assigns.webhook_auth_method)
 
-    trigger = socket.assigns.trigger || %{}
-
-    case WebhookAuthMethods.create_auth_method(trigger, enriched_params) do
+    case WebhookAuthMethods.create_auth_method(enriched_params,
+           actor: assigns.current_user
+         ) do
       {:ok, _webhook_auth_method} ->
         {:noreply,
          socket

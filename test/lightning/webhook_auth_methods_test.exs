@@ -45,12 +45,14 @@ defmodule Lightning.WebhookAuthMethodsTest do
       invalid_attrs: invalid_attrs
     } do
       assert {:error, _} =
-               WebhookAuthMethods.create_auth_method(invalid_attrs)
+               WebhookAuthMethods.create_auth_method(invalid_attrs,
+                 actor: insert(:user)
+               )
     end
 
     defp assert_creation_with(attrs, auth_type, name, username, password) do
       assert {:ok, auth_method} =
-               WebhookAuthMethods.create_auth_method(attrs)
+               WebhookAuthMethods.create_auth_method(attrs, actor: insert(:user))
 
       assert auth_method.name == name
       assert auth_method.auth_type == auth_type
@@ -75,15 +77,20 @@ defmodule Lightning.WebhookAuthMethodsTest do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
       trigger = insert(:trigger, workflow: workflow)
+      user = insert(:user)
 
       {:ok, auth_method} =
-        WebhookAuthMethods.create_auth_method(trigger, %{
-          name: "some_name",
-          auth_type: "basic",
-          username: "username",
-          password: "password",
-          project_id: project.id
-        })
+        WebhookAuthMethods.create_auth_method(
+          trigger,
+          %{
+            name: "some_name",
+            auth_type: "basic",
+            username: "username",
+            password: "password",
+            project_id: project.id
+          },
+          actor: user
+        )
 
       assert %{
                auth_type: :basic,
@@ -108,19 +115,31 @@ defmodule Lightning.WebhookAuthMethodsTest do
     test "updates the webhook auth method with valid attributes", %{
       auth_method: auth_method
     } do
+      user = insert(:user)
+
       assert {:ok, new_auth_method} =
-               WebhookAuthMethods.update_auth_method(auth_method, %{
-                 name: "new_name"
-               })
+               WebhookAuthMethods.update_auth_method(
+                 auth_method,
+                 %{
+                   name: "new_name"
+                 },
+                 actor: user
+               )
 
       assert new_auth_method.name == "new_name"
     end
 
     test "returns error when attributes are invalid", %{auth_method: auth_method} do
+      user = insert(:user)
+
       assert {:error, _} =
-               WebhookAuthMethods.update_auth_method(auth_method, %{
-                 name: nil
-               })
+               WebhookAuthMethods.update_auth_method(
+                 auth_method,
+                 %{
+                   name: nil
+                 },
+                 actor: user
+               )
     end
   end
 
@@ -128,11 +147,16 @@ defmodule Lightning.WebhookAuthMethodsTest do
     test "updates a trigger with no auth methods correctly" do
       trigger = insert(:trigger)
       auth_method = insert(:webhook_auth_method)
+      user = insert(:user)
 
       assert {:ok, updated_trigger} =
-               WebhookAuthMethods.update_trigger_auth_methods(trigger, [
-                 auth_method
-               ])
+               WebhookAuthMethods.update_trigger_auth_methods(
+                 trigger,
+                 [
+                   auth_method
+                 ],
+                 actor: user
+               )
 
       assert updated_trigger.webhook_auth_methods == [auth_method]
     end
@@ -140,6 +164,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
     test "replaces the attached auth methods" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
+      user = insert(:user)
 
       trigger =
         insert(:trigger,
@@ -153,9 +178,13 @@ defmodule Lightning.WebhookAuthMethodsTest do
       auth_method = insert(:webhook_auth_method)
 
       assert {:ok, updated_trigger} =
-               WebhookAuthMethods.update_trigger_auth_methods(trigger, [
-                 auth_method
-               ])
+               WebhookAuthMethods.update_trigger_auth_methods(
+                 trigger,
+                 [
+                   auth_method
+                 ],
+                 actor: user
+               )
 
       updated_trigger =
         Lightning.Repo.preload(updated_trigger, :webhook_auth_methods)
@@ -206,13 +235,13 @@ defmodule Lightning.WebhookAuthMethodsTest do
     setup do
       project = insert(:project)
 
-      {:ok, auth_method} =
-        WebhookAuthMethods.create_auth_method(%{
+      auth_method =
+        insert(:webhook_auth_method, %{
           auth_type: "basic",
           name: "my_webhook_auth_method",
           username: "some_username",
           password: "hello password",
-          project_id: project.id
+          project: project
         })
 
       {:ok, auth_method: auth_method, project: project}
@@ -222,11 +251,14 @@ defmodule Lightning.WebhookAuthMethodsTest do
       auth_method: auth_method,
       project: project
     } do
-      assert WebhookAuthMethods.find_by_username_and_password(
-               "some_username",
-               "hello password",
-               project
-             ) == auth_method
+      result =
+        WebhookAuthMethods.find_by_username_and_password(
+          "some_username",
+          "hello password",
+          project
+        )
+
+      assert result.id == auth_method.id
     end
 
     test "returns nil if the password is invalid", %{

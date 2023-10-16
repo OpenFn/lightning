@@ -562,6 +562,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   attr :auth_methods, :list, required: true
+  attr :current_user, :map, required: true
   attr :on_row_select, :any, default: nil
   attr :row_selected?, :any
   attr :class, :string, default: ""
@@ -680,6 +681,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                         action={:display_triggers}
                         project={auth_method.project}
                         webhook_auth_method={auth_method}
+                        current_user={@current_user}
                         return_to={
                           ~p"/projects/#{auth_method.project_id}/settings#webhook_security"
                         }
