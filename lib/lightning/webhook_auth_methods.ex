@@ -215,25 +215,27 @@ defmodule Lightning.WebhookAuthMethods do
 
       added_auth_multi =
         Enum.reduce(added_auth_ids, Multi.new(), fn auth_id, multi ->
-          Multi.insert(multi, "audit_#{auth_id}", fn _changes ->
+          changeset =
             WebhookAuthMethodAudit.event(
               "added_to_trigger",
               auth_id,
               user.id,
               %{before: %{trigger_id: nil}, after: %{trigger_id: trigger.id}}
             )
-          end)
+
+          Multi.insert(multi, "audit_#{auth_id}", changeset)
         end)
 
       Enum.reduce(removed_auth_ids, added_auth_multi, fn auth_id, multi ->
-        Multi.insert(multi, "audit_#{auth_id}", fn _changes ->
+        changeset =
           WebhookAuthMethodAudit.event(
             "removed_from_trigger",
             auth_id,
             user.id,
             %{before: %{trigger_id: trigger.id}, after: %{trigger_id: nil}}
           )
-        end)
+
+        Multi.insert(multi, "audit_#{auth_id}", changeset)
       end)
     end)
     |> Repo.transaction()
