@@ -277,7 +277,7 @@ defmodule Lightning.WebhookAuthMethods do
   def list_for_project(%Project{id: project_id}) do
     WebhookAuthMethod
     |> where(project_id: ^project_id)
-    |> where([wam], not is_nil(wam.scheduled_deletion))
+    |> where([wam], is_nil(wam.scheduled_deletion))
     |> Repo.all()
   end
 

@@ -1,9 +1,10 @@
 defmodule Lightning.WebhookAuthMethodsTest do
   use Lightning.DataCase, async: true
   alias Lightning.WebhookAuthMethods
+  alias Lightning.Workflows.WebhookAuthMethodAudit
   import Lightning.Factories
 
-  describe "create_auth_method/1" do
+  describe "create_auth_method/2" do
     setup do
       project = insert(:project)
 
@@ -41,6 +42,21 @@ defmodule Lightning.WebhookAuthMethodsTest do
       |> assert_creation_with(:api, "some_other_name", nil, nil)
     end
 
+    test "saves the audit after successfull creation", %{
+      valid_attrs: valid_attrs
+    } do
+      user = insert(:user)
+
+      {:ok, auth_method} =
+        WebhookAuthMethods.create_auth_method(valid_attrs, actor: user)
+
+      assert Repo.get_by(WebhookAuthMethodAudit.base_query(),
+               item_id: auth_method.id,
+               event: "created",
+               actor_id: user.id
+             )
+    end
+
     test "returns error when attributes are invalid", %{
       invalid_attrs: invalid_attrs
     } do
@@ -72,7 +88,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "create_auth_method/2" do
+  describe "create_auth_method/3" do
     test "creates and associates the authmethod with the trigger successfully" do
       project = insert(:project)
       workflow = insert(:workflow, project: project)
@@ -103,10 +119,31 @@ defmodule Lightning.WebhookAuthMethodsTest do
         Lightning.Repo.preload(trigger, :webhook_auth_methods)
 
       assert associated_auth_method.id == auth_method.id
+
+      # saves 2 audit records
+      # created
+      assert Repo.get_by(WebhookAuthMethodAudit.base_query(),
+               item_id: auth_method.id,
+               event: "created",
+               actor_id: user.id
+             )
+
+      # added to trigger
+      added_to_trigger =
+        Repo.get_by(WebhookAuthMethodAudit.base_query(),
+          item_id: auth_method.id,
+          event: "added_to_trigger",
+          actor_id: user.id
+        )
+
+      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+               before: %{"trigger_id" => nil},
+               after: %{"trigger_id" => trigger.id}
+             }
     end
   end
 
-  describe "update_auth_method/2" do
+  describe "update_auth_method/3" do
     setup do
       auth_method = insert(:webhook_auth_method)
       {:ok, auth_method: auth_method}
@@ -127,6 +164,19 @@ defmodule Lightning.WebhookAuthMethodsTest do
                )
 
       assert new_auth_method.name == "new_name"
+
+      # audit is created
+      audit =
+        Repo.get_by(WebhookAuthMethodAudit.base_query(),
+          item_id: auth_method.id,
+          event: "updated",
+          actor_id: user.id
+        )
+
+      assert audit.changes == %Lightning.Auditing.Model.Changes{
+               before: %{"name" => auth_method.name},
+               after: %{"name" => new_auth_method.name}
+             }
     end
 
     test "returns error when attributes are invalid", %{auth_method: auth_method} do
@@ -143,7 +193,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
     end
   end
 
-  describe "update_trigger_auth_methods/2" do
+  describe "update_trigger_auth_methods/3" do
     test "updates a trigger with no auth methods correctly" do
       trigger = insert(:trigger)
       auth_method = insert(:webhook_auth_method)
@@ -159,6 +209,19 @@ defmodule Lightning.WebhookAuthMethodsTest do
                )
 
       assert updated_trigger.webhook_auth_methods == [auth_method]
+
+      # audit is created
+      added_to_trigger =
+        Repo.get_by(WebhookAuthMethodAudit.base_query(),
+          item_id: auth_method.id,
+          event: "added_to_trigger",
+          actor_id: user.id
+        )
+
+      assert added_to_trigger.changes == %Lightning.Auditing.Model.Changes{
+               before: %{"trigger_id" => nil},
+               after: %{"trigger_id" => trigger.id}
+             }
     end
 
     test "replaces the attached auth methods" do
@@ -190,6 +253,36 @@ defmodule Lightning.WebhookAuthMethodsTest do
         Lightning.Repo.preload(updated_trigger, :webhook_auth_methods)
 
       assert updated_trigger.webhook_auth_methods == [auth_method]
+
+      # audit is created for adding to trigger
+      for auth_method <- updated_trigger.webhook_auth_methods do
+        audit =
+          Repo.get_by(WebhookAuthMethodAudit.base_query(),
+            item_id: auth_method.id,
+            event: "added_to_trigger",
+            actor_id: user.id
+          )
+
+        assert audit.changes == %Lightning.Auditing.Model.Changes{
+                 before: %{"trigger_id" => nil},
+                 after: %{"trigger_id" => trigger.id}
+               }
+      end
+
+      # audit is created for removing from trigger
+      for auth_method <- trigger.webhook_auth_methods do
+        audit =
+          Repo.get_by(WebhookAuthMethodAudit.base_query(),
+            item_id: auth_method.id,
+            event: "removed_from_trigger",
+            actor_id: user.id
+          )
+
+        assert audit.changes == %Lightning.Auditing.Model.Changes{
+                 after: %{"trigger_id" => nil},
+                 before: %{"trigger_id" => trigger.id}
+               }
+      end
     end
   end
 
@@ -237,7 +330,7 @@ defmodule Lightning.WebhookAuthMethodsTest do
 
       auth_method =
         insert(:webhook_auth_method, %{
-          auth_type: "basic",
+          auth_type: :basic,
           name: "my_webhook_auth_method",
           username: "some_username",
           password: "hello password",
