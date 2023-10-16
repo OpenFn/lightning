@@ -262,7 +262,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <% other -> %>
             <.live_component
               module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-              id={other.id || "new_webhook_auth_method"}
+              id={
+                Enum.join(
+                  [other.id, @webhook_auth_method.id || "new_webhook_auth_method"],
+                  "_"
+                )
+              }
               action={@action}
               trigger={@trigger}
               return_to={@return_to}
