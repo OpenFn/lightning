@@ -280,6 +280,7 @@ defmodule LightningWeb.WorkflowLive.Edit do
           action={:new}
           trigger={@selected_trigger}
           project={@project}
+          current_user={@current_user}
           return_to={
             ~p"/projects/#{@project.id}/w/#{@workflow.id}?#{%{s: @selected_trigger.id}}"
           }

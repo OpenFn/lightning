@@ -176,12 +176,12 @@ defmodule Lightning.Auditing.Model do
         event,
         item_id,
         actor_id,
-        %Ecto.Changeset{data: data, changes: changes}
+        %Ecto.Changeset{data: %subject_schema{} = data, changes: changes}
       ) do
     change_keys = changes |> Map.keys() |> MapSet.new()
 
     field_keys =
-      __MODULE__.__schema__(:fields)
+      subject_schema.__schema__(:fields)
       |> MapSet.new()
       |> MapSet.intersection(change_keys)
       |> MapSet.to_list()
