@@ -10,6 +10,14 @@ and this project adheres to
 
 ### Added
 
+- Webhook Authentication Methods database and CRUD operations
+  [#1152](https://github.com/OpenFn/Lightning/issues/1152)
+- Creation and Edit of webhook webhook authentication methods UI
+  [#1149](https://github.com/OpenFn/Lightning/issues/1149)
+- Add webhook authentication methods overview methods in the canvas
+  [#1153](https://github.com/OpenFn/Lightning/issues/1153)
+- Add icon on the canvas for triggers that have authentication enabled
+  [#1157](https://github.com/OpenFn/Lightning/issues/1157)
 - Restrict live dashboard access to only superusers, enable DB information and
   OS information
   [#1170](https://github.com/OpenFn/Lightning/issues/1170)
