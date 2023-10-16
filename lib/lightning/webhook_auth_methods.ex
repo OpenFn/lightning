@@ -302,7 +302,7 @@ defmodule Lightning.WebhookAuthMethods do
   """
   def list_for_trigger(%Trigger{} = trigger) do
     Ecto.assoc(trigger, :webhook_auth_methods)
-    |> where([wam], not is_nil(wam.scheduled_deletion))
+    |> where([wam], is_nil(wam.scheduled_deletion))
     |> Repo.all()
   end
 

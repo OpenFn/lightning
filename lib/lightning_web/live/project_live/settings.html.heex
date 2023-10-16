@@ -334,6 +334,7 @@
                   action={:delete}
                   project={@project}
                   webhook_auth_method={auth_method}
+                  current_user={@current_user}
                   return_to={
                     ~p"/projects/#{@project.id}/settings#webhook_security"
                   }
