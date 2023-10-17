@@ -16,7 +16,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   defp apply_action(
          socket,
          :edit,
-         %{project: _, webhook_auth_method: _} = assigns
+         %{project: _, webhook_auth_method: _, current_user: _} = assigns
        ) do
     socket
     |> assign(assigns)
@@ -26,7 +26,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   defp apply_action(
          socket,
          :new,
-         %{project: _, webhook_auth_method: auth_method} = assigns
+         %{project: _, current_user: _, webhook_auth_method: auth_method} =
+           assigns
        ) do
     socket
     |> assign(assigns)
@@ -39,7 +40,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   defp apply_action(
          socket,
          :display_triggers,
-         %{project: _, webhook_auth_method: _} = assigns
+         %{project: _, webhook_auth_method: _, current_user: _} = assigns
        ) do
     socket
     |> assign(assigns)
@@ -59,7 +60,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   defp apply_action(
          socket,
          _new_or_index,
-         %{project: project, trigger: trigger} = assigns
+         %{project: project, trigger: trigger, current_user: _} = assigns
        ) do
     trigger = Repo.preload(trigger, :webhook_auth_methods)
 
@@ -164,6 +165,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     {:noreply,
      apply_action(socket, :edit, %{
        webhook_auth_method: auth_method,
+       current_user: assigns.current_user,
        project: assigns.project
      })}
   end
@@ -186,7 +188,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     {:ok, _trigger} =
       WebhookAuthMethods.update_trigger_auth_methods(
         assigns.trigger,
-        auth_methods
+        auth_methods,
+        actor: assigns.current_user
       )
 
     {:noreply,
@@ -259,10 +262,16 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <% other -> %>
             <.live_component
               module={LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent}
-              id={other.id || "new_webhook_auth_method"}
+              id={
+                Enum.join(
+                  [other.id, @webhook_auth_method.id || "new_webhook_auth_method"],
+                  "_"
+                )
+              }
               action={@action}
               trigger={@trigger}
               return_to={@return_to}
+              current_user={@current_user}
               webhook_auth_method={@webhook_auth_method}
             />
         <% end %>
@@ -301,6 +310,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     <div class="mt-4">
       <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
         auth_methods={@project_auth_methods}
+        current_user={@current_user}
         on_row_select={
           fn auth_method ->
             JS.push("toggle_selection",

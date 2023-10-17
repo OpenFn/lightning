@@ -2,12 +2,12 @@ defmodule Lightning.Auditing.Model do
   @moduledoc """
   Macro module to add common model behaviour to a given Ecto model
   """
+  require Ecto.Query
   require Logger
 
   # coveralls-ignore-start
   defmacro __using__(opts) do
     repo = Keyword.fetch!(opts, :repo)
-    schema = Keyword.fetch!(opts, :schema)
     item = Keyword.fetch!(opts, :item)
     events = Keyword.fetch!(opts, :events)
 
@@ -37,11 +37,10 @@ defmodule Lightning.Auditing.Model do
           # Output:
           #
           # def event(item_type, "foo_event", item_id, actor_id, changes) do
-          #   Lightning.Audit.event(item_type, schema, "foo_event", item_id, actor_id, changes)
+          #   Lightning.Audit.event(item_type, "foo_event", item_id, actor_id, changes)
           # end
           def event(unquote(event_name), item_id, actor_id, changes) do
             unquote(__MODULE__).event(
-              unquote(schema),
               unquote(item),
               unquote(event_name),
               item_id,
@@ -52,10 +51,78 @@ defmodule Lightning.Auditing.Model do
         end
       end
 
-    [save_function, event_signature, event_log_functions]
+    base_query =
+      quote do
+        import Ecto.Query
+
+        def base_query do
+          from(unquote(__MODULE__),
+            where: [item_type: unquote(item)]
+          )
+        end
+      end
+
+    [base_query, save_function, event_signature, event_log_functions]
   end
 
   # coveralls-ignore-stop
+
+  defmodule Changes do
+    @moduledoc false
+
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      field :before, :map
+      field :after, :map
+    end
+
+    @doc false
+    def changeset(changes, attrs \\ %{}) do
+      changes
+      |> cast(attrs, [:before, :after])
+      |> update_change(:before, &encrypt_body/1)
+      |> update_change(:after, &encrypt_body/1)
+    end
+
+    defp encrypt_body(changes) when is_map(changes) do
+      if Map.has_key?(changes, :body) do
+        changes
+        |> Map.update(:body, nil, fn val ->
+          {:ok, val} = Lightning.Encrypted.Map.dump(val)
+          val |> Base.encode64()
+        end)
+      else
+        changes
+      end
+    end
+  end
+
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+  schema "audit_events" do
+    field :event, :string
+    field :item_type, :string
+    field :item_id, Ecto.UUID
+    embeds_one :changes, Changes
+    field :actor_id, Ecto.UUID
+    field :actor, :map, virtual: true
+
+    timestamps(updated_at: false)
+  end
+
+  @doc false
+  def changeset(%__MODULE__{} = audit, attrs) do
+    audit
+    |> cast(attrs, [:event, :item_id, :actor_id, :item_type])
+    |> cast_embed(:changes)
+    |> validate_required([:event, :actor_id])
+  end
 
   @doc """
   Saves the event to the `Repo`.
@@ -80,7 +147,7 @@ defmodule Lightning.Auditing.Model do
   end
 
   @doc """
-  Creates a `schema` changeset for the `event` identified by `item_id` and caused
+  Creates a `changeset` for the `event` identified by `item_id` and caused
   by `actor_id`.
 
   The given `changes` can be either `nil`, `Ecto.Changeset`, struct or map.
@@ -89,7 +156,6 @@ defmodule Lightning.Auditing.Model do
   or an `Ecto.Changeset` with the event ready to be inserted.
   """
   @spec event(
-          module(),
           String.t(),
           String.t(),
           Ecto.UUID.t(),
@@ -98,15 +164,14 @@ defmodule Lightning.Auditing.Model do
         ) ::
           :no_changes | Ecto.Changeset.t()
 
-  def event(schema, item_type, event, item_id, actor_id, changes \\ %{})
+  def event(item_type, event, item_id, actor_id, changes \\ %{})
 
-  def event(_, _, _, _, _, %Ecto.Changeset{changes: changes} = _changeset)
+  def event(_, _, _, _, %Ecto.Changeset{changes: changes} = _changeset)
       when map_size(changes) == 0 do
     :no_changes
   end
 
   def event(
-        schema,
         item_type,
         event,
         item_id,
@@ -126,18 +191,16 @@ defmodule Lightning.Auditing.Model do
       after: Map.take(changes, field_keys)
     }
 
-    audit_changeset(schema, item_type, event, item_id, actor_id, changes)
+    audit_changeset(item_type, event, item_id, actor_id, changes)
   end
 
-  def event(schema, item_type, event, item_id, actor_id, changes)
+  def event(item_type, event, item_id, actor_id, changes)
       when is_map(changes) do
-    audit_changeset(schema, item_type, event, item_id, actor_id, changes)
+    audit_changeset(item_type, event, item_id, actor_id, changes)
   end
 
-  defp audit_changeset(schema, item_type, event, item_id, actor_id, changes) do
-    schema
-    |> struct()
-    |> schema.changeset(%{
+  defp audit_changeset(item_type, event, item_id, actor_id, changes) do
+    changeset(%__MODULE__{}, %{
       item_type: item_type,
       event: event,
       item_id: item_id,

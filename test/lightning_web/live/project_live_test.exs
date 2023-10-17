@@ -1140,16 +1140,18 @@ defmodule LightningWeb.ProjectLiveTest do
                |> element("button#add_new_auth_method:disabled")
                |> has_element?()
 
-        assert view |> element("#new_auth_method_modal") |> has_element?()
+        modal_id = "new_auth_method_modal"
+
+        assert view |> element("##{modal_id}") |> has_element?()
 
         view
-        |> form("#choose_auth_type_form_new_auth_method_modal",
+        |> form("#choose_auth_type_form_#{modal_id}",
           webhook_auth_method: %{auth_type: "basic"}
         )
         |> render_submit() =~ "Create credential"
 
         refute view
-               |> element("form#choose_auth_type_form_new_auth_method_modal")
+               |> element("form#choose_auth_type_form_#{modal_id}")
                |> has_element?()
 
         credential_name = "#{project_user.role}credentialname"
@@ -1157,7 +1159,7 @@ defmodule LightningWeb.ProjectLiveTest do
         refute render(view) =~ credential_name
 
         view
-        |> form("#form_new_webhook_auth_method",
+        |> form("#form_#{modal_id}_new_webhook_auth_method",
           webhook_auth_method: %{
             name: credential_name,
             username: "testusername",
@@ -1246,16 +1248,16 @@ defmodule LightningWeb.ProjectLiveTest do
                |> element("a#edit_auth_method_link_#{auth_method.id}")
                |> has_element?()
 
-        assert view
-               |> element("#edit_auth_#{auth_method.id}_modal")
-               |> has_element?()
+        modal_id = "edit_auth_#{auth_method.id}_modal"
+
+        assert view |> element("##{modal_id}") |> has_element?()
 
         credential_name = "#{project_user.role}credentialname"
 
         refute render(view) =~ credential_name
 
         view
-        |> form("#form_#{auth_method.id}",
+        |> form("#form_#{modal_id}_#{auth_method.id}",
           webhook_auth_method: %{name: credential_name}
         )
         |> render_submit()

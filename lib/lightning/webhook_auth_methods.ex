@@ -24,10 +24,18 @@ defmodule Lightning.WebhookAuthMethods do
   This module is intended to be used by other modules, contexts, or controllers that need to perform operations related to Webhook Authentication Methods, serving as a clear and consistent interface for these operations.
   """
 
+  use Oban.Worker,
+    queue: :background,
+    max_attempts: 1
+
   import Ecto.Query, warn: false
+
+  alias Ecto.Multi
+  alias Lightning.Accounts.User
   alias Lightning.Jobs.Trigger
   alias Lightning.Projects.Project
   alias Lightning.Workflows.WebhookAuthMethod
+  alias Lightning.Workflows.WebhookAuthMethodAudit
   alias Lightning.Repo
 
   @doc """
@@ -85,19 +93,52 @@ defmodule Lightning.WebhookAuthMethods do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_auth_method(attrs) do
-    %WebhookAuthMethod{}
-    |> WebhookAuthMethod.changeset(attrs)
-    |> Repo.insert()
+  def create_auth_method(attrs, actor: %User{} = user) do
+    changeset = WebhookAuthMethod.changeset(%WebhookAuthMethod{}, attrs)
+
+    Multi.new()
+    |> Multi.insert(:auth_method, changeset)
+    |> Multi.insert(:audit, fn %{auth_method: auth_method} ->
+      WebhookAuthMethodAudit.event("created", auth_method.id, user.id)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{auth_method: auth_method}} ->
+        {:ok, auth_method}
+
+      {:error, :auth_method, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
-  @spec create_auth_method(Trigger.t(), map()) ::
+  @spec create_auth_method(Trigger.t(), map(), actor: User.t()) ::
           {:ok, WebhookAuthMethod.t()} | {:error, Ecto.Changeset.t()}
-  def create_auth_method(%Trigger{} = trigger, params) do
-    %WebhookAuthMethod{}
-    |> WebhookAuthMethod.changeset(params)
-    |> Ecto.Changeset.put_assoc(:triggers, [trigger])
-    |> Repo.insert()
+  def create_auth_method(%Trigger{} = trigger, params, actor: %User{} = user) do
+    Multi.new()
+    |> Multi.insert(:auth_method, fn _changes ->
+      %WebhookAuthMethod{}
+      |> WebhookAuthMethod.changeset(params)
+      |> Ecto.Changeset.put_assoc(:triggers, [trigger])
+    end)
+    |> Multi.insert(:created_audit, fn %{auth_method: auth_method} ->
+      WebhookAuthMethodAudit.event("created", auth_method.id, user.id)
+    end)
+    |> Multi.insert(:add_to_trigger_audit, fn %{auth_method: auth_method} ->
+      WebhookAuthMethodAudit.event(
+        "added_to_trigger",
+        auth_method.id,
+        user.id,
+        %{before: %{trigger_id: nil}, after: %{trigger_id: trigger.id}}
+      )
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{auth_method: auth_method}} ->
+        {:ok, auth_method}
+
+      {:error, :auth_method, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -114,23 +155,97 @@ defmodule Lightning.WebhookAuthMethods do
   """
   def update_auth_method(
         %WebhookAuthMethod{} = webhook_auth_method,
-        attrs
+        attrs,
+        actor: %User{} = user
       ) do
-    webhook_auth_method
-    |> WebhookAuthMethod.update_changeset(attrs)
-    |> Repo.update()
+    changeset = WebhookAuthMethod.update_changeset(webhook_auth_method, attrs)
+
+    Multi.new()
+    |> Multi.update(:auth_method, changeset)
+    |> Multi.insert(
+      :audit,
+      fn %{auth_method: auth_method} ->
+        WebhookAuthMethodAudit.event(
+          "updated",
+          auth_method.id,
+          user.id,
+          changeset
+        )
+      end
+    )
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{auth_method: auth_method}} ->
+        {:ok, auth_method}
+
+      {:error, :auth_method, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @spec update_trigger_auth_methods(
           Trigger.t(),
-          [WebhookAuthMethod.t(), ...] | []
+          [WebhookAuthMethod.t(), ...] | [],
+          actor: User.t()
         ) :: {:ok, Trigger.t()} | {:error, Ecto.Changeset.t()}
-  def update_trigger_auth_methods(%Trigger{} = trigger, auth_methods) do
-    trigger
-    |> Repo.preload([:webhook_auth_methods])
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
-    |> Repo.update()
+  def update_trigger_auth_methods(%Trigger{} = trigger, auth_methods,
+        actor: %User{} = user
+      ) do
+    trigger = Repo.preload(trigger, [:webhook_auth_methods])
+
+    Multi.new()
+    |> Multi.update(:trigger, fn _changes ->
+      trigger
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:webhook_auth_methods, auth_methods)
+    end)
+    |> Multi.merge(fn %{trigger: updated_trigger} ->
+      prev_auth_ids =
+        Enum.map(trigger.webhook_auth_methods, fn auth_method ->
+          auth_method.id
+        end)
+
+      new_auth_ids =
+        Enum.map(updated_trigger.webhook_auth_methods, fn auth_method ->
+          auth_method.id
+        end)
+
+      added_auth_ids = new_auth_ids -- prev_auth_ids
+      removed_auth_ids = prev_auth_ids -- new_auth_ids
+
+      added_auth_multi =
+        Enum.reduce(added_auth_ids, Multi.new(), fn auth_id, multi ->
+          changeset =
+            WebhookAuthMethodAudit.event(
+              "added_to_trigger",
+              auth_id,
+              user.id,
+              %{before: %{trigger_id: nil}, after: %{trigger_id: trigger.id}}
+            )
+
+          Multi.insert(multi, "audit_#{auth_id}", changeset)
+        end)
+
+      Enum.reduce(removed_auth_ids, added_auth_multi, fn auth_id, multi ->
+        changeset =
+          WebhookAuthMethodAudit.event(
+            "removed_from_trigger",
+            auth_id,
+            user.id,
+            %{before: %{trigger_id: trigger.id}, after: %{trigger_id: nil}}
+          )
+
+        Multi.insert(multi, "audit_#{auth_id}", changeset)
+      end)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{trigger: trigger}} ->
+        {:ok, trigger}
+
+      {:error, :trigger, changeset, _changes} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -164,7 +279,7 @@ defmodule Lightning.WebhookAuthMethods do
   def list_for_project(%Project{id: project_id}) do
     WebhookAuthMethod
     |> where(project_id: ^project_id)
-    |> where([wam], not is_nil(wam.scheduled_deletion))
+    |> where([wam], is_nil(wam.scheduled_deletion))
     |> Repo.all()
   end
 
@@ -187,7 +302,7 @@ defmodule Lightning.WebhookAuthMethods do
   """
   def list_for_trigger(%Trigger{} = trigger) do
     Ecto.assoc(trigger, :webhook_auth_methods)
-    |> where([wam], not is_nil(wam.scheduled_deletion))
+    |> where([wam], is_nil(wam.scheduled_deletion))
     |> Repo.all()
   end
 

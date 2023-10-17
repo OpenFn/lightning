@@ -104,11 +104,13 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert view |> element("#webhooks_auth_method_modal") |> has_element?()
+    modal_id = "webhooks_auth_method_modal"
+
+    assert view |> element("##{modal_id}") |> has_element?()
 
     html =
       view
-      |> form("#choose_auth_type_form_webhooks_auth_method_modal",
+      |> form("#choose_auth_type_form_#{modal_id}",
         webhook_auth_method: %{auth_type: "basic"}
       )
       |> render_submit()
@@ -120,7 +122,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     refute render(view) =~ credential_name
 
     view
-    |> form("#form_new_webhook_auth_method",
+    |> form("#form_#{modal_id}_new_webhook_auth_method",
       webhook_auth_method: %{
         name: credential_name,
         username: "testusername",
@@ -158,11 +160,13 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert view |> element("#webhooks_auth_method_modal") |> has_element?()
+    modal_id = "webhooks_auth_method_modal"
+
+    assert view |> element("##{modal_id}") |> has_element?()
 
     html =
       view
-      |> form("#choose_auth_type_form_webhooks_auth_method_modal",
+      |> form("#choose_auth_type_form_#{modal_id}",
         webhook_auth_method: %{auth_type: "api"}
       )
       |> render_submit()
@@ -176,7 +180,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     refute render(view) =~ credential_name
 
     assert view
-           |> form("#form_new_webhook_auth_method",
+           |> form("#form_#{modal_id}_new_webhook_auth_method",
              webhook_auth_method: %{
                name: credential_name
              }
@@ -219,7 +223,9 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
         ~p"/projects/#{project.id}/w/#{workflow.id}?#{[s: trigger.id]}"
       )
 
-    assert view |> element("#webhooks_auth_method_modal") |> has_element?()
+    modal_id = "webhooks_auth_method_modal"
+
+    assert view |> element("##{modal_id}") |> has_element?()
 
     html =
       view
@@ -231,7 +237,7 @@ defmodule LightningWeb.WorkflowLive.TriggerTest do
     new_credential_name = "funnyapicredentialname"
 
     assert view
-           |> form("#form_#{auth_method.id}")
+           |> form("#form_#{modal_id}_#{auth_method.id}")
            |> render_submit(%{
              webhook_auth_method: %{
                name: new_credential_name,
