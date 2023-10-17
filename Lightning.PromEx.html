@@ -7,7 +7,7 @@
     <meta name="generator" content="ExDoc v0.29.1">
     <meta name="project" content="Lightning v0.9.3">
 
-    <title>Lightning.TaskWorker — Lightning v0.9.3</title>
+    <title>Lightning.PromEx — Lightning v0.9.3</title>
     <link rel="stylesheet" href="dist/html-elixir-V2ETBPMB.css" />
 
 
@@ -102,22 +102,51 @@ Lightning
 </button>
 
 
-    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/task_worker.ex#L1" title="View Source" class="icon-action" rel="help">
+    <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/prom_ex.ex#L1" title="View Source" class="icon-action" rel="help">
       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
       <span class="sr-only">View Source</span>
     </a>
 
-  <span translate="no">Lightning.TaskWorker</span> 
+  <span translate="no">Lightning.PromEx</span> 
   <small class="app-vsn" translate="no">(Lightning v0.9.3)</small>
 
 </h1>
 
 
   <section id="moduledoc">
-<p>A TaskWorker with concurrency limits.</p><p>A simple concurrency limiter that wraps <a href="https://hexdocs.pm/elixir/Task.Supervisor.html"><code class="inline">Task.Supervisor</code></a>, which already does
-have the ability to specify <code class="inline">max_children</code>; it throws an error when
-that limit is exceeded.</p><p>To use it, start it like any other process; ideally in your supervision tree.</p><pre><code class="makeup elixir" translate="no"><span class="w">  </span><span class="n">...</span><span class="p">,</span><span class="w">
-  </span><span class="p" data-group-id="5656170634-1">{</span><span class="nc">Lightning.TaskWorker</span><span class="p">,</span><span class="w"> </span><span class="ss">name</span><span class="p">:</span><span class="w"> </span><span class="ss">:cli_task_worker</span><span class="p">,</span><span class="w"> </span><span class="ss">max_tasks</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p" data-group-id="5656170634-1">}</span></code></pre><p><strong>Options</strong></p><ul><li><code class="inline">:max_tasks</code> Defaults to the number of system schedulers available to the vm.</li></ul>
+<p>Be sure to add the following to finish setting up PromEx:</p><ol><li><p>Update your configuration (config.exs, dev.exs, prod.exs, releases.exs, etc) to
+configure the necessary bit of PromEx. Be sure to check out <a href="https://hexdocs.pm/prom_ex/1.8.0/PromEx.Config.html"><code class="inline">PromEx.Config</code></a> for
+more details regarding configuring PromEx:</p><pre><code class="makeup elixir" translate="no"><span class="w">   </span><span class="n">config</span><span class="w"> </span><span class="ss">:lightning</span><span class="p">,</span><span class="w"> </span><span class="nc">Lightning.PromEx</span><span class="p">,</span><span class="w">
+     </span><span class="ss">disabled</span><span class="p">:</span><span class="w"> </span><span class="no">false</span><span class="p">,</span><span class="w">
+     </span><span class="ss">manual_metrics_start_delay</span><span class="p">:</span><span class="w"> </span><span class="ss">:no_delay</span><span class="p">,</span><span class="w">
+     </span><span class="ss">drop_metrics_groups</span><span class="p">:</span><span class="w"> </span><span class="p" data-group-id="4564882261-1">[</span><span class="p" data-group-id="4564882261-1">]</span><span class="p">,</span><span class="w">
+     </span><span class="ss">grafana</span><span class="p">:</span><span class="w"> </span><span class="ss">:disabled</span><span class="p">,</span><span class="w">
+     </span><span class="ss">metrics_server</span><span class="p">:</span><span class="w"> </span><span class="ss">:disabled</span></code></pre></li><li><p>Add this module to your application supervision tree. It should be one of the first
+things that is started so that no Telemetry events are missed. For example, if PromEx
+is started after your Repo module, you will miss Ecto's init events and the dashboards
+will be missing some data points:</p><pre><code class="makeup elixir" translate="no"><span class="w">   </span><span class="kd">def</span><span class="w"> </span><span class="nf">start</span><span class="p" data-group-id="7921314681-1">(</span><span class="c">_type</span><span class="p">,</span><span class="w"> </span><span class="c">_args</span><span class="p" data-group-id="7921314681-1">)</span><span class="w"> </span><span class="k" data-group-id="7921314681-2">do</span><span class="w">
+     </span><span class="n">children</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p" data-group-id="7921314681-3">[</span><span class="w">
+       </span><span class="nc">Lightning.PromEx</span><span class="p">,</span><span class="w">
+
+       </span><span class="n">...</span><span class="w">
+     </span><span class="p" data-group-id="7921314681-3">]</span><span class="w">
+
+     </span><span class="n">...</span><span class="w">
+   </span><span class="k" data-group-id="7921314681-2">end</span></code></pre></li><li><p>Update your <code class="inline">endpoint.ex</code> file to expose your metrics (or configure a standalone
+server using the <code class="inline">:metrics_server</code> config options). Be sure to put this plug before
+your <a href="https://hexdocs.pm/plug/1.14.2/Plug.Telemetry.html"><code class="inline">Plug.Telemetry</code></a> entry so that you can avoid having calls to your <code class="inline">/metrics</code>
+endpoint create their own metrics and logs which can pollute your logs/metrics given
+that Prometheus will scrape at a regular interval and that can get noisy:</p><pre><code class="makeup elixir" translate="no"><span class="w">   </span><span class="kd">defmodule</span><span class="w"> </span><span class="nc">LightningWeb.Endpoint</span><span class="w"> </span><span class="k" data-group-id="2361203371-1">do</span><span class="w">
+     </span><span class="kn">use</span><span class="w"> </span><span class="nc">Phoenix.Endpoint</span><span class="p">,</span><span class="w"> </span><span class="ss">otp_app</span><span class="p">:</span><span class="w"> </span><span class="ss">:lightning</span><span class="w">
+
+     </span><span class="n">...</span><span class="w">
+
+     </span><span class="n">plug</span><span class="w"> </span><span class="nc">PromEx.Plug</span><span class="p">,</span><span class="w"> </span><span class="ss">prom_ex_module</span><span class="p">:</span><span class="w"> </span><span class="nc">Lightning.PromEx</span><span class="w">
+
+     </span><span class="n">...</span><span class="w">
+   </span><span class="k" data-group-id="2361203371-1">end</span></code></pre></li><li><p>Update the list of plugins in the <code class="inline">plugins/0</code> function return list to reflect your
+application's dependencies. Also update the list of dashboards that are to be uploaded
+to Grafana in the <code class="inline">dashboards/0</code> function.</p></li></ol>
   </section>
 
 
@@ -144,30 +173,6 @@ that limit is exceeded.</p><p>To use it, start it like any other process; ideall
 
     </div>
 
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#get_status/1" translate="no">get_status(worker)</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#start_link/1" translate="no">start_link(opts \\ [name: nil])</a>
-
-      </div>
-
-    </div>
-
-    <div class="summary-row">
-      <div class="summary-signature">
-        <a href="#start_task/2" translate="no">start_task(worker, fun)</a>
-
-      </div>
-
-    </div>
-
 </div>
 
   </section>
@@ -191,7 +196,7 @@ Functions
     </a>
     <h1 class="signature" translate="no">child_spec(init_arg)</h1>
 
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/task_worker.ex#L20" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/prom_ex.ex#L55" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -202,81 +207,6 @@ Functions
   <section class="docstring">
 
 <p>Returns a specification to start this module under a supervisor.</p><p>See <a href="https://hexdocs.pm/elixir/Supervisor.html"><code class="inline">Supervisor</code></a>.</p>
-  </section>
-</section>
-<section class="detail" id="get_status/1">
-
-  <div class="detail-header">
-    <a href="#get_status/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">get_status(worker)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/task_worker.ex#L85" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="start_link/1">
-
-    <span id="start_link/0"></span>
-
-  <div class="detail-header">
-    <a href="#start_link/1" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">start_link(opts \\ [name: nil])</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/task_worker.ex#L52" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-
-  </section>
-</section>
-<section class="detail" id="start_task/2">
-
-  <div class="detail-header">
-    <a href="#start_task/2" class="detail-link" title="Link to this function">
-      <i class="ri-link-m" aria-hidden="true"></i>
-      <span class="sr-only">Link to this function</span>
-    </a>
-    <h1 class="signature" translate="no">start_task(worker, fun)</h1>
-
-      <a href="https://github.com/OpenFn/lightning/blob/main/lib/lightning/task_worker.ex#L59" class="icon-action" rel="help" title="View Source">
-       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
-       <span class="sr-only">View Source</span>
-     </a>
-
-
-  </div>
-
-  <section class="docstring">
-
-      <div class="specs">
-
-          <pre translate="no"><span class="attribute">@spec</span> start_task(worker :: <a href="https://hexdocs.pm/elixir/GenServer.html#t:name/0">GenServer.name</a>(), (-&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>())) ::
-  {:error, :too_many_processes} | <a href="https://hexdocs.pm/elixir/typespecs.html#built-in-types">term</a>()</pre>
-
-      </div>
-
-
   </section>
 </section>
 

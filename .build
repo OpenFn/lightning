@@ -64,6 +64,7 @@ Lightning.Projects.ProjectUser.RolesEnum.html
 Lightning.Projects.ProjectUser.html
 Lightning.Projects.Provisioner.html
 Lightning.Projects.html
+Lightning.PromEx.html
 Lightning.Release.html
 Lightning.Repo.html
 Lightning.RunSearchForm.html
@@ -207,8 +208,8 @@ dist/merriweather-latin-ext-300-normal-K6L27CZ5.woff2
 dist/merriweather-vietnamese-300-italic-EHHNZPUO.woff2
 dist/merriweather-vietnamese-300-normal-U376L4Z4.woff2
 dist/remixicon-NKANDIL5.woff2
-dist/search_items-EE09F7F2.js
-dist/sidebar_items-A9529669.js
+dist/search_items-0AE44F62.js
+dist/sidebar_items-DCE0B6C0.js
 index.html
 provisioning.html
 readme.html
