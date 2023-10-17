@@ -72,7 +72,13 @@ defmodule Lightning.WebhookAuthMethods do
   end
 
   defp disassociate_from_triggers(wam) do
-    case Ecto.assoc(wam, :triggers) |> Repo.delete_all() do
+    wam_uuid = Ecto.UUID.dump!(wam.id)
+
+    from(j in "trigger_webhook_auth_methods",
+      where: j.webhook_auth_method_id == ^wam_uuid
+    )
+    |> Repo.delete_all()
+    |> case do
       {count, _} when count > 0 ->
         :ok
 
