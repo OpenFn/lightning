@@ -158,9 +158,20 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         phx-target={@myself}
       >
         <div class="space-y-4">
-          <p>You are about to delete the webhook credential
-            "<span class="credential-name"><%= @webhook_auth_method.name %></span>"
-            which is used by no workflows.</p>
+          <%= if @webhook_auth_method.triggers |> Enum.count() == 0 do %>
+            <p>You are about to delete the webhook credential
+              "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
+              which is used by no workflows.</p>
+          <% else %>
+            <p>
+              You are about to delete the webhook credential
+              "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
+              which is used by <span class="mb-2 text-purple-600 underline cursor-pointer"><%= @webhook_auth_method.triggers |> Enum.count() %> workflow triggers</span>.
+            </p>
+            <p>
+              Deleting this webhook will remove it from any associated triggers and cannot be undone.
+            </p>
+          <% end %>
 
           <.label for={:confirmation}>
             Type in 'DELETE' to confirm the deletion
