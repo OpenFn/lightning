@@ -72,6 +72,7 @@ defmodule Lightning.Application do
       end
 
     children = [
+      Lightning.PromEx,
       {Cluster.Supervisor, [topologies, [name: Lightning.ClusterSupervisor]]},
       {Lightning.Vault, Application.get_env(:lightning, Lightning.Vault, [])},
       # Start the Ecto repository

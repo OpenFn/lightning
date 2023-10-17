@@ -50,6 +50,7 @@ npm-debug.log
 /Mnesia*
 
 benchmarking/*.csv
+monitoring
 
 tmp
 priv/openfn
