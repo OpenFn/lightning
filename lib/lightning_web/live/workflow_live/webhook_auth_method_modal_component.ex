@@ -107,6 +107,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     {:noreply, assign(socket, :auth_type_changeset, changeset)}
   end
 
+  def handle_event("validate_auth_type", _params, socket) do
+    {:noreply, socket}
+  end
+
   def handle_event(
         "choose_auth_type",
         %{"webhook_auth_method" => params},

@@ -18,6 +18,8 @@ and this project adheres to
   [#1153](https://github.com/OpenFn/Lightning/issues/1153)
 - Add icon on the canvas for triggers that have authentication enabled
   [#1157](https://github.com/OpenFn/Lightning/issues/1157)
+- Require password/2FA code before showing password and API Key for
+  webhook auth methods [#1200](https://github.com/OpenFn/Lightning/issues/1200)
 - Restrict live dashboard access to only superusers, enable DB information and
   OS information
   [#1170](https://github.com/OpenFn/Lightning/issues/1170)
