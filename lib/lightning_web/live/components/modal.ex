@@ -52,7 +52,7 @@ defmodule LightningWeb.Components.Modal do
               phx-window-keydown={hide_modal(@on_close, @id)}
               phx-key="escape"
               phx-click-away={hide_modal(@on_close, @id)}
-              class="hidden relative rounded-xl bg-white p-6 shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
+              class="hidden relative rounded-xl bg-white pl-[24px] pt-[24px] pr-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
             >
               <div id={"#{@id}-content"}>
                 <header :if={@title != []}>

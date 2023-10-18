@@ -345,7 +345,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </:action>
       </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
     </div>
-    <div class="mt-4 flex justify-between content-center ">
+    <div class="w-full bg-gray-100 h-0.5 mt-[24px]"></div>
+    <div class="pt-[12px] pb-[12px] flex justify-between content-center ">
       <div class="flex flex-wrap items-center">
         <.link
           href="#"
