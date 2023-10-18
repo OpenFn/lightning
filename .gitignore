@@ -58,3 +58,10 @@ priv/openfn
 .elixir_ls
 
 .env
+
+state.json*
+.state.json*
+._state.json*
+**/state.json*
+**/.state.json*
+**/._state.json*

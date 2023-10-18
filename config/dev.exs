@@ -91,3 +91,6 @@ if System.get_env("EXPORT_OTEL") == "true" do
 else
   config :opentelemetry, traces_exporter: :none
 end
+
+# Hooks for code analysis
+import_config "dev.tools.exs"
