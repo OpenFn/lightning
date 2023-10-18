@@ -1314,5 +1314,159 @@ defmodule LightningWeb.ProjectLiveTest do
              |> element("#edit_auth_#{auth_method.id}_modal")
              |> has_element?()
     end
+
+    test "password is required before displaying the API KEY of a project webhook auth method",
+         %{conn: conn} do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :api,
+          api_key: "someverystrongapikey1234",
+          username: nil,
+          password: nil
+        )
+
+      project_user =
+        insert(:project_user,
+          role: :editor,
+          project: project,
+          user: build(:user)
+        )
+
+      conn = log_in_user(conn, project_user.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert view
+             |> element("a#edit_auth_method_link_#{auth_method.id}")
+             |> has_element?()
+
+      modal_id = "edit_auth_#{auth_method.id}_modal"
+
+      assert view |> element("##{modal_id}") |> has_element?()
+
+      form_id = "form_#{modal_id}_#{auth_method.id}"
+
+      assert view |> has_element?("##{form_id}_api_key_action_button", "Show")
+      refute view |> has_element?("##{form_id}_api_key_action_button", "Copy")
+      # API KEY not in DOM
+      refute render(view) =~ auth_method.api_key
+
+      refute view |> has_element?("#reauthentication-form")
+
+      view |> element("##{form_id}_api_key_action_button") |> render_click()
+
+      assert view |> has_element?("#reauthentication-form")
+
+      # test wrong password
+      refute render(view) =~ "Invalid! Please try again"
+
+      view
+      |> form("#reauthentication-form",
+        user: %{password: "wrongpass"}
+      )
+      |> render_submit()
+
+      assert render(view) =~ "Invalid! Please try again"
+      # form still exists
+      assert view |> has_element?("#reauthentication-form")
+
+      # correct password
+      view
+      |> form("#reauthentication-form",
+        user: %{password: project_user.user.password}
+      )
+      |> render_submit()
+
+      refute render(view) =~ "Invalid! Please try again"
+      refute view |> has_element?("#reauthentication-form")
+
+      refute view |> has_element?("##{form_id}_api_key_action_button", "Show")
+      assert view |> has_element?("##{form_id}_api_key_action_button", "Copy")
+      assert render(view) =~ auth_method.api_key
+    end
+
+    test "password is required before displaying the password of a project webhook auth method",
+         %{conn: conn} do
+      project = insert(:project)
+
+      auth_method =
+        insert(:webhook_auth_method,
+          project: project,
+          auth_type: :basic,
+          api_key: nil,
+          username: "testusername",
+          password: "someveryverystrongpassword1234"
+        )
+
+      project_user =
+        insert(:project_user,
+          role: :editor,
+          project: project,
+          user: build(:user)
+        )
+
+      conn = log_in_user(conn, project_user.user)
+
+      {:ok, view, _html} =
+        live(
+          conn,
+          Routes.project_project_settings_path(conn, :index, project.id)
+        )
+
+      assert view
+             |> element("a#edit_auth_method_link_#{auth_method.id}")
+             |> has_element?()
+
+      modal_id = "edit_auth_#{auth_method.id}_modal"
+
+      assert view |> element("##{modal_id}") |> has_element?()
+
+      form_id = "form_#{modal_id}_#{auth_method.id}"
+
+      assert view |> has_element?("##{form_id}_password_action_button", "Show")
+      refute view |> has_element?("##{form_id}_password_action_button", "Copy")
+      # password not in DOM
+      refute render(view) =~ auth_method.password
+
+      refute view |> has_element?("#reauthentication-form")
+
+      view |> element("##{form_id}_password_action_button") |> render_click()
+
+      assert view |> has_element?("#reauthentication-form")
+
+      # test wrong password
+      refute render(view) =~ "Invalid! Please try again"
+
+      view
+      |> form("#reauthentication-form",
+        user: %{password: "wrongpass"}
+      )
+      |> render_submit()
+
+      assert render(view) =~ "Invalid! Please try again"
+      # form still exists
+      assert view |> has_element?("#reauthentication-form")
+
+      # correct password
+      view
+      |> form("#reauthentication-form",
+        user: %{password: project_user.user.password}
+      )
+      |> render_submit()
+
+      refute render(view) =~ "Invalid! Please try again"
+      refute view |> has_element?("#reauthentication-form")
+
+      refute view |> has_element?("##{form_id}_password_action_button", "Show")
+      assert view |> has_element?("##{form_id}_password_action_button", "Copy")
+      assert render(view) =~ auth_method.password
+    end
   end
 end

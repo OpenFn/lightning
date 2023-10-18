@@ -232,7 +232,7 @@ defmodule Lightning.Accounts do
   """
   @spec valid_user_totp?(User.t(), String.t()) :: true | false
   def valid_user_totp?(user, code) do
-    totp = Repo.get_by!(UserTOTP, user_id: user.id)
+    totp = Repo.get_by(UserTOTP, user_id: user.id)
 
     UserTOTP.valid_totp?(totp, code)
   end

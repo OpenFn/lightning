@@ -3,6 +3,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   use LightningWeb, :live_component
 
+  alias Lightning.Accounts
   alias Lightning.WebhookAuthMethods
   alias Lightning.Workflows.WebhookAuthMethod
   alias Phoenix.LiveView.JS
@@ -17,7 +18,9 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
      socket
      |> assign(:changeset, WebhookAuthMethod.changeset(webhook_auth_method, %{}))
      |> assign(:delete_confirmation_changeset, delete_confirmation_changeset())
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign(sudo_mode?: false)
+     |> assign(show_2fa_options: false)}
   end
 
   def delete_confirmation_changeset(params \\ %{}) do
@@ -37,6 +40,22 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   @impl true
   def handle_event("save", %{"webhook_auth_method" => params}, socket) do
     save_webhook_auth_method(socket, socket.assigns.action, params)
+  end
+
+  def handle_event("toggle-2fa", _params, %{assigns: assigns} = socket) do
+    {:noreply,
+     assign(socket, show_2fa_options: !assigns.show_2fa_options, error_msg: nil)}
+  end
+
+  def handle_event("reauthenticate-user", %{"user" => params}, socket) do
+    current_user = socket.assigns.current_user
+
+    if valid_user_input?(current_user, params) do
+      {:noreply,
+       assign(socket, sudo_mode?: true, show_2fa_options: false, error_msg: nil)}
+    else
+      {:noreply, assign(socket, error_msg: "Invalid! Please try again")}
+    end
   end
 
   def handle_event(
@@ -144,6 +163,11 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     })
   end
 
+  defp valid_user_input?(current_user, %{"password" => password, "code" => code}) do
+    Accounts.User.valid_password?(current_user, password) ||
+      Accounts.valid_user_totp?(current_user, code)
+  end
+
   @impl true
   def render(%{action: :delete} = assigns) do
     ~H"""
@@ -201,6 +225,64 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
     """
   end
 
+  def render(%{action: :edit, show_2fa_options: true} = assigns) do
+    ~H"""
+    <div>
+      <p class="font-semibold text-sm whitespace-normal">
+        You're required to reauthenticate yourself before viewing the webhook
+        <%= if @webhook_auth_method.auth_type == :basic do %>
+          Password
+        <% else %>
+          API Key
+        <% end %>
+      </p>
+      <%= if @error_msg do %>
+        <div class="alert alert-danger" role="alert">
+          <%= @error_msg %>
+        </div>
+      <% end %>
+      <.form
+        :let={f}
+        for={%{}}
+        action="#"
+        phx-submit="reauthenticate-user"
+        as={:user}
+        phx-target={@myself}
+        class="mt-2"
+        id="reauthentication-form"
+      >
+        <.input type="password" field={f[:password]} label="Password" />
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center" aria-hidden="true">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-white px-2 text-sm text-gray-500">OR</span>
+          </div>
+        </div>
+        <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
+
+        <div class="sm:flex sm:flex-row-reverse">
+          <button
+            type="submit"
+            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+          >
+            Done
+          </button>
+          <button
+            type="button"
+            phx-click="toggle-2fa"
+            phx-target={@myself}
+            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+          >
+            Cancel
+          </button>
+        </div>
+      </.form>
+    </div>
+    """
+  end
+
   def render(assigns) do
     ~H"""
     <div>
@@ -233,25 +315,11 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                   <label class="block text-sm font-semibold leading-6 text-slate-800">
                     Password
                   </label>
-                  <div class="mt-2 flex rounded-md shadow-sm">
-                    <input
-                      type="password"
-                      id={f[:password].id}
-                      value={f[:password].value}
-                      class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
-                      disabled="disabled"
-                    />
-
-                    <button
-                      id={"#{f[:password].id}_copy_button"}
-                      type="button"
-                      phx-hook="Copy"
-                      data-to={"##{f[:password].id}"}
-                      class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                    >
-                      Copy
-                    </button>
-                  </div>
+                  <.maybe_mask_password_field
+                    field={f[:password]}
+                    sudo_mode?={@sudo_mode?}
+                    phx_target={@myself}
+                  />
                 </div>
               <% else %>
                 <.input
@@ -273,25 +341,12 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                 <label class="block text-sm font-semibold leading-6 text-slate-800">
                   API Key
                 </label>
-                <div class="mt-2 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    id={"api_key_#{@id}"}
-                    class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
-                    value={@webhook_auth_method.api_key}
-                    disabled="disabled"
-                  />
-
-                  <button
-                    id={"api_key_#{@id}_copy_button"}
-                    type="button"
-                    phx-hook="Copy"
-                    data-to={"#api_key_#{@id}"}
-                    class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                  >
-                    Copy
-                  </button>
-                </div>
+                <.maybe_mask_api_key_field
+                  action={@action}
+                  field={f[:api_key]}
+                  sudo_mode?={@sudo_mode?}
+                  phx_target={@myself}
+                />
               </div>
           <% end %>
 
@@ -318,5 +373,90 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       <% end %>
     </div>
     """
+  end
+
+  attr :field, :map, required: true
+  attr :phx_target, :any, required: true
+  attr :sudo_mode?, :boolean, required: true
+
+  defp maybe_mask_password_field(assigns) do
+    ~H"""
+    <div class="mt-2 flex rounded-md shadow-sm">
+      <input
+        type="password"
+        id={@field.id}
+        value={if(@sudo_mode?, do: @field.value, else: mask_password(@field.value))}
+        class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
+        disabled="disabled"
+      />
+
+      <button
+        id={"#{@field.id}_action_button"}
+        type="button"
+        class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        {if(@sudo_mode?, do: ["phx-hook": "Copy", "data-to": "##{@field.id}"], else: ["phx-click": "toggle-2fa", "phx-target": @phx_target])}
+      >
+        <%= if @sudo_mode? do %>
+          Copy
+        <% else %>
+          Show
+        <% end %>
+      </button>
+    </div>
+    """
+  end
+
+  defp mask_password(value) do
+    value
+    |> String.graphemes()
+    |> Enum.map_join(fn _char -> "*" end)
+  end
+
+  attr :field, :map, required: true
+  attr :phx_target, :any, required: true
+  attr :sudo_mode?, :boolean, required: true
+  attr :action, :any, required: true
+
+  defp maybe_mask_api_key_field(assigns) do
+    ~H"""
+    <div class="mt-2 flex rounded-md shadow-sm">
+      <input
+        type="text"
+        id={@field.id}
+        class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
+        value={
+          if(@action == :new || @sudo_mode?,
+            do: @field.value,
+            else: mask_api_key(@field.value)
+          )
+        }
+        disabled="disabled"
+      />
+
+      <button
+        id={"#{@field.id}_action_button"}
+        type="button"
+        class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+        {if(@action == :new || @sudo_mode?, do: ["phx-hook": "Copy", "data-to": "##{@field.id}"], else: ["phx-click": "toggle-2fa", "phx-target": @phx_target])}
+      >
+        <%= if @action == :new || @sudo_mode? do %>
+          Copy
+        <% else %>
+          Show
+        <% end %>
+      </button>
+    </div>
+    """
+  end
+
+  defp mask_api_key(value) do
+    {last_5, first_n} =
+      value |> String.graphemes() |> Enum.reverse() |> Enum.split(5)
+
+    masked_n = first_n |> Enum.take(15) |> Enum.map(fn _char -> "*" end)
+
+    (last_5 ++ masked_n)
+    |> Enum.reverse()
+    |> Enum.join()
   end
 end
