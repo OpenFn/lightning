@@ -5,6 +5,7 @@ defmodule Lightning.WorkOrderServiceTest do
 
   import Lightning.{AccountsFixtures, JobsFixtures, InvocationFixtures}
 
+  @tag skip: "TODO: replaced by WorkOrders.create_for/3"
   describe "multi_for_manual/3" do
     test "creates a manual workorder" do
       job = job_fixture()
