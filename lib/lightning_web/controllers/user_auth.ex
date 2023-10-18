@@ -109,7 +109,7 @@ defmodule LightningWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: "/users/log_out")
+    |> redirect(to: "/users/log_in")
   end
 
   @doc """
