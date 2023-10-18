@@ -258,6 +258,20 @@ defmodule LightningWeb.WorkflowLive.Components do
     """
   end
 
+  defp sort_by_name(webhook_auth_methods) do
+    webhook_auth_methods |> Enum.sort(&(&1.name < &2.name))
+  end
+
+  defp filter_scheduled_for_deletion(webhook_auth_methods) do
+    webhook_auth_methods |> Enum.filter(& &1.scheduled_deletion)
+  end
+
+  defp get_webhook_auth_methods_from_trigger(trigger) do
+    trigger.webhook_auth_methods
+    |> filter_scheduled_for_deletion()
+    |> sort_by_name()
+  end
+
   attr :form, :map, required: true
   attr :cancel_url, :string, required: true
   attr :disabled, :boolean, required: true
@@ -337,7 +351,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               />
             </div>
             <div class="text-xs">
-              <%= if length(@selected_trigger.webhook_auth_methods) == 0 do %>
+              <%= if length(get_webhook_auth_methods_from_trigger(@selected_trigger)) == 0 do %>
                 <p class="italic mt-3">
                   <span>
                     Add an extra layer of security with Webhook authentication.
@@ -366,7 +380,10 @@ defmodule LightningWeb.WorkflowLive.Components do
                 </p>
               <% else %>
                 <ul class="list-disc p-2 mb-2">
-                  <li :for={auth_method <- @selected_trigger.webhook_auth_methods}>
+                  <li :for={
+                    auth_method <-
+                      get_webhook_auth_methods_from_trigger(@selected_trigger)
+                  }>
                     <%= auth_method.name %> (<.humanized_auth_method_type auth_method={
                       auth_method
                     } />)

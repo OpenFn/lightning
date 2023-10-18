@@ -1,6 +1,7 @@
 defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   @moduledoc false
 
+  alias Lightning.Projects.Project
   use LightningWeb, :live_component
 
   alias Lightning.WebhookAuthMethods
@@ -49,6 +50,39 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       |> Map.put(:action, :validate)
 
     {:noreply, socket |> assign(:delete_confirmation_changeset, changeset)}
+  end
+
+  def handle_event(
+        "validate",
+        %{"webhook_auth_method" => params},
+        socket
+      ) do
+    enriched_params =
+      enrich_params(params, socket.assigns.webhook_auth_method)
+
+    changeset =
+      WebhookAuthMethod.changeset(
+        socket.assigns.webhook_auth_method,
+        enriched_params
+      )
+
+    changeset =
+      WebhookAuthMethods.list_for_project(%Project{
+        id: socket.assigns.webhook_auth_method.project_id
+      })
+      |> Enum.any?(fn wam -> wam.name == params["name"] end)
+      |> if do
+        Ecto.Changeset.add_error(
+          changeset,
+          :name,
+          "must be unique within the project"
+        )
+      else
+        changeset
+      end
+      |> Map.put(:action, :validate)
+
+    {:noreply, socket |> assign(changeset: changeset)}
   end
 
   def handle_event(
@@ -210,6 +244,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           id={"form_#{@id}"}
           for={@changeset}
           phx-submit="save"
+          phx-change="validate"
           phx-target={@myself}
           class="mt-2"
         >

@@ -286,6 +286,7 @@ defmodule Lightning.WebhookAuthMethods do
     WebhookAuthMethod
     |> where(project_id: ^project_id)
     |> where([wam], is_nil(wam.scheduled_deletion))
+    |> order_by(:name)
     |> Repo.all()
   end
 
@@ -309,6 +310,7 @@ defmodule Lightning.WebhookAuthMethods do
   def list_for_trigger(%Trigger{} = trigger) do
     Ecto.assoc(trigger, :webhook_auth_methods)
     |> where([wam], is_nil(wam.scheduled_deletion))
+    |> order_by(:name)
     |> Repo.all()
   end
 
