@@ -17,13 +17,15 @@ and this project adheres to
 - Add plumbing to dump Lightning metrics during load testing
   [#1178](https://github.com/OpenFn/Lightning/issues/1178)
 - Allow for heavier payloads during load testing
-  [#1179] (https://github.com/OpenFn/Lightning/issues/1179)
+  [#1179](https://github.com/OpenFn/Lightning/issues/1179)
 - Add dynamic delay to help mitigate flickering test
-  [#1195] (https://github.com/OpenFn/Lightning/issues/1195)
+  [#1195](https://github.com/OpenFn/Lightning/issues/1195)
 - Add a OpenTelemetry trace example
-  [#1189] (https://github.com/OpenFn/Lightning/issues/1189)
+  [#1189](https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
   [1199](https://github.com/OpenFn/Lightning/issues/1199)
+- Track and filter on webhook controller state in :telemetry metrics
+  [#1192](https://github.com/OpenFn/Lightning/issues/1192)
 
 ### Changed
 
