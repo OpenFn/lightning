@@ -24,6 +24,8 @@ and this project adheres to
   [#1189] (https://github.com/OpenFn/Lightning/issues/1189)
 - Add plumbing to support the use of PromEx
   [1199](https://github.com/OpenFn/Lightning/issues/1199)
+- Add warning text to PromEx config
+  [1222] (https://github.com/OpenFn/Lightning/issues/1222)
 
 ### Changed
 
