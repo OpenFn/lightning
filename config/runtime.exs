@@ -309,6 +309,9 @@ config :sentry,
   enable_source_code_context: true,
   root_source_code_path: File.cwd!()
 
+# WARNING: By default, PromEx exposes the metrics for Prometheus on an
+# unprotected endpoint. This functionality is not considered ready
+# for production use.
 config :lightning, Lightning.PromEx,
   disabled: System.get_env("PROMEX_ENABLED") != "true",
   manual_metrics_start_delay: :no_delay,
