@@ -189,12 +189,14 @@ defmodule LightningWeb.Components.NewInputs do
         id={@id}
         name={@name}
         class={[
-          "rounded-md shadow-sm font-mono proportional-nums text-sm",
+          "focus:outline focus:outline-2 focus:outline-offset-1 rounded-md shadow-sm font-mono proportional-nums text-sm",
           "mt-2 block w-full focus:ring-0",
           "text-slate-200 bg-slate-700 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 overflow-y-auto",
-          @errors == [] && "border-slate-300 focus:border-slate-400",
-          @errors != [] && "border-danger-400 focus:border-danger-400",
+          @errors == [] &&
+            "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400",
           @class
         ]}
         {@rest}
@@ -216,11 +218,13 @@ defmodule LightningWeb.Components.NewInputs do
           value={Phoenix.HTML.Form.normalize_value(@type, @value)}
           phx-debounce="blur"
           class={[
-            "block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+            "focus:outline focus:outline-2 focus:outline-offset-1 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
             "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
             @class,
-            @errors == [] && "border-slate-300 focus:border-slate-400",
-            @errors != [] && "border-danger-400 focus:border-danger-400"
+            @errors == [] &&
+              "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+            @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+              "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
           ]}
           {@rest}
         />
@@ -256,6 +260,11 @@ defmodule LightningWeb.Components.NewInputs do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
+    IO.inspect(
+      @errors != [] && @field && @field.field == @name && @field.errors != [],
+      label: "Assigns"
+    )
+
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
@@ -266,11 +275,13 @@ defmodule LightningWeb.Components.NewInputs do
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         phx-debounce="blur"
         class={[
-          "mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "focus:outline focus:outline-2 focus:outline-offset-1 mt-2 block w-full rounded-lg text-slate-900 focus:ring-0 sm:text-sm sm:leading-6",
           "phx-no-feedback:border-slate-300 phx-no-feedback:focus:border-slate-400 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500",
           @class,
-          @errors == [] && "border-slate-300 focus:border-slate-400",
-          @errors != [] && "border-danger-400 focus:border-danger-400"
+          @errors == [] &&
+            "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
+          @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+            "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
         ]}
         {@rest}
       />
