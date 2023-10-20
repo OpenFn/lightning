@@ -263,7 +263,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   end
 
   defp filter_scheduled_for_deletion(webhook_auth_methods) do
-    webhook_auth_methods |> Enum.filter(& &1.scheduled_deletion)
+    webhook_auth_methods |> Enum.filter(&is_nil(&1.scheduled_deletion))
   end
 
   defp get_webhook_auth_methods_from_trigger(trigger) do
@@ -429,9 +429,9 @@ defmodule LightningWeb.WorkflowLive.Components do
     <span>
       <%= case @auth_method.auth_type do %>
         <% :api -> %>
-          API KEY
+          API
         <% :basic -> %>
-          BASIC
+          Basic
       <% end %>
     </span>
     """
@@ -638,7 +638,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <th
                   scope="col"
                   class={[
-                    "min-w-[12rem] py-2.5 pr-3 text-left text-sm font-semibold text-gray-900",
+                    "min-w-[12rem] py-2.5 text-left text-sm font-normal text-gray-900",
                     if(!@on_row_select, do: "pl-4")
                   ]}
                 >
@@ -646,43 +646,31 @@ defmodule LightningWeb.WorkflowLive.Components do
                 </th>
                 <th
                   scope="col"
-                  class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
+                  class="min-w-[7rem] py-2.5 text-left text-sm font-normal text-gray-900"
                 >
                   Auth.Type
                 </th>
                 <th
                   scope="col"
-                  class="px-6 py-2.5 text-left text-sm font-semibold text-gray-900"
+                  class="min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900"
                 >
                   Linked Triggers
                 </th>
                 <th
                   scope="col"
-                  class="relative py-3 pl-3 pr-4 sm:pr-3 text-sm font-semibold text-gray-900"
+                  class="min-w-[4rem] py-2.5 text-right text-sm font-normal text-gray-900"
                 >
-                  <span class={if @on_row_select, do: "sr-only", else: ""}>
-                    <%= gettext("Actions") %>
-                  </span>
                 </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white">
               <tr
                 :for={auth_method <- @auth_methods}
-                class={
-                  if(
-                    @on_row_select && @row_selected?.(auth_method),
-                    do: "bg-[#F2EEFD]",
-                    else: ""
-                  )
-                }
+                class="hover:bg-[#F2EEFD] transition-colors duration-200"
+                id={auth_method.id}
+                phx-hook="ShowActionsOnRowHover"
               >
-                <td :if={@on_row_select} class="relative px-7 sm:w-12 sm:px-6">
-                  <div
-                    :if={@on_row_select && @row_selected?.(auth_method)}
-                    class="absolute inset-y-0 left-0 w-0.5 bg-indigo-600"
-                  >
-                  </div>
+                <td :if={@on_row_select} class="relative sm:w-12 sm:px-6">
                   <input
                     id={"select_#{auth_method.id}"}
                     phx-value-selection={to_string(!@row_selected?.(auth_method))}
@@ -693,16 +681,16 @@ defmodule LightningWeb.WorkflowLive.Components do
                   />
                 </td>
                 <td class={[
-                  "whitespace-nowrap py-2.5 pr-3 text-sm text-gray-900",
+                  "whitespace-nowrap py-2.5 text-sm text-gray-900",
                   if(!@on_row_select, do: "pl-4")
                 ]}>
                   <%= auth_method.name %>
                 </td>
-                <td class="whitespace-nowrap px-6 text-sm text-gray-900">
+                <td class="whitespace-nowrap text-sm text-gray-900">
                   <.humanized_auth_method_type auth_method={auth_method} />
                 </td>
-                <td class="whitespace-nowrap px-6 text-sm text-gray-900">
-                  <span class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700">
+                <td class="whitespace-nowrap text-sm text-gray-900">
+                  <span class="relative font-normal">
                     <a
                       :if={auth_method.triggers != []}
                       id={"display_linked_triggers_link_#{auth_method.id}"}
@@ -714,8 +702,11 @@ defmodule LightningWeb.WorkflowLive.Components do
                     >
                       <%= Enum.count(auth_method.triggers) %>
                     </a>
-                    <span :if={auth_method.triggers == []}>
-                      <%= Enum.count(auth_method.triggers) %>
+                    <span
+                      :if={auth_method.triggers == []}
+                      class="italic font-normal text-gray-300"
+                    >
+                      No associated triggers...
                     </span>
 
                     <div class="text-left">
@@ -736,14 +727,12 @@ defmodule LightningWeb.WorkflowLive.Components do
                     </div>
                   </span>
                 </td>
-                <td :if={@action != []} class="py-2.5 pr-8 sm:pr-3">
-                  <div class="flex gap-4 whitespace-nowrap text-right text-sm font-medium">
-                    <span
-                      :for={action <- @action}
-                      class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
-                    >
-                      <%= render_slot(action, auth_method) %>
-                    </span>
+                <td
+                  :if={@action != []}
+                  class="flex gap-x-2 justify-end text-right py-2.5 px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
+                >
+                  <div :for={action <- @action}>
+                    <%= render_slot(action, auth_method) %>
                   </div>
                 </td>
               </tr>

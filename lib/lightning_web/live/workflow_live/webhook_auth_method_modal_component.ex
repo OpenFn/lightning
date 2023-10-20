@@ -20,6 +20,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
        ) do
     socket
     |> assign(assigns)
+    |> assign(is_form_valid: false)
     |> assign(action: :edit)
   end
 
@@ -33,6 +34,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     |> assign(assigns)
     |> assign(
       action: :new,
+      is_form_valid: false,
       auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{})
     )
   end
@@ -44,6 +46,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
        ) do
     socket
     |> assign(assigns)
+    |> assign(is_form_valid: false)
     |> assign(action: :display_triggers)
   end
 
@@ -54,6 +57,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
        ) do
     socket
     |> assign(assigns)
+    |> assign(is_form_valid: false)
     |> assign(action: :delete)
   end
 
@@ -89,8 +93,13 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       selections: selections,
       webhook_auth_method: auth_method,
       auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{}),
-      project_auth_methods: project_auth_methods
+      project_auth_methods: project_auth_methods,
+      is_form_valid: false
     )
+  end
+
+  def handle_info({:form_validity, is_valid}, socket) do
+    {:noreply, assign(socket, is_form_valid: is_valid)}
   end
 
   @impl true
@@ -251,7 +260,17 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           <%= if @action == :new && @webhook_auth_method.auth_type do %>
             <span class="italic text-xs">
               Webhook authentication credentials are accessible to everyone within your project and can be managed via
-              <span class="text-primary-700 underline">your settings here.</span>
+              <.link
+                id="access-settings"
+                navigate={
+                  ~p"/projects/#{assigns.webhook_auth_method.project_id}/settings#webhook_security"
+                }
+                class="flex-1 rounded-md text-primary-700 hover:text-primary-900 underline"
+                role="button"
+                target="_blank"
+              >
+                your settings here.
+              </.link>
             </span>
           <% end %>
         </:subtitle>
@@ -294,28 +313,31 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       )
 
     ~H"""
-    <p class="mb-4">
-      You have <%= length(assigns.webhook_auth_method.triggers) %>
-      <span class="font-semibold">Workflows</span>
-      associated with the "<span class="font-semibold">My Auth</span>" authentication method:
-    </p>
-    <ul class="list-disc pl-5 mb-4">
-      <%= for trigger <- assigns.webhook_auth_method.triggers do %>
-        <li class="mb-2 text-purple-600 underline cursor-pointer">
-          <.link
-            id={"linked-trigger-#{trigger.id}"}
-            navigate={
-              ~p"/projects/#{assigns.webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
-            }
-            class="flex-1 rounded-md"
-            role="button"
-            target="_blank"
-          >
-            <%= trigger.workflow.name %>
-          </.link>
-        </li>
-      <% end %>
-    </ul>
+    <div class="space-y-4 ml-[24px] mr-[24px]">
+      <p class="mb-4">
+        You have <%= length(assigns.webhook_auth_method.triggers) %>
+        <span class="font-semibold">Workflows</span>
+        associated with the "<span class="font-semibold">My Auth</span>" authentication method:
+      </p>
+      <ul class="list-disc pl-5 mb-4">
+        <%= for trigger <- assigns.webhook_auth_method.triggers do %>
+          <li class="mb-2 text-primary-700 underline cursor-pointer">
+            <.link
+              id={"linked-trigger-#{trigger.id}"}
+              navigate={
+                ~p"/projects/#{assigns.webhook_auth_method.project_id}/w/#{trigger.workflow.id}?s=#{trigger.id}"
+              }
+              class="flex-1 rounded-md text-primary-700 hover:text-primary-900 underline"
+              role="button"
+              target="_blank"
+            >
+              <%= trigger.workflow.name %>
+            </.link>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+    <.modal_footer></.modal_footer>
     """
   end
 
@@ -349,37 +371,38 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </:action>
       </LightningWeb.WorkflowLive.Components.webhook_auth_methods_table>
     </div>
-    <div class="w-full bg-gray-100 h-0.5 mt-[24px]"></div>
-    <div class="pt-[12px] pb-[12px] flex justify-between content-center ">
-      <div class="flex flex-wrap items-center">
-        <.link
-          href="#"
-          class="inline-flex content-center text-primary-700 underline text-md font-semibold"
-          phx-click="new_auth_method"
-          phx-target={@myself}
-        >
-          Create a new webhook credential
-        </.link>
+    <.modal_footer>
+      <div class="flex justify-between content-center ">
+        <div class="flex flex-wrap items-center">
+          <.link
+            href="#"
+            class="inline-flex content-center text-primary-700 underline text-md font-semibold"
+            phx-click="new_auth_method"
+            phx-target={@myself}
+          >
+            Create a new webhook credential
+          </.link>
+        </div>
+        <div class="sm:flex sm:flex-row-reverse">
+          <button
+            id="update_trigger_auth_methods_button"
+            type="button"
+            phx-click="save"
+            phx-target={@myself}
+            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            phx-click={JS.navigate(@return_to)}
+            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
-      <div class="sm:flex sm:flex-row-reverse">
-        <button
-          id="update_trigger_auth_methods_button"
-          type="button"
-          phx-click="save"
-          phx-target={@myself}
-          class="inline-flex w-full justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          phx-click={JS.navigate(@return_to)}
-          class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+    </.modal_footer>
     """
   end
 
@@ -393,9 +416,9 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       phx-submit="choose_auth_type"
       phx-target={@myself}
     >
-      <div class="space-y-4">
+      <div class="space-y-4 ml-[24px] mr-[24px]">
         <label class={[
-          "relative block cursor-pointer rounded-lg border bg-white px-6 py-4 shadow-sm focus:outline-none",
+          "relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-sm focus:outline-none",
           if(
             Phoenix.HTML.Form.input_value(f, :auth_type) == :basic,
             do: "border-indigo-600 ring-2 ring-indigo-600",
@@ -403,8 +426,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           )
         ]}>
           <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :basic, class: "sr-only") %>
-          <span class="flex items-center gap-2">
-            <Heroicons.globe_alt solid class="h-5 w-5" />
+          <span class="flex items-center gap-x-2.5">
+            <Heroicons.globe_alt class="h-10 w-10" />
             Basic HTTP Authentication (username & password)
           </span>
           <span
@@ -421,7 +444,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         </label>
 
         <label class={[
-          "relative block cursor-pointer rounded-lg border bg-white px-6 py-4 shadow-sm focus:outline-none",
+          "relative block cursor-pointer rounded-lg border bg-white px-[8px] py-2 text-sm shadow-sm focus:outline-none",
           if(Phoenix.HTML.Form.input_value(f, :auth_type) == :api,
             do: "border-indigo-600 ring-2 ring-indigo-600",
             else: "border-gray-300"
@@ -429,7 +452,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         ]}>
           <%= Phoenix.HTML.Form.radio_button(f, :auth_type, :api, class: "sr-only") %>
           <span class="flex items-center gap-2">
-            <Heroicons.code_bracket_square solid class="h-5 w-5" />
+            <Heroicons.code_bracket_square class="h-10 w-10" />
             API Key Authentication (‘x-api-key’ header)
           </span>
           <span
@@ -445,14 +468,14 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </span>
         </label>
       </div>
-      <div class="py-3">
+      <.modal_footer>
         <button
           type="submit"
-          class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 "
+          class="inline-flex w-full justify-center rounded-md bg-primary-600 py-4 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 "
         >
           Next
         </button>
-      </div>
+      </.modal_footer>
     </.form>
     """
   end

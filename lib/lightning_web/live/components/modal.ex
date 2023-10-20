@@ -22,6 +22,7 @@ defmodule LightningWeb.Components.Modal do
   slot :inner_block, required: true
   slot :title
   slot :subtitle
+  slot :footer
 
   def modal(%{type: "default"} = assigns) do
     ~H"""
@@ -52,31 +53,40 @@ defmodule LightningWeb.Components.Modal do
               phx-window-keydown={hide_modal(@on_close, @id)}
               phx-key="escape"
               phx-click-away={hide_modal(@on_close, @id)}
-              class="hidden relative rounded-xl bg-white pl-[24px] pt-[24px] pr-[24px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
+              class="hidden relative rounded-xl bg-white pl-[0px] pt-[24px] pr-[0px] shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
             >
-              <div id={"#{@id}-content"}>
-                <header :if={@title != []}>
-                  <h1
-                    id={"#{@id}-title"}
-                    class="text-lg font-semibold leading-8 text-zinc-800"
-                  >
-                    <%= render_slot(@title) %>
-                  </h1>
-                  <p
-                    :if={@subtitle != []}
-                    class="mt-2 text-sm leading-6 text-zinc-600"
-                  >
-                    <%= render_slot(@subtitle) %>
-                  </p>
-                </header>
-                <div class="w-full bg-gray-100 h-0.5 my-2"></div>
+              <header :if={@title != []} class="pl-[24px] pr-[24px]">
+                <h1
+                  id={"#{@id}-title"}
+                  class="text-lg font-semibold leading-5 text-zinc-800"
+                >
+                  <%= render_slot(@title) %>
+                </h1>
+                <p
+                  :if={@subtitle != []}
+                  class="mt-2 text-sm leading-4.5 text-zinc-600"
+                >
+                  <%= render_slot(@subtitle) %>
+                </p>
+              </header>
+              <div class="flex-grow bg-gray-100 h-0.5 my-[16px]"></div>
+              <section class="pl-[0px] pr-[0px]">
                 <%= render_slot(@inner_block) %>
-              </div>
+              </section>
             </.focus_wrap>
           </div>
         </div>
       </div>
     </div>
+    """
+  end
+
+  def modal_footer(assigns) do
+    ~H"""
+    <div class="flex-grow bg-gray-100 h-0.5 mt-[16px]"></div>
+    <footer class="rounded-b-xl pt-[12px] pb-[12px] pr-[24px] pl-[24px]">
+      <%= render_slot(@inner_block) %>
+    </footer>
     """
   end
 

@@ -1,6 +1,20 @@
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { PhoenixHook } from './PhoenixHook';
 
+export const ShowActionsOnRowHover = {
+  mounted() {
+    this.el.addEventListener('mouseenter', e => {
+      let target = this.el.querySelector('.hover-content');
+      if (target) target.style.opacity = '1';
+    });
+
+    this.el.addEventListener('mouseleave', e => {
+      let target = this.el.querySelector('.hover-content');
+      if (target) target.style.opacity = '0';
+    });
+  },
+} as PhoenixHook;
+
 export const Flash = {
   mounted() {
     let hide = () =>
@@ -22,12 +36,15 @@ export const FragmentMatch = {
     if (this.el.id != '' && `#${this.el.id}` == window.location.hash) {
       let js = this.el.getAttribute('phx-fragment-match');
       if (js === null) {
-        console.warn('Fragment element missing phx-fragment-match attribute', this.el);
+        console.warn(
+          'Fragment element missing phx-fragment-match attribute',
+          this.el
+        );
         return;
       }
       this.liveSocket.execJS(this.el, js);
     }
-  }
+  },
 } as PhoenixHook;
 
 export const TogglePassword = {
@@ -45,10 +62,10 @@ export const TogglePassword = {
         return;
       }
 
-      if (passwordInput.type === "password") {
-        passwordInput.type = "text";
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
       } else {
-        passwordInput.type = "password";
+        passwordInput.type = 'password';
       }
 
       let thenJS = this.el.getAttribute('phx-then');
@@ -56,8 +73,7 @@ export const TogglePassword = {
         this.liveSocket.execJS(this.el, thenJS);
       }
     });
-
-  }
+  },
 } as PhoenixHook;
 
 export const Tooltip = {
@@ -195,8 +211,8 @@ export const Copy = {
         console.log('Copied!');
         if (phxThenAttribute == null) {
           let originalText = element.textContent;
-          element.textContent = "Copied!";
-          setTimeout(function() {
+          element.textContent = 'Copied!';
+          setTimeout(function () {
             element.textContent = originalText;
           }, 3000);
         } else {

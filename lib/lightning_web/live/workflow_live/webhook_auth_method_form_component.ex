@@ -215,7 +215,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         phx-submit="perform_deletion"
         phx-target={@myself}
       >
-        <div class="space-y-4">
+        <div class="space-y-4 ml-[24px] mr-[24px]">
           <%= if @webhook_auth_method.triggers |> Enum.count() == 0 do %>
             <p>You are about to delete the webhook credential
               "<span class="font-bold"><%= @webhook_auth_method.name %></span>"
@@ -236,24 +236,26 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
           </.label>
           <.input type="text" field={f[:confirmation]} />
         </div>
-        <div class="sm:flex sm:flex-row-reverse">
-          <button
-            id="delete_trigger_auth_methods_button"
-            type="submit"
-            phx-disable-with="Deleting..."
-            class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
-            disabled={!@delete_confirmation_changeset.valid?}
-          >
-            Delete authentication method
-          </button>
-          <button
-            type="button"
-            phx-click={JS.navigate(@return_to)}
-            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-          >
-            Cancel
-          </button>
-        </div>
+        <.modal_footer>
+          <div class="sm:flex sm:flex-row-reverse">
+            <button
+              id="delete_trigger_auth_methods_button"
+              type="submit"
+              phx-disable-with="Deleting..."
+              class="inline-flex w-full justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
+              disabled={!@delete_confirmation_changeset.valid?}
+            >
+              Delete authentication method
+            </button>
+            <button
+              type="button"
+              phx-click={JS.navigate(@return_to)}
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        </.modal_footer>
       </.form>
     </div>
     """
@@ -319,32 +321,38 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   def render(assigns) do
     ~H"""
-    <div>
-      <%= if @webhook_auth_method.auth_type do %>
-        <.form
-          :let={f}
-          id={"form_#{@id}"}
-          for={@changeset}
-          phx-submit="save"
-          phx-change="validate"
-          phx-target={@myself}
-          class="mt-2"
-        >
+    <div id="create_edit_webhook_auth_method">
+      <%!-- <%= if @webhook_auth_method.auth_type do %> --%>
+      <.form
+        :let={f}
+        id={"form_#{@id}"}
+        for={@changeset}
+        phx-submit="save"
+        phx-change="validate"
+        phx-target={@myself}
+      >
+        <div class="ml-[24px] mr-[24px]">
           <%= case @webhook_auth_method.auth_type do %>
             <% :basic -> %>
-              <.input
-                type="text"
-                field={f[:name]}
-                label="Credential name"
-                required="true"
-              />
+              <.label for={:name}>Credential name</.label>
+              <.input type="text" field={f[:name]} required="true" />
+
+              <div class="hidden sm:block" aria-hidden="true">
+                <div class="py-1"></div>
+              </div>
+
+              <.label for={:username}>Username</.label>
               <.input
                 type="text"
                 field={f[:username]}
-                label="Username"
                 required="true"
                 disabled={@action == :edit}
               />
+
+              <div class="hidden sm:block" aria-hidden="true">
+                <div class="py-1"></div>
+              </div>
+
               <%= if @action == :edit do %>
                 <div class="mb-3">
                   <label class="block text-sm font-semibold leading-6 text-slate-800">
@@ -357,38 +365,36 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                   />
                 </div>
               <% else %>
-                <.input
-                  type="password"
-                  field={f[:password]}
-                  label="Password"
-                  required="true"
-                />
+                <.label for={:password}>Password</.label>
+                <.input type="password" field={f[:password]} required="true" />
+
+                <div class="hidden sm:block" aria-hidden="true">
+                  <div class="py-1"></div>
+                </div>
               <% end %>
             <% :api -> %>
-              <.input
-                type="text"
-                field={f[:name]}
-                label="Credential name"
-                required="true"
-              />
+              <.label for={:name}>Credential name</.label>
+              <.input type="text" field={f[:name]} required="true" />
 
-              <div class="mb-3">
-                <label class="block text-sm font-semibold leading-6 text-slate-800">
-                  API Key
-                </label>
-                <.maybe_mask_api_key_field
-                  action={@action}
-                  field={f[:api_key]}
-                  sudo_mode?={@sudo_mode?}
-                  phx_target={@myself}
-                />
+              <div class="hidden sm:block" aria-hidden="true">
+                <div class="py-1"></div>
               </div>
-          <% end %>
 
+              <.label for={:api_key}>API Key</.label>
+              <.maybe_mask_api_key_field
+                action={@action}
+                field={f[:api_key]}
+                sudo_mode?={@sudo_mode?}
+                phx_target={@myself}
+              />
+          <% end %>
+        </div>
+        <.modal_footer>
           <div class="sm:flex sm:flex-row-reverse">
             <button
               type="submit"
-              class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+              disabled={!@changeset.valid?}
+              class="inline-flex w-full justify-center rounded-md disabled:bg-primary-300 bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
             >
               <%= if @action == :new do %>
                 Create credential
@@ -404,8 +410,9 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
               Cancel
             </button>
           </div>
-        </.form>
-      <% end %>
+        </.modal_footer>
+      </.form>
+      <%!-- <% end %> --%>
     </div>
     """
   end
