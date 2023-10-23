@@ -199,8 +199,9 @@ defmodule LightningWeb.WorkflowLive.Edit do
                         class="focus:ring-red-500 bg-red-600 hover:bg-red-700 disabled:bg-red-300"
                         disabled={!@can_edit_job or has_child_edges or is_first_job}
                         tooltip="You can't delete the first job of a workflow"
+                        data-confirm="Are you sure?"
                       >
-                        Delete
+                        Delete Job
                       </.button>
                     </label>
                   </div>
