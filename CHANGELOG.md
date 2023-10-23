@@ -18,11 +18,11 @@ and this project adheres to
   [#1153](https://github.com/OpenFn/Lightning/issues/1153)
 - Add icon on the canvas for triggers that have authentication enabled
   [#1157](https://github.com/OpenFn/Lightning/issues/1157)
-- Require password/2FA code before showing password and API Key for
-  webhook auth methods [#1200](https://github.com/OpenFn/Lightning/issues/1200)
+- Require password/2FA code before showing password and API Key for webhook auth
+  methods [#1200](https://github.com/OpenFn/Lightning/issues/1200)
 - Restrict live dashboard access to only superusers, enable DB information and
-  OS information
-  [#1170](https://github.com/OpenFn/Lightning/issues/1170)
+  OS information [#1170](https://github.com/OpenFn/Lightning/issues/1170) OS
+  information [#1170](https://github.com/OpenFn/Lightning/issues/1170)
 - Expose additional metrics to LiveDashboard
   [#1171](https://github.com/OpenFn/Lightning/issues/1171)
 - Add plumbing to dump Lightning metrics during load testing
@@ -44,8 +44,13 @@ and this project adheres to
 
 - Updated vulnerable JS libraries, `postcss` and `semver`
   [#1176](https://github.com/OpenFn/Lightning/issues/1176)
-- Update "Delete" to "Delete Job" on Job panel and include javascript deletion confirmation
-  [#1105](https://github.com/OpenFn/Lightning/issues/1105)
+- Update "Delete" to "Delete Job" on Job panel and include javascript deletion
+  confirmation [#1105](https://github.com/OpenFn/Lightning/issues/1105)
+
+### Fixed
+
+- [#1140](https://github.com/OpenFn/Lightning/issues/1140) Adaptor icons load
+  gracefully
 
 ### Fixed
 
