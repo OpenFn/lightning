@@ -24,7 +24,8 @@ const useAdaptorIcons = (): AdaptorIconData => {
         });
     }
 
-    // Subsequent calls will chain the fetch promise
+    // Subsequent calls will chain the fetch promise and instantly resolve once
+    // the data is down
     deffered.then(d => {
       setData(d);
     });
