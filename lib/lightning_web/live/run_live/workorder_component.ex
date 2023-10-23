@@ -80,7 +80,7 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
       {:selection_toggled, {assigns.work_order, !assigns[:entry_selected]}}
     )
 
-    {:noreply, assign(socket, :entry_selected, !socket.assigns[:entry_selected])}
+    {:noreply, assign(socket, :entry_selected, !assigns[:entry_selected])}
   end
 
   @impl true
@@ -154,15 +154,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
               <span class="mt-2 text-gray-700">
                 <%= display_short_uuid(@work_order.id) %> .
                 <.link navigate={
-                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.reason.dataclip_id}/edit"
+                  ~p"/projects/#{@work_order.workflow.project_id}/dataclips/#{@work_order.dataclip_id}/edit"
                 }>
                   <span
-                    title={@work_order.reason.dataclip_id}
+                    title={@work_order.dataclip_id}
                     class="font-normal text-xs whitespace-nowrap text-ellipsis
                             bg-gray-200 p-1 rounded-md font-mono text-indigo-400 hover:underline
                             underline-offset-2 hover:text-indigo-500"
                   >
-                    <%= display_short_uuid(@work_order.reason.dataclip_id) %>
+                    <%= display_short_uuid(@work_order.dataclip_id) %>
                   </span>
                 </.link>
               </span>

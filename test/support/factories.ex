@@ -62,8 +62,13 @@ defmodule Lightning.Factories do
 
   def attempt_factory() do
     %Lightning.Attempt{
-      id: fn -> Ecto.UUID.generate() end,
-      work_order: build(:workorder)
+      id: fn -> Ecto.UUID.generate() end
+    }
+  end
+
+  def attempt_run_factory do
+    %Lightning.AttemptRun{
+      id: fn -> Ecto.UUID.generate() end
     }
   end
 
@@ -253,12 +258,12 @@ defmodule Lightning.Factories do
   end
 
   def complex_workflow_factory(attrs) do
-    #   
+    #
     #          +---+
-    #          | T |    
-    #          +---+    
-    #            |      
-    #            |      
+    #          | T |
+    #          +---+
+    #            |
+    #            |
     #          +---+
     #      +---- 0 ----+
     #      |   +---+   |
@@ -278,7 +283,7 @@ defmodule Lightning.Factories do
     #    +-+-+       +-+-+
     #    | 3 |       | 6 |
     #    +---+       +---+
-    #   
+    #
 
     trigger = build(:trigger, type: :webhook)
 

@@ -29,6 +29,7 @@ defmodule Lightning.WorkOrders do
   Workorder.
   """
 
+  alias Lightning.AttemptRun
   alias Ecto.Multi
   alias Lightning.Accounts.User
   alias Lightning.Attempt
@@ -161,9 +162,15 @@ defmodule Lightning.WorkOrders do
   attempt will only contain the runs that are upstream of the run being
   retried.
   """
-  @spec retry(Attempt.t() | Ecto.UUID.t(), Run.t() | Ecto.UUID.t(), [
-          work_order_option()
-        ]) ::
+  @spec retry(
+          Attempt.t() | Ecto.UUID.t(),
+          Run.t() | Ecto.UUID.t(),
+          [
+            work_order_option(),
+            ...
+          ]
+          | []
+        ) ::
           {:ok, Attempt.t()} | {:error, Ecto.Changeset.t(Attempt.t())}
   def retry(attempt, run, opts \\ [])
 
@@ -219,6 +226,89 @@ defmodule Lightning.WorkOrders do
 
   def retry(%Attempt{id: attempt_id}, %Run{id: run_id}, opts) do
     retry(attempt_id, run_id, opts)
+  end
+
+  @spec retry_many(
+          [WorkOrder.t(), ...],
+          job_id :: Ecto.UUID.t(),
+          [work_order_option(), ...] | []
+        ) :: {:ok, count :: Integer.t()}
+  def retry_many([%WorkOrder{} | _rest] = workorders, job_id, opts) do
+    orders_ids = Enum.map(workorders, & &1.id)
+
+    last_attempts_query =
+      from(att in Attempt,
+        join: r in assoc(att, :runs),
+        where: att.work_order_id in ^orders_ids,
+        group_by: att.work_order_id,
+        select: %{
+          work_order_id: att.work_order_id,
+          last_inserted_at: max(att.inserted_at)
+        }
+      )
+
+    attempt_runs_query =
+      from(ar in AttemptRun,
+        join: att in assoc(ar, :attempt),
+        join: wo in assoc(att, :work_order),
+        join: last in subquery(last_attempts_query),
+        on:
+          last.work_order_id == att.work_order_id and
+            att.inserted_at == last.last_inserted_at,
+        join: r in assoc(ar, :run),
+        on: r.job_id == ^job_id,
+        order_by: [asc: wo.inserted_at]
+      )
+
+    attempt_runs_query
+    |> Repo.all()
+    |> retry_many(opts)
+  end
+
+  @spec retry_many(
+          [WorkOrder.t(), ...] | [AttemptRun.t(), ...],
+          [work_order_option(), ...] | []
+        ) :: {:ok, count :: Integer.t()}
+  def retry_many([%WorkOrder{} | _rest] = workorders, opts) do
+    orders_ids = Enum.map(workorders, & &1.id)
+
+    attempt_run_numbers_query =
+      from(ar in AttemptRun,
+        join: att in assoc(ar, :attempt),
+        join: r in assoc(ar, :run),
+        where: att.work_order_id in ^orders_ids,
+        select: %{
+          id: ar.id,
+          row_num:
+            row_number()
+            |> over(
+              partition_by: att.work_order_id,
+              order_by: coalesce(r.started_at, r.inserted_at)
+            )
+        }
+      )
+
+    first_attempt_runs_query =
+      from(ar in AttemptRun,
+        join: arn in subquery(attempt_run_numbers_query),
+        on: ar.id == arn.id,
+        join: att in assoc(ar, :attempt),
+        join: wo in assoc(att, :work_order),
+        where: arn.row_num == 1,
+        order_by: [asc: wo.inserted_at]
+      )
+
+    first_attempt_runs_query
+    |> Repo.all()
+    |> retry_many(opts)
+  end
+
+  def retry_many([%AttemptRun{} | _rest] = attempt_runs, opts) do
+    for attempt_run <- attempt_runs do
+      {:ok, _} = retry(attempt_run.attempt_id, attempt_run.run_id, opts)
+    end
+
+    {:ok, length(attempt_runs)}
   end
 
   @doc """

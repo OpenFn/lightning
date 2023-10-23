@@ -496,10 +496,9 @@ defmodule Lightning.Invocation do
 
     attempts_query =
       from(a in Lightning.Attempt,
-        join: re in assoc(a, :reason),
         join: r in assoc(a, :runs),
         order_by: [desc: a.inserted_at],
-        preload: [reason: re, runs: ^runs_query]
+        preload: [runs: ^runs_query]
       )
 
     dataclips_query =
