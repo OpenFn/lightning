@@ -333,22 +333,28 @@ defmodule LightningWeb.WorkflowLive.Components do
                 type="button"
                 phx-hook="Copy"
                 data-to="#webhookUrlInput"
-                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-gray-800 hover:bg-gray-50"
               >
                 Copy URL
               </button>
             </div>
           </div>
           <div>
-            <div class="flex flex-row items-center ">
+            <div
+              class="items-center inline-block"
+              id="webhook-authentication-tooltip-div"
+              aria-label="Add an extra layer of security with Webhook authentication."
+              phx-hook="Tooltip"
+            >
               <span class="text-sm font-medium text-secondary-700">
                 Webhook Authentication
               </span>
-              <Common.tooltip
-                id="webhook-authentication-tooltip"
-                title="Add an extra layer of security with Webhook authentication."
-                class="inline-block"
-              />
+              <span class="inline-block relative cursor-pointer">
+                <Heroicons.information_circle
+                  solid
+                  class="w-4 h-4 text-primary-600 opacity-50"
+                />
+              </span>
             </div>
             <div class="text-xs">
               <%= if length(get_webhook_auth_methods_from_trigger(@selected_trigger)) == 0 do %>

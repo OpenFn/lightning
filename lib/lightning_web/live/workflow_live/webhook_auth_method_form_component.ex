@@ -78,6 +78,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       ) do
     enriched_params =
       enrich_params(params, socket.assigns.webhook_auth_method)
+      |> slugify_username()
 
     changeset =
       WebhookAuthMethod.changeset(
@@ -122,7 +123,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
            socket
            |> put_flash(
              :info,
-             "Webhook autehntication method scheduled for deletion successfully"
+             "Your Webhook Authentication method has been deleted."
            )
            |> push_navigate(to: socket.assigns.return_to)}
 
@@ -133,6 +134,14 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
       {:noreply, socket |> assign(:delete_confirmation_changeset, changeset)}
     end
   end
+
+  defp slugify_username(%{"username" => username} = params),
+    do: %{
+      params
+      | "username" => username |> String.downcase() |> String.replace(" ", "-")
+    }
+
+  defp slugify_username(params), do: params
 
   defp save_webhook_auth_method(socket, :edit, params) do
     case WebhookAuthMethods.update_auth_method(

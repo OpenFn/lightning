@@ -260,11 +260,6 @@ defmodule LightningWeb.Components.NewInputs do
 
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
-    IO.inspect(
-      @errors != [] && @field && @field.field == @name && @field.errors != [],
-      label: "Assigns"
-    )
-
     ~H"""
     <div phx-feedback-for={@name}>
       <.label for={@id}><%= @label %></.label>
@@ -280,7 +275,7 @@ defmodule LightningWeb.Components.NewInputs do
           @class,
           @errors == [] &&
             "border-slate-300 focus:border-slate-400 focus:outline-indigo-600",
-          @errors != [] && @field && @field.field == @name && @field.errors != [] &&
+          @errors != [] &&
             "border-danger-400 focus:border-danger-400 focus:outline-danger-400"
         ]}
         {@rest}
