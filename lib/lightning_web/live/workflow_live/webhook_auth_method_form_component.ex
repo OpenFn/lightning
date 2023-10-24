@@ -273,19 +273,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
   def render(%{action: :edit, show_2fa_options: true} = assigns) do
     ~H"""
     <div>
-      <p class="font-semibold text-sm whitespace-normal">
-        You're required to reauthenticate yourself before viewing the webhook
-        <%= if @webhook_auth_method.auth_type == :basic do %>
-          Password
-        <% else %>
-          API Key
-        <% end %>
-      </p>
-      <%= if @error_msg do %>
-        <div class="alert alert-danger" role="alert">
-          <%= @error_msg %>
-        </div>
-      <% end %>
       <.form
         :let={f}
         for={%{}}
@@ -296,33 +283,50 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
         class="mt-2"
         id="reauthentication-form"
       >
-        <.input type="password" field={f[:password]} label="Password" />
-        <div class="relative">
-          <div class="absolute inset-0 flex items-center" aria-hidden="true">
-            <div class="w-full border-t border-gray-300"></div>
-          </div>
-          <div class="relative flex justify-center">
-            <span class="bg-white px-2 text-sm text-gray-500">OR</span>
-          </div>
-        </div>
-        <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
+        <div class="space-y-4 ml-[24px] mr-[24px]">
+          <p class="font-normal text-sm whitespace-normal">
+            You're required to reauthenticate yourself before viewing the webhook
+            <%= if @webhook_auth_method.auth_type == :basic do %>
+              Password
+            <% else %>
+              API Key
+            <% end %>
+          </p>
+          <%= if @error_msg do %>
+            <div class="alert alert-danger" role="alert">
+              <%= @error_msg %>
+            </div>
+          <% end %>
 
-        <div class="sm:flex sm:flex-row-reverse">
-          <button
-            type="submit"
-            class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
-          >
-            Done
-          </button>
-          <button
-            type="button"
-            phx-click="toggle-2fa"
-            phx-target={@myself}
-            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-          >
-            Cancel
-          </button>
+          <.input type="password" field={f[:password]} label="Password" />
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+              <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center">
+              <span class="bg-white px-2 text-sm text-gray-500">OR</span>
+            </div>
+          </div>
+          <.input type="text" field={f[:code]} label="2FA Code" inputmode="numeric" />
         </div>
+        <.modal_footer>
+          <div class="sm:flex sm:flex-row-reverse">
+            <button
+              type="submit"
+              class="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 sm:ml-3 sm:w-auto"
+            >
+              Done
+            </button>
+            <button
+              type="button"
+              phx-click="toggle-2fa"
+              phx-target={@myself}
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        </.modal_footer>
       </.form>
     </div>
     """
@@ -432,27 +436,35 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   defp maybe_mask_password_field(assigns) do
     ~H"""
-    <div class="mt-2 flex rounded-md shadow-sm">
-      <input
-        type="password"
-        id={@field.id}
-        value={if(@sudo_mode?, do: @field.value, else: mask_password(@field.value))}
-        class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
-        disabled="disabled"
-      />
+    <div>
+      <div class="mt-2 flex rounded-md shadow-sm">
+        <input
+          type="password"
+          id={@field.id}
+          value={
+            if(@sudo_mode?, do: @field.value, else: mask_password(@field.value))
+          }
+          class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
+          disabled="disabled"
+        />
 
-      <button
-        id={"#{@field.id}_action_button"}
-        type="button"
-        class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        {if(@sudo_mode?, do: ["phx-hook": "Copy", "data-to": "##{@field.id}"], else: ["phx-click": "toggle-2fa", "phx-target": @phx_target])}
-      >
-        <%= if @sudo_mode? do %>
-          Copy
-        <% else %>
-          Show
-        <% end %>
-      </button>
+        <button
+          id={"#{@field.id}_action_button"}
+          type="button"
+          class="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
+          {if(@sudo_mode?, do: ["phx-hook": "Copy", "data-to": "##{@field.id}"], else: ["phx-click": "toggle-2fa", "phx-target": @phx_target])}
+        >
+          <%= if @sudo_mode? do %>
+            Copy
+          <% else %>
+            Show
+          <% end %>
+        </button>
+      </div>
+      <div class="h-6"></div>
+      <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-1"></div>
+      </div>
     </div>
     """
   end
@@ -470,32 +482,38 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
 
   defp maybe_mask_api_key_field(assigns) do
     ~H"""
-    <div class="mt-2 flex rounded-md shadow-sm">
-      <input
-        type="text"
-        id={@field.id}
-        class="block w-full rounded-l-lg text-slate-900 focus:ring-0 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
-        value={
-          if(@action == :new || @sudo_mode?,
-            do: @field.value,
-            else: mask_api_key(@field.value)
-          )
-        }
-        disabled="disabled"
-      />
+    <div>
+      <div class="mt-2 flex rounded-md shadow-sm">
+        <input
+          type="text"
+          id={@field.id}
+          class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
+          value={
+            if(@action == :new || @sudo_mode?,
+              do: @field.value,
+              else: mask_api_key(@field.value)
+            )
+          }
+          disabled="disabled"
+        />
 
-      <button
-        id={"#{@field.id}_action_button"}
-        type="button"
-        class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-        {if(@action == :new || @sudo_mode?, do: ["phx-hook": "Copy", "data-to": "##{@field.id}"], else: ["phx-click": "toggle-2fa", "phx-target": @phx_target])}
-      >
-        <%= if @action == :new || @sudo_mode? do %>
-          Copy
-        <% else %>
-          Show
-        <% end %>
-      </button>
+        <button
+          id={"#{@field.id}_action_button"}
+          type="button"
+          class="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
+          {if(@action == :new || @sudo_mode?, do: ["phx-hook": "Copy", "data-to": "##{@field.id}"], else: ["phx-click": "toggle-2fa", "phx-target": @phx_target])}
+        >
+          <%= if @action == :new || @sudo_mode? do %>
+            Copy
+          <% else %>
+            Show
+          <% end %>
+        </button>
+      </div>
+      <div class="h-6"></div>
+      <div class="hidden sm:block" aria-hidden="true">
+        <div class="py-1"></div>
+      </div>
     </div>
     """
   end

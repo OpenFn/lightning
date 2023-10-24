@@ -35,7 +35,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     |> assign(
       action: :new,
       is_form_valid: false,
-      auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{})
+      auth_type_changeset:
+        WebhookAuthMethod.changeset(auth_method, %{auth_type: :basic})
     )
   end
 
@@ -48,6 +49,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     |> assign(assigns)
     |> assign(is_form_valid: false)
     |> assign(action: :display_triggers)
+    |> IO.inspect(label: "Assigns")
   end
 
   defp apply_action(
@@ -160,7 +162,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     {:noreply,
      assign(socket,
        webhook_auth_method: auth_method,
-       auth_type_changeset: WebhookAuthMethod.changeset(auth_method, %{}),
+       auth_type_changeset:
+         WebhookAuthMethod.changeset(auth_method, %{auth_type: :basic}),
        action: :new
      )}
   end
@@ -337,7 +340,17 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <% end %>
       </ul>
     </div>
-    <.modal_footer></.modal_footer>
+    <.modal_footer>
+      <div class="sm:flex sm:flex-row-reverse">
+        <button
+          type="button"
+          phx-click={JS.navigate(@return_to)}
+          class="mt-3 inline-flex w-full rounded-md bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-normal text-white shadow-sm sm:mt-0 sm:w-auto"
+        >
+          Close
+        </button>
+      </div>
+    </.modal_footer>
     """
   end
 
@@ -347,6 +360,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
         auth_methods={@project_auth_methods}
         current_user={@current_user}
+        return_to={@return_to}
         on_row_select={
           fn auth_method ->
             JS.push("toggle_selection",
@@ -376,7 +390,7 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         <div class="flex flex-wrap items-center">
           <.link
             href="#"
-            class="inline-flex content-center text-primary-700 underline text-md font-semibold"
+            class="inline-flex content-center text-primary-700 hover:text-primary-800 underline text-md font-semibold"
             phx-click="new_auth_method"
             phx-target={@myself}
           >

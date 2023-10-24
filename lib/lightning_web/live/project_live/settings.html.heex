@@ -241,8 +241,8 @@
           </.table>
         </LightningWeb.Components.Common.panel_content>
         <LightningWeb.Components.Common.panel_content for_hash="webhook_security">
-          <div class="flex justify-between content-center">
-            <div>
+          <div class="flex justify-between content-center pb-2">
+            <div class="leading-loose">
               <h6 class="font-medium text-black">Webhook Security</h6>
               <small class="block my-1 text-xs text-gray-600">
                 Webhook authentication credentials that are used with the starting trigger in workflows.
@@ -278,6 +278,7 @@
           <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
             auth_methods={@webhook_auth_methods}
             current_user={@current_user}
+            return_to={~p"/projects/#{@project.id}/settings#webhook_security"}
             class="px-2"
           >
             <:action :let={auth_method}>

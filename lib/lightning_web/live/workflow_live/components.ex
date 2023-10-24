@@ -323,7 +323,7 @@ defmodule LightningWeb.WorkflowLive.Components do
               <input
                 type="text"
                 id="webhookUrlInput"
-                class="block w-full flex-1 rounded-l-lg text-slate-900 focus:ring-0  disabled:bg-gray-50 disabled:text-gray-500 disabled:ring-gray-200 sm:text-sm sm:leading-6"
+                class="block w-full flex-1 rounded-l-lg text-slate-900 disabled:bg-gray-50 disabled:text-gray-500 border border-r-0 border-secondary-300 sm:text-sm sm:leading-6"
                 value={@webhook_url}
                 disabled="disabled"
               />
@@ -333,7 +333,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 type="button"
                 phx-hook="Copy"
                 data-to="#webhookUrlInput"
-                class="relative -ml-px inline-flex items-center gap-x-1.5 rounded-r-lg px-3 py-2 text-sm font-semibold text-primary-700 ring-1 ring-inset ring-gray-800 hover:bg-gray-50"
+                class="w-[100px] inline-block relative rounded-r-lg px-3 text-sm font-normal text-gray-900 border border-secondary-300 hover:bg-gray-50"
               >
                 Copy URL
               </button>
@@ -341,12 +341,12 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
           <div>
             <div
-              class="items-center inline-block"
+              class="flex items-center inline-block"
               id="webhook-authentication-tooltip-div"
               aria-label="Add an extra layer of security with Webhook authentication."
               phx-hook="Tooltip"
             >
-              <span class="text-sm font-medium text-secondary-700">
+              <span class="text-sm font-medium text-secondary-700 mr-1">
                 Webhook Authentication
               </span>
               <span class="inline-block relative cursor-pointer">
@@ -385,7 +385,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   </.link>
                 </p>
               <% else %>
-                <ul class="list-disc p-2 mb-2">
+                <ul class="truncate w-full list-disc p-2 pl-3 mb-2 leading-relaxed">
                   <li :for={
                     auth_method <-
                       get_webhook_auth_methods_from_trigger(@selected_trigger)
@@ -399,7 +399,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <div>
                   <.link
                     href="#"
-                    class="text-primary-700 underline"
+                    class="text-primary-700 underline hover:text-primary-800"
                     phx-click={show_modal("webhooks_auth_method_modal")}
                   >
                     Manage authentication
@@ -431,15 +431,15 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :auth_method, :map, required: true
 
   def humanized_auth_method_type(assigns) do
+    humanized_type =
+      %{
+        api: "API",
+        basic: "Basic"
+      }
+      |> Map.get(assigns.auth_method.auth_type, "")
+
     ~H"""
-    <span>
-      <%= case @auth_method.auth_type do %>
-        <% :api -> %>
-          API
-        <% :basic -> %>
-          Basic
-      <% end %>
-    </span>
+    <span><%= humanized_type %></span>
     """
   end
 
@@ -687,7 +687,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   />
                 </td>
                 <td class={[
-                  "whitespace-nowrap py-2.5 text-sm text-gray-900",
+                  "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis overflow-hidden max-w-[20rem] pr-5",
                   if(!@on_row_select, do: "pl-4")
                 ]}>
                   <%= auth_method.name %>
@@ -725,9 +725,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                         project={auth_method.project}
                         webhook_auth_method={auth_method}
                         current_user={@current_user}
-                        return_to={
-                          ~p"/projects/#{auth_method.project_id}/settings#webhook_security"
-                        }
+                        return_to={@return_to}
                         trigger={nil}
                       />
                     </div>
@@ -735,9 +733,12 @@ defmodule LightningWeb.WorkflowLive.Components do
                 </td>
                 <td
                   :if={@action != []}
-                  class="flex gap-x-2 justify-end text-right py-2.5 px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
+                  class="text-right px-4 hover-content font-normal opacity-0 transition-opacity duration-300 whitespace-nowrap"
                 >
-                  <div :for={action <- @action}>
+                  <div
+                    :for={action <- @action}
+                    class="flex items-center inline-flex gap-x-2"
+                  >
                     <%= render_slot(action, auth_method) %>
                   </div>
                 </td>
