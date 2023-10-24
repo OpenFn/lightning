@@ -168,6 +168,24 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
   end
 
   def handle_event(
+        "display_triggers",
+        %{"id" => id},
+        %{assigns: assigns} = socket
+      ) do
+    auth_method =
+      Enum.find(assigns.project_auth_methods, fn auth_method ->
+        auth_method.id == id
+      end)
+
+    {:noreply,
+     apply_action(socket, :display_triggers, %{
+       webhook_auth_method: auth_method,
+       current_user: assigns.current_user,
+       project: assigns.project
+     })}
+  end
+
+  def handle_event(
         "edit_auth_method",
         %{"id" => id},
         %{assigns: assigns} = socket
@@ -370,6 +388,40 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         }
         row_selected?={fn auth_method -> @selections[auth_method.id] end}
       >
+        <:linked_triggers :let={auth_method}>
+          <span class="relative font-normal">
+            <a
+              :if={auth_method.triggers != []}
+              id={"display_linked_triggers_link_#{auth_method.id}"}
+              href="#"
+              class="text-indigo-600 hover:text-indigo-900"
+              phx-click="display_triggers"
+              phx-value-id={auth_method.id}
+              phx-target={@myself}
+            >
+              <%= Enum.count(auth_method.triggers) %>
+            </a>
+            <span
+              :if={auth_method.triggers == []}
+              class="italic font-normal text-gray-300"
+            >
+              No associated triggers...
+            </span>
+
+            <div class="text-left">
+              <.live_component
+                module={LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent}
+                id={"display_linked_triggers_#{auth_method.id}_modal"}
+                action={:display_triggers}
+                project={auth_method.project}
+                webhook_auth_method={auth_method}
+                current_user={@current_user}
+                return_to={@return_to}
+                trigger={nil}
+              />
+            </div>
+          </span>
+        </:linked_triggers>
         <:action :let={auth_method}>
           <a
             id={"edit_auth_method_link_#{auth_method.id}"}
