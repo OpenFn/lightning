@@ -49,7 +49,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
     |> assign(assigns)
     |> assign(is_form_valid: false)
     |> assign(action: :display_triggers)
-    |> IO.inspect(label: "Assigns")
   end
 
   defp apply_action(
