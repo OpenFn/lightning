@@ -33,6 +33,8 @@ and this project adheres to
 
 - Updated vulnerable JS libraries, `postcss` and `semver`
   [#1176](https://github.com/OpenFn/Lightning/issues/1176)
+- Update "Delete" to "Delete Job" on Job panel and include javascript deletion confirmation
+  [#1105](https://github.com/OpenFn/Lightning/issues/1105)
 
 ### Fixed
 
