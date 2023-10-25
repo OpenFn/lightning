@@ -431,15 +431,19 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :auth_method, :map, required: true
 
   def humanized_auth_method_type(assigns) do
-    humanized_type =
-      %{
-        api: "API",
-        basic: "Basic"
-      }
-      |> Map.get(assigns.auth_method.auth_type, "")
+    assigns =
+      assign(
+        assigns,
+        :humanized_type,
+        %{
+          api: "API",
+          basic: "Basic"
+        }
+        |> Map.get(assigns.auth_method.auth_type, "")
+      )
 
     ~H"""
-    <span><%= humanized_type %></span>
+    <span><%= @humanized_type %></span>
     """
   end
 
@@ -619,6 +623,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :row_selected?, :any
   attr :class, :string, default: ""
   slot :action, doc: "the slot for showing user actions in the last table column"
+  slot :linked_triggers, doc: "the slot for showing the linked triggers modal"
 
   def webhook_auth_methods_table(assigns) do
     assigns =

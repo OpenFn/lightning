@@ -415,19 +415,40 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodFormComponent do
                 Save changes
               <% end %>
             </button>
-            <button
-              type="button"
-              phx-click={JS.navigate(@return_to)}
-              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-            >
-              Cancel
-            </button>
+            <.cancel_button return_to={@return_to} />
           </div>
         </.modal_footer>
       </.form>
       <%!-- <% end %> --%>
     </div>
     """
+  end
+
+  defp cancel_button(assigns) do
+    view = assigns.return_to |> String.split("/") |> List.last()
+
+    if view == "settings#webhook_security" do
+      ~H"""
+      <button
+        type="button"
+        phx-click={JS.navigate(@return_to)}
+        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+      >
+        Cancel
+      </button>
+      """
+    else
+      ~H"""
+      <button
+        type="button"
+        phx-click="close_webhook_modal"
+        phx-target="#webhooks_auth_method_modal-container"
+        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+      >
+        Cancel
+      </button>
+      """
+    end
   end
 
   attr :field, :map, required: true

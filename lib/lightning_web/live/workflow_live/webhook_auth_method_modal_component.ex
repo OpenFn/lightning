@@ -185,6 +185,26 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
      })}
   end
 
+  def handle_event("close_webhook_modal", _, socket) do
+    view = socket.assigns.return_to |> String.split("/") |> List.last()
+
+    if view == "settings#webhook_security" do
+      {:noreply,
+       socket
+       |> push_navigate(to: socket.assigns.return_to)}
+    else
+      case socket.assigns.action do
+        :index ->
+          {:noreply,
+           socket
+           |> push_navigate(to: socket.assigns.return_to)}
+
+        _ ->
+          {:noreply, socket |> assign(action: :index)}
+      end
+    end
+  end
+
   def handle_event(
         "edit_auth_method",
         %{"id" => id},
@@ -266,7 +286,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
             </span>
 
             <button
-              phx-click={JS.navigate(@return_to)}
+              phx-click="close_webhook_modal"
+              phx-target={@myself}
               type="button"
               class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
               aria-label={gettext("close")}
@@ -361,7 +382,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       <div class="sm:flex sm:flex-row-reverse">
         <button
           type="button"
-          phx-click={JS.navigate(@return_to)}
+          phx-click="close_webhook_modal"
+          phx-target={@myself}
           class="mt-3 inline-flex w-full rounded-md bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-normal text-white shadow-sm sm:mt-0 sm:w-auto"
         >
           Close
@@ -377,7 +399,6 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
       <LightningWeb.WorkflowLive.Components.webhook_auth_methods_table
         auth_methods={@project_auth_methods}
         current_user={@current_user}
-        return_to={@return_to}
         on_row_select={
           fn auth_method ->
             JS.push("toggle_selection",
@@ -460,7 +481,8 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
           </button>
           <button
             type="button"
-            phx-click={JS.navigate(@return_to)}
+            phx-click="close_webhook_modal"
+            phx-target={@myself}
             class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
           >
             Cancel
