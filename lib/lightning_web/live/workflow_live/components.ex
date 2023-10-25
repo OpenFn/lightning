@@ -390,9 +390,15 @@ defmodule LightningWeb.WorkflowLive.Components do
                     auth_method <-
                       get_webhook_auth_methods_from_trigger(@selected_trigger)
                   }>
-                    <%= auth_method.name %> (<.humanized_auth_method_type auth_method={
-                      auth_method
-                    } />)
+                    <%= if auth_method.name |> String.length <= 50 do %>
+                      <%= auth_method.name %> (<.humanized_auth_method_type auth_method={
+                        auth_method
+                      } />)
+                    <% else %>
+                      <%= auth_method.name |> String.slice(0..50) %> ... (<.humanized_auth_method_type auth_method={
+                        auth_method
+                      } />)
+                    <% end %>
                   </li>
                 </ul>
 
@@ -649,7 +655,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <th
                   scope="col"
                   class={[
-                    "min-w-[12rem] py-2.5 text-left text-sm font-normal text-gray-900",
+                    "min-w-[10rem] py-2.5 text-left text-sm font-normal text-gray-900",
                     if(!@on_row_select, do: "pl-4")
                   ]}
                 >
@@ -692,7 +698,7 @@ defmodule LightningWeb.WorkflowLive.Components do
                   />
                 </td>
                 <td class={[
-                  "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis overflow-hidden max-w-[20rem] pr-5",
+                  "whitespace-nowrap py-2.5 text-sm text-gray-900 text-ellipsis overflow-hidden max-w-[15rem] pr-5",
                   if(!@on_row_select, do: "pl-4")
                 ]}>
                   <%= auth_method.name %>
