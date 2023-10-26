@@ -313,10 +313,6 @@ defmodule LightningWeb.WorkflowLive.Components do
           />
           <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
         <% :webhook -> %>
-          <div class="flex items-center">
-            <div>
-              <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
-            </div>
             <div class="col-span-4 @md:col-span-2 text-right text-">
               <a
                 id="copyWebhookUrl"
@@ -329,7 +325,9 @@ defmodule LightningWeb.WorkflowLive.Components do
                 Copy webhook url
               </a>
             </div>
-          </div>
+            <div>
+              <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
+            </div>
       <% end %>
     </div>
     """
