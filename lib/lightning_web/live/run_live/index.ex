@@ -6,11 +6,11 @@ defmodule LightningWeb.RunLive.Index do
 
   import Ecto.Changeset, only: [get_change: 2]
 
-  alias Lightning.AttemptService
   alias Lightning.Invocation
   alias Lightning.Invocation.Run
   alias Lightning.Policies.Permissions
   alias Lightning.Policies.ProjectUsers
+  alias Lightning.WorkOrders
   alias Lightning.WorkOrderService
   alias Lightning.WorkOrders.SearchParams
   alias LightningWeb.RunLive.Components
@@ -197,14 +197,14 @@ defmodule LightningWeb.RunLive.Index do
 
   @impl true
   def handle_info(
-        {:selection_toggled, {%{id: id, workflow_id: workflow_id}, selected?}},
+        {:selection_toggled, {workorder, selected?}},
         %{assigns: assigns} = socket
       ) do
     work_orders =
       if selected? do
-        [%{id: id, workflow_id: workflow_id} | assigns.selected_work_orders]
+        [workorder | assigns.selected_work_orders]
       else
-        assigns.selected_work_orders -- [%{id: id, workflow_id: workflow_id}]
+        assigns.selected_work_orders -- [workorder]
       end
 
     {:noreply, assign(socket, selected_work_orders: work_orders)}
@@ -231,8 +231,7 @@ defmodule LightningWeb.RunLive.Index do
 
   def handle_event("bulk-rerun", attrs, socket) do
     with true <- socket.assigns.can_rerun_job,
-         {:ok, %{attempt_runs: {count, _attempt_runs}}} <-
-           handle_bulk_rerun(socket, attrs) do
+         {:ok, count} <- handle_bulk_rerun(socket, attrs) do
       {:noreply,
        socket
        |> put_flash(
@@ -304,9 +303,7 @@ defmodule LightningWeb.RunLive.Index do
 
   defp handle_bulk_rerun(socket, %{"type" => "selected", "job" => job_id}) do
     socket.assigns.selected_work_orders
-    |> workorders_ids()
-    |> AttemptService.list_for_rerun_from_job(job_id)
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all", "job" => job_id}) do
@@ -315,16 +312,12 @@ defmodule LightningWeb.RunLive.Index do
     socket.assigns.project
     |> Invocation.search_workorders_query(filter)
     |> Lightning.Repo.all()
-    |> Enum.map(& &1.id)
-    |> AttemptService.list_for_rerun_from_job(job_id)
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(job_id, created_by: socket.assigns.current_user)
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "selected"}) do
     socket.assigns.selected_work_orders
-    |> workorders_ids()
-    |> AttemptService.list_for_rerun_from_start()
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
   end
 
   defp handle_bulk_rerun(socket, %{"type" => "all"}) do
@@ -333,9 +326,7 @@ defmodule LightningWeb.RunLive.Index do
     socket.assigns.project
     |> Invocation.search_workorders_query(filter)
     |> Lightning.Repo.all()
-    |> Enum.map(& &1.id)
-    |> AttemptService.list_for_rerun_from_start()
-    |> WorkOrderService.retry_attempt_runs(socket.assigns.current_user)
+    |> WorkOrders.retry_many(created_by: socket.assigns.current_user)
   end
 
   defp all_selected?(work_orders, entries) do
@@ -345,10 +336,6 @@ defmodule LightningWeb.RunLive.Index do
   defp partially_selected?(work_orders, entries) do
     entries != [] && !none_selected?(work_orders) &&
       !all_selected?(work_orders, entries)
-  end
-
-  defp workorders_ids(selected_orders) do
-    Enum.map(selected_orders, fn workorder -> workorder.id end)
   end
 
   defp none_selected?(selected_orders) do

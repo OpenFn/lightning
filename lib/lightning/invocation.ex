@@ -346,9 +346,11 @@ defmodule Lightning.Invocation do
         %Project{} = project,
         %SearchParams{} = search_params,
         params \\ %{}
-      ),
-      do:
-        search_workorders_query(project, search_params) |> Repo.paginate(params)
+      ) do
+    project
+    |> search_workorders_query(search_params)
+    |> Repo.paginate(params)
+  end
 
   def search_workorders_query(
         %Project{id: project_id},
@@ -383,7 +385,7 @@ defmodule Lightning.Invocation do
       left_join: logline in assoc(run, :log_lines),
       as: :logline,
       select: workorder,
-      preload: [:workflow, attempts: [:runs]],
+      preload: [workflow: workflow, attempts: {attempt, [runs: run]}],
       order_by: [desc_nulls_first: workorder.inserted_at]
     )
   end
@@ -427,6 +429,8 @@ defmodule Lightning.Invocation do
   defp filter_by_date_before(query, date_before) do
     from([attempt: attempt] in query, where: attempt.finished_at <= ^date_before)
   end
+
+  defp filter_by_body_or_log(query, _search_fields, nil), do: query
 
   defp filter_by_body_or_log(query, search_fields, search_term) do
     has_body_search = :body in search_fields
@@ -496,10 +500,8 @@ defmodule Lightning.Invocation do
 
     attempts_query =
       from(a in Lightning.Attempt,
-        join: re in assoc(a, :reason),
-        join: r in assoc(a, :runs),
         order_by: [desc: a.inserted_at],
-        preload: [reason: re, runs: ^runs_query]
+        preload: [runs: ^runs_query]
       )
 
     dataclips_query =
