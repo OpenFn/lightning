@@ -24,14 +24,6 @@ defmodule Lightning.Repo.Migrations.AddQueueStateToAttempts do
       ""
     )
 
-    alter table(:attempts) do
-      add :state, :"public.attempt_state", default: "available", null: false
-
-      add :claimed_at, :utc_datetime_usec
-      add :started_at, :utc_datetime_usec
-      add :finished_at, :utc_datetime_usec
-    end
-
     alter table(:attempt_runs) do
       remove :updated_at, :naive_datetime_usec,
         null: false,
