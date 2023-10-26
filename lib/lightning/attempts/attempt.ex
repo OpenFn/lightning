@@ -55,7 +55,7 @@ defmodule Lightning.Attempt do
     field :started_at, :utc_datetime_usec
     field :finished_at, :utc_datetime_usec
 
-    timestamps type: :utc_datetime_usec
+    timestamps type: :utc_datetime_usec, updated_at: false
   end
 
   def for(%Trigger{} = trigger, attrs) do
