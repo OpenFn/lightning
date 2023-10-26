@@ -127,17 +127,10 @@ defmodule LightningWeb.WorkflowLive.WebhookAuthMethodModalComponent do
         socket
       ) do
     auth_method =
-      socket.assigns.webhook_auth_method
-      |> WebhookAuthMethod.changeset(params)
-      |> Ecto.Changeset.apply_changes()
-
-    auth_method =
-      if auth_method.auth_type == :api do
-        api_key = WebhookAuthMethod.generate_api_key()
-        %{auth_method | api_key: api_key}
-      else
-        auth_method
-      end
+      WebhookAuthMethods.create_changeset(
+        socket.assigns.webhook_auth_method,
+        params
+      )
 
     {:noreply, assign(socket, :webhook_auth_method, auth_method)}
   end

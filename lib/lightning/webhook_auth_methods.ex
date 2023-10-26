@@ -414,4 +414,19 @@ defmodule Lightning.WebhookAuthMethods do
     days = Application.get_env(:lightning, :purge_deleted_after_days, 0)
     DateTime.utc_now() |> Timex.shift(days: days)
   end
+
+  def create_changeset(%WebhookAuthMethod{} = webhook_auth_method, params) do
+    auth_method =
+      webhook_auth_method
+      |> WebhookAuthMethod.changeset(params)
+      |> Ecto.Changeset.apply_changes()
+
+    auth_method =
+      if auth_method.auth_type == :api do
+        api_key = WebhookAuthMethod.generate_api_key()
+        %{auth_method | api_key: api_key}
+      else
+        auth_method
+      end
+  end
 end
