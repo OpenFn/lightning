@@ -346,9 +346,11 @@ defmodule Lightning.Invocation do
         %Project{} = project,
         %SearchParams{} = search_params,
         params \\ %{}
-      ),
-      do:
-        search_workorders_query(project, search_params) |> Repo.paginate(params)
+      ) do
+    project
+    |> search_workorders_query(search_params)
+    |> Repo.paginate(params)
+  end
 
   def search_workorders_query(
         %Project{id: project_id},
@@ -428,6 +430,8 @@ defmodule Lightning.Invocation do
     from([attempt: attempt] in query, where: attempt.finished_at <= ^date_before)
   end
 
+  defp filter_by_body_or_log(query, _search_fields, nil), do: query
+
   defp filter_by_body_or_log(query, search_fields, search_term) do
     has_body_search = :body in search_fields
     has_log_search = :log in search_fields
@@ -496,7 +500,6 @@ defmodule Lightning.Invocation do
 
     attempts_query =
       from(a in Lightning.Attempt,
-        join: r in assoc(a, :runs),
         order_by: [desc: a.inserted_at],
         preload: [runs: ^runs_query]
       )

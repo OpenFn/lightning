@@ -69,7 +69,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert render_component(LightningWeb.RunLive.WorkOrderComponent,
                id: work_order.id,
                work_order: work_order
-             ) =~ "work_order"
+             ) =~ work_order.dataclip_id
     end
 
     test "lists all workorders", %{
@@ -82,41 +82,29 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip)
 
-      work_order = insert(:workorder, workflow: workflow, trigger: trigger, dataclip: dataclip)
-
-      insert(:attempt, )
-
-      now = Timex.now()
+      work_order =
+        insert(:workorder,
+          workflow: workflow,
+          trigger: trigger,
+          dataclip: dataclip
+        )
 
       %{id: attempt_id} =
-        Attempt.new(%{
-          work_order_id: work_order.id,
-          reason_id: reason.id,
+        insert(:attempt,
+          work_order: work_order,
+          starting_trigger: trigger,
+          dataclip: dataclip,
+          finished_at: build(:timestamp),
           runs: [
-            %{
-              job_id: job.id,
-              started_at: now |> Timex.shift(seconds: -25),
-              finished_at: now |> Timex.shift(seconds: -1),
+            build(:run,
+              job: job,
+              started_at: build(:timestamp),
+              finished_at: build(:timestamp),
               exit_code: 1,
-              input_dataclip_id: dataclip.id
-            }
+              input_dataclip: dataclip
+            )
           ]
-        })
-        |> Lightning.Repo.insert!()
-
-      # {:error, {:live_redirect, %{flash: %{}, to: destination}}} =
-      live(
-        conn,
-        Routes.project_run_index_path(conn, :index, project.id)
-      )
-
-      Routes.project_run_index_path(conn, :index, project.id)
-
-      # assert destination =~
-      #          "/projects/#{project.id}/runs?filters[body]=true&filters[crash]=true&filters[date_after]="
-
-      # assert destination =~
-      #          "&filters[date_before]=&filters[failure]=true&filters[log]=true&filters[pending]=true&filters[search_term]=&filters[success]=true&filters[timeout]=true&filters[wo_date_after]=&filters[wo_date_before]=&filters[workflow_id]=&project_id=#{project.id}"
+        )
 
       {:ok, view, html} =
         live(conn, Routes.project_run_index_path(conn, :index, project.id))
@@ -128,8 +116,8 @@ defmodule LightningWeb.RunWorkOrderTest do
         |> element("section#inner_content div[data-entity='work_order_index']")
         |> render()
 
-      assert table =~ "my workflow"
-      assert table =~ "#{reason.dataclip_id}"
+      assert table =~ workflow.name
+      assert table =~ "#{dataclip.id}"
 
       # toggle work_order details
       # TODO move to test work_order_component
@@ -147,6 +135,7 @@ defmodule LightningWeb.RunWorkOrderTest do
              |> render_click() =~ "attempt-#{attempt_id}"
     end
 
+    @tag :new_query
     test "When the most recent run is finished without exit code, work_order status is 'Timeout'",
          %{conn: conn, project: project} do
       workflow = insert(:workflow, project: project)
@@ -155,30 +144,27 @@ defmodule LightningWeb.RunWorkOrderTest do
 
       dataclip = insert(:dataclip)
 
-      reason =
-        insert(:reason,
-          type: :webhook,
-          trigger: trigger,
-          dataclip: dataclip
-        )
-
-      work_order = insert(:workorder, workflow: workflow, reason: reason)
-      now = Timex.now()
-
-      Attempt.new(%{
-        work_order_id: work_order.id,
-        reason_id: reason.id,
-        runs: [
-          %{
-            job_id: job_a.id,
-            started_at: now |> Timex.shift(seconds: -25),
-            finished_at: now |> Timex.shift(seconds: 25),
-            exit_code: nil,
-            input_dataclip_id: dataclip.id
-          }
+      insert(:workorder,
+        workflow: workflow,
+        trigger: trigger,
+        dataclip: dataclip,
+        attempts: [
+          build(:attempt,
+            starting_trigger: trigger,
+            dataclip: dataclip,
+            finished_at: build(:timestamp),
+            runs: [
+              build(:run,
+                job: job_a,
+                started_at: build(:timestamp),
+                finished_at: build(:timestamp),
+                exit_code: nil,
+                input_dataclip: dataclip
+              )
+            ]
+          )
         ]
-      })
-      |> Lightning.Repo.insert!()
+      )
 
       {:ok, view, _html} =
         live(
@@ -194,6 +180,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Timeout"
     end
 
+    @tag :new_query
     test "When the most recent run is not complete, work_order status is 'Pending'",
          %{conn: conn, project: project} do
       workflow = insert(:workflow, project: project)
@@ -237,6 +224,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Pending"
     end
 
+    @tag :new_query
     test "When run A,B and C are successful, work_order status is 'Success'",
          %{conn: conn, project: project} do
       [job_a, job_b, job_c] = build_list(3, :job)
@@ -316,6 +304,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert div =~ "Success"
     end
 
+    @tag :new_query
     test "When run A and B are successful but C fails, work_order status is 'Failure'",
          %{conn: conn, project: project} do
       trigger = build(:trigger, type: :webhook)
@@ -431,6 +420,7 @@ defmodule LightningWeb.RunWorkOrderTest do
       assert view |> has_element?("div[id^=exit-code]", "0")
     end
 
+    @tag :new_query
     test "When run A and B are successful but C is pending, work_order status is 'Pending'",
          %{conn: conn, project: project} do
       trigger = build(:trigger, type: :webhook)

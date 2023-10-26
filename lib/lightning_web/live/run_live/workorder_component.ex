@@ -37,12 +37,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
     last_run = List.last(List.first(work_order.attempts).runs)
 
     last_run_finished_at =
-      case last_run.finished_at do
-        nil -> nil
-        finished_at -> finished_at |> Calendar.strftime("%c %Z")
+      case last_run do
+        %{finished_at: %_{} = finished_at} ->
+          Calendar.strftime(finished_at, "%c %Z")
+
+        _ ->
+          nil
       end
 
-    work_order_inserted_at = work_order.inserted_at |> Calendar.strftime("%c %Z")
+    work_order_inserted_at = Calendar.strftime(work_order.inserted_at, "%c %Z")
 
     socket
     |> assign(
@@ -179,7 +182,11 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <.timestamp timestamp={@last_run.finished_at} style={:wrapped} />
+          <%= if @last_run do %>
+            <.timestamp timestamp={@last_run.finished_at} style={:wrapped} />
+          <% else %>
+            --
+          <% end %>
         </div>
         <div
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
@@ -197,17 +204,15 @@ defmodule LightningWeb.RunLive.WorkOrderComponent do
           class="py-1 px-4 text-sm font-normal text-left rtl:text-right text-gray-500"
           role="cell"
         >
-          <%= case @last_run.exit_code do %>
-            <% nil -> %>
-              <%= if @last_run.finished_at do %>
-                <.failure_pill>Timeout</.failure_pill>
-              <% else %>
-                <.pending_pill>Pending</.pending_pill>
-              <% end %>
-            <% val when val == 0 -> %>
+          <%= case @last_run do %>
+            <% %{exit_code: 0} -> %>
               <.success_pill>Success</.success_pill>
-            <% val when val > 0 -> %>
+            <% %{exit_code: val} when is_integer(val) and val > 0 -> %>
               <.failure_pill>Failure</.failure_pill>
+            <% %{exit_code: nil, finished_at: %_{}} -> %>
+              <.failure_pill>Timeout</.failure_pill>
+            <% _other -> %>
+              <.pending_pill>Pending</.pending_pill>
           <% end %>
         </div>
       </div>
