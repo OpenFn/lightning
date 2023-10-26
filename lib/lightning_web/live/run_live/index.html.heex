@@ -134,7 +134,9 @@
                     phx-click-away={hide_dropdown("status_filter_dropdown")}
                   >
                     <div class="py-1" role="none">
-                      <div class="px-4 py-1 text-gray-500 text-sm">Workflow</div>
+                      <div class="px-4 py-1 text-gray-500 text-sm">
+                        Workorder
+                      </div>
                       <!-- Active: "bg-gray-100 text-gray-900", Not Active: "text-gray-700" -->
                       <%= for status <- @statuses do %>
                         <div class="px-4 py-1 text-gray-700 text-sm">
@@ -707,7 +709,7 @@
                 >
                   <!-- Table Row 1-->
                   <!-- TODO(frank): Get rid of this Enum.uniq -->
-                  <%= for wo <- Enum.uniq(@page.entries) do %>
+                  <%= for wo <- @page.entries do %>
                     <.live_component
                       module={LightningWeb.RunLive.WorkOrderComponent}
                       id={wo.id}

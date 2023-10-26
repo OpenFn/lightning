@@ -52,9 +52,10 @@ defmodule LightningWeb.RunLive.Index do
 
     statuses = [
       %{id: :success, label: "Success", value: true},
-      %{id: :failure, label: "Failure", value: true},
-      %{id: :timeout, label: "Timeout", value: true},
-      %{id: :crash, label: "Crash", value: true},
+      %{id: :failed, label: "Failed", value: true},
+      %{id: :running, label: "Running", value: true},
+      %{id: :killed, label: "Killed", value: true},
+      %{id: :crashed, label: "Crashed", value: true},
       %{id: :pending, label: "Pending", value: true}
     ]
 

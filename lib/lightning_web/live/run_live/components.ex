@@ -174,7 +174,7 @@ defmodule LightningWeb.RunLive.Components do
       assign(
         assigns,
         :log,
-        Pipeline.logs_for_run(assigns.run) |> Enum.map(fn log -> log.body end)
+        Pipeline.logs_for_run(assigns.run) |> Enum.map(fn log -> log.message end)
       )
 
     ~H"""
@@ -356,11 +356,11 @@ defmodule LightningWeb.RunLive.Components do
         <div class="basis-1/2 text-right">
           <%= case @run.exit_code do %>
             <% nil -> %>
-              <.pending_pill class="font-mono font-bold">?</.pending_pill>
-            <% val when val > 0-> %>
-              <.failure_pill class="font-mono font-bold"><%= val %></.failure_pill>
-            <% val when val == 0 -> %>
+              <.other_state_pill class="font-mono font-bold">?</.other_state_pill>
+            <% 0 -> %>
               <.success_pill class="font-mono font-bold">0</.success_pill>
+            <% val -> %>
+              <.failure_pill class="font-mono font-bold"><%= val %></.failure_pill>
           <% end %>
         </div>
       </div>
@@ -571,6 +571,16 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
+  def killed_pill(assigns) do
+    assigns = assigns |> apply_classes(~w[text-yellow-800 bg-yellow-200])
+
+    ~H"""
+    <span class={@classes}>
+      <%= render_slot(@inner_block) %>
+    </span>
+    """
+  end
+
   def success_pill(assigns) do
     assigns =
       assigns
@@ -583,8 +593,8 @@ defmodule LightningWeb.RunLive.Components do
     """
   end
 
-  def pending_pill(assigns) do
-    assigns = assigns |> apply_classes(~w[bg-gray-200 text-gray-800])
+  def other_state_pill(assigns) do
+    assigns = assigns |> apply_classes(~w[bg-black text-white])
 
     ~H"""
     <span class={@classes}>

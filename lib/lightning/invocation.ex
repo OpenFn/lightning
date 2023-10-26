@@ -386,7 +386,8 @@ defmodule Lightning.Invocation do
       as: :logline,
       select: workorder,
       preload: [workflow: workflow, attempts: {attempt, [runs: run]}],
-      order_by: [desc_nulls_first: workorder.inserted_at]
+      order_by: [desc_nulls_first: workorder.inserted_at],
+      distinct: true
     )
   end
 
