@@ -30,6 +30,7 @@ defmodule Lightning.Workflows.Trigger do
     field :comment, :string
     field :custom_path, :string
     field :cron_expression, :string
+    field :enabled, :boolean
     belongs_to :workflow, Workflow
 
     has_many :edges, Lightning.Workflows.Edge, foreign_key: :source_trigger_id
@@ -48,12 +49,19 @@ defmodule Lightning.Workflows.Trigger do
 
   @doc false
   def changeset(trigger, attrs) do
+    attrs =
+      case Map.get(attrs, "trigger_enabled") do
+        nil -> attrs
+        trigger_enabled -> Map.put(attrs, "enabled", trigger_enabled)
+      end
+
     changeset =
       trigger
       |> cast(attrs, [
         :id,
         :comment,
         :custom_path,
+        :enabled,
         :type,
         :workflow_id,
         :cron_expression

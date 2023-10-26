@@ -3,7 +3,8 @@ defmodule LightningWeb.WebhooksController do
 
   require OpenTelemetry.Tracer
 
-  alias Lightning.{Workflows, WorkOrders}
+  alias Lightning.Workflows
+  alias Lightning.WorkOrders
 
   @spec create(Plug.Conn.t(), %{path: binary()}) :: Plug.Conn.t()
   def create(conn, %{"path" => path}) do
@@ -31,7 +32,7 @@ defmodule LightningWeb.WebhooksController do
       nil ->
         conn |> put_status(:not_found) |> json(%{})
 
-      %Workflows.Edge{target_job: %Workflows.Job{enabled: false}} ->
+      %Workflows.Edge{source_trigger: %Workflows.Trigger{enabled: false}} ->
         put_status(conn, :forbidden)
         |> json(%{
           message:

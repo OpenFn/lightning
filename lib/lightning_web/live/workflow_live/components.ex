@@ -252,10 +252,12 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :webhook_url, :string, required: true
   attr :on_change, :any, required: true
 
-  def trigger_form(assigns) do
+  def trigger_form(%{form: form} = assigns) do
     assigns =
       assign(assigns,
-        type: assigns.form.source |> Ecto.Changeset.get_field(:type)
+        type: form.source |> Ecto.Changeset.get_field(:type),
+        trigger_enabled:
+          Map.get(form.params, "trigger_enabled", form.data.enabled)
       )
 
     ~H"""
@@ -296,7 +298,9 @@ defmodule LightningWeb.WorkflowLive.Components do
             module={LightningWeb.JobLive.CronSetupComponent}
             disabled={@disabled}
           />
+          <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
         <% :webhook -> %>
+          <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
           <div class="col-span-4 @md:col-span-2 text-right text-">
             <a
               id="copyWebhookUrl"
@@ -311,6 +315,19 @@ defmodule LightningWeb.WorkflowLive.Components do
           </div>
       <% end %>
     </div>
+    """
+  end
+
+  def trigger_checkbox(assigns) do
+    ~H"""
+      <Form.check_box
+        form={@form}
+        field={:trigger_enabled}
+        label="Disable this trigger"
+        checked_value={false}
+        unchecked_value={true}
+        value={@trigger_enabled}
+      />
     """
   end
 
