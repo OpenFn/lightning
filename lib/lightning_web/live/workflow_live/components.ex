@@ -18,6 +18,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             can_delete_workflow={@can_delete_workflow}
             workflow={%{workflow | name: workflow.name || "Untitled"}}
             project={@project}
+            trigger_enabled={Enum.any?(workflow.triggers, & &1.enabled)}
           />
         <% end %>
       </div>
@@ -28,6 +29,7 @@ defmodule LightningWeb.WorkflowLive.Components do
   attr :project, :map, required: true
   attr :can_delete_workflow, :boolean, default: false
   attr :workflow, :map, required: true
+  attr :trigger_enabled, :boolean
 
   def workflow_card(assigns) do
     assigns =
@@ -58,9 +60,20 @@ defmodule LightningWeb.WorkflowLive.Components do
                 <%= @workflow.name %>
               </span>
             </div>
-            <p class="text-gray-500 text-xs">
-              Updated <%= @relative_updated_at %>
-            </p>
+            <%= if @trigger_enabled do %>
+              <p class="text-gray-500 text-xs">
+                Updated <%= @relative_updated_at %>
+              </p>
+            <% else %>
+              <div class="flex items-center">
+                <div style="background: #8b5f0d" class="w-2 h-2 rounded-full"></div>
+                <div>
+                  <p class="text-[#8b5f0d] text-xs">
+                    &nbsp; Disabled
+                  </p>
+                </div>
+              </div>
+            <% end %>
           </div>
         </.link>
         <div class="flex-shrink-0 pr-2">
@@ -300,18 +313,22 @@ defmodule LightningWeb.WorkflowLive.Components do
           />
           <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
         <% :webhook -> %>
-          <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
-          <div class="col-span-4 @md:col-span-2 text-right text-">
-            <a
-              id="copyWebhookUrl"
-              href={@webhook_url}
-              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
-              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-              target="_blank"
-              phx-click="copied_to_clipboard"
-            >
-              Copy webhook url
-            </a>
+          <div class="flex items-center">
+            <div>
+              <.trigger_checkbox form={@form} trigger_enabled={@trigger_enabled} />
+            </div>
+            <div class="col-span-4 @md:col-span-2 text-right text-">
+              <a
+                id="copyWebhookUrl"
+                href={@webhook_url}
+                class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
+                onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+                target="_blank"
+                phx-click="copied_to_clipboard"
+              >
+                Copy webhook url
+              </a>
+            </div>
           </div>
       <% end %>
     </div>
@@ -320,14 +337,14 @@ defmodule LightningWeb.WorkflowLive.Components do
 
   def trigger_checkbox(assigns) do
     ~H"""
-      <Form.check_box
-        form={@form}
-        field={:trigger_enabled}
-        label="Disable this trigger"
-        checked_value={false}
-        unchecked_value={true}
-        value={@trigger_enabled}
-      />
+    <Form.check_box
+      form={@form}
+      field={:trigger_enabled}
+      label="Disable this trigger"
+      checked_value={false}
+      unchecked_value={true}
+      value={@trigger_enabled}
+    />
     """
   end
 
