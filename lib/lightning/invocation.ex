@@ -385,7 +385,7 @@ defmodule Lightning.Invocation do
       left_join: logline in assoc(run, :log_lines),
       as: :logline,
       select: workorder,
-      preload: [:workflow, attempts: [:runs]],
+      preload: [workflow: workflow, attempts: {attempt, [runs: run]}],
       order_by: [desc_nulls_first: workorder.inserted_at]
     )
   end
