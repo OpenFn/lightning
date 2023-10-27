@@ -312,23 +312,27 @@ defmodule LightningWeb.WorkflowLive.Components do
             disabled={@disabled}
           />
         <% :webhook -> %>
-            <div class="col-span-4 @md:col-span-2 text-right text-">
-              <a
-                id="copyWebhookUrl"
-                href={@webhook_url}
-                class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
-                onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
-                target="_blank"
-                phx-click="copied_to_clipboard"
-              >
-                Copy webhook url
-              </a>
-            </div>
+          <div class="col-span-4 @md:col-span-2 text-right text-">
+            <a
+              id="copyWebhookUrl"
+              href={@webhook_url}
+              class="text-xs text-indigo-400 underline underline-offset-2 hover:text-indigo-500 cursor-pointer"
+              onclick="(function(e) {  navigator.clipboard.writeText(e.target.href); e.preventDefault(); })(event)"
+              target="_blank"
+              phx-click="copied_to_clipboard"
+            >
+              Copy webhook url
+            </a>
+          </div>
       <% end %>
     </div>
-    <div class="hidden sm:block" aria-hidden="true"><div class="py-2"></div></div>
-    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute">
-    <div class="hidden sm:block" aria-hidden="true"><div class="py-2"></div></div>
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
+    <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700 position:absolute" />
+    <div class="hidden sm:block" aria-hidden="true">
+      <div class="py-2"></div>
+    </div>
     <Form.check_box
       form={@form}
       field={:trigger_enabled}
