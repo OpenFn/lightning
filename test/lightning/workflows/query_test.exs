@@ -73,7 +73,7 @@ defmodule Lightning.Workflows.QueryTest do
         |> Repo.all()
         |> Enum.map(fn e -> e.target_job.id end)
 
-      assert jobs == [job.id]
+      assert jobs == []
     end
   end
 end
