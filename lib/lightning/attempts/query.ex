@@ -11,10 +11,7 @@ defmodule Lightning.Attempts.Query do
   """
   @spec lost(DateTime.t()) :: Ecto.Queryable.t()
   def lost(%DateTime{} = now) do
-    grace_period =
-      Application.get_env(:lightning, :max_run_duration)
-      |> Kernel.*(0.2)
-      |> trunc()
+    grace_period = Lightning.Config.grace_period()
 
     earliest_acceptable_start = DateTime.add(now, grace_period)
 

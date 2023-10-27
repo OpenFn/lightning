@@ -23,11 +23,7 @@ defmodule Lightning.Attempts.QueryTest do
         )
 
       now = DateTime.utc_now()
-
-      grace_period =
-        Application.get_env(:lightning, :max_run_duration)
-        |> Kernel.*(0.2)
-        |> trunc()
+      grace_period = Lightning.Config.grace_period()
 
       earliest_acceptable_start = DateTime.add(now, grace_period)
 
@@ -39,7 +35,7 @@ defmodule Lightning.Attempts.QueryTest do
           claimed_at: DateTime.add(earliest_acceptable_start, -10)
         )
 
-      another_attempt =
+      _another_attempt =
         insert(:attempt,
           work_order: work_order,
           starting_trigger: trigger,

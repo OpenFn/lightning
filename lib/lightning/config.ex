@@ -8,6 +8,7 @@ defmodule Lightning.Config do
     @callback attempt_token_signer() :: Joken.Signer.t()
     @callback worker_token_signer() :: Joken.Signer.t()
     @callback attempts_adaptor() :: module()
+    @callback grace_period() :: Integer.t()
 
     def attempt_token_signer() do
       pem =
@@ -31,6 +32,15 @@ defmodule Lightning.Config do
         :attempts_module,
         Lightning.Attempts.Queue
       )
+    end
+
+    @doc """
+    The grace period is 20% of the max attempt duration and may be used to wait
+    for an additional amount of time after an attempt was meant to be finished.
+    """
+    def grace_period() do
+      (Application.get_env(:lightning, :max_run_duration) * 0.2)
+      |> trunc()
     end
   end
 
@@ -58,6 +68,11 @@ defmodule Lightning.Config do
   @impl true
   def attempts_adaptor() do
     impl().attempts_adaptor()
+  end
+
+  @impl true
+  def grace_period() do
+    impl().grace_period()
   end
 
   defp impl() do
