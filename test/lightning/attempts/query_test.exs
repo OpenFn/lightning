@@ -1,4 +1,4 @@
-defmodule Lightning.Attempts.QueryTest do
+defmodule Lightning.Attempts.QueryTest dohttps://github.com/OpenFn/Lightning/issues/1238
   use Lightning.DataCase, async: true
 
   alias Lightning.Attempt
@@ -47,7 +47,6 @@ defmodule Lightning.Attempts.QueryTest do
         Query.lost(now)
         |> Repo.all()
         |> Enum.map(fn att -> att.id end)
-        |> IO.inspect()
 
       assert lost_attempts == [attempt_to_be_marked_lost.id]
     end
