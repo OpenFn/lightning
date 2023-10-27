@@ -32,6 +32,18 @@ defmodule Lightning.Workers do
           current_time |> DateTime.to_unix() >= nbf
         end
       )
+      |> add_claim(
+        "exp",
+        fn ->
+          Lightning.current_time()
+          |> DateTime.utc_now()
+          |> DateTime.add(Lightning.Config.grace_period())
+          |> DateTime.to_unix()
+        end,
+        fn exp, _claims, %{current_time: current_time} ->
+          current_time |> DateTime.to_unix() < exp
+        end
+      )
     end
   end
 

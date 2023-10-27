@@ -103,6 +103,7 @@ conditional_cron =
         [
           {"0 2 * * *", Lightning.Credentials,
            args: %{"type" => "purge_deleted"}},
+          {"*/5 * * * *", Lightning.Janitor},
           {"0 2 * * *", Lightning.Accounts, args: %{"type" => "purge_deleted"}},
           {"0 2 * * *", Lightning.Projects, args: %{"type" => "purge_deleted"}}
         ],
