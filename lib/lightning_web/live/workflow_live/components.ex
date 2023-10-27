@@ -269,8 +269,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     assigns =
       assign(assigns,
         type: form.source |> Ecto.Changeset.get_field(:type),
-        trigger_enabled:
-          Map.get(form.params, "trigger_enabled", form.data.enabled)
+        trigger_enabled: Map.get(form.params, "enabled", form.data.enabled)
       )
 
     ~H"""
@@ -335,7 +334,7 @@ defmodule LightningWeb.WorkflowLive.Components do
     </div>
     <Form.check_box
       form={@form}
-      field={:trigger_enabled}
+      field={:enabled}
       label="Disable this trigger"
       checked_value={false}
       unchecked_value={true}

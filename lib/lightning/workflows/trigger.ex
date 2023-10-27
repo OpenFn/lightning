@@ -49,12 +49,6 @@ defmodule Lightning.Workflows.Trigger do
 
   @doc false
   def changeset(trigger, attrs) do
-    attrs =
-      case Map.get(attrs, "trigger_enabled") do
-        nil -> attrs
-        trigger_enabled -> Map.put(attrs, "enabled", trigger_enabled)
-      end
-
     changeset =
       trigger
       |> cast(attrs, [
