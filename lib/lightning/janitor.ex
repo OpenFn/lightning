@@ -15,28 +15,28 @@ defmodule Lightning.Janitor do
 
   require Logger
 
-  import Ecto.Query
   alias Lightning.{Repo, Attempt}
+  alias Lightning.Attempts
 
   @doc """
-  Takes a type to either deletes completed Oban jobs, preserving
-  discarded/cancelled for inspection or marks orphaned Oban jobs as cancelled,
-  preserving them for inspection.
+  The perform function takes an `%Oban.Job`, allowing this module to be invoked
+  by the Oban cron plugin.
   """
   @impl Oban.Worker
-  def perform(%Oban.Job{}) do
-    now = DateTime.utc_now()
-    grace_period = Application.get_env(:lightning, :max_run_duration) * -0.2
-    earliest_acceptable_start = Timex.shift(now, seconds: grace_period)
+  def perform(%Oban.Job{}), do: find_and_update_lost()
 
-    from(att in Attempt,
-      where: is_nil(att.finished_at),
-      # TODO: decide if this should be claimed_at or started_at
-      where: att.claimed_at < ^earliest_acceptable_start
-    )
+  @doc """
+  The find_and_update_lost function determines the current time, finds all
+  attempts that were claimed before the earliest allowable claim time for
+  unfinished attempts, and marks them as lost.
+  """
+  def find_and_update_lost do
+    now = DateTime.utc_now()
+
+    Attempts.Query.lost(now)
     |> Repo.all()
     |> Enum.each(fn att ->
-      Logger.error(fn -> "Detected :lost attempt: #{inspect(att)}" end)
+      Logger.error(fn -> "Detected lost attempt: #{inspect(att)}" end)
       Attempt.complete(att, :lost)
     end)
   end
