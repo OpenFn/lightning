@@ -3,6 +3,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   use LightningWeb, :component
 
   alias LightningWeb.Components.Form
+  import WorkflowLive.Modal
+
   alias Phoenix.LiveView.JS
 
   def workflow_list(assigns) do
@@ -87,8 +89,8 @@ defmodule LightningWeb.WorkflowLive.Components do
   def create_workflow_card(assigns) do
     ~H"""
     <div>
-      <.link
-        navigate={~p"/projects/#{@project.id}/w/new"}
+      <button
+        phx-click="toggle_workflow_modal"
         class="col-span-1 rounded-md"
         role={@can_create_workflow && "button"}
       >
@@ -105,7 +107,7 @@ defmodule LightningWeb.WorkflowLive.Components do
             </div>
           </div>
         </div>
-      </.link>
+      </button>
     </div>
     """
   end
@@ -481,6 +483,30 @@ defmodule LightningWeb.WorkflowLive.Components do
         <%= render_slot(@inner_block) %>
       </div>
     </div>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def create_workflow_modal(assigns) do
+    ~H"""
+    <.modal id="modal" show width="w-full max-w-xl">
+      <:title>
+        <div class="flex justify-between">
+          Let's get started
+          <button
+            phx-click="close_workflow_modal"
+            type="button"
+            class="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+            aria-label={gettext("close")}
+          >
+            <span class="sr-only">Close</span>
+            <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+          </button>
+        </div>
+      </:title>
+      <%= render_slot(@inner_block) %>
+    </.modal>
     """
   end
 end

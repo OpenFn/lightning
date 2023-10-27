@@ -7,6 +7,10 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
   import LightningWeb.WorkflowLive.Components
+  alias LightningWeb.WorkflowLive.Form
+  alias Phoenix.LiveView.JS
+
+  import WorkflowLive.Modal
 
   attr :can_create_workflow, :boolean
   attr :can_delete_workflow, :boolean
@@ -30,6 +34,15 @@ defmodule LightningWeb.WorkflowLive.Index do
             workflows={@workflows}
             project={@project}
           />
+          <%= if @show_modal do %>
+            <.create_workflow_modal>
+              <.live_component
+                module={LightningWeb.WorkflowLive.Form}
+                id={@project.id}
+                }
+              />
+            </.create_workflow_modal>
+          <% end %>
         </LayoutComponents.centered>
       </div>
     </LayoutComponents.page_content>
@@ -58,7 +71,8 @@ defmodule LightningWeb.WorkflowLive.Index do
      socket
      |> assign(
        can_delete_workflow: can_delete_workflow,
-       can_create_workflow: can_create_workflow
+       can_create_workflow: can_create_workflow,
+       show_modal: false
      )}
   end
 
@@ -67,13 +81,27 @@ defmodule LightningWeb.WorkflowLive.Index do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  defp apply_action(socket, :index, _params) do
+  defp apply_action(socket, :index, params) do
     socket
     |> assign(
       active_menu_item: :overview,
       page_title: "Workflows",
       workflows: Workflows.get_workflows_for(socket.assigns.project)
     )
+  end
+
+  @impl true
+  def handle_event("toggle_workflow_modal", params, socket) do
+    socket =
+      socket
+      |> assign(show_modal: !socket.assigns.show_modal)
+
+
+    {:noreply, socket}
+  end
+
+  def handle_event("close_workflow_modal", _, socket) do
+    {:noreply, assign(socket, show_modal: false)}
   end
 
   @impl true

@@ -1,5 +1,5 @@
 defmodule LightningWeb.Components.Form do
-  @moduledoc false
+  # @moduledoc false
   use LightningWeb, :component
 
   slot :inner_block, required: true
