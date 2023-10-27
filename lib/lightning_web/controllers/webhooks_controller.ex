@@ -32,7 +32,7 @@ defmodule LightningWeb.WebhooksController do
       nil ->
         conn |> put_status(:not_found) |> json(%{})
 
-      %Workflows.Edge{source_trigger: %Workflows.Trigger{enabled: false}} ->
+      %Workflows.Trigger{enabled: false} ->
         put_status(conn, :forbidden)
         |> json(%{
           message:
@@ -40,25 +40,17 @@ defmodule LightningWeb.WebhooksController do
         })
 
       trigger ->
-        if trigger.enabled do
-          put_status(conn, :forbidden)
-          |> json(%{
-            message:
-              "Unable to process request, trigger is disabled. Enable it on OpenFn to allow requests to this endpoint."
-          })
-        else
-          {:ok, work_order} =
-            WorkOrders.create_for(trigger,
-              workflow: trigger.workflow,
-              dataclip: %{
-                body: conn.body_params,
-                type: :http_request,
-                project_id: trigger.workflow.project_id
-              }
-            )
+        {:ok, work_order} =
+          WorkOrders.create_for(trigger,
+            workflow: trigger.workflow,
+            dataclip: %{
+              body: conn.body_params,
+              type: :http_request,
+              project_id: trigger.workflow.project_id
+            }
+          )
 
-          conn |> json(%{work_order_id: work_order.id})
-        end
+        conn |> json(%{work_order_id: work_order.id})
     end
   end
 end
