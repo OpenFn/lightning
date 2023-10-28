@@ -1,6 +1,5 @@
 defmodule WorkflowLive.WorkFlowNameValidator do
   alias Lightning.Workflows
-  alias Lightning.Workflows.Workflow
   defstruct [:name, :project_id]
   @types %{name: :string, project_id: :string}
   import Ecto.Changeset

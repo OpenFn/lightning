@@ -7,9 +7,6 @@ defmodule LightningWeb.WorkflowLive.Index do
   alias Lightning.Workflows
   alias Lightning.Policies.{Permissions, ProjectUsers}
   import LightningWeb.WorkflowLive.Components
-  alias LightningWeb.WorkflowLive.Form
-  alias Phoenix.LiveView.JS
-
   import WorkflowLive.Modal
 
   attr :can_create_workflow, :boolean
@@ -95,7 +92,6 @@ defmodule LightningWeb.WorkflowLive.Index do
     socket =
       socket
       |> assign(show_modal: !socket.assigns.show_modal)
-
 
     {:noreply, socket}
   end

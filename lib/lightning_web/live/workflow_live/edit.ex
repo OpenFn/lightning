@@ -507,7 +507,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
   end
 
   def handle_event("save", params, socket) do
-
     %{workflow_params: initial_params, can_edit_job: can_edit_job} =
       socket.assigns
 
@@ -530,7 +529,6 @@ defmodule LightningWeb.WorkflowLive.Edit do
         Lightning.Repo.insert_or_update(socket.assigns.changeset)
         |> case do
           {:ok, workflow} ->
-            IO.inspect(workflow, label: "Workflow data")
 
             socket
             |> assign_workflow(workflow)

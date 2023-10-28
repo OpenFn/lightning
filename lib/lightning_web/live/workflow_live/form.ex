@@ -19,7 +19,7 @@ defmodule LightningWeb.WorkflowLive.Form do
     }
   end
 
-  def handle_event("validate", %{"workflow" => workflow_name} = params, socket) do
+  def handle_event("validate", %{"workflow" => workflow_name}, socket) do
     changeset =
       WorkFlowNameValidator.validate_workflow(%WorkFlowNameValidator{}, %{
         name: workflow_name,
@@ -40,8 +40,6 @@ defmodule LightningWeb.WorkflowLive.Form do
         name: workflow_name,
         project_id: socket.assigns.project
       })
-
-    IO.inspect(changeset, label: "Data")
 
     if changeset.valid? do
       changeset =
